@@ -829,7 +829,7 @@
                             },
                             "numericProperty": "Power"
                         },
-                        "target": "Self",
+                        "target": "IterationEntity",
                         "damageSource": {
                             "type": "ContextTarget",
                             "index": 0

@@ -33,7 +33,7 @@ val ChandrasIgnition = card("Chandra's Ignition") {
         val power = DynamicAmount.EntityProperty(EffectTarget.ContextTarget(0), EntityNumericProperty.Power)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures.otherThanTarget(),
-            Effects.DealDamage(power, EffectTarget.Self, damageSource = EffectTarget.ContextTarget(0))
+            Effects.DealDamage(power, EffectTarget.IterationEntity, damageSource = EffectTarget.ContextTarget(0))
         ).then(
             Effects.DealDamage(power, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.ContextTarget(0))
         )

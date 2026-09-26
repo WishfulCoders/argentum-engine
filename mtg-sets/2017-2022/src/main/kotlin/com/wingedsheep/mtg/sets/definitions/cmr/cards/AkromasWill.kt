@@ -37,7 +37,7 @@ val AkromasWill = card("Akroma's Will") {
                     GroupFilter.AllCreaturesYouControl,
                     Effects.Composite(
                         listOf(Keyword.FLYING, Keyword.VIGILANCE, Keyword.DOUBLE_STRIKE)
-                            .map { Effects.GrantKeyword(it, EffectTarget.Self) }
+                            .map { Effects.GrantKeyword(it, EffectTarget.IterationEntity) }
                     )
                 )
             }
@@ -45,8 +45,8 @@ val AkromasWill = card("Akroma's Will") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter.AllCreaturesYouControl,
                     Effects.Composite(
-                        listOf(Keyword.LIFELINK, Keyword.INDESTRUCTIBLE).map { Effects.GrantKeyword(it, EffectTarget.Self) } +
-                            Color.entries.map { Effects.GrantProtectionFromColor(it, EffectTarget.Self) }
+                        listOf(Keyword.LIFELINK, Keyword.INDESTRUCTIBLE).map { Effects.GrantKeyword(it, EffectTarget.IterationEntity) } +
+                            Color.entries.map { Effects.GrantProtectionFromColor(it, EffectTarget.IterationEntity) }
                     )
                 )
             }
