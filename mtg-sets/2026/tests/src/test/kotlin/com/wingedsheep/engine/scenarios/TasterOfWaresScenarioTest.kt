@@ -200,6 +200,33 @@ class TasterOfWaresScenarioTest : ScenarioTestBase() {
                     } shouldBe true
                 }
             }
+
+            test("a Goblin that isn't a creature counts towards X") {
+                // Boggart Shenanigans is a Kindred Enchantment — Goblin: "the number of Goblins you
+                // control" counts it, so X is 2 (it and the Taster), not 1.
+                val game = scenario()
+                    .withPlayers("Alice", "Bob")
+                    .withCardInHand(1, "Taster of Wares")
+                    .withCardOnBattlefield(1, "Boggart Shenanigans")
+                    .withLandsOnBattlefield(1, "Swamp", 3)
+                    .withCardInHand(2, "Volcanic Hammer")
+                    .withCardInHand(2, "Mind Rot")
+                    .withCardInHand(2, "Hill Giant")
+                    .withActivePlayer(1)
+                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                    .build()
+
+                game.castSpell(1, "Taster of Wares")
+                game.resolveStack()
+
+                val reveal = game.getPendingDecision() as com.wingedsheep.engine.core.SelectCardsDecision
+                withClue("Bob chooses which cards of his three-card hand to reveal") {
+                    reveal.playerId shouldBe game.player2Id
+                }
+                withClue("X = 2: the Taster and the Goblin enchantment") {
+                    reveal.minSelections shouldBe 2
+                }
+            }
         }
     }
 }

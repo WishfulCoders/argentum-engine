@@ -32,7 +32,7 @@ val ThoughtweftImbuer = card("Thoughtweft Imbuer") {
         trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
         val kithkinCount = DynamicAmounts.battlefield(
             com.wingedsheep.sdk.scripting.references.Player.You,
-            GameObjectFilter.Creature.withSubtype(Subtype.KITHKIN)
+            GameObjectFilter.Any.withSubtype(Subtype.KITHKIN)
         ).count()
         effect = Effects.ModifyStats(kithkinCount, kithkinCount, EffectTarget.TriggeringEntity)
     }

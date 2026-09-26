@@ -56,7 +56,7 @@ val TasterOfWares = card("Taster of Wares") {
             val goblinCount = storeNumber(
                 DynamicAmounts.battlefield(
                     Player.You,
-                    GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN)
+                    GameObjectFilter.Any.withSubtype(Subtype.GOBLIN)
                 ).count()
             )
             // Gather opponent's hand

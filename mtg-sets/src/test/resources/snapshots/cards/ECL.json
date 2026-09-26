@@ -17791,7 +17791,7 @@
                             "amount": {
                                 "type": "AggregateBattlefield",
                                 "player": "You",
-                                "filter": "creature Goblin"
+                                "filter": "Goblin"
                             }
                         },
                         {
@@ -18210,12 +18210,12 @@
                     "powerModifier": {
                         "type": "AggregateBattlefield",
                         "player": "You",
-                        "filter": "creature Kithkin"
+                        "filter": "Kithkin"
                     },
                     "toughnessModifier": {
                         "type": "AggregateBattlefield",
                         "player": "You",
-                        "filter": "creature Kithkin"
+                        "filter": "Kithkin"
                     },
                     "target": "TriggeringEntity"
                 }
