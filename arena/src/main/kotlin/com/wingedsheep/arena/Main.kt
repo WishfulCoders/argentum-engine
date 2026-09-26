@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * `arena one <decks.jsonl> <targetId> <opponentId> <game> <seed>` replays one game from a results
  * line with stack traces printed, for debugging an `exception(...)` reason.
  *
+ * `arena sealed <SET> <decks.jsonl> <targets> <opponents> [seed]` writes seeded sealed decks for a set
+ * that has no 17Lands decks yet (see [writeSealedDecks]).
+ *
  * Every target deck plays every opponent deck [gamesPerPair] times (alternating who is on the
  * play), scheduled opponent by opponent so a partial results file already has every target at
  * the same game count. Results are appended in completion order and flushed regularly; rerunning
@@ -32,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 fun main(args: Array<String>) {
     if (args.firstOrNull() == "one") return playOne(args.drop(1))
+    if (args.firstOrNull() == "sealed") return writeSealedDecks(args.drop(1))
     require(args.size >= 2) {
         "usage: arena <decks.jsonl> <results.jsonl> [gamesPerPair] [threads] [maxOpponents] [maxTargets] [seed]"
     }
@@ -237,4 +241,63 @@ private fun mixSeed(vararg parts: Long): Long {
         z = z xor (z ushr 31)
     }
     return z
+}
+
+/**
+ * `arena sealed <SET> <decks.jsonl> <targets> <opponents> [seed]`: [targets] + [opponents] seeded
+ * sealed decks for [SET], for a set with no 17Lands decks yet (Reality Fracture before release).
+ *
+ * The pool is every card the set can open — its own definitions plus its reprints resolved to their
+ * canonical definition with the reprint's rarity, the rule `ai`'s arena benchmark
+ * (`AiBenchmarkSupport.draftableCards`) and `game-server` use — opened as six boosters of 11 commons,
+ * 3 uncommons and a rare (1 in 8 mythic), and built by the engine's heuristic sealed deckbuilder. It
+ * deliberately ignores `metadata.inBooster`: Scryfall still flags most of FRA `booster: false`.
+ */
+private fun writeSealedDecks(args: List<String>) {
+    require(args.size in 4..5) { "usage: arena sealed <SET> <decks.jsonl> <targets> <opponents> [seed]" }
+    val set = MtgSetCatalog.requireByCode(args[0].uppercase())
+    val out = File(args[1])
+    val targets = args[2].toInt()
+    val opponents = args[3].toInt()
+    val seed = args.getOrNull(4)?.toLong() ?: 0L
+
+    val canonical = MtgSetCatalog.all.sortedBy { it.code }.flatMap { it.cards }
+        .groupBy { it.name }.mapValues { (_, defs) -> defs.first() }
+    val ownNames = set.cards.mapTo(hashSetOf()) { it.name }
+    val reprints = set.printings.filter { it.name !in ownNames }.groupBy { it.name }
+        .mapNotNull { (_, treatments) ->
+            val printing = treatments.firstOrNull { !it.isAlternateFrame && !it.isPromo } ?: treatments.first()
+            canonical[printing.name]?.withPrinting(printing)?.let { it.copy(metadata = it.metadata.copy(rarity = printing.rarity)) }
+        }
+    val cards = (set.cards + reprints).filter { !it.typeLine.isBasicLand && !it.meldResult }.sortedBy { it.name }
+    val byRarity = cards.groupBy { it.metadata.rarity }
+    println("${set.code}: ${cards.size} openable non-basic cards " +
+        byRarity.entries.sortedBy { it.key }.joinToString { "${it.key}=${it.value.size}" })
+
+    val rng = kotlin.random.Random(seed)
+    val seen = mutableSetOf<String>()
+    out.printWriter().use { w ->
+        for (i in 0 until targets + opponents) {
+            val pool = mutableListOf<com.wingedsheep.sdk.model.CardDefinition>()
+            repeat(6) {
+                val used = mutableSetOf<String>()
+                fun pick(r: com.wingedsheep.sdk.model.Rarity): com.wingedsheep.sdk.model.CardDefinition? =
+                    byRarity[r].orEmpty().filter { it.name !in used }.takeIf { it.isNotEmpty() }
+                        ?.let { it[rng.nextInt(it.size)] }?.also { used += it.name }
+                repeat(11) { pick(com.wingedsheep.sdk.model.Rarity.COMMON)?.let(pool::add) }
+                repeat(3) { pick(com.wingedsheep.sdk.model.Rarity.UNCOMMON)?.let(pool::add) }
+                val mythic = if (rng.nextDouble() < 0.125) pick(com.wingedsheep.sdk.model.Rarity.MYTHIC) else null
+                (mythic ?: pick(com.wingedsheep.sdk.model.Rarity.RARE) ?: pick(com.wingedsheep.sdk.model.Rarity.UNCOMMON))?.let(pool::add)
+            }
+            seen += pool.map { it.name }
+            val deck = com.wingedsheep.ai.engine.buildHeuristicSealedDeck(pool)
+                .flatMap { (name, n) -> List(n) { name } }.sorted()
+            val colours = pool.filter { it.name in deck.toSet() && !it.typeLine.isLand }
+                .flatMap { c -> c.colors.map { it.symbol } }.groupingBy { it }.eachCount()
+                .entries.sortedByDescending { it.value }.take(2).map { it.key }.sorted().joinToString("")
+            val role = if (i < targets) "target" else "opponent"
+            w.println(arenaJson.encodeToString(DeckSpec("${set.code.lowercase()}-sealed-$seed-$i", role, deck, colours)))
+        }
+    }
+    println("wrote ${targets + opponents} decks to $out; ${seen.size} distinct cards opened across the pools")
 }
