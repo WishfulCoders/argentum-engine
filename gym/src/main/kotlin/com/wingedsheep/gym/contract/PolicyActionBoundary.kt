@@ -100,9 +100,11 @@ object PolicyActionBoundary {
      * cast refuses. Each rejected the whole step batch. Checking every parameter-free action is what closes
      * the class rather than one card.
      *
-     * A simple single-target cast is checked the same way with its first advertised target: whether the
-     * cost can be paid does not depend on which legal target is named, unless the target prices the spell,
-     * and [targetPriced] has already checked those target by target. Dismember ({1}{B/P}{B/P}) was the
+     * A simple single-target cast or activation is checked the same way with its first advertised target:
+     * whether the cost can be paid does not depend on which legal target is named, unless the target prices
+     * the spell or is one of the payer's mana sources, and [targetPriced] has already checked those target by
+     * target. Skycoach Waypoint's "{3}, {T}: Target creature becomes prepared" was the activation case: Tablet of
+     * Discovery's {R}{R} for instants and sorceries was counted toward it (mtg-draft-ai `docs/43` §5.6). Dismember ({1}{B/P}{B/P}) was the
      * case: advertised as affordable, refused at every target.
      */
     private fun preflightParameterFree(action: LegalAction, state: GameState, simulator: GameSimulator): LegalAction {
@@ -118,7 +120,7 @@ object PolicyActionBoundary {
         if (action.action !is CastSpell && action.action !is ActivateAbility) return action
         val params = when {
             !action.requiresTargets -> ActionParams()
-            action.action is CastSpell && (action.action as CastSpell).targets.isEmpty() &&
+            ((action.action as? CastSpell)?.targets ?: (action.action as? ActivateAbility)?.targets).isNullOrEmpty() &&
                 action.minTargets == 1 && action.targetCount == 1 &&
                 action.targetRequirements.orEmpty().isEmpty() && !action.validTargets.isNullOrEmpty() ->
                 ActionParams(targets = listOf(action.validTargets!!.first()))

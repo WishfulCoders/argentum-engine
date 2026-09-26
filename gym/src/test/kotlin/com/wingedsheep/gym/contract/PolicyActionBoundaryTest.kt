@@ -27,6 +27,8 @@ import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
 import com.wingedsheep.mtg.sets.definitions.sos.cards.AjanisResponse
 import com.wingedsheep.mtg.sets.definitions.sos.cards.GroupProject
 import com.wingedsheep.mtg.sets.definitions.sos.cards.RubbleRouser
+import com.wingedsheep.mtg.sets.definitions.sos.cards.SkycoachWaypoint
+import com.wingedsheep.mtg.sets.definitions.sos.cards.TabletOfDiscovery
 import com.wingedsheep.mtg.sets.definitions.sos.cards.HydroChanneler
 import com.wingedsheep.mtg.sets.definitions.sos.cards.Pterafractyl
 import com.wingedsheep.mtg.sets.definitions.sos.cards.ShatteredAcolyte
@@ -690,6 +692,39 @@ class PolicyActionBoundaryTest : FunSpec({
         accepted shouldBe false
         PolicyActionBoundary.mask(legal, driver.state, simulator)
             .first { (it.action as? ActivateAbility)?.sourceId == clue }.affordable shouldBe false
+    }
+
+    test("a single-target activation the engine refuses at its first target is masked") {
+        // Skycoach Waypoint ({3}, {T}: target creature becomes prepared) with a Mountain and Tablet of Discovery:
+        // the enumerator counts the Tablet's {R}{R} for instants and sorceries, the engine does not
+        // (mtg-draft-ai docs/43 §5.6's mask sweep).
+        fun waypoint(extraMountain: Boolean): Pair<Boolean, Boolean> {
+            val driver = GameTestDriver()
+            driver.registerCards(TestCards.all + listOf(SkycoachWaypoint, TabletOfDiscovery))
+            driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), skipMulligans = true)
+            val player = driver.activePlayer!!
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+            val land = driver.putPermanentOnBattlefield(player, "Skycoach Waypoint")
+            driver.putPermanentOnBattlefield(player, "Mountain")
+            if (extraMountain) driver.putPermanentOnBattlefield(player, "Mountain")
+            driver.putPermanentOnBattlefield(player, "Tablet of Discovery")
+            driver.putCreatureOnBattlefield(player, "Grizzly Bears")
+            val simulator = GameSimulator(driver.cardRegistry)
+            val legal = LegalActionEnumerator.create(driver.cardRegistry)
+                .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+            val bare = legal.first { (it.action as? ActivateAbility)?.sourceId == land && !it.isManaAbility }
+            val accepted = PolicyActionStager(simulator).begin(
+                driver.state,
+                ActionParameterizer.apply(bare.action, ActionParams(targets = listOf(bare.validTargets!!.first())), driver.state),
+            ) != null
+            val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+                .first { (it.action as? ActivateAbility)?.sourceId == land && !it.isManaAbility }
+            masked.affordable shouldBe (bare.affordable && accepted)
+            return bare.affordable to masked.affordable
+        }
+        waypoint(extraMountain = false) shouldBe (true to false)
+        // With a second Mountain the {3} is real, and the activation stays callable.
+        waypoint(extraMountain = true) shouldBe (true to true)
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {
