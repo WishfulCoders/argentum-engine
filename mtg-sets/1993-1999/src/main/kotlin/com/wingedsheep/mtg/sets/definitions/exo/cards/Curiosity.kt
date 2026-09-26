@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.exo.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Curiosity
@@ -17,8 +16,8 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  * Enchant creature
  * Whenever enchanted creature deals damage to an opponent, you may draw a card.
  *
- * An ATTACHED-bound [Triggers.dealsDamage] of any damage (not only combat, 2011 ruling) to
- * [RecipientFilter.Opponent]. The attachment detector measures "opponent" against the Aura's
+ * A `Triggers.attached.dealsDamage` of any damage (not only combat, 2011 ruling) to
+ * [Recipient.Opponent]. The attachment detector measures "opponent" against the Aura's
  * controller and makes that player the ability's controller — "you" and "an opponent" are both
  * relative to Curiosity's controller, not the enchanted creature's (rulings). A planeswalker or a
  * battle is not an opponent, so damage to one does not trigger it.
@@ -29,15 +28,11 @@ val Curiosity = card("Curiosity") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhenever enchanted creature deals damage to an opponent, you may draw a card."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Any,
-            recipient = RecipientFilter.Opponent,
-            binding = TriggerBinding.ATTACHED,
-        )
-        effect = MayEffect(Effects.DrawCards(1))
+        trigger = Triggers.attached.dealsDamage(to = Recipient.Opponent, damageType = DamageType.Any)
+        effect = Effects.May(Effects.DrawCards(1))
     }
 
     metadata {

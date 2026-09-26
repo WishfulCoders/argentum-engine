@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Shared Animosity
@@ -31,15 +30,12 @@ val SharedAnimosity = card("Shared Animosity") {
     oracleText = "Whenever a creature you control attacks, it gets +1/+0 until end of turn for each other attacking creature that shares a creature type with it."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks()
         effect = Effects.ModifyStats(
             power = DynamicAmount.AggregateBattlefield(
                 Player.Each,
                 GameObjectFilter.Creature.attacking()
-                    .sharingCreatureTypeWith(EntityReference.Triggering)
+                    .sharingCreatureTypeWith(EffectTarget.TriggeringEntity)
                     .notTriggeringEntity()
             ),
             toughness = DynamicAmount.Fixed(0),

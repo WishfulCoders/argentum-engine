@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.zen.cards
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Journey to Nowhere
@@ -26,13 +27,13 @@ val JourneyToNowhere = card("Journey to Nowhere") {
         "When this enchantment leaves the battlefield, return the exiled card to the battlefield under its owner's control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target("target creature", TargetCreature())
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetObject(filter = TargetFilter.Creature))
         effect = Effects.ExileUntilLeaves(exiled)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

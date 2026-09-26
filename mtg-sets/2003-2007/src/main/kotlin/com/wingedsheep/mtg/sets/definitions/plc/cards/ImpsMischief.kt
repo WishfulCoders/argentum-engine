@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Imp's Mischief
@@ -29,10 +28,10 @@ val ImpsMischief = card("Imp's Mischief") {
     oracleText = "Change the target of target spell with a single target. You lose life equal to that spell's mana value."
 
     spell {
-        target("target spell with a single target", TargetObject(filter = TargetFilter.SpellOnStack))
+        target(TargetObject(filter = TargetFilter.SpellOnStack))
         effect = Effects.ChangeTarget().then(
             Effects.LoseLife(
-                DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.ManaValue),
+                DynamicAmount.EntityProperty(EffectTarget.ContextTarget(0), EntityNumericProperty.ManaValue),
                 EffectTarget.Controller
             )
         )

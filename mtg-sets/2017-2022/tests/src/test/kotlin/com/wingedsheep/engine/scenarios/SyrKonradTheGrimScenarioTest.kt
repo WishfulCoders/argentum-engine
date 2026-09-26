@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
@@ -42,7 +43,7 @@ class SyrKonradTheGrimScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Instant"
         spell {
-            val t = target("target card in a graveyard", Targets.CardInGraveyard)
+            val t = target(TargetFilter.CardInGraveyard)
             effect = Effects.Exile(t, fromZone = Zone.GRAVEYARD)
         }
     }

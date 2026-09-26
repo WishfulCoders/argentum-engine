@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.stx.cards
 
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Decisive Denial
@@ -30,16 +30,16 @@ val DecisiveDenial = card("Decisive Denial") {
     spell {
         modal(chooseCount = 1) {
             mode("Target creature you control fights target creature you don't control.") {
-                val yours = target("target creature you control", TargetCreature(
+                val yours = target(TargetObject(
                     filter = TargetFilter(GameObjectFilter.Creature.youControl())
                 ))
-                val theirs = target("target creature you don't control", TargetCreature(
+                val theirs = target(TargetObject(
                     filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
                 ))
                 effect = Effects.Fight(yours, theirs)
             }
             mode("Counter target noncreature spell unless its controller pays {3}.") {
-                target("target noncreature spell", Targets.NoncreatureSpell)
+                target(TargetFilter.NoncreatureSpellOnStack)
                 effect = Effects.CounterUnlessPays("{3}")
             }
         }

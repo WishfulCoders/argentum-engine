@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.RemoveAllAbilitiesEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Oko, Thief of Crowns
@@ -40,8 +40,8 @@ val OkoThiefOfCrowns = card("Oko, Thief of Crowns") {
     }
 
     loyaltyAbility(1) {
-        val t = target("target artifact or creature", TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact)))
-        effect = Effects.Composite(
+        val t = target(TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact)))
+        effect = Effects.Composite(listOf(
             RemoveAllAbilitiesEffect(t, Duration.Permanent),
             Effects.BecomeCreature(
                 target = t,
@@ -52,17 +52,13 @@ val OkoThiefOfCrowns = card("Oko, Thief of Crowns") {
                 colors = setOf("GREEN"),
                 duration = Duration.Permanent
             )
-        )
+        ))
     }
 
     loyaltyAbility(-5) {
-        val yours = target(
-            "target artifact or creature you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
+        val yours = target(TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
         )
-        val theirs = target(
-            "target creature an opponent controls with power 3 or less",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature.opponentControls().powerAtMost(3)))
+        val theirs = target(TargetObject(filter = TargetFilter(GameObjectFilter.Creature.opponentControls().powerAtMost(3)))
         )
         effect = Effects.ExchangeControl(yours, theirs)
     }

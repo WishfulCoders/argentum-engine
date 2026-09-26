@@ -18,7 +18,7 @@ val HatchingPlans = card("Hatching Plans") {
     oracleText = "When this enchantment is put into a graveyard from the battlefield, draw three cards."
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(3)
     }
 

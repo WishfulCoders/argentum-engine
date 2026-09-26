@@ -28,7 +28,7 @@ val BlindObedience = card("Blind Obedience") {
         "Artifacts and creatures your opponents control enter tapped."
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         effect = Patterns.Mechanic.extort()
         description = "Extort (Whenever you cast a spell, you may pay {W/B}. If you do, each " +
             "opponent loses 1 life and you gain that much life.)"

@@ -35,7 +35,7 @@ val SkewerTheCritics = card("Skewer the Critics") {
     )
 
     spell {
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
 

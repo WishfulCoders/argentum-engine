@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.aer.cards
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Fatal Push
@@ -29,8 +29,8 @@ val FatalPush = card("Fatal Push") {
         "Revolt — Destroy that creature if it has mana value 4 or less instead if a permanent left the battlefield under your control this turn."
 
     spell {
-        val creature = target("target creature", TargetCreature())
-        effect = ConditionalEffect(
+        val creature = target(TargetObject(filter = TargetFilter.Creature))
+        effect = Effects.If(
             condition = Conditions.Any(
                 Conditions.TargetMatchesFilter(GameObjectFilter.Creature.manaValueAtMost(2)),
                 Conditions.All(
@@ -38,7 +38,7 @@ val FatalPush = card("Fatal Push") {
                     Conditions.TargetMatchesFilter(GameObjectFilter.Creature.manaValueAtMost(4)),
                 ),
             ),
-            effect = Effects.Destroy(creature),
+            then = Effects.Destroy(creature),
         )
     }
 

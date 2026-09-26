@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.support.GameTestDriver
@@ -28,7 +29,7 @@ class DetentionSphereScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Instant"
         spell {
-            val t = target("target enchantment", Targets.Enchantment)
+            val t = target(TargetFilter.Enchantment)
             effect = Effects.Destroy(t)
         }
     }

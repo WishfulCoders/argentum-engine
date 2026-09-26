@@ -42,7 +42,7 @@ class TreasureManaAiTest : FunSpec({
             if (driver.state.priorityPlayerId != ai.playerId) return refused
             val action = ai.chooseAction(driver.state)
             if (action is PassPriority) return refused
-            if (!driver.submit(action).isSuccess) {
+            if (driver.submit(action).error != null) {
                 refused++
                 return refused
             }

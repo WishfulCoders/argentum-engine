@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Detention Sphere
@@ -32,11 +32,9 @@ val DetentionSphere = card("Detention Sphere") {
         "When this enchantment leaves the battlefield, return the exiled cards to the battlefield under their owner's control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        target(
-            "target nonland permanent not named Detention Sphere",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.NonlandPermanent.notNamed("Detention Sphere")))
+        target(TargetObject(filter = TargetFilter(GameObjectFilter.NonlandPermanent.notNamed("Detention Sphere")))
         )
         effect = Effects.Pipeline {
             val chosen = gather(CardSource.ChosenTargets, name = "target")
@@ -47,7 +45,7 @@ val DetentionSphere = card("Detention Sphere") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

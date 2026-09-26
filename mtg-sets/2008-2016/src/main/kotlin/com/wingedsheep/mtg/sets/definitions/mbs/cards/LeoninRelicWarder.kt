@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Leonin Relic-Warder
@@ -30,16 +30,14 @@ val LeoninRelicWarder = card("Leonin Relic-Warder") {
         "When this creature leaves the battlefield, return the exiled card to the battlefield under its owner's control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target(
-            "target artifact or enchantment",
-            TargetPermanent(optional = true, filter = TargetFilter(GameObjectFilter.ArtifactOrEnchantment)),
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetObject(optional = true, filter = TargetFilter(GameObjectFilter.ArtifactOrEnchantment)),
         )
         effect = Effects.ExileUntilLeaves(exiled)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

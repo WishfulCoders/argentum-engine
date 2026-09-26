@@ -1,5 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
@@ -30,17 +32,17 @@ val Hypothesizzle = card("Hypothesizzle") {
         "deals 4 damage to target creature."
 
     spell {
-        effect = Effects.Composite(
+        effect = Effects.Composite(listOf(
             Effects.DrawCards(2),
             ReflexiveTriggerEffect(
                 action = Patterns.Hand.discardCards(1, filter = GameObjectFilter.Nonland),
                 optional = true,
                 reflexiveEffect = Effects.DealDamage(4, EffectTarget.ContextTarget(0)),
-                reflexiveTargetRequirements = listOf(Targets.Creature),
+                reflexiveTargetRequirements = listOf(TargetObject(filter = TargetFilter.Creature)),
                 descriptionOverride = "You may discard a nonland card. When you do, Hypothesizzle " +
                     "deals 4 damage to target creature."
             )
-        )
+        ))
     }
 
     metadata {

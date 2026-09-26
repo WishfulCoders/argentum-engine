@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
 
 /**
@@ -25,11 +24,11 @@ val HeartlessPillage = card("Heartless Pillage") {
         "Raid — If you attacked this turn, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        val opponent = target("target opponent", TargetOpponent())
+        val opponent = target(TargetOpponent())
         effect = Effects.Discard(2, opponent).then(
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.YouAttackedThisTurn,
-                effect = Effects.CreateTreasure(1),
+                then = Effects.CreateTreasure(1),
             )
         )
     }

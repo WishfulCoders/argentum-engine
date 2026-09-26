@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.c16.cards
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
@@ -28,10 +29,10 @@ val BruseTarlBoorishHerder = card("Bruse Tarl, Boorish Herder") {
     oracleText = "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn.\n" +
         "Partner (You can have two commanders if both have partner.)"
 
-    for (trigger in listOf(Triggers.EntersBattlefield, Triggers.Attacks)) {
+    for (trigger in listOf(Triggers.self.enters(), Triggers.self.attacks())) {
         triggeredAbility {
             this.trigger = trigger
-            val t = target("target creature you control", Targets.CreatureYouControl)
+            val t = target(TargetFilter.CreatureYouControl)
             effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, t)
                 .then(Effects.GrantKeyword(Keyword.LIFELINK, t))
             description = "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn."

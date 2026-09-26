@@ -49,11 +49,7 @@ val SyrKonradTheGrim = card("Syr Konrad, the Grim") {
         "other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature,
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature).dies()
         effect = pingEachOpponent
         description = abilityText
     }

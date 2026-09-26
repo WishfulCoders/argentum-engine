@@ -33,10 +33,7 @@ val RaidBombardment = card("Raid Bombardment") {
     oracleText = "Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl().powerAtMost(2),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().powerAtMost(2)).attacks()
         effect = Effects.DealDamage(1, EffectTarget.AttackedBy(EffectTarget.TriggeringEntity))
         description = "Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking."
     }

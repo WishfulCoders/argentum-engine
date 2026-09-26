@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m21.cards
 
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
@@ -25,7 +26,7 @@ val GriffinAerie = card("Griffin Aerie") {
     oracleText = "At the beginning of your end step, if you gained 3 or more life this turn, create a 2/2 white Griffin creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedLifeThisTurnAtLeast(3)
         effect = Effects.CreateToken(
             power = 2,

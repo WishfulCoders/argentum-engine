@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.scripting.AdditionalManaOnTap
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
@@ -27,7 +27,7 @@ val UtopiaSprawl = card("Utopia Sprawl") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant Forest\nAs this Aura enters, choose a color.\n" +
         "Whenever enchanted Forest is tapped for mana, its controller adds an additional one mana of the chosen color."
-    auraTarget = TargetPermanent(filter = TargetFilter.Land.withSubtype("Forest"))
+    auraTarget = TargetObject(filter = TargetFilter.Land.withSubtype("Forest"))
 
     replacementEffect(EntersWithChoice(ChoiceType.COLOR))
     staticAbility {

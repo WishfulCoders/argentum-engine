@@ -26,7 +26,7 @@ val GalvanicBlast = card("Galvanic Blast") {
         "Metalcraft — Galvanic Blast deals 4 damage instead if you control three or more artifacts."
 
     spell {
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(
             DynamicAmount.Conditional(
                 Conditions.YouControlAtLeast(3, GameObjectFilter.Artifact),

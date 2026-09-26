@@ -41,6 +41,9 @@ class SnapshotPatcher(
     /** A vanilla creature card, made a token when a side needs one and has none to copy. */
     private val tokenFiller: () -> String?,
 ) {
+    /** The zone-move pipeline over this registry (upstream made it an instance per engine). */
+    private val zones = ZoneTransitionService(registry, com.wingedsheep.engine.handlers.PredicateEvaluator(registry))
+
     var lastError: String? = null
         private set
     /** What the last successful [patch] changed, for the trace and the result. */
@@ -312,7 +315,7 @@ class SnapshotPatcher(
             else com.wingedsheep.engine.handlers.effects.LibraryPlacement.Top,
         )
         val r = try {
-            ZoneTransitionService.moveToZone(s, id, zone, options)
+            zones.moveToZone(s, id, zone, options)
         } catch (e: Exception) {
             lastError = "exception ${e::class.simpleName}: ${e.message?.take(160)}"
             return null

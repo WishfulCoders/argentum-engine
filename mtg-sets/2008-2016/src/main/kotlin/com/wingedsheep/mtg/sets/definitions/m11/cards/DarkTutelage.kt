@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m11.cards
 
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -30,7 +31,7 @@ val DarkTutelage = card("Dark Tutelage") {
     oracleText = "At the beginning of your upkeep, reveal the top card of your library and put that card into your hand. You lose life equal to its mana value."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.Composite(
             listOf(
                 GatherCardsEffect(

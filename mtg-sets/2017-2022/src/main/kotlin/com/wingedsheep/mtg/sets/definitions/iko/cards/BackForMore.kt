@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.iko.cards
 
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Back for More
@@ -29,7 +29,7 @@ val BackForMore = card("Back for More") {
         "one target creature you don't control. (Each deals damage equal to its power to the other.)"
 
     spell {
-        val card = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
+        val card = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Pipeline(
             descriptionOverride = "Return target creature card from your graveyard to the battlefield. " +
                 "When you do, it fights up to one target creature you don't control."
@@ -44,7 +44,7 @@ val BackForMore = card("Back for More") {
                         EffectTarget.ContextTarget(0)
                     ),
                     reflexiveTargetRequirements = listOf(
-                        TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
+                        TargetObject(optional = true, filter = TargetFilter.CreatureOpponentControls)
                     ),
                     descriptionOverride = "When you do, it fights up to one target creature you don't control."
                 )

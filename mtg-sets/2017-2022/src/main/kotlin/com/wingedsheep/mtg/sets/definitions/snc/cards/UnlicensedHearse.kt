@@ -39,9 +39,7 @@ val UnlicensedHearse = card("Unlicensed Hearse") {
 
     activatedAbility {
         cost = Costs.Tap
-        target(
-            "up to two target cards from a single graveyard",
-            TargetObject(
+        target(TargetObject(
                 count = 2,
                 optional = true,
                 filter = TargetFilter.CardInGraveyard,

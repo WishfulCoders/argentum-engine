@@ -72,6 +72,6 @@ class ConvokePaymentAiTest : FunSpec({
         val chosen = AIPlayer.create(driver.cardRegistry, player).chooseFrom(driver.state, listOf(legal)).action
             as CastSpell
         chosen.alternativePayment?.convokedCreatures?.size shouldBe 2
-        driver.submit(chosen).isSuccess shouldBe true
+        driver.submit(chosen).error shouldBe null
     }
 })

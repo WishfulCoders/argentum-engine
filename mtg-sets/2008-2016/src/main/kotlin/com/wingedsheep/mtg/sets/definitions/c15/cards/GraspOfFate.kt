@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Grasp of Fate
@@ -32,10 +32,8 @@ val GraspOfFate = card("Grasp of Fate") {
         "their owners' control.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target(
-            "up to one target nonland permanent that player controls",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanentOpponentControls),
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetObject(optional = true, filter = TargetFilter.NonlandPermanentOpponentControls),
         )
         effect = Effects.MoveUntilSourceLeaves(exiled, Zone.EXILE)
     }

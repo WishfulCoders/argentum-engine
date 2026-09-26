@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.sth.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 
 /**
  * Fling
@@ -27,8 +27,8 @@ val Fling = card("Fling") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Creature))
 
     spell {
-        val t = target("any target", AnyTarget())
-        effect = DealDamageEffect(DynamicAmounts.sacrificedPower(), t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(DynamicAmounts.sacrificedPower(), t)
     }
 
     metadata {

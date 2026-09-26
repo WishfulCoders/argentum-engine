@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Savage Smash
@@ -26,10 +26,10 @@ val SavageSmash = card("Savage Smash") {
         "(Each deals damage equal to its power to the other.)"
 
     spell {
-        val yours = target("target creature you control", TargetCreature(
+        val yours = target(TargetObject(
             filter = TargetFilter(GameObjectFilter.Creature.youControl())
         ))
-        val theirs = target("target creature you don't control", TargetCreature(
+        val theirs = target(TargetObject(
             filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
         ))
         effect = Effects.ModifyStats(2, 2, yours).then(Effects.Fight(yours, theirs))

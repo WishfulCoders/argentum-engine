@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Loran of the Third Path
@@ -32,17 +32,15 @@ val LoranOfTheThirdPath = card("Loran of the Third Path") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "up to one target artifact or enchantment",
-            TargetPermanent(optional = true, filter = TargetFilter.ArtifactOrEnchantment)
+        trigger = Triggers.self.enters()
+        val t = target(TargetObject(optional = true, filter = TargetFilter.ArtifactOrEnchantment)
         )
         effect = Effects.Destroy(t)
     }
 
     activatedAbility {
         cost = Costs.Tap
-        val opponent = target("target opponent", Targets.Opponent)
+        val opponent = target(Targets.Opponent)
         effect = Effects.DrawCards(1).then(Effects.DrawCards(1, opponent))
     }
 

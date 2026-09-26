@@ -32,11 +32,11 @@ val CaptainLanneryStorm = card("Captain Lannery Storm") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateTreasure(1)
     }
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Treasure"))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Treasure"))
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
     }
 

@@ -60,7 +60,7 @@ class StructuredDecisionPayloadTest : ScenarioTestBase() {
         manaCost = "{0}"
         typeLine = "Sorcery"
         spell {
-            effect = Effects.Composite(
+            effect = Effects.Composite(listOf(
                 GatherCardsEffect(CardSource.FromZone(Zone.HAND), "hand"),
                 SelectFromCollectionEffect(
                     from = "hand",
@@ -69,7 +69,7 @@ class StructuredDecisionPayloadTest : ScenarioTestBase() {
                     storeRemainder = "rest",
                     prompt = "Choose two cards",
                 ),
-            )
+            ))
         }
     }
 

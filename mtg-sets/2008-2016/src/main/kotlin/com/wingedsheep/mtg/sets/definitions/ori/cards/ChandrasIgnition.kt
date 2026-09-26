@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ori.cards
 
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Chandra's Ignition
@@ -29,8 +29,8 @@ val ChandrasIgnition = card("Chandra's Ignition") {
     oracleText = "Target creature you control deals damage equal to its power to each other creature and each opponent."
 
     spell {
-        target("target creature you control", Targets.CreatureYouControl)
-        val power = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power)
+        target(TargetFilter.CreatureYouControl)
+        val power = DynamicAmount.EntityProperty(EffectTarget.ContextTarget(0), EntityNumericProperty.Power)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures.otherThanTarget(),
             Effects.DealDamage(power, EffectTarget.Self, damageSource = EffectTarget.ContextTarget(0))

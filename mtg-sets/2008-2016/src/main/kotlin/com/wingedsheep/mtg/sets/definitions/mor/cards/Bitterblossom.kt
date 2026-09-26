@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mor.cards
 
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
@@ -25,7 +26,7 @@ val Bitterblossom = card("Bitterblossom") {
     oracleText = "At the beginning of your upkeep, you lose 1 life and create a 1/1 black Faerie Rogue creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.LoseLife(1, EffectTarget.Controller).then(
             Effects.CreateToken(
                 power = 1,

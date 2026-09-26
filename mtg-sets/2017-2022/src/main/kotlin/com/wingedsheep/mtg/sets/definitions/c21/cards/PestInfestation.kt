@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
@@ -33,12 +33,12 @@ val PestInfestation = card("Pest Infestation") {
     oracleText = "Destroy up to X target artifacts and/or enchantments. Create twice X 1/1 black and green Pest creature tokens with \"When this token dies, you gain 1 life.\""
 
     spell {
-        target = TargetPermanent(
+        target = TargetObject(
             optional = true,
             filter = TargetFilter.ArtifactOrEnchantment,
             dynamicMaxCount = DynamicAmount.XValue
         )
-        effect = Effects.Composite(
+        effect = Effects.Composite(listOf(
             ForEachTargetEffect(listOf(Effects.Destroy(EffectTarget.ContextTarget(0)))),
             CreateTokenEffect(
                 count = DynamicAmount.Multiply(DynamicAmount.XValue, 2),
@@ -48,14 +48,14 @@ val PestInfestation = card("Pest Infestation") {
                 creatureTypes = setOf("Pest"),
                 triggeredAbilities = listOf(
                     TriggeredAbility.create(
-                        trigger = Triggers.Dies.event,
-                        binding = Triggers.Dies.binding,
+                        trigger = Triggers.self.dies().event,
+                        binding = Triggers.self.dies().binding,
                         effect = Effects.GainLife(1)
                     )
                 ),
                 imageUri = "https://cards.scryfall.io/normal/front/d/0/d0ddbe3e-4a66-494d-9304-7471232549bf.jpg?1783927190"
             )
-        )
+        ))
     }
 
     metadata {

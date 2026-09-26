@@ -181,7 +181,7 @@ class GameSimulator(
                 val activations = used.zip(pick).map { (source, colour) -> source.first.copy(manaColorChoice = colour) }
                 val floated = activations.all { activation ->
                     val r = processor.process(current, activation).result
-                    if (r.error != null || r.isPaused) false else { current = r.state; true }
+                    if (r.error != null || r.pendingDecision != null) false else { current = r.state; true }
                 }
                 if (!floated) continue
                 val result = processor.process(current, action).result

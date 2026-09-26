@@ -62,7 +62,7 @@ val MangaraTheDiplomat = card("Mangara, the Diplomat") {
     }
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.EachOpponent)
+        trigger = Triggers.anOpponent.castsNth(2)
         effect = Effects.DrawCards(1)
         description = "Whenever an opponent casts their second spell each turn, draw a card."
     }
