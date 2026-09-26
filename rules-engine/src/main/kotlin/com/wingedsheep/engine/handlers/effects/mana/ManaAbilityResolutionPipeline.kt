@@ -390,6 +390,9 @@ class ManaAbilityResolutionPipeline(
             val container = state.getEntity(permanentId) ?: continue
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
+            // Same as TriggerDetector.duplicateSourceTriggers: a doubler that has lost all
+            // abilities doubles nothing.
+            if (projected.hasLostAllAbilities(permanentId)) continue
             val controllerId = projected.getController(permanentId) ?: continue
             if (controllerId != triggerControllerId) continue
             val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
