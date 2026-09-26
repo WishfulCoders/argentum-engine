@@ -1,10 +1,12 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import com.wingedsheep.engine.core.Outcome
@@ -70,5 +72,86 @@ class MustBeBlockedMatchingScenarioTest : FunSpec({
             p2,
             mapOf(groundBlocker to listOf(groundAttacker), flexibleBlocker to listOf(flyingAttacker))
         ).outcome shouldBe Outcome.Done
+    }
+
+    /**
+     * The declare-blockers legal action carries `mandatoryBlockerAssignments` — the pre-filled
+     * blocks the web client and `AIPlayer`'s fallback submit. It used to cover only
+     * "must block" requirements (Lure, provoke), not "must be blocked if able", so a declaration
+     * built from it left the attacker unblocked and was then rejected for breaking 509.1c. It
+     * now carries one satisfying assignment, from the same maximum matching the validator uses.
+     */
+    test("the declare-blockers legal action offers an assignment that obeys every must-be-blocked requirement") {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.initMirrorMatch(
+            deck = Deck.of("Forest" to 40),
+            startingLife = 20
+        )
+
+        val p1 = driver.activePlayer!!
+        val p2 = driver.getOpponent(p1)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+        val groundAttacker = driver.putCreatureOnBattlefield(p1, "Grizzly Bears")
+        val flyingAttacker = driver.putCreatureOnBattlefield(p1, "Birds of Paradise")
+        driver.removeSummoningSickness(groundAttacker)
+        driver.removeSummoningSickness(flyingAttacker)
+        val groundBlocker = driver.putCreatureOnBattlefield(p2, "Grizzly Bears")
+        val flexibleBlocker = driver.putCreatureOnBattlefield(p2, "Birds of Paradise")
+
+        val allure1 = driver.putCardInHand(p1, "Deadly Allure")
+        val allure2 = driver.putCardInHand(p1, "Deadly Allure")
+        driver.giveMana(p1, Color.BLACK, 2)
+        driver.castSpell(p1, allure1, targets = listOf(groundAttacker)).outcome shouldBe Outcome.Done
+        driver.bothPass()
+        driver.castSpell(p1, allure2, targets = listOf(flyingAttacker)).outcome shouldBe Outcome.Done
+        driver.bothPass()
+
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.declareAttackers(p1, listOf(groundAttacker, flyingAttacker), p2).outcome shouldBe Outcome.Done
+        driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
+
+        val declareBlockers = driver.legalActions(p2).single { it.action is DeclareBlockers }
+        val offered = declareBlockers.mandatoryBlockerAssignments ?: emptyMap()
+        withClue("the offered blocks are the unique assignment covering both attackers") {
+            offered shouldBe mapOf(
+                groundBlocker to listOf(groundAttacker),
+                flexibleBlocker to listOf(flyingAttacker),
+            )
+        }
+        withClue("a declaration built from the offered blocks is legal") {
+            driver.declareBlockers(p2, offered).outcome shouldBe Outcome.Done
+        }
+    }
+
+    test("a lone must-be-blocked attacker is offered its blocker") {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.initMirrorMatch(
+            deck = Deck.of("Forest" to 40),
+            startingLife = 20
+        )
+
+        val p1 = driver.activePlayer!!
+        val p2 = driver.getOpponent(p1)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+        // Gaea's Protector: "Gaea's Protector must be blocked if able."
+        val protector = driver.putCreatureOnBattlefield(p1, "Gaea's Protector")
+        driver.removeSummoningSickness(protector)
+        val bears = driver.putCreatureOnBattlefield(p2, "Grizzly Bears")
+
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.declareAttackers(p1, listOf(protector), p2).outcome shouldBe Outcome.Done
+        driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
+
+        withClue("leaving the Protector unblocked is illegal while Grizzly Bears can block it") {
+            driver.declareBlockers(p2, emptyMap()).outcome shouldNotBe Outcome.Done
+        }
+        val offered = driver.legalActions(p2).single { it.action is DeclareBlockers }
+            .mandatoryBlockerAssignments ?: emptyMap()
+        offered shouldBe mapOf(bears to listOf(protector))
+        driver.declareBlockers(p2, offered).outcome shouldBe Outcome.Done
     }
 })
