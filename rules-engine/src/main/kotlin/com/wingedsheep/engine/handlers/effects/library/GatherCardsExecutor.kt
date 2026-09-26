@@ -60,7 +60,10 @@ class GatherCardsExecutor(
                     } else {
                         count
                     }
-                    state.getZone(ZoneKey(playerId, Zone.LIBRARY)).take(effectiveCount)
+                    // A dynamic count can be negative — "equal to its power" read with last-known
+                    // information after a -X/-X effect killed the creature (End-Blaze Epiphany).
+                    // CR 107.1b: a negative number of cards is treated as zero.
+                    state.getZone(ZoneKey(playerId, Zone.LIBRARY)).take(effectiveCount.coerceAtLeast(0))
                 }
             }
 
