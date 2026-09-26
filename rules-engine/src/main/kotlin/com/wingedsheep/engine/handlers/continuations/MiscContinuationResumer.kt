@@ -6,6 +6,7 @@ import com.wingedsheep.engine.handlers.effects.CoinFlipService
 import com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils
 import com.wingedsheep.engine.handlers.effects.composite.FlipCoinExecutor
 import com.wingedsheep.engine.handlers.effects.composite.FlipTwoCoinsExecutor
+import com.wingedsheep.engine.handlers.effects.composite.RepeatWhileExecutor
 import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 import com.wingedsheep.sdk.scripting.effects.FlipCoinsEffect
 import com.wingedsheep.sdk.scripting.effects.FlipCoinsUntilLossEffect
@@ -335,20 +336,16 @@ class MiscContinuationResumer(
             return ExecutionResult.error(state, "Expected yes/no response for RepeatWhile")
         }
 
+        val repeatWhile = RepeatWhileExecutor
         if (!response.choice) {
-            // Player chose not to repeat — done
-            return checkForMore(state, emptyList())
+            // Player chose not to repeat — done; publish what the loop collected.
+            return checkForMore(exposeCollectionsToNextFrame(state, repeatWhile.published(continuation)), emptyList())
         }
 
         // Player chose to repeat — execute another iteration
-        val context = continuation.effectContext
-        val result = com.wingedsheep.engine.handlers.effects.composite.RepeatWhileExecutor.executeIteration(
+        val result = repeatWhile.executeIteration(
             state = state,
-            body = continuation.body,
-            repeatCondition = continuation.repeatCondition,
-            resolvedDeciderId = continuation.resolvedDeciderId,
-            context = context,
-            sourceName = continuation.sourceName,
+            loop = continuation,
             effectExecutor = services.effectExecutorRegistry::execute,
             priorEvents = emptyList(),
             conditionEvaluator = services.conditionEvaluator
@@ -358,7 +355,7 @@ class MiscContinuationResumer(
             return result.toExecutionResult()
         }
 
-        return checkForMore(result.state, result.events.toList())
+        return checkForMore(exposeCollectionsToNextFrame(result.state, result.updatedCollections), result.events.toList())
     }
 
     /**
