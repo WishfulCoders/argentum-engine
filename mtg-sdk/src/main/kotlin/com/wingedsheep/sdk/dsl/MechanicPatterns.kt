@@ -2,6 +2,7 @@ package com.wingedsheep.sdk.dsl
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -54,6 +55,20 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * pattern object) because they're identified by their rules-name, not the zone they touch.
  */
 object MechanicPatterns {
+
+    /**
+     * Extort (CR 702.101a) — the effect of "Whenever you cast a spell, you may pay {W/B}. If you do,
+     * each opponent loses 1 life and you gain that much life." Pair with `Triggers.you.casts()`; each
+     * instance of extort is its own trigger, so a card with extort gets one triggered ability.
+     *
+     * The hybrid {W/B} is paid (or not) as the ability resolves, at most once per trigger, and
+     * [Effects.DrainLife] gains the total life actually lost — so no life if no opponent lost any.
+     * The Kingpin of Crime and Blind Obedience.
+     */
+    fun extort(): Effect = Effects.MayPay(
+        cost = ManaCost.parse("{W/B}"),
+        then = Effects.DrainLife(1),
+    )
 
     /**
      * Blight N — the given player puts N -1/-1 counters on a creature they control.

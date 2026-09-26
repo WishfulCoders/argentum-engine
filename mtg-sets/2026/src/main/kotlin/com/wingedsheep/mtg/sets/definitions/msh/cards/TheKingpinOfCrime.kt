@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -24,16 +24,12 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  *  - **Extort** (CR 702.101) has no `Keyword` of its own here, and it does not need one: it *is*
  *    exactly "whenever you cast a spell, you may pay {W/B}. If you do, each opponent loses 1 life
- *    and you gain that much life", which composes from primitives already in the SDK —
- *    `Triggers.you.casts()` + [Effects.MayPay] over [Effects.DrainLife]. The hybrid `{W/B}`
- *    parses and pays as a hybrid symbol (either color, or two generic-equivalent sources of
- *    either), and `DrainLife(1)` is the single-event "each opponent loses 1, you gain that much"
- *    shape — so a multiplayer drain gains the total, not 1 per opponent. `Effects.MayPay` is
- *    the same shape Shambling Cie'th uses for its cast-triggered optional mana payment.
- *
- *    TODO: promote extort to a first-class `Keyword` (with its own reminder text and a shared
- *    trigger factory) when a second extort card lands — one card doesn't yet justify new SDK
- *    vocabulary, but two do, and the reminder text should not be re-typed per card.
+ *    and you gain that much life" — `Triggers.you.casts()` over [Patterns.Mechanic.extort], an
+ *    [Effects.MayPay] of the hybrid `{W/B}` over [Effects.DrainLife]`(1)`, shared with Blind
+ *    Obedience. The hybrid parses and pays as a hybrid symbol (either color, or two
+ *    generic-equivalent sources of either), and `DrainLife(1)` is the single-event "each opponent
+ *    loses 1, you gain that much" shape — so a multiplayer drain gains the total, not 1 per
+ *    opponent.
  *
  *  - **The attack ability** is a [Gate.MayPay] over [PayLifeEffect]`(2)` — a cost the engine checks
  *    for affordability before prompting, so a controller who cannot pay is never offered the choice.
@@ -82,10 +78,7 @@ val TheKingpinOfCrime = card("The Kingpin of Crime") {
     // life and you gain that much life.
     triggeredAbility {
         trigger = Triggers.you.casts()
-        effect = Effects.MayPay(
-            cost = ManaCost.parse("{W/B}"),
-            then = Effects.DrainLife(1),
-        )
+        effect = Patterns.Mechanic.extort()
         description = "Extort (Whenever you cast a spell, you may pay {W/B}. If you do, each " +
             "opponent loses 1 life and you gain that much life.)"
     }

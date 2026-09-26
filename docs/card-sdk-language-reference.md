@@ -3686,6 +3686,14 @@ one-off pipeline belongs inline in the card file via `Effects.Pipeline { }` (§5
   "a nonland card was discarded" — an empty hand discards nothing and mints nothing. Token art comes from
   the set-scoped resolver (`MtgSet.tokenArt`), not a baked-in `imageUri`, because ten HOB cards share the
   facade. Lake-town Lookout, Patient Instructor, Long Lake Nuisance, Esgaroth Garrison, Great Gilded Boat.
+- `Patterns.Mechanic.extort()` — **Extort** (CR 702.101a): the effect half of "Whenever you cast a
+  spell, you may pay {W/B}. If you do, each opponent loses 1 life and you gain life equal to the
+  total life lost this way." Pair it with `Triggers.you.casts()`; each instance of extort is its own
+  triggered ability. Composed as `Effects.MayPay({W/B}, then = Effects.DrainLife(1))`: the hybrid
+  is paid (or declined) as the trigger resolves, and `DrainLife` gains the total actually lost, so
+  a multiplayer drain gains the sum and a drain that makes nobody lose life gains nothing. There is
+  no `Keyword.EXTORT`; the card's `description` carries the reminder text. The Kingpin of Crime,
+  Blind Obedience.
 - `readTheRunes()` — "draw X cards; for each, discard a card unless you sacrifice a permanent." Composes `RepeatDynamicTimesEffect(XValue, ChooseActionEffect(...))` with feasibility guards. Exposed as `Effects.ReadTheRunes()`.
 - `eachOpponentMayPutFromHand(filter?)` — each opponent may dump a matching card.
 - `putFromHand(filter?, count?, entersTapped?, entersAttacking?, anyNumber?, prompt?)` — you may put N
