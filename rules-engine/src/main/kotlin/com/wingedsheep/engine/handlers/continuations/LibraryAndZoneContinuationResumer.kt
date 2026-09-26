@@ -7,6 +7,7 @@ import com.wingedsheep.engine.handlers.actions.spell.CastSpellHandler
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
+import com.wingedsheep.engine.handlers.effects.permanent.attachments.AttachmentMover
 import com.wingedsheep.engine.handlers.effects.library.CascadeExecutor
 import com.wingedsheep.engine.handlers.effects.library.ChooseOnePerCategoryExecutor
 import com.wingedsheep.engine.handlers.effects.library.CastAnyNumberFromCollectionWithoutPayingCostExecutor
@@ -47,6 +48,7 @@ class LibraryAndZoneContinuationResumer(
         resumer(SelectTargetPipelineContinuation::class, ::resumeSelectTargetPipeline),
         resumer(MoveCollectionAuraTargetContinuation::class, ::resumeMoveCollectionAuraTarget),
         resumer(PutOntoBattlefieldAttachedToChosenContinuation::class, ::resumePutOntoBattlefieldAttachedToChosen),
+        resumer(AttachToChosenHostContinuation::class, ::resumeAttachToChosenHost),
         resumer(PutOnTopOrBottomContinuation::class, ::resumePutOnTopOrBottom),
         resumer(CascadeMayCastContinuation::class, ::resumeCascadeMayCast),
         resumer(DiscoverMayCastContinuation::class, ::resumeDiscoverMayCast),
@@ -401,6 +403,31 @@ class LibraryAndZoneContinuationResumer(
             state, continuation.cardId, hostId, continuation.controllerId
         )
 
+        return checkForMore(newState, events)
+    }
+
+    /**
+     * Resume after the controller chooses the new host for an Aura/Equipment already on the
+     * battlefield (AttachToChosenHostEffect). Re-checks legality, then moves it.
+     */
+    fun resumeAttachToChosenHost(
+        state: GameState,
+        continuation: AttachToChosenHostContinuation,
+        response: DecisionResponse,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        if (response !is TargetsResponse) {
+            return ExecutionResult.error(state, "Expected targets response for attach-host selection")
+        }
+        val hostId = response.selectedTargets[0]?.firstOrNull()
+            ?: return checkForMore(state, emptyList())
+        if (!AttachmentMover.canAttach(
+                state, services.predicateEvaluator, services.cardRegistry, continuation.attachmentId, hostId
+            )
+        ) {
+            return checkForMore(state, emptyList())
+        }
+        val (newState, events) = AttachmentMover.attach(state, continuation.attachmentId, hostId, continuation.controllerId)
         return checkForMore(newState, events)
     }
 

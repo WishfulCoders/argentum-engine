@@ -1048,6 +1048,7 @@ serialized shape; the facade for each is:
 | `AddSubtypeEffect` | `Effects.AddSubtype` |
 | `AnyPlayerMayPayEffect` | `Effects.AnyPlayerMayPay(cost, consequence, eligiblePlayers)` / `UnlessAnyPlayerPays(cost, effect, eligiblePlayers)` |
 | `AttachEquipmentEffect` | `Effects.AttachEquipment` |
+| `AttachToChosenHostEffect` | `Effects.AttachToChosenHost` |
 | `BecomeArtifactEffect` | `Effects.BecomeArtifact` |
 | `BecomeCreatureEffect` | `Effects.BecomeCreature` |
 | `BecomeCreatureTypeEffect` | `Effects.BecomeCreatureType` |
@@ -2759,7 +2760,20 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
 - `AttachEquipmentEffect(equip, target)` — attach an Equipment. Facade `Effects.AttachEquipment(...)`.
   `Effects.AttachTargetEquipmentToCreature(equipmentTarget, creatureTarget)` force-attaches one
   *targeted* Equipment to one *targeted* creature (both are explicit targets, not the source) — used
-  by Stolen Uniform's "Attach it to the chosen creature".
+  by Stolen Uniform's "Attach it to the chosen creature". An attachment that can't legally go on that
+  creature doesn't move, and re-attaching to its current host does nothing (both CR 701.3b).
+- `AttachToChosenHostEffect(attachment, hostFilter = Creature)` — facade
+  `Effects.AttachToChosenHost(attachment, hostFilter)`. Move an Aura or Equipment that is already on the
+  battlefield to **another** permanent matching `hostFilter`, chosen by the controller **at resolution**
+  (not targeted — hexproof/shroud don't matter). Only hosts it could legally be attached to are offered
+  (CR 701.3a: the Aura's enchant restriction with "you" = the Aura's controller, protection, an
+  Equipment's creature requirement), never its current host; with none, nothing happens (CR 701.3b).
+  "Attach target Aura attached to a creature to another creature" (Autumn-Tail, Kitsune Sage; Crown of
+  the Ages): `target(TargetFilter(Enchantment.withSubtype("Aura").attachedTo(Creature)))` +
+  `AttachToChosenHost(aura, Creature)`. Pair with a gain-control effect for Aura Graft ("attach it to
+  another permanent it can enchant", `hostFilter = GameObjectFilter.Permanent`).
+  All three attach effects share `AttachmentMover` in the engine: a move emits
+  `PermanentUnattachedEvent` (old host) then `PermanentAttachedEvent` (new host).
 - `UnattachEquipmentEffect(target = Self)` — facade `Effects.UnattachEquipment(target)`. The inverse of
   the attach effects: **unattach** an Aura/Equipment from its host *without moving zones* (CR 701.3d) —
   clears the attachment's `AttachedToComponent` and drops it from the host's attachment list, emitting
@@ -6644,7 +6658,7 @@ Triggers.you.casts(GameObjectFilter.Noncreature or
   becomes-target trigger sees a redirect. **Known bug (ward and every other becomes-target trigger
   miss redirects), not intended behaviour:** CR 115.9c counts the targets chosen when the spell or
   ability was put on the stack "(as modified by effects that changed those targets)", so a redirected
-  object *is* a target of it, and by CR 603.2e the "becomes a target" event happens at the moment the
+  object *is* a target of it, and by CR 603.2f the "becomes a target" event happens at the moment the
   redirect makes it one. Pre-existing and orthogonal to the player axis, so it is pinned rather than
   fixed by `BecomesTargetPlayerAndAbilityAxesTest`, which characterizes current-and-wrong behaviour —
   when a later unit fixes it, invert that test rather than deleting it.
@@ -6748,7 +6762,7 @@ Triggers.you.casts(GameObjectFilter.Noncreature or
   uses `Triggers.or(Triggers.self.saddles(), Triggers.self.crews())` plus
   `triggerRestriction = Conditions.IsYourMainPhase`.
 - `Triggers.<subject>.becomesAttached(to, controller)`
-  — "whenever an Aura/Equipment becomes attached to a permanent" (CR 603.2e). Fires from
+  — "whenever an Aura/Equipment becomes attached to a permanent" (CR 603.2f). Fires from
   `PermanentAttachedEvent`, emitted at every attach site (aura ETB onto its enchant target, equip
   resolution, an aura moved onto the battlefield attached by an effect) only when newly attached —
   not on a persisting attachment, and not on phasing in/out (CR 702.26j). The triggering entity is
@@ -12085,6 +12099,9 @@ For "X = the number of [things] attached to this permanent":
 - `DynamicAmounts.attachmentsOnSelf()` — every Aura/Equipment/Fortification attached to the source
   (Champion of the Flame, Valduk). Desugars to `EntityProperty(Self, AttachmentCount())`
   (`AttachmentKind.ANY`).
+- `DynamicAmounts.aurasAttachedToSelf()` — only the Auras attached to the source (Kitsune Mystic: "if
+  this creature is enchanted by two or more Auras"). Desugars to
+  `EntityProperty(Self, AttachmentCount(AttachmentKind.AURA))`.
 - `DynamicAmounts.equipmentAttachedToSelf()` — only the Equipment attached to the source (Shagrat,
   Loot Bearer: "amass Orcs X, where X is the number of Equipment attached to Shagrat"). Desugars to
   `EntityProperty(Self, AttachmentCount(AttachmentKind.EQUIPMENT))`.
