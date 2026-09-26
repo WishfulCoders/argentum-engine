@@ -30,6 +30,7 @@ import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.SagaComponent
+import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.battlefield.TriggeredAbilityFiredEverComponent
 import com.wingedsheep.engine.state.components.battlefield.TriggeredAbilityFiredThisTurnComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -1258,8 +1259,41 @@ class TriggerDetector(
                     // create one trigger per matching blocker.
                     else if (ability.trigger is EventPattern.BlockEvent && ability.binding == TriggerBinding.ANY &&
                         event is com.wingedsheep.engine.core.BlockersDeclaredEvent) {
-                        val blockFilter = (ability.trigger as EventPattern.BlockEvent).filter
-                        for (blockerId in event.blockers.keys) {
+                        val blockTrigger = ability.trigger as EventPattern.BlockEvent
+                        val blockFilter = blockTrigger.filter
+                        // "one or more … block" (batch): a block declaration is one simultaneous
+                        // event, so fire once if any declared blocker matches, and never on a
+                        // declaration with no matching blocker (CR 603.2c). No single blocker is
+                        // "the" triggering creature. With several defending players each declares
+                        // in turn (CR 802.4), but the step's blocks are still one "creatures block"
+                        // — so a matching creature already blocking from an earlier declaration
+                        // means this ability has already triggered this step.
+                        val blockerIds = if (!blockTrigger.batch) event.blockers.keys else {
+                            val blockerMatches = { blockerId: EntityId ->
+                                blockFilter == null || predicateEvaluator.matches(
+                                    state, projected, blockerId, blockFilter,
+                                    PredicateContext(controllerId = controllerId, sourceId = entityId)
+                                )
+                            }
+                            val alreadyTriggered = state.getBattlefield().any { id ->
+                                id !in event.blockers &&
+                                    state.getEntity(id)?.has<BlockingComponent>() == true &&
+                                    blockerMatches(id)
+                            }
+                            if (!alreadyTriggered && event.blockers.keys.any(blockerMatches)) {
+                                triggers.add(
+                                    PendingTrigger(
+                                        ability = ability,
+                                        sourceId = entityId,
+                                        sourceName = cardComponent.name,
+                                        controllerId = controllerId,
+                                        triggerContext = TriggerContext()
+                                    )
+                                )
+                            }
+                            emptySet()
+                        }
+                        for (blockerId in blockerIds) {
                             if (blockFilter != null) {
                                 if (predicateEvaluator.matches(
                                         state, projected, blockerId, blockFilter,
