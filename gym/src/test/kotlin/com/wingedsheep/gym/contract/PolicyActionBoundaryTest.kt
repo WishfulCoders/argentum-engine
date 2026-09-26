@@ -26,6 +26,7 @@ import com.wingedsheep.mtg.sets.definitions.lci.cards.AdaptiveGemguard
 import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
 import com.wingedsheep.mtg.sets.definitions.sos.cards.AjanisResponse
 import com.wingedsheep.mtg.sets.definitions.sos.cards.GroupProject
+import com.wingedsheep.mtg.sets.definitions.sos.cards.RubbleRouser
 import com.wingedsheep.mtg.sets.definitions.nph.cards.Dismember
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
@@ -545,6 +546,37 @@ class PolicyActionBoundaryTest : FunSpec({
         // Only {1}: the Phyrexian symbols need 4 life, which the policy cannot choose to pay. The
         // enumerator calls it affordable and the engine refuses it, so the mask removes it.
         castable(Color.RED, 1) shouldBe (true to false)
+    }
+
+    test("a mana ability whose extra cost cannot be paid is masked, and stays callable when it can") {
+        // Rubble Rouser ({T}, exile a card from your graveyard: add {R}) was advertised as affordable with an
+        // empty graveyard and refused at the step (mtg-draft-ai docs/43 §5.1).
+        fun rouser(graveyard: Boolean): Pair<Boolean, Boolean> {
+            val driver = GameTestDriver()
+            driver.registerCards(TestCards.all)
+            driver.registerCard(RubbleRouser)
+            driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true)
+            val player = driver.activePlayer!!
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+            val source = driver.putCreatureOnBattlefield(player, "Rubble Rouser")
+            driver.removeSummoningSickness(source)
+            if (graveyard) driver.putCardInGraveyard(player, "Mountain")
+            val simulator = GameSimulator(driver.cardRegistry)
+            val legal = LegalActionEnumerator.create(driver.cardRegistry)
+                .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+            val bare = legal.first { (it.action as? ActivateAbility)?.sourceId == source }
+            bare.isManaAbility shouldBe true
+            val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+            masked.first { (it.action as? ActivateAbility)?.sourceId == source }.affordable shouldBe
+                (bare.affordable && simulator.accepts(driver.state, bare.action))
+            // Plain {T} mana abilities are never preflighted and keep their enumerated affordability.
+            legal.zip(masked).filter { (original, _) -> original.isManaAbility &&
+                (original.action as? ActivateAbility)?.sourceId != source }
+                .forEach { (original, after) -> after.affordable shouldBe original.affordable }
+            return bare.affordable to masked.first { (it.action as? ActivateAbility)?.sourceId == source }.affordable
+        }
+        rouser(graveyard = true) shouldBe (true to true)
+        rouser(graveyard = false).second shouldBe false
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {

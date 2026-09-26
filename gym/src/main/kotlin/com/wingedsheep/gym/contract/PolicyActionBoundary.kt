@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
@@ -100,7 +101,8 @@ object PolicyActionBoundary {
      * case: advertised as affordable, refused at every target.
      */
     private fun preflightParameterFree(action: LegalAction, state: GameState, simulator: GameSimulator): LegalAction {
-        if (!action.affordable || !callable(action) || action.isManaAbility) return action
+        if (!action.affordable || !callable(action)) return action
+        if (action.isManaAbility && !costsMoreThanTap(action, state, simulator.cardRegistry)) return action
         val fixedShape = !action.hasXCost && action.additionalCostInfo == null && !action.hasConvoke &&
             action.modalEnumeration == null && !action.requiresDamageDistribution
         if (!fixedShape) return action
@@ -115,6 +117,22 @@ object PolicyActionBoundary {
         }
         val completed = ActionParameterizer.apply(action.action, params, state)
         return if (PolicyActionStager(simulator).begin(state, completed) != null) action else action.copy(affordable = false)
+    }
+
+    /**
+     * A mana ability with a cost beyond {T}, which the enumerator may not price.
+     *
+     * Rubble Rouser's "{T}, Exile a card from your graveyard: Add {R}" was advertised as affordable with an
+     * empty graveyard, and refused at the step (mtg-draft-ai `docs/43` §5.1, the smoke's negated arm). A plain
+     * {T} ability, nearly every mana ability in a game, skips the preflight: it costs one simulated step per
+     * ability per observation. An ability the source's script does not list (a granted one) is not checked.
+     */
+    private fun costsMoreThanTap(action: LegalAction, state: GameState, registry: CardRegistry): Boolean {
+        val activation = action.action as? ActivateAbility ?: return false
+        val card = state.getEntity(activation.sourceId)?.get<CardComponent>() ?: return false
+        val ability = registry.getCard(card.cardDefinitionId)?.script?.activatedAbilities
+            ?.firstOrNull { it.id == activation.abilityId } ?: return false
+        return ability.cost != AbilityCost.Tap
     }
 
     /**
