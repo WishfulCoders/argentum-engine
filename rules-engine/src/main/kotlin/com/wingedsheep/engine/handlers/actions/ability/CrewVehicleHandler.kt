@@ -177,15 +177,22 @@ class CrewVehicleHandler(
         }
 
         // Create the crew ability effect: Vehicle becomes an artifact creature
-        // with its base P/T until end of turn
+        // with its base P/T until end of turn. A */* Vehicle keeps its characteristic-defining
+        // P/T (Unlicensed Hearse: the number of cards exiled with it) as a live base P/T —
+        // stamping the missing fixed value would make it a 0/0 that dies on being crewed.
         val stats = cardDef.creatureStats
         val basePower = (stats?.power as? CharacteristicValue.Fixed)?.value ?: 0
         val baseToughness = (stats?.toughness as? CharacteristicValue.Fixed)?.value ?: 0
+        val dynamicPower = characteristicAmount(stats?.power)
+        val dynamicToughness = characteristicAmount(stats?.toughness)
+        val hasDynamicStats = dynamicPower != null || dynamicToughness != null
         val crewEffect = BecomeCreatureEffect(
             target = EffectTarget.Self,
             power = DynamicAmount.Fixed(basePower),
             toughness = DynamicAmount.Fixed(baseToughness),
-            keywords = cardDef.keywords
+            keywords = cardDef.keywords,
+            dynamicPower = if (hasDynamicStats) dynamicPower ?: DynamicAmount.Fixed(basePower) else null,
+            dynamicToughness = if (hasDynamicStats) dynamicToughness ?: DynamicAmount.Fixed(baseToughness) else null
         )
 
         // Put the crew ability on the stack
@@ -209,6 +216,13 @@ class CrewVehicleHandler(
             currentState.withPriority(action.playerId),
             allEvents
         )
+    }
+
+    /** The amount behind a printed `*` (CR 604.3), or null for a fixed printed value. */
+    private fun characteristicAmount(value: CharacteristicValue?): DynamicAmount? = when (value) {
+        is CharacteristicValue.Dynamic -> value.source
+        is CharacteristicValue.DynamicWithOffset -> DynamicAmount.Add(value.source, DynamicAmount.Fixed(value.offset))
+        is CharacteristicValue.Fixed, null -> null
     }
 
     companion object {
