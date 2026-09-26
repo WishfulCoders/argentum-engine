@@ -2274,7 +2274,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Raid Bombardment:1",
                 "trigger": {
                     "type": "AttackEvent",
                     "filter": "creature pow<=2 ctrl:you"

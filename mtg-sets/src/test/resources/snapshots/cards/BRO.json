@@ -1113,7 +1113,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Loran of the Third Path:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1122,7 +1122,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "up to one target artifact or enchantment"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -1133,13 +1133,13 @@
                     "filter": {
                         "baseFilter": "artifact|enchantment"
                     },
-                    "id": "up to one target artifact or enchantment"
+                    "id": "t0"
                 }
             }
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Loran of the Third Path:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -1159,7 +1159,7 @@
                             },
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target opponent"
+                                "name": "t1"
                             }
                         }
                     ]
@@ -1167,7 +1167,7 @@
                 "targetRequirements": [
                     {
                         "type": "TargetOpponent",
-                        "id": "target opponent"
+                        "id": "t1"
                     }
                 ]
             }

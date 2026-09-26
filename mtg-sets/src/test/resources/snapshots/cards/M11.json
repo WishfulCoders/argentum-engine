@@ -672,7 +672,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dark Tutelage:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"

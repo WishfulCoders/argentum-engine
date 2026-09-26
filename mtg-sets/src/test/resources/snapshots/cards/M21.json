@@ -323,7 +323,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Griffin Aerie:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "END"
@@ -534,7 +534,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mangara, the Diplomat:1",
                 "trigger": {
                     "type": "CreaturesAttackYouEvent",
                     "minAttackers": 2,
@@ -571,7 +571,7 @@
                 "descriptionOverride": "Whenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card."
             },
             {
-                "id": "ability_2",
+                "id": "Mangara, the Diplomat:2",
                 "trigger": {
                     "type": "NthSpellCastEvent",
                     "nthSpell": 2,

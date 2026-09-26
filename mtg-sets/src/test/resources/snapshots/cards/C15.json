@@ -78,7 +78,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Grasp of Fate:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -87,7 +87,7 @@
                     "type": "MoveUntilSourceLeaves",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "up to one target nonland permanent that player controls"
+                        "name": "t0"
                     },
                     "destination": "Exile"
                 },
@@ -97,7 +97,7 @@
                     "filter": {
                         "baseFilter": "nonland permanent ctrl:opponent"
                     },
-                    "id": "up to one target nonland permanent that player controls"
+                    "id": "t0"
                 }
             }
         ]

@@ -1055,7 +1055,10 @@
                     "type": "LoseLife",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Target",
+                        "entity": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        },
                         "numericProperty": "ManaValue"
                     },
                     "target": "Controller"
@@ -1069,7 +1072,7 @@
                     "baseFilter": {},
                     "zone": "Stack"
                 },
-                "id": "target spell with a single target"
+                "id": "t0"
             }
         ]
     },

@@ -40,7 +40,7 @@
                     "imageUri": "https://cards.scryfall.io/normal/front/d/0/d0ddbe3e-4a66-494d-9304-7471232549bf.jpg?1783927190",
                     "triggeredAbilities": [
                         {
-                            "id": "ability_1",
+                            "id": "Pest Infestation:1",
                             "trigger": {
                                 "type": "ZoneChangeEvent",
                                 "from": "Battlefield",

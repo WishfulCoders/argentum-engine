@@ -1045,7 +1045,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Detention Sphere:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1110,11 +1110,11 @@
                             ]
                         }
                     },
-                    "id": "target nonland permanent not named Detention Sphere"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Detention Sphere:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -3101,7 +3101,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stab Wound:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"

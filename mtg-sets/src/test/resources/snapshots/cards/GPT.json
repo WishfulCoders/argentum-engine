@@ -347,7 +347,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Hatching Plans:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",

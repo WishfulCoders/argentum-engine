@@ -43,7 +43,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bitterblossom:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -358,7 +358,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Shared Animosity:1",
                 "trigger": {
                     "type": "AttackEvent",
                     "filter": "creature ctrl:you"
@@ -374,7 +374,7 @@
                                 "IsCreature",
                                 {
                                     "type": "SharesCreatureTypeWith",
-                                    "entity": "Triggering"
+                                    "entity": "TriggeringEntity"
                                 }
                             ],
                             "statePredicates": [

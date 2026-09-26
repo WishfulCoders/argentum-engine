@@ -54,7 +54,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bruse Tarl, Boorish Herder:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -67,7 +67,7 @@
                             "keyword": "DOUBLE_STRIKE",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature you control"
+                                "name": "t0"
                             }
                         },
                         {
@@ -75,7 +75,7 @@
                             "keyword": "LIFELINK",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature you control"
+                                "name": "t0"
                             }
                         }
                     ]
@@ -85,12 +85,12 @@
                     "filter": {
                         "baseFilter": "creature ctrl:you"
                     },
-                    "id": "target creature you control"
+                    "id": "t0"
                 },
                 "descriptionOverride": "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn."
             },
             {
-                "id": "ability_2",
+                "id": "Bruse Tarl, Boorish Herder:2",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "Composite",
@@ -100,7 +100,7 @@
                             "keyword": "DOUBLE_STRIKE",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature you control"
+                                "name": "t1"
                             }
                         },
                         {
@@ -108,7 +108,7 @@
                             "keyword": "LIFELINK",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature you control"
+                                "name": "t1"
                             }
                         }
                     ]
@@ -118,7 +118,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:you"
                     },
-                    "id": "target creature you control"
+                    "id": "t1"
                 },
                 "descriptionOverride": "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn."
             }

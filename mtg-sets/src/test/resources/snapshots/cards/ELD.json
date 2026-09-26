@@ -880,7 +880,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Oko, Thief of Crowns:1",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": 2
@@ -893,7 +893,7 @@
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Oko, Thief of Crowns:2",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": 1
@@ -905,7 +905,7 @@
                             "type": "RemoveAllAbilities",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact or creature"
+                                "name": "t0"
                             },
                             "duration": "Permanent"
                         },
@@ -913,7 +913,7 @@
                             "type": "BecomeCreature",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact or creature"
+                                "name": "t0"
                             },
                             "power": {
                                 "type": "Fixed",
@@ -947,14 +947,14 @@
                         "filter": {
                             "baseFilter": "creature|artifact"
                         },
-                        "id": "target artifact or creature"
+                        "id": "t0"
                     }
                 ],
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Oko, Thief of Crowns:3",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": -5
@@ -963,11 +963,11 @@
                     "type": "ExchangeControl",
                     "target1": {
                         "type": "BoundVariable",
-                        "name": "target artifact or creature you control"
+                        "name": "t1"
                     },
                     "target2": {
                         "type": "BoundVariable",
-                        "name": "target creature an opponent controls with power 3 or less"
+                        "name": "t2"
                     }
                 },
                 "targetRequirements": [
@@ -976,14 +976,14 @@
                         "filter": {
                             "baseFilter": "creature|artifact ctrl:you"
                         },
-                        "id": "target artifact or creature you control"
+                        "id": "t1"
                     },
                     {
                         "type": "TargetObject",
                         "filter": {
                             "baseFilter": "creature pow<=3 ctrl:opponent"
                         },
-                        "id": "target creature an opponent controls with power 3 or less"
+                        "id": "t2"
                     }
                 ],
                 "timing": "SorcerySpeed",
@@ -1428,7 +1428,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Syr Konrad, the Grim:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature",
@@ -1450,7 +1450,7 @@
                 "descriptionOverride": "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
             },
             {
-                "id": "ability_2",
+                "id": "Syr Konrad, the Grim:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature",
@@ -1472,7 +1472,7 @@
                 "descriptionOverride": "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
             },
             {
-                "id": "ability_3",
+                "id": "Syr Konrad, the Grim:3",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature own:you",
@@ -1495,7 +1495,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_4",
+                "id": "Syr Konrad, the Grim:4",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {

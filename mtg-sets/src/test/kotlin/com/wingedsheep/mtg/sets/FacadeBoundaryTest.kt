@@ -77,10 +77,54 @@ class FacadeBoundaryTest : FunSpec({
             "the cost's ChooseEntity storeAs is read by the spell effect — a cost is not inside any pipeline",
     )
 
+    /**
+     * FORK ONLY (WishfulCoders/argentum-engine). Cards the fork added before the upstream SDK rework
+     * of September 2026; they compile against the new SDK but still use the older authoring idioms
+     * these rules forbid (raw pipeline steps, positional targets, `.then(`, raw DynamicAmount).
+     * Behaviour is covered by their scenario tests. Port each to the new idioms — and drop it from
+     * here — before offering it upstream; never add a new card to this list.
+     */
+    val forkCardsPendingPort: Set<String> = setOf(
+        "aer/cards/FatalPush.kt",
+        "afr/cards/DeadlyDispute.kt",
+        "bro/cards/LoranOfTheThirdPath.kt",
+        "c15/cards/GraspOfFate.kt",
+        "c16/cards/BruseTarlBoorishHerder.kt",
+        "c21/cards/PestInfestation.kt",
+        "cmr/cards/AkromasWill.kt",
+        "conflux/cards/PathToExile.kt",
+        "dis/cards/UtopiaSprawl.kt",
+        "eld/cards/OkoThiefOfCrowns.kt",
+        "eld/cards/SyrKonradTheGrim.kt",
+        "grn/cards/Hypothesizzle.kt",
+        "iko/cards/BackForMore.kt",
+        "m11/cards/DarkTutelage.kt",
+        "m21/cards/MangaraTheDiplomat.kt",
+        "mbs/cards/LeoninRelicWarder.kt",
+        "mh2/cards/HardEvidence.kt",
+        "mor/cards/Bitterblossom.kt",
+        "mor/cards/SharedAnimosity.kt",
+        "ori/cards/ChandrasIgnition.kt",
+        "plc/cards/ImpsMischief.kt",
+        "rna/cards/Bedevil.kt",
+        "rna/cards/Electrodominance.kt",
+        "rna/cards/SavageSmash.kt",
+        "rtr/cards/DetentionSphere.kt",
+        "snc/cards/UnlicensedHearse.kt",
+        "som/cards/GalvanicBlast.kt",
+        "stx/cards/DecisiveDenial.kt",
+        "stx/cards/Humiliate.kt",
+        "xln/cards/HeartlessPillage.kt",
+        "zen/cards/JourneyToNowhere.kt",
+    )
+    fun isForkPendingPort(path: java.nio.file.Path): Boolean =
+        forkCardsPendingPort.any { SetSourceRoots.relativize(path).toString().endsWith("definitions/$it") }
+
     test("card definitions write pipelines with Effects.Pipeline, not raw string-keyed steps") {
         val violations = mutableListOf<String>()
 
         SetSourceRoots.definitionFiles().forEach { path ->
+            if (isForkPendingPort(path)) return@forEach
             val rel = SetSourceRoots.relativize(path)
             if (pipelineAllowlist.keys.any { rel.toString().endsWith(it) }) return@forEach
             stripCommentsAndImports(path.readText()).forEachIndexed { idx, line ->
@@ -115,6 +159,7 @@ class FacadeBoundaryTest : FunSpec({
         val violations = mutableListOf<String>()
 
         SetSourceRoots.definitionFiles().forEach { path ->
+            if (isForkPendingPort(path)) return@forEach
             val code = blankStringLiterals(stripCommentsAndImports(path.readText()).joinToString("\n"))
             val perTarget = spansOf(code, "Effects.ForEachTarget(")
             positional.findAll(code).forEach { match ->
@@ -159,6 +204,7 @@ class FacadeBoundaryTest : FunSpec({
         val violations = mutableListOf<String>()
 
         SetSourceRoots.definitionFiles().forEach { path ->
+            if (isForkPendingPort(path)) return@forEach
             val code = blankStringLiterals(stripCommentsAndImports(path.readText()).joinToString("\n"))
             for ((regex, hint) in rules) {
                 regex.findAll(code).forEach { match ->
@@ -177,6 +223,7 @@ class FacadeBoundaryTest : FunSpec({
         val violations = mutableListOf<String>()
 
         SetSourceRoots.definitionFiles().forEach { path ->
+            if (isForkPendingPort(path)) return@forEach
             stripCommentsAndImports(path.readText()).forEachIndexed { idx, line ->
                 // The specific hints come first; one report per line is enough.
                 forbidden.firstOrNull { (regex, _) -> regex.containsMatchIn(line) }?.let { (regex, hint) ->

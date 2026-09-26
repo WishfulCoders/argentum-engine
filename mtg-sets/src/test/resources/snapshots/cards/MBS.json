@@ -201,7 +201,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Leonin Relic-Warder:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -210,7 +210,7 @@
                     "type": "ExileUntilLeaves",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact or enchantment"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -219,11 +219,11 @@
                     "filter": {
                         "baseFilter": "artifact|enchantment"
                     },
-                    "id": "target artifact or enchantment"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Leonin Relic-Warder:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"

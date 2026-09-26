@@ -1245,11 +1245,11 @@
                         "type": "Fight",
                         "target1": {
                             "type": "BoundVariable",
-                            "name": "target creature you control"
+                            "name": "t0"
                         },
                         "target2": {
                             "type": "BoundVariable",
-                            "name": "target creature you don't control"
+                            "name": "t1"
                         }
                     },
                     "targetRequirements": [
@@ -1258,14 +1258,14 @@
                             "filter": {
                                 "baseFilter": "creature ctrl:you"
                             },
-                            "id": "target creature you control"
+                            "id": "t0"
                         },
                         {
                             "type": "TargetObject",
                             "filter": {
                                 "baseFilter": "creature ctrl:opponent"
                             },
-                            "id": "target creature you don't control"
+                            "id": "t1"
                         }
                     ],
                     "description": "Target creature you control fights target creature you don't control."
@@ -1285,7 +1285,7 @@
                                 "baseFilter": "noncreature",
                                 "zone": "Stack"
                             },
-                            "id": "target noncreature spell"
+                            "id": "t2"
                         }
                     ],
                     "description": "Counter target noncreature spell unless its controller pays {3}."
@@ -3032,7 +3032,7 @@
                     "type": "RevealHand",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target opponent"
+                        "name": "t0"
                     }
                 },
                 {
@@ -3091,7 +3091,7 @@
                         },
                         {
                             "type": "AddCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "count": 1,
                             "target": {
                                 "type": "PipelineTarget",
@@ -3105,7 +3105,7 @@
         "targetRequirements": [
             {
                 "type": "TargetOpponent",
-                "id": "target opponent"
+                "id": "t0"
             }
         ]
     },

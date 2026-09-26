@@ -3023,7 +3023,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Unlicensed Hearse:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "ForEach",
@@ -3047,7 +3047,7 @@
                             "baseFilter": {},
                             "zone": "Graveyard"
                         },
-                        "id": "up to two target cards from a single graveyard",
+                        "id": "t0",
                         "sameOwner": true
                     }
                 ]

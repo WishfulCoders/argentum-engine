@@ -145,7 +145,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Blind Obedience:1",
                 "trigger": "SpellCastEvent",
                 "binding": "ANY",
                 "effect": {
