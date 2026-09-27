@@ -63,6 +63,8 @@ object FlashTypeGrants {
         cardRegistry: CardRegistry,
         predicateEvaluator: PredicateEvaluator,
         conditionEvaluator: ConditionEvaluator,
+        /** [granters] for this state when the caller already has it; computed here otherwise. */
+        granters: List<Granter>? = null,
     ): Boolean {
         val spellOwner = state.getEntity(spellCardId)?.get<ControllerComponent>()?.playerId
             ?: return false
@@ -94,26 +96,49 @@ object FlashTypeGrants {
         // controller (CR 109.5), so a stolen granter must grant to its new controller, and
         // `controlledBattlefield` also drops phased-out permanents (CR 702.26b — a phased-out
         // permanent "is treated as though it does not exist").
+        for ((playerId, entityId) in granters ?: granters(state, cardRegistry)) {
+            val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
+            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val classLevel = state.getEntity(entityId)?.get<ClassLevelComponent>()?.currentLevel
+            for (raw in cardDef.script.effectiveStaticAbilities(classLevel)) {
+                val ability = activeGrant(state, raw, entityId, playerId, conditionEvaluator)
+                    ?: continue
+                // If controllerOnly, only the permanent's controller benefits.
+                if (ability.controllerOnly && playerId != spellOwner) continue
+                // "The first [type] spell you cast each turn" — the grant covers only one
+                // spell per turn (Radagast of Rhosgobel).
+                if (!nthGateAllows(state, spellOwner, ability, predicateEvaluator)) continue
+                if (predicateEvaluator.matches(state, state.projectedState, spellCardId, ability.filter, context)) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    /** A battlefield permanent that prints a flash grant, with the player controlling it. */
+    data class Granter(val controllerId: EntityId, val permanentId: EntityId)
+
+    /**
+     * The permanents step 3 of [hasGrantedFlash] reads, in the order it reads them: every player's
+     * controlled battlefield in turn order, keeping only permanents printing a [GrantFlashToSpellType]
+     * (bare or conditional). Any other permanent yields nothing there, so the scan over this list is
+     * the scan over the whole battlefield. It depends on the state alone, so a caller asking about
+     * many cards in one state (legal-action enumeration asks once per card in hand) builds it once.
+     */
+    fun granters(state: GameState, cardRegistry: CardRegistry): List<Granter> = buildList {
         for (playerId in state.turnOrder) {
             for (entityId in state.controlledBattlefield(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
                 val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
                 val classLevel = state.getEntity(entityId)?.get<ClassLevelComponent>()?.currentLevel
-                for (raw in cardDef.script.effectiveStaticAbilities(classLevel)) {
-                    val ability = activeGrant(state, raw, entityId, playerId, conditionEvaluator)
-                        ?: continue
-                    // If controllerOnly, only the permanent's controller benefits.
-                    if (ability.controllerOnly && playerId != spellOwner) continue
-                    // "The first [type] spell you cast each turn" — the grant covers only one
-                    // spell per turn (Radagast of Rhosgobel).
-                    if (!nthGateAllows(state, spellOwner, ability, predicateEvaluator)) continue
-                    if (predicateEvaluator.matches(state, state.projectedState, spellCardId, ability.filter, context)) {
-                        return true
-                    }
+                val grants = cardDef.script.effectiveStaticAbilities(classLevel).any { raw ->
+                    raw is GrantFlashToSpellType ||
+                        (raw is ConditionalStaticAbility && raw.ability is GrantFlashToSpellType)
                 }
+                if (grants) add(Granter(playerId, entityId))
             }
         }
-        return false
     }
 
     /**

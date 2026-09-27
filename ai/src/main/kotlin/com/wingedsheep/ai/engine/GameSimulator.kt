@@ -331,7 +331,9 @@ class GameSimulator(
                     val response = try {
                         isResponding = true
                         policy.respond(state, priorityPlayerId) {
-                            enumerator.enumerate(state, priorityPlayerId, EnumerationMode.ACTIONS_ONLY)
+                            enumerator.enumerate(
+                                state, priorityPlayerId, EnumerationMode.ACTIONS_ONLY, includeManaAbilities = false
+                            )
                         }
                     } finally {
                         isResponding = false
