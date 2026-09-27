@@ -220,7 +220,7 @@ check:
 # Implement a whole set with headless Claude Code, one fresh session per step (e.g. just set-loop ecl)
 [group: 'ai']
 set-loop CODE:
-    scripts/set-loop {{CODE}}
+    scripts/set-loop "{{CODE}}"
 
 # Report implemented vs missing cards for a set (e.g., just card-status --set BLB --list)
 [group: 'build']

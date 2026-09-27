@@ -604,6 +604,24 @@ value class CounterType(val name: String) {
          */
         val IMPOSTOR = CounterType("IMPOSTOR")
 
+        /**
+         * Devotion counter (CHK — Bloodthirsty Ogre). A tally with no inherent rule: one tap
+         * ability adds one, another reads the count back as the size of a -X/-X.
+         */
+        val DEVOTION = CounterType("DEVOTION")
+
+        /**
+         * Theft counter (CHK — Night Dealings). A tally with no inherent rule: damage your sources
+         * deal to other players adds them, and an activated cost removes X of them.
+         */
+        val THEFT = CounterType("THEFT")
+
+        /**
+         * Training counter (CHK — Sensei Golden-Tail). A marker with no inherent rule: it records
+         * which creatures the Sensei trained; removing it undoes nothing.
+         */
+        val TRAINING = CounterType("TRAINING")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -713,6 +731,9 @@ value class CounterType(val name: String) {
             BLOODLINE,
             INVITATION,
             IMPOSTOR,
+            DEVOTION,
+            THEFT,
+            TRAINING,
         )
 
         /**

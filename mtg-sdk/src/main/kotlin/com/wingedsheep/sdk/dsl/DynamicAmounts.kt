@@ -56,6 +56,14 @@ object DynamicAmounts {
     fun castChoice(slot: com.wingedsheep.sdk.scripting.ChoiceSlot): DynamicAmount = DynamicAmount.CastChoice(slot)
 
     /**
+     * The number of creatures that convoked this object (CR 702.51c) — Knight-Errant of Eos,
+     * Ancient Imperiosaur. Counts every creature tapped for convoke, including any that has since
+     * left the battlefield; 0 when it wasn't convoked.
+     */
+    fun convokedCreatureCount(): DynamicAmount =
+        DynamicAmount.CastChoice(com.wingedsheep.sdk.scripting.ChoiceSlot.CONVOKED_CREATURES)
+
+    /**
      * A number an earlier effect of this resolution stored under [name] (a fight's excess damage,
      * a clash's mana values, a guess). Inside `Effects.Pipeline { }` read the step's `NumberSlot`
      * instead.
@@ -714,6 +722,14 @@ object DynamicAmounts {
      */
     fun artifactsDiedThisTurn(player: Player = Player.Each): DynamicAmount =
         DynamicAmount.TurnTracking(player, TurnTracker.ARTIFACTS_DIED)
+
+    /**
+     * Permanents of any type (tokens included) put into a graveyard from the battlefield this
+     * turn. Defaults to [Player.Each], the game-wide count ("if a permanent was put into a
+     * graveyard from the battlefield this turn", Ashen Reaper).
+     */
+    fun permanentsPutIntoGraveyardFromBattlefieldThisTurn(player: Player = Player.Each): DynamicAmount =
+        DynamicAmount.TurnTracking(player, TurnTracker.PERMANENTS_PUT_INTO_GRAVEYARD_FROM_BATTLEFIELD)
 
     fun opponentsWhoLostLifeThisTurn(): DynamicAmount =
         DynamicAmount.TurnTracking(Player.You, TurnTracker.OPPONENTS_WHO_LOST_LIFE)

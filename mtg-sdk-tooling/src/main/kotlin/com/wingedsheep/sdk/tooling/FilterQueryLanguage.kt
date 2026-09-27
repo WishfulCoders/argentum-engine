@@ -35,7 +35,7 @@ import kotlinx.serialization.json.*
  * `tou>=4`, `tou<=2`         (toughness)
  *
  * ### State predicates:
- * `tapped`, `untapped`, `attacking`, `blocking`, `facedown`
+ * `tapped`, `untapped`, `attacking`, `blocking`, `facedown`, `transformed`
  *
  * ### Keywords:
  * `kw:flying`, `kw:haste`, `kw:trample`
@@ -64,6 +64,7 @@ object FilterQueryLanguage {
         "nontoken" to "IsNontoken",
         "basicland" to "IsBasicLand",
         "planeswalker" to "IsPlaneswalker",
+        "battle" to "IsBattle",
     )
 
     // Reverse: SerialName → query term
@@ -76,6 +77,7 @@ object FilterQueryLanguage {
         "attacking" to "IsAttacking",
         "blocking" to "IsBlocking",
         "facedown" to "IsFaceDown",
+        "transformed" to "IsTransformed",
     )
     private val STATE_PREDICATE_NAMES = STATE_PREDICATES.entries.associate { (k, v) -> v to k }
 

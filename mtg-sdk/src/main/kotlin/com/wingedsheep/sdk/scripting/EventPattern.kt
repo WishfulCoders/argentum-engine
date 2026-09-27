@@ -2099,21 +2099,31 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
     }
 
     /**
-     * When a permanent transforms.
+     * When a permanent transforms (CR 701.27).
      * [intoBackFace] filters direction: true = to back, false = to front, null = either.
+     * [filter] narrows *which* permanent under a non-SELF binding ("a permanent you control
+     * transforms into a Phyrexian" — Norn's Inquisitor). It is matched against the permanent's
+     * characteristics *after* it turned over, so "transforms into a Phyrexian" is a filter on the
+     * new face; its "you control" resolves against the trigger's controller.
      */
     @SerialName("TransformEvent")
     @Serializable
     data class TransformEvent(
-        val intoBackFace: Boolean? = null
+        val intoBackFace: Boolean? = null,
+        val filter: GameObjectFilter = GameObjectFilter.Any
     ) : EventPattern {
         override val description: String = buildString {
-            append("this transforms")
+            append(if (filter == GameObjectFilter.Any) "this transforms" else "a ${filter.description} transforms")
             when (intoBackFace) {
                 true -> append(" into its back face")
                 false -> append(" into its front face")
                 null -> {}
             }
+        }
+
+        override fun applyTextReplacement(replacer: TextReplacer): EventPattern {
+            val newFilter = filter.applyTextReplacement(replacer)
+            return if (newFilter !== filter) copy(filter = newFilter) else this
         }
     }
 
@@ -2911,19 +2921,29 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * to a player. Batching trigger — fires at most once per event batch regardless of how
      * many matching creatures connected.
      *
+     * It fires once per damaged recipient: each player (and, with [orBattle], each battle) dealt
+     * combat damage by one or more matching creatures. The matching creatures that hit that
+     * recipient are the trigger's captured collection ("one of those Dragons").
+     *
      * Examples:
      *   → OneOrMoreDealCombatDamageToPlayerEvent(sourceFilter = GameObjectFilter.Creature.withSubtype("Bird"))
      *     "Whenever one or more Birds you control deal combat damage to a player"
+     *   → OneOrMoreDealCombatDamageToPlayerEvent(GameObjectFilter.Creature.withSubtype("Dragon"), orBattle = true)
+     *     "Whenever one or more Dragons you control deal combat damage to a player or battle"
+     *     (Zurgo and Ojutai)
      */
     @SerialName("OneOrMoreDealCombatDamageToPlayerEvent")
     @Serializable
     data class OneOrMoreDealCombatDamageToPlayerEvent(
-        val sourceFilter: GameObjectFilter = GameObjectFilter.Companion.Creature
+        val sourceFilter: GameObjectFilter = GameObjectFilter.Companion.Creature,
+        /** Also count combat damage dealt to a battle — "to a player or battle". */
+        val orBattle: Boolean = false
     ) : EventPattern {
         override val description: String = buildString {
             append("one or more ")
             append(describeObjectForEvent(sourceFilter))
             append(" you control deal combat damage to a player")
+            if (orBattle) append(" or battle")
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): EventPattern {
@@ -3029,6 +3049,13 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * [excludeSelf] models the "other" in "one or more *other* creatures you control die":
      * the trigger's own source death does not count toward the batch.
      *
+     * The [filter] decides which permanent types count — it is not creature-only. With a
+     * noncreature filter this is "one or more [filter] are put into a graveyard from the
+     * battlefield": `GameObjectFilter.CreatureOrArtifact` is Seer of Stolen Sight's "one or more
+     * artifacts and/or creatures you control are put into a graveyard from the battlefield", and a
+     * dying noncreature artifact token counts. The filter is matched against each permanent's
+     * last-known information, by the same matcher as the per-object zone-change trigger.
+     *
      * Detection is handled specially by TriggerDetector: after processing individual events,
      * it groups battlefield→graveyard zone changes by each creature's last-known controller,
      * checks the creature filter, and fires the trigger at most once per qualifying controller.
@@ -3052,12 +3079,15 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             append(
                 when (filter.controllerPredicate) {
                     com.wingedsheep.sdk.scripting.predicates.ControllerPredicate.ControlledByOpponent ->
-                        " an opponent controls die"
-                    com.wingedsheep.sdk.scripting.predicates.ControllerPredicate.ControlledByAny ->
-                        " die"
-                    else -> " you control die"
+                        " an opponent controls"
+                    com.wingedsheep.sdk.scripting.predicates.ControllerPredicate.ControlledByAny -> ""
+                    else -> " you control"
                 }
             )
+            // "Die" is creature vocabulary (CR 700.4); anything wider is spelled out.
+            val creaturesOnly = filter.anyOf.isEmpty() &&
+                com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsCreature in filter.cardPredicates
+            append(if (creaturesOnly) " die" else " are put into a graveyard from the battlefield")
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): EventPattern {

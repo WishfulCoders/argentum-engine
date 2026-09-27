@@ -11,6 +11,7 @@ import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.stack.attachmentIdsOf
 import com.wingedsheep.engine.state.components.stack.captureLastKnown
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.DamageComponent
@@ -312,8 +313,17 @@ internal class CombatDamageManager(
         // The set is deliberately step-scoped: the first-strike and regular combat damage steps are
         // separate events that each call `applyCombatDamage`, so each heals in turn.
         val healProcessedTargets = mutableSetOf<EntityId>()
+        // Life owed by "prevent the next N damage … you gain life equal to the damage prevented
+        // this way" shields (Candles' Glow), summed over the step and gained once per controller
+        // afterwards — the step is one simultaneous damage event (CR 510.2).
+        val preventionLifeGains = linkedMapOf<EntityId, Int>()
         for (assignment in finalAssignments) {
-            newState = applySingleAssignment(newState, assignment, events, healProcessedTargets)
+            newState = applySingleAssignment(newState, assignment, events, healProcessedTargets, preventionLifeGains)
+        }
+        for ((controllerId, gained) in preventionLifeGains) {
+            val (gainedState, gainEvent) = DamageUtils.gainLife(newState, controllerId, gained, predicateEvaluator = predicateEvaluator)
+            newState = gainedState
+            gainEvent?.let { events.add(it) }
         }
 
         // Consume one-shot redirect effects for creatures that dealt damage
@@ -872,7 +882,9 @@ internal class CombatDamageManager(
         assignment: CombatDamageAssignment,
         events: MutableList<GameEvent>,
         /** Recipients whose heal-on-damage replacement was already evaluated this step — see [applyCombatDamage]. */
-        healProcessedTargets: MutableSet<EntityId>
+        healProcessedTargets: MutableSet<EntityId>,
+        /** Life owed to life-gaining prevention shields' controllers this step — see [applyCombatDamage]. */
+        preventionLifeGains: MutableMap<EntityId, Int>
     ): GameState {
         if (assignment.amount <= 0) return state
 
@@ -892,18 +904,19 @@ internal class CombatDamageManager(
         return when {
             isPlayer -> applyDamageToPlayer(
                 state, assignment.sourceId, assignment.targetId, amplifiedAmount, assignment.amount,
-                events, healProcessedTargets
+                events, healProcessedTargets, preventionLifeGains
             )
             isPlaneswalker -> applyDamageByRemovingCounters(
                 state, assignment.sourceId, assignment.targetId, amplifiedAmount,
-                com.wingedsheep.sdk.core.CounterType.LOYALTY, events
+                com.wingedsheep.sdk.core.CounterType.LOYALTY, events, preventionLifeGains
             )
             isBattle -> applyDamageByRemovingCounters(
                 state, assignment.sourceId, assignment.targetId, amplifiedAmount,
-                com.wingedsheep.sdk.core.CounterType.DEFENSE, events
+                com.wingedsheep.sdk.core.CounterType.DEFENSE, events, preventionLifeGains
             )
             else -> applyDamageToCreature(
-                state, assignment.sourceId, assignment.targetId, amplifiedAmount, events, healProcessedTargets
+                state, assignment.sourceId, assignment.targetId, amplifiedAmount, events, healProcessedTargets,
+                preventionLifeGains
             )
         }
     }
@@ -1045,7 +1058,8 @@ internal class CombatDamageManager(
         amplifiedAmount: Int,
         originalAmount: Int,
         events: MutableList<GameEvent>,
-        healProcessedTargets: MutableSet<EntityId>
+        healProcessedTargets: MutableSet<EntityId>,
+        preventionLifeGains: MutableMap<EntityId, Int>
     ): GameState {
         var newState = state
 
@@ -1091,11 +1105,13 @@ internal class CombatDamageManager(
         }
 
         // Prevention shields
-        val (shieldState, effectiveAmount) = DamageUtils.applyDamagePreventionShields(
+        val shieldResult = DamageUtils.applyDamagePreventionShields(
             newState, targetId, amplifiedAmount, isCombatDamage = true, sourceId = sourceId,
             predicateEvaluator = predicateEvaluator
         )
-        newState = shieldState
+        newState = shieldResult.state
+        val effectiveAmount = shieldResult.remainingDamage
+        shieldResult.lifeGains.forEach { (controllerId, gained) -> preventionLifeGains.merge(controllerId, gained, Int::plus) }
         if (effectiveAmount <= 0) return newState
 
         // Damage redirection (Glarecaster, Zealous Inquisitor). inBatch=true so a one-shot
@@ -1156,7 +1172,8 @@ internal class CombatDamageManager(
 
         val sourceName = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: "Creature"
         events.add(DamageDealtEvent(sourceId, targetId, effectiveAmount, true,
-            sourceName = sourceName, targetName = "Player", targetIsPlayer = true))
+            sourceName = sourceName, targetName = "Player", targetIsPlayer = true,
+            sourceAttachmentIds = attachmentIdsOf(state, sourceId)))
         events.add(LifeChangedEvent(targetId, currentLife, newLife, LifeChangeReason.DAMAGE))
 
         // Commander damage (CR 903.10a)
@@ -1193,18 +1210,21 @@ internal class CombatDamageManager(
         targetId: EntityId,
         amplifiedAmount: Int,
         counterType: com.wingedsheep.sdk.core.CounterType,
-        events: MutableList<GameEvent>
+        events: MutableList<GameEvent>,
+        preventionLifeGains: MutableMap<EntityId, Int>
     ): GameState {
         if (targetId !in state.getBattlefield()) return state
         if (amplifiedAmount <= 0) return state
         var newState = state
 
         // Prevention shields
-        val (shieldState, effectiveAmount) = DamageUtils.applyDamagePreventionShields(
+        val shieldResult = DamageUtils.applyDamagePreventionShields(
             newState, targetId, amplifiedAmount, isCombatDamage = true, sourceId = sourceId,
             predicateEvaluator = predicateEvaluator
         )
-        newState = shieldState
+        newState = shieldResult.state
+        val effectiveAmount = shieldResult.remainingDamage
+        shieldResult.lifeGains.forEach { (controllerId, gained) -> preventionLifeGains.merge(controllerId, gained, Int::plus) }
         if (effectiveAmount <= 0) return newState
 
         return removeCountersForDamage(newState, sourceId, targetId, effectiveAmount, counterType, events)
@@ -1259,7 +1279,8 @@ internal class CombatDamageManager(
         val targetName = newState.getEntity(targetId)?.get<CardComponent>()?.name ?: defaultName
         events.add(DamageDealtEvent(sourceId, targetId, amount, true,
             sourceName = sourceName, targetName = targetName, targetIsPlayer = false,
-            targetLastKnown = captureLastKnown(state, targetId)))
+            targetLastKnown = captureLastKnown(state, targetId),
+            sourceAttachmentIds = attachmentIdsOf(state, sourceId)))
         val removed = amount.coerceAtMost(currentCount)
         if (counterType == com.wingedsheep.sdk.core.CounterType.LOYALTY) {
             events.add(LoyaltyChangedEvent(targetId, targetName, -removed))
@@ -1281,17 +1302,20 @@ internal class CombatDamageManager(
         targetId: EntityId,
         amplifiedAmount: Int,
         events: MutableList<GameEvent>,
-        healProcessedTargets: MutableSet<EntityId>
+        healProcessedTargets: MutableSet<EntityId>,
+        preventionLifeGains: MutableMap<EntityId, Int>
     ): GameState {
         if (targetId !in state.getBattlefield()) return state
         var newState = state
 
         // Prevention shields
-        val (shieldState, effectiveAmount) = DamageUtils.applyDamagePreventionShields(
+        val shieldResult = DamageUtils.applyDamagePreventionShields(
             newState, targetId, amplifiedAmount, isCombatDamage = true, sourceId = sourceId,
             predicateEvaluator = predicateEvaluator
         )
-        newState = shieldState
+        newState = shieldResult.state
+        val effectiveAmount = shieldResult.remainingDamage
+        shieldResult.lifeGains.forEach { (controllerId, gained) -> preventionLifeGains.merge(controllerId, gained, Int::plus) }
         if (effectiveAmount <= 0) return newState
 
         // Damage-to-counters self-replacement (Anti-Venom): "if damage would be dealt to <this
@@ -1379,7 +1403,8 @@ internal class CombatDamageManager(
             }
             val sourceName = newState.getEntity(sourceId)?.get<CardComponent>()?.name ?: "Creature"
             events.add(DamageDealtEvent(sourceId, targetId, amount, true,
-                sourceName = sourceName, targetName = "Player", targetIsPlayer = true))
+                sourceName = sourceName, targetName = "Player", targetIsPlayer = true,
+                sourceAttachmentIds = attachmentIdsOf(newState, sourceId)))
             events.add(LifeChangedEvent(targetId, currentLife, newLife, LifeChangeReason.DAMAGE))
 
             // Commander damage (CR 903.10a)
@@ -1492,7 +1517,8 @@ internal class CombatDamageManager(
             // damage") rely on this last-known information to still match (CR 603.10).
             events.add(DamageDealtEvent(sourceId, targetId, amount, true,
                 sourceName = sourceName, targetName = targetName, targetIsPlayer = false, targetWasFaceDown = targetIsFaceDown,
-                targetLastKnown = captureLastKnown(newState, targetId), excessAmount = excess))
+                targetLastKnown = captureLastKnown(newState, targetId), excessAmount = excess,
+                sourceAttachmentIds = attachmentIdsOf(newState, sourceId)))
         }
 
         return newState
@@ -1547,7 +1573,8 @@ internal class CombatDamageManager(
         newState = DamageUtils.trackDamageDealt(newState, sourceId, originalAmount, isCombatDamage = true)
         val sourceName = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: "Creature"
         events.add(DamageDealtEvent(sourceId, attackerController, originalAmount, true,
-            sourceName = sourceName, targetName = "Player", targetIsPlayer = true))
+            sourceName = sourceName, targetName = "Player", targetIsPlayer = true,
+            sourceAttachmentIds = attachmentIdsOf(state, sourceId)))
         events.add(LifeChangedEvent(attackerController, attackerControllerLife, newLife, LifeChangeReason.DAMAGE))
 
         // Commander damage (CR 903.10a) — reflection still counts as combat damage from the commander

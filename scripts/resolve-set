@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Resolve a set code, set directory, or set name to its lowercase set code.
+
+    scripts/resolve-set MOM                    # -> mom
+    scripts/resolve-set march                  # -> mom (unique match on the set's displayName)
+    scripts/resolve-set "March of the Machine" # -> mom
+
+Prints the code on stdout and exits 0 on a unique match; otherwise lists the candidates on stderr
+and exits 1. Only scaffolded sets resolve — scaffold a new one with the create-backlog-for-set skill.
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from set_dirs import dir_for_codes, set_dir_codes, set_dir_paths  # noqa: E402
+
+DISPLAY_NAME_RE = re.compile(r'override\s+val\s+displayName\s*=\s*"([^"]+)"')
+
+
+def display_names() -> dict[str, str]:
+    """Map each lowercase set code to its `MtgSet.displayName` (the directory name if none)."""
+    names: dict[str, str] = {}
+    paths = set_dir_paths()
+    for dir_name, code in set_dir_codes().items():
+        name = dir_name
+        for set_kt in sorted(paths[dir_name].glob("*Set.kt")):
+            m = DISPLAY_NAME_RE.search(set_kt.read_text(encoding="utf-8"))
+            if m:
+                name = m.group(1)
+                break
+        names[code] = name
+    return names
+
+
+def normalise(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 1 or not argv[0].strip():
+        print(__doc__, file=sys.stderr)
+        return 2
+    query = argv[0].strip()
+
+    dirs = dir_for_codes()
+    if query.lower() in dirs:
+        print(query.lower())
+        return 0
+    codes = set_dir_codes()
+    if query in codes:
+        print(codes[query])
+        return 0
+
+    names = display_names()
+    q = normalise(query)
+    exact = [c for c, n in names.items() if normalise(n) == q]
+    hits = exact or [c for c, n in names.items() if q and q in normalise(n)]
+    if len(hits) == 1:
+        print(hits[0])
+        return 0
+
+    if hits:
+        print(f"resolve-set: '{query}' matches several sets — pass the code:", file=sys.stderr)
+        for c in sorted(hits):
+            print(f"  {c.upper():6} {names[c]}", file=sys.stderr)
+    else:
+        print(
+            f"resolve-set: no scaffolded set with code, directory, or name '{query}' "
+            "(scaffold it first with the create-backlog-for-set skill)",
+            file=sys.stderr,
+        )
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

@@ -497,6 +497,9 @@ class BeginningPhaseManager(
         StatePredicate.PutIntoGraveyardFromBattlefieldThisTurn -> false
         // Combat-partner history is cleared at cleanup, so nothing has blocked anything yet this turn.
         is StatePredicate.BlockedOrWasBlockedByEntityThisTurn -> false
+        // Untap candidates are battlefield permanents, so back face up is the whole CR 701.27g test.
+        StatePredicate.IsTransformed ->
+            container.get<com.wingedsheep.engine.state.components.identity.DoubleFacedComponent>()?.isBack == true
         // No granter context in untap filtering — granter-relative exclusion is resolution-time only.
         StatePredicate.IsGrantingPermanent -> false
         // Nor a trigger context — trigger-relative exclusion is resolution-time only too.
@@ -553,6 +556,8 @@ class BeginningPhaseManager(
         // narrow untap helper deliberately does not receive. Fail closed rather than untapping an
         // unrelated permanent.
         is StatePredicate.HasLeastManaValueAmong -> false
+        // Protector scoping needs a "you" this helper has no context for; fail closed.
+        is StatePredicate.IsProtectedBy -> false
         // Untap-during-other-untap-step filters only meaningfully restrict by counter type
         // and structural combinators. Tap / combat / face-down / damage-history / equipment
         // predicates would either be redundant at this point in the turn (e.g. IsTapped is
@@ -567,6 +572,7 @@ class BeginningPhaseManager(
         StatePredicate.IsAttacking,
         StatePredicate.IsAttackingAlone,
         StatePredicate.IsAttackingAnOpponent,
+        StatePredicate.IsAttackingABattle,
         StatePredicate.IsAttackingYouOrYourPlaneswalkers,
         StatePredicate.IsAttackingEnchantedPlayer,
         StatePredicate.IsBlocking,
@@ -585,6 +591,7 @@ class BeginningPhaseManager(
         StatePredicate.WasDealtDamageBySourceThisTurn,
         StatePredicate.DealtDamageToSourceControllerThisTurn,
         StatePredicate.AttackedThisTurn,
+        StatePredicate.AttackedABattleThisTurn,
         StatePredicate.CouldNotHaveAttackedThisTurn,
         StatePredicate.AttackedLastTurn,
         StatePredicate.AttackedThisCombat,

@@ -1,6 +1,9 @@
 package com.wingedsheep.engine.handlers
 
 import com.wingedsheep.engine.state.components.battlefield.chosenCreatureType
+import com.wingedsheep.sdk.scripting.ChoiceSlot
+import com.wingedsheep.engine.state.components.battlefield.entitiesChoice
+import com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent
 import com.wingedsheep.engine.state.components.battlefield.chosenColor
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
 import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
@@ -173,14 +176,18 @@ class PredicateEvaluator(
      * P/T comparisons, "has a non-mana activated ability", …) reports
      * *unanswerable* rather than guessing — see [matchesSnapshotPredicate] — and an unanswerable
      * predicate makes the whole filter fail to match, which is the same answer the caller got before
-     * any snapshot existed. State predicates (tapped, attacking, …) describe a battlefield presence
-     * the object no longer has, so a filter carrying one never matches a snapshot.
+     * any snapshot existed. Of the state predicates only the combat status the snapshot freezes —
+     * attacking, blocking — is answered (see [matchesSnapshotState]): a blocker killed by the damage
+     * is still "a blocking creature" to the trigger that damage fired (CR 603.10). Every other state
+     * predicate (tapped, …) describes a battlefield presence the object no longer has and is
+     * unanswerable.
      *
      * **Caller invariant: pass a snapshot captured with the state-aware
      * [com.wingedsheep.engine.state.components.stack.captureEntitySnapshots] overload** (the
      * `(ids, state)` one), and populate [EntitySnapshot.typeLine] and [EntitySnapshot.keywords] on
      * top of it. The unanswerable-reports-null discipline above cannot cover
-     * [EntitySnapshot.wasToken] or [EntitySnapshot.keywords]: both default to a *legitimate* value
+     * [EntitySnapshot.wasToken], [EntitySnapshot.keywords], [EntitySnapshot.wasAttacking] or
+     * [EntitySnapshot.wasBlocking]: each defaults to a *legitimate* value
      * (`false` / empty) with no "was never captured" state, so a snapshot taken by the projection-
      * only overload answers `IsToken` false, `IsNontoken` true and every `HasKeyword` false with
      * full confidence rather than reporting unknown. There is one caller today
@@ -197,7 +204,7 @@ class PredicateEvaluator(
         filter.controllerPredicate?.let { controllerPred ->
             if (!matchesSnapshotController(state, snapshot, controllerPred, context)) return false
         }
-        if (filter.statePredicates.isNotEmpty()) return false
+        if (!filter.statePredicates.all { matchesSnapshotState(snapshot, it) == true }) return false
         if (!filter.cardPredicates.all { matchesSnapshotPredicate(snapshot, it) == true }) return false
         if (filter.anyOf.isNotEmpty()) {
             return filter.anyOf.any { matchesSnapshot(state, snapshot, it, context) }
@@ -213,7 +220,8 @@ class PredicateEvaluator(
      * A [Recipient.Player] reads its [Player] reference relative to [context] — `You` is
      * [PredicateContext.controllerId], `EachOpponent` a real opponent of that player (a teammate in
      * a team game is not one, CR 102.3), `EnchantedPlayer` the player the context's source is
-     * attached to. A [Recipient.Object] is a [matches] of its filter against the live object, with
+     * attached to. [Recipient.AnotherPlayer] is any player but that controller — teammates
+     * included. A [Recipient.Object] is a [matches] of its filter against the live object, with
      * the context's [PredicateContext.sourceId] answering `sourceItself()` /
      * `attachedToBySource()`; an object that isn't on the battlefield yet (a creature entering with
      * counters) reads its own characteristics, as [matches] always does off the battlefield.
@@ -237,6 +245,7 @@ class PredicateEvaluator(
         }
         is Recipient.Player ->
             entityId in state.turnOrder && matchesPlayer(state, projected, recipient.player, entityId, context)
+        Recipient.AnotherPlayer -> entityId in state.turnOrder && entityId != context.controllerId
         is Recipient.Object -> when {
             entityId in state.turnOrder -> false
             lastKnown != null && entityId !in state.getBattlefield() ->
@@ -268,6 +277,28 @@ class PredicateEvaluator(
     }
 
     /**
+     * Tri-state evaluation of one [StatePredicate] against frozen last-known information — the
+     * state-predicate sibling of [matchesSnapshotPredicate], with the same null-means-unknown
+     * discipline. Only the combat status [EntitySnapshot] freezes is answered: attacking
+     * ([EntitySnapshot.wasAttacking]) and blocking ([EntitySnapshot.wasBlocking]).
+     */
+    private fun matchesSnapshotState(snapshot: EntitySnapshot, predicate: StatePredicate): Boolean? =
+        when (predicate) {
+            StatePredicate.IsAttacking -> snapshot.wasAttacking
+            StatePredicate.IsBlocking -> snapshot.wasBlocking
+            is StatePredicate.Not -> matchesSnapshotState(snapshot, predicate.predicate)?.not()
+            is StatePredicate.And -> {
+                val results = predicate.predicates.map { matchesSnapshotState(snapshot, it) }
+                if (false in results) false else if (null in results) null else true
+            }
+            is StatePredicate.Or -> {
+                val results = predicate.predicates.map { matchesSnapshotState(snapshot, it) }
+                if (true in results) true else if (null in results) null else false
+            }
+            else -> null
+        }
+
+    /**
      * Tri-state evaluation of one [CardPredicate] against frozen last-known information:
      * `true`/`false` when [EntitySnapshot] carries the characteristic, **null** when it doesn't.
      *
@@ -286,6 +317,7 @@ class PredicateEvaluator(
             CardPredicate.IsInstant -> typeLine?.isInstant
             CardPredicate.IsSorcery -> typeLine?.isSorcery
             CardPredicate.IsPlaneswalker -> typeLine?.cardTypes?.contains(CardType.PLANESWALKER)
+            CardPredicate.IsBattle -> typeLine?.isBattle
             CardPredicate.IsPermanent -> typeLine?.isPermanent
             CardPredicate.IsLegendary -> typeLine?.isLegendary
             CardPredicate.IsNonlegendary -> typeLine?.isLegendary?.not()
@@ -392,11 +424,13 @@ class PredicateEvaluator(
             is CardPredicate.SharesCreatureTypeWith,
             CardPredicate.SharesCreatureTypeWithSource,
             CardPredicate.SharesCreatureTypeWithTriggeringEntity,
+            CardPredicate.ConvokedSource,
             is CardPredicate.SharesManaValueWith,
             is CardPredicate.SharesNameWith,
             CardPredicate.SharesNameWithLinkedExile,
             is CardPredicate.SharesNameWithPermanentYouControl,
             is CardPredicate.TargetsMatching,
+            is CardPredicate.TargetsPlayer,
             is CardPredicate.TotalPowerAndToughnessAtMost,
             is CardPredicate.ToughnessAtLeast,
             is CardPredicate.ToughnessAtMost,
@@ -579,6 +613,16 @@ class PredicateEvaluator(
                 matches(state, projected, targetEntityId, predicate.subfilter, subContext)
             }
         }
+        // The player half of the above: "a spell that targets you" asks whether some chosen
+        // target is a player the predicate names, relative to the filter's chooser.
+        if (predicate is CardPredicate.TargetsPlayer) {
+            val targets = container.get<TargetsComponent>()?.targets ?: return false
+            val subContext = context ?: return false
+            return targets.any { chosen ->
+                chosen is ChosenTarget.Player &&
+                    matchesPlayer(state, projected, predicate.player, chosen.playerId, subContext)
+            }
+        }
         // Ability-source predicate ("copy target ability ... from a creature source"): an ability on
         // the stack is its own object with no characteristics of its own (CR 113.3b/c), so the match
         // is redirected onto the ability's source (CR 113.7) and evaluated there. Handled before the
@@ -638,6 +682,7 @@ class PredicateEvaluator(
             CardPredicate.IsArtifact -> "ARTIFACT" in types
             CardPredicate.IsEnchantment -> "ENCHANTMENT" in types
             CardPredicate.IsPlaneswalker -> "PLANESWALKER" in types
+            CardPredicate.IsBattle -> "BATTLE" in types
             CardPredicate.IsInstant -> "INSTANT" in types
             CardPredicate.IsSorcery -> "SORCERY" in types
             // Adventure-ness is a static characteristic of the whole card (not a projected type),
@@ -648,7 +693,7 @@ class PredicateEvaluator(
             CardPredicate.IsDoubleFaced -> card.isDoubleFaced
             CardPredicate.HasNoAbilities -> card.oracleText.isBlank()
             CardPredicate.IsBasicLand -> "LAND" in types && card.typeLine.supertypes.any { it.name == "BASIC" }
-            CardPredicate.IsPermanent -> types.any { it in setOf("CREATURE", "LAND", "ARTIFACT", "ENCHANTMENT", "PLANESWALKER") }
+            CardPredicate.IsPermanent -> types.any { it in com.wingedsheep.sdk.core.CardType.PERMANENT_TYPE_NAMES }
             CardPredicate.IsNonland -> "LAND" !in types
             CardPredicate.IsNoncreature -> "CREATURE" !in types
             CardPredicate.IsNonenchantment -> "ENCHANTMENT" !in types
@@ -1030,6 +1075,20 @@ class PredicateEvaluator(
                 !hasSubtype
             }
 
+            // CR 702.51c: tapped to pay for the source's convoke — and still that same object
+            // (CR 400.7), which the entry stamp recorded at the tap tells apart from a blink.
+            CardPredicate.ConvokedSource -> {
+                val sourceId = context?.sourceId ?: return false
+                val source = state.getEntity(sourceId) ?: return false
+                val convoked = source.entitiesChoice(ChoiceSlot.CONVOKED_CREATURES)?.entryStamps
+                    ?: source.get<SpellOnStackComponent>()?.convokedCreatures
+                    ?: return false
+                val stamp = convoked[entityId] ?: return false
+                val current = state.getEntity(entityId)
+                    ?.get<BattlefieldEntryTimestampComponent>()?.timestamp ?: 0L
+                entityId in state.getBattlefield() && current == stamp
+            }
+
             CardPredicate.SharesCreatureTypeWithSource -> {
                 val sourceId = context?.sourceId ?: return false
                 // Source may be a spell on the stack (e.g., Amplify resolution-time reveal) —
@@ -1309,6 +1368,7 @@ class PredicateEvaluator(
             CardPredicate.IsTriggeredAbility -> false
             CardPredicate.IsActivatedAbility -> false
             is CardPredicate.TargetsMatching -> false
+            is CardPredicate.TargetsPlayer -> false
             is CardPredicate.AbilitySourceMatches -> false
         }
     }
@@ -1381,37 +1441,53 @@ class PredicateEvaluator(
                     // from the graveyard.
                     ?: container.get<LastKnownPermanentComponent>()?.snapshot?.controllerId
                     ?: return false
-                when (predicate) {
-                    ControllerPredicate.ControlledByYou -> controllerId == context.controllerId
-                    ControllerPredicate.ControlledByOpponent -> controllerId != context.controllerId
-                    ControllerPredicate.ControlledByAny -> true
-                    ControllerPredicate.ControlledByActivePlayer -> controllerId == state.activePlayerId
-                    ControllerPredicate.ControlledByTargetOpponent -> {
-                        context.targetOpponentId?.let { controllerId == it } ?: false
-                    }
-                    ControllerPredicate.ControlledByTargetPlayer -> {
-                        context.targetPlayerId?.let { controllerId == it } ?: false
-                    }
-                    ControllerPredicate.ControlledByTriggeringPlayer -> {
-                        // Mirror OwnedByTriggeringPlayer's resolution: the damaged player rides on
-                        // triggeringEntityId for a damage trigger (triggeringPlayerId is only set by
-                        // triggers that name a distinct player), so fall back to it. A non-player
-                        // triggeringEntityId (e.g. a creature) can never equal a controller playerId.
-                        val triggeringPlayer = context.triggeringPlayerId ?: context.triggeringEntityId
-                        triggeringPlayer != null && controllerId == triggeringPlayer
-                    }
-                    is ControllerPredicate.ControlledByReferencedPlayer -> {
-                        val referenced = context.resolvePlayerTarget(predicate.target)
-                            ?: resolveReferencedPlayerFromState(state, projected, predicate.target, context)
-                        referenced?.let { controllerId == it } ?: false
-                    }
-                    // Already handled above
-                    ControllerPredicate.OwnedByYou, ControllerPredicate.OwnedByOpponent,
-                    ControllerPredicate.OwnedByTriggeringPlayer,
-                    is ControllerPredicate.And, is ControllerPredicate.Or, is ControllerPredicate.Not -> true
-                }
+                playerMatchesControlLeaf(state, projected, controllerId, predicate, context)
             }
         }
+    }
+
+    /**
+     * Whether [playerId] is the player a control-based [ControllerPredicate] leaf names — the shared
+     * leaf semantics for "controller of the candidate" ([matchesControllerPredicate]) and "protector of
+     * the battle" ([StatePredicate.IsProtectedBy]). Combinators recurse; owner-based leaves say
+     * nothing about a player standing in for a controller and never match.
+     */
+    private fun playerMatchesControlLeaf(
+        state: GameState,
+        projected: ProjectedState,
+        playerId: EntityId,
+        predicate: ControllerPredicate,
+        context: PredicateContext
+    ): Boolean = when (predicate) {
+        is ControllerPredicate.And ->
+            predicate.predicates.all { playerMatchesControlLeaf(state, projected, playerId, it, context) }
+        is ControllerPredicate.Or ->
+            predicate.predicates.any { playerMatchesControlLeaf(state, projected, playerId, it, context) }
+        is ControllerPredicate.Not ->
+            !playerMatchesControlLeaf(state, projected, playerId, predicate.predicate, context)
+        ControllerPredicate.ControlledByYou -> playerId == context.controllerId
+        ControllerPredicate.ControlledByOpponent -> playerId != context.controllerId
+        ControllerPredicate.ControlledByAny -> true
+        ControllerPredicate.ControlledByActivePlayer -> playerId == state.activePlayerId
+        ControllerPredicate.ControlledByTargetOpponent ->
+            context.targetOpponentId?.let { playerId == it } ?: false
+        ControllerPredicate.ControlledByTargetPlayer ->
+            context.targetPlayerId?.let { playerId == it } ?: false
+        ControllerPredicate.ControlledByTriggeringPlayer -> {
+            // Mirror OwnedByTriggeringPlayer's resolution: the damaged player rides on
+            // triggeringEntityId for a damage trigger (triggeringPlayerId is only set by
+            // triggers that name a distinct player), so fall back to it. A non-player
+            // triggeringEntityId (e.g. a creature) can never equal a playerId.
+            val triggeringPlayer = context.triggeringPlayerId ?: context.triggeringEntityId
+            triggeringPlayer != null && playerId == triggeringPlayer
+        }
+        is ControllerPredicate.ControlledByReferencedPlayer -> {
+            val referenced = context.resolvePlayerTarget(predicate.target)
+                ?: resolveReferencedPlayerFromState(state, projected, predicate.target, context)
+            referenced?.let { playerId == it } ?: false
+        }
+        ControllerPredicate.OwnedByYou, ControllerPredicate.OwnedByOpponent,
+        ControllerPredicate.OwnedByTargetPlayer, ControllerPredicate.OwnedByTriggeringPlayer -> false
     }
 
     /**
@@ -1584,6 +1660,12 @@ class PredicateEvaluator(
                 val defenderId = container.get<AttackingComponent>()?.defenderId
                 you != null && defenderId != null && defenderId in state.getOpponents(you)
             }
+            // "Attacking a battle": the declared defender is a battle in projected state (CR 310).
+            // Same no-last-known policy as IsAttackingAnOpponent.
+            StatePredicate.IsAttackingABattle -> {
+                val defenderId = container.get<AttackingComponent>()?.defenderId
+                defenderId != null && projected.isBattle(defenderId)
+            }
             // "Attacking you and/or planeswalkers you control": the defender is either the asking
             // ability's controller themself, or a planeswalker that player controls. Battles are
             // excluded — a battle's protector is a player, not its controller, so `defendingPlayerOf`
@@ -1617,7 +1699,11 @@ class PredicateEvaluator(
                 val defenderId = container.get<AttackingComponent>()?.defenderId
                 enchanted != null && defenderId == enchanted
             }
-            StatePredicate.IsBlocking -> container.has<BlockingComponent>()
+            // Same last-known fallback as IsAttacking: a blocker the damage killed has left the
+            // battlefield (and combat) by the time a trigger resolves (CR 608.2h).
+            StatePredicate.IsBlocking ->
+                container.has<BlockingComponent>() ||
+                    container.get<LastKnownPermanentComponent>()?.snapshot?.wasBlocking == true
             StatePredicate.IsBlocked -> CombatStatusQueries.isBlockedAttacker(state, entityId, container)
             StatePredicate.IsUnblocked ->
                 CombatStatusQueries.isUnblockedAttacker(state, entityId, container, projected::getController)
@@ -1832,6 +1918,16 @@ class PredicateEvaluator(
                     ?.attackerIds ?: emptySet()
                 entityId in attackerSet
             }
+            // The battle-scoped sibling, read from the same controller-side record.
+            StatePredicate.AttackedABattleThisTurn -> {
+                val controllerId = projected.getController(entityId)
+                    ?: container.get<ControllerComponent>()?.playerId
+                    ?: return false
+                val attackerSet = state.getEntity(controllerId)
+                    ?.get<PlayerAttackersThisTurnComponent>()
+                    ?.battleAttackerIds ?: emptySet()
+                entityId in attackerSet
+            }
 
             // "Creatures that couldn't attack" (Season of the Witch). The clause spares a creature
             // that had no say in staying home, so it asks a cut-down version of the declare-attackers
@@ -1935,6 +2031,15 @@ class PredicateEvaluator(
             StatePredicate.IsFaceDown -> container.has<FaceDownComponent>()
             StatePredicate.IsFaceUp -> !container.has<FaceDownComponent>()
 
+            // Transformed permanent (CR 701.27g) — back face up *on the battlefield*. A card cast
+            // transformed also carries a back-face `DoubleFacedComponent` while it is a spell, but
+            // a spell isn't a permanent; every battlefield permanent has a projection entry and a
+            // stack object never does, so the entry is the zone test. MDFCs don't carry the
+            // component at all (their faces live in `cardFaces`), so they never match.
+            StatePredicate.IsTransformed ->
+                container.get<com.wingedsheep.engine.state.components.identity.DoubleFacedComponent>()?.isBack == true &&
+                    projected.getProjectedValues(entityId) != null
+
             // Morph ability — check both the runtime turn-up data (face-down permanents) and the
             // card definition tag (cards in hand/library/graveyard). Manifested, cloaked and
             // disguised permanents carry turn-up data too, so the runtime check asks whether one
@@ -2016,6 +2121,16 @@ class PredicateEvaluator(
                         }
                     }
                 }
+            }
+
+            // "a battle an opponent protects" — the protector (CR 310.9) stands in for the controller
+            // in the reused ControllerPredicate. Fail closed with no context (no "you") or no
+            // protector (a non-battle, or a battle the protector SBA hasn't assigned yet).
+            is StatePredicate.IsProtectedBy -> {
+                val ctx = context ?: return false
+                val protector = com.wingedsheep.engine.mechanics.battle.Battles.protectorOf(state, entityId)
+                    ?: return false
+                playerMatchesControlLeaf(state, projected, protector, predicate.protector, ctx)
             }
 
             StatePredicate.IsModified -> com.wingedsheep.engine.handlers.predicates.isModified(state, entityId)
@@ -2279,6 +2394,7 @@ class PredicateEvaluator(
             CardPredicate.IsArtifact -> typeLine.isArtifact
             CardPredicate.IsEnchantment -> typeLine.isEnchantment
             CardPredicate.IsPlaneswalker -> com.wingedsheep.sdk.core.CardType.PLANESWALKER in typeLine.cardTypes
+            CardPredicate.IsBattle -> typeLine.isBattle
             CardPredicate.IsInstant -> typeLine.isInstant
             CardPredicate.IsSorcery -> typeLine.isSorcery
             // A cast-spell record stores only the resolved characteristics, not the card's layout,
@@ -2376,7 +2492,8 @@ class PredicateEvaluator(
 
             // Source-relative and context predicates — not applicable
             CardPredicate.NotOfSourceChosenType, CardPredicate.SharesCreatureTypeWithSource,
-            CardPredicate.SharesCreatureTypeWithTriggeringEntity, CardPredicate.HasChosenSubtype,
+            CardPredicate.SharesCreatureTypeWithTriggeringEntity,
+            CardPredicate.ConvokedSource, CardPredicate.HasChosenSubtype,
             CardPredicate.HasChosenColor, CardPredicate.SharesChosenColorWithSource,
             CardPredicate.SharesColorWithRecipient,
             is CardPredicate.SharesCreatureTypeWith,
@@ -2409,6 +2526,7 @@ class PredicateEvaluator(
             // Stack-relative targeting predicate — historical cast records have no
             // chosen-target snapshot, so this always returns false here.
             is CardPredicate.TargetsMatching -> false
+            is CardPredicate.TargetsPlayer -> false
 
             // Ability-source predicate — a cast-spell record is not an ability and has no source
             // object to inspect.

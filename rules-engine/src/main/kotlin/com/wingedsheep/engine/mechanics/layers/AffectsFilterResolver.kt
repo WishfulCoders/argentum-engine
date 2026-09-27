@@ -356,7 +356,11 @@ internal class AffectsFilterResolver(
                 is CardPredicate.And -> predicate.predicates.all(::matchesPredicate)
                 is CardPredicate.Or -> predicate.predicates.any(::matchesPredicate)
                 is CardPredicate.Not -> !matchesPredicate(predicate.predicate)
-                is CardPredicate.SharesColorWith -> relationalEvaluator.matchesCardPredicate(
+                // Relational to another permanent (Konda's Banner's "creatures that share a color /
+                // a creature type with equipped creature"): evaluated against the intermediate
+                // projection, so the reference's layer-4/5 types and colors are the ones seen here.
+                is CardPredicate.SharesColorWith,
+                is CardPredicate.SharesCreatureTypeWith -> relationalEvaluator.matchesCardPredicate(
                     state, relationalProjection, entityId, predicate, relationalContext
                 )
                 else -> matchesCardPredicateForProjection(
@@ -446,6 +450,15 @@ internal class AffectsFilterResolver(
             val defenderId = container.get<AttackingComponent>()?.defenderId
             sourceController != null && defenderId != null &&
                 defenderId in state.getOpponents(sourceController)
+        }
+        // "Attacking a battle": read the defender's *base* card types, since this resolver runs
+        // while the projection is being built (same reasoning as the branch below).
+        StatePredicate.IsAttackingABattle -> {
+            val defenderId = container.get<AttackingComponent>()?.defenderId
+            defenderId != null && state.getEntity(defenderId)
+                ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
+                ?.typeLine?.cardTypes
+                ?.contains(com.wingedsheep.sdk.core.CardType.BATTLE) == true
         }
         // The defender-side mirror: attacking the static's controller themself, or a planeswalker
         // that player controls. Reads the *base* controller of the defender rather than a
@@ -577,6 +590,15 @@ internal class AffectsFilterResolver(
             } ?: emptySet()
             entityId in attackerSet
         }
+        StatePredicate.AttackedABattleThisTurn -> {
+            val controllerId = projectedController(state, entityId, projectedValues)
+            val attackerSet = controllerId?.let {
+                state.getEntity(it)
+                    ?.get<PlayerAttackersThisTurnComponent>()
+                    ?.battleAttackerIds
+            } ?: emptySet()
+            entityId in attackerSet
+        }
         // "Couldn't attack" — controlled by someone whose turn it isn't so they never declared
         // attackers (CR 508.1a), or controlled by someone who did have the turn but never reached a
         // Declare Attackers Step (False Peace, Fatespinner), or defender (CR 702.3b) / a projected
@@ -628,6 +650,10 @@ internal class AffectsFilterResolver(
         is StatePredicate.BlockedOrWasBlockedByEntityThisTurn -> false
         StatePredicate.IsFaceDown -> isFaceDown
         StatePredicate.IsFaceUp -> !isFaceDown
+        // Transformed permanent (CR 701.27g). Every candidate here comes off the battlefield, so
+        // "back face up" is the whole test — PredicateEvaluator adds the zone check it needs.
+        StatePredicate.IsTransformed ->
+            container.get<com.wingedsheep.engine.state.components.identity.DoubleFacedComponent>()?.isBack == true
         // "Creature with a morph ability" (Backslide) means *morph* specifically — a manifested,
         // cloaked or disguised permanent also carries turn-up data, so match on the procedure's
         // mechanic rather than on the component's presence.
@@ -680,6 +706,23 @@ internal class AffectsFilterResolver(
                         ControllerPredicate.ControlledByActivePlayer -> auraController == state.activePlayerId
                         else -> null
                     }
+                }
+            }
+        }
+        // "battles an opponent protects" — the protector (CR 310.9) is plain per-entity state, not a
+        // layered characteristic, so read it straight off the battle and resolve the leaf against the
+        // static's controller, as IsEnchantedByAura does for the Aura's controller.
+        is StatePredicate.IsProtectedBy -> {
+            val protector = com.wingedsheep.engine.mechanics.battle.Battles.protectorOf(state, entityId)
+            protector != null && sourceController != null && predicate.protector.evaluateWith { leaf ->
+                when (leaf) {
+                    ControllerPredicate.ControlledByYou -> protector == sourceController
+                    ControllerPredicate.ControlledByOpponent -> protector != sourceController
+                    ControllerPredicate.ControlledByAny -> true
+                    ControllerPredicate.ControlledByActivePlayer -> protector == state.activePlayerId
+                    ControllerPredicate.OwnedByYou, ControllerPredicate.OwnedByOpponent,
+                    ControllerPredicate.OwnedByTargetPlayer, ControllerPredicate.OwnedByTriggeringPlayer -> false
+                    else -> null
                 }
             }
         }
@@ -868,6 +911,7 @@ internal class AffectsFilterResolver(
         CardPredicate.IsArtifact -> "ARTIFACT" in types
         CardPredicate.IsEnchantment -> "ENCHANTMENT" in types
         CardPredicate.IsPlaneswalker -> "PLANESWALKER" in types
+        CardPredicate.IsBattle -> "BATTLE" in types
         CardPredicate.IsInstant -> "INSTANT" in types
         CardPredicate.IsSorcery -> "SORCERY" in types
         // Adventure-ness is a static whole-card characteristic, not a projected type.
@@ -875,7 +919,7 @@ internal class AffectsFilterResolver(
         // Double-faced-ness is likewise a static whole-card characteristic, not a projected type.
         CardPredicate.IsDoubleFaced -> card.isDoubleFaced
         CardPredicate.HasNoAbilities -> card.oracleText.isBlank()
-        CardPredicate.IsPermanent -> types.any { it in setOf("CREATURE", "LAND", "ARTIFACT", "ENCHANTMENT", "PLANESWALKER") }
+        CardPredicate.IsPermanent -> types.any { it in com.wingedsheep.sdk.core.CardType.PERMANENT_TYPE_NAMES }
         CardPredicate.IsNonland -> "LAND" !in types
         CardPredicate.IsNoncreature -> "CREATURE" !in types
         CardPredicate.IsNonenchantment -> "ENCHANTMENT" !in types
@@ -988,6 +1032,7 @@ internal class AffectsFilterResolver(
         CardPredicate.NotOfSourceChosenType,
         CardPredicate.SharesCreatureTypeWithSource,
         CardPredicate.SharesCreatureTypeWithTriggeringEntity,
+        CardPredicate.ConvokedSource,
         CardPredicate.HasChosenSubtype,
         CardPredicate.SharesChosenColorWithSource,
         CardPredicate.SharesColorWithRecipient,
@@ -1015,6 +1060,7 @@ internal class AffectsFilterResolver(
         CardPredicate.IsTriggeredAbility,
         CardPredicate.IsActivatedAbility -> false
         is CardPredicate.TargetsMatching -> false
+        is CardPredicate.TargetsPlayer -> false
         is CardPredicate.AbilitySourceMatches -> false
     }
 

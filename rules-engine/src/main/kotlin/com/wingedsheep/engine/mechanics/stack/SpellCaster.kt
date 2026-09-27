@@ -4,7 +4,7 @@ import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.effects.FaceDownTurnUp
 import com.wingedsheep.engine.handlers.effects.permanent.types.buildCardComponentForDfcFace
 import com.wingedsheep.engine.handlers.effects.permanent.types.dfcBackFaceManaValue
-import com.wingedsheep.engine.handlers.effects.permanent.types.withDfcFaceSelfRedirects
+import com.wingedsheep.engine.handlers.effects.permanent.types.withFaceIntrinsicComponents
 import com.wingedsheep.engine.mechanics.SpliceCasts
 import com.wingedsheep.engine.mechanics.layers.ContinuousEffectSourceComponent
 import com.wingedsheep.engine.mechanics.layers.StaticAbilityHandler
@@ -99,6 +99,7 @@ internal class SpellCaster(
         splicedCardNames: List<String> = emptyList(),
         totalManaSpent: Int = 0,
         beheldCards: List<EntityId> = emptyList(),
+        convokedCreatures: Map<EntityId, Long> = emptyMap(),
         discardedAsCostCards: List<EntityId> = emptyList(),
         exiledAsCostCards: List<EntityId> = emptyList(),
         exiledAsCostSnapshots: List<EntitySnapshot> = emptyList(),
@@ -228,6 +229,7 @@ internal class SpellCaster(
             webSlungReturnedManaValue = webSlungReturnedManaValue,
             wasMayhem = wasMayhem,
             beheldCards = beheldCards,
+            convokedCreatures = convokedCreatures,
             discardedAsCostCards = discardedAsCostCards,
             exiledAsCostCards = exiledAsCostCards,
             exiledAsCostSnapshots = exiledAsCostSnapshots,
@@ -360,7 +362,7 @@ internal class SpellCaster(
             // moment the card is a back-face object — CR 614.12).
             updated = staticAbilityHandler.addContinuousEffectComponent(updated, transformedBackDef)
             updated = staticAbilityHandler.addReplacementEffectComponent(updated, transformedBackDef)
-            withDfcFaceSelfRedirects(updated, transformedBackDef)
+            withFaceIntrinsicComponents(updated, transformedBackDef)
         }
 
     /** The X the spell carries onto the stack. */

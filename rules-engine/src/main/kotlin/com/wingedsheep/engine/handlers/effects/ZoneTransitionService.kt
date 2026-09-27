@@ -23,8 +23,9 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.CommanderComponent
 import com.wingedsheep.engine.state.components.identity.CommanderZoneChoiceAskedComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
+import com.wingedsheep.engine.handlers.effects.permanent.types.restoreDfcFrontFace
 import com.wingedsheep.engine.handlers.effects.permanent.types.stampDoubleFacedFrontFace
-import com.wingedsheep.engine.handlers.effects.permanent.types.withDfcFaceSelfRedirects
+import com.wingedsheep.engine.handlers.effects.permanent.types.withFaceIntrinsicComponents
 import com.wingedsheep.engine.state.components.identity.DoubleFacedComponent
 import com.wingedsheep.engine.state.components.identity.FlippedComponent
 import com.wingedsheep.engine.state.components.identity.PutIntoGraveyardThisTurnComponent
@@ -41,6 +42,7 @@ import com.wingedsheep.engine.state.components.player.CardsLeftGraveyardThisTurn
 import com.wingedsheep.engine.state.components.player.CardsPutIntoExileThisTurnComponent
 import com.wingedsheep.engine.state.components.player.CreatureSubtypesDiedThisTurnComponent
 import com.wingedsheep.engine.state.components.player.ArtifactsDiedThisTurnComponent
+import com.wingedsheep.engine.state.components.player.PermanentsPutIntoGraveyardFromBattlefieldThisTurnComponent
 import com.wingedsheep.engine.state.components.player.CreaturesDiedThisTurnComponent
 import com.wingedsheep.engine.state.components.player.NonTokenCreaturesDiedThisTurnComponent
 import com.wingedsheep.engine.state.components.player.OpponentCreaturesExiledThisTurnComponent
@@ -244,6 +246,7 @@ class ZoneTransitionService(
         var lastKnownAttachedTo = options.lastKnownAttachedTo
         var lastKnownBlockingOrBlockedByIds: List<EntityId> = emptyList()
         var lastKnownWasAttacking = false
+        var lastKnownWasBlocking = false
         var lastKnownAttackedDefenderId: EntityId? = null
         var lastKnownWasToken = false
         var lastKnownCreatedBy: EntityId? = null
@@ -287,6 +290,7 @@ class ZoneTransitionService(
             // attacking" (Garna, Bloodfist of Keld) resolves after the death, so it can only read
             // last known information (CR 608.2h).
             lastKnownWasAttacking = container.has<AttackingComponent>()
+            lastKnownWasBlocking = container.has<BlockingComponent>()
             // …and *what* it was attacking. CR 802.2a keeps naming a defending player after the
             // creature "is no longer attacking" — the player it *was* attacking before it left
             // combat — so an ability that outlives its own attacking source still has an answer.
@@ -445,6 +449,7 @@ class ZoneTransitionService(
                 wasEnchanted = lastKnownWasEnchanted,
                 blockingOrBlockedByIds = lastKnownBlockingOrBlockedByIds,
                 wasAttacking = lastKnownWasAttacking,
+                wasBlocking = lastKnownWasBlocking,
                 attackedDefenderId = lastKnownAttackedDefenderId,
                 wasToken = lastKnownWasToken,
                 createdBy = lastKnownCreatedBy,
@@ -790,21 +795,7 @@ class ZoneTransitionService(
         // 7b. Rule 712.8a: while a DFC is in a zone other than the battlefield or stack, it has
         // only the characteristics of its front face. Restore the saved front-face CardComponent.
         if (actualDestZone != Zone.BATTLEFIELD && actualDestZone != Zone.STACK) {
-            val entityContainer = newState.getEntity(entityId)
-            if (entityContainer != null) {
-                val dfc = entityContainer.get<DoubleFacedComponent>()
-                if (dfc != null && dfc.isBack && dfc.frontFaceCard != null) {
-                    // The front face's own "from anywhere" self-replacements come back with it —
-                    // and, just as importantly, the back face's stop applying. A disturbed creature
-                    // that is exiled by its own back-face clause reverts to a plain front face.
-                    val frontDef = cardRegistry.getCard(dfc.frontCardDefinitionId)
-                    newState = newState.updateEntity(entityId) { c ->
-                        val reverted = c.with(dfc.frontFaceCard)
-                            .with(dfc.copy(currentFace = DoubleFacedComponent.Face.FRONT, frontFaceCard = null))
-                        if (frontDef != null) withDfcFaceSelfRedirects(reverted, frontDef) else reverted
-                    }
-                }
-            }
+            newState = restoreDfcFrontFace(newState, cardRegistry, entityId)
         }
 
         // 7b'. CR 710.4: a flipped permanent that leaves the battlefield retains no memory of its
@@ -815,7 +806,7 @@ class ZoneTransitionService(
                 val uprightDef = cardRegistry.getCard(flipped.unflippedCard.cardDefinitionId)
                 newState = newState.updateEntity(entityId) { c ->
                     val reverted = c.with(flipped.unflippedCard).without<FlippedComponent>()
-                    if (uprightDef != null) withDfcFaceSelfRedirects(reverted, uprightDef) else reverted
+                    if (uprightDef != null) withFaceIntrinsicComponents(reverted, uprightDef) else reverted
                 }
             }
         }
@@ -943,6 +934,16 @@ class ZoneTransitionService(
                 val existing = playerContainer.get<ArtifactsDiedThisTurnComponent>()
                     ?: ArtifactsDiedThisTurnComponent()
                 playerContainer.with(ArtifactsDiedThisTurnComponent(existing.count + 1))
+            }
+        }
+
+        // 8b1a. Track permanents of any type put into a graveyard from the battlefield (Ashen
+        // Reaper). The type-agnostic sibling of 8b / 8b1, credited to the same last-known controller.
+        if (leavingBattlefield && actualDestZone == Zone.GRAVEYARD) {
+            newState = newState.updateEntity(controllerId) { playerContainer ->
+                val existing = playerContainer.get<PermanentsPutIntoGraveyardFromBattlefieldThisTurnComponent>()
+                    ?: PermanentsPutIntoGraveyardFromBattlefieldThisTurnComponent()
+                playerContainer.with(PermanentsPutIntoGraveyardFromBattlefieldThisTurnComponent(existing.count + 1))
             }
         }
 

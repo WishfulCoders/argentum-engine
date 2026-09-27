@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.text.TextReplaceable
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import com.wingedsheep.sdk.scripting.util.numberToWord
@@ -55,6 +56,12 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     @Serializable
     data object IsPlaneswalker : CardPredicate {
         override val description: String = "planeswalker"
+    }
+
+    @SerialName("IsBattle")
+    @Serializable
+    data object IsBattle : CardPredicate {
+        override val description: String = "battle"
     }
 
     @SerialName("IsInstant")
@@ -939,6 +946,20 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
         override val description: String = "that shares a creature type with this creature"
     }
 
+    /**
+     * Matches a permanent that **convoked** the source object (CR 702.51c) — "each creature that
+     * convoked it" (Zephyr Singer). Reads [com.wingedsheep.sdk.scripting.ChoiceSlot.CONVOKED_CREATURES]
+     * off the source (its cast-choices bag on the battlefield, or the spell while it is still on the
+     * stack) and requires the candidate to be the *same object* that tapped: one that left the
+     * battlefield and came back since is a new object (CR 400.7) and doesn't match. Fails closed with
+     * no source, and during layer projection.
+     */
+    @SerialName("ConvokedSource")
+    @Serializable
+    data object ConvokedSource : CardPredicate {
+        override val description: String = "that convoked it"
+    }
+
     /** Matches creatures that share a creature subtype with the triggering entity */
     @SerialName("SharesCreatureTypeWithTriggeringEntity")
     @Serializable
@@ -1267,6 +1288,22 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
             val newSubfilter = subfilter.applyTextReplacement(replacer)
             return if (newSubfilter !== subfilter) copy(subfilter = newSubfilter) else this
         }
+    }
+
+    /**
+     * Matches a spell or ability on the stack at least one of whose chosen targets is a player
+     * that [player] names, read relative to the filter's chooser — the player half of
+     * [TargetsMatching], which skips player targets. [Player.You]
+     * is "an instant or sorcery spell that targets you" (Shell of the Last Kappa);
+     * [Player.EachOpponent] is "that targets an opponent".
+     *
+     * It asks only whether *some* chosen target is that player, so a spell that targets you and
+     * a creature still matches.
+     */
+    @SerialName("TargetsPlayer")
+    @Serializable
+    data class TargetsPlayer(val player: Player) : CardPredicate {
+        override val description: String = "that targets ${player.description}"
     }
 
     /**

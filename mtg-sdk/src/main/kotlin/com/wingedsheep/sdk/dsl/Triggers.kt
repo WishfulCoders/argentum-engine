@@ -332,11 +332,14 @@ class ObjectTriggerSubject internal constructor(
         return spec(TurnFaceUpEvent)
     }
 
-    /** "transforms" — [intoBackFace] `true` to the back face, `false` to the front, `null` either way. */
-    fun transforms(intoBackFace: Boolean? = null): TriggerSpec {
-        unfiltered("transforms")
-        return spec(TransformEvent(intoBackFace = intoBackFace))
-    }
+    /**
+     * "transforms" — [intoBackFace] `true` to the back face, `false` to the front, `null` either way.
+     * Under [Triggers.a] / [Triggers.another] the subject's filter is matched against the permanent's
+     * post-transform characteristics: `Triggers.a(Permanent.youControl().withSubtype("Phyrexian"))
+     * .transforms()` is "whenever a permanent you control transforms into a Phyrexian".
+     */
+    fun transforms(intoBackFace: Boolean? = null): TriggerSpec =
+        spec(TransformEvent(intoBackFace = intoBackFace, filter = filter ?: GameObjectFilter.Any))
 
     /** "phases in" (CR 702.26). */
     fun phasesIn(): TriggerSpec = spec(PhasesInEvent(filter = filter))
@@ -576,7 +579,11 @@ class BatchTriggerSubject internal constructor(
     /** "enter" (the battlefield). The matching members are the payoff's captured collection. */
     fun enter(): TriggerSpec = spec(PermanentsEnteredEvent(filter = filter, excludeSource = excludeSource))
 
-    /** "die" — once per death batch (CR 603.3b), so a board wipe fires it once. */
+    /**
+     * "die" — once per death batch, so a board wipe fires it once. The filter picks the types:
+     * with a noncreature filter it reads "are put into a graveyard from the battlefield"
+     * (`oneOrMore(GameObjectFilter.CreatureOrArtifact.youControl()).die()`, Seer of Stolen Sight).
+     */
     fun die(): TriggerSpec = spec(CreaturesYouControlDiedEvent(filter = filter, excludeSelf = excludeSource))
 
     /** "leave the battlefield without dying" — to any zone but a graveyard. */
@@ -597,6 +604,15 @@ class BatchTriggerSubject internal constructor(
     fun dealCombatDamageToAPlayer(): TriggerSpec {
         noOther("dealCombatDamageToAPlayer")
         return spec(OneOrMoreDealCombatDamageToPlayerEvent(sourceFilter = filter))
+    }
+
+    /**
+     * "deal combat damage to a player or battle" — once per player or battle hit; the matching
+     * creatures that hit it are the captured collection (Zurgo and Ojutai).
+     */
+    fun dealCombatDamageToAPlayerOrBattle(): TriggerSpec {
+        noOther("dealCombatDamageToAPlayerOrBattle")
+        return spec(OneOrMoreDealCombatDamageToPlayerEvent(sourceFilter = filter, orBattle = true))
     }
 
     /** "deal combat damage to you" — defensive; fires once per combat-damage batch. */

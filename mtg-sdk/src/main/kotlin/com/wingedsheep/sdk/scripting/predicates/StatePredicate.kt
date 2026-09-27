@@ -148,6 +148,20 @@ sealed interface StatePredicate {
     }
 
     /**
+     * Attacking a **battle** rather than a player or planeswalker (Rampaging Geoderm: "If it's
+     * attacking a battle, put a +1/+1 counter on it instead"). Reads the attacker's declared
+     * defender and asks whether that permanent is a battle in projected state (CR 310).
+     *
+     * No last-known fallback, for [IsAttackingAnOpponent]'s reason: the frozen snapshot records
+     * only *that* the permanent was attacking, never whom.
+     */
+    @SerialName("IsAttackingABattle")
+    @Serializable
+    data object IsAttackingABattle : Entity {
+        override val description: String = "attacking a battle"
+    }
+
+    /**
      * The defender-side mirror of [IsAttackingAnOpponent]: attacking *you* or a planeswalker
      * *you* control (Tomik, Wielder of Law: "if two or more of those creatures are attacking you
      * and/or planeswalkers you control"). "You" is the controller of the ability doing the asking,
@@ -539,6 +553,19 @@ sealed interface StatePredicate {
     }
 
     /**
+     * Was declared as attacking a **battle** at least once during the current turn — "as long as
+     * it attacked a battle this turn" (War Historian). The battle-scoped sibling of
+     * [AttackedThisTurn], backed by the same controller-side per-turn attacker record (its
+     * `battleAttackerIds`), stamped at declaration (CR 508.1) and cleared in cleanup. Stays true
+     * after the creature leaves combat or the battle it attacked is defeated.
+     */
+    @SerialName("AttackedABattleThisTurn")
+    @Serializable
+    data object AttackedABattleThisTurn : History {
+        override val description: String = "attacked a battle this turn"
+    }
+
+    /**
      * The creature **couldn't have been declared as an attacker** this turn — the "except for
      * creatures that couldn't attack" clause of Season of the Witch, which spares a creature that
      * had no choice in the matter rather than punishing it for staying home.
@@ -735,6 +762,22 @@ sealed interface StatePredicate {
         override val description: String = "face-up"
     }
 
+    /**
+     * Is a **transformed permanent** (CR 701.27g): a nonmodal double-faced permanent on the
+     * battlefield with its back face up — a Siege cast transformed, a werewolf flipped at night, a
+     * saga that exiled itself back transformed. A permanent sitting on its front face is never
+     * transformed, even if it was back-face-up earlier; modal double-faced permanents and melded
+     * permanents never are either, whichever face is up (MOM release notes).
+     *
+     * This is the *state*, not the card: [CardPredicate.IsDoubleFaced] answers "is this a
+     * double-faced card" in every zone, and is true of a front-face-up werewolf too.
+     */
+    @SerialName("IsTransformed")
+    @Serializable
+    data object IsTransformed : Entity {
+        override val description: String = "transformed"
+    }
+
     /** Has a morph ability (has MorphDataComponent) */
     @SerialName("HasMorphAbility")
     @Serializable
@@ -910,6 +953,31 @@ sealed interface StatePredicate {
             ControllerPredicate.ControlledByYou -> "enchanted by Auras you control"
             ControllerPredicate.ControlledByOpponent -> "enchanted by Auras an opponent controls"
             else -> "enchanted"
+        }
+    }
+
+    /**
+     * A battle whose protector (CR 310.9) satisfies [protector] — the battle's analogue of the
+     * controller predicate. Battles are protected, not controlled, by the player whose side of the
+     * table they defend, and a Siege is controlled by its caster but protected by an opponent, so
+     * "a battle an opponent protects" can't be spelled with [ControllerPredicate] on the battle.
+     *
+     * The [ControllerPredicate] vocabulary is reused, evaluated against the protecting player
+     * instead of the controller: `ControlledByOpponent` reads "an opponent protects",
+     * `ControlledByYou` "you protect", `ControlledByTriggeringPlayer` "that player protects"
+     * (Rampaging Raptor). Owner-based leaves never match. A permanent with no protector (a
+     * non-battle, or a battle before the protector SBA has run) never matches.
+     */
+    @SerialName("IsProtectedBy")
+    @Serializable
+    data class IsProtectedBy(val protector: ControllerPredicate) : Entity {
+        override val description: String = when (protector) {
+            ControllerPredicate.ControlledByYou -> "you protect"
+            ControllerPredicate.ControlledByOpponent -> "an opponent protects"
+            ControllerPredicate.ControlledByTriggeringPlayer -> "that player protects"
+            ControllerPredicate.ControlledByTargetPlayer -> "target player protects"
+            ControllerPredicate.ControlledByTargetOpponent -> "target opponent protects"
+            else -> "protected by ${protector.description.removeSuffix(" controls")}"
         }
     }
 

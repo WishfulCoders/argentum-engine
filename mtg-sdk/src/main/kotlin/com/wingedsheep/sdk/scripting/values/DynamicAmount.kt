@@ -242,6 +242,19 @@ enum class TurnTracker {
      */
     ARTIFACTS_DIED,
     /**
+     * Count of permanents of **every** type — lands, enchantments, planeswalkers, battles and
+     * tokens included — put into a graveyard from the battlefield under the player's control this
+     * turn. The type-agnostic sibling of [CREATURES_DIED] and [ARTIFACTS_DIED], recorded by the
+     * same `ZoneTransitionService` battlefield→graveyard hook and credited to the last-known
+     * controller. Tokens count even though they cease to exist in the graveyard (CR 704.5d), which
+     * is why this is a player tally and not a scan of the graveyards.
+     *
+     * Read it with [Player.Each] for the game-wide "if a permanent was put into a graveyard from
+     * the battlefield this turn" (Ashen Reaper). Distinct from `PermanentLeftBattlefieldThisTurn`
+     * (any destination).
+     */
+    PERMANENTS_PUT_INTO_GRAVEYARD_FROM_BATTLEFIELD,
+    /**
      * How many cards the player had in hand **at the beginning of this turn** — a snapshot taken
      * in the turn's untap step, before any draw, not a running count. Backed by
      * `CardsInHandAtTurnStartComponent`, rewritten for every player at each turn start.
@@ -306,6 +319,12 @@ enum class TurnTracker {
             "the number of artifacts that were put into graveyards from the battlefield this turn"
         } else {
             "the number of artifacts put into graveyards from the battlefield under " +
+                "${player.possessive} control this turn"
+        }
+        PERMANENTS_PUT_INTO_GRAVEYARD_FROM_BATTLEFIELD -> if (player == Player.Each) {
+            "the number of permanents that were put into graveyards from the battlefield this turn"
+        } else {
+            "the number of permanents put into graveyards from the battlefield under " +
                 "${player.possessive} control this turn"
         }
         CARDS_IN_HAND_AT_TURN_START ->
@@ -733,6 +752,10 @@ sealed interface DynamicAmount : TextReplaceable<DynamicAmount> {
      * [com.wingedsheep.sdk.scripting.ChoiceSlot] value off the cast-choices bag, falling back to the
      * resolution context so a spell that never becomes a permanent (an instant/sorcery) still
      * resolves it from the value paid at cast.
+     *
+     * An entity-list slot reads as its size: `CastChoice(ChoiceSlot.CONVOKED_CREATURES)` is "the
+     * number of creatures that convoked it" (CR 702.51c), counting every creature that tapped for
+     * convoke even if it has since left the battlefield.
      *
      * The non-numeric slots (color, creature type, mode) are read by conditions
      * ([com.wingedsheep.sdk.scripting.conditions.CastChoiceMade] /

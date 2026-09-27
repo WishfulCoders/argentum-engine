@@ -84,6 +84,14 @@ interface ObjectFilterBuilder<out Self> {
         withCardPredicate(CardPredicate.TargetsMatching(subfilter))
 
     /**
+     * Restrict to spells/abilities on the stack that target at least one player [player] names —
+     * `targetsPlayer(Player.You)` is "an instant or sorcery spell that targets you" (Shell of the
+     * Last Kappa). The player half of [targetsMatching]. See [CardPredicate.TargetsPlayer].
+     */
+    fun targetsPlayer(player: Player) =
+        withCardPredicate(CardPredicate.TargetsPlayer(player))
+
+    /**
      * Restrict to activated/triggered abilities on the stack whose *source* (CR 113.7) matches
      * [subfilter] — "from a creature source" (Echo, Perceptive Prodigy), "from an artifact source"
      * (Scientist Supreme of A.I.M.). Read with last known information when the source has already
@@ -356,6 +364,9 @@ interface ObjectFilterBuilder<out Self> {
     /** Must include the color chosen on the source permanent (CastChoicesComponent) */
     fun sharingChosenColorWithSource() = withCardPredicate(CardPredicate.SharesChosenColorWithSource)
 
+    /** Must have convoked the source object (CR 702.51c) — "each creature that convoked it" */
+    fun thatConvokedSource() = withCardPredicate(CardPredicate.ConvokedSource)
+
     /** Must share a creature type with the referenced entity */
     fun sharingCreatureTypeWith(entity: EffectTarget.SingleEntity) =
         withCardPredicate(CardPredicate.SharesCreatureTypeWith(entity))
@@ -487,6 +498,9 @@ interface ObjectFilterBuilder<out Self> {
      */
     fun attackingAnOpponent() = withStatePredicate(StatePredicate.IsAttackingAnOpponent)
 
+    /** Must be attacking a battle, not a player or planeswalker (Rampaging Geoderm). */
+    fun attackingABattle() = withStatePredicate(StatePredicate.IsAttackingABattle)
+
     /**
      * The defender-side mirror of [attackingAnOpponent]: must be attacking *you* or a planeswalker
      * *you* control (Tomik, Wielder of Law). "You" is the controller of whatever ability applies
@@ -507,6 +521,12 @@ interface ObjectFilterBuilder<out Self> {
      * Survives leaving combat; cleared at end-of-turn cleanup.
      */
     fun attackedThisTurn() = withStatePredicate(StatePredicate.AttackedThisTurn)
+
+    /**
+     * Was declared as attacking a battle at least once this turn (War Historian). The
+     * battle-scoped sibling of [attackedThisTurn]; cleared at end-of-turn cleanup.
+     */
+    fun attackedABattleThisTurn() = withStatePredicate(StatePredicate.AttackedABattleThisTurn)
 
     /** Was **not** declared as an attacker at any point this turn. Negation of [attackedThisTurn]. */
     fun didntAttackThisTurn() = withStatePredicate(StatePredicate.Not(StatePredicate.AttackedThisTurn))
@@ -835,6 +855,9 @@ interface ObjectFilterBuilder<out Self> {
     /** Must be face-up (not face-down) */
     fun faceUp() = withStatePredicate(StatePredicate.IsFaceUp)
 
+    /** Must be a transformed permanent (back face up, CR 701.27g) — see [StatePredicate.IsTransformed] */
+    fun transformed() = withStatePredicate(StatePredicate.IsTransformed)
+
     /** Must have a morph ability */
     fun withMorph() = withStatePredicate(StatePredicate.HasMorphAbility)
 
@@ -919,6 +942,15 @@ interface ObjectFilterBuilder<out Self> {
      */
     fun enchantedByAura(auraController: ControllerPredicate = ControllerPredicate.ControlledByYou) =
         withStatePredicate(StatePredicate.IsEnchantedByAura(auraController))
+
+    /**
+     * A battle protected by [protector] — "battle an opponent protects" (Joyful Stormsculptor),
+     * "battle that player protects" (Rampaging Raptor). Compose with a battle type filter; the
+     * [ControllerPredicate] is evaluated against the protecting player, not the controller. See
+     * [StatePredicate.IsProtectedBy].
+     */
+    fun protectedBy(protector: ControllerPredicate = ControllerPredicate.ControlledByOpponent) =
+        withStatePredicate(StatePredicate.IsProtectedBy(protector))
 
     /**
      * Must be marked as a "warped card in exile" (CR 702.185b) — i.e., the

@@ -760,12 +760,20 @@ class TriggerMatcher(
             }
             is EventPattern.TransformEvent -> {
                 if (event !is TransformedEvent) return false
-                // SELF binding must match the transforming permanent
+                // SELF binding must match the transforming permanent; OTHER must not
                 if (binding == TriggerBinding.SELF && event.entityId != sourceId) return false
+                if (binding == TriggerBinding.OTHER && event.entityId == sourceId) return false
                 // intoBackFace==null matches any transform; true/false filters by direction
-                val directionMatches = trigger.intoBackFace == null ||
-                    trigger.intoBackFace == event.intoBackFace
-                directionMatches
+                if (trigger.intoBackFace != null && trigger.intoBackFace != event.intoBackFace) return false
+                // "a permanent you control transforms into a Phyrexian" — the turn-over has already
+                // happened by detection time, so the projected state holds the new face.
+                trigger.filter == GameObjectFilter.Any || predicateEvaluator.matches(
+                    state,
+                    state.projectedState,
+                    event.entityId,
+                    trigger.filter,
+                    com.wingedsheep.engine.handlers.PredicateContext(controllerId = controllerId, sourceId = sourceId)
+                )
             }
             // These are handled separately in their own detect* methods
             is EventPattern.ControlChangeEvent -> false
@@ -1252,6 +1260,7 @@ class TriggerMatcher(
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsArtifact -> cardComponent.typeLine.isArtifact
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsEnchantment -> cardComponent.typeLine.isEnchantment
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsPlaneswalker -> com.wingedsheep.sdk.core.CardType.PLANESWALKER in cardComponent.typeLine.cardTypes
+            is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsBattle -> cardComponent.typeLine.isBattle
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsInstant -> cardComponent.typeLine.isInstant
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsSorcery -> cardComponent.typeLine.isSorcery
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsBasicLand -> cardComponent.typeLine.isLand && cardComponent.typeLine.supertypes.contains(com.wingedsheep.sdk.core.Supertype.BASIC)
@@ -1783,6 +1792,8 @@ class TriggerMatcher(
         // Per-attacker: the trigger's own source was declared as attacking a player (not a
         // planeswalker or battle). Stamped on the event at declaration (CR 508.1 defender kind).
         AttackPredicate.DefenderIsPlayer -> boundEntityId in event.attackersAgainstPlayer
+        // Per-attacker: the trigger's own source was declared as attacking a battle.
+        AttackPredicate.DefenderIsBattle -> boundEntityId in event.attackersAgainstBattle
         // Training (CR 702.149a): the source attacked, and at least one *other* declared attacker
         // has strictly greater PROJECTED power (Rule 613 layers — so an anthem/aura on the other
         // attacker counts). Read every power through the cached projected state, never raw
@@ -2192,6 +2203,12 @@ class TriggerMatcher(
             val entity = state.getEntity(entityId) ?: return false
             entity.has<FaceDownComponent>()
         }
+        // Transformed permanent (CR 701.27g) — the same live read as PredicateEvaluator: back face
+        // up and on the battlefield (a projection entry; a back-face-up spell has none).
+        com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsTransformed ->
+            state.getEntity(entityId)
+                ?.get<com.wingedsheep.engine.state.components.identity.DoubleFacedComponent>()?.isBack == true &&
+                state.projectedState.getProjectedValues(entityId) != null
         // Relative to a referenced entity a trigger filter has no context to resolve; no trigger
         // uses it, so fail closed rather than matching every creature.
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.BlockedOrWasBlockedByEntityThisTurn -> false
@@ -2250,6 +2267,9 @@ class TriggerMatcher(
         // Graveyard-zone-only predicates; trigger gating never sees a stamped entity here.
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.PutIntoGraveyardThisTurn -> false
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.PutIntoGraveyardFromBattlefieldThisTurn -> false
+        // No controller context here to resolve the protector predicate's "you"/"that player"; fail
+        // closed rather than matching every battle.
+        is com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsProtectedBy -> false
         // No granter context in trigger gating — granter-relative exclusion is resolution-time only.
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsGrantingPermanent -> false
         // Nor the resolving trigger's context — trigger-relative exclusion is resolution-time only.
@@ -2276,6 +2296,7 @@ class TriggerMatcher(
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsAttacking,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsAttackingAlone,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsAttackingAnOpponent,
+        com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsAttackingABattle,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsAttackingYouOrYourPlaneswalkers,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsAttackingEnchantedPlayer,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsBlocking,
@@ -2297,6 +2318,7 @@ class TriggerMatcher(
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.WasDealtDamageBySourceThisTurn,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.DealtDamageToSourceControllerThisTurn,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.AttackedThisTurn,
+        com.wingedsheep.sdk.scripting.predicates.StatePredicate.AttackedABattleThisTurn,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.CouldNotHaveAttackedThisTurn,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.AttackedLastTurn,
         com.wingedsheep.sdk.scripting.predicates.StatePredicate.AttackedThisCombat,

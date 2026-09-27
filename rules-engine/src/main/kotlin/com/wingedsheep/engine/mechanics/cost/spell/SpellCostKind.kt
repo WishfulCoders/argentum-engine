@@ -141,6 +141,8 @@ class SpellCostOffer {
     val sacrificeTargets = mutableListOf<EntityId>()
     var variableSacrificeTargets = emptyList<EntityId>()
     var variableSacrificeReduction = 0
+    var variablePermanentsCost: CostAtom.VariablePermanents? = null
+    var variablePermanentsTargets = emptyList<EntityId>()
     var exileTargets = emptyList<EntityId>()
     var exileMinCount = 0
     var collectEvidenceCost: CostAtom.CollectEvidence? = null
@@ -200,6 +202,9 @@ class SpellCostLedger(
     val sacrificedSnapshots = mutableListOf<EntitySnapshot>()
     var exiledCardCount = 0
     val beheldCards = mutableListOf<EntityId>()
+
+    /** Creatures tapped for convoke, with their entry stamps (CR 702.51c) — `SpellOnStackComponent.convokedCreatures`. */
+    val convokedCreatures = linkedMapOf<EntityId, Long>()
 
     /** Discarded to pay — read at resolution as `EffectTarget.DiscardedAsCost`. */
     val discardedAsCostCards = mutableListOf<EntityId>()

@@ -52,6 +52,18 @@ sealed interface Recipient {
         override val description: String get() = filter.description
     }
 
+    /**
+     * "Another player" — any player other than the observing ability's controller. Wider than
+     * [Opponent]: in a team game a teammate is another player but not an opponent (CR 102.3), so
+     * Night Dealings' "a source you control deals damage to another player" counts damage to a
+     * Two-Headed Giant teammate that [Opponent] would skip.
+     */
+    @SerialName("RecipientAnotherPlayer")
+    @Serializable
+    data object AnotherPlayer : Recipient {
+        override val description: String = "another player"
+    }
+
     /** Any of [options] — the heterogeneous "player or object" unions. */
     @SerialName("RecipientAnyOf")
     @Serializable
@@ -108,6 +120,9 @@ sealed interface Recipient {
 
         /** "A player or planeswalker". */
         val AnyPlayerOrPlaneswalker: Recipient = AnyOf(listOf(AnyPlayer, Object(GameObjectFilter.Planeswalker)))
+
+        /** "A player or battle" — the March of the Machine combat-damage wording (Archpriest of Shadows). */
+        val AnyPlayerOrBattle: Recipient = AnyOf(listOf(AnyPlayer, Object(GameObjectFilter.Battle)))
 
         /** "A creature or player" — Ertha Jo, Frontier Mentor's "an ability that targets a creature or player". */
         val CreatureOrPlayer: Recipient = AnyOf(listOf(Object(GameObjectFilter.Creature), AnyPlayer))
@@ -548,6 +563,21 @@ sealed interface AttackPredicate {
     @Serializable
     data object DefenderIsPlayer : AttackPredicate {
         override val description = "a player"
+    }
+
+    /**
+     * The attacker was declared as attacking a **battle** — the defender-kind sibling of
+     * [DefenderIsPlayer] (CR 508.1: an attacker is declared as attacking a player, planeswalker,
+     * or battle). "Whenever this creature attacks a battle" (Thrashing Frontliner, War-Trained
+     * Slasher). Like [DefenderIsPlayer] the defender kind is fixed at declaration, so the matcher
+     * reads the stamped `AttackersDeclaredEvent.attackersAgainstBattle` set.
+     *
+     * Per-attacker by design: use it with a `SELF` binding.
+     */
+    @SerialName("AttacksDefenderIsBattle")
+    @Serializable
+    data object DefenderIsBattle : AttackPredicate {
+        override val description = "a battle"
     }
 
     /**

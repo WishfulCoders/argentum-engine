@@ -2485,6 +2485,8 @@ class TriggerDetector(
                     cardComponent.typeLine.isLand
                 is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsPlaneswalker ->
                     com.wingedsheep.sdk.core.CardType.PLANESWALKER in cardComponent.typeLine.cardTypes
+                is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsBattle ->
+                    cardComponent.typeLine.isBattle
                 is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsPermanent ->
                     cardComponent.typeLine.isPermanent
                 is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsNonland ->
@@ -3000,18 +3002,22 @@ class TriggerDetector(
     ) {
         // Collect all combat damage-to-player events, grouped by the controller of the damage
         // source (offensive batch) and, separately, by the damaged player (defensive batch).
-        data class CombatDamageInfo(val sourceId: EntityId, val targetPlayerId: EntityId)
+        // Damage to a battle is collected alongside, flagged, for the "to a player or battle"
+        // variant only; every other batch here is about players.
+        data class CombatDamageInfo(val sourceId: EntityId, val targetPlayerId: EntityId, val toBattle: Boolean = false)
         val combatDamageByController = mutableMapOf<EntityId, MutableList<CombatDamageInfo>>()
         val combatDamageByDamagedPlayer = mutableMapOf<EntityId, MutableList<CombatDamageInfo>>()
         for (event in events) {
-            if (event is DamageDealtEvent && event.isCombatDamage && event.sourceId != null &&
-                event.targetId in state.turnOrder) {
-                val sourceContainer = state.getEntity(event.sourceId) ?: continue
-                val controller = sourceContainer.get<ControllerComponent>()?.playerId ?: continue
-                val info = CombatDamageInfo(event.sourceId, event.targetId)
-                combatDamageByController.getOrPut(controller) { mutableListOf() }.add(info)
-                combatDamageByDamagedPlayer.getOrPut(event.targetId) { mutableListOf() }.add(info)
-            }
+            if (event !is DamageDealtEvent || !event.isCombatDamage || event.sourceId == null) continue
+            val toPlayer = event.targetId in state.turnOrder
+            // Read the recipient's snapshot: a battle the same damage defeated is already gone
+            // (combat-damage SBAs run before detection), but it was still dealt the damage.
+            if (!toPlayer && event.targetLastKnown?.typeLine?.isBattle != true) continue
+            val sourceContainer = state.getEntity(event.sourceId) ?: continue
+            val controller = sourceContainer.get<ControllerComponent>()?.playerId ?: continue
+            val info = CombatDamageInfo(event.sourceId, event.targetId, toBattle = !toPlayer)
+            combatDamageByController.getOrPut(controller) { mutableListOf() }.add(info)
+            if (toPlayer) combatDamageByDamagedPlayer.getOrPut(event.targetId) { mutableListOf() }.add(info)
         }
         if (combatDamageByController.isEmpty()) return
 
@@ -3080,6 +3086,7 @@ class TriggerDetector(
                 // predicates (e.g. +1/+1 counters) and any other card/controller predicates are
                 // honored — not just the handful of card predicates handled inline.
                 val matchingInfos = damageEvents.filter { info ->
+                    if (info.toBattle && !trigger.orBattle) return@filter false
                     val sourceContainer = state.getEntity(info.sourceId) ?: return@filter false
                     sourceContainer.get<CardComponent>() ?: return@filter false
                     if (!projected.isCreature(info.sourceId)) return@filter false
@@ -3100,7 +3107,10 @@ class TriggerDetector(
                 // can reference "that player" (Vaan, Street Thief); `triggeringEntityId` is an
                 // arbitrary matching source for that player — batch triggers don't dispatch
                 // per source, so cards needing per-source dispatch use a singular trigger event.
-                for ((damagedPlayerId, infos) in matchingInfos.groupBy { it.targetPlayerId }) {
+                // The "or battle" variant also fires once per battle hit (no triggering player).
+                // Either way the matching sources that hit that recipient are captured, so a
+                // payoff can act on "those creatures" (Zurgo and Ojutai).
+                for ((recipientId, infos) in matchingInfos.groupBy { it.targetPlayerId }) {
                     triggers.add(
                         PendingTrigger(
                             ability = ability,
@@ -3109,7 +3119,8 @@ class TriggerDetector(
                             controllerId = controllerId,
                             triggerContext = TriggerContext(
                                 triggeringEntityId = infos.first().sourceId,
-                                triggeringPlayerId = damagedPlayerId
+                                triggeringPlayerId = recipientId.takeUnless { infos.first().toBattle },
+                                capturedEntityIds = infos.map { it.sourceId }.distinct()
                             )
                         )
                     )
@@ -3191,11 +3202,10 @@ class TriggerDetector(
 
     private data class CreatureDeathInfo(
         val entityId: EntityId,
-        val typeLine: com.wingedsheep.sdk.core.TypeLine?,
-        /** Power the instant the creature left the battlefield (CR 603.10 LKI), for batch power sums. */
-        val lastKnownPower: Int? = null,
-        /** Whether the dead creature was a token, so the filter's nontoken/token predicate is honored. */
-        val wasToken: Boolean = false
+        /** The battlefield→graveyard move itself — its LKI snapshot answers the trigger's filter. */
+        val event: ZoneChangeEvent,
+        /** Power the instant the permanent left the battlefield (CR 603.10 LKI), for batch power sums. */
+        val lastKnownPower: Int? = null
     )
 
     /**
@@ -3224,22 +3234,21 @@ class TriggerDetector(
         triggers: MutableList<PendingTrigger>,
         index: TriggerIndex
     ) {
-        // Collect creature deaths (battlefield → graveyard), grouped by last-known controller.
+        // Collect every permanent put into a graveyard from the battlefield, grouped by last-known
+        // controller. Not only creatures: the trigger's filter decides which types count, so
+        // "one or more artifacts and/or creatures you control are put into a graveyard from the
+        // battlefield" (Seer of Stolen Sight) sees a dying noncreature artifact token.
         val deathsByController = mutableMapOf<EntityId, MutableList<CreatureDeathInfo>>()
         for (event in events) {
             if (event !is ZoneChangeEvent) continue
             if (event.fromZone != Zone.BATTLEFIELD || event.toZone != Zone.GRAVEYARD) continue
-            val typeLine = event.lastKnown?.typeLine
-                ?: state.getEntity(event.entityId)?.get<CardComponent>()?.typeLine
-            if (typeLine?.isCreature != true) continue
             val controllerId = event.lastKnown?.controllerId ?: event.ownerId
             deathsByController.getOrPut(controllerId) { mutableListOf() }
                 .add(
                     CreatureDeathInfo(
                         entityId = event.entityId,
-                        typeLine = typeLine,
-                        lastKnownPower = event.lastKnown?.power,
-                        wasToken = event.lastKnown?.wasToken ?: false
+                        event = event,
+                        lastKnownPower = event.lastKnown?.power
                     )
                 )
         }
@@ -3349,23 +3358,19 @@ class TriggerDetector(
         if (relevantDeaths.isEmpty()) return
 
         // Which of the batch's deaths satisfy the trigger's filter. Evaluated against last-known
-        // information (the creatures are already in the graveyard) — including the token/nontoken
-        // predicate, so "one or more *nontoken* creatures you control die" (The Skullspore Nexus,
-        // Ghoulish Procession) ignores dying tokens both for firing and for the power sum below.
+        // information (the permanents are already in the graveyard, and a token may already be
+        // swept by 704.5d) through the same LKI-aware matcher as the per-object zone-change
+        // trigger — so composites (`Creature or Artifact`), token/nontoken, subtypes and keywords
+        // all read the snapshot. Controller scoping was already applied above, relative to the
+        // observer, so the controller predicate is stripped before delegating.
+        val cardFilter = trigger.filter.copy(controllerPredicate = null)
+        val zonePattern = EventPattern.ZoneChangeEvent(
+            filter = cardFilter, from = Zone.BATTLEFIELD, to = Zone.GRAVEYARD
+        )
         fun deathMatchesFilter(info: CreatureDeathInfo): Boolean =
-            trigger.filter.cardPredicates.all { predicate ->
-                when (predicate) {
-                    is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsCreature ->
-                        info.typeLine?.isCreature == true
-                    is com.wingedsheep.sdk.scripting.predicates.CardPredicate.HasSubtype ->
-                        info.typeLine?.hasSubtype(predicate.subtype) == true
-                    is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsNontoken ->
-                        !info.wasToken
-                    is com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsToken ->
-                        info.wasToken
-                    else -> true
-                }
-            }
+            matcher.matchesZoneChangeTrigger(
+                zonePattern, TriggerBinding.ANY, info.event, sourceId, controllerId, state
+            )
 
         val matchingDeaths = relevantDeaths.filter { deathMatchesFilter(it) }
         if (matchingDeaths.isEmpty()) return

@@ -854,6 +854,7 @@ class CastZoneResolver(
                 is CardPredicate.IsLand -> card.typeLine.isLand
                 is CardPredicate.IsNonland -> !card.typeLine.isLand
                 is CardPredicate.IsPlaneswalker -> card.isPlaneswalker
+                is CardPredicate.IsBattle -> card.isBattle
                 is CardPredicate.IsPermanent -> card.typeLine.isPermanent
                 is CardPredicate.IsBasicLand -> card.typeLine.isBasicLand
                 is CardPredicate.HasAdventure -> card.hasAdventure
@@ -987,6 +988,7 @@ class CastZoneResolver(
                 is CardPredicate.NotOfSourceChosenType,
                 is CardPredicate.SharesCreatureTypeWithSource,
                 is CardPredicate.SharesCreatureTypeWithTriggeringEntity,
+                is CardPredicate.ConvokedSource,
                 is CardPredicate.SharesCreatureTypeWith,
                 is CardPredicate.SharesCardTypeWith,
                 is CardPredicate.SharesColorWith,
@@ -998,6 +1000,7 @@ class CastZoneResolver(
                 is CardPredicate.DoesNotShareCreatureTypeWithPermanentYouControl,
                 is CardPredicate.DoesNotShareLandTypeWithPermanentYouControl,
                 is CardPredicate.TargetsMatching,
+                is CardPredicate.TargetsPlayer,
                 is CardPredicate.AbilitySourceMatches,
                 is CardPredicate.IsActivatedOrTriggeredAbility,
                 is CardPredicate.IsTriggeredAbility,
