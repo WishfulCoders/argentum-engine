@@ -2184,7 +2184,8 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
 - `CreateEldraziSpawn(count?, controller?, imageUri?)` — 0/1 colorless Eldrazi Spawn creature tokens
   ("Sacrifice this creature: Add {C}."). `count` accepts an `Int` (default 1) or a `DynamicAmount`
   evaluated at resolution, such as `DynamicAmount.XValue` for Kozilek's Command.
-- `CreatePest(count?, controller?)` — 1/1 **black and green** Pest creature tokens with "When this
+- `CreatePest(count?, controller?)` — `count` is an `Int` (default 1) or a `DynamicAmount` read at
+  resolution (Pest Infestation's "twice X"). 1/1 **black and green** Pest creature tokens with "When this
   creature dies, you gain 1 life." (`PredefinedTokens.Pest`) — Strixhaven's Witherbloom token
   (Hunt for Specimens, Pest Summoning, Sedgemoor Witch, …). Predefined rather than inline because
   the token is *named* and carries its own triggered ability, which the inline `CreateToken` facade

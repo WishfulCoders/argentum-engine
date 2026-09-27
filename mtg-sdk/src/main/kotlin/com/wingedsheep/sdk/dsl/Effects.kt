@@ -3174,6 +3174,13 @@ object Effects {
         CreatePredefinedTokenEffect("Pest", count, controller)
 
     /**
+     * [CreatePest] with a count read at resolution — "create twice X Pests" (Pest Infestation:
+     * `DynamicAmounts.xValue() * 2`).
+     */
+    fun CreatePest(count: DynamicAmount, controller: EffectTarget? = null): Effect =
+        CreatePredefinedTokenEffect("Pest", controller = controller, dynamicCount = count)
+
+    /**
      * Create a dynamic number of 0/1 colorless Eldrazi Spawn creature tokens.
      * The count is evaluated at resolution time.
      */
