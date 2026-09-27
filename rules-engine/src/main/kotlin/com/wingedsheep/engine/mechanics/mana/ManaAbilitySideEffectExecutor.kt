@@ -70,8 +70,10 @@ class ManaAbilitySideEffectExecutor(
     ): Pair<GameState, List<GameEvent>> {
         var currentState = state
         val events = mutableListOf<GameEvent>()
+        // The solver chose these sources off this projection, so it is already built.
+        val paymentProjection = state.projectedState
         for (source in solution.sources) {
-            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, controllerId)
+            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, controllerId, paymentProjection)
             currentState = tappedState
             events.addAll(tapEvents)
 

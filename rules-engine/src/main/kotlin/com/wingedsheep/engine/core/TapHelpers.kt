@@ -132,10 +132,23 @@ fun tapForMana(
     state: GameState,
     sourceId: EntityId,
     tapperId: EntityId,
+    paymentProjection: ProjectedState? = null,
 ): Pair<GameState, List<GameEvent>> {
-    val (tapped, tapEvent) = tap(state, sourceId)
+    // A payment taps its sources one after another, so every source after the first is tapped on
+    // a state nobody has projected yet, and reading its controller and land-ness used to project
+    // the whole board once per source. [paymentProjection] is the projection of the state the
+    // payment started from, which the solver that picked these sources already built. Tapping
+    // other sources for mana changes no permanent's controller or card types.
+    val (tapped, tapEvent) = if (paymentProjection == null) tap(state, sourceId) else tap(
+        state, sourceId,
+        tappedById = paymentProjection.getController(sourceId)
+            ?: state.getEntity(sourceId)?.get<ControllerComponent>()?.playerId,
+    )
     if (tapEvent == null) return state to emptyList()
-    return tapped to listOfNotNull(tapEvent, landTappedForManaEvent(state, sourceId, tapperId))
+    return tapped to listOfNotNull(
+        tapEvent,
+        landTappedForManaEvent(state, sourceId, tapperId, paymentProjection ?: state.projectedState),
+    )
 }
 
 /**
@@ -147,8 +160,9 @@ fun landTappedForManaEvent(
     state: GameState,
     sourceId: EntityId,
     tapperId: EntityId,
+    projected: ProjectedState = state.projectedState,
 ): LandTappedForManaEvent? {
-    if (!state.projectedState.hasType(sourceId, "LAND")) return null
+    if (!projected.hasType(sourceId, "LAND")) return null
     val name = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: return null
     return LandTappedForManaEvent(tapperId = tapperId, landId = sourceId, landName = name)
 }

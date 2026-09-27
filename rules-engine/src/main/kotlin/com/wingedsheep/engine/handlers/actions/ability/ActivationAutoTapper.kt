@@ -91,9 +91,11 @@ internal class ActivationAutoTapper(
         var currentState = state
         var currentPool = pool
         val events = mutableListOf<GameEvent>()
+        // The solver chose these sources off this projection, so it is already built.
+        val paymentProjection = state.projectedState
 
         for (source in solution.sources) {
-            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, playerId)
+            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, playerId, paymentProjection)
             currentState = tappedState
             events.addAll(tapEvents)
             // Auto-tapping a source to pay an ability's mana cost activates that source's mana
