@@ -1,10 +1,12 @@
 package com.wingedsheep.sdk.model
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SealedSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.util.UUID
@@ -21,7 +23,7 @@ import java.util.UUID
  * single map lookup allocated. That boxing was a fifth of all allocation in an AI game
  * (mtg-draft-ai `docs/56` §3 item 4). Equality, [hashCode] and [toString] are exactly the value
  * class's — those of [value] — so hash-map iteration order is unchanged, and [EntityIdSerializer]
- * writes the same bare string the value class did.
+ * writes it exactly as the value class did.
  */
 @Serializable(with = EntityIdSerializer::class)
 class EntityId(val value: String) {
@@ -45,12 +47,25 @@ class EntityId(val value: String) {
     }
 }
 
-/** Serializes an [EntityId] as its bare [EntityId.value], as the former value class did. */
+/**
+ * Serializes an [EntityId] exactly as the former value class did: an *inline* descriptor named
+ * `com.wingedsheep.sdk.model.EntityId` around one String element, written through
+ * `encodeInline`. JSON therefore still sees a bare string (map keys included), and encoders that
+ * find entity references by watching for this inline descriptor — `TypedEntityReferences`, which
+ * the hidden-information rewrite and the determinizer build on — still find every one.
+ */
+@OptIn(ExperimentalSerializationApi::class, SealedSerializationApi::class)
 object EntityIdSerializer : KSerializer<EntityId> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("com.wingedsheep.sdk.model.EntityId", PrimitiveKind.STRING)
+    private val carrier: SerialDescriptor = buildClassSerialDescriptor("com.wingedsheep.sdk.model.EntityId") {
+        element("value", String.serializer().descriptor)
+    }
 
-    override fun serialize(encoder: Encoder, value: EntityId) = encoder.encodeString(value.value)
+    override val descriptor: SerialDescriptor = object : SerialDescriptor by carrier {
+        override val isInline: Boolean get() = true
+    }
 
-    override fun deserialize(decoder: Decoder): EntityId = EntityId(decoder.decodeString())
+    override fun serialize(encoder: Encoder, value: EntityId) =
+        encoder.encodeInline(descriptor).encodeString(value.value)
+
+    override fun deserialize(decoder: Decoder): EntityId = EntityId(decoder.decodeInline(descriptor).decodeString())
 }
