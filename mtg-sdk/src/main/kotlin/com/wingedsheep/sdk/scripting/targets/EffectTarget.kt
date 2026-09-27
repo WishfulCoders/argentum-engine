@@ -309,6 +309,29 @@ sealed interface EffectTarget {
     }
 
     /**
+     * ATTACKED BY: the player or planeswalker [attacker] is attacking — "deals 1 damage to the
+     * player or planeswalker that creature is attacking" (Raid Bombardment, Hellrider:
+     * [TriggeringEntity]), "… it's attacking" (Scorch Spitter: [Self]), Mage Slayer
+     * ([EquippedCreature]). Not "defending player" ([Player.DefendingPlayer]), which maps a
+     * planeswalker to its controller; this names the planeswalker itself.
+     *
+     * Read at resolution: the attacker's current attack while it is still on the battlefield, else
+     * the one it had when it left (last-known information) — Raid Bombardment's ruling that the
+     * damage is still dealt after the creature has left. An attacker removed from combat but still
+     * on the battlefield is attacking nothing, and a battle is neither a player nor a planeswalker,
+     * so both resolve to nothing and the effect does nothing.
+     */
+    @SerialName("AttackedBy")
+    @Serializable
+    data class AttackedBy(val attacker: EffectTarget = TriggeringEntity) : EffectTarget {
+        override val description: String = when (attacker) {
+            Self -> "the player or planeswalker it's attacking"
+            TriggeringEntity -> "the player or planeswalker that creature is attacking"
+            else -> "the player or planeswalker ${attacker.description} is attacking"
+        }
+    }
+
+    /**
      * DISCARDED AS COST: a card discarded to pay this spell's additional cost
      * (`Costs.additional.DiscardCards(...)`) or this activated ability's cost (`Costs.Discard(...)`),
      * by index. The discard counterpart of [SacrificedAsCost] / [TappedAsCost]. Resolves to the discarded card's entity id —
