@@ -248,6 +248,7 @@ class AttachmentTriggerDetector(
                 if (event.entityId != attachedEntityId) return false
                 if (trigger.from != null && event.fromZone != trigger.from) return false
                 if (trigger.to != null && event.toZone != trigger.to) return false
+                if (trigger.excludeFrom != null && event.fromZone == trigger.excludeFrom) return false
                 true
             }
             else -> false

@@ -5775,7 +5775,7 @@ Copy the subject the Oracle text prints. `Triggers.self.matching(filter)` narrow
 ("when this creature, if it's a …").
 
 **Object verbs** (`self` / `attached` / `a` / `another`): `enters(from?)`, `leaves(to?, excludeTo?,
-excludeSacrifice?, asCraftMaterial?)`, `dies()`, `changesZone(from?, to?, excludeTo?)` (non-battlefield
+excludeSacrifice?, asCraftMaterial?)`, `dies()`, `changesZone(from?, to?, excludeTo?, excludeFrom?)` (non-battlefield
 moves), `attacks(requires)`, `blocks(attackerFilter?, minBlockedAttackers?)`, `becomesBlocked()`,
 `blocksOrBecomesBlocked(by?, oncePerCombat?)`, `attacksAndIsntBlocked()`, `dealsDamage(to, damageType,
 requireExcess, batch, requires)`, `dealsCombatDamage(to, …)`, `isDealtDamage(by)`,
@@ -6063,6 +6063,13 @@ The shapes in this family, with their engine notes.
   (`ZoneTransitionService.trackPermanentSacrifice` → `pendingSacrificeIds`) stamps on every
   sacrifice — cost payment and the sacrifice effect executors alike — so ordinary destruction /
   lethal-damage / SBA deaths leave it `false`.
+- `EventPattern.ZoneChangeEvent(..., excludeFrom = zone)` — the origin that does **not** match, the
+  mirror of `excludeTo`. "A creature card is put into a graveyard from anywhere other than the
+  battlefield" is `Triggers.a(GameObjectFilter.Creature).changesZone(to = Zone.GRAVEYARD, excludeFrom =
+  Zone.BATTLEFIELD)` — a discard, a mill, a countered creature spell, never a death (**Syr Konrad, the
+  Grim**, whose "another creature dies" clause is a separate OTHER-bound `leavesBattlefield` trigger
+  so it keeps the leaves-the-battlefield look-back). Honored by the trigger matcher, delayed
+  zone-change triggers and the attachment detectors.
 
 **Token creation**
 

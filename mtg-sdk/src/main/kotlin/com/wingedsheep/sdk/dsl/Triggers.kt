@@ -187,14 +187,23 @@ class ObjectTriggerSubject internal constructor(
     /**
      * A zone change that doesn't touch the battlefield — "is put into a graveyard from anywhere"
      * (`changesZone(to = Zone.GRAVEYARD)`), "is put into your hand from your library". Battlefield
-     * moves are [enters] / [leaves] / [dies].
+     * moves are [enters] / [leaves] / [dies]. [excludeFrom] is the origin that does *not* match:
+     * "a creature card is put into a graveyard from anywhere other than the battlefield" (Syr
+     * Konrad, the Grim) is `changesZone(to = Zone.GRAVEYARD, excludeFrom = Zone.BATTLEFIELD)`.
      */
-    fun changesZone(from: Zone? = null, to: Zone? = null, excludeTo: Zone? = null): TriggerSpec {
+    fun changesZone(
+        from: Zone? = null,
+        to: Zone? = null,
+        excludeTo: Zone? = null,
+        excludeFrom: Zone? = null,
+    ): TriggerSpec {
         require(from != Zone.BATTLEFIELD && to != Zone.BATTLEFIELD) {
             "a battlefield zone change is enters()/leaves()/dies()"
         }
         require(from != null || to != null) { "changesZone() needs a from or a to zone" }
-        return spec(ZoneChangeEvent(filter = filterOrAny, from = from, to = to, excludeTo = excludeTo))
+        return spec(
+            ZoneChangeEvent(filter = filterOrAny, from = from, to = to, excludeTo = excludeTo, excludeFrom = excludeFrom)
+        )
     }
 
     // ---- Combat ------------------------------------------------------------------------------
