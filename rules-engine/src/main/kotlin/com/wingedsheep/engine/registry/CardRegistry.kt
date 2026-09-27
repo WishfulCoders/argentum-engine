@@ -81,8 +81,11 @@ class CardRegistry(private val parent: CardRegistry? = null) {
      * @return The card definition, or null if not found
      */
     fun getCard(name: String): CardDefinition? {
-        // First try exact match with collector number format
-        cardsByNameAndNumber[name]?.let { return it }
+        // First try exact match with collector number format. Every key of that index contains a
+        // '#', so a plain name — nearly every lookup, since the engine resolves each permanent's
+        // definition id through here many times per action — can skip a guaranteed miss in a
+        // ~20k-entry map (mtg-draft-ai `docs/56` §3 item 5).
+        if (name.indexOf('#') >= 0) cardsByNameAndNumber[name]?.let { return it }
         // Fall back to name-only lookup, then to the parent registry for an overlay.
         return cardsByName[name] ?: parent?.getCard(name)
     }
