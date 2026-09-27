@@ -98,6 +98,24 @@ class TriggerDetector(
      * - Damage observer trigger lists for specialized detection methods
      */
     private fun buildTriggerIndex(state: GameState): TriggerIndex {
+        indexMemo?.let { if (it.state === state) return it.index }
+        return indexFor(state).also { indexMemo = IndexMemo(state, it) }
+    }
+
+    /**
+     * The last index built, and the state it was built from. The index is a function of the state
+     * alone (the registries it also reads are fixed for the detector's life) and states are
+     * immutable, so a second detection pass over the *same* state object can reuse it. That is the
+     * common case, not a corner: settling an action detects on the result, asks the new step's
+     * phase triggers of that same state, and then — when nothing triggered and no state-based
+     * action applied — detects the (empty) state-based-action batch on it once more. Each of those
+     * rebuilt the index from scratch, projection and all (mtg-draft-ai `docs/56` §3 item 2).
+     */
+    private class IndexMemo(val state: GameState, val index: TriggerIndex)
+
+    @Volatile private var indexMemo: IndexMemo? = null
+
+    private fun indexFor(state: GameState): TriggerIndex {
         val projected = state.projectedState
 
         // Phase 1: One walk for every battlefield-wide fact the per-entity ability resolution below
