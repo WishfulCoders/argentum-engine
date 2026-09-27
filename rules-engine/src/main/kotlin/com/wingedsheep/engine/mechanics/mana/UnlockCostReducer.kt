@@ -68,7 +68,7 @@ class UnlockCostReducer(
             for (entityId in state.getBattlefield(playerId)) {
                 val container = state.getEntity(entityId) ?: continue
                 val card = container.get<CardComponent>() ?: continue
-                val def = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val def = cardRegistry.getCard(card) ?: continue
                 val classLevel = container.get<ClassLevelComponent>()?.currentLevel
                 for (ability in def.script.effectiveStaticAbilities(classLevel)) {
                     if (ability is ModifyUnlockCost) results += entityId to ability

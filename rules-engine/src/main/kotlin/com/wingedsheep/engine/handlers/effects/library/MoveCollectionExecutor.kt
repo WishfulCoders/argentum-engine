@@ -599,7 +599,7 @@ class MoveCollectionExecutor(
         excludedHosts: List<EntityId> = emptyList()
     ): EffectResult {
         val cardComponent = state.getEntity(auraId)?.get<CardComponent>()
-        val cardDef = cardComponent?.let { cardRegistry.getCard(it.cardDefinitionId) }
+        val cardDef = cardComponent?.let { cardRegistry.getCard(it) }
         val auraTarget = cardDef?.script?.auraTarget
 
         if (auraTarget == null) {
@@ -725,7 +725,7 @@ class MoveCollectionExecutor(
         val container = newState.getEntity(auraId)
         if (container != null) {
             val cardDef = container.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
             var newContainer = container
                 .with(ControllerComponent(destPlayerId))
                 .with(AttachedToComponent(targetId))

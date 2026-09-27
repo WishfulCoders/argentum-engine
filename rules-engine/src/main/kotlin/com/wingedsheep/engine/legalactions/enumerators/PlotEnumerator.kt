@@ -64,7 +64,7 @@ class PlotEnumerator : ActionEnumerator {
             val topCardId = library.firstOrNull()
             if (topCardId != null) {
                 val topCardComponent = state.getEntity(topCardId)?.get<CardComponent>()
-                val topCardDef = topCardComponent?.let { context.cardRegistry.getCard(it.cardDefinitionId) }
+                val topCardDef = topCardComponent?.let { context.cardRegistry.getCard(it) }
                 if (topCardComponent != null && topCardDef != null &&
                     context.predicateEvaluator.matches(
                         state, state.projectedState, topCardId, plotTopFilter,

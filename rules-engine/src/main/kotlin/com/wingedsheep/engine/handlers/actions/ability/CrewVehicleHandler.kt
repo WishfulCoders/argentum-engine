@@ -67,7 +67,7 @@ class CrewVehicleHandler(
         }
 
         // Vehicle must have Crew keyword ability
-        val cardDef = cardRegistry.getCard(vehicleCard.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(vehicleCard)
             ?: return "Card definition not found"
 
         val crewAbility = cardDef.keywordAbilities
@@ -141,7 +141,7 @@ class CrewVehicleHandler(
         val vehicleCard = vehicleContainer.get<CardComponent>()
             ?: return ExecutionResult.error(state, "Not a card")
 
-        val cardDef = cardRegistry.getCard(vehicleCard.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(vehicleCard)
             ?: return ExecutionResult.error(state, "Card definition not found")
 
         var currentState = state

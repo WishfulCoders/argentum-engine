@@ -22,7 +22,7 @@ object LandEntryLocks {
     fun landsCantEnter(state: GameState, cardRegistry: CardRegistry, predicateEvaluator: PredicateEvaluator): Boolean {
         for (entityId in state.getBattlefield()) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 when (ability) {
                     is LandsCantEnterTheBattlefield -> return true

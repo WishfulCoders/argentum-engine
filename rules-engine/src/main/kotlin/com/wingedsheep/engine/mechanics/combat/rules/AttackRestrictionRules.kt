@@ -191,7 +191,7 @@ class CantAttackUnlessDefenderRule(
         val container = ctx.state.getEntity(ctx.attackerId) ?: return null
         if (container.has<FaceDownComponent>()) return null
         val cardComponent = container.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = ctx.cardRegistry.getCard(cardComponent) ?: return null
 
         val restriction = cardDef.staticAbilities
             .filterIsInstance<CantAttackUnless>()
@@ -249,7 +249,7 @@ class CantBeAttackedByDefenderRule(
             val container = ctx.state.getEntity(permId) ?: continue
             if (container.has<FaceDownComponent>()) continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val cardDef = ctx.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = ctx.cardRegistry.getCard(cardComponent) ?: continue
             for (ability in cardDef.staticAbilities) {
                 if (ability is CantBeAttackedBy) {
                     val matches = predicateEvaluator.matches(
@@ -279,7 +279,7 @@ class CantBeAttackedWhileAttachedDefenderRule : AttackDefenderRule {
             return null
         }
         val card = defender.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(card.cardDefinitionId) ?: return null
+        val cardDef = ctx.cardRegistry.getCard(card) ?: return null
         if (cardDef.staticAbilities.none { it is CantBeAttackedWhileAttached }) return null
         return "${card.name} can't be attacked while it's attached"
     }

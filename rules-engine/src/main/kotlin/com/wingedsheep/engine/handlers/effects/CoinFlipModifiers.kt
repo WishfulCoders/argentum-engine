@@ -42,7 +42,7 @@ object CoinFlipModifiers {
         val alreadyFlippedThisTurn = state.getEntity(playerId)?.has<FlippedCoinsThisTurnComponent>() == true
         return state.projectedState.getBattlefieldControlledBy(playerId).any { permanentId ->
             val card = state.getEntity(permanentId)?.get<CardComponent>() ?: return@any false
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@any false
+            val cardDef = cardRegistry.getCard(card) ?: return@any false
             cardDef.script.staticAbilities.any { ability ->
                 ability is WinCoinFlips && (!ability.firstFlipEachTurn || !alreadyFlippedThisTurn)
             }
@@ -71,7 +71,7 @@ object CoinFlipModifiers {
     fun coinsPerFlip(state: GameState, cardRegistry: CardRegistry, playerId: EntityId): Int =
         state.projectedState.getBattlefieldControlledBy(playerId).fold(1) { coins, permanentId ->
             val card = state.getEntity(permanentId)?.get<CardComponent>() ?: return@fold coins
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@fold coins
+            val cardDef = cardRegistry.getCard(card) ?: return@fold coins
             cardDef.script.staticAbilities
                 .filterIsInstance<FlipAdditionalCoins>()
                 .fold(coins) { running, ability -> running * ability.coinsPerFlip.coerceAtLeast(1) }

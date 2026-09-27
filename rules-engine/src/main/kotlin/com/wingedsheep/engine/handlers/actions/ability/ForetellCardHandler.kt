@@ -64,7 +64,7 @@ class ForetellCardHandler(
 
     private fun foretellCostOf(state: GameState, cardId: com.wingedsheep.sdk.model.EntityId): ManaCost? {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return null
         return cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Foretell>().firstOrNull()?.cost
     }
 

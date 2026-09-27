@@ -141,7 +141,7 @@ object UndoPolicyComputer {
     ): Boolean {
         val container = state.getEntity(action.sourceId) ?: return false
         val cardComponent = container.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return false
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return false
         val ability = cardDef.script.activatedAbilities.find { it.id == action.abilityId }
         return ability?.isManaAbility == true
     }

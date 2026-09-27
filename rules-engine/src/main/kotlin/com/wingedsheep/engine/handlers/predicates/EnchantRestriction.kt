@@ -58,7 +58,7 @@ object EnchantRestriction {
         hostId: EntityId,
         controllerId: EntityId
     ): Boolean {
-        val requirement = cardRegistry.getCard(auraCard.cardDefinitionId)?.script?.auraTarget ?: return false
+        val requirement = cardRegistry.getCard(auraCard)?.script?.auraTarget ?: return false
         if (hostSatisfies(state, projected, predicateEvaluator, requirement, hostId, controllerId, auraId) != true) {
             return false
         }
@@ -84,7 +84,7 @@ object EnchantRestriction {
         val colors: Set<String> = if (attachmentId in state.getBattlefield()) projected.getColors(attachmentId)
         else attachmentCard.colors.map { it.name }.toSet()
         if (colors.isEmpty()) return false
-        val statics = cardRegistry.getCard(attachmentCard.cardDefinitionId)?.staticAbilities.orEmpty()
+        val statics = cardRegistry.getCard(attachmentCard)?.staticAbilities.orEmpty()
         if (statics.any { it is GrantProtectionFromControlledColors || it is GrantProtectionFromChosenColorToGroup }) {
             return false
         }

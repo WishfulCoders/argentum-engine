@@ -230,7 +230,7 @@ class BeginningPhaseManager(
 
             for (permanentId in projectedForSeedborn.getBattlefieldControlledBy(playerId)) {
                 val card = newState.getEntity(permanentId)?.get<CardComponent>() ?: continue
-                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(card) ?: continue
                 for (ability in cardDef.script.staticAbilities) {
                     when (ability) {
                         is UntapDuringOtherUntapSteps -> untapAll = true
@@ -411,7 +411,7 @@ class BeginningPhaseManager(
             val newLoreCount = counters.getCount(CounterType.LORE) + 1
 
             // Determine which chapters this lore counter triggers
-            val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+            val cardDef = cardRegistry.getCard(cardComponent)
             var updatedSaga = sagaComponent
             if (cardDef != null) {
                 for (chapter in cardDef.sagaChapters) {
@@ -447,7 +447,7 @@ class BeginningPhaseManager(
         val byFilter = LinkedHashMap<GameObjectFilter, Int>()
         for (permanentId in state.getBattlefield()) {
             val card = state.getEntity(permanentId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 if (ability is UntapLimitPerStep) {
                     byFilter.merge(ability.filter, ability.max, ::minOf)

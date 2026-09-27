@@ -447,7 +447,7 @@ internal class BlockPhaseManager(
 
         if (attackerIds.size > 1) {
             val canBlockAny = if (!isFaceDown) {
-                val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+                val cardDef = cardRegistry.getCard(cardComponent)
                 cardDef?.staticAbilities?.any { it is CanBlockAnyNumber } == true
             } else false
             if (!canBlockAny) {
@@ -515,7 +515,7 @@ internal class BlockPhaseManager(
      * Check if a creature has "can't block" ability (e.g., Craven Giant, Jungle Lion).
      */
     private fun validateCantBlock(blockerCard: CardComponent): String? {
-        val cardDef = cardRegistry.getCard(blockerCard.cardDefinitionId) ?: return null
+        val cardDef = cardRegistry.getCard(blockerCard) ?: return null
         val cantBlockAbility = cardDef.staticAbilities.filterIsInstance<CantBlock>().firstOrNull()
             ?: return null
 
@@ -531,7 +531,7 @@ internal class BlockPhaseManager(
      * Returns true if the creature cannot block.
      */
     private fun hasCantBlockAbility(blockerCard: CardComponent): Boolean {
-        val cardDef = cardRegistry.getCard(blockerCard.cardDefinitionId) ?: return false
+        val cardDef = cardRegistry.getCard(blockerCard) ?: return false
         val cantBlockAbility = cardDef.staticAbilities.filterIsInstance<CantBlock>().firstOrNull()
             ?: return false
 
@@ -630,7 +630,7 @@ internal class BlockPhaseManager(
             val attackerContainer = state.getEntity(attackerId) ?: continue
             if (attackerContainer.has<FaceDownComponent>()) continue
             val attackerCard = attackerContainer.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(attackerCard) ?: continue
 
             val minBlockers = cardDef.staticAbilities
                 .filterIsInstance<com.wingedsheep.sdk.scripting.CantBeBlockedByFewerThan>()
@@ -664,7 +664,7 @@ internal class BlockPhaseManager(
             val attackerContainer = state.getEntity(attackerId) ?: continue
             if (attackerContainer.has<FaceDownComponent>()) continue
             val attackerCard = attackerContainer.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId)
+            val cardDef = cardRegistry.getCard(attackerCard)
 
             // Printed "can't be blocked by more than N", including the conditional form
             // (Akawalli's descend-8 "can't be blocked by more than one creature") — unwrap a
@@ -731,7 +731,7 @@ internal class BlockPhaseManager(
         var capDescription = ""
         for (permId in state.getBattlefield()) {
             val cardComponent = state.getEntity(permId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(cardComponent) ?: continue
             for (ability in cardDef.staticAbilities.filterIsInstance<BlockerCountLimit>()) {
                 if (cap == null || ability.maxBlockers < cap) {
                     cap = ability.maxBlockers
@@ -767,7 +767,7 @@ internal class BlockPhaseManager(
         for (blockerId in blockerIds) {
             val cardComponent = state.getEntity(blockerId)?.get<CardComponent>() ?: continue
             if (state.getEntity(blockerId)?.has<FaceDownComponent>() == true) continue
-            val printed = cardRegistry.getCard(cardComponent.cardDefinitionId)
+            val printed = cardRegistry.getCard(cardComponent)
                 ?.staticAbilities.orEmpty()
             val granted = state.grantedStaticAbilities
                 .filter { it.entityId == blockerId }
@@ -1110,7 +1110,7 @@ internal class BlockPhaseManager(
         val container = state.getEntity(blockerId) ?: return null
         if (container.has<FaceDownComponent>()) return null
         val cardComponent = container.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return null
 
         val restriction = cardDef.staticAbilities
             .filterIsInstance<CantBlockUnless>()
@@ -1145,7 +1145,7 @@ internal class BlockPhaseManager(
         val container = state.getEntity(blockerId) ?: return false
         if (container.has<FaceDownComponent>()) return false
         val cardComponent = container.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return false
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return false
 
         val restriction = cardDef.staticAbilities
             .filterIsInstance<CantBlockUnless>()

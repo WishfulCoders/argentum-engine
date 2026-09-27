@@ -56,7 +56,7 @@ class GrantedKeywordResolver(
         if (printed != null) return printed.threshold
         val grantSource = findGrant(state, playerId, cardDef, Keyword.CASUALTY) ?: return null
         val sourceDef = state.getEntity(grantSource)?.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: return null
+            ?.let { cardRegistry.getCard(it) } ?: return null
         return sourceDef.script.staticAbilities
             .filterIsInstance<GrantKeywordToOwnSpells>()
             .firstOrNull { it.keyword == Keyword.CASUALTY && matchesSpellFilter(it.spellFilter, cardDef) }
@@ -78,7 +78,7 @@ class GrantedKeywordResolver(
             val controllerId = container.get<ControllerComponent>()?.playerId ?: continue
             if (controllerId != playerId) continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val sourceDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val sourceDef = cardRegistry.getCard(cardComponent) ?: continue
             for (ability in sourceDef.script.staticAbilities) {
                 if (ability is GrantKeywordToOwnSpells &&
                     ability.keyword == keyword &&
@@ -109,7 +109,7 @@ class GrantedKeywordResolver(
             val controllerId = container.get<ControllerComponent>()?.playerId ?: continue
             if (controllerId != playerId) continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val sourceDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val sourceDef = cardRegistry.getCard(cardComponent) ?: continue
             for (ability in sourceDef.script.staticAbilities) {
                 if (ability is GrantKeywordToOwnSpells &&
                     ability.keyword == keyword &&

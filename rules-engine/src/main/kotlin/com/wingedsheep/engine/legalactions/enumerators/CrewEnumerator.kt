@@ -37,7 +37,7 @@ class CrewEnumerator : ActionEnumerator {
             // By definition id, not name — `CrewVehicleHandler` resolves the crew keyword by id,
             // so a renamed copy of a Vehicle (CR 707.9) would otherwise be crewable by the engine
             // but never offered the Crew action.
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
             val crewAbility = cardDef.keywordAbilities
                 .filterIsInstance<KeywordAbility.Numeric>()

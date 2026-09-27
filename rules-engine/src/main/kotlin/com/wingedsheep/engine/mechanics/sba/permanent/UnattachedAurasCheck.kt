@@ -235,7 +235,7 @@ class UnattachedAurasCheck(
         auraCard: CardComponent,
         hostId: EntityId
     ): Boolean {
-        val requirement = cardRegistry.getCard(auraCard.cardDefinitionId)?.script?.auraTarget ?: return false
+        val requirement = cardRegistry.getCard(auraCard)?.script?.auraTarget ?: return false
         // "you" in "Enchant creature you control" is the Aura's controller, read from the
         // projection so a control-changing effect on the Aura itself is honored.
         val controllerId = projected.getController(auraId) ?: return false

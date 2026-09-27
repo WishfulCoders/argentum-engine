@@ -50,7 +50,7 @@ class PlayLandEnumerator : ActionEnumerator {
                 val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: continue
                 if (!cardComponent.typeLine.isLand) continue
                 if (context.cantPlayLand(cardId)) continue
-                val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+                val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
                 if (com.wingedsheep.engine.mechanics.MayhemGrants.effectiveMayhem(state, cardId, cardDef) == null) continue
                 result.add(LegalAction(
                     actionType = "PlayLand",
@@ -124,7 +124,7 @@ class PlayLandEnumerator : ActionEnumerator {
             ))
         }
         val backLand = ModalDfcCasts.landFace(
-            context.cardRegistry.getCard(cardComponent.cardDefinitionId)
+            context.cardRegistry.getCard(cardComponent)
         )
         if (backLand != null) {
             result.add(LegalAction(

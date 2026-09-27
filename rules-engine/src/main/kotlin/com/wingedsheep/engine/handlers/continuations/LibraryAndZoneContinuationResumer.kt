@@ -284,7 +284,7 @@ class LibraryAndZoneContinuationResumer(
             } else continuation.controllerId
 
             val nextCardComponent = newState.getEntity(nextAuraId)?.get<CardComponent>()
-            val nextCardDef = nextCardComponent?.let { services.cardRegistry.getCard(it.cardDefinitionId) }
+            val nextCardDef = nextCardComponent?.let { services.cardRegistry.getCard(it) }
             val nextAuraTarget = nextCardDef?.script?.auraTarget
 
             if (nextAuraTarget == null) {
@@ -455,7 +455,7 @@ class LibraryAndZoneContinuationResumer(
         } else if (faces.size == 1) faces.single() else {
             val card = state.getEntity(selected)?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
                 ?: return ExecutionResult.error(state, "Selected card is missing")
-            val definition = services.cardRegistry.getCard(card.cardDefinitionId)
+            val definition = services.cardRegistry.getCard(card)
             return state.suspendForDecision(
                 { id -> ChooseOptionDecision(
                     id = id, playerId = continuation.playerId, prompt = "Choose which spell to cast",

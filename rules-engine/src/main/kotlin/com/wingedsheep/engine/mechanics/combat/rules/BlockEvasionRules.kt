@@ -195,7 +195,7 @@ class CantBeBlockedByRule(
         val attackerCard = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>() ?: return null
         // Printed restrictions. cardDef may be null for tokens/copies without a registered
         // definition — the granted form below still applies.
-        val cardDef = ctx.cardRegistry.getCard(attackerCard.cardDefinitionId)
+        val cardDef = ctx.cardRegistry.getCard(attackerCard)
         val printed = cardDef?.staticAbilities
             ?.filterIsInstance<CantBeBlockedBy>()
             ?.filter { it.filter.scope is Scope.Self }
@@ -248,7 +248,7 @@ class CantBeBlockedByRule(
             val container = ctx.state.getEntity(hostId) ?: continue
             if (container.has<FaceDownComponent>()) continue
             val hostCard = container.get<CardComponent>() ?: continue
-            val statics = ctx.cardRegistry.getCard(hostCard.cardDefinitionId)?.staticAbilities.orEmpty()
+            val statics = ctx.cardRegistry.getCard(hostCard)?.staticAbilities.orEmpty()
             for (ability in statics.filterIsInstance<CantBeBlockedBy>()) {
                 val scopeMatches = when (val scope = ability.filter.scope) {
                     is Scope.AttachedTo -> container.get<AttachedToComponent>()?.targetId == ctx.attackerId
@@ -394,7 +394,7 @@ class CantBeBlockedExceptByRule(
 class CantBeBlockedUnlessDefenderSharesCreatureTypeRule : BlockEvasionRule {
     override fun check(ctx: BlockCheckContext): String? {
         val attackerCard = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(attackerCard.cardDefinitionId) ?: return null
+        val cardDef = ctx.cardRegistry.getCard(attackerCard) ?: return null
         val restriction = cardDef.staticAbilities
             .filterIsInstance<CantBeBlockedUnlessDefenderSharesCreatureType>().firstOrNull()
             ?: return null
@@ -441,7 +441,7 @@ class CantBeBlockedIfDefenderControlsRule(
         // Face-down creatures have no abilities — the evasion doesn't apply.
         if (ctx.state.getEntity(ctx.attackerId)?.has<FaceDownComponent>() == true) return null
         val attackerCard = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(attackerCard.cardDefinitionId)
+        val cardDef = ctx.cardRegistry.getCard(attackerCard)
         val printed = cardDef?.staticAbilities
             ?.filterIsInstance<CantBeBlockedIfDefenderControls>()
             ?.filter { it.filter.scope is Scope.Self }
@@ -602,7 +602,7 @@ class CantBlockCreaturesWithGreaterPowerRule : BlockEvasionRule {
         // Face-down creatures have no abilities — restriction doesn't apply
         if (ctx.state.getEntity(ctx.blockerId)?.has<FaceDownComponent>() == true) return null
         val blockerCard = ctx.state.getEntity(ctx.blockerId)?.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(blockerCard.cardDefinitionId) ?: return null
+        val cardDef = ctx.cardRegistry.getCard(blockerCard) ?: return null
         val restriction = cardDef.staticAbilities
             .filterIsInstance<com.wingedsheep.sdk.scripting.CantBlockCreaturesWithGreaterPower>().firstOrNull()
             ?: return null
@@ -630,7 +630,7 @@ class CantBeBlockedByCreaturesWithLessPowerRule : BlockEvasionRule {
         // Face-down creatures have no abilities — restriction doesn't apply
         if (ctx.state.getEntity(ctx.attackerId)?.has<FaceDownComponent>() == true) return null
         val attackerCard = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(attackerCard.cardDefinitionId) ?: return null
+        val cardDef = ctx.cardRegistry.getCard(attackerCard) ?: return null
         val restriction = cardDef.staticAbilities
             .filterIsInstance<com.wingedsheep.sdk.scripting.CantBeBlockedByCreaturesWithLessPower>().firstOrNull()
             ?: return null
@@ -667,7 +667,7 @@ class CantBeBlockedWhilePropertyAtMostRule : BlockEvasionRule {
         // Scan the attacking player's battlefield for permanents with this ability
         for (entityId in ctx.projected.getBattlefieldControlledBy(attackerController)) {
             val card = ctx.state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = ctx.cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = ctx.cardRegistry.getCard(card) ?: continue
             for (ability in cardDef.staticAbilities.filterIsInstance<CantBeBlockedWhilePropertyAtMost>()) {
                 if (ability.filter.scope is Scope.Self && entityId != ctx.attackerId) continue
                 val checks = ability.properties
@@ -693,7 +693,7 @@ class CantBeBlockedIfCastSpellTypeRule(
 ) : BlockEvasionRule {
     override fun check(ctx: BlockCheckContext): String? {
         val attackerCard = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>() ?: return null
-        val cardDef = ctx.cardRegistry.getCard(attackerCard.cardDefinitionId) ?: return null
+        val cardDef = ctx.cardRegistry.getCard(attackerCard) ?: return null
         val restriction = cardDef.staticAbilities.filterIsInstance<CantBeBlockedIfCastSpellType>().firstOrNull()
             ?: return null
 

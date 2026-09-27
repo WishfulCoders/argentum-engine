@@ -27,7 +27,7 @@ internal object AdditionalManaForCountersOffer {
         // Cheap gate: nothing to do unless the player controls a permanent printing the static.
         val anyGrant = state.projectedState.getBattlefieldControlledBy(playerId).any { id ->
             val card = state.getEntity(id)?.get<CardComponent>() ?: return@any false
-            context.cardRegistry.getCard(card.cardDefinitionId)?.script?.staticAbilities
+            context.cardRegistry.getCard(card)?.script?.staticAbilities
                 ?.any { it is AdditionalManaForEntryCounters } == true
         }
         if (!anyGrant) return actions

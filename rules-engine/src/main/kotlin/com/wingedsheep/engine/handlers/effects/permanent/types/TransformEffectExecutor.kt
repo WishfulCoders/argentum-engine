@@ -509,7 +509,7 @@ internal fun ensureDoubleFacedComponent(
 ): GameState? {
     val container = state.getEntity(entityId) ?: return null
     val cardComponent = container.get<CardComponent>() ?: return null
-    val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+    val cardDef = cardRegistry.getCard(cardComponent)
     val backFace = cardDef?.backFace ?: return null
     if (container.get<DoubleFacedComponent>() != null) return state
     return state.updateEntity(entityId) { c ->

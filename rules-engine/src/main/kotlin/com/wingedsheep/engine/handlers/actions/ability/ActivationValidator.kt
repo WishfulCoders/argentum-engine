@@ -225,7 +225,7 @@ internal class ActivationValidator(
         cardComponent: CardComponent,
         ability: ActivatedAbility,
     ): String? {
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         val classLevel = container.get<ClassLevelComponent>()?.currentLevel
 
         // A face-down permanent has no characteristics beyond those the rules that made it face
@@ -672,7 +672,7 @@ internal class ActivationValidator(
             val controller = container.get<ControllerComponent>()?.playerId ?: continue
             if (controller != playerId) continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { it is ExtraLoyaltyActivation }) {
                 return 2
             }

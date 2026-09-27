@@ -104,7 +104,7 @@ class PlayLandHandler(
         // is not consulted at all.
         val playedFace = if (action.asBackFace) {
             com.wingedsheep.engine.mechanics.ModalDfcCasts
-                .landFace(cardRegistry.getCard(cardComponent.cardDefinitionId))
+                .landFace(cardRegistry.getCard(cardComponent))
                 ?: return "${cardComponent.name} has no land back face to play"
         } else null
         if (playedFace == null && !cardComponent.typeLine.isLand) {
@@ -374,7 +374,7 @@ class PlayLandHandler(
         // replacements) has to read the face actually played, not the printed front.
         val cardComponent = newState.getEntity(action.cardId)?.get<CardComponent>()
             ?: printedCardComponent
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
 
         // "This land enters with two charge counters on it" (the vivid lands) and the global
         // enters-with replacements other permanents carry (Doubling Season's extra counters,
@@ -695,7 +695,7 @@ class PlayLandHandler(
     private fun hasPlayFromTopOfLibrary(state: GameState, playerId: EntityId): Boolean {
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 // Honor a conditional gate (e.g. The Lunar Whale's "as long as it attacked this
                 // turn") against the granting permanent before allowing the land play from top.
@@ -740,7 +740,7 @@ class PlayLandHandler(
             ?.cardIds ?: emptyList()
         if (cardId in discardedThisTurn) {
             val cardDef = state.getEntity(cardId)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
             if (cardDef != null &&
                 com.wingedsheep.engine.mechanics.MayhemGrants.effectiveMayhem(state, cardId, cardDef) != null
             ) return true
@@ -755,7 +755,7 @@ class PlayLandHandler(
     private fun hasLandGraveyardPlayPermission(state: GameState, playerId: EntityId): Boolean {
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val classLevel = state.getEntity(entityId)?.get<ClassLevelComponent>()?.currentLevel
             for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
                 // Unwrap mode/condition-gated abilities (e.g. Glacierwood Siege's Sultai mode)
@@ -803,7 +803,7 @@ class PlayLandHandler(
     ): EntityId? {
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { it is MayPlayPermanentsFromGraveyard }) {
                 val tracker = state.getEntity(entityId)?.get<GraveyardPlayPermissionUsedComponent>()
                 if (tracker == null || !tracker.hasUsedType(typeName)) {

@@ -56,7 +56,7 @@ class StateTriggerPoller(
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
             val controllerId = projected.getController(permanentId) ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             // Fold in unlocked Room-face state triggers (CR 709.5) so a locked door's state
             // trigger stays inert until its door is unlocked (Promising Stairs).
             val printed = com.wingedsheep.engine.state.components.identity.RoomFaceStatics

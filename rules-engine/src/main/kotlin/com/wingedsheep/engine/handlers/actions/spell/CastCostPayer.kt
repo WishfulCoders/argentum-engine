@@ -592,7 +592,7 @@ internal class CastCostPayer(
         val effectiveCost = if (isCastWithAnyManaType(state, action)) cost.relaxColors() else cost
 
         // "Spend only [colors] on X" restriction (Soul Burn) — limits which mana can pay X.
-        val cardDef = cardComponent?.let { cardRegistry.getCard(it.cardDefinitionId) }
+        val cardDef = cardComponent?.let { cardRegistry.getCard(it) }
         val xManaRestriction = xManaRestriction(action, cardDef)
 
         val validationCost = when (val strategy = action.paymentStrategy) {

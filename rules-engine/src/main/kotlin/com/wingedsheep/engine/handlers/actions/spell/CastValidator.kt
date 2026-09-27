@@ -207,7 +207,7 @@ internal class CastValidator(
             ?: return "Not a card: ${action.cardId}"
         val source = castSource(state, action, cardComponent)
             ?: return "Card is not in your hand"
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
 
         validateAuthority(state, action, cardComponent, cardDef, source)?.let { return it }
         if (action.castFaceDown) return validateFaceDownCast(state, action, cardDef)

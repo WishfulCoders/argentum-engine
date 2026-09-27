@@ -184,7 +184,7 @@ internal class CardProjector(
             (container.has<FaceDownComponent>() || spellOnStack?.castFaceDown == true) &&
             !viewerMayPlayThisExiledCard
 
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         // Which face-down mechanic this object is *drawn* as: it decides the helper card every
         // surface shows in place of the hidden art (morph's helmet, the Manifest token, "A
         // Mysterious Creature" for disguise/cloak). A permanent carries the mode as a component
@@ -647,7 +647,7 @@ internal class CardProjector(
         attachments.mapNotNull { auraId ->
             val auraContainer = state.getEntity(auraId) ?: return@mapNotNull null
             val grantsColor = auraContainer.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
                 ?.script?.staticAbilities?.any { it is GrantChosenColor } == true
             if (grantsColor) auraContainer.chosenColor() else null
         }.toSet()

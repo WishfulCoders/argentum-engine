@@ -49,7 +49,7 @@ object DefenderBypass {
 
         // Static "can attack despite defender as long as <condition>" printed on the creature.
         val cardComp = container.get<CardComponent>()
-        val cardDef = cardComp?.let { cardRegistry.getCard(it.cardDefinitionId) }
+        val cardDef = cardComp?.let { cardRegistry.getCard(it) }
         if (cardDef != null && !container.has<FaceDownComponent>()) {
             val effectContext = EffectContext(sourceId = entityId, controllerId = controllerId)
             val selfBypass = cardDef.staticAbilities
@@ -74,7 +74,7 @@ object DefenderBypass {
             val permanent = state.getEntity(permanentId) ?: continue
             if (permanent.has<FaceDownComponent>()) continue
             val permCard = permanent.get<CardComponent>() ?: continue
-            val abilities = cardRegistry.getCard(permCard.cardDefinitionId)?.staticAbilities ?: continue
+            val abilities = cardRegistry.getCard(permCard)?.staticAbilities ?: continue
             val grants = abilities.filterIsInstance<CanAttackDespiteDefender>()
                 .filter { it.filter.scope is Scope.Battlefield }
             if (grants.isEmpty()) continue

@@ -24,7 +24,7 @@ fun playersConvertingEmptyingManaToRed(state: GameState, cardRegistry: CardRegis
     val result = mutableSetOf<EntityId>()
     for (entityId in state.getBattlefield()) {
         val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+        val cardDef = cardRegistry.getCard(card) ?: continue
         if (cardDef.script.staticAbilities.any { it is ConvertEmptyingManaToRed }) {
             projected.getController(entityId)?.let { result.add(it) }
         }
@@ -53,7 +53,7 @@ fun retainedColorsFromStatics(
     for (entityId in state.getBattlefield()) {
         if (projected.getController(entityId) != playerId) continue
         val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+        val cardDef = cardRegistry.getCard(card) ?: continue
         for (ability in cardDef.script.staticAbilities) {
             if (ability is RetainUnspentColoredMana) colors.add(ability.color)
         }

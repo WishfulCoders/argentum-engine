@@ -71,7 +71,7 @@ object SplitSecond {
             return true
         }
         val cardDef = container.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: return false
+            ?.let { cardRegistry.getCard(it) } ?: return false
         val controllerId = container.get<ControllerComponent>()?.playerId ?: spell.casterId
         return GrantedKeywordResolver(cardRegistry).hasKeyword(state, controllerId, cardDef, Keyword.SPLIT_SECOND)
     }

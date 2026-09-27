@@ -71,7 +71,7 @@ object MaximumHandSize {
         for (permanentId in state.getBattlefield()) {
             val container = state.getEntity(permanentId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.isEmpty()) continue
             val controllerId = projected.getController(permanentId) ?: continue
             val timestamp = container.get<BattlefieldEntryTimestampComponent>()?.timestamp ?: 0L

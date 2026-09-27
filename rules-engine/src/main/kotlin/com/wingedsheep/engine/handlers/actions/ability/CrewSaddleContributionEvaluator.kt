@@ -24,7 +24,7 @@ internal object CrewSaddleContributionEvaluator {
     ): Int {
         val printed = state.getEntity(creatureId)
             ?.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+            ?.let { cardRegistry.getCard(it) }
             ?.staticAbilities
             .orEmpty()
         val granted = state.grantedStaticAbilities

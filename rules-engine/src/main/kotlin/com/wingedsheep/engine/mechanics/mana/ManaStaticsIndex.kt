@@ -137,7 +137,7 @@ class ManaStaticsIndex private constructor(
             for (permanentId in state.getBattlefield()) {
                 val container = state.getEntity(permanentId) ?: continue
                 val card = container.get<CardComponent>() ?: continue
-                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(card) ?: continue
                 val attachedTo = container.get<AttachedToComponent>()?.targetId
                 val faceDown = container.has<FaceDownComponent>()
 

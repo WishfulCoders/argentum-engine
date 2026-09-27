@@ -201,7 +201,7 @@ class EnumerationContext(
     ): Boolean {
         val cardDef = state.getEntity(cardId)
             ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+            ?.let { cardRegistry.getCard(it) }
             ?: return costCalculator.hasFreeCastPermission(state, playerId, null, castFromZone)
         return costCalculator.hasFreeCastPermission(state, playerId, cardDef, castFromZone)
     }

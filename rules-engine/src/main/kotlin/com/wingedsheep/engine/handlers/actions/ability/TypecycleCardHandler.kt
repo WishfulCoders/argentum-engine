@@ -75,7 +75,7 @@ class TypecycleCardHandler(
             return "Card is not in your hand"
         }
 
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
             ?: return "Card definition not found"
 
         val variant = findTypecyclingVariant(cardDef)
@@ -103,7 +103,7 @@ class TypecycleCardHandler(
         val cardComponent = container.get<CardComponent>()
             ?: return ExecutionResult.error(state, "Not a card")
 
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
             ?: return ExecutionResult.error(state, "Card definition not found")
 
         val variant = findTypecyclingVariant(cardDef)
@@ -259,7 +259,7 @@ class TypecycleCardHandler(
     private fun isCyclingPrevented(state: GameState): Boolean {
         for (entityId in state.getBattlefield()) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { it is PreventCycling }) {
                 return true
             }

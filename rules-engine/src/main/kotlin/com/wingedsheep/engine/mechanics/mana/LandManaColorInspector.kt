@@ -79,7 +79,7 @@ object LandManaColorInspector {
         // ManaAbilityEnumerator's behavior for shock lands etc.).
         val intrinsicLandColors = colors.toSet()
         if (!ownAbilitiesSuppressed && intrinsicLandColors.isEmpty()) {
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId)
+            val cardDef = cardRegistry.getCard(card)
             if (cardDef != null) {
                 for (ability in cardDef.script.activatedAbilities) {
                     if (!ability.isManaAbility) continue

@@ -80,7 +80,7 @@ class ActivatedAbilityEnumerator(
             // effect is allowed to change. `ActivateAbilityHandler` already resolves by id, so a
             // name lookup here would silently stop offering an ability the engine would happily
             // execute.
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId)
+            val cardDef = context.cardRegistry.getCard(cardComponent)
             // Include granted activated abilities alongside the card's own abilities (both temporary and static)
             val grantedAbilities = state.grantedActivatedAbilities
                 .filter { it.entityId == entityId }
@@ -1177,7 +1177,7 @@ class ActivatedAbilityEnumerator(
 
             // By definition id, not name — see enumerateOwnPermanents. An opponent's renamed copy
             // of a "any player may activate" permanent must still offer its ability.
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
             val anyPlayerAbilities = cardDef.script.activatedAbilities.filter { ability ->
                 !ability.isManaAbility && ability.activateFromZone == Zone.BATTLEFIELD &&
                     LegalityKernel.anyPlayerMay(ability)

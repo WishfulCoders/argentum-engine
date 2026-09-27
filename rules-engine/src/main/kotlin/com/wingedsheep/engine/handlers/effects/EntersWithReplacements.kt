@@ -116,7 +116,7 @@ object EntersWithReplacements {
     ): Pair<GameState, List<GameEvent>> {
         val container = state.getEntity(enteringEntityId) ?: return state to emptyList()
         val cardComponent = container.get<CardComponent>() ?: return state to emptyList()
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return state to emptyList()
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return state to emptyList()
 
         var newState = state
         val events = mutableListOf<GameEvent>()
@@ -322,7 +322,7 @@ object EntersWithReplacements {
                 for (sourceId in newState.getGraveyard(playerId)) {
                     if (sourceId == enteringEntityId) continue
                     val cardComponent = newState.getEntity(sourceId)?.get<CardComponent>() ?: continue
-                    val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+                    val cardDef = cardRegistry.getCard(cardComponent) ?: continue
                     val effects = cardDef.script.replacementEffects
                         .filter { Zone.GRAVEYARD in it.activeZones }
                     if (effects.isEmpty()) continue

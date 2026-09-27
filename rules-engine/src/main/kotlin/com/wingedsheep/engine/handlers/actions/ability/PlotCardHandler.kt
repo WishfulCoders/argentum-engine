@@ -68,7 +68,7 @@ class PlotCardHandler(
 
     private fun resolvePlotSource(state: GameState, action: PlotCard): PlotSource? {
         val cardComponent = state.getEntity(action.cardId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return null
 
         // Hand: the card's own Plot keyword, after any "plotting cards from your hand costs {N}
         // less" reductions (Doc Aurlock, Grizzled Genius).
@@ -85,7 +85,7 @@ class PlotCardHandler(
         if (library.firstOrNull() == action.cardId) {
             val filter = state.getBattlefield(action.playerId).asSequence()
                 .mapNotNull { state.getEntity(it)?.get<CardComponent>() }
-                .mapNotNull { cardRegistry.getCard(it.cardDefinitionId) }
+                .mapNotNull { cardRegistry.getCard(it) }
                 .flatMap { it.script.staticAbilities.asSequence() }
                 .filterIsInstance<PlotFromTopOfLibrary>()
                 .firstOrNull()?.filter

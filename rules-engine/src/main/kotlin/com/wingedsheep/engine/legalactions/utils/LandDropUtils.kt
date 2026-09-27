@@ -53,7 +53,7 @@ object LandDropUtils {
         val projected = state.projectedState
         for (entityId in state.getBattlefield()) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val sourceController = projected.getController(entityId) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 val lock = when (ability) {
@@ -101,7 +101,7 @@ object LandDropUtils {
     fun anyFilteredLandLockPresent(state: GameState, cardRegistry: CardRegistry): Boolean =
         state.getBattlefield().any { id ->
             val cardDef = state.getEntity(id)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
             cardDef?.script?.staticAbilities?.any { ability ->
                 val lock = ability as? PlayersCantPlayLands
                     ?: (ability as? ConditionalStaticAbility)?.ability as? PlayersCantPlayLands
@@ -121,7 +121,7 @@ object LandDropUtils {
         var bonus = 0
         for (entityId in state.getBattlefield()) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val sourceController = projected.getController(entityId) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 val grant = when (ability) {

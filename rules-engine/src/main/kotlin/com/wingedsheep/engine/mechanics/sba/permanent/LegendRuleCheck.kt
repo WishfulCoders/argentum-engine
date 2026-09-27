@@ -58,7 +58,7 @@ class LegendRuleCheck(
         val filters = mutableListOf<GameObjectFilter>()
         for (permId in permanents) {
             val cardDef = state.getEntity(permId)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
+                ?.let { cardRegistry.getCard(it) } ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 activeExemption(state, ability, permId, playerId)?.let { filters.add(it.filter) }
             }

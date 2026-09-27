@@ -209,7 +209,7 @@ class CostCalculator(
             for (entityId in state.getBattlefield(playerId)) {
                 val container = state.getEntity(entityId) ?: continue
                 val card = container.get<CardComponent>() ?: continue
-                val permanentDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val permanentDef = cardRegistry.getCard(card) ?: continue
                 val classLevel = container.get<ClassLevelComponent>()?.currentLevel
                 for (ability in permanentDef.script.effectiveStaticAbilities(classLevel)) {
                     if (ability is ModifySpellCost) {
@@ -665,7 +665,7 @@ class CostCalculator(
         for (entityId in state.controlledBattlefield(playerId)) {
             if (!predicateEvaluator.matches(state, projected, entityId, filter, context)) continue
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val value = numericProperty(projected, entityId, card, cardDef, property)
             if (value > maxValue) maxValue = value
         }
@@ -696,7 +696,7 @@ class CostCalculator(
         for (entityId in state.controlledBattlefield(playerId)) {
             if (!predicateEvaluator.matches(state, projected, entityId, filter, context)) continue
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             total += numericProperty(projected, entityId, card, cardDef, property)
         }
         return total.coerceAtLeast(0)
@@ -727,7 +727,7 @@ class CostCalculator(
             ?.targetId
             ?: return 0
         val card = state.getEntity(attachedTo)?.get<CardComponent>() ?: return 0
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return 0
+        val cardDef = cardRegistry.getCard(card) ?: return 0
         return numericProperty(state.projectedState, attachedTo, card, cardDef, property)
             .coerceAtLeast(0)
     }
@@ -1002,7 +1002,7 @@ class CostCalculator(
     private fun countGraveyardCardsMatchingFilter(state: GameState, playerId: EntityId, filter: GameObjectFilter): Int {
         return state.getGraveyard(playerId).count { entityId ->
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: return@count false
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@count false
+            val cardDef = cardRegistry.getCard(card) ?: return@count false
             filter.cardPredicates.all { predicate ->
                 matchesGraveyardPredicate(cardDef, predicate)
             }
@@ -1016,7 +1016,7 @@ class CostCalculator(
     private fun countExileCardsMatchingFilter(state: GameState, playerId: EntityId, filter: GameObjectFilter): Int {
         return state.getExile(playerId).count { entityId ->
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: return@count false
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@count false
+            val cardDef = cardRegistry.getCard(card) ?: return@count false
             filter.cardPredicates.all { predicate ->
                 matchesGraveyardPredicate(cardDef, predicate)
             }
@@ -1561,7 +1561,7 @@ class CostCalculator(
         for (entityId in state.getBattlefield(casterId)) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val permanentDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val permanentDef = cardRegistry.getCard(card) ?: continue
             val classLevel = container.get<ClassLevelComponent>()?.currentLevel
 
             for (ability in permanentDef.script.effectiveStaticAbilities(classLevel)) {
@@ -1606,7 +1606,7 @@ class CostCalculator(
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val permanentDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val permanentDef = cardRegistry.getCard(card) ?: continue
             // Fold in unlocked Room-face statics (CR 709.5) so a face-level Warped Space is seen.
             for (ability in com.wingedsheep.engine.state.components.identity.RoomFaceStatics.activeStaticAbilities(container, permanentDef)) {
                 if (ability !is MayCastWithoutPayingManaCost) continue
@@ -1748,7 +1748,7 @@ class CostCalculator(
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val permanentDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val permanentDef = cardRegistry.getCard(card) ?: continue
             // Fold in unlocked Room-face statics (CR 709.5) so a face-level Warped Space is seen.
             for (ability in com.wingedsheep.engine.state.components.identity.RoomFaceStatics.activeStaticAbilities(container, permanentDef)) {
                 if (ability !is MayCastWithoutPayingManaCost) continue

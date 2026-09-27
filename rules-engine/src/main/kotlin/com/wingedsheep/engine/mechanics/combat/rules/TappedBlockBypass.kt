@@ -55,7 +55,7 @@ object TappedBlockBypass {
             if (permanent.has<FaceDownComponent>()) continue
             if (projected.hasLostAllAbilities(permanentId)) continue
             val permCard = permanent.get<CardComponent>() ?: continue
-            val abilities = cardRegistry.getCard(permCard.cardDefinitionId)?.staticAbilities ?: continue
+            val abilities = cardRegistry.getCard(permCard)?.staticAbilities ?: continue
             val grants = abilities.filterIsInstance<CanBlockAsThoughUntapped>()
             if (grants.isEmpty()) continue
             val permController = projected.getController(permanentId) ?: continue

@@ -280,7 +280,7 @@ class LegalityKernel(
             emptyList()
         } else {
             container.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
                 ?.let { RoomFaceStatics.activeStaticAbilities(container, it) }
                 ?: emptyList()
         }

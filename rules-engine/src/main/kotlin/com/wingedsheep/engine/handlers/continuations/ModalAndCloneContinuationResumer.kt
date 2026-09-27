@@ -372,14 +372,14 @@ class ModalAndCloneContinuationResumer(
                 }
 
                 // Look up the card definition for the copied creature
-                copiedCardDef = services.cardRegistry.getCard(targetCardComponent.cardDefinitionId)
+                copiedCardDef = services.cardRegistry.getCard(targetCardComponent)
             } else {
                 // Target creature no longer exists - enter as itself
-                copiedCardDef = services.cardRegistry.getCard(originalCardComponent.cardDefinitionId)
+                copiedCardDef = services.cardRegistry.getCard(originalCardComponent)
             }
         } else {
             // Player declined to copy - enter as itself (0/0 Clone)
-            copiedCardDef = services.cardRegistry.getCard(originalCardComponent.cardDefinitionId)
+            copiedCardDef = services.cardRegistry.getCard(originalCardComponent)
         }
 
         // Get the (possibly updated) card component for event names
@@ -641,7 +641,7 @@ class ModalAndCloneContinuationResumer(
             ?: return ExecutionResult.error(state, "Spell entity not found: $spellId")
         val cardComponent = spellContainer.get<CardComponent>()
             ?: return ExecutionResult.error(state, "Spell has no CardComponent")
-        val cardDef = services.cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = services.cardRegistry.getCard(cardComponent)
 
         val nextChoice = cardDef?.script?.replacementEffects
             ?.filterIsInstance<com.wingedsheep.sdk.scripting.EntersWithChoice>()
@@ -827,7 +827,7 @@ class ModalAndCloneContinuationResumer(
         // Check if the permanent has remaining choices to chain to (e.g. color + creature type).
         val entityContainer = newState.getEntity(entityId)
         val cardComponent = entityContainer?.get<CardComponent>()
-        val cardDef = cardComponent?.let { services.cardRegistry.getCard(it.cardDefinitionId) }
+        val cardDef = cardComponent?.let { services.cardRegistry.getCard(it) }
 
         val nextChoice = cardDef?.script?.replacementEffects
             ?.filterIsInstance<com.wingedsheep.sdk.scripting.EntersWithChoice>()
@@ -941,7 +941,7 @@ class ModalAndCloneContinuationResumer(
         val spellComponent = spellContainer.get<SpellOnStackComponent>()
             ?: return ExecutionResult.error(state, "Spell has no SpellOnStackComponent")
 
-        val cardDef = cardComponent?.let { services.cardRegistry.getCard(it.cardDefinitionId) }
+        val cardDef = cardComponent?.let { services.cardRegistry.getCard(it) }
         val (enterState, enterEvents) = services.stackResolver.enterPermanentOnBattlefield(
             newState, continuation.spellId, spellComponent, cardComponent, cardDef
         )
@@ -1064,7 +1064,7 @@ class ModalAndCloneContinuationResumer(
         val spellComponent = spellContainer.get<SpellOnStackComponent>()
             ?: return ExecutionResult.error(state, "Spell has no SpellOnStackComponent")
 
-        val cardDef = services.cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = services.cardRegistry.getCard(cardComponent)
         val (enterState4, enterEvents4) = services.stackResolver.enterPermanentOnBattlefield(
             newState, spellId, spellComponent, cardComponent, cardDef
         )
@@ -1131,7 +1131,7 @@ class ModalAndCloneContinuationResumer(
             ?: return ExecutionResult.error(state, "Spell has no CardComponent")
         val spellComponent = spellContainer.get<SpellOnStackComponent>()
             ?: return ExecutionResult.error(state, "Spell has no SpellOnStackComponent")
-        val cardDef = services.cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = services.cardRegistry.getCard(cardComponent)
         val (enteredState, enterEvents) = services.stackResolver.enterPermanentOnBattlefield(
             newState, continuation.spellId, spellComponent, cardComponent, cardDef
         )
@@ -1207,7 +1207,7 @@ class ModalAndCloneContinuationResumer(
             ?: return ExecutionResult.error(state, "Spell has no CardComponent")
         val spellComponent = spellContainer.get<SpellOnStackComponent>()
             ?: return ExecutionResult.error(state, "Spell has no SpellOnStackComponent")
-        val cardDef = services.cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = services.cardRegistry.getCard(cardComponent)
 
         val (afterEnter, enterEvents) = services.stackResolver.enterPermanentOnBattlefield(
             newState, spellId, spellComponent, cardComponent, cardDef

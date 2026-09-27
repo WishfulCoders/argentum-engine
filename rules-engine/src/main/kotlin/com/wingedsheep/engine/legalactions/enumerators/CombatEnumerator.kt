@@ -105,7 +105,7 @@ class CombatEnumerator : ActionEnumerator {
                         // authoritative check, resolves by id. A renamed copy (CR 707.9) of a
                         // "can block any number of creatures" permanent would otherwise be capped
                         // at one blocker in the UI while the engine allowed more.
-                        val cardDef = context.cardRegistry.getCard(card.cardDefinitionId)
+                        val cardDef = context.cardRegistry.getCard(card)
                         cardDef?.staticAbilities?.any { it is CanBlockAnyNumber } == true
                     } else false
                     if (canBlockAny) {

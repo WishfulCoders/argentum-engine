@@ -141,7 +141,7 @@ internal class SpellCaster(
         // spell is countered or the permanent later leaves the battlefield (ZoneTransitionService
         // does that restore, and it deliberately exempts the stack).
         val transformedFrontDef = if (castTransformed) {
-            cardRegistry.getCard(cardComponent.cardDefinitionId)
+            cardRegistry.getCard(cardComponent)
         } else null
         val transformedBackDef = transformedFrontDef?.backFace
         // CR 712.8c: a *nonmodal* transformed spell keeps the front face's mana value, which
@@ -384,7 +384,7 @@ internal class SpellCaster(
         // "(X=0)" in the game log's cast line, which is otherwise silently absent.
         return xValue ?: run {
             val castCost = faceIndex
-                ?.let { cardRegistry.getCard(cardComponent.cardDefinitionId)?.cardFaces?.getOrNull(it)?.manaCost }
+                ?.let { cardRegistry.getCard(cardComponent)?.cardFaces?.getOrNull(it)?.manaCost }
                 ?: transformedBackDef?.manaCost
                 ?: cardComponent.manaCost
             if (castCost.hasX) 0 else null
@@ -414,7 +414,7 @@ internal class SpellCaster(
         // for effects like Backslide that target "creature with a morph ability"). The mode
         // decides which keyword's cost applies — FaceDownTurnUp is the single place that
         // knows that mapping.
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         val castFaceDownMode = faceDownCastMode(cardDef)
         if (castFaceDownMode != null) {
             FaceDownTurnUp.dataFor(cardDef, cardComponent.cardDefinitionId, castFaceDownMode)
@@ -547,7 +547,7 @@ internal class SpellCaster(
         // construct via `Patterns.Mechanic.giftSpell` (or set `countsAsModalSpell =
         // false` directly), which zeroes the count here.
         val countsAsModalForTriggers = run {
-            val script = cardRegistry.getCard(cardComponent.cardDefinitionId)?.script
+            val script = cardRegistry.getCard(cardComponent)?.script
             val modal = script?.spellEffect as? com.wingedsheep.sdk.scripting.effects.ModalEffect
             modal?.countsAsModalSpell ?: false
         }
@@ -742,7 +742,7 @@ internal class SpellCaster(
             val container = newState.getEntity(handCardId) ?: continue
             val castableFaceDown = container.has<HasMorphAbilityComponent>() ||
                 faceDownCastMode(
-                    container.get<CardComponent>()?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                    container.get<CardComponent>()?.let { cardRegistry.getCard(it) }
                 ) != null
             if (!castableFaceDown) continue
             if (container.get<RevealedToComponent>() == null) continue

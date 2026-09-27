@@ -168,7 +168,7 @@ class ManaAbilityResolutionPipeline(
             if (attachedTo?.targetId != sourceId) continue
 
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
 
             // Check each static ability for AdditionalManaOnTap
             for (staticAbility in cardDef.script.staticAbilities) {
@@ -268,7 +268,7 @@ class ManaAbilityResolutionPipeline(
             currentState.getBattlefield().flatMap { entityId ->
                 val container = currentState.getEntity(entityId)
                 val card = container?.get<CardComponent>()
-                val cardDef = card?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                val cardDef = card?.let { cardRegistry.getCard(it) }
                 cardDef?.script?.staticAbilities.orEmpty()
                     .filterIsInstance<AdditionalManaOnSourceTap>()
                     .map { entityId to it }
@@ -395,7 +395,7 @@ class ManaAbilityResolutionPipeline(
             if (projected.hasLostAllAbilities(permanentId)) continue
             val controllerId = projected.getController(permanentId) ?: continue
             if (controllerId != triggerControllerId) continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val classLevel = container.get<ClassLevelComponent>()?.currentLevel
             for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
                 if (ability !is AdditionalSourceTriggers) continue
@@ -429,7 +429,7 @@ class ManaAbilityResolutionPipeline(
         for (playerId in state.turnOrder) {
             for (entityId in state.getBattlefield(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(card) ?: continue
                 if (cardDef.script.staticAbilities.any { it is DampLandManaProduction }) {
                     return true
                 }

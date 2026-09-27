@@ -606,7 +606,7 @@ class SpellCounterer(
         for (playerId in state.turnOrder) {
             for (entityId in state.getBattlefield(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                val def = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val def = cardRegistry.getCard(card) ?: continue
                 val sourceControllerId =
                     state.getEntity(entityId)?.get<ControllerComponent>()?.playerId ?: playerId
                 val context = PredicateContext(controllerId = sourceControllerId, sourceId = entityId)
@@ -652,7 +652,7 @@ class SpellCounterer(
         for (playerId in state.turnOrder) {
             for (entityId in state.getBattlefield(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                val def = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val def = cardRegistry.getCard(card) ?: continue
                 val sourceControllerId =
                     state.getEntity(entityId)?.get<ControllerComponent>()?.playerId ?: playerId
                 val context = PredicateContext(controllerId = sourceControllerId, sourceId = entityId)

@@ -73,7 +73,7 @@ class LegalActionEnricher(
                 // isn't on the printed script, so the lookup can miss and the equip fact reads
                 // false — the client then under-reports spendable mana rather than over-reporting
                 // it, and the server's own payment check (which always has the ability) decides.
-                val ability = cardRegistry.getCard(card.cardDefinitionId)
+                val ability = cardRegistry.getCard(card)
                     ?.script?.activatedAbilities?.find { it.id == gameAction.abilityId }
                 buildAbilityPaymentContext(card, state.projectedState, gameAction.sourceId, ability)
             }
@@ -236,7 +236,7 @@ class LegalActionEnricher(
             // with no image stamped. Deriving it from the definition alone would show the original
             // printing's art for a reprint, so the mana picker wouldn't match the battlefield.
             val imageUri = card?.imageUri
-                ?: card?.let { cardRegistry.getCard(it.cardDefinitionId)?.metadata?.imageUri }
+                ?: card?.let { cardRegistry.getCard(it)?.metadata?.imageUri }
             ManaSourceInfo(
                 entityId = source.entityId,
                 name = source.name,

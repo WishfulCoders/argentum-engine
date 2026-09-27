@@ -727,7 +727,7 @@ internal class CardActiveEffectsProjector(
         seenDescriptions: MutableSet<String>
     ): List<ClientCardEffect> {
         val cardDefForRestrictions = state.getEntity(entityId)?.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+            ?.let { cardRegistry.getCard(it) }
             ?: return emptyList()
         val restrictionController = state.projectedState.getController(entityId) ?: return emptyList()
         val effects = mutableListOf<ClientCardEffect>()

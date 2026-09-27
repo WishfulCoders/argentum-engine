@@ -53,7 +53,7 @@ class TappedForManaBonusResolver(
             val container = state.getEntity(entityId) ?: continue
             if (container.get<AttachedToComponent>()?.targetId != landId) continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (staticAbility in cardDef.script.staticAbilities) {
                 val bonus = staticAbility as? AdditionalManaOnTap ?: continue
                 if (!bonus.anyColor) continue

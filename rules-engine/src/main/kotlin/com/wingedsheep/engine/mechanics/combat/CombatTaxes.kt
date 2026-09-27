@@ -70,7 +70,7 @@ object CombatTaxes {
             for (entityId in defenderPermanents) {
                 val container = state.getEntity(entityId) ?: continue
                 val cardComponent = container.get<CardComponent>() ?: continue
-                val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(cardComponent) ?: continue
                 for (ability in cardDef.staticAbilities) {
                     if (ability !is AttackTax) continue
                     val attackerCount = (attackersAtPlayer[defenderId] ?: 0) +
@@ -112,7 +112,7 @@ object CombatTaxes {
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(cardComponent) ?: continue
             for (ability in cardDef.staticAbilities) {
                 if (ability !is BlockTax) continue
                 val controllerId = projected.getController(entityId) ?: continue
@@ -161,14 +161,14 @@ object CombatTaxes {
             // monotone in the declared set: the charge still depends only on the creature being
             // declared, so dropping a creature drops exactly its own charge.
             val ownStatics = container.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
                 ?.staticAbilities
                 .orEmpty()
             val attachedStatics = container.get<AttachmentsComponent>()?.attachedIds.orEmpty()
                 .flatMap { attachmentId ->
                     state.getEntity(attachmentId)
                         ?.get<CardComponent>()
-                        ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                        ?.let { cardRegistry.getCard(it) }
                         ?.staticAbilities
                         .orEmpty()
                 }

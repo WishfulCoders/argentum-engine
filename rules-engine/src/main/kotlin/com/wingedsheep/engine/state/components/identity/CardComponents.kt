@@ -116,6 +116,16 @@ data class CardComponent(
         com.wingedsheep.engine.mechanics.layers.ProjectionBase(this)
     }
 
+    /**
+     * [com.wingedsheep.engine.registry.CardRegistry.getCard]'s memo of this card's definition,
+     * tagged with the registry and its registration count, so the engine's many per-action lookups
+     * of a permanent's definition skip the ~20k-entry name map. Not serialized, not part of
+     * equality.
+     */
+    @kotlinx.serialization.Transient
+    @Volatile
+    internal var definitionMemo: Any? = null
+
     // Convenience accessors
     val isCreature: Boolean get() = typeLine.isCreature
     val isLand: Boolean get() = typeLine.isLand

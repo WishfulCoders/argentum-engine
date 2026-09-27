@@ -126,7 +126,7 @@ class LeylineContinuationResumer(
         transitionEvents: List<GameEvent>
     ): ExecutionResult? {
         val cardComponent = state.getEntity(leylineCardId)?.get<CardComponent>() ?: return null
-        val cardDef = services.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = services.cardRegistry.getCard(cardComponent) ?: return null
         val firstChoice = cardDef.script.replacementEffects
             .filterIsInstance<EntersWithChoice>()
             .sortedBy { it.choiceType.ordinal }

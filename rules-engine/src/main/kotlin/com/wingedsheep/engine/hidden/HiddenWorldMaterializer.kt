@@ -200,7 +200,7 @@ class HiddenWorldMaterializer internal constructor(
                     listOf("card identity owner differs from OwnerComponent"),
                 )
             }
-            val currentDefinition = cardRegistry.getCard(currentCard.cardDefinitionId)
+            val currentDefinition = cardRegistry.getCard(currentCard)
                 ?: return unsupported(
                     UnsupportedHiddenWorldKind.INVALID_ASSIGNMENT,
                     entityId,

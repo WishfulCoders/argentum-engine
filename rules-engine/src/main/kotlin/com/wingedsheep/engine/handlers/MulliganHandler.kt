@@ -339,7 +339,7 @@ class MulliganHandler(
             val hand = newState.getHand(playerId)
             val leylineCardIds = hand.filter { cardId ->
                 val cardComponent = newState.getEntity(cardId)?.get<CardComponent>() ?: return@filter false
-                val cardDef = registry.getCard(cardComponent.cardDefinitionId) ?: return@filter false
+                val cardDef = registry.getCard(cardComponent) ?: return@filter false
                 cardDef.script.mayStartOnBattlefield
             }
 

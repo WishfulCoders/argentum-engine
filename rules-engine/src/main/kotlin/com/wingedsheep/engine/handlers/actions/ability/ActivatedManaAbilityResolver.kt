@@ -340,7 +340,7 @@ internal class ActivatedManaAbilityResolver(
             val attachedTo = container.get<AttachedToComponent>()
             if (attachedTo?.targetId != sourceId) continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (staticAbility in cardDef.script.staticAbilities) {
                 val o = staticAbility as? OverrideEnchantedLandManaColor ?: continue
                 override = o.color
@@ -367,7 +367,7 @@ internal class ActivatedManaAbilityResolver(
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val printed = cardRegistry.getCard(card.cardDefinitionId)?.script?.staticAbilities.orEmpty()
+            val printed = cardRegistry.getCard(card)?.script?.staticAbilities.orEmpty()
             // Granted statics too — a durational "{U}: … until end of turn" mana rule (Deep Water)
             // lives only in `grantedStaticAbilities`, since the layer projector doesn't carry them.
             val granted = grantsByEntity[entityId]?.map { it.ability }.orEmpty()
@@ -402,7 +402,7 @@ internal class ActivatedManaAbilityResolver(
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (staticAbility in cardDef.script.staticAbilities) {
                 val static = staticAbility as? MultiplyManaOnSourceTap ?: continue
                 if (static.multiplier <= 1) continue

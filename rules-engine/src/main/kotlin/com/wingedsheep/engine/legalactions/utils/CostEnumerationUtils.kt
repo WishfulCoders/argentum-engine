@@ -471,7 +471,7 @@ class CostEnumerationUtils(
         return state.getZone(graveyardZone).mapNotNull { entityId ->
             val container = state.getEntity(entityId) ?: return@mapNotNull null
             val cardComponent = container.get<CardComponent>() ?: return@mapNotNull null
-            val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+            val cardDef = cardRegistry.getCard(cardComponent)
             DelveCardData(entityId, cardComponent.name, cardDef?.metadata?.imageUri)
         }
     }

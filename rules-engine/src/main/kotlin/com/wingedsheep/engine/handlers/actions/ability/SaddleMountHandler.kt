@@ -65,7 +65,7 @@ class SaddleMountHandler(
             return "You don't control this permanent"
         }
 
-        val cardDef = cardRegistry.getCard(mountCard.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(mountCard)
             ?: return "Card definition not found"
 
         val saddleAbility = cardDef.keywordAbilities

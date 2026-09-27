@@ -32,7 +32,7 @@ object AdditionalManaForCounters {
         for (permanentId in projected.getBattlefieldControlledBy(casterId)) {
             if (projected.hasLostAllAbilities(permanentId)) continue
             val card = state.getEntity(permanentId)?.get<CardComponent>() ?: continue
-            val def = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val def = cardRegistry.getCard(card) ?: continue
             for (ability in def.script.staticAbilities) {
                 if (ability !is AdditionalManaForEntryCounters) continue
                 val matches = predicateEvaluator.matches(

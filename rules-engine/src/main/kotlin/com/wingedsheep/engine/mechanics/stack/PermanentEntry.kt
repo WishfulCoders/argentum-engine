@@ -209,7 +209,7 @@ internal class PermanentEntry(
             updated = updated.with(FaceDownComponent)
                 .without<RevealedToComponent>()
             val castDef = state.getEntity(spellId)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
             FaceDownTurnUp.castMode(castDef)?.let { updated = updated.with(FaceDownModeComponent(it)) }
         }
 

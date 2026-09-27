@@ -857,7 +857,7 @@ class TriggerDetector(
             val container = state.getEntity(permanentId) ?: continue
             if (container.has<FaceDownComponent>()) continue
             val cardDef = container.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
+                ?.let { cardRegistry.getCard(it) } ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 if (ability is SuppressEntersTriggers) {
                     val controller = projected.getController(permanentId)
@@ -3512,7 +3512,7 @@ class TriggerDetector(
 
             val entity = state.getEntity(event.entityId) ?: continue
             val card = entity.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
 
             // Find the class level that was just gained
             val levelAbility = cardDef.classLevels.find { it.level == event.newLevel } ?: continue
@@ -3566,7 +3566,7 @@ class TriggerDetector(
             val sagaComponent = container.get<SagaComponent>() ?: continue
             val counters = container.get<CountersComponent>() ?: continue
 
-            val cardDef = registry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(cardComponent) ?: continue
             val sagaChapters = cardDef.sagaChapters
             if (sagaChapters.isEmpty()) continue
 
@@ -3655,7 +3655,7 @@ class TriggerDetector(
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
             val controllerId = projected.getController(permanentId) ?: continue
-            val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(card) ?: continue
 
             // Route through RoomFaceStatics so a doubler printed on an *unlocked* Room face
             // (CR 709.5) is honoured, not just one in the card's top-level script.
@@ -3818,7 +3818,7 @@ class TriggerDetector(
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
             val controllerId = projected.getController(permanentId) ?: continue
-            val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(card) ?: continue
             val classLevel = container.get<ClassLevelComponent>()?.currentLevel
             for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
                 // Unwrap mode/condition-gated abilities (e.g. Windcrag Siege's Mardu mode) and
@@ -3929,7 +3929,7 @@ class TriggerDetector(
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
             val controllerId = projected.getController(permanentId) ?: continue
-            val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(card) ?: continue
             val classLevel = container.get<ClassLevelComponent>()?.currentLevel
             for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
                 val unwrapped: AdditionalDeathTriggers? = when (ability) {
@@ -4039,7 +4039,7 @@ class TriggerDetector(
             // (Noggle the Mind on Twinflame Travelers) doubles nothing.
             if (projected.hasLostAllAbilities(permanentId)) continue
             val controllerId = projected.getController(permanentId) ?: continue
-            val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(card) ?: continue
             // Route through RoomFaceStatics so a doubler printed on an *unlocked* Room face
             // (CR 709.5) is honoured, not just one in the card's top-level script.
             for (ability in RoomFaceStatics.activeStaticAbilities(container, cardDef)) {
@@ -4115,7 +4115,7 @@ class TriggerDetector(
             val container = state.getEntity(event.roomId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
             val roomComp = container.get<RoomComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(cardComponent) ?: continue
             val face = cardDef.cardFaces.firstOrNull {
                 RoomFaceId(it.name) == event.faceId
             } ?: continue

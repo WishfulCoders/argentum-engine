@@ -41,7 +41,7 @@ class BecomePreparedExecutor(
 
         val card = state.getEntity(targetId)?.get<CardComponent>()
             ?: return EffectResult.success(state)
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(card)
             ?: return EffectResult.success(state)
         if (cardDef.layout != CardLayout.PREPARE) {
             return EffectResult.success(state)

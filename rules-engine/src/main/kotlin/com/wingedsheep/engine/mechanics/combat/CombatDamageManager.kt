@@ -102,7 +102,7 @@ internal class CombatDamageManager(
             // Already has a manual assignment (decision already made)
             if (attackerContainer.get<DamageAssignmentComponent>() != null) continue
 
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(attackerCard) ?: continue
             val hasAssignAsUnblocked = cardDef.staticAbilities.any { it is AssignCombatDamageAsUnblocked }
             if (!hasAssignAsUnblocked) continue
 
@@ -144,7 +144,7 @@ internal class CombatDamageManager(
             val attackerCard = attackerContainer.get<CardComponent>() ?: continue
             // CR 708.2a: a face-down permanent has no abilities, so it can't divide freely.
             if (attackerContainer.has<FaceDownComponent>()) continue
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(attackerCard) ?: continue
             val hasDivideDamageFreely = cardDef.staticAbilities.any { it is DivideCombatDamageFreely }
             if (!hasDivideDamageFreely) continue
 
@@ -404,7 +404,7 @@ internal class CombatDamageManager(
             val attackerContainer = state.getEntity(attackerId) ?: continue
             val attackerCard = attackerContainer.get<CardComponent>() ?: continue
 
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId)
+            val cardDef = cardRegistry.getCard(attackerCard)
             // DivideCombatDamageFreely (Butcher Orgg) keeps its own DistributeDecision pre-check —
             // but only when face up. A face-down permanent has no abilities (CR 708.2a), so it takes
             // part in the normal board here rather than being dropped from it.

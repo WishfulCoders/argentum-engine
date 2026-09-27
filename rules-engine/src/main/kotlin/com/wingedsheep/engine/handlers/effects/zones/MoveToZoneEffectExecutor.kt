@@ -244,7 +244,7 @@ class MoveToZoneEffectExecutor(
         controllerId: EntityId,
         context: EffectContext
     ): EffectResult {
-        val auraTarget = cardRegistry.getCard(cardComponent.cardDefinitionId)?.script?.auraTarget
+        val auraTarget = cardRegistry.getCard(cardComponent)?.script?.auraTarget
         val legalHosts = if (auraTarget == null) emptyList() else targetFinder.findLegalTargets(
             state = state,
             requirement = auraTarget,
@@ -342,7 +342,7 @@ class MoveToZoneEffectExecutor(
         val isBattlefieldFaceDown = faceDownMode != null && effect.destination == Zone.BATTLEFIELD
         val morphData = if (isBattlefieldFaceDown) {
             com.wingedsheep.engine.handlers.effects.FaceDownTurnUp.dataFor(
-                cardRegistry.getCard(cardComponent.cardDefinitionId),
+                cardRegistry.getCard(cardComponent),
                 cardComponent.cardDefinitionId,
                 faceDownMode
             )

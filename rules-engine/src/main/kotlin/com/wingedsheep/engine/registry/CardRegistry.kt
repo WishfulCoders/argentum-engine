@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.registry
 
+import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.model.CardDefinition
 
 /**
@@ -37,6 +38,7 @@ class CardRegistry(private val parent: CardRegistry? = null) {
      * carries no further `backFace` pointer — it stands alone as the back-face identity.
      */
     fun register(card: CardDefinition) {
+        ownVersion++
         cardsByName[card.name] = card
         // Also register by name#collectorNumber for variants.
         // When setCode is present, use "Name#SetCode-CollectorNumber" to avoid collisions
@@ -95,6 +97,25 @@ class CardRegistry(private val parent: CardRegistry? = null) {
         // Fall back to name-only lookup, then to the parent registry for an overlay.
         return cardsByName[name] ?: parent?.getCard(name)
     }
+
+    /**
+     * The definition [card] presents — [getCard] of its `cardDefinitionId` — memoised on the
+     * component. A registration or [clear] after the memo was taken invalidates it, and a memo
+     * taken through another registry (an overlay, a test's own registry) is never reused here.
+     */
+    fun getCard(card: CardComponent): CardDefinition? {
+        val memo = card.definitionMemo as? DefinitionMemo
+        if (memo != null && memo.registry === this && memo.version == version) return memo.definition
+        val definition = getCard(card.cardDefinitionId)
+        card.definitionMemo = DefinitionMemo(this, version, definition)
+        return definition
+    }
+
+    private class DefinitionMemo(val registry: CardRegistry, val version: Int, val definition: CardDefinition?)
+
+    /** Bumped by every change to what a name resolves to, including the [parent]'s. */
+    private var ownVersion = 0
+    private val version: Int get() = ownVersion + (parent?.version ?: 0) * 31
 
     /**
      * Look up a card by name, throwing if not found.
@@ -192,6 +213,7 @@ class CardRegistry(private val parent: CardRegistry? = null) {
      * Clear all registered cards.
      */
     fun clear() {
+        ownVersion++
         cardsByName.clear()
         cardsByNameAndNumber.clear()
         backFaceToFrontFace.clear()

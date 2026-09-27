@@ -62,7 +62,7 @@ object OnceOnlyActivationAllowance {
             } else {
                 val card = container?.get<CardComponent>()
                 val classLevel = container?.get<ClassLevelComponent>()?.currentLevel
-                card?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                card?.let { cardRegistry.getCard(it) }
                     ?.script?.effectiveStaticAbilities(classLevel).orEmpty()
             }
             val granted = state.grantedStaticAbilities

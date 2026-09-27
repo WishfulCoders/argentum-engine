@@ -66,7 +66,7 @@ object TokenEntryReplacements {
         predicateEvaluator: PredicateEvaluator
     ): EntersWithChoicePlan? {
         val cardComponent = state.getEntity(tokenId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         val printedChoices = cardDef?.script?.replacementEffects
             ?.filterIsInstance<EntersWithChoice>()
             ?: emptyList()

@@ -89,7 +89,7 @@ class PutOntoBattlefieldAttachedToChosenExecutor(
 
         // For an Aura, narrow to hosts it can legally enchant (Rule 303.4f).
         if (isAura) {
-            val auraTarget = cardRegistry.getCard(cardComponent.cardDefinitionId)?.script?.auraTarget
+            val auraTarget = cardRegistry.getCard(cardComponent)?.script?.auraTarget
             if (auraTarget != null) {
                 val auraLegal = targetFinder.findLegalTargets(
                     state = state,

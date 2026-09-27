@@ -66,7 +66,7 @@ class SuspendCardFromHandHandler(
 
     private fun suspendAbilityOf(state: GameState, cardId: EntityId): KeywordAbility.Suspend? {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return null
         return cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Suspend>().firstOrNull()
     }
 
@@ -90,7 +90,7 @@ class SuspendCardFromHandHandler(
         // hasKeyword() on a hand-zone card silently returns false regardless of what's printed.
         // A battlefield-granted flash (GrantFlashToSpellType, e.g. Quick Sliver) counts too — the
         // permission side of "could begin to cast" is exactly as real as printed flash.
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         val hasFlash = cardDef?.keywords?.contains(Keyword.FLASH) == true ||
             castPermissionUtils.hasGrantedFlash(state, action.cardId)
         val isInstantSpeed = cardComponent.typeLine.isInstant || hasFlash

@@ -109,7 +109,7 @@ class BattlefieldStaticsIndex private constructor(
                 if (container.has<FaceDownComponent>()) continue
                 val card = container.get<CardComponent>() ?: continue
                 val sourceControllerId = projected.getController(permanentId) ?: continue
-                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(card) ?: continue
                 val classLevel = container.get<ClassLevelComponent>()?.currentLevel
                 for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
                     when {

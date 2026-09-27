@@ -119,7 +119,7 @@ class DrawCardPrimitive(
             // in hand), open its miracle window so its controller may cast it for the miracle cost
             // this turn, and reveal it (CR 702.94b). The window component is cleared at end of turn.
             val cardDef = newState.getEntity(cardId)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
             val miracle = com.wingedsheep.engine.mechanics.MiracleGrants.effectiveMiracle(
                 newState, cardId, cardDef, playerId, cardRegistry, predicateEvaluator
             )
@@ -167,7 +167,7 @@ class DrawCardPrimitive(
         val projected = state.projectedState
         val hasRevealAbility = projected.getBattlefieldControlledBy(playerId).any { permanentId ->
             val card = state.getEntity(permanentId)?.get<CardComponent>() ?: return@any false
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@any false
+            val cardDef = cardRegistry.getCard(card) ?: return@any false
             cardDef.script.staticAbilities.any { it is RevealFirstDrawEachTurn }
         }
         if (!hasRevealAbility) return null

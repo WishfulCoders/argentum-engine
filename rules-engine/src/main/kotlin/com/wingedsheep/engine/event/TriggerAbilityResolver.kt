@@ -226,7 +226,7 @@ class TriggerAbilityResolver(
 
             val sourceControllerId = projected.getController(permanentId) ?: continue
 
-            val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(card) ?: continue
             for (ability in cardDef.staticAbilities) {
                 if (ability !is GrantTriggeredAbility) continue
                 // Mirrors the fast provider path: the soulbond-pair scope carries its own
@@ -506,7 +506,7 @@ class TriggerAbilityResolver(
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
 
-            val sourceDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val sourceDef = cardRegistry.getCard(card) ?: continue
             val classLevel = container.get<ClassLevelComponent>()?.currentLevel
             val allStaticAbilities = sourceDef.script.effectiveStaticAbilities(classLevel)
 
@@ -557,7 +557,7 @@ class TriggerAbilityResolver(
         val container = state.getEntity(entityId) ?: return emptyList()
         if (container.has<FaceDownComponent>()) return emptyList()
         val card = container.get<CardComponent>() ?: return emptyList()
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return emptyList()
+        val cardDef = cardRegistry.getCard(card) ?: return emptyList()
         val classLevel = container.get<ClassLevelComponent>()?.currentLevel
         val staticAbilities = cardDef.script.effectiveStaticAbilities(classLevel)
         if (staticAbilities.isEmpty()) return emptyList()
@@ -700,7 +700,7 @@ class TriggerAbilityResolver(
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
 
-            val sourceDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val sourceDef = cardRegistry.getCard(card) ?: continue
             val classLevel = container.get<ClassLevelComponent>()?.currentLevel
             val allStaticAbilities = sourceDef.script.effectiveStaticAbilities(classLevel)
 

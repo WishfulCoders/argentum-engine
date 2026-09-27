@@ -55,7 +55,7 @@ object WebSlinging {
             val context = PredicateContext(controllerId = controllerId)
             for (granterId in state.controlledBattlefield(controllerId)) {
                 val def = state.getEntity(granterId)?.get<CardComponent>()
-                    ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
+                    ?.let { cardRegistry.getCard(it) } ?: continue
                 for (ability in def.script.staticAbilities) {
                     if (ability !is GrantWebSlingingToSpells) continue
                     if (predicateEvaluator.matches(state, state.projectedState, spellCardId, ability.spellFilter, context)) {

@@ -105,7 +105,7 @@ object CombatMath {
         if (cardRegistry != null) {
             val attackerCard = state.getEntity(attacker)?.get<CardComponent>()
             if (attackerCard != null) {
-                val attackerDef = cardRegistry.getCard(attackerCard.cardDefinitionId)
+                val attackerDef = cardRegistry.getCard(attackerCard)
                 if (attackerDef != null) {
                     val attackerController = projected.getController(attacker)
                     val predicateEvaluator = PredicateEvaluator(cardRegistry)
@@ -136,7 +136,7 @@ object CombatMath {
             }
             val blockerCard = state.getEntity(blocker)?.get<CardComponent>()
             if (blockerCard != null) {
-                val cardDef = cardRegistry.getCard(blockerCard.cardDefinitionId)
+                val cardDef = cardRegistry.getCard(blockerCard)
                 if (cardDef != null) {
                     for (ability in cardDef.staticAbilities) {
                         when (ability) {

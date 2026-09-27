@@ -148,7 +148,7 @@ class ManaAbilitySideEffectExecutor(
         producedColor: Color?,
     ): ActivatedAbility? {
         val card = state.getEntity(sourceId)?.get<CardComponent>() ?: return null
-        val printed = cardRegistry.getCard(card.cardDefinitionId)?.script?.activatedAbilities.orEmpty()
+        val printed = cardRegistry.getCard(card)?.script?.activatedAbilities.orEmpty()
         val granted = state.grantedActivatedAbilities.asSequence()
             .filter { it.entityId == sourceId }
             .map { it.ability }

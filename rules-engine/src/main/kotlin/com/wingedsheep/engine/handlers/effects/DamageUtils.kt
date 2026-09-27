@@ -825,7 +825,7 @@ object DamageUtils {
         val spellOnStack = container.get<SpellOnStackComponent>() ?: return false
         val controllerId = container.get<ControllerComponent>()?.playerId ?: spellOnStack.casterId
         val cardDef = container.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: return false
+            ?.let { cardRegistry.getCard(it) } ?: return false
         return GrantedKeywordResolver(cardRegistry).hasKeyword(state, controllerId, cardDef, keyword)
     }
 
@@ -2402,7 +2402,7 @@ object DamageUtils {
                 for (entityId in state.controlledBattlefield(sourceController)) {
                     val container = state.getEntity(entityId) ?: continue
                     val card = container.get<CardComponent>() ?: continue
-                    val permanentDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                    val permanentDef = cardRegistry.getCard(card) ?: continue
                     val classLevel = container.get<ClassLevelComponent>()?.currentLevel
 
                     for (ability in permanentDef.script.effectiveStaticAbilities(classLevel)) {

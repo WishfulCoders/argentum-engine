@@ -71,7 +71,7 @@ object FlashTypeGrants {
 
         // 1. The card's own conditionalFlash (e.g. Ferocious).
         val spellDef = state.getEntity(spellCardId)?.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+            ?.let { cardRegistry.getCard(it) }
         val conditionalFlash = spellDef?.script?.conditionalFlash
         if (conditionalFlash != null) {
             val effectContext = EffectContext(sourceId = spellCardId, controllerId = spellOwner)
@@ -98,7 +98,7 @@ object FlashTypeGrants {
         // permanent "is treated as though it does not exist").
         for ((playerId, entityId) in granters ?: granters(state, cardRegistry)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val classLevel = state.getEntity(entityId)?.get<ClassLevelComponent>()?.currentLevel
             for (raw in cardDef.script.effectiveStaticAbilities(classLevel)) {
                 val ability = activeGrant(state, raw, entityId, playerId, conditionEvaluator)
@@ -130,7 +130,7 @@ object FlashTypeGrants {
         for (playerId in state.turnOrder) {
             for (entityId in state.controlledBattlefield(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(card) ?: continue
                 val classLevel = state.getEntity(entityId)?.get<ClassLevelComponent>()?.currentLevel
                 val grants = cardDef.script.effectiveStaticAbilities(classLevel).any { raw ->
                     raw is GrantFlashToSpellType ||

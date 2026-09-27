@@ -136,7 +136,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
     /** True when [cardId]'s definition has a back face to be cast transformed as. */
     private fun hasBackFace(state: GameState, cardId: EntityId): Boolean {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
-        return cardRegistry.getCard(cardComponent.cardDefinitionId)?.backFace != null
+        return cardRegistry.getCard(cardComponent)?.backFace != null
     }
 
     private fun invokeCast(
@@ -288,7 +288,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
             faceIndex: Int? = null,
         ): TargetPrep {
             val cardComponent = state.getEntity(cardId)?.get<CardComponent>()
-            val printedDef = cardComponent?.let { cardRegistry.getCard(it.cardDefinitionId) }
+            val printedDef = cardComponent?.let { cardRegistry.getCard(it) }
             val cardDef = if (castTransformed) printedDef?.backFace ?: printedDef else printedDef
             val selectedFace = faceIndex?.let { printedDef?.cardFaces?.getOrNull(it) }
             val script = selectedFace?.script ?: cardDef?.script

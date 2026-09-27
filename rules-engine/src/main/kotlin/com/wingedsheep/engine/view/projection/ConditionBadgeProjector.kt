@@ -79,7 +79,7 @@ internal class ConditionBadgeProjector(
     ): List<ClientCardEffect> {
         val container = state.getEntity(entityId) ?: return emptyList()
         val cardComponent = container.get<CardComponent>() ?: return emptyList()
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return emptyList()
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return emptyList()
         val controllerId = container.get<ControllerComponent>()?.playerId ?: return emptyList()
 
         val badges = mutableListOf<ClientCardEffect>()

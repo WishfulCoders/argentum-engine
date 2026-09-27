@@ -293,7 +293,7 @@ class Visibility(
     ): Boolean {
         for (entityId in state.controlledBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { ability ->
                     activeStaticAbility(state, ability, entityId, playerId)?.let(predicate) == true
                 }

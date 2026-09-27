@@ -96,7 +96,7 @@ class Determinizer internal constructor(
                     .first
                 OpponentModel.IdentityPermutation -> {
                     val existing = hidden.mapNotNull { id ->
-                        state.getEntity(id)?.get<CardComponent>()?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                        state.getEntity(id)?.get<CardComponent>()?.let { cardRegistry.getCard(it) }
                     }
                     currentRng.shuffle(existing).also { currentRng = it.second }.first
                 }
@@ -159,7 +159,7 @@ class Determinizer internal constructor(
         val container = state.getEntity(entityId) ?: return false
         val ownerId = container.get<OwnerComponent>()?.playerId ?: return false
         val definition = container.get<CardComponent>()
-            ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+            ?.let { cardRegistry.getCard(it) }
             ?: return false
         return HiddenSlotRewrite.runtimeBlockers(container, definition, ownerId).isEmpty()
     }

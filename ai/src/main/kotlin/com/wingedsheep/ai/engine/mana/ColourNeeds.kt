@@ -141,7 +141,7 @@ class ColourNeeds private constructor(
             if (card.isLand) {
                 return LandManaColorInspector.colorsLandCouldProduce(state, projected, entityId, cardRegistry)
             }
-            val definition = cardRegistry.getCard(card.cardDefinitionId) ?: return emptySet()
+            val definition = cardRegistry.getCard(card) ?: return emptySet()
             val colours = mutableSetOf<Color>()
             for (ability in definition.script.activatedAbilities) {
                 if (ability.isManaAbility) collectColours(ability.effect, colours)

@@ -34,7 +34,7 @@ class SagaSacrificeCheck(
             container.get<SagaComponent>() ?: continue
             val counters = container.get<CountersComponent>() ?: continue
 
-            val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(cardComponent) ?: continue
             val finalChapter = cardDef.finalChapter ?: continue
 
             val loreCount = counters.getCount(CounterType.LORE)

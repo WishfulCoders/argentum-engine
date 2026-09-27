@@ -50,7 +50,7 @@ object RiotSynthesis {
         var count = 0
         for (sourceId in state.getBattlefield()) {
             val srcCard = state.getEntity(sourceId)?.get<CardComponent>() ?: continue
-            val def = cardRegistry.getCard(srcCard.cardDefinitionId) ?: continue
+            val def = cardRegistry.getCard(srcCard) ?: continue
             val srcController = state.projectedState.getController(sourceId) ?: continue
             for (ability in def.staticAbilities) {
                 if (ability !is GrantKeyword || ability.keyword != Keyword.RIOT.name) continue

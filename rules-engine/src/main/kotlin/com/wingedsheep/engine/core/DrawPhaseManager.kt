@@ -155,7 +155,7 @@ class DrawPhaseManager(
         for (permanentId in projected.getBattlefieldControlledBy(playerId)) {
             val container = state.getEntity(permanentId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (RoomFaceStatics.activeStaticAbilities(container, cardDef).any { it is SkipDrawStep }) {
                 return true
             }

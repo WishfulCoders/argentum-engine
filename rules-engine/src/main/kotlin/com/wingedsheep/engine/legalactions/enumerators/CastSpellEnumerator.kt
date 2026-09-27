@@ -1391,7 +1391,7 @@ class CastSpellEnumerator(
             }
             if (artifacts.isEmpty()) return@map la
             val cardComponent = state.getEntity(cs.cardId)?.get<CardComponent>() ?: return@map la
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return@map la
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: return@map la
             val hasImprovise = hasImproviseByCard.getOrPut(cs.playerId to cardComponent.cardDefinitionId) {
                 context.grantedKeywordResolver.hasKeyword(state, cs.playerId, cardDef, Keyword.IMPROVISE)
             }

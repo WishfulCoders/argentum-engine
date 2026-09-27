@@ -217,7 +217,7 @@ class StaticAbilityHandler(
         val cardComponent = container.get<CardComponent>() ?: return container
 
         // Get the card definition to access static abilities
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return container
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return container
 
         return addContinuousEffectComponent(container, cardDef)
     }
@@ -1127,7 +1127,7 @@ class StaticAbilityHandler(
      */
     fun addReplacementEffectComponent(container: ComponentContainer): ComponentContainer {
         val cardComponent = container.get<CardComponent>() ?: return container
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return container
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return container
         return addReplacementEffectComponent(container, cardDef)
     }
 

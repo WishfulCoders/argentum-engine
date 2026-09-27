@@ -915,7 +915,7 @@ class ManaSolver(
         for (entityId in handCards) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
 
             // Get mana cost
             val manaCost = cardDef.manaCost
@@ -990,7 +990,7 @@ class ManaSolver(
             val card = container.get<CardComponent>() ?: return@mapNotNull null
 
             // Check for explicit mana abilities via CardRegistry
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId)
+            val cardDef = cardRegistry.getCard(card)
             // Suppress the card's own activated abilities when projection has stripped them
             // (e.g., Noggle the Mind / Humility / Deep Freeze). Granted abilities are kept.
             val allAbilities = if (cardDef == null || projected.hasLostAllAbilities(entityId)) emptyList()
@@ -1973,7 +1973,7 @@ class ManaSolver(
     private fun hasSelfTapManaAbility(state: GameState, entityId: EntityId): Boolean {
         val container = state.getEntity(entityId) ?: return false
         val card = container.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(card)
         val manaAbilities = cardDef?.script?.activatedAbilities?.filter { it.isManaAbility }.orEmpty()
         if (manaAbilities.any { abilityCostHasTap(it.cost) }) return true
         // No printed mana ability: a land with a basic subtype still has the intrinsic tap ability.
@@ -2054,7 +2054,7 @@ class ManaSolver(
         for (playerId in state.turnOrder) {
             for (entityId in state.getBattlefield(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+                val cardDef = cardRegistry.getCard(card) ?: continue
                 if (cardDef.script.staticAbilities.any { it is DampLandManaProduction }) {
                     return true
                 }
@@ -2363,7 +2363,7 @@ class ManaSolver(
         for (entityId in battlefieldCards) {
             val container = state.getEntity(entityId) ?: continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
 
             // Skip own abilities that have been stripped by a continuous effect (Humility, Noggle the Mind, etc.)
             if (projected.hasLostAllAbilities(entityId)) continue
@@ -2455,7 +2455,7 @@ class ManaSolver(
             val card = container.get<CardComponent>() ?: continue
 
             val ownAbilities = if (projected.hasLostAllAbilities(entityId)) emptyList()
-                else cardRegistry.getCard(card.cardDefinitionId)?.script?.activatedAbilities.orEmpty()
+                else cardRegistry.getCard(card)?.script?.activatedAbilities.orEmpty()
             val abilities = ownAbilities + getStaticGrantedManaAbilities(entityId, state, manaStatics) +
                 runtimeGrants[entityId].orEmpty()
 
@@ -2625,7 +2625,7 @@ class ManaSolver(
             // Own abilities stripped by Humility / similar — skip the printed mana ability; an
             // ability a resolved effect granted still counts.
             val printed = if (projected.hasLostAllAbilities(entityId)) emptyList()
-                else cardRegistry.getCard(card.cardDefinitionId)?.script?.activatedAbilities.orEmpty()
+                else cardRegistry.getCard(card)?.script?.activatedAbilities.orEmpty()
             val abilities = printed + runtimeGrants[entityId].orEmpty()
             if (abilities.isEmpty()) continue
 
@@ -2745,7 +2745,7 @@ class ManaSolver(
             val container = state.getEntity(entityId) ?: continue
             if (container.has<TappedComponent>()) continue
             val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (projected.hasLostAllAbilities(entityId)) continue
 
             val isCreature = projected.isCreature(entityId)

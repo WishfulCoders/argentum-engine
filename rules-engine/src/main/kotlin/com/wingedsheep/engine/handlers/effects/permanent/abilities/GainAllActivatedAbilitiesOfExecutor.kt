@@ -69,7 +69,7 @@ class GainAllActivatedAbilitiesOfExecutor(
         val donorId = context.resolveTarget(effect.donor)
         val donorEntity = donorId?.let { state.getEntity(it) }
         val donorCard = donorEntity?.get<CardComponent>()
-        val donorDef = donorCard?.let { cardRegistry.getCard(it.cardDefinitionId) }
+        val donorDef = donorCard?.let { cardRegistry.getCard(it) }
             ?: return EffectResult.success(state)
         val donorClassLevel = donorEntity.get<ClassLevelComponent>()?.currentLevel
 

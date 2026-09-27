@@ -1210,7 +1210,7 @@ class CastFromZoneEnumerator(
         for (cardId in graveyardCards) {
             val container = state.getEntity(cardId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
             // Flashback may be printed, granted per-entity (Archmage's Newt), or granted to the
             // whole graveyard by a battlefield static (Iroh, Grand Lotus).
@@ -1350,7 +1350,7 @@ class CastFromZoneEnumerator(
             val cardComponent = container.get<CardComponent>() ?: continue
             // Lands are played (CR 702.187c), not cast — handled elsewhere.
             if (cardComponent.typeLine.isLand) continue
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
             val mayhem = MayhemGrants.effectiveMayhem(
                 state, cardId, cardDef, playerId, context.cardRegistry, context.predicateEvaluator
@@ -1476,7 +1476,7 @@ class CastFromZoneEnumerator(
         for (cardId in graveyardCards) {
             val container = state.getEntity(cardId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
             val disturb = DisturbCasts.printedDisturb(cardDef) ?: continue
             val backFace = DisturbCasts.castFace(cardDef) ?: continue
@@ -1602,7 +1602,7 @@ class CastFromZoneEnumerator(
         for (cardId in graveyardCards) {
             val container = state.getEntity(cardId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
             // Harmonize may be printed on the card or granted at runtime (Songcrafter Mage).
             val harmonize = HarmonizeGrants.effectiveHarmonize(state, cardId, cardDef) ?: continue
@@ -1747,7 +1747,7 @@ class CastFromZoneEnumerator(
             // Skip lands — warp is for spells only
             if (cardComponent.typeLine.isLand) continue
 
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
             // Printed warp wins; otherwise consult battlefield grants
             // ([com.wingedsheep.sdk.scripting.GrantWarpToCardsInHand]). Granted warp is
@@ -1922,7 +1922,7 @@ class CastFromZoneEnumerator(
             // Dash is for creature spells only.
             if (cardComponent.typeLine.isLand) continue
 
-            val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
             val dashAbility = cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Dash>().firstOrNull()
                 ?: continue
 
@@ -2233,7 +2233,7 @@ class CastFromZoneEnumerator(
             val controller = container.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
             if (controller != playerId) continue
             val cardComp = container.get<CardComponent>() ?: continue
-            val cardDef = context.cardRegistry.getCard(cardComp.cardDefinitionId) ?: continue
+            val cardDef = context.cardRegistry.getCard(cardComp) ?: continue
             for (sa in cardDef.script.staticAbilities) {
                 if (sa is MayCastFromGraveyard && !grantIsSpent(permId, sa)) {
                     permissions.add(sa to null)
@@ -2292,7 +2292,7 @@ class CastFromZoneEnumerator(
                 if (scopedCardId != null && cardId != scopedCardId) continue
                 val container = state.getEntity(cardId) ?: continue
                 val cardComponent = container.get<CardComponent>() ?: continue
-                val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
+                val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
                 // Check if card matches filter
                 if (!context.predicateEvaluator.matches(

@@ -422,7 +422,7 @@ class SelectFromCollectionExecutor(
         for (id in cards) {
             if (id in state.getBattlefield()) continue
             val card = state.getEntity(id)?.get<CardComponent>() ?: continue
-            val definition = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val definition = cardRegistry.getCard(card) ?: continue
             val faces = buildList {
                 // A split card's combined characteristics are not a castable face.
                 if (!definition.isSplit) add(-1 to card)

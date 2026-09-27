@@ -194,7 +194,7 @@ class GameSimulator(
     /** True when [activation] is a printed mana ability whose cost taps and sacrifices its source. */
     private fun sacrificesItself(state: GameState, activation: ActivateAbility): Boolean {
         val card = state.getEntity(activation.sourceId)?.get<CardComponent>() ?: return false
-        val ability = cardRegistry.getCard(card.cardDefinitionId)?.script?.activatedAbilities
+        val ability = cardRegistry.getCard(card)?.script?.activatedAbilities
             ?.firstOrNull { it.id == activation.abilityId } ?: return false
         val cost = ability.cost as? AbilityCost.Composite ?: return false
         return cost.costs.any { it is AbilityCost.SacrificeSelf }

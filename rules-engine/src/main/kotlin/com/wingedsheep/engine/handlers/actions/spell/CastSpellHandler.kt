@@ -213,7 +213,7 @@ class CastSpellHandler(
     override fun execute(state: GameState, action: CastSpell): ExecutionResult {
         val cardComponent = state.getEntity(action.cardId)?.get<CardComponent>()
             ?: return ExecutionResult.error(state, "Card not found")
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
 
         // --- 1. Announce (CR 601.2a–c) -----------------------------------------------------------
 
@@ -780,7 +780,7 @@ class CastSpellHandler(
         // Nothing stacks — base-cost affordability was already validated on the cast action.
         if (extraCosts.isEmpty()) return true
         val cardComponent = state.getEntity(action.cardId)?.get<CardComponent>() ?: return true
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return true
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return true
         val playForFree = zoneResolver.hasPlayWithoutPayingCost(state, action.playerId, action.cardId) ||
             action.useWithoutPayingManaCost
         val computed = castCostTotaller.validationCost(

@@ -190,7 +190,7 @@ object ZoneMovementUtils {
         val container = state.getEntity(entityId) ?: return state to emptyList()
         if (container.has<FaceDownComponent>()) return state to emptyList()
         val cardComponent = container.get<CardComponent>() ?: return state to emptyList()
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         val (counterType, amount) = when {
             cardComponent.isPlaneswalker -> CounterType.LOYALTY to cardDef?.startingLoyalty
             cardComponent.isBattle ->

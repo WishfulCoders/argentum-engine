@@ -149,7 +149,7 @@ class CastZoneResolver(
         cardId: EntityId
     ): MayCastSelfFromZones? {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return null
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return null
 
         // A permission applies if the card is currently in one of its named zones for this player
         // AND its optional condition (e.g. Undead Sprinter's "a non-Zombie creature died this turn")
@@ -244,7 +244,7 @@ class CastZoneResolver(
         val battlefield = state.getBattlefield()
         for (permId in state.getBattlefield(playerId)) {
             val permCard = state.getEntity(permId)?.get<CardComponent>() ?: continue
-            val permDef = cardRegistry.getCard(permCard.cardDefinitionId) ?: continue
+            val permDef = cardRegistry.getCard(permCard) ?: continue
             for (sa in permDef.script.staticAbilities) {
                 if (sa is MayCastFromGraveyard && mayCastFromGraveyardGrantApplies(state, playerId, cardId, sa, permId)) {
                     matches.add(permId to sa)
@@ -362,7 +362,7 @@ class CastZoneResolver(
         val graveyardZone = ZoneKey(playerId, Zone.GRAVEYARD)
         if (cardId !in state.getZone(graveyardZone)) return false
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         return FlashbackGrants.effectiveFlashback(
             state, cardId, cardDef, playerId, cardRegistry, predicateEvaluator
         ) != null
@@ -384,7 +384,7 @@ class CastZoneResolver(
         val graveyardZone = ZoneKey(playerId, Zone.GRAVEYARD)
         if (cardId !in state.getZone(graveyardZone)) return null
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        return DisturbCasts.castFace(cardRegistry.getCard(cardComponent.cardDefinitionId))
+        return DisturbCasts.castFace(cardRegistry.getCard(cardComponent))
     }
 
     /**
@@ -411,7 +411,7 @@ class CastZoneResolver(
         }
         if (!transformedGrant) return null
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        return cardRegistry.getCard(cardComponent.cardDefinitionId)?.backFace
+        return cardRegistry.getCard(cardComponent)?.backFace
     }
 
     /**
@@ -431,7 +431,7 @@ class CastZoneResolver(
         val handZone = ZoneKey(playerId, Zone.HAND)
         if (cardId !in state.getZone(handZone)) return null
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        return ModalDfcCasts.castFace(cardRegistry.getCard(cardComponent.cardDefinitionId))
+        return ModalDfcCasts.castFace(cardRegistry.getCard(cardComponent))
     }
 
     /**
@@ -447,7 +447,7 @@ class CastZoneResolver(
         val graveyardZone = ZoneKey(playerId, Zone.GRAVEYARD)
         if (cardId !in state.getZone(graveyardZone)) return false
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         return HarmonizeGrants.effectiveHarmonize(state, cardId, cardDef) != null
     }
 
@@ -467,7 +467,7 @@ class CastZoneResolver(
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
         // Lands use the no-cost "play from graveyard" form (CR 702.187c), not the cast path.
         if (cardComponent.typeLine.isLand) return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         if (com.wingedsheep.engine.mechanics.MayhemGrants.effectiveMayhem(
                 state, cardId, cardDef, playerId, cardRegistry, predicateEvaluator
             ) == null
@@ -483,7 +483,7 @@ class CastZoneResolver(
      */
     fun getMayhemCost(cardId: EntityId, state: GameState): com.wingedsheep.sdk.core.ManaCost? {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         return com.wingedsheep.engine.mechanics.MayhemGrants.effectiveMayhem(
             state, cardId, cardDef, cardComponent.ownerId, cardRegistry, predicateEvaluator
         )?.cost
@@ -494,7 +494,7 @@ class CastZoneResolver(
      */
     fun getFlashbackCost(cardId: EntityId, state: GameState): com.wingedsheep.sdk.core.ManaCost? {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
+        val cardDef = cardRegistry.getCard(cardComponent)
         // A graveyard card's controller is its owner — enough to resolve a whole-graveyard
         // group grant (Iroh, Grand Lotus) in addition to printed / per-entity flashback.
         return FlashbackGrants.effectiveFlashback(
@@ -516,7 +516,7 @@ class CastZoneResolver(
         cardId: EntityId
     ): Boolean {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return false
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return false
         val warp = cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Warp>().firstOrNull()
         if (warp != null) {
             if (cardId in state.getZone(ZoneKey(playerId, Zone.HAND))) return true
@@ -536,7 +536,7 @@ class CastZoneResolver(
         cardId: EntityId
     ): Boolean {
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
-        val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: return false
+        val cardDef = cardRegistry.getCard(cardComponent) ?: return false
         if (cardDef.keywordAbilities.none { it is KeywordAbility.Dash }) return false
         return cardId in state.getZone(ZoneKey(playerId, Zone.HAND))
     }
@@ -644,7 +644,7 @@ class CastZoneResolver(
         val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 // Honor a conditional gate (e.g. The Lunar Whale's "as long as it attacked this
                 // turn") against the granting permanent before allowing the cast from top.
@@ -687,7 +687,7 @@ class CastZoneResolver(
         var limitedSource: EntityId? = null
         for (entityId in state.getBattlefield(playerId)) {
             val sourceCard = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(sourceCard.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(sourceCard) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 val unwrapped = if (ability is ConditionalStaticAbility) {
                     val ctx = EffectContext(sourceId = entityId, controllerId = playerId)
@@ -713,7 +713,7 @@ class CastZoneResolver(
     private fun hasPlayFromTopOfLibrary(state: GameState, playerId: EntityId): Boolean {
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { it is PlayFromTopOfLibrary }) {
                 return true
             }
@@ -732,7 +732,7 @@ class CastZoneResolver(
     ): com.wingedsheep.sdk.scripting.PlayFromTopWithAlternativeCost? {
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             cardDef.script.staticAbilities
                 .firstOrNull { it is com.wingedsheep.sdk.scripting.PlayFromTopWithAlternativeCost }
                 ?.let { return it as com.wingedsheep.sdk.scripting.PlayFromTopWithAlternativeCost }
@@ -800,7 +800,7 @@ class CastZoneResolver(
     ): EntityId? {
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { it is MayPlayPermanentsFromGraveyard }) {
                 val tracker = state.getEntity(entityId)?.get<GraveyardPlayPermissionUsedComponent>()
                 if (tracker == null || !tracker.hasUsedType(typeName)) {

@@ -76,7 +76,7 @@ object ManaColorSetResolver {
         val colors = mutableSetOf<Color>()
         for (commanderId in registry.commanderIds) {
             val card = state.getEntity(commanderId)?.get<CardComponent>() ?: continue
-            val def = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val def = cardRegistry.getCard(card) ?: continue
             colors.addAll(def.colorIdentity)
         }
         return colors

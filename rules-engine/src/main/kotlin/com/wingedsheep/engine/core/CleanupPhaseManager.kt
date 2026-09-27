@@ -517,7 +517,7 @@ class CleanupPhaseManager(
         val registry = cardRegistry
         for (entityId in state.getBattlefield()) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = registry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any { it is PreventManaPoolEmptying }) {
                 return true
             }
@@ -1195,7 +1195,7 @@ class CleanupPhaseManager(
         ): Boolean {
             val container = state.getEntity(entityId) ?: return false
             val cardDef = container.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+                ?.let { cardRegistry.getCard(it) }
             val printed = cardDef != null &&
                 RoomFaceStatics.activeStaticAbilities(container, cardDef)
                     .any { it is DamagePersistsThroughCleanup }

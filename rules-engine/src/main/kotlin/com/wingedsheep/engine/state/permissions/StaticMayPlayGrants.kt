@@ -98,7 +98,7 @@ internal object StaticMayPlayGrants {
             if (granter.has<FaceDownComponent>()) continue
             if (projected.getController(granterId) != playerId) continue
             val card = granter.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val cardDef = cardRegistry.getCard(card) ?: continue
             val classLevel = granter.get<ClassLevelComponent>()?.currentLevel
             for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
                 if (ability !is MayPlayCardsFromExile) continue

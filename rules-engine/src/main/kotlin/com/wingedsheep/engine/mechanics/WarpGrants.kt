@@ -84,7 +84,7 @@ object WarpGrants {
         // than its owner. CR 109.5: "you" in an ability refers to the object's controller.
         for (entityId in state.controlledBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val def = cardRegistry.getCard(card.cardDefinitionId) ?: continue
+            val def = cardRegistry.getCard(card) ?: continue
             for (ability in def.script.staticAbilities) {
                 if (ability !is GrantWarpToCardsInHand) continue
                 if (predicateEvaluator.matches(state, state.projectedState, cardId, ability.filter, context)) {

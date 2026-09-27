@@ -84,7 +84,7 @@ object FlashbackGrants {
         // the granter — CR 109.5: "you" in an ability refers to the object's controller.
         for (granterId in state.controlledBattlefield(controllerId)) {
             val def = state.getEntity(granterId)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
+                ?.let { cardRegistry.getCard(it) } ?: continue
             for (ability in def.script.staticAbilities) {
                 if (ability !is GraveyardCardsHaveFlashback) continue
                 if (ability.duringYourTurnOnly && !state.isActiveTurnFor(controllerId)) continue

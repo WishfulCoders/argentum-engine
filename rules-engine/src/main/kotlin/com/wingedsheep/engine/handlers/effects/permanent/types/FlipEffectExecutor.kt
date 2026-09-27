@@ -60,7 +60,7 @@ internal fun flipPermanent(
     val container = state.getEntity(entityId) ?: return null
     if (container.get<FlippedComponent>() != null) return null
     val upright = container.get<CardComponent>() ?: return null
-    val flipDef = cardRegistry.getCard(upright.cardDefinitionId)?.flipSide ?: return null
+    val flipDef = cardRegistry.getCard(upright)?.flipSide ?: return null
     val controllerId = container.get<ControllerComponent>()?.playerId ?: upright.ownerId ?: return null
 
     // CR 710.1c: the flip half replaces name, type line, text box and P/T — never mana cost or colour.
