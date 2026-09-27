@@ -106,6 +106,16 @@ data class CardComponent(
      */
     val manaValueOverride: Int? = null,
 ) : Component {
+    /**
+     * The printed characteristics projection starts every permanent from, built on first use and
+     * shared by every projection of every state holding this component (see
+     * [com.wingedsheep.engine.mechanics.layers.CopyOnWriteNameSet]). Not serialized, and not part
+     * of equality.
+     */
+    internal val projectionBase: com.wingedsheep.engine.mechanics.layers.ProjectionBase by lazy {
+        com.wingedsheep.engine.mechanics.layers.ProjectionBase(this)
+    }
+
     // Convenience accessors
     val isCreature: Boolean get() = typeLine.isCreature
     val isLand: Boolean get() = typeLine.isLand
