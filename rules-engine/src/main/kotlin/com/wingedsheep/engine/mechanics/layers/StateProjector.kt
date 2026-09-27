@@ -113,12 +113,11 @@ class StateProjector(
                 )
             } else {
                 val baseStats = cardComponent.baseStats
+                val printed = cardComponent.projectionBase
                 projectedValues[entityId] = MutableProjectedValues(
                     power = baseStats?.basePower,
                     toughness = baseStats?.baseToughness,
-                    keywords = linkedSetOf<String>().apply {
-                        cardComponent.baseKeywords.forEach { add(it.name) }
-                        cardComponent.baseFlags.forEach { add(it.name) }
+                    keywords = CopyOnWriteNameSet(printed.keywords).apply {
                         container.get<ProtectionComponent>()?.let { protection ->
                             protection.colors.forEach { add("PROTECTION_FROM_${it.name}") }
                             protection.subtypes.forEach { add("PROTECTION_FROM_SUBTYPE_${it.uppercase()}") }
@@ -133,9 +132,9 @@ class StateProjector(
                         // Dash supplies haste from the live marker on every projection.
                         if (container.has<DashedComponent>()) add(Keyword.HASTE.name)
                     },
-                    colors = cardComponent.colors.mapTo(linkedSetOf()) { it.name },
-                    types = extractTypes(cardComponent),
-                    subtypes = cardComponent.typeLine.subtypes.mapTo(linkedSetOf()) { it.value },
+                    colors = CopyOnWriteNameSet(printed.colors),
+                    types = CopyOnWriteNameSet(printed.types),
+                    subtypes = CopyOnWriteNameSet(printed.subtypes),
                     controllerId = container.get<ControllerComponent>()?.playerId,
                     isFaceDown = false
                 )
@@ -521,14 +520,6 @@ class StateProjector(
                 }
             }
         }
-    }
-
-    private fun extractTypes(card: CardComponent): MutableSet<String> {
-        val types = linkedSetOf<String>()
-        card.typeLine.supertypes.forEach { types.add(it.name) }
-        card.typeLine.cardTypes.forEach { types.add(it.name) }
-        card.typeLine.subtypes.forEach { types.add(it.value) }
-        return types
     }
 
     /**
