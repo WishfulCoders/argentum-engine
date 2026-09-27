@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, SplitPilesDecision } from '@/types'
-import { calculateFittingCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
+import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import styles from './DecisionUI.module.css'
+import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
 /**
  * Split piles decision UI - assign cards to labeled piles (e.g., Surveil).
@@ -48,6 +49,17 @@ export function SplitPilesUI({
     submitSplitPilesDecision(decision.id, piles)
   }
 
+  // One card: 1..n send it to that pile. Several: Enter confirms the assignment.
+  const pileKeys: Record<string, () => void> = {}
+  if (decision.cards.length === 1) {
+    labels.slice(0, 9).forEach((_, index) => {
+      pileKeys[String(index + 1)] = () => handleSubmit({ [decision.cards[0]!]: index })
+    })
+  } else {
+    pileKeys.Enter = () => handleSubmit()
+  }
+  useDecisionHotkeys(pileKeys)
+
   // For single-card surveil: clicking a pile button directly assigns and submits
   if (decision.cards.length === 1) {
     const cardId = decision.cards[0]!
@@ -56,7 +68,7 @@ export function SplitPilesUI({
     const cardName = cardInfoFromDecision?.name || cardFromState?.name || 'Unknown Card'
     const imageUri = cardInfoFromDecision?.imageUri || cardFromState?.imageUri
 
-    const cardWidth = responsive.isMobile ? 120 : 180
+    const cardWidth = responsive.isMobile ? 120 : Math.max(180, decisionCardMaxWidth(responsive))
     const cardHeight = Math.round(cardWidth * 1.4)
     const cardImageUrl = getCardImageUrl(cardName, imageUri)
 
@@ -106,6 +118,7 @@ export function SplitPilesUI({
               className={index === 0 ? styles.yesButton : styles.noButton}
               data-testid={`pile-button-${index}`}
               data-pile-label={label}
+              title={String(index + 1)}
             >
               {label}
             </button>
@@ -118,7 +131,7 @@ export function SplitPilesUI({
   // Multi-card: show cards with pile toggle buttons
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 32
   const gap = responsive.isMobile ? 4 : 8
-  const maxCardWidth = responsive.isMobile ? 90 : 130
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const cardWidth = calculateFittingCardWidth(
     decision.cards.length,
     availableWidth,

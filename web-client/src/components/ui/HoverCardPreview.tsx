@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
+import { previewCardWidth } from '@/hooks/useResponsive.ts'
 
-const PREVIEW_WIDTH = 280
 const MARGIN = 40
 const VIEWPORT_PADDING = 10
 const RULINGS_MAX_HEIGHT = 300
@@ -83,7 +83,7 @@ export function HoverCardPreview({ name, imageUri, imageSize = 'large', pos, rul
   }, [rulingsOpen])
 
   const imageUrl = getCardImageUrl(name, imageUri, imageSize)
-  const portraitWidth = PREVIEW_WIDTH
+  const portraitWidth = previewCardWidth(window.innerHeight)
   const portraitHeight = Math.round(portraitWidth * 1.4)
   // For sideways layouts (Rooms), the displayed container is landscape; the image element
   // keeps its portrait pixel dims and rotates inside it.

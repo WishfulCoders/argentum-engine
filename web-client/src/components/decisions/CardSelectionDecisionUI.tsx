@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, SelectCardsDecision } from '@/types'
-import { calculateFittingCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
+import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import { DecisionCard, DecisionCardPreview } from './DecisionComponents'
 import styles from './DecisionUI.module.css'
+import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
 /** Known MTG card types used for OnePerCardType restriction enforcement. */
 const CARD_TYPES = new Set([
@@ -105,7 +106,7 @@ export function CardSelectionDecision({
   // Calculate card size that fits all cards
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 32
   const gap = responsive.isMobile ? 4 : 8
-  const maxCardWidth = responsive.isMobile ? 90 : 130
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const nonSelectableOptions = decision.nonSelectableOptions ?? []
   const totalCardCount = decision.options.length + nonSelectableOptions.length
   const cardWidth = calculateFittingCardWidth(
@@ -291,6 +292,16 @@ export function CardSelectionDecision({
     submitDecision(decision.id, selectedCards)
     setSelectedCards([])
   }
+
+  useDecisionHotkeys(
+    {
+      Enter: () => {
+        if (!canConfirm || !meetsManaValueFloor) return false
+        handleConfirm()
+      },
+    },
+    !minimized,
+  )
 
   if (minimized) {
     return (

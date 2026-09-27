@@ -114,6 +114,24 @@ export function calculateFittingCardWidth(
 }
 
 /**
+ * Widest a card grows in a decision overlay (scry, discard, pick-from-among): about a fifth of the
+ * window's height, 130-240 px on desktop. The overlays are for reading cards, so they size to the
+ * window rather than to the board's small battlefield cards.
+ */
+export function decisionCardMaxWidth(r: Pick<ResponsiveSizes, 'isMobile' | 'viewportHeight'>): number {
+  if (r.isMobile) return 90
+  return Math.round(Math.max(130, Math.min(240, r.viewportHeight * 0.2)))
+}
+
+/**
+ * Width of the enlarged hover preview: 280 px on a short window, growing with its height to 420 px
+ * so rules text stays legible on a large monitor.
+ */
+export function previewCardWidth(viewportHeight: number): number {
+  return Math.round(Math.max(280, Math.min(420, viewportHeight * 0.36)))
+}
+
+/**
  * Hook to track viewport dimensions.
  */
 /** Below this viewport width the layout is the phone layout (`isMobile`). */

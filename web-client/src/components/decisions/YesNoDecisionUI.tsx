@@ -3,6 +3,7 @@ import type { YesNoDecision, ClientGameState } from '@/types'
 import { AbilityText } from '../ui/ManaSymbols'
 import { DecisionContextCards, hasDecisionContextCards, resolveDecisionCards } from './DecisionContextCards'
 import styles from './DecisionUI.module.css'
+import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
 /**
  * Yes/No decision - make a binary choice.
@@ -31,6 +32,8 @@ export function YesNoDecisionUI({
   const handleNo = () => {
     submitYesNoDecision(decision.id, false)
   }
+
+  useDecisionHotkeys({ y: handleYes, n: handleNo })
 
   const cards = resolveDecisionCards(decision.context, gameState)
   const showCardContext = hasDecisionContextCards(cards)
@@ -64,10 +67,10 @@ export function YesNoDecisionUI({
             View Battlefield
           </button>
         )}
-        <button onClick={handleYes} className={styles.yesButton}>
+        <button onClick={handleYes} className={styles.yesButton} title="Y">
           <AbilityText text={decision.yesText} size={16} />
         </button>
-        <button onClick={handleNo} className={styles.noButton}>
+        <button onClick={handleNo} className={styles.noButton} title="N">
           <AbilityText text={decision.noText} size={16} />
         </button>
       </div>

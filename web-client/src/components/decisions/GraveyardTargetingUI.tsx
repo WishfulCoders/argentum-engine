@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import { ZoneType } from '@/types'
 import type { EntityId, ChooseTargetsDecision, ClientCard } from '@/types'
-import { calculateFittingCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
+import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { ZoneSelectionUI, type ZoneCardInfo } from './ZoneSelectionUI'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import { derivePileAction } from '@/utils/targeting.ts'
@@ -350,7 +350,7 @@ function GraveyardCardSelection({
 
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 64
   const gap = responsive.isMobile ? 8 : 12
-  const maxCardWidth = responsive.isMobile ? 100 : 140
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const cardWidth = calculateFittingCardWidth(
     Math.min(sortedCards.length, 8),
     availableWidth,

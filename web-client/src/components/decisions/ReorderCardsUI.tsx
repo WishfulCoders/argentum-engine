@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, ReorderLibraryDecision, SearchCardInfo } from '@/types'
-import { calculateFittingCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
+import { calculateFittingCardWidth, decisionCardMaxWidth, previewCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
+import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
 interface ReorderCardsUIProps {
   decision: ReorderLibraryDecision
@@ -31,7 +32,7 @@ export function ReorderCardsUI({ decision, responsive }: ReorderCardsUIProps) {
   // Calculate card size that fits available width
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 64
   const gap = responsive.isMobile ? 12 : 16
-  const maxCardWidth = responsive.isMobile ? 100 : 140
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const cardWidth = calculateFittingCardWidth(
     Math.min(orderedCards.length, 6),
     availableWidth,
@@ -94,6 +95,8 @@ export function ReorderCardsUI({ decision, responsive }: ReorderCardsUIProps) {
   const handleConfirm = () => {
     submitOrderedDecision(decision.id, orderedCards)
   }
+
+  useDecisionHotkeys({ Enter: handleConfirm }, !minimized)
 
   const handleMouseEnter = useCallback((cardId: EntityId, e: React.MouseEvent) => {
     setHoveredCardId(cardId)
@@ -590,7 +593,7 @@ function ReorderCardPreview({ cardInfo }: { cardInfo: SearchCardInfo }) {
   const cardName = cardInfo.name || 'Unknown Card'
   const cardImageUrl = getCardImageUrl(cardName, cardInfo.imageUri, 'large')
 
-  const previewWidth = 280
+  const previewWidth = previewCardWidth(window.innerHeight)
   const previewHeight = Math.round(previewWidth * 1.4)
 
   return (

@@ -3,6 +3,7 @@ import type { BatchYesNoDecision, ClientGameState } from '@/types'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import { AbilityText } from '../ui/ManaSymbols'
 import styles from './DecisionUI.module.css'
+import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
 /**
  * Batched yes/no for a run of N identical optional ("you may …") triggers (e.g. a board of
@@ -23,6 +24,12 @@ export function BatchYesNoDecisionUI({
   onMinimize?: () => void
 }) {
   const submitBatchYesNoDecision = useGameStore((s) => s.submitBatchYesNoDecision)
+
+  // Y / N answer this one instance; the "to all" buttons stay click-only.
+  useDecisionHotkeys({
+    y: () => submitBatchYesNoDecision(decision.id, true, false),
+    n: () => submitBatchYesNoDecision(decision.id, false, false),
+  })
 
   const sourceCard = decision.context.sourceId ? gameState?.cards[decision.context.sourceId] : undefined
   const sourceImageUrl = sourceCard ? getCardImageUrl(sourceCard.name, sourceCard.imageUri) : undefined
@@ -83,10 +90,10 @@ export function BatchYesNoDecisionUI({
             View Battlefield
           </button>
         )}
-        <button onClick={() => submitBatchYesNoDecision(decision.id, true, false)} className={styles.yesButton}>
+        <button onClick={() => submitBatchYesNoDecision(decision.id, true, false)} className={styles.yesButton} title="Y">
           <AbilityText text={decision.yesText} size={16} />
         </button>
-        <button onClick={() => submitBatchYesNoDecision(decision.id, false, false)} className={styles.noButton}>
+        <button onClick={() => submitBatchYesNoDecision(decision.id, false, false)} className={styles.noButton} title="N">
           <AbilityText text={decision.noText} size={16} />
         </button>
         <button onClick={() => submitBatchYesNoDecision(decision.id, true, true)} className={styles.yesButton}>

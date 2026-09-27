@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, PendingDecision } from '@/types'
-import { useResponsive, calculateFittingCardWidth } from '@/hooks/useResponsive.ts'
+import { useResponsive, calculateFittingCardWidth, decisionCardMaxWidth } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import { DecisionCardPreview } from './DecisionComponents'
 import styles from './RevealedCardsUI.module.css'
@@ -136,7 +136,7 @@ export function RevealedCardsUI() {
   // Calculate card size that fits all cards
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 64
   const gap = responsive.isMobile ? 8 : 12
-  const maxCardWidth = responsive.isMobile ? 120 : 180
+  const maxCardWidth = responsive.isMobile ? 120 : Math.max(180, decisionCardMaxWidth(responsive))
   const cardWidth = calculateFittingCardWidth(
     Math.min(cards.length || 1, 6),
     availableWidth,

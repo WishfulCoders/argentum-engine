@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, ChooseOptionDecision } from '@/types'
 import { useResponsive } from '@/hooks/useResponsive.ts'
+import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import { optionIcon } from '@/assets/icons/options'
 import { DecisionCardPreview } from './DecisionComponents'
@@ -96,6 +97,23 @@ export function ChooseOptionDecisionUI({
       submitOptionDecision(decision.id, selectedIndex)
     }
   }
+
+  // 1-9 pick the options as listed (after any search filter); Enter confirms.
+  const digitKeys: Record<string, () => boolean | void> = {}
+  const listed = useTiledLayout ? decision.options.map((_, index) => index) : filteredOptions.map((o) => o.index)
+  listed.slice(0, 9).forEach((index, i) => {
+    digitKeys[String(i + 1)] = () => setSelectedIndex(index)
+  })
+  useDecisionHotkeys(
+    {
+      ...digitKeys,
+      Enter: () => {
+        if (selectedIndex === null) return false
+        handleConfirm()
+      },
+    },
+    !minimized,
+  )
 
   if (minimized) {
     return (

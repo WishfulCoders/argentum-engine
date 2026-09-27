@@ -1,5 +1,6 @@
 import type { EntityId } from '@/types'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
+import { previewCardWidth } from '@/hooks/useResponsive.ts'
 import styles from './DecisionUI.module.css'
 
 /**
@@ -8,7 +9,7 @@ import styles from './DecisionUI.module.css'
 export function DecisionCardPreview({ cardName, imageUri }: { cardName: string; imageUri?: string | null | undefined }) {
   const cardImageUrl = getCardImageUrl(cardName, imageUri, 'large')
 
-  const previewWidth = 280
+  const previewWidth = previewCardWidth(window.innerHeight)
   const previewHeight = Math.round(previewWidth * 1.4)
 
   return (

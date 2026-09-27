@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, ChooseTargetsDecision } from '@/types'
 import { ZoneType } from '@/types'
 import { useResponsive } from '@/hooks/useResponsive.ts'
+import { usePeekKey } from '@/hooks/useDecisionHotkeys.ts'
+import { LibraryLanesUI } from './LibraryLanesUI'
+import { isLaneDecision, notePendingDecision, plannedOrderFor } from './libraryLanes'
 import { LibrarySearchUI } from './LibrarySearchUI'
 import { ReorderCardsUI } from './ReorderCardsUI'
 import { OrderBlockersUI } from './OrderBlockersUI'
@@ -44,8 +47,41 @@ function isPlayerOnlyTargeting(decision: ChooseTargetsDecision, playerIds: Entit
 
 /**
  * Decision UI overlay for pending decisions (e.g., discard to hand size, library search).
+ *
+ * Holding Tab hides whichever overlay is up so the board can be read; the overlay stays mounted,
+ * so any half-made choice is still there on release.
  */
 export function DecisionUI() {
+  const pendingDecision = useGameStore((state) => state.pendingDecision)
+  const peeking = usePeekKey(pendingDecision != null)
+
+  useEffect(() => {
+    notePendingDecision(pendingDecision)
+  }, [pendingDecision])
+
+  return (
+    <div style={{ display: peeking ? 'none' : 'contents' }}>
+      <DecisionRouter />
+    </div>
+  )
+}
+
+/**
+ * Answers a library reorder the player already arranged on the lane screen (a scry's top cards),
+ * so the engine's follow-up prompt never appears.
+ */
+function PlannedOrderSubmit({ decisionId, order }: { decisionId: string; order: readonly EntityId[] }) {
+  const submitOrderedDecision = useGameStore((s) => s.submitOrderedDecision)
+  const sent = useRef(false)
+  useEffect(() => {
+    if (sent.current) return
+    sent.current = true
+    submitOrderedDecision(decisionId, order)
+  }, [decisionId, order, submitOrderedDecision])
+  return null
+}
+
+function DecisionRouter() {
   const pendingDecision = useGameStore((state) => state.pendingDecision)
   const gameState = useGameStore((state) => state.gameState)
   const responsive = useResponsive()
@@ -77,6 +113,10 @@ export function DecisionUI() {
 
   // Handle ReorderLibraryDecision with dedicated UI
   if (pendingDecision.type === 'ReorderLibraryDecision') {
+    const planned = plannedOrderFor(pendingDecision)
+    if (planned) {
+      return <PlannedOrderSubmit key={pendingDecision.id} decisionId={pendingDecision.id} order={planned} />
+    }
     return <ReorderCardsUI key={pendingDecision.id} decision={pendingDecision} responsive={responsive} />
   }
 
@@ -248,6 +288,12 @@ export function DecisionUI() {
           />
         )
       }
+    }
+
+    // A two-way split (scry, surveil, "one to hand, the rest on the bottom"): the two
+    // destinations as lanes to drag cards into.
+    if (isLaneDecision(pendingDecision)) {
+      return <LibraryLanesUI key={pendingDecision.id} decision={pendingDecision} responsive={responsive} />
     }
 
     // Default: full-screen modal

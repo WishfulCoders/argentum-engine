@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId } from '@/types'
-import { calculateFittingCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
+import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 
 /**
@@ -149,7 +149,7 @@ export function ZoneSelectionUI({
   // Calculate card size that fits available width
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 64
   const gap = responsive.isMobile ? 8 : 12
-  const maxCardWidth = responsive.isMobile ? 100 : 140
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const cardWidth = calculateFittingCardWidth(
     Math.min(sortedCards.length, 8), // Show up to 8 cards without scrolling
     availableWidth,

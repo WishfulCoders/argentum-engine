@@ -4,6 +4,7 @@ import type { ClientCard, EntityId } from '@/types'
 import { ZoneType } from '@/types'
 import {
   calculateFittingCardWidth,
+  decisionCardMaxWidth,
   type ResponsiveSizes,
 } from '@/hooks/useResponsive.ts'
 import { DecisionCard, DecisionCardPreview } from './DecisionComponents'
@@ -74,7 +75,7 @@ export function CraftMaterialOverlay({
   const availableWidth =
     responsive.viewportWidth - responsive.containerPadding * 2 - 32
   const gap = responsive.isMobile ? 4 : 8
-  const maxCardWidth = responsive.isMobile ? 90 : 130
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const maxCardsInAnyGroup = Math.max(...groups.map((g) => g.cards.length), 1)
   const cardWidth = calculateFittingCardWidth(
     maxCardsInAnyGroup,

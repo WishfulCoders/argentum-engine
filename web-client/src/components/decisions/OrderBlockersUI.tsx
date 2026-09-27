@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, OrderObjectsDecision, SearchCardInfo, ClientCard } from '@/types'
-import { calculateFittingCardWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
+import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 
 interface OrderBlockersUIProps {
@@ -40,7 +40,7 @@ export function OrderBlockersUI({ decision, responsive }: OrderBlockersUIProps) 
   // Calculate card size that fits available width
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 64
   const gap = responsive.isMobile ? 12 : 16
-  const maxCardWidth = responsive.isMobile ? 100 : 140
+  const maxCardWidth = decisionCardMaxWidth(responsive)
   const cardWidth = calculateFittingCardWidth(
     Math.min(orderedBlockers.length, 6),
     availableWidth,
