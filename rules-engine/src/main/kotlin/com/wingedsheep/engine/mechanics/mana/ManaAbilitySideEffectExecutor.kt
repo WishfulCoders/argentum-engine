@@ -12,6 +12,7 @@ import com.wingedsheep.engine.handlers.effects.life.LifePaymentService
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityCost
@@ -68,8 +69,14 @@ class ManaAbilitySideEffectExecutor(
     ): Pair<GameState, List<GameEvent>> {
         var currentState = state
         val events = mutableListOf<GameEvent>()
+        // The solver chose these sources off this projection, so it is already built.
+        val paymentProjection = state.projectedState
         for (source in solution.sources) {
-            val (tappedState, event) = tap(currentState, source.entityId)
+            val (tappedState, event) = tap(
+                currentState, source.entityId,
+                tappedById = paymentProjection.getController(source.entityId)
+                    ?: currentState.getEntity(source.entityId)?.get<ControllerComponent>()?.playerId,
+            )
             currentState = tappedState
             event?.let(events::add)
 
