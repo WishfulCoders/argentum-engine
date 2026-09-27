@@ -7,10 +7,11 @@
  * UI shows the two destinations as drop zones instead, so a card's position on screen is where it
  * will end up and nobody has to read which way "selected" runs.
  *
- * A lane whose label puts cards on top of a library is ordered: the engine follows the split with
- * a [ReorderLibraryDecision] for those cards (it asks even for one card, to show it). The order
- * the player already arranged in the lane is remembered here and answers that follow-up
- * automatically, so a scry is one screen, not two.
+ * A lane whose label puts cards into a library is ordered left to right, top-most first: the engine
+ * follows the split with a [ReorderLibraryDecision] for those cards (for the top it asks even for
+ * one card, to show it; for the bottom, when more than one goes there and the card lets you order
+ * them). The order the player already arranged in the lane is remembered here and answers that
+ * follow-up automatically, so a scry is one screen, not two.
  */
 import type { EntityId, PendingDecision, ReorderLibraryDecision, SelectCardsDecision } from '@/types'
 
@@ -21,11 +22,18 @@ export interface Lane {
   readonly label: string
   /** Cards here land on top of a library, in lane order (index 0 = top). */
   readonly isLibraryTop: boolean
+  /** Cards here go into a library, top or bottom; the lane order is the order they land in. */
+  readonly isLibrary: boolean
 }
 
 export interface LaneState {
   readonly selected: readonly EntityId[]
   readonly remainder: readonly EntityId[]
+}
+
+/** True when [label] sends cards to the bottom of a library ("Put on the bottom of your library"). */
+export function isLibraryBottomLabel(label: string): boolean {
+  return /\bbottom\b/i.test(label)
 }
 
 /** Most cards a lane screen lays out; a larger choice (a whole graveyard) keeps the grid picker. */
@@ -53,9 +61,15 @@ export function isLaneDecision(decision: SelectCardsDecision): boolean {
 
 /** The decision's two lanes, the library-top lane first (it reads as the top of the pile). */
 export function lanesFor(decision: SelectCardsDecision): Lane[] {
+  const lane = (key: LaneKey, label: string): Lane => ({
+    key,
+    label,
+    isLibraryTop: isLibraryTopLabel(label),
+    isLibrary: isLibraryTopLabel(label) || isLibraryBottomLabel(label),
+  })
   const lanes: Lane[] = [
-    { key: 'selected', label: decision.selectedLabel ?? 'Selected', isLibraryTop: isLibraryTopLabel(decision.selectedLabel ?? '') },
-    { key: 'remainder', label: decision.remainderLabel ?? 'Not selected', isLibraryTop: isLibraryTopLabel(decision.remainderLabel ?? '') },
+    lane('selected', decision.selectedLabel ?? 'Selected'),
+    lane('remainder', decision.remainderLabel ?? 'Not selected'),
   ]
   return lanes.sort((a, b) => Number(b.isLibraryTop) - Number(a.isLibraryTop))
 }
@@ -101,19 +115,25 @@ export function moveCard(
 // ---------------------------------------------------------------------------
 
 interface PlannedOrder {
-  /** The split decision that produced it. */
-  readonly fromDecisionId: string
-  /** Top of library first. */
+  /** Top-most first. */
   readonly order: readonly EntityId[]
   /** The reorder decision it answers, once one has matched; it answers no other. */
   boundTo: string | null
 }
 
-let planned: PlannedOrder | null = null
+interface Plan {
+  /** The split decision that produced it. */
+  readonly fromDecisionId: string
+  /** One order per library lane (a scry's top, an Anticipate's bottom). */
+  readonly orders: PlannedOrder[]
+}
 
-/** Remember the order the player gave the library-top lane of split [fromDecisionId]. */
-export function planLibraryOrder(fromDecisionId: string, order: readonly EntityId[]): void {
-  planned = order.length > 0 ? { fromDecisionId, order: [...order], boundTo: null } : null
+let planned: Plan | null = null
+
+/** Remember the orders the player gave the library lanes of split [fromDecisionId]. */
+export function planLibraryOrder(fromDecisionId: string, ...orders: (readonly EntityId[])[]): void {
+  const kept = orders.filter((o) => o.length > 0).map((o) => ({ order: [...o], boundTo: null }))
+  planned = kept.length > 0 ? { fromDecisionId, orders: kept } : null
 }
 
 /**
@@ -122,13 +142,15 @@ export function planLibraryOrder(fromDecisionId: string, order: readonly EntityI
  */
 export function plannedOrderFor(decision: ReorderLibraryDecision): readonly EntityId[] | null {
   if (!planned) return null
-  if (planned.boundTo !== null) return planned.boundTo === decision.id ? planned.order : null
-  const { order } = planned
-  if (order.length !== decision.cards.length) return null
+  const bound = planned.orders.find((p) => p.boundTo === decision.id)
+  if (bound) return bound.order
   const asked = new Set(decision.cards)
-  if (!order.every((id) => asked.has(id))) return null
-  planned.boundTo = decision.id
-  return order
+  const match = planned.orders.find((p) =>
+    p.boundTo === null && p.order.length === decision.cards.length && p.order.every((id) => asked.has(id)),
+  )
+  if (!match) return null
+  match.boundTo = decision.id
+  return match.order
 }
 
 /**

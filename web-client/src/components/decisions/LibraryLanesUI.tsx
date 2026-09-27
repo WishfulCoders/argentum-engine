@@ -28,8 +28,8 @@ interface DropSpot {
 /**
  * A two-way card split drawn as its two destinations — scry's "top of library" and "bottom",
  * surveil's "top" and "graveyard", "hand" and "bottom" — with the cards dragged into the one they
- * go to. The library-top lane is ordered left to right, top card first, and that order also
- * answers the reorder prompt the engine raises next (see `libraryLanes.ts`).
+ * go to. A library lane is ordered left to right, top-most card first, and that order also answers
+ * the reorder prompt the engine raises next (see `libraryLanes.ts`).
  *
  * Click a card to send it to the other lane. With a card under the cursor, ↑/↓ moves it between
  * lanes and ←/→ along its lane; Enter confirms.
@@ -73,8 +73,8 @@ export function LibraryLanesUI({
 
   const handleConfirm = () => {
     if (!canConfirm) return
-    const topLane = lanes.find((l) => l.isLibraryTop)
-    if (topLane) planLibraryOrder(decision.id, state[topLane.key])
+    const libraryLanes = lanes.filter((l) => l.isLibrary)
+    if (libraryLanes.length > 0) planLibraryOrder(decision.id, ...libraryLanes.map((l) => state[l.key]))
     else clearPlannedOrder()
     submitDecision(decision.id, state.selected)
   }
@@ -257,6 +257,9 @@ export function LibraryLanesUI({
         <div className={styles.laneHeader}>
           <span className={styles.laneLabel}>{lane.label}</span>
           {lane.isLibraryTop && cards.length > 1 && <span className={styles.laneHint}>left card is drawn first</span>}
+          {lane.isLibrary && !lane.isLibraryTop && cards.length > 1 && (
+            <span className={styles.laneHint}>right card goes deepest</span>
+          )}
           {lane.key === 'selected' && decision.maxSelections < total && (
             <span className={styles.laneHint}>
               {count} / {decision.maxSelections}

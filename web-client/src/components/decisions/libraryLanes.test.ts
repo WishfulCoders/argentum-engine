@@ -73,6 +73,8 @@ describe('lanesFor', () => {
     expect(lanesFor(scry(['a'])).map((l) => l.key)).toEqual(['remainder', 'selected'])
     const topSelected = scry(['a'], { selectedLabel: 'Put on top of your library', remainderLabel: 'Put into your graveyard' })
     expect(lanesFor(topSelected).map((l) => [l.key, l.isLibraryTop])).toEqual([['selected', true], ['remainder', false]])
+    const handOrBottom = scry(['a'], { selectedLabel: 'Put in hand', remainderLabel: 'Put on the bottom of your library' })
+    expect(lanesFor(handOrBottom).map((l) => [l.key, l.isLibrary])).toEqual([['selected', false], ['remainder', true]])
   })
 })
 
@@ -130,6 +132,12 @@ describe('planned library order', () => {
     // The same decision asks again on every re-render until the server moves on.
     expect(plannedOrderFor(reorder(['a'], 'd-first'))).toEqual([a])
     expect(plannedOrderFor(reorder(['a'], 'd-later'))).toBeNull()
+  })
+
+  it('carries a bottom order beside the top one and answers each by its cards', () => {
+    planLibraryOrder('d-split', [a], [c, b])
+    expect(plannedOrderFor(reorder(['b', 'c'], 'd-bottom'))).toEqual([c, b])
+    expect(plannedOrderFor(reorder(['a'], 'd-top'))).toEqual([a])
   })
 
   it('an empty top lane plans nothing', () => {
