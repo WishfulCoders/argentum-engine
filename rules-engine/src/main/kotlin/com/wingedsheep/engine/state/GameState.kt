@@ -482,13 +482,13 @@ data class GameState(
      * Add or update an entity (returns new state).
      */
     fun withEntity(id: EntityId, container: ComponentContainer): GameState =
-        copy(entities = entities + (id to container))
+        copy(entities = EntityMap.of(entities).put(id, container))
 
     /**
      * Remove an entity (returns new state).
      */
     fun withoutEntity(id: EntityId): GameState =
-        copy(entities = entities - id, objectIdentities = objectIdentities - id)
+        copy(entities = EntityMap.of(entities).remove(id), objectIdentities = objectIdentities - id)
 
     /**
      * Update an entity's components (returns new state).
