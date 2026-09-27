@@ -103,6 +103,22 @@ describe('solveSlotLayout', () => {
     expect(scaled.cardWidth).toBeGreaterThan(76)
     expect(scaled.backCardWidth).toBe(Math.round(scaled.cardWidth * 0.7))
   })
+
+  it('preferSize packs a comfortable board tightly when that buys a larger card', () => {
+    const comfortable = solveSlotLayout(SLOT_W, SLOT_H, board(row(3), row(4)), DESKTOP)
+    const packed = solveSlotLayout(SLOT_W, SLOT_H, board(row(3), row(4)), { ...DESKTOP, preferSize: true })
+    expect(comfortable.cardWidth).toBeGreaterThanOrEqual(PREFERRED_MIN_CARD_WIDTH)
+    expect(packed.cardWidth).toBeGreaterThan(comfortable.cardWidth)
+    // Still fits the slot.
+    expect(slotHeightNeeded(board(row(3), row(4)), packed.frontLines, packed.backLines, packed.cardWidth, DESKTOP, true))
+      .toBeLessThanOrEqual(SLOT_H)
+  })
+
+  it('preferSize changes nothing when the ceiling, not the height, binds', () => {
+    const env = { ...DESKTOP, maxCardWidth: 60 }
+    expect(solveSlotLayout(SLOT_W, SLOT_H, board(row(3), row(4)), { ...env, preferSize: true }))
+      .toEqual(solveSlotLayout(SLOT_W, SLOT_H, board(row(3), row(4)), env))
+  })
 })
 
 describe('solvePooledLayout', () => {
@@ -135,6 +151,14 @@ describe('solvePooledLayout', () => {
     const pooled = solvePooledLayout(SLOT_W, POOLED, board(row(3), row(4)), board(row(3), row(4)), DESKTOP)
     expect(pooled.playerHeight).toBeCloseTo(pooled.opponentHeight, 6)
     expect(pooled.cardWidth).toBe(solveSlotLayout(SLOT_W, SLOT_H, board(row(3), row(4)), DESKTOP).cardWidth)
+  })
+
+  it('preferSize grows the shared card by packing both boards', () => {
+    const shape = [board(row(5), row(7)), board(row(3), row(6))] as const
+    const comfortable = solvePooledLayout(SLOT_W, POOLED, shape[0], shape[1], DESKTOP)
+    const packed = solvePooledLayout(SLOT_W, POOLED, shape[0], shape[1], { ...DESKTOP, preferSize: true })
+    expect(packed.cardWidth).toBeGreaterThan(comfortable.cardWidth)
+    expect(packed.playerHeight + packed.opponentHeight).toBeCloseTo(POOLED, 6)
   })
 
   it('falls back to the floor with a need-proportional split when nothing fits', () => {

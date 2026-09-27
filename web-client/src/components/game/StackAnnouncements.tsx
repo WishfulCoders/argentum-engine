@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import { useStackCards } from '@/store/selectors.ts'
 import type { AnnouncementMode } from '@/store/slices/ui/playerPrefsSlice.ts'
+import { CARD_SCALES } from '@/store/slices/ui/playerPrefsSlice.ts'
 import type { ClientCard, ClientChosenTarget, ClientGameState } from '@/types/gameState'
 import type { EntityId } from '@/types'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
@@ -230,6 +231,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
 }
 
+const CARD_SCALE_LABELS: Record<number, string> = {
+  0.85: 'S',
+  1: 'M',
+  1.15: 'L',
+  1.3: 'XL',
+  1.5: 'XXL',
+}
+
 const ANNOUNCEMENT_LABELS: Record<AnnouncementMode, string> = {
   off: 'Off',
   opponent: "Opponent's",
@@ -243,6 +252,10 @@ export function GameplaySettingsButton({ buttonStyle }: { buttonStyle?: React.CS
   const [open, setOpen] = useState(false)
   const mode = useGameStore((s) => s.announcementMode)
   const setMode = useGameStore((s) => s.setAnnouncementMode)
+  const cardScale = useGameStore((s) => s.cardScale)
+  const setCardScale = useGameStore((s) => s.setCardScale)
+  const compactLands = useGameStore((s) => s.compactLands)
+  const setCompactLands = useGameStore((s) => s.setCompactLands)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -292,7 +305,37 @@ export function GameplaySettingsButton({ buttonStyle }: { buttonStyle?: React.CS
             targets chosen. Hover to hold it, click to dismiss.
           </div>
           <div style={popover.divider} />
+          <div style={popover.label}>Card size</div>
+          <div style={popover.segment}>
+            {CARD_SCALES.map((scale) => (
+              <button
+                key={scale}
+                onClick={() => setCardScale(scale)}
+                title={`${Math.round(scale * 100)} %`}
+                style={{
+                  ...popover.segButton,
+                  ...(scale === cardScale ? popover.segActive : {}),
+                }}
+              >
+                {CARD_SCALE_LABELS[scale] ?? `${Math.round(scale * 100)}%`}
+              </button>
+            ))}
+          </div>
+          <label style={popover.check}>
+            <input type="checkbox" checked={compactLands} onChange={(e) => setCompactLands(e.target.checked)} />
+            Smaller lands row
+          </label>
           <div style={popover.hint}>
+            Battlefield cards. M is the original layout; larger sizes pack the rows closer, and a
+            crowded board still shrinks to fit. Smaller lands give creatures the height.
+          </div>
+          <div style={popover.divider} />
+          <div style={popover.hint}>
+            <b>Keys:</b> Space passes · Enter confirms a prompt · Y / N answer yes-no prompts ·
+            1-9 pick an option · hold Tab to hide a prompt and see the board · F flips a
+            double-faced card in the preview.<br />
+            <b>Scry / surveil:</b> drag cards into the row they go to; the top row is drawn left
+            to right.<br />
             <b>Hand:</b> drag a card sideways to rearrange it.<br />
             <b>Blocking:</b> drag a creature onto an attacker, or click your creatures and then
             the attacker.
@@ -335,5 +378,6 @@ const popover: Record<string, React.CSSProperties> = {
   },
   segActive: { background: 'rgba(79, 195, 247, 0.9)', color: '#000', fontWeight: 700 },
   hint: { fontSize: 11, color: '#999', lineHeight: 1.4 },
+  check: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#ddd', cursor: 'pointer' },
   divider: { height: 1, background: '#333' },
 }

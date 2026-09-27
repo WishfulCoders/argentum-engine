@@ -41,10 +41,12 @@ export function layoutEnvFor(base: ResponsiveSizes): LayoutEnv {
   return {
     cardGap: base.cardGap,
     stackOffset: stackOffsetFor(base.isMobile),
-    backRowScale: BACK_ROW_SCALE,
+    // The player's compact-lands preference; the layout default (BACK_ROW_SCALE) otherwise.
+    backRowScale: base.backRowScale ?? BACK_ROW_SCALE,
     // A sparse board grows cards back up to the ordinary window-derived size,
     // never past it — one permanent should not fill the board.
     maxCardWidth: base.battlefieldCardWidth,
+    preferSize: base.preferBoardSize,
   }
 }
 

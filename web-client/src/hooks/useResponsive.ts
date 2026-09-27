@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useGameStore } from '@/store/gameStore.ts'
 
 export interface ViewportSize {
   width: number
@@ -54,6 +55,10 @@ export interface ResponsiveSizes {
   smallCardHeight: number
   battlefieldCardWidth: number
   battlefieldCardHeight: number
+  /** Lands-row card size relative to the creature row (the ⚙ "Compact lands" preference). */
+  backRowScale: number
+  /** The player asked for bigger battlefield cards: the solver packs rows tightly to get them. */
+  preferBoardSize: boolean
 
   // Pile sizes (deck/graveyard)
   pileWidth: number
@@ -113,6 +118,9 @@ export function calculateFittingCardWidth(
   return Math.max(minCardWidth, Math.min(maxCardWidth, calculatedWidth))
 }
 
+/** Lands-row size when the player turns on compact lands: creatures grow into the height it frees. */
+export const COMPACT_BACK_ROW_SCALE = 0.7
+
 /**
  * Widest a card grows in a decision overlay (scry, discard, pick-from-among): about a fifth of the
  * window's height, 130-240 px on desktop. The overlays are for reading cards, so they size to the
@@ -171,6 +179,8 @@ export function useResponsive(
   zoneRowCounts: readonly number[] = [0, 0, 0, 0],
 ): ResponsiveSizes {
   const { width, height } = useViewportSize()
+  const cardScale = useGameStore((s) => s.cardScale)
+  const compactLands = useGameStore((s) => s.compactLands)
 
   return useMemo(() => {
     // =========================================================================
@@ -316,7 +326,12 @@ export function useResponsive(
     const smallCardWidth = Math.round(baseSmallCardWidth * heightScale)
     const smallCardHeight = Math.round(smallCardWidth * cardRatio)
 
-    const battlefieldCardWidth = Math.round(baseBattlefieldCardWidth * heightScale)
+    // The player's card-size preference (⚙ → Card size) raises the battlefield's ceiling past what
+    // the fixed row budget above allows. It is a ceiling, not a size: the solver still shrinks a
+    // crowded board to fit its slot, so a larger setting only grows cards where there is room. The
+    // hand is left alone on purpose — its reserved grid row comes straight out of the battlefield's
+    // height, so a bigger hand made the battlefield *smaller* on a 16:9 screen.
+    const battlefieldCardWidth = Math.round(baseBattlefieldCardWidth * heightScale * cardScale)
     const battlefieldCardHeight = Math.round(battlefieldCardWidth * cardRatio)
 
     const pileWidth = Math.round(basePileWidth * heightScale)
@@ -402,6 +417,8 @@ export function useResponsive(
       smallCardHeight,
       battlefieldCardWidth,
       battlefieldCardHeight,
+      backRowScale: compactLands ? COMPACT_BACK_ROW_SCALE : 1,
+      preferBoardSize: cardScale > 1,
       pileWidth,
       pileHeight,
       cardGap,
@@ -419,5 +436,5 @@ export function useResponsive(
       isTablet,
       isShortDesktop,
     }
-  }, [width, height, topOffset])
+  }, [width, height, topOffset, cardScale, compactLands])
 }

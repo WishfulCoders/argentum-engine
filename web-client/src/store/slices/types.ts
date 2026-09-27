@@ -1126,6 +1126,10 @@ export type GameStore = {
   announcementMode: import('./ui/playerPrefsSlice').AnnouncementMode
   setHandOrder: (order: readonly EntityId[]) => void
   setAnnouncementMode: (mode: import('./ui/playerPrefsSlice').AnnouncementMode) => void
+  cardScale: number
+  setCardScale: (scale: number) => void
+  compactLands: boolean
+  setCompactLands: (on: boolean) => void
 
   // UI slice
   selectedCardId: EntityId | null

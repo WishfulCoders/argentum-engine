@@ -129,6 +129,13 @@ export interface LayoutEnv {
    * up to the ordinary card size and no further.
    */
   maxCardWidth?: number
+  /**
+   * Take the tight spacing (compact divider, no row padding, the small HUD gap) whenever it buys a
+   * larger card, not only once the comfortable spacing would drop under
+   * `PREFERRED_MIN_CARD_WIDTH`. Set when the player asks for bigger cards (⚙ → Card size): on a
+   * 16:9 window the board is height-bound, and the comfortable spacing is ~a quarter of each slot.
+   */
+  preferSize?: boolean
 }
 
 /** The ceiling this environment allows (see `LayoutEnv.maxCardWidth`). */
@@ -427,6 +434,10 @@ export function solveSlotLayout(slotWidth: number, slotHeight: number, stats: Bo
     return best
   }
   const comfortable = pass(false, maxCardWidthFor(env))
+  if (env.preferSize) {
+    const packed = pass(true, maxCardWidthFor(env))
+    if (packed && (!comfortable || packed.cardWidth > comfortable.cardWidth)) return packed
+  }
   if (comfortable && comfortable.cardWidth >= PREFERRED_MIN_CARD_WIDTH) return comfortable
   const squeezed = pass(true, PREFERRED_MIN_CARD_WIDTH)
   if (squeezed) return squeezed
@@ -491,6 +502,10 @@ export function solvePooledLayout(
   }
 
   const comfortable = pass(false, maxCardWidthFor(env))
+  if (env.preferSize) {
+    const packed = pass(true, maxCardWidthFor(env))
+    if (packed && (!comfortable || packed.cardWidth > comfortable.cardWidth)) return packed
+  }
   if (comfortable && comfortable.cardWidth >= PREFERRED_MIN_CARD_WIDTH) return comfortable
   const squeezed = pass(true, PREFERRED_MIN_CARD_WIDTH)
   if (squeezed) return squeezed
