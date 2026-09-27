@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 139 / 312
+**Implemented:** 141 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -81,7 +81,7 @@
 - [x] Cultivate
 - [ ] Curiosity Crafter
 - [ ] Cut a Deal
-- [ ] Deadly Dispute
+- [x] Deadly Dispute
 - [x] Decimate
 - [x] Decree of Pain
 - [ ] Deep Forest Hermit
@@ -170,7 +170,7 @@
 - [ ] Luminous Broodmoth
 - [ ] Maelstrom Pulse
 - [ ] Managorger Hydra
-- [ ] Mangara, the Diplomat
+- [x] Mangara, the Diplomat
 - [ ] Marrow-Gnawer
 - [ ] Martial Coup
 - [ ] Martial Impetus
