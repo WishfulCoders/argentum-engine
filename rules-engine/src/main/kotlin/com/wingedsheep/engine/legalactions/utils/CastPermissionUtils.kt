@@ -416,6 +416,7 @@ class CastPermissionUtils(
             cardRegistry = cardRegistry,
             predicateEvaluator = predicateEvaluator,
             conditionEvaluator = conditionEvaluator,
+            granters = battlefieldStatics(state).flashGranters,
         )
 
     /**
@@ -927,7 +928,7 @@ class CastPermissionUtils(
         abilityIsManaAbility: Boolean = false
     ): Boolean {
         val projected = state.projectedState
-        battlefield@ for (entityId in state.getBattlefield()) {
+        battlefield@ for (entityId in battlefieldStatics(state).activationPreventers) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
             var context: PredicateContext? = null
@@ -1001,7 +1002,7 @@ class CastPermissionUtils(
     ): Boolean {
         val projected = state.projectedState
         val sourceOnBattlefield = sourceId in state.getBattlefield()
-        for (permanentId in state.getBattlefield()) {
+        for (permanentId in battlefieldStatics(state).playerActivationPreventers) {
             val container = state.getEntity(permanentId) ?: continue
             if (container.has<FaceDownComponent>()) continue
             val cardDef = container.get<CardComponent>()
@@ -1116,6 +1117,85 @@ class CastPermissionUtils(
     }
 
     /**
+     * The battlefield scans below that run once per permanent (or per card in hand) being asked
+     * about, narrowed once per state to the permanents that can matter.
+     *
+     * Each list keeps the scan's own iteration order and holds every permanent that can reach the
+     * scan's body past its type checks; a permanent left out would only ever have hit a `continue`.
+     * So a narrowed scan returns exactly what the full one did. States are immutable, so a list is
+     * valid for as long as the state it was built from is the one being asked about.
+     *
+     * Before this, enumerating one priority window re-read every permanent's statics for every
+     * permanent (and every flash-eligible card) it looked at: quadratic in board size, and the
+     * largest single cost of the rollout pilot's move generation (mtg-draft-ai `docs/56` §3 item 1).
+     */
+    private inner class BattlefieldStaticScan(val state: GameState) {
+        /** Permanents with a static [getStaticGrantedAbilitiesWithGranter] acts on. */
+        val activatedAbilityGranters: List<EntityId> by lazy {
+            state.getBattlefield().filter { permanentId ->
+                val container = state.getEntity(permanentId) ?: return@filter false
+                val card = container.get<CardComponent>() ?: return@filter false
+                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@filter false
+                com.wingedsheep.engine.state.components.identity.RoomFaceStatics
+                    .activeStaticAbilities(container, cardDef).any(::grantsActivatedAbilities)
+            }
+        }
+
+        /** Permanents printing a [PreventActivatedAbilities], for [isActivationPrevented]. */
+        val activationPreventers: List<EntityId> by lazy {
+            printingStatic(state) { it is PreventActivatedAbilities }
+        }
+
+        /** Permanents printing a [PlayersCantActivateAbilities], for [isActivationPreventedForPlayer]. */
+        val playerActivationPreventers: List<EntityId> by lazy {
+            printingStatic(state) { it is PlayersCantActivateAbilities }
+        }
+
+        /** Permanents with a [com.wingedsheep.sdk.scripting.GainActivatedAbilitiesOfPermanents], for [getGainedAbilitiesOfPermanents]. */
+        val abilityGainGranters: List<EntityId> by lazy {
+            state.getBattlefield().filter { granterId ->
+                val granter = state.getEntity(granterId) ?: return@filter false
+                val card = granter.get<CardComponent>() ?: return@filter false
+                val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@filter false
+                val classLevel = granter.get<com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent>()?.currentLevel
+                cardDef.script.effectiveStaticAbilities(classLevel)
+                    .any { it is com.wingedsheep.sdk.scripting.GainActivatedAbilitiesOfPermanents }
+            }
+        }
+
+        /** [FlashTypeGrants.hasGrantedFlash]'s battlefield candidates, see [FlashTypeGrants.granters]. */
+        val flashGranters: List<FlashTypeGrants.Granter> by lazy { FlashTypeGrants.granters(state, cardRegistry) }
+    }
+
+    @Volatile private var battlefieldStaticScan: BattlefieldStaticScan? = null
+
+    /** Battlefield permanents, in order, whose printed `staticAbilities` include one matching [kind]. */
+    private fun printingStatic(state: GameState, kind: (com.wingedsheep.sdk.scripting.StaticAbility) -> Boolean): List<EntityId> =
+        state.getBattlefield().filter { entityId ->
+            val card = state.getEntity(entityId)?.get<CardComponent>() ?: return@filter false
+            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@filter false
+            cardDef.script.staticAbilities.any(kind)
+        }
+
+    private fun battlefieldStatics(state: GameState): BattlefieldStaticScan {
+        battlefieldStaticScan?.let { if (it.state === state) return it }
+        return BattlefieldStaticScan(state).also { battlefieldStaticScan = it }
+    }
+
+    /**
+     * Whether [ability] is one [getStaticGrantedAbilitiesWithGranter] can act on. Conditional
+     * wrappers are looked through at any depth: the loop unwraps one level, so this errs towards
+     * keeping a permanent, which is the safe direction.
+     */
+    private fun grantsActivatedAbilities(ability: com.wingedsheep.sdk.scripting.StaticAbility): Boolean = when (ability) {
+        is com.wingedsheep.sdk.scripting.ConditionalStaticAbility -> grantsActivatedAbilities(ability.ability)
+        is com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards -> true
+        is com.wingedsheep.sdk.scripting.HasAbilitiesOfChosenLinkedExiledCard -> true
+        is GrantActivatedAbility -> true
+        else -> false
+    }
+
+    /**
      * Get activated abilities granted to an entity by static abilities on battlefield permanents,
      * paired with the EntityId of the permanent that granted each ability.
      *
@@ -1131,7 +1211,7 @@ class CastPermissionUtils(
 
         val result = mutableListOf<StaticGrantedAbility>()
 
-        for (permanentId in state.getBattlefield()) {
+        for (permanentId in battlefieldStatics(state).activatedAbilityGranters) {
             val container = state.getEntity(permanentId) ?: continue
             val card = container.get<CardComponent>() ?: continue
             if (container.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>()) continue
@@ -1337,7 +1417,7 @@ class CastPermissionUtils(
         val projected = state.projectedState
         val result = mutableListOf<StaticGrantedAbility>()
 
-        for (granterId in state.getBattlefield()) {
+        for (granterId in battlefieldStatics(state).abilityGainGranters) {
             val granter = state.getEntity(granterId) ?: continue
             if (granter.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>()) continue
             val card = granter.get<CardComponent>() ?: continue

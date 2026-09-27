@@ -119,8 +119,10 @@ class PlayoutEngine(
             }
 
             val priorityPlayer = state.priorityPlayerId ?: break
+            // Without mana abilities: [PlayoutPolicy.decide] drops every one of them, and on a
+            // developed board they were a tenth of a playout's time (mtg-draft-ai `docs/56` §3).
             val (action, nextRng) = policy.decide(state, priorityPlayer, rng) {
-                enumerator.enumerate(state, priorityPlayer, EnumerationMode.ACTIONS_ONLY)
+                enumerator.enumerate(state, priorityPlayer, EnumerationMode.ACTIONS_ONLY, includeManaAbilities = false)
             }
             rng = nextRng
 

@@ -61,12 +61,17 @@ class LegalActionEnumerator(
      * @param playerId The player to enumerate actions for
      * @param mode Controls what data is computed. [EnumerationMode.ACTIONS_ONLY] skips
      *   auto-tap preview computation for simulation/MCTS use.
+     * @param includeManaAbilities false skips [ManaAbilityEnumerator], for a caller that discards
+     *   every `isManaAbility` offer anyway (a rollout's playout policy). That enumerator is the only
+     *   source of mana-ability offers and emits nothing else, so the result is the full list with
+     *   those offers removed, in the same order.
      * @return All legal actions (including unaffordable ones marked with affordable=false)
      */
     fun enumerate(
         state: GameState,
         playerId: EntityId,
-        mode: EnumerationMode = EnumerationMode.FULL
+        mode: EnumerationMode = EnumerationMode.FULL,
+        includeManaAbilities: Boolean = true,
     ): List<LegalAction> {
         val context = EnumerationContext(
             state = state,
@@ -86,7 +91,9 @@ class LegalActionEnumerator(
         }
 
         // Normal priority: enumerate all action categories
-        val offers = enumerators.flatMap { it.enumerate(context) }
+        val offers = enumerators.flatMap {
+            if (!includeManaAbilities && it is ManaAbilityEnumerator) emptyList() else it.enumerate(context)
+        }
         // Split second (CR 702.61): while a spell with it is on the stack, withhold every spell and
         // non-mana activated ability — the same verdict ActionProcessor.validate reaches.
         val permitted = if (SplitSecond.isLocked(state, cardRegistry)) {

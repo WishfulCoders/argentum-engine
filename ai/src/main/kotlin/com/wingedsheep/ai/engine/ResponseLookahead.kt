@@ -32,7 +32,8 @@ fun interface OpponentResponsePolicy {
      *
      * @param enumerate the legal actions, deferred — a policy that decides from the state alone
      *   never pays for enumeration, which is the same contract [PlayoutPolicy.decide] has and the
-     *   reason this is a lambda rather than a list.
+     *   reason this is a lambda rather than a list. Mana abilities are left out: a response is a
+     *   spell or a non-mana ability, and the shipped policy discards them anyway.
      */
     fun respond(
         state: GameState,
