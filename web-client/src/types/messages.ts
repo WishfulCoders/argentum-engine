@@ -26,6 +26,7 @@ export type ServerMessage =
   | WaitingForOpponentMulliganMessage
   | GameOverMessage
   | ErrorMessage
+  | TakebackDeclinedMessage
   // Sealed Draft Messages
   | SealedGameCreatedMessage
   | SealedPoolGeneratedMessage
@@ -211,6 +212,12 @@ export interface StateUpdateMessage {
   readonly stateVersion?: number
   /** Live timeline on which actions in this snapshot originate. */
   readonly interactionEpoch?: string | null
+  /** What a take-back would undo right now ("Cast Lightning Bolt"); absent when nothing can be. */
+  readonly takebackLabel?: string | null
+  /** This player's take-back request is waiting on the opponent. */
+  readonly takebackPending?: boolean
+  /** Another player's take-back request, waiting on this player's answer. */
+  readonly takebackRequest?: TakebackRequestInfo | null
 }
 
 /**
@@ -282,6 +289,12 @@ export interface StateDeltaUpdateMessage {
   readonly stateVersion?: number
   /** Live timeline on which actions in this snapshot originate. */
   readonly interactionEpoch?: string | null
+  /** What a take-back would undo right now ("Cast Lightning Bolt"); absent when nothing can be. */
+  readonly takebackLabel?: string | null
+  /** This player's take-back request is waiting on the opponent. */
+  readonly takebackPending?: boolean
+  /** Another player's take-back request, waiting on this player's answer. */
+  readonly takebackRequest?: TakebackRequestInfo | null
 }
 
 // ============================================================================
@@ -1300,6 +1313,18 @@ export interface GameOverMessage {
 /**
  * Error response from the server.
  */
+/** Another player's request to take back their last decision this turn (see `takebackRequest`). */
+export interface TakebackRequestInfo {
+  readonly requesterName: string
+  readonly label: string
+}
+
+/** Your take-back request was declined, or voided because the game moved on. */
+export interface TakebackDeclinedMessage {
+  readonly type: 'takebackDeclined'
+  readonly reason: string
+}
+
 export interface ErrorMessage {
   readonly type: 'error'
   readonly code: ErrorCode
@@ -2078,6 +2103,8 @@ export type ClientMessage =
   | ClearAllYieldsMessage
   // Undo
   | RequestUndoMessage
+  | RequestTakebackMessage
+  | RespondTakebackMessage
   // Resync
   | RequestResyncMessage
   // Liveness
@@ -2670,6 +2697,17 @@ export interface RequestUndoMessage {
   readonly type: 'requestUndo'
 }
 
+/** Take back your last decision this turn (any decision, unlike undo). The opponent may be asked. */
+export interface RequestTakebackMessage {
+  readonly type: 'requestTakeback'
+}
+
+/** Allow or deny the opponent's take-back request. */
+export interface RespondTakebackMessage {
+  readonly type: 'respondTakeback'
+  readonly accept: boolean
+}
+
 /**
  * Request a full state resync from the server.
  * Sent when the client detects it may have missed messages (tab backgrounded, version gap).
@@ -2867,6 +2905,14 @@ export function createClearAllYieldsMessage(): ClearAllYieldsMessage {
 
 export function createRequestUndoMessage(): RequestUndoMessage {
   return { type: 'requestUndo' }
+}
+
+export function createRequestTakebackMessage(): RequestTakebackMessage {
+  return { type: 'requestTakeback' }
+}
+
+export function createRespondTakebackMessage(accept: boolean): RespondTakebackMessage {
+  return { type: 'respondTakeback', accept }
 }
 
 export function createRequestResyncMessage(): RequestResyncMessage {

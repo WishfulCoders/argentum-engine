@@ -10,8 +10,24 @@ data class GameProperties(
     val ai: AiProperties = AiProperties(),
     val easterEggs: EasterEggProperties = EasterEggProperties(),
     val tournament: TournamentProperties = TournamentProperties(),
-    val debugMode: Boolean = false
+    val debugMode: Boolean = false,
+    /** Whether players may take back decisions made this turn — see [TakebackMode]. */
+    val takebacks: TakebackMode = TakebackMode.ASK,
 )
+
+/**
+ * Take-backs rewind a player's decisions within the current turn (`ClientMessage.RequestTakeback`).
+ * The engine's own undo (a land drop, a mana tap — actions that revealed nothing) is separate and
+ * always on.
+ */
+enum class TakebackMode {
+    /** No take-backs. */
+    OFF,
+    /** Against the AI a take-back applies at once; a human opponent is asked to allow it. The default. */
+    ASK,
+    /** Take-backs always apply at once, without asking anyone. */
+    ALWAYS,
+}
 
 /**
  * Joke cards that [com.wingedsheep.gameserver.deck.EasterEggDeckInjector] sneaks into a deck based on

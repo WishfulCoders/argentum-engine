@@ -170,6 +170,8 @@ export type {
   MulliganCompleteMessage,
   GameOverMessage,
   ErrorMessage,
+  TakebackDeclinedMessage,
+  TakebackRequestInfo,
   ClientMessage,
   ConnectMessage,
   CreateGameMessage,
@@ -432,6 +434,8 @@ export {
   createClearAbilityYieldMessage,
   createClearAllYieldsMessage,
   createRequestUndoMessage,
+  createRequestTakebackMessage,
+  createRespondTakebackMessage,
   createRequestResyncMessage,
   // Quick Game Lobby factories & guards
   createCreateQuickGameLobbyMessage,

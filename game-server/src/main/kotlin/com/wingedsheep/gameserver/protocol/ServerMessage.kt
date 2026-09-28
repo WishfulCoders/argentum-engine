@@ -144,7 +144,30 @@ sealed interface ServerMessage {
         val stateVersion: Long = 0,
         /** Originating live timeline for browser and asynchronous AI action submissions. */
         val interactionEpoch: String? = null,
+        /** What a take-back would undo right now ("Cast Lightning Bolt"); null when nothing can be taken back. */
+        val takebackLabel: String? = null,
+        /** This player's take-back request is waiting on the opponent. */
+        val takebackPending: Boolean = false,
+        /** Another player's take-back request, waiting on this player's answer. */
+        val takebackRequest: TakebackRequestInfo? = null,
     ) : ServerMessage
+
+    /**
+     * Another player asks to take back their last decision this turn ([ClientMessage.RequestTakeback]).
+     * Carried on every state update while the request stands, so it disappears on its own once
+     * anyone acts. Answer with [ClientMessage.RespondTakeback].
+     */
+    @Serializable
+    data class TakebackRequestInfo(
+        val requesterName: String,
+        /** What would be taken back ("Cast Lightning Bolt"). */
+        val label: String,
+    )
+
+    /** Your take-back request was declined (or voided because the game moved on). */
+    @Serializable
+    @SerialName("takebackDeclined")
+    data class TakebackDeclined(val reason: String) : ServerMessage
 
     /**
      * Delta game state update — sends only changes since the last state update.
@@ -172,6 +195,12 @@ sealed interface ServerMessage {
         val stateVersion: Long = 0,
         /** Originating live timeline for browser and asynchronous AI action submissions. */
         val interactionEpoch: String? = null,
+        /** What a take-back would undo right now ("Cast Lightning Bolt"); null when nothing can be taken back. */
+        val takebackLabel: String? = null,
+        /** This player's take-back request is waiting on the opponent. */
+        val takebackPending: Boolean = false,
+        /** Another player's take-back request, waiting on this player's answer. */
+        val takebackRequest: TakebackRequestInfo? = null,
     ) : ServerMessage
 
     /**

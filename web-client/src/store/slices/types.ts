@@ -929,6 +929,14 @@ export type GameStore = {
   nextStopPoint: string | null
   opponentName: string | null
   undoAvailable: boolean
+  /** What a take-back would undo ("Cast Lightning Bolt"); null when nothing this turn can be. */
+  takebackLabel: string | null
+  /** Your take-back request is waiting on the opponent's answer. */
+  takebackPending: boolean
+  /** The opponent's take-back request, waiting on your answer. */
+  takebackRequest: import('../../types').TakebackRequestInfo | null
+  /** Why your last take-back request did not happen, until dismissed. */
+  takebackNotice: string | null
   /** Seconds remaining on opponent's disconnect countdown (null = connected) */
   opponentDisconnectCountdown: number | null
   autoTapEnabled: boolean
@@ -975,6 +983,9 @@ export type GameStore = {
   toggleMulliganCard: (cardId: EntityId) => void
   concede: () => void
   requestUndo: () => void
+  requestTakeback: () => void
+  respondTakeback: (accept: boolean) => void
+  clearTakebackNotice: () => void
   toggleAutoTap: () => void
   cancelGame: () => void
   setFullControl: (enabled: boolean) => void

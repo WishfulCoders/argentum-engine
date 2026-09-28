@@ -95,6 +95,9 @@ game:
     # Development-only: the curated matchup file /api/dev/playtest/matchups serves, written by
     # mtg-draft-ai's scripts/playtest/build_matchups.py. Blank serves an empty list.
     matchups-file: ${GAME_PLAYTEST_MATCHUPS_FILE:}
+  # Take back your decisions within the current turn: off | ask (AI opponents allow at once, a person
+  # is asked) | always.
+  takebacks: ${GAME_TAKEBACKS:ask}
   dev-endpoints:
     # Enable development endpoints for manual testing. NEVER enable in production.
     enabled: ${GAME_DEV_ENDPOINTS_ENABLED:false}

@@ -4,7 +4,7 @@
 import type { MessageHandlers } from '@/network/messageHandlers.ts'
 import { ErrorCode, ZoneType } from '@/types'
 import type { EntityId } from '@/types'
-import type { ClientGameState, ClientEvent, LegalActionInfo, PendingDecision, OpponentDecisionStatus, PriorityModeValue, Step } from '@/types'
+import type { ClientGameState, ClientEvent, LegalActionInfo, PendingDecision, OpponentDecisionStatus, PriorityModeValue, Step, TakebackRequestInfo } from '@/types'
 import { trackEvent, setInGame } from '@/utils/analytics.ts'
 import { applyStateDelta } from '@/network/deltaApplicator.ts'
 import { getWebSocket, clearLobbyId, requestReauth } from '../shared'
@@ -203,6 +203,9 @@ interface StateUpdateEnvelope {
   readonly stopOverrides?: { readonly myTurnStops: readonly string[]; readonly opponentTurnStops: readonly string[] } | null
   readonly undoAvailable?: boolean
   readonly priorityMode?: PriorityModeValue | null
+  readonly takebackLabel?: string | null
+  readonly takebackPending?: boolean
+  readonly takebackRequest?: TakebackRequestInfo | null
 }
 
 /** A replaced timeline invalidates every partially built action in the same store update. */
@@ -635,6 +638,9 @@ function processStateUpdate(
     opponentDecisionStatus: msg.opponentDecisionStatus ?? null,
     nextStopPoint: msg.nextStopPoint ?? null,
     undoAvailable: msg.undoAvailable ?? false,
+    takebackLabel: msg.takebackLabel ?? null,
+    takebackPending: msg.takebackPending ?? false,
+    takebackRequest: msg.takebackRequest ?? null,
     ...(serverPriorityMode ? { priorityMode: serverPriorityMode, fullControl: serverPriorityMode === 'fullControl' } : {}),
     ...(serverOverrides ? { stopOverrides: serverOverrides } : {}),
     // The server resends the whole game log every update, but it only ever grows at the tail:
@@ -734,7 +740,7 @@ type GameplayHandlerKeys =
   | 'onGameCreated' | 'onGameStarted' | 'onGameCancelled'
   | 'onStateUpdate' | 'onStateDeltaUpdate'
   | 'onMulliganDecision' | 'onChooseBottomCards' | 'onMulliganComplete' | 'onWaitingForOpponentMulligan'
-  | 'onGameOver' | 'onPlayerEliminated' | 'onError'
+  | 'onGameOver' | 'onPlayerEliminated' | 'onError' | 'onTakebackDeclined'
 
 export function createGameplayHandlers(set: SetState, get: GetState): Pick<MessageHandlers, GameplayHandlerKeys> {
   return {
@@ -898,6 +904,10 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
 
     onWaitingForOpponentMulligan: () => {
       set({ waitingForOpponentMulligan: true })
+    },
+
+    onTakebackDeclined: (msg) => {
+      set({ takebackNotice: msg.reason })
     },
 
     onGameOver: (msg) => {

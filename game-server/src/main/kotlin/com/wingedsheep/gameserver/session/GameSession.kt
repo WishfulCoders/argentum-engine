@@ -40,6 +40,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 private val logger = LoggerFactory.getLogger(GameSession::class.java)
 
+/** Most take-back points a player keeps within one turn; older ones fall off. */
+private const val MAX_TAKEBACK_POINTS = 64
+
 /**
  * Represents an active game session between two players.
  *
@@ -162,6 +165,39 @@ class GameSession(
     private var undoCheckpointActionCount: Int? = null
     @Volatile
     private var preCombatActionCount: Int? = null
+
+    /**
+     * A moment a player can take back to: the state just before one of their own actions this turn.
+     *
+     * Take-backs are the permissive sibling of the undo checkpoint above. The checkpoint only covers
+     * actions that revealed nothing (a land drop, a mana tap); a take-back rewinds any of the
+     * player's decisions in the current turn — a spell cast with the wrong lands tapped, an attack
+     * made without understanding a card — including what resolved and what the opponent did since.
+     * That can hand the player information (a card they drew), which is why against another person
+     * it needs their consent (see [GamePlayHandler]); against the AI it applies at once.
+     */
+    private data class TakebackPoint(
+        val state: GameState,
+        /** [recordedActions] size at [state], so the replay log rolls back with it. */
+        val actionCount: Int,
+        val playerId: EntityId,
+        /** What taking back undoes, for the button's tooltip ("Cast Lightning Bolt"). */
+        val label: String,
+        val turnNumber: Int,
+    )
+
+    /** Guarded by [stateLock]. Points from an earlier turn are pruned as soon as the turn changes. */
+    private val takebackPoints = ArrayList<TakebackPoint>()
+
+    /** True while a run of mana-ability activations is open, so the run is one point, not one per land. */
+    private var takebackManaRunOpen = false
+
+    /** A take-back waiting for the opponent's consent; voided by any action. */
+    data class PendingTakeback(val requesterId: EntityId, val label: String, val actionCount: Int)
+
+    @Volatile
+    var pendingTakeback: PendingTakeback? = null
+        private set
     /** Set code used for quick game deck generation (so joining player uses the same set) */
     @Volatile
     var quickGameSetCode: String? = null
@@ -820,6 +856,8 @@ class GameSession(
         action: GameAction,
         messageId: String? = null,
         interactionEpoch: String? = null,
+        /** Keep a take-back point before this action (a person's action, take-backs switched on). */
+        recordTakeback: Boolean = false,
     ): ActionResult {
         val submission = if (action is SubmitDecision) {
             val wireId = action.response.decisionId
@@ -843,7 +881,7 @@ class GameSession(
                 messageId,
             )
         }
-        return executeLiveAction(playerId, submission)
+        return executeLiveAction(playerId, submission, recordTakeback)
             ?: ActionResult.Failure("Action is no longer current")
     }
 
@@ -863,11 +901,15 @@ class GameSession(
      * Null is obsolete delivery, not an invalid action: asynchronous callers must discard it
      * without fallbacks, rejection accounting, or a broadcast.
      */
-    fun executeLiveAction(playerId: EntityId, submission: LiveActionSubmission): ActionResult? = synchronized(stateLock) {
+    fun executeLiveAction(
+        playerId: EntityId,
+        submission: LiveActionSubmission,
+        recordTakeback: Boolean = false,
+    ): ActionResult? = synchronized(stateLock) {
         if (!isCurrentInteraction(submission.interactionEpoch)) return null
         val action = submission.action
         if (action is SubmitDecision && action.response.decisionId != gameState?.pendingDecision?.id) return null
-        executeAction(playerId, action, submission.messageId)
+        executeAction(playerId, action, submission.messageId, recordTakeback)
     }
 
     /** Must be checked under [stateLock], alongside the mutation it authorizes. */
@@ -884,7 +926,12 @@ class GameSession(
      * Undo checkpoint management follows the engine's [UndoCheckpointAction] policy —
      * the engine decides what to do with checkpoints, the server just executes it.
      */
-    fun executeAction(playerId: EntityId, action: GameAction, messageId: String? = null): ActionResult = synchronized(stateLock) {
+    fun executeAction(
+        playerId: EntityId,
+        action: GameAction,
+        messageId: String? = null,
+        recordTakeback: Boolean = false,
+    ): ActionResult = synchronized(stateLock) {
         val state = gameState ?: return ActionResult.Failure("Game not started")
 
         // Seat authorization: a seat may submit actions tagged with its own playerId, or
@@ -932,8 +979,12 @@ class GameSession(
 
         fun accept() {
             applyUndoPolicy(undoPolicy, action, state, playerId)
+            if (recordTakeback) noteTakebackPoint(action, state, playerId, undoPolicy)
+            else if (action !is PassPriority) takebackManaRunOpen = false
             gameState = result.state
             recordAction(action)
+            pruneTakebackPoints(result.state)
+            pendingTakeback = null
             if (messageId != null) lastProcessedMessageId[playerId] = messageId
         }
 
@@ -1091,11 +1142,11 @@ class GameSession(
         if (previous != null) {
             // Compute delta and send smaller message
             val delta = StateDiffCalculator.computeDelta(previous, stateWithLog)
-            return ServerMessage.StateDeltaUpdate(delta, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch)
+            return ServerMessage.StateDeltaUpdate(delta, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch, takebackLabelFor(playerId), pendingTakeback?.requesterId == playerId, takebackRequestFor(playerId))
         }
 
         // First update — send full state
-        return ServerMessage.StateUpdate(stateWithLog, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch)
+        return ServerMessage.StateUpdate(stateWithLog, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch, takebackLabelFor(playerId), pendingTakeback?.requesterId == playerId, takebackRequestFor(playerId))
     }
 
     /**
@@ -1293,17 +1344,119 @@ class GameSession(
 
         gameState = checkpoint
         liveInteractionEpoch = UUID.randomUUID().toString()
-        // Roll the replay log back to the actions that produced the restored state, so a later
-        // reconstruction replays exactly this history. Yields recorded after the rollback point are
-        // dropped too — they were set against actions that no longer exist.
         undoCheckpointActionCount?.let { target ->
-            while (recordedActions.size > target) recordedActions.removeAt(recordedActions.size - 1)
-            recordedYields.removeIf { it.afterActionCount > target }
-            recordedCheckpoints.removeIf { it.afterActionCount > target }
+            rollBackReplayLog(target)
+            takebackPoints.removeIf { it.actionCount >= target }
         }
+        pendingTakeback = null
         clearCheckpoint()
         logger.info("Player $playerId undid their last action")
         ActionResult.Success(checkpoint, emptyList())
+    }
+
+    /**
+     * Roll the replay log back to the actions that produced a restored state, so a later
+     * reconstruction replays exactly this history. Yields recorded after the rollback point are
+     * dropped too — they were set against actions that no longer exist.
+     */
+    private fun rollBackReplayLog(target: Int) {
+        while (recordedActions.size > target) recordedActions.removeAt(recordedActions.size - 1)
+        recordedYields.removeIf { it.afterActionCount > target }
+        recordedCheckpoints.removeIf { it.afterActionCount > target }
+    }
+
+    /**
+     * Keep the state before [action] as a take-back point for [playerId]. Passing priority is not
+     * a point (a take-back lands on the choice before it, so casting then passing then taking back
+     * returns to before the cast), and a run of mana taps is one point at its start.
+     */
+    private fun noteTakebackPoint(action: GameAction, before: GameState, playerId: EntityId, undoPolicy: UndoCheckpointAction) {
+        if (action is PassPriority || action is Concede) return
+        val isManaTap = undoPolicy == UndoCheckpointAction.SET_IF_NO_EXISTING_CHECKPOINT
+        if (isManaTap && takebackManaRunOpen) return
+        takebackManaRunOpen = isManaTap
+        takebackPoints += TakebackPoint(
+            state = before,
+            actionCount = recordedActions.size,
+            playerId = playerId,
+            label = takebackLabel(action, before),
+            turnNumber = before.turnNumber,
+        )
+        // Bounded: a long turn of decisions (a big storm turn) keeps its most recent ones.
+        if (takebackPoints.size > MAX_TAKEBACK_POINTS) takebackPoints.removeAt(0)
+    }
+
+    private fun pruneTakebackPoints(now: GameState) {
+        takebackPoints.removeIf { it.turnNumber != now.turnNumber }
+    }
+
+    private fun takebackLabel(action: GameAction, state: GameState): String {
+        fun nameOf(id: EntityId?): String? = id?.let { state.getEntity(it)?.get<CardComponent>()?.name }
+        return when (action) {
+            is CastSpell -> "Cast ${nameOf(action.cardId) ?: "a spell"}"
+            is PlayLand -> "Play ${nameOf(action.cardId) ?: "a land"}"
+            is ActivateAbility -> "Activate ${nameOf(action.sourceId) ?: "an ability"}"
+            is DeclareAttackers -> if (action.attackers.isEmpty()) "No attack" else "Attack"
+            is DeclareBlockers -> if (action.blockers.isEmpty()) "No blocks" else "Blocks"
+            is SubmitDecision -> state.pendingDecision?.context?.sourceName?.let { "Choice for $it" } ?: "Your last choice"
+            else -> "Your last action"
+        }
+    }
+
+    /**
+     * What [playerId] would take back right now, or null if nothing: their latest point this turn.
+     * Null while their own request is waiting on the opponent.
+     */
+    fun takebackLabelFor(playerId: EntityId): String? = synchronized(stateLock) {
+        if (pendingTakeback?.requesterId == playerId) return null
+        val turn = gameState?.turnNumber ?: return null
+        takebackPoints.lastOrNull { it.playerId == playerId && it.turnNumber == turn }?.label
+    }
+
+    /** Another player's take-back request that [playerId] is being asked to allow. */
+    fun takebackRequestFor(playerId: EntityId): ServerMessage.TakebackRequestInfo? {
+        val pending = pendingTakeback ?: return null
+        if (pending.requesterId == playerId) return null
+        val name = players[pending.requesterId]?.playerName ?: "Your opponent"
+        return ServerMessage.TakebackRequestInfo(name, pending.label)
+    }
+
+    /** Hold [playerId]'s take-back until the opponent answers. Null when they have nothing to take back. */
+    fun openTakebackRequest(playerId: EntityId): PendingTakeback? = synchronized(stateLock) {
+        val label = takebackLabelFor(playerId) ?: return null
+        PendingTakeback(playerId, label, recordedActions.size).also { pendingTakeback = it }
+    }
+
+    /**
+     * The opponent's answer to [pendingTakeback]. Null when there is no live request (answered,
+     * or voided because somebody acted since); otherwise the request, cleared either way.
+     */
+    fun answerTakebackRequest(responderId: EntityId): PendingTakeback? = synchronized(stateLock) {
+        val pending = pendingTakeback ?: return null
+        if (pending.requesterId == responderId) return null
+        pendingTakeback = null
+        if (pending.actionCount != recordedActions.size) null else pending
+    }
+
+    /**
+     * Rewind to [playerId]'s latest take-back point this turn: the state before their last
+     * decision, with everything after it — their own actions, what resolved, the opponent's
+     * responses — gone, and the replay log rolled back to match.
+     */
+    fun executeTakeback(playerId: EntityId): ActionResult = synchronized(stateLock) {
+        val turn = gameState?.turnNumber ?: return ActionResult.Failure("Game not started")
+        val index = takebackPoints.indexOfLast { it.playerId == playerId && it.turnNumber == turn }
+        if (index < 0) return ActionResult.Failure("Nothing to take back this turn")
+        val point = takebackPoints[index]
+        gameState = point.state
+        liveInteractionEpoch = UUID.randomUUID().toString()
+        rollBackReplayLog(point.actionCount)
+        while (takebackPoints.size > index) takebackPoints.removeAt(takebackPoints.size - 1)
+        takebackManaRunOpen = false
+        pendingTakeback = null
+        clearCheckpoint()
+        logger.info("Player $playerId took back: ${point.label}")
+        ActionResult.Success(point.state, emptyList())
     }
 
     /**

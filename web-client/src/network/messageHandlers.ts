@@ -12,6 +12,7 @@ import type {
   MulliganCompleteMessage,
   GameOverMessage,
   ErrorMessage,
+  TakebackDeclinedMessage,
   SealedGameCreatedMessage,
   SealedPoolGeneratedMessage,
   OpponentDeckSubmittedMessage,
@@ -73,6 +74,7 @@ export interface MessageHandlers {
   onWaitingForOpponentMulligan: () => void
   onGameOver: (message: GameOverMessage) => void
   onError: (message: ErrorMessage) => void
+  onTakebackDeclined: (message: TakebackDeclinedMessage) => void
   // Sealed draft handlers
   onSealedGameCreated: (message: SealedGameCreatedMessage) => void
   onSealedPoolGenerated: (message: SealedPoolGeneratedMessage) => void
@@ -177,6 +179,9 @@ export function handleServerMessage(message: ServerMessage, handlers: MessageHan
       break
     case 'error':
       handlers.onError(message)
+      break
+    case 'takebackDeclined':
+      handlers.onTakebackDeclined(message)
       break
     // Sealed draft messages
     case 'sealedGameCreated':

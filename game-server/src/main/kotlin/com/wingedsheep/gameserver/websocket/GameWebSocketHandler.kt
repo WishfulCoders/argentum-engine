@@ -94,6 +94,8 @@ class GameWebSocketHandler(
                 is ClientMessage.ClearAbilityYield,
                 is ClientMessage.ClearAllYields,
                 is ClientMessage.RequestUndo,
+                is ClientMessage.RequestTakeback,
+                is ClientMessage.RespondTakeback,
                 is ClientMessage.RequestResync -> gamePlayHandler.handle(session, clientMessage)
 
                 is ClientMessage.CreateSealedGame,

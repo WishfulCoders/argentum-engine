@@ -20,6 +20,8 @@ import {
   createClearAbilityYieldMessage,
   createClearAllYieldsMessage,
   createRequestUndoMessage,
+  createRequestTakebackMessage,
+  createRespondTakebackMessage,
 
 } from '@/types'
 import type { Step, PriorityModeValue, YieldKind } from '@/types'
@@ -48,6 +50,14 @@ export interface GameplaySliceState {
   nextStopPoint: string | null
   opponentName: string | null
   undoAvailable: boolean
+  /** What a take-back would undo ("Cast Lightning Bolt"); null when nothing this turn can be. */
+  takebackLabel: string | null
+  /** Your take-back request is waiting on the opponent's answer. */
+  takebackPending: boolean
+  /** The opponent's take-back request, waiting on your answer. */
+  takebackRequest: import('../../types').TakebackRequestInfo | null
+  /** Why your last take-back request did not happen, until dismissed. */
+  takebackNotice: string | null
   opponentDisconnectCountdown: number | null
   autoTapEnabled: boolean
   /** Number of spectators currently watching this player's game (0 if none). */
@@ -102,6 +112,9 @@ export interface GameplaySliceActions {
   clearAbilityYield: (cardDefinitionId: string, abilityId: string) => void
   clearAllYields: () => void
   requestUndo: () => void
+  requestTakeback: () => void
+  respondTakeback: (accept: boolean) => void
+  clearTakebackNotice: () => void
   toggleAutoTap: () => void
   returnToMenu: () => void
   /**
@@ -133,6 +146,10 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
   nextStopPoint: null,
   opponentName: null,
   undoAvailable: false,
+  takebackLabel: null,
+  takebackPending: false,
+  takebackRequest: null,
+  takebackNotice: null,
   opponentDisconnectCountdown: null,
   autoTapEnabled: localStorage.getItem('argentum-auto-tap') !== 'false',
   spectatorCount: 0,
@@ -531,6 +548,18 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
     getWebSocket()?.send(createRequestUndoMessage())
   },
 
+  requestTakeback: () => {
+    set({ takebackNotice: null })
+    getWebSocket()?.send(createRequestTakebackMessage())
+  },
+
+  respondTakeback: (accept) => {
+    set({ takebackRequest: null })
+    getWebSocket()?.send(createRespondTakebackMessage(accept))
+  },
+
+  clearTakebackNotice: () => set({ takebackNotice: null }),
+
   toggleAutoTap: () => {
     const { autoTapEnabled } = get()
     const newValue = !autoTapEnabled
@@ -621,6 +650,10 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
       fullControl: false,
       priorityMode: 'auto' as PriorityModeValue,
       undoAvailable: false,
+      takebackLabel: null,
+      takebackPending: false,
+      takebackRequest: null,
+      takebackNotice: null,
       stopOverrides: { myTurnStops: [], opponentTurnStops: [] },
       nextStopPoint: null,
       opponentDisconnectCountdown: null,

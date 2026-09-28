@@ -32,7 +32,7 @@ import { PooledBattlefieldLayoutContext } from './board/shared'
 import { useBoardGroups } from './board/useBoardGroups'
 import { usePooledBattlefieldLayout } from './board/usePooledBattlefieldLayout'
 import { CardPreview } from './card'
-import { TargetingOverlay, ManaColorSelectionOverlay, LifeDisplay, ActiveEffectsBadges, SpeedGauge, DayNightBadge, ConcedeButton, FullscreenButton, SpectatorCountBadge, TeamLifeBanner, EliminationNotice } from './overlay'
+import { TargetingOverlay, ManaColorSelectionOverlay, LifeDisplay, ActiveEffectsBadges, SpeedGauge, DayNightBadge, ConcedeButton, FullscreenButton, SpectatorCountBadge, TeamLifeBanner, EliminationNotice, TakebackPrompt } from './overlay'
 import { HelpDrawer, HelpDrawerButton } from '../help/HelpDrawer'
 import { markLearnSignal } from '@/learn/signals'
 import { styles } from './board/styles'
@@ -78,6 +78,12 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
   const cancelCounterDistribution = useGameStore((state) => state.cancelCounterDistribution)
   const undoAvailable = useGameStore((state) => state.undoAvailable)
   const requestUndo = useGameStore((state) => state.requestUndo)
+  const takebackLabel = useGameStore((state) => state.takebackLabel)
+  const takebackPending = useGameStore((state) => state.takebackPending)
+  const requestTakeback = useGameStore((state) => state.requestTakeback)
+  // One button for both: the engine's undo when it applies (it needs nobody's permission), else a
+  // take-back of your last decision this turn.
+  const canTakeBack = undoAvailable || takebackLabel != null
   const autoTapEnabled = useGameStore((state) => state.autoTapEnabled)
   const toggleAutoTap = useGameStore((state) => state.toggleAutoTap)
   const delveSelectionState = useGameStore((state) => state.delveSelectionState)
@@ -709,6 +715,22 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
 
     return { satisfied, total, entries, colorSatisfied }
   }, [manaSelectionState, viewingPlayer?.manaPool])
+
+  // Ctrl+Z (Cmd+Z): the undo button — the engine's undo when it applies, else a take-back.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'z' || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.repeat) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+      const store = useGameStore.getState()
+      if (store.undoAvailable) store.requestUndo()
+      else if (store.takebackLabel != null) store.requestTakeback()
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   // Space passes priority: the same press as the floating Pass button, and only while that button is
   // enabled. Whether it is enabled is decided below the early return, so the render hands the pass in
@@ -1713,18 +1735,25 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
             >
               <button
                 data-learn="undo"
+                data-testid="undo-button"
                 onClick={() => {
                   markLearnSignal('undoUsed')
-                  requestUndo()
+                  if (undoAvailable) requestUndo()
+                  else requestTakeback()
                 }}
-                disabled={!undoAvailable}
-                title="Undo"
+                disabled={!canTakeBack}
+                title={
+                  takebackPending ? 'Waiting for your opponent to allow the take-back'
+                    : undoAvailable ? 'Undo (Ctrl+Z)'
+                    : takebackLabel ? `Take back: ${takebackLabel} (Ctrl+Z)`
+                    : 'Undo / take back — nothing to undo this turn'
+                }
                 style={{
                   ...styles.floatingBarButton,
-                  color: undoAvailable ? '#d4a017' : '#555',
-                  border: undoAvailable ? '1px solid #8b7000' : '1px solid #333',
-                  opacity: undoAvailable ? 1 : 0.4,
-                  cursor: undoAvailable ? 'pointer' : 'default',
+                  color: canTakeBack ? '#d4a017' : '#555',
+                  border: canTakeBack ? '1px solid #8b7000' : '1px solid #333',
+                  opacity: canTakeBack ? 1 : takebackPending ? 0.7 : 0.4,
+                  cursor: canTakeBack ? 'pointer' : 'default',
                 }}
               >
                 <i className="ms ms-untap" style={{ fontSize: 14 }} />
@@ -2287,6 +2316,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
           that size anyway. */}
       {!spectatorMode && !responsive.isMobile && <GameLog />}
       {!spectatorMode && <StackAnnouncements />}
+      {!spectatorMode && <TakebackPrompt />}
       {!spectatorMode && <ActiveYieldsPanel />}
       {/* Hidden on phones for the same reason as the log: its toggle sits in the
           bottom-left corner, directly on top of the hand, and the expanded panel

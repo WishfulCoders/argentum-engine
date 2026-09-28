@@ -506,6 +506,19 @@ sealed interface ClientMessage {
     data object RequestUndo : ClientMessage
 
     /**
+     * Take back the player's last decision this turn — any decision, unlike [RequestUndo]. Applies
+     * at once against the AI; against a person it asks them first (see `game.takebacks`).
+     */
+    @Serializable
+    @SerialName("requestTakeback")
+    data object RequestTakeback : ClientMessage
+
+    /** Answer the opponent's [RequestTakeback]. */
+    @Serializable
+    @SerialName("respondTakeback")
+    data class RespondTakeback(val accept: Boolean) : ClientMessage
+
+    /**
      * Request a full state resync. Sent by the client when it detects it may have missed
      * messages (e.g., tab was backgrounded, or a gap in stateVersion sequence).
      */

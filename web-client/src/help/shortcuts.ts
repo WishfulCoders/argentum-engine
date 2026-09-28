@@ -29,6 +29,12 @@ export const SHORTCUTS: readonly Shortcut[] = [
     where: 'In a game',
   },
   {
+    id: 'undo',
+    keys: 'Ctrl+Z',
+    label: 'Undo, or take back your last decision this turn (a human opponent is asked first)',
+    where: 'In a game — the ⟲ button beside Auto',
+  },
+  {
     id: 'confirm-prompt',
     keys: 'Enter',
     label: 'Confirm the prompt on screen (card choices, scry, ordering, options)',

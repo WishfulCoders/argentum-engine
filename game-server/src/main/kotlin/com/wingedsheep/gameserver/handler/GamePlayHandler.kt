@@ -116,6 +116,8 @@ class GamePlayHandler(
             is ClientMessage.ClearAbilityYield -> handleClearAbilityYield(session, message)
             is ClientMessage.ClearAllYields -> handleClearAllYields(session)
             is ClientMessage.RequestUndo -> handleRequestUndo(session)
+            is ClientMessage.RequestTakeback -> handleRequestTakeback(session)
+            is ClientMessage.RespondTakeback -> handleRespondTakeback(session, message)
 
             is ClientMessage.RequestResync -> handleRequestResync(session)
             else -> {}
@@ -549,7 +551,8 @@ class GamePlayHandler(
         }
 
         val result = gameSession.executeClientAction(
-            playerSession.playerId, message.action, message.messageId, message.interactionEpoch
+            playerSession.playerId, message.action, message.messageId, message.interactionEpoch,
+            recordTakeback = gameProperties.takebacks != com.wingedsheep.gameserver.config.TakebackMode.OFF,
         )
         when (result) {
             is GameSession.ActionResult.Success -> {
@@ -1171,6 +1174,67 @@ class GamePlayHandler(
                 // Should not happen for undo
                 broadcastStateUpdate(gameSession, result.events)
             }
+        }
+    }
+
+    /**
+     * Take back the player's last decision this turn. Applies at once when every other seat is an
+     * AI or `game.takebacks` is `always`; otherwise the other players are asked through their state
+     * updates, and the first answer decides ([handleRespondTakeback]).
+     */
+    private fun handleRequestTakeback(session: WebSocketSession) {
+        val playerSession = sessionRegistry.getPlayerSession(session.id)
+        if (playerSession == null) {
+            sender.sendError(session, ErrorCode.NOT_CONNECTED, "Not connected")
+            return
+        }
+        val gameSession = getGameSession(session, playerSession) ?: return
+        if (gameProperties.takebacks == com.wingedsheep.gameserver.config.TakebackMode.OFF) {
+            sender.sendError(session, ErrorCode.INVALID_ACTION, "Take-backs are off on this server")
+            return
+        }
+
+        val others = gameSession.getPlayers().filter { it.playerId != playerSession.playerId }
+        val humans = others.filter { it.webSocketSession !is AiWebSocketSession }
+        if (gameProperties.takebacks == com.wingedsheep.gameserver.config.TakebackMode.ALWAYS || humans.isEmpty()) {
+            applyTakeback(gameSession, playerSession.playerId, session)
+            return
+        }
+
+        val pending = gameSession.openTakebackRequest(playerSession.playerId)
+        if (pending == null) {
+            sender.sendError(session, ErrorCode.INVALID_ACTION, "Nothing to take back this turn")
+            return
+        }
+        logger.info("Player ${playerSession.playerName} asks to take back: ${pending.label}")
+        // The request rides on every state update while it stands (TakebackRequestInfo).
+        broadcastStateUpdate(gameSession, emptyList())
+    }
+
+    private fun handleRespondTakeback(session: WebSocketSession, message: ClientMessage.RespondTakeback) {
+        val playerSession = sessionRegistry.getPlayerSession(session.id)
+        if (playerSession == null) {
+            sender.sendError(session, ErrorCode.NOT_CONNECTED, "Not connected")
+            return
+        }
+        val gameSession = getGameSession(session, playerSession) ?: return
+        val pending = gameSession.answerTakebackRequest(playerSession.playerId) ?: return
+        val requester = gameSession.getPlayers().find { it.playerId == pending.requesterId }
+        if (message.accept) {
+            logger.info("Player ${playerSession.playerName} allowed the take-back: ${pending.label}")
+            applyTakeback(gameSession, pending.requesterId, requester?.webSocketSession)
+        } else {
+            logger.info("Player ${playerSession.playerName} declined the take-back: ${pending.label}")
+            requester?.let { sender.send(it.webSocketSession, ServerMessage.TakebackDeclined("${playerSession.playerName} declined")) }
+            broadcastStateUpdate(gameSession, emptyList())
+        }
+    }
+
+    private fun applyTakeback(gameSession: GameSession, playerId: EntityId, replyTo: WebSocketSession?) {
+        when (val result = gameSession.executeTakeback(playerId)) {
+            is GameSession.ActionResult.Failure ->
+                replyTo?.let { sender.sendError(it, ErrorCode.INVALID_ACTION, result.reason) }
+            else -> broadcastStateUpdate(gameSession, emptyList())
         }
     }
 
