@@ -17,6 +17,48 @@ export interface Shortcut {
 
 export const SHORTCUTS: readonly Shortcut[] = [
   {
+    id: 'help',
+    keys: '?',
+    label: 'Open or close this list of shortcuts',
+    where: 'In a game',
+  },
+  {
+    id: 'pass',
+    keys: 'Space',
+    label: 'Pass priority — the same as the Pass button, while it is enabled',
+    where: 'In a game',
+  },
+  {
+    id: 'confirm-prompt',
+    keys: 'Enter',
+    label: 'Confirm the prompt on screen (card choices, scry, ordering, options)',
+    where: 'In a game, while a prompt is open',
+  },
+  {
+    id: 'yes-no',
+    keys: 'Y / N',
+    label: 'Answer a yes-or-no prompt',
+    where: 'In a game, while a yes-or-no prompt is open',
+  },
+  {
+    id: 'pick-option',
+    keys: '1 – 9',
+    label: 'Pick an option, or send a single surveilled card to a pile',
+    where: 'In a game, while an option or pile prompt is open',
+  },
+  {
+    id: 'peek-board',
+    keys: 'Hold Tab',
+    label: 'Hide the open prompt to look at the board; your choices so far are kept',
+    where: 'In a game, while a prompt is open',
+  },
+  {
+    id: 'lanes-move',
+    keys: '↑ / ↓ / ← / →',
+    label: 'With a card under the pointer: move it to the other row (↑ ↓) or along its row (← →)',
+    where: 'Scry, surveil and other "this pile or that pile" prompts',
+  },
+  {
     id: 'opponent-boards',
     keys: '1 – 9',
     label: 'Focus an opponent’s board',

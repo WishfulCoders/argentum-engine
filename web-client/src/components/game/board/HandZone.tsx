@@ -64,6 +64,7 @@ export function CardRow({
   const responsive = useResponsiveContext()
   // Your own hand shows in the order you arranged it (drag a card sideways to move it).
   const handOrder = useGameStore((state) => state.handOrder)
+  const cardScale = useGameStore((state) => state.cardScale)
   const arrangeable = interactive && !faceDown
   const cards = useMemo(
     () => (arrangeable ? applyHandOrder(zoneCards, handOrder) : zoneCards),
@@ -103,15 +104,20 @@ export function CardRow({
   // Calculate card width that fits all cards (revealed + unrevealed + ghost)
   const totalCardCount = (faceDown ? zoneSize : cards.length) + ghostCards.length
   const cardCount = showPlaceholders ? zoneSize : totalCardCount
+  // Your own full-width hand follows the ⚙ Card size setting. Its grid row keeps the layout's
+  // height — the extra card height hangs below the screen edge (`sink`) instead of coming out of
+  // the battlefield, and a hovered card rises to show all of it.
+  const handScale = isOwnHand && fitWidth == null && maxCardWidth == null && !responsive.isMobile ? cardScale : 1
   const baseWidth = maxCardWidth ?? (small ? responsive.smallCardWidth : responsive.cardWidth)
   const minWidth = Math.min(small ? 30 : 45, baseWidth)
   const fittingWidth = calculateFittingCardWidth(
     cardCount,
     availableWidth,
     responsive.cardGap,
-    baseWidth,
+    Math.round(baseWidth * handScale),
     minWidth
   )
+  const sink = Math.max(0, Math.round(fittingWidth * 1.4) - Math.round(Math.min(fittingWidth, baseWidth) * 1.4))
 
   // For hands (player or opponent), create a fan effect
   // - Player's own hand: interactive, face-up
@@ -160,6 +166,7 @@ export function CardRow({
           faceDown={false}
           interactive={interactive}
           small={small}
+          sink={sink}
         />
         {tray}
       </div>
@@ -181,6 +188,7 @@ export function CardRow({
         inverted={inverted}
         ghostCards={ghostCards}
         shiftLeft={fanShift}
+        sink={sink}
       />
     )
   }
@@ -248,6 +256,7 @@ export function HandFan({
   inverted = false,
   ghostCards = [],
   shiftLeft = 0,
+  sink = 0,
 }: {
   cards: readonly ClientCard[]
   placeholderCount?: number
@@ -262,8 +271,13 @@ export function HandFan({
   ghostCards?: readonly ClientCard[]
   /** Extra right margin: with flex centering, shifts the fan left by half this. */
   shiftLeft?: number
+  /**
+   * How far the cards hang below the screen edge beyond the usual fan margin — a hand drawn larger
+   * than its reserved row. The hovered card rises by this much so it shows whole.
+   */
+  sink?: number
 }) {
-  const [, setHoveredIndex] = useState<number | null>(null)
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   // When we have revealed cards in opponent's hand, show both revealed cards AND placeholders
   const baseCardCount = revealedCards
@@ -318,7 +332,7 @@ export function HandFan({
         position: 'relative',
         width: totalWidth,
         height: cardHeight + maxVerticalOffset + 40, // Extra space for hover lift
-        marginBottom: inverted ? 0 : edgeMargin,
+        marginBottom: inverted ? 0 : edgeMargin - sink,
         marginTop: inverted ? edgeMargin : 0,
         marginRight: shiftLeft > 0 ? shiftLeft : undefined,
       }}
@@ -338,8 +352,12 @@ export function HandFan({
         // Calculate horizontal position
         const left = index * cardSpacing
 
-        // Z-index: center cards on top
-        const zIndex = 50 - Math.abs(index - Math.floor(cardCount / 2))
+        // Z-index: center cards on top; a card risen out of a sunk hand above them all.
+        const lifted = sink > 0 && !inverted && hoveredIndex === index
+        const zIndex = lifted ? 60 : 50 - Math.abs(index - Math.floor(cardCount / 2))
+        // The container hangs `sink - edgeMargin` below the screen and the card another
+        // `-edgeMargin` below that; lift it by both so its bottom edge sits on the screen edge.
+        const rise = lifted ? sink - 2 * edgeMargin : 0
 
         const key = item.type === 'card' ? item.card.id : `placeholder-${item.index}`
         // A real card in your own hand: its slot is what drag-to-rearrange measures against.
@@ -354,7 +372,7 @@ export function HandFan({
               left,
               ...(inverted
                 ? { top: edgeMargin, transform: `translateY(${verticalOffset}px) rotate(${rotation}deg)` }
-                : { bottom: edgeMargin, transform: `translateY(${-verticalOffset}px) rotate(${rotation}deg)` }
+                : { bottom: edgeMargin, transform: `translateY(${-verticalOffset - rise}px) rotate(${lifted ? 0 : rotation}deg)` }
               ),
               transformOrigin: inverted ? 'top center' : 'bottom center',
               zIndex,

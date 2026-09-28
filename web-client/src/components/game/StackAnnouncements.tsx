@@ -326,14 +326,14 @@ export function GameplaySettingsButton({ buttonStyle }: { buttonStyle?: React.CS
             Smaller lands row
           </label>
           <div style={popover.hint}>
-            Battlefield cards. M is the original layout; larger sizes pack the rows closer, and a
-            crowded board still shrinks to fit. Smaller lands give creatures the height.
+            Your hand and the battlefield. M is the original layout. Larger sizes pack the rows
+            closer (a crowded board still shrinks to fit) and let your hand hang lower — hover a
+            card to raise it. Smaller lands give creatures the height.
           </div>
           <div style={popover.divider} />
           <div style={popover.hint}>
-            <b>Keys:</b> Space passes · Enter confirms a prompt · Y / N answer yes-no prompts ·
-            1-9 pick an option · hold Tab to hide a prompt and see the board · F flips a
-            double-faced card in the preview.<br />
+            <b>Keys:</b> press <b>?</b> for the full list — Space passes, Enter confirms a prompt,
+            Y / N answer yes-no prompts, hold Tab to see the board behind a prompt.<br />
             <b>Scry / surveil:</b> drag cards into the row they go to; the top row is drawn left
             to right.<br />
             <b>Hand:</b> drag a card sideways to rearrange it.<br />

@@ -35,6 +35,21 @@ export function HelpDrawer() {
     return () => window.clearTimeout(id)
   }, [isOpen, openTopicId])
 
+  // `?` opens the drawer on the keyboard shortcuts (and closes it again) from anywhere in a game.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+      e.preventDefault()
+      const ui = useHelpUi.getState()
+      if (ui.isOpen) ui.closeDrawer()
+      else ui.openDrawer('keyboard-shortcuts')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   useEffect(() => {
     if (!isOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -102,7 +117,7 @@ export function HelpDrawerButton({ className }: { className?: string }) {
       type="button"
       className={`${styles.helpEntryButton} ${className ?? ''}`}
       onClick={() => openDrawer()}
-      title="Help — priority modes, stops, yields, shortcuts"
+      title="Help — priority modes, stops, yields, shortcuts (?)"
     >
       ? Help
     </button>
