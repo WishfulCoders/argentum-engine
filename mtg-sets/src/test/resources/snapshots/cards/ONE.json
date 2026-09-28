@@ -1500,6 +1500,64 @@
     }
 }
 
+// Sheoldred's Edict
+{
+    "name": "Sheoldred's Edict",
+    "manaCost": "{1}{B}",
+    "typeLine": "Instant",
+    "oracleText": "Choose one —\n• Each opponent sacrifices a nontoken creature of their choice.\n• Each opponent sacrifices a creature token of their choice.\n• Each opponent sacrifices a planeswalker of their choice.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "ForceSacrifice",
+                        "filter": "creature nontoken",
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "EachOpponent"
+                        }
+                    },
+                    "description": "Each opponent sacrifices a nontoken creature of their choice"
+                },
+                {
+                    "effect": {
+                        "type": "ForceSacrifice",
+                        "filter": "creature token",
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "EachOpponent"
+                        }
+                    },
+                    "description": "Each opponent sacrifices a creature token of their choice"
+                },
+                {
+                    "effect": {
+                        "type": "ForceSacrifice",
+                        "filter": "planeswalker",
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "EachOpponent"
+                        }
+                    },
+                    "description": "Each opponent sacrifices a planeswalker of their choice"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "108",
+        "rarity": "UNCOMMON",
+        "artist": "Helge C. Balzer",
+        "flavorText": "\"Congratulations. I am entertained.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/9/a9225cc3-90f0-448f-a8d9-7c6c2796d077.jpg?1783918041"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Sheoldred's Headcleaver
 {
     "name": "Sheoldred's Headcleaver",
