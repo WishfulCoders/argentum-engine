@@ -349,6 +349,11 @@ class AIPlayer(
                     cashCantripsInTheEndStep = profile.cashCantripsInTheEndStep,
                     idleManaAllowance = profile.spendIdleManaAtSorcerySpeed,
                     endStepManaAllowance = profile.spendIdleManaInTheirEndStep,
+                    lastPermanentRefund = if (profile.lastPermanentHasNoCliff) {
+                        EvalWeights.lastPermanentRefund(profile.priorityEvalWeightsId ?: profile.evalWeightsId)
+                    } else {
+                        0.0
+                    },
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
                     expiringGrantsNeedACombat = profile.expiringGrantsNeedACombat,

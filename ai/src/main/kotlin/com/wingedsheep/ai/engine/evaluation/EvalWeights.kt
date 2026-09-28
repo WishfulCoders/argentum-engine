@@ -166,6 +166,26 @@ object EvalWeights {
     /** An installed linear correction ([RawEvaluationWeights.toCorrection]), or null if none loaded. */
     fun correction(id: String): RawEvaluationWeights? = apprenticeWeights[id]?.takeIf(RawEvaluationWeights::isValid)
 
+    /**
+     * How much of the empty-hand cliff casting a lone sorcery-speed permanent is refunded under
+     * `AiProfile.lastPermanentHasNoCliff`, in [id]'s evaluator units: the first card in hand is worth
+     * `1.0 - topdeckPenalty` on [CardAdvantage]'s curve, and the refund leaves exactly
+     * [LAST_PERMANENT_HOLD_VALUE] of that charged. Zero for a raw vector, whose `myHandSize` term is
+     * linear and has no cliff to refund.
+     */
+    fun lastPermanentRefund(id: String): Double {
+        if (isRawProfile(id)) return 0.0
+        val weights = resolve(id)
+        return ((1.0 - weights.topdeckPenalty) - LAST_PERMANENT_HOLD_VALUE).coerceAtLeast(0.0) * weights.cardAdvantage
+    }
+
+    /**
+     * What holding a lone sorcery-speed permanent is still worth over an empty hand once the cliff is
+     * refunded — a small preference for a card in hand over nothing, so a creature still has to be
+     * worth its card to come down.
+     */
+    const val LAST_PERMANENT_HOLD_VALUE = 1.0
+
     /** Whether [id] selects a complete, finite raw vector rather than the composite fallback. */
     fun isRawProfile(id: String): Boolean = apprenticeWeights[id]?.isValid() == true || rawResourceWeights[id]?.isValid() == true
 

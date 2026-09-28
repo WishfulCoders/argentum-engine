@@ -1,5 +1,6 @@
 package com.wingedsheep.ai.puzzles
 
+import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.engine.support.ScenarioTestBase
@@ -23,7 +24,11 @@ class PuzzleComparisonBenchmark : ScenarioTestBase() {
 
         test("puzzles: profile comparison").config(enabled = enabled) {
             val runner = PuzzleRunner(cardRegistry) { scenario() }
-            val profiles = listOf(
+            // `-DpuzzleProfiles=a,b` swaps the fixed list below for token strings (`profileFromTokens`),
+            // so a research profile such as the gameplay pilot can be compared column by column.
+            val requested = System.getProperty("puzzleProfiles")?.split(',')?.filter(String::isNotBlank)
+                ?.map(::profileFromTokens)
+            val profiles = requested ?: listOf(
                 AiProfile.LEGACY_V0,
                 AiProfile.PRODUCTION,
                 // The promotion pair. `production` is what ships today and `production-candidate`
