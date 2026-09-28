@@ -68,6 +68,22 @@ class XCostSpellAiTest : ScenarioTestBase() {
 
                 cast.xValue shouldBe 1
             }
+
+            test("with no mana for X the spell is not a candidate at all, not a cast for X=0") {
+                // One Forest pays the {G} and nothing for X. The enumerator still offers the cast
+                // (maxAffordableX = 0); before 2026-09-27 the Strategist passed that bare action
+                // through un-expanded, so it was scored — and could be chosen — at X=0, which is how
+                // End-Blaze Epiphany went off for nothing in a play session.
+                val game = gameWithHydra(forests = 1)
+                val recorded = mutableListOf<com.wingedsheep.ai.insight.AiDecisionInsight>()
+                val ai = AIPlayer.create(
+                    cardRegistry, game.player1Id, AiProfile.CURRENT,
+                    insightSink = { _, insight -> recorded += insight },
+                )
+
+                ai.chooseAction(game.state).shouldBeInstanceOf<com.wingedsheep.engine.core.PassPriority>()
+                recorded.flatMap { it.options }.map { it.label }.none { "Goldvein Hydra" in it } shouldBe true
+            }
         }
 
         /**

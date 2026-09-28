@@ -1191,6 +1191,16 @@ class Strategist(
         if (isMomirAvatarActivation(state, action)) {
             return@flatMap momirActivations(state, action, playerId)
         }
+        // A spell with no mana left for X gets the same treatment, for the same reason: its bare
+        // action is cast at X=0. [XCostSelection.expandToX] keeps X=0 only where it is a real choice
+        // (a target-gated X that some mana-value-0 target matches, or "X can't be 0" raising the
+        // floor), so a Fireball-shaped spell is dropped rather than cast for nothing — End-Blaze
+        // Epiphany went off for X=0 in the 2026-09-27 play session.
+        if (action.hasXCost && maxX != null && maxX < 1 && payableCost && base is CastSpell &&
+            bindsXWithoutTheEnginesHelp(action)
+        ) {
+            return@flatMap XCostSelection.expandToX(state, action)
+        }
         if (!action.hasXCost || maxX == null || maxX < 1 || !payableCost) {
             return@flatMap listOf(action)
         }
