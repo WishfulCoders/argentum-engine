@@ -137,6 +137,12 @@ export const createAnimationSlice: SliceCreator<AnimationSlice> = (set, get) => 
     // Entering (or leaving) a card is a real change of *what* is previewed — apply it now, and
     // drop any coalesced move still queued for the card we just left so it can't land after.
     cancelPendingHoverPosition()
+    // While a card is held (dragged from the hand), the preview belongs to it: passing over a land
+    // on the way to the battlefield must not wipe the lands it would tap (see GameCard).
+    if (get().draggingCardId) {
+      set({ hoveredCardId: cardId, hoverPosition: position ?? null })
+      return
+    }
     set({ hoveredCardId: cardId, hoverPosition: position ?? null, autoTapPreview })
   },
 

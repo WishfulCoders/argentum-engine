@@ -87,6 +87,13 @@ function CardStackImpl({
   // ungrouped stack as the N cards it renders — see `expandedStackCardIds`.
   const expanded = useGameStore((state) => isStackExpanded(group, state.expandedStackCardIds))
   const setStackExpanded = useGameStore((state) => state.setStackExpanded)
+  // How many of this stack's members auto-pay would tap for the card being picked up / the action
+  // being hovered. Identical lands are interchangeable, so the stack lights up and says how many,
+  // rather than one member glowing behind the others.
+  const autoTapCount = useGameStore((state) => {
+    const preview = state.autoTapPreview
+    return preview ? group.cardIds.filter((id) => preview.includes(id)).length : 0
+  })
 
   // For single cards, just render a normal GameCard
   if (group.count === 1) {
@@ -180,6 +187,38 @@ function CardStackImpl({
           />
         </div>
       ))}
+      {autoTapCount > 0 && (
+        <div
+          data-autotap-count={autoTapCount}
+          style={{
+            position: 'absolute',
+            inset: -3,
+            borderRadius: 8,
+            border: '3px solid #f5b400',
+            boxShadow: '0 0 14px rgba(245, 180, 0, 0.85)',
+            pointerEvents: 'none',
+            zIndex: renderedCards.length + 1,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: -12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '1px 8px',
+              borderRadius: 10,
+              background: '#f5b400',
+              color: '#1a1200',
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Tap {autoTapCount}
+          </span>
+        </div>
+      )}
       {/* Ungroup affordance — lets the player split the stack to click individual
           members (e.g. tap 8 of 8 tokens for waterbend, not just the front 4). */}
       <StackToggle expanded={false} count={group.count} onToggle={() => setStackExpanded(group.cardIds, true)} />

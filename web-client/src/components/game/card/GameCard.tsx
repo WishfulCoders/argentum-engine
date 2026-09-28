@@ -603,6 +603,18 @@ function GameCardImpl({
     // Attacker drag drop is handled in the global handler via resolveDropTarget
   }, [isInBlockerMode, isAttackingInBlockerMode, card.id])
 
+  // Picking up a card shows which lands auto-pay would tap for it (MTGA does the same), so a bad
+  // auto-tap can be seen before the card is dropped; the action menu does this on hover.
+  const pickUpTapPreview = isDraggingThisCard && inHand && !isInCombatMode && !isInTargetingMode
+    ? playableAction?.autoTapPreview ?? null
+    : null
+  useEffect(() => {
+    if (!pickUpTapPreview || pickUpTapPreview.length === 0) return
+    const store = useGameStore.getState()
+    store.setAutoTapPreview(pickUpTapPreview)
+    return () => useGameStore.getState().setAutoTapPreview(null)
+  }, [pickUpTapPreview])
+
   // Global mouse/touch up handler for card dragging (to detect drop outside hand)
   useEffect(() => {
     if (!isDraggingThisCard) return
@@ -1195,16 +1207,18 @@ function GameCardImpl({
     // Amber border for the card currently being cast (not selectable as a cost target)
     borderStyle = '2px solid #d4a017'
     boxShadow = '0 0 12px rgba(212, 160, 23, 0.5), 0 0 24px rgba(212, 160, 23, 0.3)'
+  } else if (isInAutoTapPreview) {
+    // Amber for the lands auto-pay would tap for the card being picked up or the action being
+    // hovered. Ahead of the playable cyan and in its own colour: every untapped land is "playable"
+    // (it has a mana ability), so a cyan preview was indistinguishable from the lands it skips.
+    borderStyle = '3px solid #f5b400'
+    boxShadow = '0 0 14px rgba(245, 180, 0, 0.85), 0 0 28px rgba(245, 180, 0, 0.45)'
   } else if (isPlayable && isHovered) {
     // Bright cyan highlight when hovering over a playable card
     borderStyle = `3px solid ${TARGET_COLOR_BRIGHT}`
     boxShadow = `0 0 20px ${TARGET_GLOW_BRIGHT}, 0 0 40px ${TARGET_GLOW_OUTER}`
   } else if (isPlayable) {
     // Cyan highlight for playable cards
-    borderStyle = `2px solid ${TARGET_COLOR}`
-    boxShadow = `0 0 12px ${TARGET_GLOW}, 0 0 24px ${TARGET_SHADOW}`
-  } else if (isInAutoTapPreview) {
-    // Cyan highlight for lands that would be auto-tapped
     borderStyle = `2px solid ${TARGET_COLOR}`
     boxShadow = `0 0 12px ${TARGET_GLOW}, 0 0 24px ${TARGET_SHADOW}`
   }
@@ -1257,6 +1271,7 @@ function GameCardImpl({
   const cardElement = (
     <div
       data-card-id={card.id}
+      data-autotap-preview={isInAutoTapPreview || undefined}
       {...(isGhost ? { 'data-ghost': 'true' } : {})}
       {...(isTapped ? { 'data-tapped': 'true' } : {})}
       onClick={handleClick}
