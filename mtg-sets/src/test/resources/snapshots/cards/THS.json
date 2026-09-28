@@ -2424,6 +2424,64 @@
     ]
 }
 
+// Swan Song
+{
+    "name": "Swan Song",
+    "manaCost": "{U}",
+    "typeLine": "Instant",
+    "oracleText": "Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [
+                        "BLUE"
+                    ],
+                    "creatureTypes": [
+                        "Bird"
+                    ],
+                    "keywords": [
+                        "FLYING"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/c/a/ca72703f-d45b-4c80-98a8-55fad1fcf431.jpg?1783939699",
+                    "controller": "TargetController"
+                },
+                "Counter"
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "enchantment|instant|sorcery",
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "65",
+        "rarity": "RARE",
+        "artist": "Peter Mohrbacher",
+        "flavorText": "\"The most enlightened mages create beauty from violence.\"\n—Medomai the Ageless",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/f/efd26041-059b-4a1e-9ce8-c3cfd69a3721.jpg?1783939790",
+        "rulings": [
+            {
+                "date": "2013-09-15",
+                "text": "Swan Song can target a spell that can't be countered. That spell won't be countered when Swan Song resolves, but its controller will get a Bird token."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Sylvan Caryatid
 {
     "name": "Sylvan Caryatid",
