@@ -108,6 +108,11 @@ class Strategist(
     /** [AiProfile.spendIdleManaInTheirEndStep]; 0 is off. */
     private val endStepManaAllowance: Double = 0.0,
     /**
+     * [AiProfile.lastPermanentHasNoCliff], already converted to evaluator units by
+     * [com.wingedsheep.ai.engine.evaluation.EvalWeights.lastPermanentRefund]; 0 is off.
+     */
+    private val lastPermanentRefund: Double = 0.0,
+    /**
      * [AiProfile.holdFlashPermanentsForAmbush] — passed straight through to [HoldPolicy], which
      * hands it to [com.wingedsheep.ai.engine.knowledge.AmbushWindow].
      */
@@ -313,7 +318,12 @@ class Strategist(
                 theirEndStep && !adjustment.floored && isInstantSpeedCast(state, action) -> endStepManaAllowance
                 else -> 0.0
             }
-            action to adjustment.score + bonus
+            val refund = if (lastPermanentRefund > 0.0 && !adjustment.floored && castsLastCardAsPermanent(state, action)) {
+                lastPermanentRefund
+            } else {
+                0.0
+            }
+            action to adjustment.score + bonus + refund
         }
 
         // On the opponent's end step, unspent mana is about to be wasted. Reduce the pass threshold
@@ -674,6 +684,26 @@ class Strategist(
         if (cast.cardId !in state.getHand(action.action.playerId)) return null
         val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return null
         return if (isInstantSpeed(card)) null else card.manaValue + (cast.xValue ?: 0) * card.manaCost.xCount
+    }
+
+    /**
+     * Whether [action] casts the only card in its caster's hand, and that card is a permanent spell
+     * cast at sorcery speed — the one move [lastPermanentRefund] refunds the empty-hand cliff for.
+     *
+     * The cliff prices the option a held card carries: an instant held up, a removal spell waiting
+     * for its target. A creature card carries none, so charging the whole cliff to cast it made the
+     * pilot sit on its last creature for whole games (2026-09-27: Mudbutton Cursetosser T10-T16 with
+     * seven lands; a second Moonshadow looted away rather than cast for {B}). Refunding it on this
+     * transition, rather than re-pricing a one-creature hand in the evaluator, leaves every other
+     * comparison alone: re-pricing the hand moved the cliff up a card, so casting either of two
+     * creatures got dearer. Only a hand of exactly this card counts — with a land beside it the
+     * historical count never reaches zero, so there is no cliff to refund.
+     */
+    private fun castsLastCardAsPermanent(state: GameState, action: LegalAction): Boolean {
+        val cast = action.action as? CastSpell ?: return false
+        if (state.getHand(cast.playerId) != listOf(cast.cardId)) return false
+        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return false
+        return card.typeLine.isPermanent && !card.typeLine.isLand && !isInstantSpeed(card)
     }
 
     private fun isInstantSpeed(card: CardComponent): Boolean =
@@ -1190,6 +1220,16 @@ class Strategist(
         // look for a mana-value-0 creature, a bucket that holds no castable card at all.
         if (isMomirAvatarActivation(state, action)) {
             return@flatMap momirActivations(state, action, playerId)
+        }
+        // A spell with no mana left for X gets the same treatment, for the same reason: its bare
+        // action is cast at X=0. [XCostSelection.expandToX] keeps X=0 only where it is a real choice
+        // (a target-gated X that some mana-value-0 target matches, or "X can't be 0" raising the
+        // floor), so a Fireball-shaped spell is dropped rather than cast for nothing — End-Blaze
+        // Epiphany went off for X=0 in the 2026-09-27 play session.
+        if (action.hasXCost && maxX != null && maxX < 1 && payableCost && base is CastSpell &&
+            bindsXWithoutTheEnginesHelp(action)
+        ) {
+            return@flatMap XCostSelection.expandToX(state, action)
         }
         if (!action.hasXCost || maxX == null || maxX < 1 || !payableCost) {
             return@flatMap listOf(action)

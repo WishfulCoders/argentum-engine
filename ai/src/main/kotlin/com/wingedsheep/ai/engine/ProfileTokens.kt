@@ -47,6 +47,8 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  *
  * - `eot`: the same for instant-speed casts in the opponent's end step, at `-Darena.eotAllowance` (default 3.0)
  *   ([AiProfile.spendIdleManaInTheirEndStep], `docs/33` §13.6).
+ * - `lastcard`: casting the last card in hand costs 1.0, not the empty-hand cliff (4.0), when it is a sorcery-speed
+ *   permanent ([AiProfile.lastPermanentHasNoCliff], the 2026-09-27 play session).
  *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
@@ -59,6 +61,7 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
     return when (token) {
         "current" -> p
         "raceclock" -> p.copy(id = id, discountedRaceClock = true)
+        "lastcard" -> p.copy(id = id, lastPermanentHasNoCliff = true)
         "intent" -> p.copy(id = id, useCardIntent = true)
         "locked" -> p.copy(
             id = id,

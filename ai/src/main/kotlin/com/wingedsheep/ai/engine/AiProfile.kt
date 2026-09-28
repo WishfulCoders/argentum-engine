@@ -449,6 +449,22 @@ data class AiProfile(
     val priceLandsInHandAsMana: Boolean = false,
 
     /**
+     * Refund the empty-hand cliff (4.0 on `default`) down to
+     * [com.wingedsheep.ai.engine.evaluation.EvalWeights.LAST_PERMANENT_HOLD_VALUE] (1.0) when the AI
+     * casts its last card and that card is a sorcery-speed permanent. Instants and flash cards keep
+     * the cliff. Applied to the candidate in `Strategist`, not inside the evaluator — see
+     * `Strategist.castsLastCardAsPermanent` for why.
+     *
+     * The cliff prices the option a held card carries; a creature card carries none, so the old
+     * charge simply made the AI sit on its last creature — the 2026-09-27 play session held
+     * Mudbutton Cursetosser from turn 10 to 16 with seven lands and looted away a Moonshadow it
+     * could have cast for {B}. Unlike moving [com.wingedsheep.ai.engine.evaluation.EvaluationWeights.topdeckPenalty]
+     * (the `concave-hand*` vectors), this leaves every other hand — and the last instant, which is
+     * what cost `concave-hand` `respond-02` — exactly where it was. Token: `lastcard`.
+     */
+    val lastPermanentHasNoCliff: Boolean = false,
+
+    /**
      * Price a land that cannot make mana as the permanent it is: nothing.
      *
      * The first half of mtg-draft-ai `docs/46`. `BoardPresence` tells one land from another with a
