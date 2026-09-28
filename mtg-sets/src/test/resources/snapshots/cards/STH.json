@@ -246,6 +246,42 @@
     ]
 }
 
+// Mana Leak
+{
+    "name": "Mana Leak",
+    "manaCost": "{1}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Counter target spell unless its controller pays {3}.",
+    "script": {
+        "spellEffect": {
+            "type": "Counter",
+            "condition": {
+                "type": "CounterCondition.UnlessPaysMana",
+                "cost": "{3}"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "36",
+        "artist": "Christopher Rush",
+        "flavorText": "\"The fatal flaw in every plan is the assumption that you know more than your enemy.\"\n—Volrath",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/b/abcaf16d-aa02-43e2-aa38-bb1835d47a05.jpg?1783946567"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Mulch
 {
     "name": "Mulch",
