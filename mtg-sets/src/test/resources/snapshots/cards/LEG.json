@@ -1377,6 +1377,47 @@
     ]
 }
 
+// Force Spike
+{
+    "name": "Force Spike",
+    "manaCost": "{U}",
+    "typeLine": "Instant",
+    "oracleText": "Counter target spell unless its controller pays {1}.",
+    "script": {
+        "spellEffect": {
+            "type": "Counter",
+            "condition": {
+                "type": "CounterCondition.UnlessPaysMana",
+                "cost": "{1}"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "58",
+        "artist": "Bryon Wackwitz",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/0/70e64028-ae96-4950-aa6c-9d347409fad3.jpg?1783948076",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "The payment is optional."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Frost Giant
 {
     "name": "Frost Giant",
