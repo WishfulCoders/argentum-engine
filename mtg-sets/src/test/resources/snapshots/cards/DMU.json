@@ -558,6 +558,58 @@
     "colorIdentityOverride": []
 }
 
+// Cut Down
+{
+    "name": "Cut Down",
+    "manaCost": "{B}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target creature with total power and toughness 5 or less.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "TotalPowerAndToughnessAtMost",
+                                "max": 5
+                            }
+                        ]
+                    }
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "89",
+        "rarity": "UNCOMMON",
+        "artist": "Dominik Mayer",
+        "flavorText": "\"There can be no mercy, no half measures. When facing Phyrexians, it's kill swiftly or die.\"\n—Jodah",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/5/753db072-5d6a-4f37-8f7d-255572ecd3bd.jpg?1783921335",
+        "rulings": [
+            {
+                "date": "2022-09-09",
+                "text": "The total power and toughness of a creature is determined by adding its power and toughness. For example, the total power and toughness of a 3/2 creature is 5."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Deathbloom Gardener
 {
     "name": "Deathbloom Gardener",
