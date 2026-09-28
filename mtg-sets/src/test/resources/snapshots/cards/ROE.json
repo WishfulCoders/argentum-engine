@@ -1301,6 +1301,91 @@
     ]
 }
 
+// Inquisition of Kozilek
+{
+    "name": "Inquisition of Kozilek",
+    "manaCost": "{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target player reveals their hand. You choose a nonland card from it with mana value 3 or less. That player discards that card.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "RevealHand",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "storeAs": "gathered1"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered1",
+                    "selection": {
+                        "type": "ChooseExactly",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "filter": "nonland mv<=3",
+                    "storeSelected": "selected2",
+                    "prompt": "Choose a nonland card with mana value 3 or less to discard",
+                    "showAllCards": true,
+                    "alwaysPrompt": true
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "selected2",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "moveType": "Discard"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetPlayer",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "115",
+        "rarity": "UNCOMMON",
+        "artist": "Tomasz Jedruszek",
+        "flavorText": "You will scream out your innermost secrets just to make it stop.",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/a/6a3ff5c3-0fdb-4d54-b4e5-ce7bad9953f0.jpg?1783941984",
+        "rulings": [
+            {
+                "date": "2014-02-01",
+                "text": "If you target yourself with this spell, you must reveal your entire hand to the other players just as any other player would."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Jwari Scuttler
 {
     "name": "Jwari Scuttler",
