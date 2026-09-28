@@ -45,6 +45,12 @@ data class HalfTurnSpec(
     val tutored: List<String> = emptyList(),
     /** Cards the user played or cast that were not in their hand: from exile (an impulse draw), the graveyard, a bounce. */
     val outsideHand: List<String> = emptyList(),
+    /**
+     * The user's cards that left their library this half-turn other than into their hand (milled, exiled
+     * from the top, put onto the battlefield), in order. Only exports from our own Arena logs have it
+     * (mtg-draft-ai `reconstruct/own_export.py`, docs/58); a 17Lands row does not log mills.
+     */
+    val libraryOut: List<String> = emptyList(),
     val lands: List<String> = emptyList(),
     val creatures: List<String> = emptyList(),
     val noncreatures: List<String> = emptyList(),

@@ -1259,7 +1259,8 @@ class Reconstructor(
 
     /**
      * Put this half-turn's recorded draws on top of the user's library, then its tutored cards (so a
-     * "look at the top N" effect finds the card the record says it took), then the draws of the
+     * "look at the top N" effect finds the card the record says it took), then the cards a mill or an
+     * exile from the top took ([HalfTurnSpec.libraryOut], own Arena logs only), then the draws of the
      * user's [later] half-turns (so such an effect sees what the user really saw). Library effects —
      * Eclipsed Kithkin sending cards to the bottom, surveil, a shuffle — move cards after [stackUser]
      * ran, so the order is re-forced every half-turn.
@@ -1274,7 +1275,7 @@ class Reconstructor(
         val own = ht.active == "user"
         // Past the upkeep, this turn's draw-step draw has already happened.
         val drawn = if (own && state.step.ordinal > Step.UPKEEP.ordinal) ht.drawn.drop(1) else ht.drawn
-        val now = drawn + ht.tutored
+        val now = drawn + ht.tutored + ht.libraryOut
         val library = state.getLibrary(seats.user)
         if (library.size < now.size) return null
         val rest = library.toMutableList()
