@@ -2735,6 +2735,128 @@
     ]
 }
 
+// Shadowspear
+{
+    "name": "Shadowspear",
+    "manaCost": "{1}",
+    "typeLine": "Legendary Artifact — Equipment",
+    "oracleText": "Equipped creature gets +1/+1 and has trample and lifelink.\n{1}: Permanents your opponents control lose hexproof and indestructible until end of turn.\nEquip {2}",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Shadowspear:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Group",
+                                "filter": {
+                                    "baseFilter": "permanent ctrl:opponent"
+                                }
+                            },
+                            "body": {
+                                "type": "RemoveKeyword",
+                                "keyword": "HEXPROOF",
+                                "target": "IterationEntity"
+                            }
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Group",
+                                "filter": {
+                                    "baseFilter": "permanent ctrl:opponent"
+                                }
+                            },
+                            "body": {
+                                "type": "RemoveKeyword",
+                                "keyword": "INDESTRUCTIBLE",
+                                "target": "IterationEntity"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Permanents your opponents control lose hexproof and indestructible until end of turn."
+            },
+            {
+                "id": "Shadowspear:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "AttachEquipment",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "creature you control"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "creature you control"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isEquipAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 1,
+                "toughnessBonus": 1
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "TRAMPLE"
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "LIFELINK"
+            }
+        ]
+    },
+    "equipCost": "{2}",
+    "metadata": {
+        "collectorNumber": "236",
+        "rarity": "RARE",
+        "artist": "Yeong-Hao Han",
+        "flavorText": "A weapon of darkness for a warrior of light.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/3/939c6e19-4b27-4023-bb9c-ae440f91e21c.jpg?1783931515",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "Because damage remains marked on a creature until the damage is removed as the turn ends, damage previously dealt to a creature with indestructible may cause it to be destroyed if Shadowspear's second ability resolves during that turn."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If a permanent enters the battlefield under an opponent's control with hexproof or indestructible after Shadowspear's second ability resolves, it won't lose that ability unless you activate Shadowspear's second ability again. The same is true if an opponent's permanent gains indestructible or hexproof after Shadowspear's second ability resolves."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "You can activate Shadowspear's second ability whether or not it's equipped to a creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Soul-Guide Lantern
 {
     "name": "Soul-Guide Lantern",
