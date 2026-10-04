@@ -98,7 +98,7 @@ class NumberExplosionSafetyTest : FunSpec({
             e.has<TokenComponent>() && e.get<ControllerComponent>()?.playerId == playerId
         }
 
-    test("runaway token creation is capped at MAX_TOKENS_PER_EFFECT, not OOM") {
+    test("runaway token creation is capped (per effect and per battlefield), not OOM") {
         val driver = driverWith(tokenFlood)
         driver.initMirrorMatch(deck = Deck.of("Forest" to 20), startingLife = 20)
         val player1 = driver.activePlayer!!
@@ -110,8 +110,10 @@ class NumberExplosionSafetyTest : FunSpec({
         driver.castSpell(player1, spell)
         driver.bothPass()
 
-        // Clamped to exactly the per-effect cap — the engine survives a "create 50000" combo.
-        tokensControlledBy(driver, player1) shouldBe GameLimits.MAX_TOKENS_PER_EFFECT
+        // Clamped to the tighter of the per-effect and the whole-battlefield cap — the engine
+        // survives a "create 50000" combo.
+        tokensControlledBy(driver, player1) shouldBe
+            minOf(GameLimits.MAX_TOKENS_PER_EFFECT, GameLimits.MAX_TOKENS_ON_BATTLEFIELD)
     }
 
     test("doubling a near-overflow counter count clamps positive instead of wrapping negative") {

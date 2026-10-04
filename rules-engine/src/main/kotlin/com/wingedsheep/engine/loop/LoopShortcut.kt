@@ -15,7 +15,6 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
-import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.sdk.core.CounterType
@@ -362,7 +361,8 @@ class LoopShortcut(private val processor: ActionProcessor) {
                 state.getEntity(it)?.get<ControllerComponent>()?.playerId == playerId
             }
             return PlayerTally(
-                life = player?.get<LifeTotalComponent>()?.life ?: 0,
+                // Through the resolver: a Two-Headed Giant team shares one life total (CR 810.9a).
+                life = state.lifeTotal(playerId),
                 poison = player?.get<CountersComponent>()?.getCount(CounterType.POISON) ?: 0,
                 hand = state.getHand(playerId).size,
                 library = state.getLibrary(playerId).size,
