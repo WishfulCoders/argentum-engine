@@ -2420,6 +2420,74 @@
     ]
 }
 
+// Sheoldred, the Apocalypse
+{
+    "name": "Sheoldred, the Apocalypse",
+    "manaCost": "{2}{B}{B}",
+    "typeLine": "Legendary Creature — Phyrexian Praetor",
+    "oracleText": "Deathtouch\nWhenever you draw a card, you gain 2 life.\nWhenever an opponent draws a card, they lose 2 life.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 5
+    },
+    "keywords": [
+        "DEATHTOUCH"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Sheoldred, the Apocalypse:1",
+                "trigger": "DrawEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                },
+                "descriptionOverride": "Whenever you draw a card, you gain 2 life."
+            },
+            {
+                "id": "Sheoldred, the Apocalypse:2",
+                "trigger": {
+                    "type": "DrawEvent",
+                    "player": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                },
+                "descriptionOverride": "Whenever an opponent draws a card, they lose 2 life."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "107",
+        "rarity": "MYTHIC",
+        "artist": "Chris Rahn",
+        "flavorText": "\"Gix failed. I shall not.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/6/d67be074-cdd4-41d9-ac89-0a0456c4e4b2.jpg?1783921327",
+        "rulings": [
+            {
+                "date": "2022-09-09",
+                "text": "If you and an opponent draw a card at the same time, you choose the order that the triggered abilities will resolve in."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Soaring Drake
 {
     "name": "Soaring Drake",
