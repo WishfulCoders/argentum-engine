@@ -55,8 +55,11 @@ object GameLimits {
     /** Most iterations a single loop shortcut may repeat (MTR 4.4 asks for a number; this bounds it). */
     const val MAX_LOOP_ITERATIONS: Int = 1_000
 
-    /** Most actions a single loop shortcut may replay, all iterations together. */
-    const val MAX_LOOP_ACTIONS: Int = 20_000
+    /**
+     * Most actions a single loop shortcut may replay, all iterations together — a fifth of the game
+     * server's replay log (25,000 actions), so one shortcut cannot freeze a game's recording.
+     */
+    const val MAX_LOOP_ACTIONS: Int = 5_000
 
     /**
      * Maximum nesting/iteration depth of effect execution within a single resolution, enforced at

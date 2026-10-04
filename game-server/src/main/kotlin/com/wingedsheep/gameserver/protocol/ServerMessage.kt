@@ -150,6 +150,8 @@ sealed interface ServerMessage {
         val takebackPending: Boolean = false,
         /** Another player's take-back request, waiting on this player's answer. */
         val takebackRequest: TakebackRequestInfo? = null,
+        /** A loop this player just played and may repeat ([ClientMessage.RepeatLoop]); null when there is none. */
+        val loopOffer: LoopOfferInfo? = null,
     ) : ServerMessage
 
     /**
@@ -163,6 +165,29 @@ sealed interface ServerMessage {
         /** What would be taken back ("Cast Lightning Bolt"). */
         val label: String,
     )
+
+    /**
+     * A loop the player has just played by hand and may repeat in one decision (MTR 4.4 shortcut) —
+     * see `com.wingedsheep.engine.loop.LoopShortcut`.
+     */
+    @Serializable
+    data class LoopOfferInfo(
+        /** The loop's first action ("Activate Kiki-Jiki, Mirror Breaker"). */
+        val label: String,
+        /** What one repetition changes ("Opponent: life −1", "You: tokens +1"). */
+        val perIteration: List<String>,
+        /** Repetitions that bring every opponent to 0 life or 10 poison, when the loop does that. */
+        val iterationsToWin: Int? = null,
+        /** The most repetitions the server will run in one go. */
+        val maxIterations: Int,
+        /** Actions one repetition takes, both players' passes included. */
+        val actionsPerIteration: Int,
+    )
+
+    /** How a [ClientMessage.RepeatLoop] went: how many repetitions ran and why it stopped. */
+    @Serializable
+    @SerialName("loopRepeated")
+    data class LoopRepeated(val iterations: Int, val requested: Int, val stop: String, val reason: String? = null) : ServerMessage
 
     /** Your take-back request was declined (or voided because the game moved on). */
     @Serializable
@@ -201,6 +226,8 @@ sealed interface ServerMessage {
         val takebackPending: Boolean = false,
         /** Another player's take-back request, waiting on this player's answer. */
         val takebackRequest: TakebackRequestInfo? = null,
+        /** A loop this player just played and may repeat ([ClientMessage.RepeatLoop]); null when there is none. */
+        val loopOffer: LoopOfferInfo? = null,
     ) : ServerMessage
 
     /**

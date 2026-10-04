@@ -4,7 +4,7 @@
 import type { MessageHandlers } from '@/network/messageHandlers.ts'
 import { ErrorCode, ZoneType } from '@/types'
 import type { EntityId } from '@/types'
-import type { ClientGameState, ClientEvent, LegalActionInfo, PendingDecision, OpponentDecisionStatus, PriorityModeValue, Step, TakebackRequestInfo } from '@/types'
+import type { ClientGameState, ClientEvent, LegalActionInfo, PendingDecision, OpponentDecisionStatus, PriorityModeValue, Step, TakebackRequestInfo, LoopOfferInfo } from '@/types'
 import { trackEvent, setInGame } from '@/utils/analytics.ts'
 import { applyStateDelta } from '@/network/deltaApplicator.ts'
 import { getWebSocket, clearLobbyId, requestReauth } from '../shared'
@@ -206,6 +206,7 @@ interface StateUpdateEnvelope {
   readonly takebackLabel?: string | null
   readonly takebackPending?: boolean
   readonly takebackRequest?: TakebackRequestInfo | null
+  readonly loopOffer?: LoopOfferInfo | null
 }
 
 /** A replaced timeline invalidates every partially built action in the same store update. */
@@ -641,6 +642,7 @@ function processStateUpdate(
     takebackLabel: msg.takebackLabel ?? null,
     takebackPending: msg.takebackPending ?? false,
     takebackRequest: msg.takebackRequest ?? null,
+    loopOffer: msg.loopOffer ?? null,
     ...(serverPriorityMode ? { priorityMode: serverPriorityMode, fullControl: serverPriorityMode === 'fullControl' } : {}),
     ...(serverOverrides ? { stopOverrides: serverOverrides } : {}),
     // The server resends the whole game log every update, but it only ever grows at the tail:
@@ -740,7 +742,7 @@ type GameplayHandlerKeys =
   | 'onGameCreated' | 'onGameStarted' | 'onGameCancelled'
   | 'onStateUpdate' | 'onStateDeltaUpdate'
   | 'onMulliganDecision' | 'onChooseBottomCards' | 'onMulliganComplete' | 'onWaitingForOpponentMulligan'
-  | 'onGameOver' | 'onPlayerEliminated' | 'onError' | 'onTakebackDeclined'
+  | 'onGameOver' | 'onPlayerEliminated' | 'onError' | 'onTakebackDeclined' | 'onLoopRepeated'
 
 export function createGameplayHandlers(set: SetState, get: GetState): Pick<MessageHandlers, GameplayHandlerKeys> {
   return {
@@ -908,6 +910,15 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
 
     onTakebackDeclined: (msg) => {
       set({ takebackNotice: msg.reason })
+    },
+
+    onLoopRepeated: (msg) => {
+      const what = `Repeated the loop ${msg.iterations}×`
+      const notice =
+        msg.stop === 'GAME_OVER' ? `${what} — the game is over`
+        : msg.stop === 'COMPLETED' ? what
+        : `${what} of ${msg.requested}: ${msg.reason ?? msg.stop.toLowerCase()}`
+      set({ loopNotice: notice })
     },
 
     onGameOver: (msg) => {

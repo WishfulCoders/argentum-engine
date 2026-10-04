@@ -172,6 +172,8 @@ export type {
   ErrorMessage,
   TakebackDeclinedMessage,
   TakebackRequestInfo,
+  LoopOfferInfo,
+  LoopRepeatedMessage,
   ClientMessage,
   ConnectMessage,
   CreateGameMessage,
@@ -436,6 +438,7 @@ export {
   createRequestUndoMessage,
   createRequestTakebackMessage,
   createRespondTakebackMessage,
+  createRepeatLoopMessage,
   createRequestResyncMessage,
   // Quick Game Lobby factories & guards
   createCreateQuickGameLobbyMessage,

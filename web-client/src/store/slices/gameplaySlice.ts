@@ -22,6 +22,7 @@ import {
   createRequestUndoMessage,
   createRequestTakebackMessage,
   createRespondTakebackMessage,
+  createRepeatLoopMessage,
 
 } from '@/types'
 import type { Step, PriorityModeValue, YieldKind } from '@/types'
@@ -58,6 +59,10 @@ export interface GameplaySliceState {
   takebackRequest: import('../../types').TakebackRequestInfo | null
   /** Why your last take-back request did not happen, until dismissed. */
   takebackNotice: string | null
+  /** A loop you just played and may repeat (MTR 4.4 shortcut); null when there is none. */
+  loopOffer: import('../../types').LoopOfferInfo | null
+  /** How your last loop repeat went, until dismissed. */
+  loopNotice: string | null
   opponentDisconnectCountdown: number | null
   autoTapEnabled: boolean
   /** Number of spectators currently watching this player's game (0 if none). */
@@ -115,6 +120,9 @@ export interface GameplaySliceActions {
   requestTakeback: () => void
   respondTakeback: (accept: boolean) => void
   clearTakebackNotice: () => void
+  /** Repeat the offered loop this many more times. */
+  repeatLoop: (iterations: number) => void
+  clearLoopNotice: () => void
   toggleAutoTap: () => void
   returnToMenu: () => void
   /**
@@ -150,6 +158,8 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
   takebackPending: false,
   takebackRequest: null,
   takebackNotice: null,
+  loopOffer: null,
+  loopNotice: null,
   opponentDisconnectCountdown: null,
   autoTapEnabled: localStorage.getItem('argentum-auto-tap') !== 'false',
   spectatorCount: 0,
@@ -560,6 +570,13 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
 
   clearTakebackNotice: () => set({ takebackNotice: null }),
 
+  repeatLoop: (iterations) => {
+    set({ loopOffer: null, loopNotice: null })
+    getWebSocket()?.send(createRepeatLoopMessage(iterations))
+  },
+
+  clearLoopNotice: () => set({ loopNotice: null }),
+
   toggleAutoTap: () => {
     const { autoTapEnabled } = get()
     const newValue = !autoTapEnabled
@@ -654,6 +671,8 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
       takebackPending: false,
       takebackRequest: null,
       takebackNotice: null,
+      loopOffer: null,
+      loopNotice: null,
       stopOverrides: { myTurnStops: [], opponentTurnStops: [] },
       nextStopPoint: null,
       opponentDisconnectCountdown: null,

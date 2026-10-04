@@ -27,6 +27,7 @@ export type ServerMessage =
   | GameOverMessage
   | ErrorMessage
   | TakebackDeclinedMessage
+  | LoopRepeatedMessage
   // Sealed Draft Messages
   | SealedGameCreatedMessage
   | SealedPoolGeneratedMessage
@@ -218,6 +219,8 @@ export interface StateUpdateMessage {
   readonly takebackPending?: boolean
   /** Another player's take-back request, waiting on this player's answer. */
   readonly takebackRequest?: TakebackRequestInfo | null
+  /** A loop this player just played and may repeat (MTR 4.4 shortcut); absent when there is none. */
+  readonly loopOffer?: LoopOfferInfo | null
 }
 
 /**
@@ -295,6 +298,8 @@ export interface StateDeltaUpdateMessage {
   readonly takebackPending?: boolean
   /** Another player's take-back request, waiting on this player's answer. */
   readonly takebackRequest?: TakebackRequestInfo | null
+  /** A loop this player just played and may repeat (MTR 4.4 shortcut); absent when there is none. */
+  readonly loopOffer?: LoopOfferInfo | null
 }
 
 // ============================================================================
@@ -1319,6 +1324,33 @@ export interface TakebackRequestInfo {
   readonly label: string
 }
 
+/**
+ * A loop you just played by hand and may repeat in one decision — the MTR 4.4 shortcut. Every
+ * repetition is still played through the rules engine; this only saves the clicking.
+ */
+export interface LoopOfferInfo {
+  /** The loop's first action ("Activate Kiki-Jiki, Mirror Breaker"). */
+  readonly label: string
+  /** What one repetition changes ("Player2: life −1", "You: tokens +1"). */
+  readonly perIteration: readonly string[]
+  /** Repetitions that bring every opponent to 0 life or 10 poison, when the loop does that. */
+  readonly iterationsToWin?: number | null
+  /** The most repetitions the server will run in one go. */
+  readonly maxIterations: number
+  /** Actions one repetition takes, both players' passes included. */
+  readonly actionsPerIteration: number
+}
+
+/** How a repeatLoop request went. */
+export interface LoopRepeatedMessage {
+  readonly type: 'loopRepeated'
+  readonly iterations: number
+  readonly requested: number
+  /** COMPLETED, GAME_OVER, DIVERGED (a repetition changed something different) or FAILED. */
+  readonly stop: string
+  readonly reason?: string | null
+}
+
 /** Your take-back request was declined, or voided because the game moved on. */
 export interface TakebackDeclinedMessage {
   readonly type: 'takebackDeclined'
@@ -2105,6 +2137,8 @@ export type ClientMessage =
   | RequestUndoMessage
   | RequestTakebackMessage
   | RespondTakebackMessage
+  // Loop shortcut
+  | RepeatLoopMessage
   // Resync
   | RequestResyncMessage
   // Liveness
@@ -2708,6 +2742,12 @@ export interface RespondTakebackMessage {
   readonly accept: boolean
 }
 
+/** Repeat the loop you were just offered (`loopOffer`) this many more times. */
+export interface RepeatLoopMessage {
+  readonly type: 'repeatLoop'
+  readonly iterations: number
+}
+
 /**
  * Request a full state resync from the server.
  * Sent when the client detects it may have missed messages (tab backgrounded, version gap).
@@ -2913,6 +2953,10 @@ export function createRequestTakebackMessage(): RequestTakebackMessage {
 
 export function createRespondTakebackMessage(accept: boolean): RespondTakebackMessage {
   return { type: 'respondTakeback', accept }
+}
+
+export function createRepeatLoopMessage(iterations: number): RepeatLoopMessage {
+  return { type: 'repeatLoop', iterations }
 }
 
 export function createRequestResyncMessage(): RequestResyncMessage {

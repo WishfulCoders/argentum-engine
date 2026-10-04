@@ -937,6 +937,10 @@ export type GameStore = {
   takebackRequest: import('../../types').TakebackRequestInfo | null
   /** Why your last take-back request did not happen, until dismissed. */
   takebackNotice: string | null
+  /** A loop you just played and may repeat (MTR 4.4 shortcut); null when there is none. */
+  loopOffer: import('../../types').LoopOfferInfo | null
+  /** How your last loop repeat went, until dismissed. */
+  loopNotice: string | null
   /** Seconds remaining on opponent's disconnect countdown (null = connected) */
   opponentDisconnectCountdown: number | null
   autoTapEnabled: boolean
@@ -986,6 +990,9 @@ export type GameStore = {
   requestTakeback: () => void
   respondTakeback: (accept: boolean) => void
   clearTakebackNotice: () => void
+  /** Repeat the offered loop this many more times. */
+  repeatLoop: (iterations: number) => void
+  clearLoopNotice: () => void
   toggleAutoTap: () => void
   cancelGame: () => void
   setFullControl: (enabled: boolean) => void

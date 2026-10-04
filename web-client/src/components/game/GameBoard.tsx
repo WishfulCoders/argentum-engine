@@ -32,7 +32,7 @@ import { PooledBattlefieldLayoutContext } from './board/shared'
 import { useBoardGroups } from './board/useBoardGroups'
 import { usePooledBattlefieldLayout } from './board/usePooledBattlefieldLayout'
 import { CardPreview } from './card'
-import { TargetingOverlay, ManaColorSelectionOverlay, LifeDisplay, ActiveEffectsBadges, SpeedGauge, DayNightBadge, ConcedeButton, FullscreenButton, SpectatorCountBadge, TeamLifeBanner, EliminationNotice, TakebackPrompt } from './overlay'
+import { TargetingOverlay, ManaColorSelectionOverlay, LifeDisplay, ActiveEffectsBadges, SpeedGauge, DayNightBadge, ConcedeButton, FullscreenButton, SpectatorCountBadge, TeamLifeBanner, EliminationNotice, TakebackPrompt, LoopOfferPanel } from './overlay'
 import { HelpDrawer, HelpDrawerButton } from '../help/HelpDrawer'
 import { markLearnSignal } from '@/learn/signals'
 import { styles } from './board/styles'
@@ -2317,6 +2317,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
       {!spectatorMode && !responsive.isMobile && <GameLog />}
       {!spectatorMode && <StackAnnouncements />}
       {!spectatorMode && <TakebackPrompt />}
+      {!spectatorMode && <LoopOfferPanel />}
       {!spectatorMode && <ActiveYieldsPanel />}
       {/* Hidden on phones for the same reason as the log: its toggle sits in the
           bottom-left corner, directly on top of the hand, and the expanded panel

@@ -16,6 +16,10 @@ import com.wingedsheep.gameserver.priority.AutoPassManager
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.mechanics.combat.CombatDeclarationControl
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
+import com.wingedsheep.engine.loop.LoopCandidate
+import com.wingedsheep.engine.loop.LoopShortcut
+import com.wingedsheep.engine.loop.LoopStep
+import com.wingedsheep.engine.loop.LoopStop
 import com.wingedsheep.engine.mechanics.mana.ManaPaymentWindow
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -42,6 +46,9 @@ private val logger = LoggerFactory.getLogger(GameSession::class.java)
 
 /** Most take-back points a player keeps within one turn; older ones fall off. */
 private const val MAX_TAKEBACK_POINTS = 64
+
+/** Actions of the current turn kept for loop detection (a loop is at most [LoopShortcut.MAX_ACTIONS_PER_ITERATION] of them). */
+private const val MAX_LOOP_HISTORY = 256
 
 /**
  * Represents an active game session between two players.
@@ -198,6 +205,20 @@ class GameSession(
     @Volatile
     var pendingTakeback: PendingTakeback? = null
         private set
+
+    /**
+     * This turn's actions, every seat's, each with the state it was taken in — what
+     * [LoopShortcut.detect] reads to find a loop a person just played (MTR 4.4). Guarded by
+     * [stateLock]. Self-validating: [loopHistoryHead] is the state the last recorded action led to,
+     * and any other way the state changes (undo, take-back, restore) leaves the head behind, which
+     * [noteLoopStep] and [loopOfferFor] treat as "start over".
+     */
+    private val loopHistory = ArrayList<LoopStep>()
+    private var loopHistoryHead: GameState? = null
+
+    /** [LoopShortcut.detect]'s answer for one state, computed once however many updates read it. */
+    private var loopOfferCache: Pair<GameState, LoopCandidate?>? = null
+
     /** Set code used for quick game deck generation (so joining player uses the same set) */
     @Volatile
     var quickGameSetCode: String? = null
@@ -291,6 +312,7 @@ class GameSession(
         com.wingedsheep.gameserver.replay.ReplayRecordingPolicy.MAX_RECORDED_ACTIONS
 
     private val actionProcessor = ActionProcessor(services)
+    private val loopShortcut = LoopShortcut(actionProcessor)
     private val gameInitializer = GameInitializer(cardRegistry, services.printingRegistry)
     private val autoPassManager = AutoPassManager(cardRegistry)
     private val spectatorStateBuilder = SpectatorStateBuilder(cardRegistry, stateTransformer)
@@ -982,6 +1004,7 @@ class GameSession(
             if (recordTakeback) noteTakebackPoint(action, state, playerId, undoPolicy)
             else if (action !is PassPriority) takebackManaRunOpen = false
             gameState = result.state
+            noteLoopStep(state, action, result.state)
             recordAction(action)
             pruneTakebackPoints(result.state)
             pendingTakeback = null
@@ -1142,11 +1165,11 @@ class GameSession(
         if (previous != null) {
             // Compute delta and send smaller message
             val delta = StateDiffCalculator.computeDelta(previous, stateWithLog)
-            return ServerMessage.StateDeltaUpdate(delta, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch, takebackLabelFor(playerId), pendingTakeback?.requesterId == playerId, takebackRequestFor(playerId))
+            return ServerMessage.StateDeltaUpdate(delta, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch, takebackLabelFor(playerId), pendingTakeback?.requesterId == playerId, takebackRequestFor(playerId), loopOfferInfoFor(playerId))
         }
 
         // First update — send full state
-        return ServerMessage.StateUpdate(stateWithLog, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch, takebackLabelFor(playerId), pendingTakeback?.requesterId == playerId, takebackRequestFor(playerId))
+        return ServerMessage.StateUpdate(stateWithLog, clientEvents, legalActions, pendingDecision, nextStopPoint, opponentDecisionStatus, stopOverrideInfo, isUndoAvailable(playerId), priorityModeStr, version, interactionEpoch, takebackLabelFor(playerId), pendingTakeback?.requesterId == playerId, takebackRequestFor(playerId), loopOfferInfoFor(playerId))
     }
 
     /**
@@ -1438,6 +1461,104 @@ class GameSession(
         if (pending.actionCount != recordedActions.size) null else pending
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Loop shortcuts (MTR 4.4)
+    // ---------------------------------------------------------------------------------------------
+
+    private fun noteLoopStep(before: GameState, action: GameAction, after: GameState) {
+        if (loopHistoryHead !== before || before.turnNumber != after.turnNumber) loopHistory.clear()
+        if (before.turnNumber == after.turnNumber) {
+            loopHistory += LoopStep(before, action)
+            if (loopHistory.size > MAX_LOOP_HISTORY) loopHistory.removeAt(0)
+        }
+        loopHistoryHead = after
+    }
+
+    /**
+     * The loop [playerId] has just completed and may repeat, or null. Offered only to a person, and
+     * only when every other seat is an AI: MTR 4.4 lets the opponents shorten a loop (act part-way
+     * through), and nothing asks a person that yet — against the AI the remaining iterations' passes
+     * are exactly the ones it made in the iteration played by hand.
+     */
+    fun loopOfferFor(playerId: EntityId): LoopCandidate? = synchronized(stateLock) {
+        val state = gameState ?: return null
+        if (state.priorityPlayerId != playerId) return null
+        val seats = getPlayers()
+        val me = seats.find { it.playerId == playerId } ?: return null
+        if (me.webSocketSession is com.wingedsheep.gameserver.ai.AiWebSocketSession) return null
+        if (seats.any { it.playerId != playerId && it.webSocketSession !is com.wingedsheep.gameserver.ai.AiWebSocketSession }) {
+            return null
+        }
+        loopOfferCache?.let { (s, c) -> if (s === state) return c }
+        if (loopHistoryHead !== state) loopHistory.clear()
+        val candidate = loopShortcut.detect(loopHistory, state, playerId)
+        loopOfferCache = state to candidate
+        candidate
+    }
+
+    /** [loopOfferFor] as the client sees it: what the loop is and what one repetition does. */
+    fun loopOfferInfoFor(playerId: EntityId): ServerMessage.LoopOfferInfo? {
+        val loop = loopOfferFor(playerId) ?: return null
+        val names = getPlayers().associate { it.playerId to it.playerName }
+        val perIteration = loop.delta.perPlayer.flatMap { (id, change) ->
+            val who = if (id == playerId) "You" else names[id] ?: "Opponent"
+            change.changes().map { (what, n) -> "$who: $what ${if (n > 0) "+$n" else "−${-n}"}" }
+        }
+        val first = loop.playerActions.first()
+        return ServerMessage.LoopOfferInfo(
+            label = takebackLabel(first, loop.steps.first { it.action === first }.before),
+            perIteration = perIteration,
+            iterationsToWin = loop.iterationsToWin,
+            maxIterations = loop.maxIterations,
+            actionsPerIteration = loop.steps.size,
+        )
+    }
+
+    /**
+     * Repeat the loop [playerId] was offered [iterations] more times. Every repeated action goes
+     * through the engine ([LoopShortcut.run]); the session then takes the result as if the actions
+     * had arrived one by one — replay log, a take-back point before the whole shortcut, the undo
+     * checkpoint cleared, a new interaction epoch so an AI reply computed on the old state is
+     * dropped — except that the stall guard sees one action, not thousands: a stated loop is the
+     * opposite of a game that stopped making progress.
+     */
+    fun executeLoopShortcut(playerId: EntityId, iterations: Int): LoopShortcutResult = synchronized(stateLock) {
+        val state = gameState ?: return LoopShortcutResult.Failure("Game not started")
+        val loop = loopOfferFor(playerId) ?: return LoopShortcutResult.Failure("No loop to repeat right now")
+        if (iterations < 1) return LoopShortcutResult.Failure("Repeat at least once")
+        val run = loopShortcut.run(loop, state, iterations)
+        if (run.iterations == 0) {
+            return LoopShortcutResult.Failure("The loop could not be repeated: ${run.reason ?: run.stop.name.lowercase()}")
+        }
+        takebackPoints += TakebackPoint(
+            state = state,
+            actionCount = recordedActions.size,
+            playerId = playerId,
+            label = "Repeat loop ×${run.iterations}",
+            turnNumber = state.turnNumber,
+        )
+        if (takebackPoints.size > MAX_TAKEBACK_POINTS) takebackPoints.removeAt(0)
+        takebackManaRunOpen = false
+        clearCheckpoint()
+        run.actions.forEach(::appendToReplayLog)
+        gameState = run.state
+        enforceProgress()
+        // [LoopShortcut.run] keeps no intermediate states, so the history starts over here: playing
+        // one more iteration by hand offers the loop again.
+        loopHistory.clear()
+        loopHistoryHead = run.state
+        loopOfferCache = null
+        liveInteractionEpoch = UUID.randomUUID().toString()
+        pendingTakeback = null
+        logger.info("Player $playerId repeated a loop ${run.iterations}× (${run.stop}${run.reason?.let { ": $it" } ?: ""})")
+        LoopShortcutResult.Success(run.state, run.iterations, run.stop, run.reason)
+    }
+
+    sealed interface LoopShortcutResult {
+        data class Success(val state: GameState, val iterations: Int, val stop: LoopStop, val reason: String?) : LoopShortcutResult
+        data class Failure(val reason: String) : LoopShortcutResult
+    }
+
     /**
      * Rewind to [playerId]'s latest take-back point this turn: the state before their last
      * decision, with everything after it — their own actions, what resolved, the opponent's
@@ -1565,6 +1686,7 @@ class GameSession(
         applyUndoPolicy(undoPolicy, action, state, playerId)
 
         gameState = result.state
+        noteLoopStep(state, action, result.state)
         recordAction(action)
         val pendingDecision = result.pendingDecision
         return if (pendingDecision != null) {

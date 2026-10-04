@@ -118,6 +118,7 @@ class GamePlayHandler(
             is ClientMessage.RequestUndo -> handleRequestUndo(session)
             is ClientMessage.RequestTakeback -> handleRequestTakeback(session)
             is ClientMessage.RespondTakeback -> handleRespondTakeback(session, message)
+            is ClientMessage.RepeatLoop -> handleRepeatLoop(session, message)
 
             is ClientMessage.RequestResync -> handleRequestResync(session)
             else -> {}
@@ -1235,6 +1236,29 @@ class GamePlayHandler(
             is GameSession.ActionResult.Failure ->
                 replyTo?.let { sender.sendError(it, ErrorCode.INVALID_ACTION, result.reason) }
             else -> broadcastStateUpdate(gameSession, emptyList())
+        }
+    }
+
+    /** Repeat the loop the player was offered (MTR 4.4) — see [GameSession.executeLoopShortcut]. */
+    private fun handleRepeatLoop(session: WebSocketSession, message: ClientMessage.RepeatLoop) {
+        val playerSession = sessionRegistry.getPlayerSession(session.id)
+        if (playerSession == null) {
+            sender.sendError(session, ErrorCode.NOT_CONNECTED, "Not connected")
+            return
+        }
+        val gameSession = getGameSession(session, playerSession) ?: return
+        when (val result = gameSession.executeLoopShortcut(playerSession.playerId, message.iterations)) {
+            is GameSession.LoopShortcutResult.Failure ->
+                sender.sendError(session, ErrorCode.INVALID_ACTION, result.reason)
+            is GameSession.LoopShortcutResult.Success -> {
+                logger.info("Player ${playerSession.playerName} repeated a loop ${result.iterations}×")
+                sender.send(
+                    session,
+                    ServerMessage.LoopRepeated(result.iterations, message.iterations, result.stop.name, result.reason),
+                )
+                broadcastStateUpdate(gameSession, emptyList())
+                if (gameSession.isGameOver()) handleGameOver(gameSession)
+            }
         }
     }
 

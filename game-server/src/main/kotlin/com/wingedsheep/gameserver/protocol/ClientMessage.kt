@@ -519,6 +519,14 @@ sealed interface ClientMessage {
     data class RespondTakeback(val accept: Boolean) : ClientMessage
 
     /**
+     * Repeat the loop this player was just offered ([ServerMessage.LoopOfferInfo]) [iterations]
+     * more times — the MTR 4.4 shortcut.
+     */
+    @Serializable
+    @SerialName("repeatLoop")
+    data class RepeatLoop(val iterations: Int) : ClientMessage
+
+    /**
      * Request a full state resync. Sent by the client when it detects it may have missed
      * messages (e.g., tab was backgrounded, or a gap in stateVersion sequence).
      */
