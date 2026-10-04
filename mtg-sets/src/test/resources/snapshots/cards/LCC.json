@@ -1,0 +1,95 @@
+// Broadside Bombardiers
+{
+    "name": "Broadside Bombardiers",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Goblin Pirate",
+    "oracleText": "Menace, haste\nBoast — Sacrifice another creature or artifact: This creature deals damage equal to 2 plus the sacrificed permanent's mana value to any target. (Activate only if this creature attacked this turn and only once each turn.)",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "MENACE",
+        "HASTE"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Broadside Bombardiers:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomSacrifice",
+                        "filter": "creature|artifact",
+                        "excludeSelf": true
+                    }
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Add",
+                        "left": {
+                            "type": "Fixed",
+                            "amount": 2
+                        },
+                        "right": {
+                            "type": "EntityProperty",
+                            "entity": "SacrificedAsCost",
+                            "numericProperty": "ManaValue"
+                        }
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ],
+                "restrictions": [
+                    "OncePerTurn",
+                    {
+                        "type": "ActivationOnlyIfCondition",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": "Self",
+                            "filter": {
+                                "statePredicates": [
+                                    "AttackedThisTurn"
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "isBoast": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "54",
+        "rarity": "RARE",
+        "artist": "Tomek Larek",
+        "flavorText": "When they ran short on cannonballs, they went for the pots and pans.",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/c/ec9df172-9fdb-4b0c-a23a-865b83c8fa40.jpg?1783913918",
+        "rulings": [
+            {
+                "date": "2023-11-10",
+                "text": "A boast ability can be activated at any point after the creature with that ability has been declared as an attacker, including during the postcombat main phase and the end step."
+            },
+            {
+                "date": "2023-11-10",
+                "text": "If a creature with a boast ability is put onto the battlefield attacking, it was never declared as an attacker. Its boast ability can't be activated that turn."
+            },
+            {
+                "date": "2023-11-10",
+                "text": "The back face of a double-faced card doesn't have a mana cost. A double-faced permanent with its back face up has a mana value equal to the mana value of its front face."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
