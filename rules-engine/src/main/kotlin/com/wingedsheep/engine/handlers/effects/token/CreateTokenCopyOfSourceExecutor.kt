@@ -92,7 +92,7 @@ class CreateTokenCopyOfSourceExecutor(
         val tokenCard = CopyExceptionApplier.apply(sourceCard, exceptions)
             .copy(ownerId = controllerId, isDoubleFaced = false)
 
-        val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "source-copy tokens")
+        val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "source-copy tokens", newState)
         for (index in 0 until cappedCount) {
             val (tokenId, stateWithId) = newState.newEntity()
             newState = stateWithId

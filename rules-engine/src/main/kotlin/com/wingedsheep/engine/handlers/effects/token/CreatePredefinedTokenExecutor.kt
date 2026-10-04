@@ -94,7 +94,7 @@ class CreatePredefinedTokenExecutor(
             ?.let { substitute ->
                 return substituteExecutor.createSubstituteTokens(
                     state, substitute, context,
-                    com.wingedsheep.engine.core.GameLimits.cappedTokenCount(tokenCount, "predefined tokens"),
+                    com.wingedsheep.engine.core.GameLimits.cappedTokenCount(tokenCount, "predefined tokens", state),
                     tokenControllerId
                 )
             }
@@ -120,7 +120,7 @@ class CreatePredefinedTokenExecutor(
         var newState = state
         val createdTokenIds = mutableListOf<EntityId>()
 
-        repeat(com.wingedsheep.engine.core.GameLimits.cappedTokenCount(tokenCount, "predefined tokens")) { indexInBatch ->
+        repeat(com.wingedsheep.engine.core.GameLimits.cappedTokenCount(tokenCount, "predefined tokens", state)) { indexInBatch ->
             val resolvedImageUri = resolvedImageUris[indexInBatch % resolvedImageUris.size]
             val (tokenId, stateWithId) = newState.newEntity()
             newState = stateWithId

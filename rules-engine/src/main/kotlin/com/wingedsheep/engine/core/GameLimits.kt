@@ -42,6 +42,23 @@ object GameLimits {
     const val MAX_TOKENS_PER_EFFECT: Int = 500
 
     /**
+     * Maximum number of tokens on the battlefield at once, all players together. [MAX_TOKENS_PER_EFFECT]
+     * bounds one effect; this bounds a *game*, which a repeated effect — a loop of one token per
+     * iteration, or a [com.wingedsheep.engine.loop.LoopShortcut] repeating it hundreds of times in one
+     * decision — would otherwise grow without limit, slowing every later step (each token is scanned
+     * by every projection, legal-action pass and combat decision). A token that would be created
+     * beyond it is not created, logged like the per-effect cap. The value comes from
+     * `TokenScalingBenchmark` (mtg-draft-ai `docs/60`).
+     */
+    const val MAX_TOKENS_ON_BATTLEFIELD: Int = 300
+
+    /** Most iterations a single loop shortcut may repeat (MTR 4.4 asks for a number; this bounds it). */
+    const val MAX_LOOP_ITERATIONS: Int = 1_000
+
+    /** Most actions a single loop shortcut may replay, all iterations together. */
+    const val MAX_LOOP_ACTIONS: Int = 20_000
+
+    /**
      * Maximum nesting/iteration depth of effect execution within a single resolution, enforced at
      * the [com.wingedsheep.engine.handlers.effects.EffectExecutorRegistry] chokepoint via
      * [EffectContext.resolutionDepth][com.wingedsheep.engine.handlers.EffectContext.resolutionDepth].
@@ -86,6 +103,33 @@ object GameLimits {
         }
         return capped
     }
+
+    /**
+     * [cappedTokenCount], further clamped so the battlefield never holds more than
+     * [MAX_TOKENS_ON_BATTLEFIELD] tokens in [state].
+     */
+    fun cappedTokenCount(requested: Int, what: String, state: com.wingedsheep.engine.state.GameState): Int {
+        val perEffect = cappedTokenCount(requested, what)
+        val room = (MAX_TOKENS_ON_BATTLEFIELD - tokensOnBattlefield(state)).coerceAtLeast(0)
+        if (perEffect > room) {
+            System.err.println(
+                "GameLimits: $requested $what would pass $MAX_TOKENS_ON_BATTLEFIELD tokens on the " +
+                    "battlefield — creating $room (likely a runaway token loop)."
+            )
+            return room
+        }
+        return perEffect
+    }
+
+    /** Whether one more token fits under [MAX_TOKENS_ON_BATTLEFIELD]; logs when it does not. */
+    fun hasTokenRoom(state: com.wingedsheep.engine.state.GameState, what: String): Boolean =
+        cappedTokenCount(1, what, state) == 1
+
+    /** Tokens on the battlefield, all players together. */
+    fun tokensOnBattlefield(state: com.wingedsheep.engine.state.GameState): Int =
+        state.getBattlefield().count {
+            state.getEntity(it)?.has<com.wingedsheep.engine.state.components.identity.TokenComponent>() == true
+        }
 
     /** Clamp [value] into `[-MAX_QUANTITY, MAX_QUANTITY]`. */
     fun clamp(value: Int): Int = value.coerceIn(-MAX_QUANTITY, MAX_QUANTITY)

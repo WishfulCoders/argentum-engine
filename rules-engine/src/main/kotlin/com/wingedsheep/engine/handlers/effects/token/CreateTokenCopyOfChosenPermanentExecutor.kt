@@ -110,6 +110,7 @@ class CreateTokenCopyOfChosenPermanentExecutor(
 
             val chosenCard = chosenContainer.copiableCardComponent()
                 ?: return EffectResult.success(state)
+            if (!com.wingedsheep.engine.core.GameLimits.hasTokenRoom(state, "chosen-copy token")) return EffectResult.success(state)
 
             val (tokenId, stateWithId) = state.newEntity()
 
