@@ -2685,6 +2685,144 @@
     "colorIdentityOverride": []
 }
 
+// Touch the Spirit Realm
+{
+    "name": "Touch the Spirit Realm",
+    "manaCost": "{2}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "When this enchantment enters, exile up to one target artifact or creature until this enchantment leaves the battlefield.\nChannel — {1}{W}, Discard this card: Exile target artifact or creature. Return it to the battlefield under its owner's control at the beginning of the next end step.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Touch the Spirit Realm:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "ExileUntilLeaves",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature|artifact"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "When this enchantment enters, exile up to one target artifact or creature until this enchantment leaves the battlefield."
+            },
+            {
+                "id": "Touch the Spirit Realm:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "linked_return"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "linked_return",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            },
+                            "underOwnersControl": true
+                        }
+                    ]
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Touch the Spirit Realm:3",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}{W}"
+                            }
+                        },
+                        "CostDiscardSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            },
+                            "destination": "Exile"
+                        },
+                        {
+                            "type": "CreateDelayedTrigger",
+                            "step": "END",
+                            "effect": {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                },
+                                "destination": "Battlefield"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature|artifact"
+                        },
+                        "id": "t1"
+                    }
+                ],
+                "activateFromZone": "Hand",
+                "descriptionOverride": "Channel — {1}{W}, Discard this card: Exile target artifact or creature. Return it at the beginning of the next end step."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "40",
+        "rarity": "UNCOMMON",
+        "artist": "Marta Nael",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/1/e16ab44e-4257-4c0c-b705-8ac1e9c1d835.jpg?1783923911",
+        "rulings": [
+            {
+                "date": "2022-02-18",
+                "text": "If Touch the Spirit Realm leaves the battlefield before its first ability resolves, the target permanent won't be exiled."
+            },
+            {
+                "date": "2022-02-18",
+                "text": "If a token is exiled this way, it will cease to exist and won't return to the battlefield."
+            },
+            {
+                "date": "2022-02-18",
+                "text": "If a channel ability requires a target, you may not activate it without a target just to discard the card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Towashi Songshaper
 {
     "name": "Towashi Songshaper",
