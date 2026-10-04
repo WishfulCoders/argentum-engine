@@ -1244,6 +1244,116 @@
     "layout": "MODAL_DFC"
 }
 
+// Skyclave Apparition
+{
+    "name": "Skyclave Apparition",
+    "manaCost": "{1}{W}{W}",
+    "typeLine": "Creature — Kor Spirit",
+    "oracleText": "When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less.\nWhen this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Skyclave Apparition:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile",
+                    "linkToSource": true
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "nonland permanent nontoken mv<=4 ctrl:opponent"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less."
+            },
+            {
+                "id": "Skyclave Apparition:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "CreateToken",
+                            "count": {
+                                "type": "VariableReference",
+                                "variableName": "gathered0_count"
+                            },
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [
+                                "BLUE"
+                            ],
+                            "creatureTypes": [
+                                "Illusion"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/2/3/2300635e-7771-4676-a5a5-29a9d8f49f1a.jpg?1783929499",
+                            "controller": {
+                                "type": "ControllerOfPipelineTarget",
+                                "collectionName": "gathered0"
+                            },
+                            "dynamicPower": {
+                                "type": "StoredCardManaValue",
+                                "collectionName": "gathered0"
+                            },
+                            "dynamicToughness": {
+                                "type": "StoredCardManaValue",
+                                "collectionName": "gathered0"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "39",
+        "rarity": "RARE",
+        "artist": "Donato Giancola",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/8/b83cfbaa-7890-4f6f-878b-4edb45677371.jpg?1783929406",
+        "rulings": [
+            {
+                "date": "2020-09-25",
+                "text": "If there's no exiled card when Skyclave Apparition leaves the battlefield (most likely because its first ability hasn't resolved yet), no player creates a token."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "If a creature on the battlefield has {X} in its mana cost, X is considered to be 0."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "If Skyclave Apparition leaves the battlefield before its first ability resolves, the ability still exiles the target permanent."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Spitfire Lagac
 {
     "name": "Spitfire Lagac",

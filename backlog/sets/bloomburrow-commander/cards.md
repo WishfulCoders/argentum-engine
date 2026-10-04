@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 140 / 312
+**Implemented:** 141 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -250,7 +250,7 @@
 - [x] Siege-Gang Commander
 - [x] Simic Ascendancy
 - [ ] Skullclamp
-- [ ] Skyclave Apparition
+- [x] Skyclave Apparition
 - [ ] Skycloud Expanse
 - [ ] Skyfisher Spider
 - [x] Sol Ring
