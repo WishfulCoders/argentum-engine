@@ -938,6 +938,54 @@
     ]
 }
 
+// Giver of Runes
+{
+    "name": "Giver of Runes",
+    "manaCost": "{W}",
+    "typeLine": "Creature — Kor Cleric",
+    "oracleText": "{T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Giver of Runes:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "GrantProtectionFromColorlessOrChosenColor",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you",
+                            "excludeSelf": true
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "13",
+        "rarity": "RARE",
+        "artist": "Seb McKinnon",
+        "flavorText": "She provides marks of protection to those she chooses as family.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/e/4e117771-5a8b-4812-b487-32ba34b7f724.jpg?1783933162"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Goblin Oriflamme
 {
     "name": "Goblin Oriflamme",
