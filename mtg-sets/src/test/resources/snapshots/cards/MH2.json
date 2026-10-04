@@ -2019,6 +2019,72 @@
     ]
 }
 
+// Prismatic Ending
+{
+    "name": "Prismatic Ending",
+    "manaCost": "{X}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Converge — Exile target nonland permanent if its mana value is less than or equal to the number of colors of mana spent to cast this spell.",
+    "script": {
+        "spellEffect": {
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "numericProperty": "ManaValue"
+                    },
+                    "operator": "LTE",
+                    "right": "DistinctColorsManaSpent"
+                }
+            },
+            "then": {
+                "type": "MoveToZone",
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                },
+                "destination": "Exile"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "nonland permanent"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "25",
+        "rarity": "UNCOMMON",
+        "artist": "John Stanko",
+        "flavorText": "Right before his demise, he experienced a shattering revelation.",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/2/825969b9-3c70-4fca-8cab-696e9ca7cdb2.jpg?1783926888",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "The mana value is not a targeting condition. It is checked only as the spell resolves."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you cast a spell with converge without spending any mana to cast it (perhaps because an effect allowed you to cast it without paying its mana cost), then the number of colors spent to cast it will be zero."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Ragavan, Nimble Pilferer
 {
     "name": "Ragavan, Nimble Pilferer",
