@@ -91,6 +91,7 @@ object TokenFromDefinition {
         staticAbilityHandler: StaticAbilityHandler? = null,
         devourCounters: Int? = null,
     ): EffectResult {
+        if (!com.wingedsheep.engine.core.GameLimits.hasTokenRoom(state, "token")) return EffectResult.success(state)
         // As-enters: Devour (CR 702.82) and its variants, raised before the token is minted — see
         // [devourCounters]. Skipped when the controller has nothing to sacrifice; devour then just
         // adds no counters, which is also what choosing zero permanents does (CR 702.82a).

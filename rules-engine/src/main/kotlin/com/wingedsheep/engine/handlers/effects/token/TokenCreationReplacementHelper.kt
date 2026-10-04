@@ -202,7 +202,7 @@ object TokenCreationReplacementHelper {
 
             repeat(
                 com.wingedsheep.engine.core.GameLimits.cappedTokenCount(
-                    effect.additionalTokenCount, "additional tokens"
+                    effect.additionalTokenCount, "additional tokens", newState
                 )
             ) {
                 val (tokenId, stateWithId) = newState.newEntity()
@@ -371,7 +371,7 @@ object TokenCreationReplacementHelper {
         val events = mutableListOf<com.wingedsheep.engine.core.GameEvent>()
 
         // Same structural cap as CreateTokenExecutor: copies are full entities too.
-        val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "token copies")
+        val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "token copies", state)
 
         repeat(cappedCount) {
             val (tokenId, stateWithId) = newState.newEntity()

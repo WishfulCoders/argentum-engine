@@ -104,7 +104,7 @@ class CreateTokenCopyOfTargetExecutor(
                 auraName = targetCard.name,
                 controllerId = controllerId,
                 remaining = com.wingedsheep.engine.core.GameLimits
-                    .cappedTokenCount(count, "target-copy tokens"),
+                    .cappedTokenCount(count, "target-copy tokens", state),
                 cardRegistry = cardRegistry,
             )
         }
@@ -150,7 +150,7 @@ class CreateTokenCopyOfTargetExecutor(
         val tokenCard = CopyExceptionApplier.apply(targetCard, exceptions)
             .copy(ownerId = controllerId, isDoubleFaced = false)
 
-        val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "target-copy tokens")
+        val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "target-copy tokens", state)
         for (index in 0 until cappedCount) {
             val (tokenId, stateWithId) = newState.newEntity()
             newState = stateWithId

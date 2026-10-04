@@ -111,7 +111,7 @@ class CreateTokenExecutor(
         // Structural cap: each token is a full ECS entity, so an unbounded doubler stack would
         // allocate entities until the JVM OOMs. Clamp before the allocation loop — a board this
         // large is already a decided game. See GameLimits.MAX_TOKENS_PER_EFFECT.
-        val count = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(requestedCount, "tokens")
+        val count = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(requestedCount, "tokens", state)
 
         // Check for token creation replacement effects (e.g., Mirrormind Crown)
         val replacementResult = TokenCreationReplacementHelper.checkReplacement(

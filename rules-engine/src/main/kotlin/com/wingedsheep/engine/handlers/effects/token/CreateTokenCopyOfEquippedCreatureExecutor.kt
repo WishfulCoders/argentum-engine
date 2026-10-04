@@ -61,6 +61,7 @@ class CreateTokenCopyOfEquippedCreatureExecutor(
             ?: return EffectResult.success(state)
 
         val controllerId = context.controllerId
+        if (!com.wingedsheep.engine.core.GameLimits.hasTokenRoom(state, "equipped-copy token")) return EffectResult.success(state)
 
         val (tokenId, stateWithId) = state.newEntity()
         var newState = stateWithId
