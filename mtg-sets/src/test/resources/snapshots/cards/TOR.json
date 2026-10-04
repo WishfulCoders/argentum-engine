@@ -570,6 +570,79 @@
     ]
 }
 
+// Grim Lavamancer
+{
+    "name": "Grim Lavamancer",
+    "manaCost": "{R}",
+    "typeLine": "Creature — Human Wizard",
+    "oracleText": "{R}, {T}, Exile two cards from your graveyard: This creature deals 2 damage to any target.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Grim Lavamancer:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{R}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomExileFrom",
+                                "zone": "Graveyard",
+                                "count": 2
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "100",
+        "rarity": "RARE",
+        "artist": "Jim Nelson",
+        "flavorText": "\"Fools dig for water, corpses, or gold. The earth's real treasure is far deeper.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/d/5dd72697-24be-42c7-a6d9-a837bdbd4662.jpg?1783945148",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "The two cards are exiled as the cost of Grim Lavamancer's ability is paid. Players can't respond to the paying of costs by trying to move those cards to another zone."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Hypochondria
 {
     "name": "Hypochondria",
