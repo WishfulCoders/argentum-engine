@@ -72,7 +72,7 @@
 - [ ] 1 Golgari Signet
 - [ ] 1 Idol of Oblivion
 - [ ] 1 Maskwood Nexus
-- [ ] 1 Skullclamp
+- [x] 1 Skullclamp
 - [x] 1 Sol Ring
 - [ ] 1 Sword of the Squeak
 - [ ] 1 Talisman of Resilience
