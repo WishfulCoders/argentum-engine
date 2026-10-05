@@ -557,6 +557,64 @@
     ]
 }
 
+// Chromatic Star
+{
+    "name": "Chromatic Star",
+    "manaCost": "{1}",
+    "typeLine": "Artifact",
+    "oracleText": "{1}, {T}, Sacrifice this artifact: Add one mana of any color.\nWhen this artifact is put into a graveyard from the battlefield, draw a card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Chromatic Star:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "descriptionOverride": "When this artifact is put into a graveyard from the battlefield, draw a card."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Chromatic Star:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        "CostTap",
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": "AddManaOfChoice",
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "Add one mana of any color."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "251",
+        "artist": "Alex Horley-Orlandelli",
+        "flavorText": "\"This item is not from . . . now. It reflects a sky no longer ours and gleams with hope that does not exist.\"\n—Tavalus, acolyte of Korlis",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/d/1d7a1357-debd-49b0-9fd5-560d5b3f589e.jpg?1783943199"
+    },
+    "colorIdentityOverride": []
+}
+
 // Chronosavant
 {
     "name": "Chronosavant",
