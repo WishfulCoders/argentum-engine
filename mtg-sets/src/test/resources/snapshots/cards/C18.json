@@ -94,3 +94,132 @@
         ]
     }
 }
+
+// Retrofitter Foundry
+{
+    "name": "Retrofitter Foundry",
+    "manaCost": "{1}",
+    "typeLine": "Artifact",
+    "oracleText": "{3}: Untap this artifact.\n{2}, {T}: Create a 1/1 colorless Servo artifact creature token.\n{1}, {T}, Sacrifice a Servo: Create a 1/1 colorless Thopter artifact creature token with flying.\n{T}, Sacrifice a Thopter: Create a 4/4 colorless Construct artifact creature token.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Retrofitter Foundry:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{3}"
+                    }
+                },
+                "effect": {
+                    "type": "TapUntap",
+                    "target": "Self",
+                    "tap": false
+                },
+                "descriptionOverride": "{3}: Untap this artifact."
+            },
+            {
+                "id": "Retrofitter Foundry:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Servo"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/6/e/6ec42fab-86b8-4479-90f2-a1690318d6d4.jpg?1783934348",
+                    "artifactToken": true
+                },
+                "descriptionOverride": "{2}, {T}: Create a 1/1 colorless Servo artifact creature token."
+            },
+            {
+                "id": "Retrofitter Foundry:3",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomSacrifice",
+                                "filter": "permanent Servo"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Thopter"
+                    ],
+                    "keywords": [
+                        "FLYING"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/6/2/62cafc0a-cd02-4265-aa1f-b8a6cb7cc8db.jpg?1783934348",
+                    "artifactToken": true
+                },
+                "descriptionOverride": "{1}, {T}, Sacrifice a Servo: Create a 1/1 colorless Thopter artifact creature token with flying."
+            },
+            {
+                "id": "Retrofitter Foundry:4",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomSacrifice",
+                                "filter": "permanent Thopter"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 4,
+                    "toughness": 4,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Construct"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/7/f/7fee6034-f0bb-49b9-ad75-67d3d6be1159.jpg?1783934350",
+                    "artifactToken": true
+                },
+                "descriptionOverride": "{T}, Sacrifice a Thopter: Create a 4/4 colorless Construct artifact creature token."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "57",
+        "rarity": "RARE",
+        "artist": "Dmitry Burmak",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/d/5da578b8-19e6-4068-9336-e7cd33c585f1.jpg?1783934323"
+    },
+    "colorIdentityOverride": []
+}

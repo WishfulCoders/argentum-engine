@@ -1,3 +1,192 @@
+// Currency Converter
+{
+    "name": "Currency Converter",
+    "manaCost": "{1}",
+    "typeLine": "Artifact",
+    "oracleText": "Whenever you discard a card, you may exile that card from your graveyard.\n{2}, {T}: Draw a card, then discard a card.\n{T}: Put a card exiled with this artifact into its owner's graveyard. If it's a land card, create a Treasure token. If it's a nonland card, create a 2/2 black Rogue creature token.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Currency Converter:1",
+                "trigger": "DiscardEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": "TriggeringEntity",
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "FilterCollection",
+                                "from": "gathered0",
+                                "filter": {
+                                    "statePredicates": [
+                                        {
+                                            "type": "InZone",
+                                            "zone": "Graveyard"
+                                        }
+                                    ]
+                                },
+                                "storeMatching": "matching1"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "matching1",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Exile"
+                                },
+                                "linkToSource": true
+                            }
+                        ]
+                    },
+                    "descriptionOverride": "Exile the discarded card from your graveyard?"
+                },
+                "descriptionOverride": "Whenever you discard a card, you may exile that card from your graveyard."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Currency Converter:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand"
+                                    },
+                                    "storeAs": "hand"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "hand",
+                                    "selection": {
+                                        "type": "ChooseExactly",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "discarded",
+                                    "prompt": "Choose 1 card to discard"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "discarded",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Graveyard"
+                                    },
+                                    "moveType": "Discard"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "descriptionOverride": "{2}, {T}: Draw a card, then discard a card."
+            },
+            {
+                "id": "Currency Converter:3",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Choose a card exiled with Currency Converter"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            }
+                        },
+                        {
+                            "type": "ConditionalOnCollection",
+                            "collection": "selected1",
+                            "ifNotEmpty": {
+                                "type": "CreatePredefinedToken",
+                                "tokenType": "Treasure"
+                            },
+                            "ifEmpty": {
+                                "type": "ConditionalOnCollection",
+                                "collection": "selected1",
+                                "ifNotEmpty": {
+                                    "type": "CreateToken",
+                                    "power": 2,
+                                    "toughness": 2,
+                                    "colors": [
+                                        "BLACK"
+                                    ],
+                                    "creatureTypes": [
+                                        "Rogue"
+                                    ],
+                                    "imageUri": "https://cards.scryfall.io/normal/front/0/5/0526330e-40eb-4c5f-b0f5-5489839e5f44.jpg?1789737431"
+                                }
+                            },
+                            "filter": "land"
+                        }
+                    ]
+                },
+                "descriptionOverride": "{T}: Put a card exiled with this artifact into its owner's graveyard. If it's a land card, create a Treasure token. If it's a nonland card, create a 2/2 black Rogue creature token."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "81",
+        "rarity": "RARE",
+        "artist": "Sean Murray",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/8/187b6719-e5ed-4615-a00b-3313ceca055b.jpg?1783923344"
+    },
+    "colorIdentityOverride": []
+}
+
 // Extravagant Replication
 {
     "name": "Extravagant Replication",

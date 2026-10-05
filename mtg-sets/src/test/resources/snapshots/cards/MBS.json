@@ -428,6 +428,56 @@
     ]
 }
 
+// Phyrexian Revoker
+{
+    "name": "Phyrexian Revoker",
+    "manaCost": "{2}",
+    "typeLine": "Artifact Creature — Phyrexian Horror",
+    "oracleText": "As this creature enters, choose a nonland card name.\nActivated abilities of sources with the chosen name can't be activated.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "PreventActivatedAbilities",
+                "filter": {
+                    "cardPredicates": [
+                        "NameEqualsChosenComponent"
+                    ]
+                },
+                "anyZone": true
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "CARD_NAME",
+                "cardNamePool": "NONLAND"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "122",
+        "rarity": "RARE",
+        "artist": "Kev Walker",
+        "flavorText": "Basic senses like sight and taste are reserved for those in power.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c7bec21-61b0-4e72-848b-82f38e1910e0.jpg?1783941366",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "Activated abilities are written in the form \"Cost: Effect.\" Some keywords are activated abilities (such as equip) and will have colons in their reminder texts. Static and triggered abilities of sources with the chosen name are unaffected."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "Phyrexian Revoker's ability affects sources with the chosen name no matter what zone they are in. For example, a cycling ability of a card with the chosen name can't be activated from hand."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Quilled Slagwurm
 {
     "name": "Quilled Slagwurm",
