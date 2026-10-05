@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.morph
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
@@ -144,8 +145,10 @@ class TurnFaceUpHandler(
                             red = poolComponent.red,
                             green = poolComponent.green,
                             colorless = poolComponent.colorless,
-                            restrictedMana = poolComponent.restrictedMana
-                        )
+                            restrictedMana = poolComponent.restrictedMana,
+                            snowMana = poolComponent.snowMana,
+                            snowColorless = poolComponent.snowColorless
+                        ).withSpendingColors(state, action.playerId)
                         if (!costHandler.canPayManaCost(pool, withXResolved(manaCost, xValue), faceUpContext)) {
                             return "Insufficient mana in pool to turn this creature face up"
                         }
@@ -227,8 +230,10 @@ class TurnFaceUpHandler(
                             red = poolComponent.red,
                             green = poolComponent.green,
                             colorless = poolComponent.colorless,
-                            restrictedMana = poolComponent.restrictedMana
-                        )
+                            restrictedMana = poolComponent.restrictedMana,
+                            snowMana = poolComponent.snowMana,
+                            snowColorless = poolComponent.snowColorless
+                        ).withSpendingColors(currentState, action.playerId)
 
                         val newPool = costHandler.payManaCost(pool, withXResolved(manaCost, xValue), faceUpContext)
                             ?: return ExecutionResult.error(currentState, "Insufficient mana in pool")
@@ -242,7 +247,9 @@ class TurnFaceUpHandler(
                                     red = newPool.red,
                                     green = newPool.green,
                                     colorless = newPool.colorless,
-                                    restrictedMana = newPool.restrictedMana
+                                    restrictedMana = newPool.restrictedMana,
+                                    snowMana = newPool.snowMana,
+                                    snowColorless = newPool.snowColorless
                                 )
                             )
                         }
@@ -272,8 +279,10 @@ class TurnFaceUpHandler(
                             red = poolComponent.red,
                             green = poolComponent.green,
                             colorless = poolComponent.colorless,
-                            restrictedMana = poolComponent.restrictedMana
-                        )
+                            restrictedMana = poolComponent.restrictedMana,
+                            snowMana = poolComponent.snowMana,
+                            snowColorless = poolComponent.snowColorless
+                        ).withSpendingColors(currentState, action.playerId)
 
                         val partialResult = pool.payPartial(manaCost, faceUpContext)
                         var poolAfterPayment = partialResult.newPool
@@ -291,7 +300,7 @@ class TurnFaceUpHandler(
                         val xSymbolCount = manaCost.xCount.coerceAtLeast(1)
                         var xRemainingToPay = xValue * xSymbolCount
                         while (xRemainingToPay > 0 && poolAfterPayment.colorless > 0) {
-                            poolAfterPayment = poolAfterPayment.copy(colorless = poolAfterPayment.colorless - 1)
+                            poolAfterPayment = poolAfterPayment.spendColorless()!!
                             colorlessSpent++
                             xRemainingToPay--
                         }
@@ -306,11 +315,11 @@ class TurnFaceUpHandler(
                                 }
                                 if (current <= 0) break
                                 poolAfterPayment = when (color) {
-                                    Color.WHITE -> poolAfterPayment.copy(white = poolAfterPayment.white - 1).also { whiteSpent++ }
-                                    Color.BLUE -> poolAfterPayment.copy(blue = poolAfterPayment.blue - 1).also { blueSpent++ }
-                                    Color.BLACK -> poolAfterPayment.copy(black = poolAfterPayment.black - 1).also { blackSpent++ }
-                                    Color.RED -> poolAfterPayment.copy(red = poolAfterPayment.red - 1).also { redSpent++ }
-                                    Color.GREEN -> poolAfterPayment.copy(green = poolAfterPayment.green - 1).also { greenSpent++ }
+                                    Color.WHITE -> poolAfterPayment.spend(color)!!.also { whiteSpent++ }
+                                    Color.BLUE -> poolAfterPayment.spend(color)!!.also { blueSpent++ }
+                                    Color.BLACK -> poolAfterPayment.spend(color)!!.also { blackSpent++ }
+                                    Color.RED -> poolAfterPayment.spend(color)!!.also { redSpent++ }
+                                    Color.GREEN -> poolAfterPayment.spend(color)!!.also { greenSpent++ }
                                 }
                                 xRemainingToPay--
                             }
@@ -325,7 +334,9 @@ class TurnFaceUpHandler(
                                     red = poolAfterPayment.red,
                                     green = poolAfterPayment.green,
                                     colorless = poolAfterPayment.colorless,
-                                    restrictedMana = poolAfterPayment.restrictedMana
+                                    restrictedMana = poolAfterPayment.restrictedMana,
+                                    snowMana = poolAfterPayment.snowMana,
+                                    snowColorless = poolAfterPayment.snowColorless
                                 )
                             )
                         }

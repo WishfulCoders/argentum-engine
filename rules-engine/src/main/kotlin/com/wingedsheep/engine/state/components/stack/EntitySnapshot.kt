@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.state.components.stack
 
+import com.wingedsheep.engine.state.components.identity.TextChanges
+import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
@@ -13,6 +15,7 @@ import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.TypeLine
+import com.wingedsheep.sdk.model.CharacteristicValue
 import com.wingedsheep.sdk.model.EntityId
 import kotlinx.serialization.Serializable
 
@@ -103,6 +106,10 @@ data class EntitySnapshot(
     val typeLine: TypeLine? = null,
     /** Card definition id, so dies/leaves triggers resolve for tokens after 704.5d cleanup. */
     val cardDefinitionId: String? = null,
+    /** Effective text at departure, before zone movement ends the object's text changes. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val textChanges: TextReplacementComponent? = null,
     /**
      * The permanent's name at capture time. Frozen because a *cost* has to be describable after the
      * permanent it consumed is gone: the emerge sacrifice (CR 702.119a) is named on the stack card
@@ -117,9 +124,8 @@ data class EntitySnapshot(
     /**
      * True if this permanent had at least one Equipment attached when it left the battlefield. The
      * live attachment links are torn down by the exit cleanup, so leaves/dies triggers asking "was
-     * it modified/equipped?" must read last-known information (CR 608.2h). Backs the last-known leg
-     * of [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsEquipped] and (together with
-     * counters / [wasEnchanted]) [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsModified].
+     * it equipped?" must read last-known information (CR 608.2h). Backs the last-known leg of
+     * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsEquipped].
      */
     val wasEquipped: Boolean = false,
     /**
@@ -138,9 +144,17 @@ data class EntitySnapshot(
     /**
      * True if this permanent had at least one Aura attached when it left the battlefield (CR 303.4).
      * Last-known counterpart to [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsEnchanted];
-     * a leg of the last-known [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsModified].
+     * see [wasModified] for the last-known
+     * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsModified].
      */
     val wasEnchanted: Boolean = false,
+    /**
+     * True if this permanent was modified (CR 700.9) when it left the battlefield: it had a counter,
+     * an Equipment, or an Aura controlled by its own controller. Not derivable from [wasEnchanted],
+     * which counts an opponent's Aura too. Backs the last-known leg of
+     * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsModified].
+     */
+    val wasModified: Boolean = false,
     /** Creatures blocking, or blocked by, this one when it left (CR 509; Abu Ja'far). */
     val blockingOrBlockedByIds: List<EntityId> = emptyList(),
     /**
@@ -206,6 +220,25 @@ data class EntitySnapshot(
      * way [wasSuspected] does for the suspected designation.
      */
     val wasFaceDown: Boolean = false,
+    /** Copy-added rules text, frozen before the original identity is restored on departure. */
+    val copyTriggeredAbilities: List<com.wingedsheep.sdk.scripting.TriggeredAbility> = emptyList(),
+    /**
+     * The granted triggered abilities this permanent had immediately before it left that can't be
+     * read back afterwards: its "as long as …" self-grants whose condition held, and the triggered
+     * abilities its Auras / Equipment granted it. Leaves-the-battlefield abilities look back in time
+     * (CR 603.10a) — Oculus Whelp's conditional "when this creature dies" and Infernal Scarring's
+     * granted one are read from here. See [com.wingedsheep.engine.event.LookBackGrants].
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val lookBackGrants: com.wingedsheep.engine.event.LookBackGrants? = null,
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val objectRef: com.wingedsheep.engine.state.ObjectRef? = null,
+    /** Mana value before the cost or zone change, including copy/face-down characteristics. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val manaValue: Int? = null,
 ) : EntityView {
     companion object {
         /**
@@ -218,8 +251,11 @@ data class EntitySnapshot(
             val projected = state.projectedState
             return EntitySnapshot(
                 entityId = entityId,
+                objectRef = state.objectRef(entityId),
+                wasFaceDown = state.getEntity(entityId)?.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() == true,
                 battlefieldEntryTimestamp = state.getEntity(entityId)
                     ?.get<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()?.timestamp,
+                manaValue = permanentManaValue(state, entityId),
                 power = projected.getPower(entityId),
                 toughness = projected.getToughness(entityId),
                 subtypes = projected.getSubtypes(entityId),
@@ -247,9 +283,14 @@ private fun countersOf(state: GameState, entityId: EntityId): Map<CounterType, I
 fun captureEntitySnapshots(
     ids: List<EntityId>,
     projected: ProjectedState,
+    state: GameState? = null,
 ): List<EntitySnapshot> = ids.map { id ->
     EntitySnapshot(
         entityId = id,
+        objectRef = state?.objectRef(id),
+        wasFaceDown = state?.getEntity(id)?.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() == true,
+        name = state?.getEntity(id)?.get<CardComponent>()?.name,
+        manaValue = state?.let { permanentManaValue(it, id) },
         power = projected.getPower(id),
         toughness = projected.getToughness(id),
         subtypes = projected.getSubtypes(id),
@@ -271,13 +312,34 @@ fun captureEntitySnapshots(
 fun captureEntitySnapshots(
     ids: List<EntityId>,
     state: GameState,
-): List<EntitySnapshot> = captureEntitySnapshots(ids, state.projectedState).map { snapshot ->
+): List<EntitySnapshot> = captureEntitySnapshots(ids, state.projectedState, state).map { snapshot ->
     val container = state.getEntity(snapshot.entityId)
     snapshot.copy(
         battlefieldEntryTimestamp = container
             ?.get<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()?.timestamp,
         wasToken = container?.has<TokenComponent>() ?: false,
         name = container?.get<CardComponent>()?.name,
+    )
+}
+
+/**
+ * Each card's characteristics as it sits in a hidden zone — a card revealed from hand to pay a cost
+ * (`EffectTarget.RevealedAsCost`). Off the battlefield there is no projection, so power and
+ * toughness are the printed fixed values; a characteristic-defining `*` is left null so a read falls
+ * through to evaluating it live. The type line rides along so a power read of a noncreature card
+ * answers 0, as it would in hand.
+ */
+fun captureCardInHandSnapshots(state: GameState, ids: List<EntityId>): List<EntitySnapshot> = ids.map { id ->
+    val card = state.getEntity(id)?.get<CardComponent>()
+    EntitySnapshot(
+        entityId = id,
+        objectRef = state.objectRef(id),
+        name = card?.name,
+        manaValue = card?.manaValue ?: 0,
+        power = (card?.baseStats?.power as? CharacteristicValue.Fixed)?.value,
+        toughness = (card?.baseStats?.toughness as? CharacteristicValue.Fixed)?.value,
+        typeLine = card?.typeLine,
+        cardDefinitionId = card?.cardDefinitionId,
     )
 }
 
@@ -296,6 +358,8 @@ fun captureLastKnown(state: GameState, entityId: EntityId): EntitySnapshot {
         typeLine = projectedTypeLine(state, entityId),
         keywords = state.projectedState.getKeywords(entityId),
         cardDefinitionId = container?.get<CardComponent>()?.cardDefinitionId,
+        copyTriggeredAbilities = captureCopyTriggeredAbilities(state, entityId),
+        textChanges = TextChanges.of(state, entityId),
         wasAttacking = container?.has<AttackingComponent>() ?: false,
         wasBlocking = container?.has<BlockingComponent>() ?: false,
         attachmentIds = attachmentIdsOf(state, entityId),
@@ -345,3 +409,21 @@ fun List<EntitySnapshot>.snapshotFor(id: EntityId): EntitySnapshot? =
 
 val List<EntitySnapshot>.entityIds: List<EntityId>
     get() = map { it.entityId }
+
+/** Freeze copy-added rules text while its battlefield text-changing effects still apply. */
+fun captureCopyTriggeredAbilities(state: GameState, entityId: EntityId): List<com.wingedsheep.sdk.scripting.TriggeredAbility> {
+    val container = state.getEntity(entityId) ?: return emptyList()
+    val abilities = container.get<CardComponent>()?.copyTriggeredAbilities.orEmpty()
+    if (abilities.isEmpty()) return abilities
+    if (container.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() ||
+        state.projectedState.hasLostAllAbilities(entityId)
+    ) return emptyList()
+    val replacement = TextChanges.of(state, entityId)
+        ?: return abilities
+    return abilities.map { it.applyTextReplacement(replacement) }
+}
+
+/** Face-down permanents have no mana cost; copies and transformed faces use the effective card. */
+private fun permanentManaValue(state: GameState, entityId: EntityId): Int =
+    if (state.getEntity(entityId)?.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() == true) 0
+    else state.getEntity(entityId)?.get<CardComponent>()?.manaValue ?: 0

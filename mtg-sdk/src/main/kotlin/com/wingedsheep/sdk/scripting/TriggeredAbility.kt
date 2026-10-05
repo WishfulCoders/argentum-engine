@@ -114,6 +114,15 @@ data class TriggeredAbility(
      * "Do this only once each turn", use [effectOncePerTurn]. */
     val oncePerTurn: Boolean = false,
     /**
+     * "This ability triggers only **N times** each turn" for N of two or more (Nadu, Winged
+     * Wisdom's granted "triggers only twice each turn"). The same trigger cap as [oncePerTurn] —
+     * spent by each trigger whether or not anything came of it, tracked per (source permanent,
+     * ability) and cleared in cleanup — with a count instead of a single use. One is
+     * [oncePerTurn]'s spelling, so this rejects anything below two; read the cap through
+     * [perTurnTriggerCap], which folds the two together.
+     */
+    val triggersPerTurn: Int? = null,
+    /**
      * When true, this ability carries the printed rider "*Do this only once each turn*" (Jennifer
      * Walters // The Sensational She-Hulk, Baron Strucker, HYDRA Overlord).
      *
@@ -154,9 +163,34 @@ data class TriggeredAbility(
      * Acrobatic Cheerleader: "This ability triggers only once." Tracked by a component that,
      * unlike the [oncePerTurn] tracker, is NOT cleared at end of turn. */
     val triggersOnce: Boolean = false,
+    /**
+     * True for a *backup* ability (March of the Machine; CR 702.165). "Backup N" is an enters
+     * trigger — put N +1/+1 counters on target creature; if that's another creature, it gains the
+     * printed abilities below backup until end of turn — and the card composes that effect like
+     * any other trigger. This flag is only the keyword marker, the triggered twin of
+     * [ActivatedAbility.isBoast]: it travels with the ability onto the stack so a trigger can ask
+     * whether *a backup ability* did the targeting (Mirror-Shield Hoplite's
+     * [EventPattern.BecomesTargetEvent.backupAbilitiesOnly]). A copy of a backup ability is a
+     * backup ability too (CR 707.2 — the copy copies the ability's text).
+     */
+    val isBackup: Boolean = false,
     /** Optional human-readable description that overrides the auto-generated one. */
     val descriptionOverride: String? = null
 ) : TextReplaceable<TriggeredAbility> {
+    init {
+        require(triggersPerTurn == null || triggersPerTurn >= 2) {
+            "triggersPerTurn must be at least 2 — \"triggers only once each turn\" is oncePerTurn = true"
+        }
+        require(triggersPerTurn == null || !oncePerTurn) {
+            "A triggered ability sets either oncePerTurn or triggersPerTurn, not both"
+        }
+    }
+
+    /** How many times this ability may trigger each turn — 1 for [oncePerTurn], [triggersPerTurn]
+     * otherwise, null when uncapped. */
+    val perTurnTriggerCap: Int?
+        get() = if (oncePerTurn) 1 else triggersPerTurn
+
     /**
      * Every condition checked *when the trigger event occurs* — both kinds, since CR 603.2 and
      * CR 603.4 agree on the first check and differ only on whether there is a second one. This is
@@ -245,8 +279,10 @@ data class TriggeredAbility(
             triggerRestriction: Condition? = null,
             controlledByTriggeringEntityController: Boolean = false,
             oncePerTurn: Boolean = false,
+            triggersPerTurn: Int? = null,
             effectOncePerTurn: Boolean = false,
             triggersOnce: Boolean = false,
+            isBackup: Boolean = false,
             descriptionOverride: String? = null,
             id: AbilityId = AbilityId.next(),
         ): TriggeredAbility =
@@ -263,8 +299,10 @@ data class TriggeredAbility(
                 triggerRestriction = triggerRestriction,
                 controlledByTriggeringEntityController = controlledByTriggeringEntityController,
                 oncePerTurn = oncePerTurn,
+                triggersPerTurn = triggersPerTurn,
                 effectOncePerTurn = effectOncePerTurn,
                 triggersOnce = triggersOnce,
+                isBackup = isBackup,
                 descriptionOverride = descriptionOverride
             )
 
@@ -283,8 +321,10 @@ data class TriggeredAbility(
             triggerRestriction: Condition? = null,
             controlledByTriggeringEntityController: Boolean = false,
             oncePerTurn: Boolean = false,
+            triggersPerTurn: Int? = null,
             effectOncePerTurn: Boolean = false,
             triggersOnce: Boolean = false,
+            isBackup: Boolean = false,
             descriptionOverride: String? = null,
             id: AbilityId = AbilityId.next(),
         ): TriggeredAbility = create(
@@ -299,8 +339,10 @@ data class TriggeredAbility(
             triggerRestriction = triggerRestriction,
             controlledByTriggeringEntityController = controlledByTriggeringEntityController,
             oncePerTurn = oncePerTurn,
+            triggersPerTurn = triggersPerTurn,
             effectOncePerTurn = effectOncePerTurn,
             triggersOnce = triggersOnce,
+            isBackup = isBackup,
             descriptionOverride = descriptionOverride,
             id = id,
         )

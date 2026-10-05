@@ -1790,6 +1790,72 @@
     }
 }
 
+// Leechridden Swamp
+{
+    "name": "Leechridden Swamp",
+    "manaCost": "",
+    "typeLine": "Land — Swamp",
+    "oracleText": "({T}: Add {B}.)\nThis land enters tapped.\n{B}, {T}: Each opponent loses 1 life. Activate only if you control two or more black permanents.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Leechridden Swamp:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{B}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                },
+                "restrictions": [
+                    {
+                        "type": "ActivationOnlyIfCondition",
+                        "condition": {
+                            "type": "Compare",
+                            "left": {
+                                "type": "AggregateBattlefield",
+                                "player": "You",
+                                "filter": "permanent black"
+                            },
+                            "operator": "GTE",
+                            "right": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
+                        }
+                    }
+                ]
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "273",
+        "rarity": "UNCOMMON",
+        "artist": "Lars Grant-West",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/f/afa47202-5824-4f6a-b306-465976d4d422.jpg?1783942706"
+    }
+}
+
 // Loamdragger Giant
 {
     "name": "Loamdragger Giant",
@@ -2356,6 +2422,52 @@
         "flavorText": "\"It was vast, a great sheet of soaring wings, and equally silent. It caught us unawares and blocked our view of the kithkin stronghold.\"\n—Grensch, merrow cutthroat",
         "imageUri": "https://cards.scryfall.io/normal/front/8/e/8e8b0449-3ae5-4fee-b870-af12be5e5a64.jpg?1783942736"
     }
+}
+
+// Presence of Gond
+{
+    "name": "Presence of Gond",
+    "manaCost": "{2}{G}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nEnchanted creature has \"{T}: Create a 1/1 green Elf Warrior creature token.\"",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantActivatedAbility",
+                "ability": {
+                    "id": "Presence of Gond:1",
+                    "cost": "CostTap",
+                    "effect": {
+                        "type": "CreateToken",
+                        "power": 1,
+                        "toughness": 1,
+                        "colors": [
+                            "GREEN"
+                        ],
+                        "creatureTypes": [
+                            "Elf",
+                            "Warrior"
+                        ]
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "125",
+        "artist": "Brandon Kitkouski",
+        "flavorText": "\"Here lies Gond, hero of Safehold Taldwen. May he ever guide our quest.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/4/546c647d-8d0a-4b88-804e-ce0348eb772a.jpg"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
 }
 
 // Pyre Charger

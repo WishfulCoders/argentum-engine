@@ -21,6 +21,7 @@ import com.wingedsheep.engine.state.components.stack.TargetsComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.engine.state.permissions.hasMayPlayFor
 import com.wingedsheep.engine.view.ClientCard
+import com.wingedsheep.engine.view.ClientBestow
 import com.wingedsheep.engine.view.ClientImpending
 import com.wingedsheep.engine.view.ClientRuling
 import com.wingedsheep.engine.view.Visibility
@@ -526,6 +527,7 @@ internal class CardProjector(
             isSuspected = frame.projectedValues?.isSuspected == true,
             isSolved = container.has<SolvedComponent>(),
             isRenowned = container.has<RenownedComponent>(),
+            isMonstrous = container.has<MonstrousComponent>(),
             saddleRequirement = zoneStatus.saddleRequirement,
             isSaddled = zoneStatus.isSaddled,
             isPlotted = zoneStatus.isPlotted,
@@ -588,7 +590,9 @@ internal class CardProjector(
             grantedCardTypes = if (onBattlefield) {
                 val printed = cardComponent.typeLine.cardTypes.map { it.name }.toSet()
                 typeLine.cardTypes.map { it.name }.filterNot { it in printed }.toSet()
-            } else emptySet(),
+            } else frame.projectedState.crossZoneGrantedCardTypes(frame.entityId)
+                .filterNot { name -> cardComponent.typeLine.cardTypes.any { it.name == name } }
+                .toSet(),
             damageDistribution = (spellOnStack?.damageDistribution ?: container.get<TriggeredAbilityOnStackComponent>()?.damageDistribution)?.takeIf { it.isNotEmpty() },
             sagaTotalChapters = cardDef?.finalChapter,
             classLevel = container.get<ClassLevelComponent>()?.currentLevel,
@@ -626,7 +630,11 @@ internal class CardProjector(
                 ?.filterIsInstance<KeywordAbility.Evoke>()
                 ?.firstOrNull()
                 ?.cost
-                ?.toString()
+                ?.toString(),
+            bestow = cardDef?.keywordAbilities
+                ?.filterIsInstance<KeywordAbility.Bestow>()
+                ?.firstOrNull()
+                ?.let { ClientBestow(it.cost.toString(), it.additionalCost?.description) }
         )
     }
 
@@ -701,7 +709,11 @@ internal class CardProjector(
         val displayCardTypes = if (projectedTypes != null) {
             projectedTypes.mapNotNull { try { CardType.valueOf(it) } catch (_: Exception) { null } }
         } else {
-            typeLine.cardTypes.toList()
+            // Off the battlefield a cross-zone GrantCardType (Encroaching Mycosynth) still adds
+            // types; granted ones lead, matching "Artifact Creature" printed order.
+            val granted = frame.projectedState.crossZoneGrantedCardTypes(frame.entityId)
+                .mapNotNull { name -> CardType.entries.firstOrNull { it.name == name } }
+            (granted + typeLine.cardTypes).distinct()
         }
         // Supertypes share the projected `types` set with card types and subtypes (see
         // StateProjector.extractTypes), so a granted supertype — Origin of Spider-Man's "it becomes

@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.continuations
 
+import com.wingedsheep.engine.mechanics.cost.SharedCreatureTypeTapCost
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.effects.life.LifePaymentService
 import com.wingedsheep.engine.handlers.effects.zones.ForceExileMultiZoneExecutor
@@ -41,7 +43,8 @@ class SacrificeAndPayContinuationResumer(
         resumer(PayOrSufferManaSelectionContinuation::class, ::resumePayOrSufferManaSelection),
         resumer(PayOrSufferChoiceContinuation::class, ::resumePayOrSufferChoice),
         resumer(AnyPlayerMayPayContinuation::class, ::resumeAnyPlayerMayPay),
-        resumer(UntapChoiceContinuation::class, ::resumeUntapChoice)
+        resumer(UntapChoiceContinuation::class, ::resumeUntapChoice),
+        resumer(UntapStepSkipChoiceContinuation::class, ::resumeUntapStepSkipChoice)
     )
 
     fun resumeSacrifice(
@@ -106,11 +109,26 @@ class SacrificeAndPayContinuationResumer(
                 // Another player needs a decision — return paused with combined events
                 ExecutionResult.propagatePause(resultStateWithSnaps, allEvents)
             } else {
-                checkForMore(resultStateWithSnaps, allEvents)
+                finishSacrificeInstruction(resultStateWithSnaps, allEvents, checkForMore)
             }
         }
 
-        return checkForMore(newState, events)
+        return finishSacrificeInstruction(newState, events, checkForMore)
+    }
+
+    /** Finalize the resumed instruction before a sibling can read its graveyard order. */
+    private fun finishSacrificeInstruction(
+        state: GameState,
+        events: List<GameEvent>,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        // Sacrifice snapshots were already published to the enclosing effect frames;
+        // the ordering continuation parks the move events until the owner answers.
+        val ordered = com.wingedsheep.engine.mechanics.GraveyardOrdering.finish(
+            ExecutionResult.success(state, events)
+        )
+        return if (ordered.outcome is Outcome.Paused) ordered
+        else checkForMore(ordered.state, ordered.events)
     }
 
     /**
@@ -207,6 +225,7 @@ class SacrificeAndPayContinuationResumer(
             // Player chose the suffer option — runs under the ability's controller (see
             // executePayOrSufferConsequence), not the player who declined the costs.
             val context = EffectContext(
+                resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
                 sourceId = continuation.sourceId,
             objectReferences = continuation.objectReferences,
                 controllerId = continuation.abilityControllerId ?: continuation.playerId,
@@ -230,6 +249,7 @@ class SacrificeAndPayContinuationResumer(
             consequenceDescription = continuation.consequenceDescription
         )
         val context = EffectContext(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
             objectReferences = continuation.objectReferences,
             controllerId = continuation.playerId,
@@ -426,8 +446,11 @@ class SacrificeAndPayContinuationResumer(
 
         val selectedPermanents = response.selectedCards
 
-        // If player didn't select enough untapped permanents, execute the suffer effect.
-        if (selectedPermanents.size < continuation.requiredCount) {
+        // If player didn't select enough untapped permanents (or ones that don't share a creature
+        // type when the cost demands it), execute the suffer effect.
+        if (selectedPermanents.size < continuation.requiredCount ||
+            !SharedCreatureTypeTapCost.satisfiedBy(state, continuation.sharedCreatureType, selectedPermanents)
+        ) {
             return executePayOrSufferConsequence(state, continuation, checkForMore)
         }
 
@@ -485,6 +508,7 @@ class SacrificeAndPayContinuationResumer(
                 predicateEvaluator = services.predicateEvaluator
             )
             val firstThisTurn = DamageUtils.isFirstCounterThisTurn(newState, permanentId)
+            val firstOfTypeThisTurn = DamageUtils.isFirstCounterOfTypeThisTurn(newState, permanentId, counterType)
             newState = newState.updateEntity(permanentId) { c ->
                 c.with(counters.withAdded(counterType, modifiedCount))
             }.let {
@@ -496,7 +520,7 @@ class SacrificeAndPayContinuationResumer(
                     counterType,
                     modifiedCount,
                     container.get<CardComponent>()?.name ?: "Permanent",
-                    firstThisTurn,
+                    firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn,
                     placedBy = placerId,
                 )
             )
@@ -721,8 +745,10 @@ class SacrificeAndPayContinuationResumer(
             manaPoolComponent.black,
             manaPoolComponent.red,
             manaPoolComponent.green,
-            manaPoolComponent.colorless
-        )
+            manaPoolComponent.colorless,
+            snowMana = manaPoolComponent.snowMana,
+            snowColorless = manaPoolComponent.snowColorless
+        ).withSpendingColors(state, playerId)
 
         val currentPool = manaPool
         var currentState = state
@@ -742,7 +768,9 @@ class SacrificeAndPayContinuationResumer(
                     black = newPool.black,
                     red = newPool.red,
                     green = newPool.green,
-                    colorless = newPool.colorless
+                    colorless = newPool.colorless,
+                    snowMana = newPool.snowMana,
+                    snowColorless = newPool.snowColorless
                 )
             )
         }
@@ -771,6 +799,7 @@ class SacrificeAndPayContinuationResumer(
         // (ability-controller) context, so this keeps both paths consistent. Falls back to the payer
         // for the common case where the payer is the controller.
         val context = EffectContext(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = sourceId,
             objectReferences = continuation.objectReferences,
             controllerId = continuation.abilityControllerId ?: continuation.playerId,
@@ -871,6 +900,7 @@ class SacrificeAndPayContinuationResumer(
     ): ExecutionResult {
         if (consequence == null) return checkForMore(state, priorEvents)
         val context = EffectContext(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
             objectReferences = continuation.objectReferences.authorize(priorEvents),
             controllerId = continuation.controllerId,
@@ -957,8 +987,8 @@ class SacrificeAndPayContinuationResumer(
                 }
 
                 is CostAtom.PayLife -> {
-                    val life = state.lifeTotal(nextPlayerId) // CR 810.9a — team's shared total
-                    if (life >= atom.amount) {
+                    // CR 810.9a — team's shared total; CR 119.8 — a life-loss lock forbids paying.
+                    if (state.canPayLife(nextPlayerId, atom.amount)) {
                         val prompt = "Pay ${atom.amount} life to prevent ${continuation.sourceName}'s effect?"
                         val question = { decisionId: String -> YesNoDecision(
                             id = decisionId,
@@ -990,6 +1020,12 @@ class SacrificeAndPayContinuationResumer(
 
         // No player paid - run the "none paid" branch.
         return runAnyPlayerMayPayConsequence(state, continuation, continuation.consequenceIfNonePaid, emptyList(), checkForMore)
+    }
+
+    fun resumeUntapStepSkipChoice(state: GameState, continuation: UntapStepSkipChoiceContinuation,
+        response: DecisionResponse, checkForMore: CheckForMore): ExecutionResult {
+        val result = services.turnManager.beginningPhaseManager.resumeUntapStepSkipChoice(state, continuation, response)
+        return if (result.outcome is Outcome.Done) checkForMore(result.state, result.events) else result
     }
 
     fun resumeUntapChoice(

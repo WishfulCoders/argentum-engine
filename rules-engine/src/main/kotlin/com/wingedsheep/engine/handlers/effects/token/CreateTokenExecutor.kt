@@ -273,13 +273,16 @@ class CreateTokenExecutor(
                 // (CR 802.2a: defender per attacking creature), falling back to the sole
                 // active opponent outside combat-derived contexts.
                 val defenderId = com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
-                    .resolveDefendingPlayer(context, newState)
-                    ?: newState.getOpponents(tokenControllerId).firstOrNull()
+                    .defenderForEnteringAttacker(context, newState, tokenControllerId)
                 if (defenderId != null) {
-                    components.add(AttackingComponent(defenderId))
+                    components.add(AttackingComponent(defenderId, defendingPlayerId = com.wingedsheep.engine.mechanics.combat.CombatDefenders.defendingPlayerOf(newState, defenderId)))
                 }
             }
             var container = ComponentContainer.of(*components.toTypedArray())
+            // "with toxic 1" — the token's printed numeric keywords ride the same components a
+            // card's do, so combat damage and "creatures with toxic" read them.
+            container = com.wingedsheep.engine.core.CardEntityFactory
+                .applyNumericKeywords(container, effect.numericKeywords)
             if (effect.staticAbilities.isNotEmpty() && staticAbilityHandler != null) {
                 container = staticAbilityHandler.addContinuousEffectComponentFromAbilities(
                     container, effect.staticAbilities

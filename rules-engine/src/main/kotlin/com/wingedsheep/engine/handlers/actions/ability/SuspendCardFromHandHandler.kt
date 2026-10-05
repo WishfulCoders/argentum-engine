@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.core.ExecutionResult
@@ -130,8 +131,10 @@ class SuspendCardFromHandHandler(
                 black = poolComponent.black,
                 red = poolComponent.red,
                 green = poolComponent.green,
-                colorless = poolComponent.colorless
-            )
+                colorless = poolComponent.colorless,
+                snowMana = poolComponent.snowMana,
+                snowColorless = poolComponent.snowColorless
+            ).withSpendingColors(state, action.playerId)
             val remainingCost = pool.payPartial(suspend.cost).remainingCost
             if (!remainingCost.isEmpty()) {
                 val chosenSet = chosenSources.toSet()
@@ -169,8 +172,10 @@ class SuspendCardFromHandHandler(
             black = poolComponent.black,
             red = poolComponent.red,
             green = poolComponent.green,
-            colorless = poolComponent.colorless
-        )
+            colorless = poolComponent.colorless,
+            snowMana = poolComponent.snowMana,
+            snowColorless = poolComponent.snowColorless
+        ).withSpendingColors(state, action.playerId)
         val partialResult = pool.payPartial(suspend.cost)
         val poolAfterPayment = partialResult.newPool
         val remainingCost = partialResult.remainingCost
@@ -191,7 +196,9 @@ class SuspendCardFromHandHandler(
                     black = poolAfterPayment.black,
                     red = poolAfterPayment.red,
                     green = poolAfterPayment.green,
-                    colorless = poolAfterPayment.colorless
+                    colorless = poolAfterPayment.colorless,
+                    snowMana = poolAfterPayment.snowMana,
+                    snowColorless = poolAfterPayment.snowColorless
                 )
             )
         }

@@ -91,13 +91,14 @@ class CreateDelayedTriggerExecutor(
         // For step-based delayed triggers that restrict to a specific player's turn (e.g.
         // Nafs Asp's "at the beginning of their next draw step"): resolve the player target
         // now, while the trigger context still knows who it is, and bake the entity id in.
-        // resolvePlayerTarget covers PlayerRef shapes; the generic resolveTarget fallback
+        // The state-aware resolvePlayerTarget covers PlayerRef shapes, relational ones like
+        // OwnerOf included (The Eternal Wanderer); the generic resolveTarget fallback
         // covers pre-baked SpecificEntity/TriggeringEntity ids. Either way, the resolved id
         // must point at a player — anything else (e.g. SpecificEntity(creatureId)) would
         // never match state.activePlayerId and the trigger would silently never fire, so we
         // fail loudly at scheduling time instead.
         val fireOnPlayerId = effect.fireOnPlayer?.let { target ->
-            val resolved = context.resolvePlayerTarget(target) ?: context.resolveTarget(target)
+            val resolved = context.resolvePlayerTarget(target, state) ?: context.resolveTarget(target)
                 ?: return EffectResult.error(state, "CreateDelayedTrigger fireOnPlayer did not resolve: $target")
             if (resolved !in state.turnOrder) {
                 return EffectResult.error(
@@ -152,7 +153,9 @@ class CreateDelayedTriggerExecutor(
             // ForEach body still refers to *that* object — "exile each creature; return it at the
             // next end step" — and, having captured its identity, stops affecting it once it is in
             // a zone the trigger didn't expect (CR 603.7c).
-            objectReferences = context.objectReferences,
+            objectReferences = if (effect.trigger == null && fireOnPlayerId == null && watchedEntityId != null) {
+                context.objectReferences.copy(triggering = state.objectRef(watchedEntityId))
+            } else context.objectReferences,
             sourceName = sourceName,
             controllerId = context.controllerId,
             trigger = resolvedTrigger,
@@ -303,6 +306,7 @@ class CreateDelayedTriggerExecutor(
         is DynamicAmount.CastChoice,
         DynamicAmount.CastX,
         is DynamicAmount.ContextProperty,
+        is DynamicAmount.GraveyardRelativeCount,
         is DynamicAmount.Count,
         is DynamicAmount.CountPlayersWith,
         DynamicAmount.CraftedMaterialsColorCount,
@@ -318,17 +322,20 @@ class CreateDelayedTriggerExecutor(
         is DynamicAmount.LastKnownSourceCounters,
         is DynamicAmount.LifeTotal,
         is DynamicAmount.ManaSpentFromSubtype,
+        DynamicAmount.SnowManaSpent,
         is DynamicAmount.ManaSpentOnX,
         DynamicAmount.PermanentsSacrificedThisWay,
         DynamicAmount.CountersRemovedAsCost,
         is DynamicAmount.PlayerCount,
         is DynamicAmount.PlayerCounterCount,
+        is DynamicAmount.CardsCycledThisGame,
         is DynamicAmount.Speed,
         DynamicAmount.SpellsCastLastTurn,
         is DynamicAmount.SpellsCastThisTurn,
         is DynamicAmount.StartingLifeTotal,
         DynamicAmount.StationCharge,
         is DynamicAmount.SubtypeEnteredUnderControlThisTurn,
+        is DynamicAmount.CardTypeEnteredUnderControlThisTurn,
         is DynamicAmount.CreaturesWithSubtypeDiedThisTurn,
         DynamicAmount.TotalManaSpent,
         DynamicAmount.TotalPowerSacrificedThisWay,

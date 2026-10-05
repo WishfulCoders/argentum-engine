@@ -17,6 +17,12 @@ import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.EntersWithRevealCounters
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.soulshift
+import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
+import com.wingedsheep.sdk.serialization.CardSerialization
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
@@ -164,11 +170,12 @@ object Grammar {
      */
     private val triggerLine: Phrase<CardFragment> = phrase("{trigger}", name = "a triggered ability line") {
         slot("trigger", Triggers.line)
-        build { CardFragment.of(CardScript(triggeredAbilities = it.value("trigger"))) }
+        build { CardFragment.of(withLinkedReturn(CardScript(triggeredAbilities = it.value("trigger")))) }
         match { fragment ->
-            val abilities = fragment.script.triggeredAbilities.takeIf { it.isNotEmpty() } ?: return@match null
             if (fragment.keywordAbilities.isNotEmpty()) return@match null
-            if (fragment.script != CardScript(triggeredAbilities = abilities)) return@match null
+            val script = withoutLinkedReturn(fragment.script) ?: return@match null
+            val abilities = script.triggeredAbilities.takeIf { it.isNotEmpty() } ?: return@match null
+            if (script != CardScript(triggeredAbilities = abilities)) return@match null
             bind("trigger" to abilities)
         }
     }
@@ -182,14 +189,63 @@ object Grammar {
      */
     private val activatedLine: Phrase<CardFragment> = phrase("{abilities}", name = "an activated ability line") {
         slot("abilities", Activated.abilities)
-        build { CardFragment.of(CardScript(activatedAbilities = it.value("abilities"))) }
+        build { CardFragment.of(withLinkedReturn(CardScript(activatedAbilities = it.value("abilities")))) }
         match { fragment ->
-            val abilities = fragment.script.activatedAbilities
-            if (abilities.isEmpty() || fragment.keywordAbilities.isNotEmpty()) return@match null
-            if (fragment.script != CardScript(activatedAbilities = abilities)) return@match null
+            if (fragment.keywordAbilities.isNotEmpty()) return@match null
+            val script = withoutLinkedReturn(fragment.script) ?: return@match null
+            val abilities = script.activatedAbilities
+            if (abilities.isEmpty()) return@match null
+            if (script != CardScript(activatedAbilities = abilities)) return@match null
             bind("abilities" to abilities)
         }
     }
+
+    /**
+     * "Exile target creature until ~ leaves the battlefield." — one printed sentence, **two**
+     * abilities: the exile, and the leaves-the-battlefield trigger that returns the card. The SDK
+     * spells the "until" as a linked exile plus that trigger rather than as a duration, and every
+     * hand-written card carrying
+     * `ExileUntilLeavesEffect` — 42 of them — pairs it with the same
+     * `Triggers.self.leaves()` / `Effects.ReturnLinkedExileUnderOwnersControl()` ability, so the
+     * second ability is a lowering of the first rather than a sentence of its own.
+     *
+     * The same shape as [amplifyLine] and [equipLine] — a line whose meaning fills more of the card
+     * than the ability it prints — and it lives here for the same reason: a step rule in [Steps] can
+     * only return an effect, and the fragment is the only place the two abilities meet. The pairing
+     * is keyed on the effect's own serial discriminator because the exile can sit anywhere inside
+     * the ability's effect tree (a composite with "You gain 2 life", a gate, a modal branch).
+     */
+    private val linkedReturn = TriggeredAbility(
+        id = AbilityId("linked-return"),
+        trigger = SdkTriggers.self.leaves().event,
+        binding = SdkTriggers.self.leaves().binding,
+        effect = Effects.ReturnLinkedExileUnderOwnersControl(),
+    )
+
+    /** [script] with [linkedReturn] appended when one of its abilities exiles until the source leaves. */
+    private fun withLinkedReturn(script: CardScript): CardScript =
+        if (exilesUntilLeaves(script)) script.copy(triggeredAbilities = script.triggeredAbilities + linkedReturn) else script
+
+    /**
+     * The inverse of [withLinkedReturn]: [script] without its trailing [linkedReturn], or **null**
+     * when the script exiles until the source leaves but does not carry the return — a card whose
+     * exile never comes back, which the sentence does not say and so must not print.
+     */
+    private fun withoutLinkedReturn(script: CardScript): CardScript? {
+        if (!exilesUntilLeaves(script)) return script
+        val last = script.triggeredAbilities.lastOrNull() ?: return null
+        if (last.copy(id = linkedReturn.id) != linkedReturn) return null
+        return script.copy(triggeredAbilities = script.triggeredAbilities.dropLast(1))
+    }
+
+    private fun exilesUntilLeaves(script: CardScript): Boolean =
+        EXILE_UNTIL_LEAVES in CardSerialization.json.encodeToString(CardScript.serializer(), script)
+
+    /**
+     * `ExileUntilLeavesEffect`'s `@SerialName`, quoted as it appears in the serialized script. No
+     * other string value in the SDK is spelled this way, so the quoted name is the discriminator.
+     */
+    private const val EXILE_UNTIL_LEAVES = "\"ExileUntilLeaves\""
 
     /**
      * A line that is one Aura's attachment restriction — "Enchant creature".
@@ -298,15 +354,69 @@ object Grammar {
         }
     }
 
-    /** A line that is one replacement effect — "~ enters tapped." */
-    private val replacementLine: Phrase<CardFragment> = phrase("{replacement}", name = "a replacement effect line") {
-        slot("replacement", Replacements.replacement)
-        build { CardFragment.of(CardScript(replacementEffects = listOf(it.value("replacement")))) }
+    /**
+     * "Soulshift 4" — the third line whose two halves land in **two different card slots**: the
+     * printed `Numeric(SOULSHIFT, n)` keyword *and* the triggered ability CR 702.46a says it means.
+     *
+     * The same shape as [equipLine], and built the same way for the same reason: the SDK lowers
+     * soulshift at authoring time, so the second half is a lowering to reproduce rather than a
+     * sentence to read, and a second copy of it here would agree with the cards only until someone
+     * edits one of them. Unlike equip there is no factory to call — the lowering lives in the
+     * `CardBuilder.soulshift` DSL method every soulshift card uses — so the rule calls *that*,
+     * inside a throwaway `card { }`, and keeps what it produced. The id is re-minted to a constant
+     * because no printed word determines it; the differential renames both sides by position.
+     */
+    private val soulshiftLine: Phrase<CardFragment> = run {
+        val soulshiftId = AbilityId("soulshift")
+        fun fragmentFor(n: Int): CardFragment {
+            val lowered = card("Soulshift") { soulshift(n) }
+            return CardFragment(
+                keywordAbilities = lowered.keywordAbilities,
+                script = CardScript(
+                    triggeredAbilities = lowered.script.triggeredAbilities.map { it.copy(id = soulshiftId) },
+                ),
+            )
+        }
+        phrase("soulshift {n}", name = "soulshift") {
+            slot("n", Primitives.cardinal)
+            build { fragmentFor(it.int("n")) }
+            match { fragment ->
+                val keyword = fragment.keywordAbilities.singleOrNull() as? KeywordAbility.Numeric
+                    ?: return@match null
+                if (keyword.keyword != Keyword.SOULSHIFT || fragment != fragmentFor(keyword.n)) return@match null
+                bind("n" to keyword.n)
+            }
+        }
+    }
+
+    /**
+     * A line that is replacement effects and nothing else — "~ enters tapped.", and the kicker
+     * sentence whose two halves are two effects ([Replacements.replacements]).
+     */
+    private val replacementLine: Phrase<CardFragment> = phrase("{replacements}", name = "a replacement effect line") {
+        slot("replacements", Replacements.replacements)
+        build { CardFragment.of(CardScript(replacementEffects = it.value("replacements"))) }
         match { fragment ->
-            val replacement = fragment.script.replacementEffects.singleOrNull() ?: return@match null
+            val replacements = fragment.script.replacementEffects.takeIf { it.isNotEmpty() } ?: return@match null
             if (fragment.keywordAbilities.isNotEmpty()) return@match null
-            if (fragment.script != CardScript(replacementEffects = listOf(replacement))) return@match null
-            bind("replacement" to replacement)
+            if (fragment.script != CardScript(replacementEffects = replacements)) return@match null
+            bind("replacements" to replacements)
+        }
+    }
+
+    /**
+     * A line that is one state-triggered ability — "When you control no Islands, sacrifice ~." —
+     * landing in `CardScript.stateTriggeredAbilities`, the SDK's list for CR 603.8 beside the event
+     * triggers [triggerLine] fills. Wrapped here for the reason the other ability lines are:
+     * [StateTriggers] knows nothing about which of a card's slots its ability lands in.
+     */
+    private val stateTriggerLine: Phrase<CardFragment> = phrase("{trigger}", name = "a state-triggered ability line") {
+        slot("trigger", StateTriggers.line)
+        build { CardFragment.of(CardScript(stateTriggeredAbilities = listOf(it.value("trigger")))) }
+        match { fragment ->
+            val ability = fragment.script.stateTriggeredAbilities.singleOrNull() ?: return@match null
+            if (fragment != CardFragment.of(CardScript(stateTriggeredAbilities = listOf(ability)))) return@match null
+            bind("trigger" to ability)
         }
     }
 
@@ -524,8 +634,10 @@ object Grammar {
         semicolonKeywordLine,
         amplifyLine,
         equipLine,
+        soulshiftLine,
         spellLine,
         triggerLine,
+        stateTriggerLine,
         activatedLine,
         replacementLine,
         enchantLine,

@@ -24,7 +24,7 @@ val RushOfKnowledge = card("Rush of Knowledge") {
 
     metadata {
         rarity = Rarity.COMMON
-        collectorNumber = "47"
+        collectorNumber = "49"
         artist = "Eric Peterson"
         flavorText = "\"Limitless power is glorious until you gain limitless understanding.\"\n—Ixidor"
         imageUri = "https://cards.scryfall.io/normal/front/6/5/65b03b40-671f-4973-8d75-c3fa878ef603.jpg?1562529750"

@@ -12,12 +12,15 @@ class CombatExecutors(
     private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry
 ) : ExecutorModule {
     override fun executors(): List<EffectExecutor<*>> = listOf(
+        RandomizedBlockerPilesExecutor(),
         MustBeBlockedExecutor(),
         ProvokeExecutor(),
         ForceBlockExecutor(),
         PreventDamageExecutor(amountEvaluator),
+        PreventNextDamageLeavingAmountExecutor(amountEvaluator),
         GrantCantBeBlockedExceptByColorExecutor(predicateEvaluator = amountEvaluator.predicates),
         GrantCantBeBlockedExceptByExecutor(),
+        GrantCantBeBlockedExceptByCollectionExecutor(),
         ReflectCombatDamageExecutor(),
         TauntExecutor(),
         CantAttackGroupExecutor(),
@@ -25,6 +28,7 @@ class CombatExecutors(
         CantAttackExecutor(),
         CantBlockExecutor(),
         RemoveFromCombatExecutor(),
+        BecomeBlockingExecutor(),
         SwapBlockingAssignmentsExecutor(cardRegistry, predicateEvaluator = amountEvaluator.predicates),
         OpponentGuessesTopCardKindExecutor(),
         PlayerGuessesConditionExecutor(),
@@ -33,6 +37,7 @@ class CombatExecutors(
         GoadExecutor(),
         CanAttackDespiteDefenderThisTurnExecutor(),
         RedirectNextDamageExecutor(),
+        RedirectDamageFromChosenSourceExecutor(),
         RedirectCombatDamageToControllerExecutor(),
         GrantAttackBlockTaxPerCreatureTypeExecutor(),
         GrantKeywordToAttackersBlockedByExecutor(),

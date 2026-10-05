@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.state.components.identity
 
 import com.wingedsheep.engine.state.Component
+import com.wingedsheep.engine.state.components.battlefield.ManaSpendingGrant
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Color
@@ -59,6 +60,11 @@ data class CardComponent(
      */
     val hasActivatedAbility: Boolean = false,
     /**
+     * Precomputed from the card definition: does this card have a cycling ability (plain or
+     * typecycling)? Read by `CardPredicate.HasCycling` (Rooting Moloch). Printed abilities only.
+     */
+    val hasCycling: Boolean = false,
+    /**
      * The set this card was *originally printed* in (the canonical [CardDefinition.setCode], not the
      * specific printing the player owns). Read by `CardPredicate.OriginallyPrintedInSet` to model
      * "permanent with a name originally printed in [set]" (Golgothian Sylex, ARN City in a Bottle).
@@ -105,6 +111,15 @@ data class CardComponent(
      * which is the one place the modal/nonmodal split is decided.
      */
     val manaValueOverride: Int? = null,
+    /** Rules text added by copy effects; copied and restored with the identity, not a layer-six grant. */
+    val copyTriggeredAbilities: List<com.wingedsheep.sdk.scripting.TriggeredAbility> = emptyList(),
+    /**
+     * Activated abilities added by a copy exception (Gigantoplasm's "{X}: … X/X"). Copiable like
+     * [copyTriggeredAbilities]; read through [ownActivatedAbilities] alongside the definition's own.
+     */
+    val copyActivatedAbilities: List<com.wingedsheep.sdk.scripting.ActivatedAbility> = emptyList(),
+    /** Copiable spending-rule abilities, baked from the active printed statics on entry/unlock. */
+    val manaSpendingGrants: List<ManaSpendingGrant> = emptyList(),
 ) : Component {
     /**
      * The printed characteristics projection starts every permanent from, built on first use and

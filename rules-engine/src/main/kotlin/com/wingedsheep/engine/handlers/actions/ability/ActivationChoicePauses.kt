@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ActivateAbilityChooseManaXContinuation
 import com.wingedsheep.engine.core.ActivateAbilityChooseXContinuation
@@ -22,8 +23,10 @@ import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.handlers.CostHandler
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment
 import com.wingedsheep.engine.mechanics.cost.VariablePermanentsCost
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
+import com.wingedsheep.engine.mechanics.mana.buildAbilityPaymentContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -108,7 +111,7 @@ internal class ActivationChoicePauses(
         val tapXCost = activation.effectiveCost.extractTapXPermanentsCost()
         val alreadyTapping = (action.costPayment?.tappedPermanents?.isNotEmpty() == true)
         if (tapXCost == null || action.xValue != null || alreadyTapping) return null
-        val tapTargets = costHandler.findUntappedMatchingPermanentsUnified(state, action.playerId, tapXCost.filter)
+        val tapTargets = costHandler.findUntappedMatchingPermanentsUnified(state, action.playerId, tapXCost.filter, action.sourceId)
         val maxX = tapTargets.size
         val continuation = ActivateAbilityChooseXContinuation(
             action = action,
@@ -144,13 +147,21 @@ internal class ActivationChoicePauses(
         val effectiveCost = activation.effectiveCost
         val tapXCost = effectiveCost.extractTapXPermanentsCost()
         val manaXCost = effectiveCost.extractManaCost()
-        if (!((manaXCost?.hasX == true || effectiveCost == AbilityCost.LoyaltyX) && action.xValue == null && tapXCost == null)) {
+        val counterMaxX = PlayerCounterPayment.abilityMaxX(state, action.playerId, effectiveCost)
+        if (!((manaXCost?.hasX == true || effectiveCost == AbilityCost.LoyaltyX || counterMaxX != null) && action.xValue == null && tapXCost == null)) {
             return null
         }
         val fixedMana = manaXCost?.cmc ?: 0 // the non-X portion ({X} alone is 0; {1}{X} is 1)
-        val maxX = if (effectiveCost == AbilityCost.LoyaltyX) {
+        val manaMaxX = if (manaXCost?.hasX == true) {
+            (manaSolver.getAvailableManaCount(state, action.playerId, spellContext = buildAbilityPaymentContext(
+                activation.cardComponent, state.projectedState, action.sourceId, activation.ability)
+            ) - fixedMana).coerceAtLeast(0) /
+                manaXCost.xCount.coerceAtLeast(1)
+        } else null
+        val loyaltyMaxX = if (effectiveCost == AbilityCost.LoyaltyX) {
             activation.container.get<CountersComponent>()?.getCount(CounterType.LOYALTY) ?: 0
-        } else (manaSolver.getAvailableManaCount(state, action.playerId) - fixedMana).coerceAtLeast(0)
+        } else null
+        val maxX = listOfNotNull(manaMaxX, loyaltyMaxX, counterMaxX).minOrNull() ?: 0
         // "X can't be 0" abilities (Gogo, Master of Mimicry) set a minimum; clamp it to what the
         // player can actually pay so the decision bounds stay valid.
         val minX = activation.ability.minimumXValue.coerceAtMost(maxX)
@@ -203,7 +214,8 @@ internal class ActivationChoicePauses(
             state,
             state.getZone(ZoneKey(action.playerId, Zone.GRAVEYARD)),
             exileXCost.filter,
-            action.playerId
+            action.playerId,
+            sourceId = action.sourceId
         )
         // A mana `{X}` already fixed the count; otherwise the player is free to exile any
         // number of matching cards (including none) and that count becomes X.
@@ -323,7 +335,7 @@ internal class ActivationChoicePauses(
         if (sacrificeCost == null || alreadySacrificing) return null
         val sacrificeCandidates = costHandler
             .findMatchingCardsUnified(
-                state, state.getBattlefield(action.playerId), sacrificeCost.filter, action.playerId,
+                state, state.controlledBattlefield(action.playerId), sacrificeCost.filter, action.playerId,
                 // Source-relative filters ("an Equipment attached to this creature") need the
                 // ability's own source to resolve; without it they match nothing.
                 sourceId = action.sourceId,
@@ -418,7 +430,7 @@ internal class ActivationChoicePauses(
         val verb = VariablePermanentsCost.verb(variablePermanentsCost.action)
         val candidates = costHandler
             .findMatchingCardsUnified(
-                state, state.getBattlefield(action.playerId), variablePermanentsCost.filter, action.playerId,
+                state, state.controlledBattlefield(action.playerId), variablePermanentsCost.filter, action.playerId,
                 // Same source-relative resolution as the sacrifice pause above, so the choices
                 // offered here are exactly the ones payment will accept.
                 sourceId = action.sourceId,
@@ -479,7 +491,8 @@ internal class ActivationChoicePauses(
         val legalTargets = mutableMapOf<Int, List<EntityId>>()
         val requirementInfos = controllerTargetReqsExec.mapIndexed { index, req ->
             val legal = finder.findLegalTargets(
-                state, req, action.playerId, action.sourceId, pipelineContext = pipelineContext
+                state, req, action.playerId, action.sourceId,
+                targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY, pipelineContext = pipelineContext
             )
             if (legal.isEmpty() && req.effectiveMinCount > 0) {
                 return ExecutionResult.error(state, "No legal target for ${sourceName}")
@@ -613,7 +626,7 @@ internal class ActivationChoicePauses(
         val finder = targetFinder
         val legalTargets = mutableMapOf<Int, List<EntityId>>()
         val requirementInfos = opponentReqs.mapIndexed { index, req ->
-            val legal = finder.findLegalTargets(state, req, action.playerId, action.sourceId)
+            val legal = finder.findLegalTargets(state, req, action.playerId, action.sourceId, targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY)
             if (legal.isEmpty() && req.effectiveMinCount > 0) {
                 // A required target with no legal choice means the ability can't be activated
                 // (the enumerator gates on this; guard the engine-direct path too).

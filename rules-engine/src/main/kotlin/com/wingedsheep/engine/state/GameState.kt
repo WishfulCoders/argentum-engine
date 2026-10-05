@@ -43,6 +43,10 @@ import kotlinx.serialization.ExperimentalSerializationApi
 @KeepGeneratedSerializer
 @Serializable(with = LegacyGameStateSerializer::class)
 data class GameState(
+    /** Fixed at setup; false is a deterministic-order mode for fixtures and legacy replays. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val preserveGraveyardOrder: Boolean = false,
+
     /** All entities in the game, keyed by their ID */
     val entities: Map<EntityId, ComponentContainer> = emptyMap(),
 
@@ -51,6 +55,14 @@ data class GameState(
 
     /** Exile piles of departed battlefield visits, keyed by their unique entry timestamp. */
     val departedLinkedExile: Map<Long, List<EntityId>> = emptyMap(),
+
+    /** Source-visit histories survive their source leaving or ceasing to exist. String keys keep JSON portable. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val sourceObjectRecords: Map<String, SourceObjectRecord> = emptyMap(),
+
+    /** Captured stack-object control windows, inactive until that object resolves. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val resolutionControls: List<ResolutionControl> = emptyList(),
 
     /** Outstanding zone-return one-shot effects, independent of the source's current abilities. */
     val zoneReturns: List<ZoneReturn> = emptyList(),
@@ -71,6 +83,9 @@ data class GameState(
 
     /** ID of the player whose turn it is */
     val activePlayerId: EntityId? = null,
+
+    /** Uninterrupted battlefield visits from the start of this turn; null for a fresh imported board. */
+    val controlAtTurnStart: Map<EntityId, TurnStartControl>? = null,
 
     /** Current phase */
     val phase: Phase = Phase.BEGINNING,
@@ -122,6 +137,9 @@ data class GameState(
 
     /** Activated abilities granted to entities temporarily (e.g., Run Wild) */
     val grantedActivatedAbilities: List<GrantedActivatedAbility> = emptyList(),
+
+    /** Repeatable special actions created by resolved effects, retaining captured references. */
+    val playerActionPermissions: List<com.wingedsheep.engine.event.PlayerActionPermission> = emptyList(),
 
     /** Static abilities granted to entities temporarily (e.g., Full Steam Ahead) */
     val grantedStaticAbilities: List<GrantedStaticAbility> = emptyList(),
@@ -195,6 +213,14 @@ data class GameState(
     val pendingNextSpellAffinities: List<PendingNextSpellAffinity> = emptyList(),
 
     /**
+     * Pending "the next matching spell you cast this turn has [keyword]" riders (Archway of
+     * Innovation's improvise). Read by
+     * [com.wingedsheep.engine.mechanics.mana.GrantedKeywordResolver] and consumed by the next
+     * matching cast.
+     */
+    val pendingNextSpellKeywords: List<PendingNextSpellKeyword> = emptyList(),
+
+    /**
      * Pending "the next matching spell you cast this turn can be cast without paying its mana cost"
      * riders (World War Hulk I). Read by
      * [com.wingedsheep.engine.mechanics.mana.CostCalculator.hasFreeCastPermission] and consumed by
@@ -203,11 +229,14 @@ data class GameState(
     val pendingFreeCastSpells: List<PendingFreeCastSpell> = emptyList(),
 
     /**
-     * Turn-scoped "spells you cast this turn that match … cost {N} less" discounts (the Scion
-     * cycle). Unlike [pendingNextSpellAffinities] these are not consumed by the spell they
-     * discount — they apply to every matching spell until the turn ends.
+     * Duration-bounded "spells you cast [this turn | until your next turn] that match … cost {N}
+     * less" discounts (the Scion cycle; Ral, Leyline Prodigy). Unlike [pendingNextSpellAffinities]
+     * these are not consumed by the spell they discount — they apply to every matching spell until
+     * their [SpellCostReduction.duration] ends. Serialized under its pre-duration name so recorded
+     * states keep decoding.
      */
-    val turnSpellCostReductions: List<TurnSpellCostReduction> = emptyList(),
+    @kotlinx.serialization.SerialName("turnSpellCostReductions")
+    val spellCostReductions: List<SpellCostReduction> = emptyList(),
 
     /** Whether a spell was warped this turn (for Void condition: "a spell was warped this turn") */
     val spellWarpedThisTurn: Boolean = false,
@@ -316,6 +345,21 @@ data class GameState(
      * last turn. Backs `TurnTracker.DEALT_NONCOMBAT_DAMAGE_LAST_TURN` (Command the Stage).
      */
     val playersDealtNoncombatDamageLastTurn: Set<EntityId> = emptySet(),
+    /**
+     * Players (by entity id) who lost life during the previous turn, whoever's turn it was.
+     * Snapshotted from each player's `LifeLostThisTurnComponent` by
+     * `CleanupPhaseManager.cleanupEndOfTurn` just before that marker is cleared. Backs
+     * `TurnTracker.LIFE_LOST_LAST_TURN` (Feast on the Fallen).
+     */
+    val playersWhoLostLifeLastTurn: Set<EntityId> = emptySet(),
+    /**
+     * Players (by entity id) who have been dealt combat damage since their own last turn ended.
+     * Populated at the combat-damage-to-a-player sites in `CombatDamageManager`; a player leaves
+     * the set only when their own turn ends (`TurnManager.startTurn` drops the outgoing turn's
+     * active player, or the whole team on a shared team turn). Backs
+     * `TurnTracker.DEALT_COMBAT_DAMAGE_SINCE_YOUR_LAST_TURN` (Marchesa, Resolute Monarch).
+     */
+    val playersDealtCombatDamageSinceTheirLastTurn: Set<EntityId> = emptySet(),
 
     /**
      * Colors of the spell most recently cast this turn (by any player), or null if no spell has
@@ -448,6 +492,21 @@ data class GameState(
      * on its controller's behalf without having asked.
      */
     val optionalDamageRedirectChoices: Map<String, Boolean> = emptyMap(),
+
+    /**
+     * A resolved "restart the game" (CR 727) waiting for its resolution to finish; the settle
+     * boundary carries it out through [com.wingedsheep.engine.core.GameRestarter].
+     */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val pendingRestart: com.wingedsheep.engine.core.GameRestartRequest? = null,
+
+    /**
+     * The rest of the instructions of the ability that restarted the game, followed just before the
+     * new game's first untap step (CR 727.4) by
+     * [com.wingedsheep.engine.handlers.MulliganHandler.beginFirstTurn].
+     */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val restartFollowUp: com.wingedsheep.engine.core.TurnStartFollowUp? = null,
 ) {
     /**
      * Cached projection of the game state with all continuous effects (Rule 613) applied.
@@ -935,6 +994,21 @@ data class GameState(
      * team-aware replacement for `activePlayerId == playerId` at every turn-ownership / sorcery-speed
      * gate. In a non-team game the active team is just the active player, so this reduces to equality.
      */
+    /**
+     * True while the current turn belongs to a side that has entirely left the game. CR 800.4j: such
+     * a turn continues to its completion without an active player, and whenever the active player
+     * would receive priority the next player in turn order receives it instead — but the turn is
+     * still the departed player's, not the next player's. Under shared team turns (CR 805.4) a
+     * surviving teammate keeps the turn alive, so this is false while one remains.
+     */
+    val isActiveSideGone: Boolean
+        get() {
+            val active = activePlayerId ?: return false
+            return sharedTurnTeam(active).all {
+                getEntity(it)?.has<com.wingedsheep.engine.state.components.player.PlayerLostComponent>() == true
+            }
+        }
+
     fun isActiveTurnFor(playerId: EntityId): Boolean {
         val active = activePlayerId ?: return false
         // Only a shared-team-turns format (CR 805.5a) lets a teammate share turn ownership; in Team
@@ -1001,6 +1075,26 @@ data class GameState(
             ?.get<com.wingedsheep.engine.state.components.identity.LifeTotalComponent>()?.life ?: 0
 
     /**
+     * Whether [playerId] can't lose life (CR 119.8) — a `CantLoseLifeComponent` lock on them, or in a
+     * shared-life team game on any teammate (CR 810.9h). Damage and life loss leave the total
+     * unchanged; a lowering exchange or redistribution doesn't happen.
+     */
+    fun isLifeLossLocked(playerId: EntityId): Boolean {
+        val seats = if (format.sharesTeamLife) teamOf(playerId) else listOf(playerId)
+        return seats.any {
+            getEntity(it)?.has<com.wingedsheep.engine.state.components.player.CantLoseLifeComponent>() == true
+        }
+    }
+
+    /**
+     * Whether [playerId] can pay [amount] life: paying 0 always can (CR 119.4 / 118.3); otherwise
+     * the (team's, CR 810.9a) life total must be at least the amount and the player must be able to
+     * lose life (CR 119.8 — "a cost that involves having that player pay life can't be paid").
+     */
+    fun canPayLife(playerId: EntityId, amount: Int): Boolean =
+        amount <= 0 || (lifeTotal(playerId) >= amount && !isLifeLossLocked(playerId))
+
+    /**
      * [playerId]'s **speed** (Aetherdrift, CR 702.179), 0–[com.wingedsheep.sdk.core.Speed.MAX].
      *
      * A player who has no speed reads as 0 per CR 702.179f, so every consumer — dynamic amounts, the
@@ -1045,7 +1139,7 @@ data class GameState(
     /**
      * Returns the player who currently has *input authority* for [playerId] — that is,
      * who clicks the buttons and answers the decisions. Normally this is [playerId]
-     * itself; during a Mindslaver-style hijacked turn this resolves to the hijacker.
+     * itself; during turn, combat or stack-resolution control this resolves to the controller.
      *
      * Resource ownership (mana, cards, life) is unaffected — it always stays with
      * [playerId]. This helper is consulted at input and private-view routing seams: legal action
@@ -1059,6 +1153,8 @@ data class GameState(
     fun actorFor(playerId: EntityId): EntityId {
         val entity = getEntity(playerId) ?: return playerId
         entity.get<com.wingedsheep.engine.state.components.player.HotseatControlComponent>()
+            ?.let { return it.controllerId }
+        resolutionControls.lastOrNull { it.playerId == playerId && isResolving(it.resolvingObject) }
             ?.let { return it.controllerId }
         val hijack = entity
             .get<com.wingedsheep.engine.state.components.player.PlayerTurnHijackedComponent>()
@@ -1104,10 +1200,33 @@ data class GameState(
         getEntity(entityId)?.has<SpellOnStackComponent>() == true
 
     /**
-     * Remove a specific entity from the stack (for countering).
+     * Take an object off the stack without it resolving — countered, bounced, exiled, or moved by
+     * any other zone change. The object it becomes is new (CR 400.7), so abilities granted to the
+     * stack object (CR 400.7a — Thief of Existence's cast trigger) end here. A *resolving* permanent
+     * spell leaves through [popFromStack] instead and keeps them on the permanent it becomes.
      */
     fun removeFromStack(entityId: EntityId): GameState =
-        copy(stack = stack - entityId)
+        copy(
+            stack = stack - entityId,
+            resolutionControls = resolutionControls.filterNot {
+                it.resolvingObject.entityId == entityId && !isResolving(it.resolvingObject)
+            },
+        ).withoutObjectGrants(entityId)
+
+    /**
+     * Drop the triggered, state-triggered and activated abilities granted to [entityId] — the
+     * object stopped existing as the object those grants were made to (CR 400.7).
+     */
+    fun withoutObjectGrants(entityId: EntityId): GameState =
+        if (grantedTriggeredAbilities.none { it.entityId == entityId } &&
+            grantedStateTriggeredAbilities.none { it.entityId == entityId } &&
+            grantedActivatedAbilities.none { it.entityId == entityId }
+        ) this
+        else copy(
+            grantedTriggeredAbilities = grantedTriggeredAbilities.filter { it.entityId != entityId },
+            grantedStateTriggeredAbilities = grantedStateTriggeredAbilities.filter { it.entityId != entityId },
+            grantedActivatedAbilities = grantedActivatedAbilities.filter { it.entityId != entityId }
+        )
 
     // =========================================================================
     // Convenience Zone Accessors

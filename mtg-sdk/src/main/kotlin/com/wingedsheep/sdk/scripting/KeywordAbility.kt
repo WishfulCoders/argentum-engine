@@ -5,9 +5,11 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.scripting.conditions.Condition
 import com.wingedsheep.sdk.scripting.costs.CostAtom
 import com.wingedsheep.sdk.scripting.costs.PayCost
 import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import com.wingedsheep.sdk.dsl.firebending
@@ -116,6 +118,8 @@ sealed interface KeywordAbility {
      * - `Protection(ProtectionScope.Subtype("Goblin"))`             — "Protection from Goblins"
      * - `Protection(ProtectionScope.Everything)`                    — "Protection from everything"
      * - `Protection(ProtectionScope.EachOpponent)`                  — "Protection from each opponent" (Rule 702.16e)
+     * - `Protection(ProtectionScope.Spells)` + `Protection(ProtectionScope.PermanentsCastThisTurn)`
+     *   — "Protection from spells and from permanents that were cast this turn" (Emrakul, the World Anew)
      */
     @SerialName("Protection")
     @Serializable
@@ -128,22 +132,34 @@ sealed interface KeywordAbility {
             is ProtectionScope.Color -> "Protection from ${scope.color.displayName.lowercase()}"
             is ProtectionScope.Colors -> "Protection from " +
                 scope.colors.joinToString(" and from ") { it.displayName.lowercase() }
+            is ProtectionScope.NonColor -> "Protection from non${scope.color.displayName.lowercase()}"
+            is ProtectionScope.Multicolored -> "Protection from multicolored"
             is ProtectionScope.CardType -> "Protection from ${scope.cardType.lowercase()}"
             is ProtectionScope.Subtype -> "Protection from ${scope.subtype}s"
             is ProtectionScope.Supertype -> "Protection from ${scope.supertype.lowercase()}"
             is ProtectionScope.Everything -> "Protection from everything"
             is ProtectionScope.EachOpponent -> "Protection from each opponent"
+            is ProtectionScope.Spells -> "Protection from spells"
+            is ProtectionScope.PermanentsCastThisTurn -> "Protection from permanents that were cast this turn"
+            is ProtectionScope.ActivatedAbilities -> "Protection from activated abilities"
+            is ProtectionScope.TriggeredAbilities -> "Protection from triggered abilities"
         }
     }
 
     /**
      * Hexproof from a quality. Parameterized by [ProtectionScope]; `ProtectionScope.Color`,
-     * `ProtectionScope.Colors` and `ProtectionScope.CardType` are engine-supported (the remaining
-     * scopes format the oracle text but have no rules-engine wiring yet).
+     * `ProtectionScope.Colors`, `ProtectionScope.NonColor`, `ProtectionScope.CardType` and the
+     * source-kind scopes (`Spells`, `PermanentsCastThisTurn`, `ActivatedAbilities`,
+     * `TriggeredAbilities`) are engine-supported (the remaining scopes format the oracle text but
+     * have no rules-engine wiring yet).
      *
      * Examples:
      * - `Hexproof(ProtectionScope.Color(Color.WHITE))`    — "Hexproof from white" (Knight of Malice)
      * - `Hexproof(ProtectionScope.CardType("Instant"))`   — "Hexproof from instants" (Elenda, Saint of Dusk)
+     * - `Hexproof(ProtectionScope.NonColor(Color.GREEN))`  — "can't be the target of nongreen spells or
+     *   abilities your opponents control" (Thrun, Breaker of Silence)
+     * - `Hexproof(ProtectionScope.ActivatedAbilities)` + `Hexproof(ProtectionScope.TriggeredAbilities)`
+     *   — "Hexproof from activated and triggered abilities" (Volatile Stormdrake; CR 702.11f)
      */
     @SerialName("Hexproof")
     @Serializable
@@ -152,11 +168,17 @@ sealed interface KeywordAbility {
             is ProtectionScope.Color -> "Hexproof from ${scope.color.displayName.lowercase()}"
             is ProtectionScope.Colors -> "Hexproof from " +
                 scope.colors.joinToString(" and from ") { it.displayName.lowercase() }
+            is ProtectionScope.NonColor -> "Hexproof from non${scope.color.displayName.lowercase()}"
+            is ProtectionScope.Multicolored -> "Hexproof from multicolored"
             is ProtectionScope.CardType -> "Hexproof from ${scope.cardType.lowercase()}"
             is ProtectionScope.Subtype -> "Hexproof from ${scope.subtype}s"
             is ProtectionScope.Supertype -> "Hexproof from ${scope.supertype.lowercase()}"
             is ProtectionScope.Everything -> "Hexproof from everything"
             is ProtectionScope.EachOpponent -> "Hexproof from each opponent"
+            is ProtectionScope.Spells -> "Hexproof from spells"
+            is ProtectionScope.PermanentsCastThisTurn -> "Hexproof from permanents that were cast this turn"
+            is ProtectionScope.ActivatedAbilities -> "Hexproof from activated abilities"
+            is ProtectionScope.TriggeredAbilities -> "Hexproof from triggered abilities"
         }
     }
 
@@ -354,7 +376,39 @@ sealed interface KeywordAbility {
             require(manaCost != null || additionalCost != null) {
                 "OptionalAdditionalCost requires either a manaCost or an additionalCost"
             }
+            require(!multi || additionalCost == null || additionalCostPaid(2) != null) {
+                "A repeatable optional cost's non-mana half must be an amount that scales " +
+                    "(pay life, pay player counters); got ${additionalCost?.description}"
+            }
         }
+
+        /**
+         * The mana half of this cost paid [times] times over — each payment repeats the symbols
+         * (CR 702.56a "pay [cost] any number of times"). Null when this cost has no mana half.
+         */
+        fun manaCostPaid(times: Int): ManaCost? =
+            manaCost?.let { cost -> ManaCost(List(times) { cost.symbols }.flatten()) }
+
+        /**
+         * The non-mana half of this cost paid [times] times over, as one cost whose amount is
+         * multiplied — "pay {E}{E}{E}" twice is "pay six energy". Only amount-shaped atoms scale;
+         * anything else returns null for [times] > 1, which is why a [multi] cost is restricted to
+         * them at construction.
+         */
+        fun additionalCostPaid(times: Int): AdditionalCost? {
+            val cost = additionalCost ?: return null
+            if (times == 1) return cost
+            val atom = (cost as? AdditionalCost.Atom)?.atom ?: return null
+            return when {
+                atom is CostAtom.PayLife ->
+                    AdditionalCost.Atom(atom.copy(amount = atom.amount * times))
+                atom is CostAtom.PayPlayerCounters &&
+                    atom.amount is DynamicAmount.Fixed ->
+                    AdditionalCost.Atom(atom.copy(amount = DynamicAmount.Fixed((atom.amount as DynamicAmount.Fixed).amount * times)))
+                else -> null
+            }
+        }
+
         override val description: String = when {
             // Bargain's and Teamwork's costs are definitional (CR 702.166a / 702.194a), so the
             // printed text is the bare keyword — never "Bargain—sacrifice …" / "Teamwork 2—tap …".
@@ -460,12 +514,19 @@ sealed interface KeywordAbility {
      * The optional [additionalCost] models flashback variants that bundle a
      * non-mana cost (e.g., "Flashback—{1}{R}, Behold three Elementals.").
      * It is paid only on the flashback cast path; hand casts ignore it.
+     *
+     * The optional [condition] models a printed flashback the card has only "as long as" something
+     * holds (Viral Spawning: "Corrupted — As long as an opponent has three or more poison counters,
+     * this card has flashback {2}{G}."). It is evaluated with the card as the source and its owner
+     * as the controller whenever the graveyard cast is enumerated or paid for; a spell already cast
+     * with flashback is still exiled when it leaves the stack even if the condition has lapsed.
      */
     @SerialName("Flashback")
     @Serializable
     data class Flashback(
         val cost: ManaCost,
-        val additionalCost: AdditionalCost? = null
+        val additionalCost: AdditionalCost? = null,
+        val condition: @Serializable Condition? = null
     ) : KeywordAbility {
         override val keyword: Keyword = Keyword.FLASHBACK
         override val description: String =
@@ -523,6 +584,38 @@ sealed interface KeywordAbility {
     ) : KeywordAbility {
         override val keyword: Keyword = Keyword.MAYHEM
         override val description: String = "Mayhem $cost"
+    }
+
+    // =========================================================================
+    // Escape
+    // =========================================================================
+
+    /**
+     * Escape (CR 702.138, Theros Beyond Death). "Escape—[cost]" means "You may cast this card from
+     * your graveyard by paying [cost] rather than paying its mana cost" (CR 702.138a) — an
+     * alternative cost, so the spell's own additional costs are still owed on top.
+     *
+     * [cost] is the mana half; [additionalCost] is the non-mana half every printed escape card
+     * carries — "Exile N other cards from your graveyard", spelled
+     * `Costs.additional.ExileOtherCards(N)`. The card being cast is never part of its own exile
+     * pool: it is on the stack by the time costs are paid (CR 601.2a before 601.2h).
+     *
+     * Grants no timing permission (a creature still escapes at sorcery speed) and, unlike
+     * [Flashback], does NOT exile the card on resolution: an escaped permanent stays on the
+     * battlefield and is durably marked as having escaped (CR 702.138b), readable through
+     * `Conditions.Escaped` — which is how "sacrifice it unless it escaped" (Phlage) and
+     * "escapes with a +1/+1 counter" (CR 702.138c, an `EntersWithCounters` gated on it) are written.
+     */
+    @SerialName("Escape")
+    @Serializable
+    data class Escape(
+        val cost: ManaCost,
+        val additionalCost: AdditionalCost? = null
+    ) : KeywordAbility {
+        override val keyword: Keyword = Keyword.ESCAPE
+        override val description: String =
+            if (additionalCost == null) "Escape—$cost"
+            else "Escape—$cost, ${additionalCost.description}"
     }
 
     // =========================================================================
@@ -610,9 +703,10 @@ sealed interface KeywordAbility {
      * graveyard. Default warp (CR 702.185a) is hand-only; cards like Timeline
      * Culler explicitly grant graveyard access via their oracle text.
      *
-     * Provisional: if a sibling keyword ever needs the same "you may cast this
-     * from your graveyard using its X ability" wording, extract a generic
-     * cast-from-zone permission rather than duplicating this flag.
+     * The generic spelling of "you may cast this from your graveyard using its X
+     * ability" is `MayCastSelfFromZones(castUsing = X)` (bestow: Detective's
+     * Phoenix); this flag predates it and should migrate there rather than be
+     * copied onto another keyword.
      */
     @SerialName("Warp")
     @Serializable
@@ -785,6 +879,31 @@ sealed interface KeywordAbility {
     }
 
     // =========================================================================
+    // Bestow
+
+    @Serializable
+    @SerialName("Bestow")
+    data class Bestow(val cost: ManaCost, val additionalCost: AdditionalCost? = null) : KeywordAbility {
+        override val keyword: Keyword = Keyword.BESTOW
+        override val description: String = "Bestow $cost" + (additionalCost?.let { ", ${it.description}" } ?: "")
+    }
+
+    // =========================================================================
+    // Prototype
+
+    /**
+     * Prototype [cost] — [power]/[toughness] (CR 702.160, 718). The caster may cast the card
+     * "prototyped": the spell, and the permanent it becomes, has this mana cost (and so its colors
+     * and mana value) and this power and toughness instead of the printed ones. Every other
+     * characteristic is unchanged. Prototyping is not an alternative cost, so it combines with one.
+     */
+    @Serializable
+    @SerialName("Prototype")
+    data class Prototype(val cost: ManaCost, val power: Int, val toughness: Int) : KeywordAbility {
+        override val keyword: Keyword = Keyword.PROTOTYPE
+        override val description: String = "Prototype $cost — $power/$toughness"
+    }
+
     // Evoke
     // =========================================================================
 
@@ -822,15 +941,26 @@ sealed interface KeywordAbility {
      *    off the *generic* portion only, so it can never reduce a colored pip and any excess is
      *    simply wasted.
      *
+     * [from] is the "emerge from [quality]" variant (CR 702.119b, Crabomination's "emerge from
+     * artifact"): the sacrificed permanent must match it instead of being a creature. Null is plain
+     * emerge — "sacrificing a creature".
+     *
      * The sacrifice rides `CastSpell.additionalCostPayment.sacrificedPermanents`, exactly like
      * [Sneak]'s bounce rides `bouncedPermanents`. Attach via the `emerge("{cost}")` DSL helper on
      * [com.wingedsheep.sdk.dsl.CardBuilder].
      */
     @SerialName("Emerge")
     @Serializable
-    data class Emerge(val cost: ManaCost) : KeywordAbility {
+    data class Emerge(
+        val cost: ManaCost,
+        val from: GameObjectFilter? = null
+    ) : KeywordAbility {
         override val keyword: Keyword = Keyword.EMERGE
-        override val description: String = "Emerge $cost"
+        override val description: String =
+            if (from == null) "Emerge $cost" else "Emerge from ${from.description.lowercase()} $cost"
+
+        /** What may be sacrificed to pay this emerge cost (CR 702.119a/b). */
+        val sacrificeFilter: GameObjectFilter get() = from ?: GameObjectFilter.Creature
     }
 
     // =========================================================================
@@ -1032,7 +1162,7 @@ sealed interface KeywordAbility {
      * [com.wingedsheep.sdk.model.CardScript.cleaveTargetRequirements] (mirroring how kicker supplies
      * an alternate effect/target tree). Casting for cleave swaps in that variant at cast time, so a
      * clause inside brackets that would create a delayed triggered ability is never created at all
-     * (Alchemist's Gambit ruling). The cleave cost never changes the spell's mana value (CR 202.3b).
+     * (Alchemist's Gambit ruling). The cleave cost never changes the spell's mana value (CR 118.9c).
      *
      * Wired by the `cleave(cost) { }` DSL helper on [com.wingedsheep.sdk.dsl.CardBuilder], which
      * attaches this keyword ability and captures the brackets-removed effect/targets.
@@ -1042,6 +1172,28 @@ sealed interface KeywordAbility {
     data class Cleave(val cost: ManaCost) : KeywordAbility {
         override val keyword: Keyword = Keyword.CLEAVE
         override val description: String = "Cleave $cost"
+    }
+
+    // =========================================================================
+    // Overload
+    // =========================================================================
+
+    /**
+     * Overload [cost] (CR 702.96). "You may choose to pay [cost] rather than pay this spell's mana
+     * cost" and "If you chose to pay this spell's overload cost, change its text by replacing all
+     * instances of the word 'target' with the word 'each.'" (CR 702.96a)
+     *
+     * An alternative cost whose text change is modelled *structurally*, like [Cleave]: the card
+     * author supplies the "each" variant as
+     * [com.wingedsheep.sdk.model.CardScript.overloadSpellEffect] (`overloadEffect` in `spell { }`).
+     * Casting for overload swaps that effect in and the spell has no targets at all (CR 702.96b), so
+     * it reaches objects that couldn't have been targeted (hexproof, protection).
+     */
+    @SerialName("Overload")
+    @Serializable
+    data class Overload(val cost: ManaCost) : KeywordAbility {
+        override val keyword: Keyword = Keyword.OVERLOAD
+        override val description: String = "Overload $cost"
     }
 
     // =========================================================================
@@ -1113,6 +1265,9 @@ sealed interface KeywordAbility {
          * Create Hexproof from a color.
          */
         fun hexproofFrom(color: Color): KeywordAbility = Hexproof(ProtectionScope.Color(color))
+
+        /** "Hexproof from non<color>" — opponents' sources that aren't [color] (colorless included). */
+        fun hexproofFromNon(color: Color): KeywordAbility = Hexproof(ProtectionScope.NonColor(color))
 
         /**
          * Create Protection from a color.
@@ -1221,6 +1376,14 @@ sealed interface KeywordAbility {
             Flashback(ManaCost.parse(cost), additionalCost)
 
         /**
+         * Create a Flashback the card has only while [condition] holds
+         * (e.g., Viral Spawning: "As long as an opponent has three or more poison counters, this
+         * card has flashback {2}{G}" → `flashback("{2}{G}", Conditions.Corrupted)`).
+         */
+        fun flashback(cost: String, condition: Condition): KeywordAbility =
+            Flashback(ManaCost.parse(cost), condition = condition)
+
+        /**
          * Create Harmonize with mana cost from string (e.g., "Harmonize {5}{R}{R}").
          */
         fun harmonize(cost: String): KeywordAbility = Harmonize(ManaCost.parse(cost))
@@ -1230,6 +1393,14 @@ sealed interface KeywordAbility {
          * 702.187c "Mayhem" (no cost) land form (Oscorp Industries).
          */
         fun mayhem(cost: String): KeywordAbility = Mayhem(ManaCost.parse(cost))
+
+        /**
+         * Create Escape with a mana cost and its non-mana half (CR 702.138) — e.g.
+         * `escape("{R}{R}{W}{W}", Costs.additional.ExileOtherCards(5))` for "Escape—{R}{R}{W}{W},
+         * Exile five other cards from your graveyard."
+         */
+        fun escape(cost: String, additionalCost: AdditionalCost? = null): KeywordAbility =
+            Escape(ManaCost.parse(cost), additionalCost)
 
         /**
          * Create Madness with mana cost from string (e.g., "Madness {R}").
@@ -1265,6 +1436,35 @@ sealed interface KeywordAbility {
             manaCost = ManaCost.parse(cost),
             multi = true,
             displayPrefix = "Multikicker"
+        )
+
+        /**
+         * Create Replicate (CR 702.56) — "as an additional cost to cast this spell, you may pay
+         * [cost] any number of times", and "when you cast this spell, copy it for each time its
+         * replicate cost was paid". The cast declares [ChoiceSlot.REPLICATED] and the payment count
+         * together; the engine's cast triggers put the copy trigger on the stack.
+         */
+        fun replicate(cost: String): KeywordAbility = OptionalAdditionalCost(
+            manaCost = ManaCost.parse(cost),
+            multi = true,
+            displayPrefix = "Replicate",
+            keyword = Keyword.REPLICATE,
+            branchesEffect = false,
+            declaredSlot = ChoiceSlot.REPLICATED
+        )
+
+        /**
+         * Replicate with a non-mana cost — "Replicate—Pay {E}{E}{E}" (Reiterating Bolt). The cost
+         * must be amount-shaped (pay life, pay player counters) so that paying it N times is one
+         * cost of N times the amount.
+         */
+        fun replicate(additionalCost: AdditionalCost): KeywordAbility = OptionalAdditionalCost(
+            additionalCost = additionalCost,
+            multi = true,
+            displayPrefix = "Replicate",
+            keyword = Keyword.REPLICATE,
+            branchesEffect = false,
+            declaredSlot = ChoiceSlot.REPLICATED
         )
 
         /**
@@ -1316,15 +1516,24 @@ sealed interface KeywordAbility {
         fun dash(cost: String): KeywordAbility = Dash(ManaCost.parse(cost))
 
         /**
-         * Create Evoke with mana cost from string.
+         * Create Bestow with mana cost from string and an optional nonmana payment.
          */
+        fun bestow(cost: String, additionalCost: AdditionalCost? = null): KeywordAbility =
+            Bestow(ManaCost.parse(cost), additionalCost)
+
+        /** Create Prototype with its alternative mana cost and size: `prototype("{3}{R}", 2, 2)`. */
+        fun prototype(cost: String, power: Int, toughness: Int): KeywordAbility =
+            Prototype(ManaCost.parse(cost), power, toughness)
+
+        /** Create Evoke with mana cost from string. */
         fun evoke(cost: String): KeywordAbility = Evoke(ManaCost.parse(cost))
 
         /**
          * Create Emerge with mana cost from string (CR 702.119). Prefer the `emerge(cost)` DSL
          * helper on [com.wingedsheep.sdk.dsl.CardBuilder].
          */
-        fun emerge(cost: String): KeywordAbility = Emerge(ManaCost.parse(cost))
+        fun emerge(cost: String, from: GameObjectFilter? = null): KeywordAbility =
+            Emerge(ManaCost.parse(cost), from)
 
         /**
          * Create Sneak with mana cost from string. Prefer the `sneak(cost)` DSL helper on
@@ -1367,6 +1576,13 @@ sealed interface KeywordAbility {
         fun cleave(cost: String): KeywordAbility = Cleave(ManaCost.parse(cost))
 
         /**
+         * Create Overload with an overload mana cost (CR 702.96). Declared on the card via
+         * `keywordAbility(KeywordAbility.overload("{cost}"))`; the "each" variant is supplied inside
+         * the card's `spell { }` block via `overloadEffect`.
+         */
+        fun overload(cost: String): KeywordAbility = Overload(ManaCost.parse(cost))
+
+        /**
          * Create Conspire keyword ability.
          */
         fun conspire(): KeywordAbility = Conspire
@@ -1384,7 +1600,7 @@ sealed interface KeywordAbility {
         /**
          * Create Toxic with a numeric value.
          */
-        fun toxic(count: Int): KeywordAbility = Numeric(Keyword.TOXIC, count)
+        fun toxic(count: Int): Numeric = Numeric(Keyword.TOXIC, count)
 
         // Numeric-keyword shorthands. Each `Keyword.<X>` numeric ability is just
         // `Numeric(Keyword.<X>, n)`; these helpers exist purely for readability.

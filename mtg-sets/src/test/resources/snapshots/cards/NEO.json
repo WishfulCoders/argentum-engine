@@ -1115,6 +1115,39 @@
     "colorIdentityOverride": []
 }
 
+// Hotshot Mechanic
+{
+    "name": "Hotshot Mechanic",
+    "manaCost": "{W}",
+    "typeLine": "Artifact Creature — Fox Pilot",
+    "oracleText": "This creature crews Vehicles as though its power were 2 greater.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "CrewSaddleContribution",
+                "modifier": 2,
+                "costs": [
+                    "CREW"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "16",
+        "rarity": "UNCOMMON",
+        "artist": "Julio Reyna",
+        "flavorText": "\"If your mech is factory standard, you might as well be walking.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5a70e8fa-b71d-441e-b049-dacb09a9a7af.jpg?1783923922"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Imperial Oath
 {
     "name": "Imperial Oath",
@@ -1299,6 +1332,42 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Moonfolk Puzzlemaker
+{
+    "name": "Moonfolk Puzzlemaker",
+    "manaCost": "{2}{U}",
+    "typeLine": "Artifact Creature — Moonfolk Wizard",
+    "oracleText": "Flying\nWhenever this creature becomes tapped, scry 1.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 4
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Moonfolk Puzzlemaker:1",
+                "trigger": "TapEvent",
+                "effect": {
+                    "type": "Scry",
+                    "count": 1
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "68",
+        "artist": "Miguel Mercado",
+        "flavorText": "\"Research is hardly the dry, serious pastime outsiders make it out to be.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/9/c9fa6d4c-78dc-4b40-9ce8-a0e593d4001f.jpg"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 

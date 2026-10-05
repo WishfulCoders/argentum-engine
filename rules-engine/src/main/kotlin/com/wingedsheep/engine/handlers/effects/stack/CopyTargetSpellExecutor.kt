@@ -109,47 +109,16 @@ class CopyTargetSpellExecutor(
             ))
         }
 
-        // If the original spell has no targets, create the copy immediately.
-        // For permanent spells (no spellEffect) and when removing the Legendary supertype
-        // (CR 707.10f resolves the copy into a token), we use putSpellCopy so we get a real
-        // spell entity whose CardComponent can be patched. For instant/sorcery spells
-        // without the legendary clause, the lightweight TriggeredAbilityOnStackComponent
-        // path is sufficient.
+        // If the original spell has no targets, create the copies immediately. Each is a real
+        // spell entity (CR 707.10: a copy of a spell is itself a spell), so it can be countered
+        // as a spell and fires "whenever you copy a spell" triggers off its SpellCopiedEvent.
         if (targetRequirements.isEmpty()) {
-            if (effect.removeLegendary || spellEffect == null) {
-                return EffectResult.from(
-                    putInheritedCopies(
-                        state, spellEntityId, context.controllerId, copyCount,
-                        effect.keywordsForCopy.toSet(), effect.removeLegendary, tokenRiders
-                    )
+            return EffectResult.from(
+                putInheritedCopies(
+                    state, spellEntityId, context.controllerId, copyCount,
+                    effect.keywordsForCopy.toSet(), effect.removeLegendary, tokenRiders
                 )
-            }
-            var currentState = state
-            val allEvents = mutableListOf<GameEvent>()
-            val contextSourceId = context.sourceId
-            repeat(copyCount) {
-                val sourceId = if (contextSourceId != null) contextSourceId else {
-                    val (id, s) = currentState.newEntity()
-                    currentState = s
-                    id
-                }
-                val copyAbility = TriggeredAbilityOnStackComponent(
-                    sourceId = sourceId,
-            objectReferences = context.objectReferences,
-                    sourceName = spellName,
-                    controllerId = context.controllerId,
-                    effect = spellEffect,
-                    description = "Copy of $spellName"
-                )
-                val pushed = applyKeywordsToCopy(
-                    StackPlacement.putTriggeredAbility(currentState, copyAbility),
-                    effect.keywordsForCopy
-                )
-                if (pushed.outcome !is Outcome.Done) return EffectResult.from(pushed)
-                currentState = pushed.newState
-                allEvents.addAll(pushed.events)
-            }
-            return EffectResult.success(currentState, allEvents)
+            )
         }
 
         // Spell has targets — prompt for new target selection. Permanent spells
@@ -158,7 +127,7 @@ class CopyTargetSpellExecutor(
         // CR 707.10f token tagging happens at resolution in StackResolver.
         return promptForCopyTargets(
             state, context, spellEntityId, spellEffect, targetRequirements, spellName,
-            effect.keywordsForCopy.toSet(), effect.removeLegendary, copyCount
+            effect.keywordsForCopy.toSet(), effect.removeLegendary, copyCount, tokenRiders
         )
     }
 
@@ -230,6 +199,7 @@ class CopyTargetSpellExecutor(
         keywordsForCopy: Set<String> = emptySet(),
         removeLegendary: Boolean = false,
         copyCount: Int = 1,
+        tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent? = null,
     ): EffectResult {
 
         val legalTargetsMap = mutableMapOf<Int, List<EntityId>>()
@@ -248,7 +218,7 @@ class CopyTargetSpellExecutor(
             return EffectResult.from(
                 putInheritedCopies(
                     state, spellEntityId, context.controllerId, copyCount,
-                    keywordsForCopy, removeLegendary, tokenRiders = null
+                    keywordsForCopy, removeLegendary, tokenRiders
                 )
             )
         }
@@ -268,7 +238,8 @@ class CopyTargetSpellExecutor(
             sourceId = spellEntityId,
             totalCopies = copyCount,
             keywordsForCopy = keywordsForCopy,
-            removeLegendary = removeLegendary
+            removeLegendary = removeLegendary,
+            tokenRiders = tokenRiders
         )
         val targetReqInfos = targetRequirements.mapIndexed { index, req ->
             TargetRequirementInfo(

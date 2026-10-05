@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    naming: with zero artifacts you may still say yes, draw nothing, and each opponent draws.
  *    Whether "you did" when the draw was for zero cards is not something the printed text
  *    settles; gating on the choice is the reading that keeps the two halves atomic.
- *  - Chapter II is the Will, Scion of Peace shape ([Effects.ReduceSpellCostsThisTurn]): a
+ *  - Chapter II is the Will, Scion of Peace shape ([Effects.ReduceSpellCosts]): a
  *    turn-scoped, state-held reduction that already scopes to the controller's own spells, is
  *    not consumed by the first matching spell, survives the Saga being sacrificed after III, and
  *    reduces only generic mana (CR 601.2f).
@@ -58,7 +58,7 @@ val ArmorWars = card("Armor Wars") {
 
     // II — Artifact spells you cast this turn cost {1} less to cast.
     sagaChapter(2) {
-        effect = Effects.ReduceSpellCostsThisTurn(
+        effect = Effects.ReduceSpellCosts(
             spellFilter = GameObjectFilter.Artifact,
             amount = DynamicAmounts.fixed(1),
         )

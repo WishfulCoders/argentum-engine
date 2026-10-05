@@ -29,13 +29,19 @@ data class CantAttack(
  * Forces the affected permanents to attack each combat if able.
  * Use [GroupFilter.source] for "this creature attacks each combat", or any battlefield
  * filter for "All creatures attack each combat if able" effects (e.g. Grand Melee).
+ *
+ * @property playersOnly "attacks **a player** each combat if able" (Nahiri, the Unforgiving): the
+ *   requirement is only met by attacking a player, so attacking a planeswalker or battle is an
+ *   error while some player could legally be attacked (CR 508.1d — maximize requirements obeyed).
  */
 @SerialName("MustAttack")
 @Serializable
 data class MustAttack(
-    val filter: GroupFilter = GroupFilter.source()
+    val filter: GroupFilter = GroupFilter.source(),
+    val playersOnly: Boolean = false
 ) : StaticAbility {
-    override val description: String = "${filter.description} attack each combat if able"
+    override val description: String =
+        "${filter.description} attack${if (playersOnly) " a player" else ""} each combat if able"
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
         val newFilter = filter.applyTextReplacement(replacer)
         return if (newFilter !== filter) copy(filter = newFilter) else this
@@ -191,17 +197,48 @@ data class DivideCombatDamageFreely(
 }
 
 /**
- * This creature may assign its combat damage as though it weren't blocked.
- * When blocked, the controller chooses whether to assign damage to blockers
- * or to the defending player/planeswalker. Used for Thorn Elemental.
+ * A creature may assign its combat damage as though it weren't blocked. When it is
+ * blocked, its controller chooses, at each combat damage step it deals damage in, whether to
+ * assign to its blockers or to the player, planeswalker or battle it is attacking.
+ *
+ * [filter] picks which creatures: the default [GroupFilter.source] is "this creature" (Thorn
+ * Elemental); a battlefield-scoped group covers every creature it matches, evaluated against the
+ * source's controller (Zilortha, Apex of Ikoria — "for each non-Human creature you control, you may
+ * have that creature assign its combat damage as though it weren't blocked").
  */
 @SerialName("AssignCombatDamageAsUnblocked")
 @Serializable
 data class AssignCombatDamageAsUnblocked(
     val filter: GroupFilter = GroupFilter.source()
 ) : StaticAbility {
+    override val description: String = when (filter.scope) {
+        is Scope.Battlefield ->
+            "For each ${filter.baseFilter.description}, you may have that creature assign its combat damage as though it weren't blocked"
+        else -> "You may have ${filter.description} assign its combat damage as though it weren't blocked"
+    }
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newFilter = filter.applyTextReplacement(replacer)
+        return if (newFilter !== filter) copy(filter = newFilter) else this
+    }
+}
+
+/**
+ * If this creature is unblocked, its controller may have it assign all its combat damage to one
+ * creature the defending player controls instead of to the player, planeswalker or battle it is
+ * attacking. Used for Cunning Giant.
+ *
+ * The mirror of [AssignCombatDamageAsUnblocked]: that one lets a *blocked* creature skip its
+ * blockers, this one lets an *unblocked* creature reach a creature that isn't blocking it. The
+ * choice is made as combat damage is assigned, once per combat damage step (CR 510.1), among the
+ * creatures the defending player controls at that moment — for a battle, its protector's (CR 508.5).
+ */
+@SerialName("AssignUnblockedCombatDamageToDefendingCreature")
+@Serializable
+data class AssignUnblockedCombatDamageToDefendingCreature(
+    val filter: GroupFilter = GroupFilter.source()
+) : StaticAbility {
     override val description: String =
-        "You may have this creature assign its combat damage as though it weren't blocked"
+        "If this creature is unblocked, you may have it assign its combat damage to a creature defending player controls"
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
         val newFilter = filter.applyTextReplacement(replacer)
         return if (newFilter !== filter) copy(filter = newFilter) else this
@@ -235,6 +272,29 @@ data class AssignCombatDamageAsUnblocked(
  * Unlike [CantAttackOrBlockUnlessPay] this has no blocking half: the printed line is attack-only,
  * and a blocking sibling would need its own pause in the blocker step.
  */
+/**
+ * "You may exert this creature as it attacks." (CR 701.43d) — an *optional* cost to attack
+ * (CR 508.1g): as attackers are declared, the controller chooses whether to exert each declared
+ * attacker carrying it. Exerting (CR 701.43a) means the creature won't untap during its
+ * controller's next untap step; a creature can be exerted even if it was already exerted
+ * (CR 701.43b), and the choice is still offered.
+ *
+ * The "When you do, …" paragraph printed with it is a triggered ability linked to this static
+ * (CR 607.2h): author it as `Triggers.self.exertedAsItAttacks()`. That trigger fires only for an
+ * exert chosen through this ability, never for an exert paid as an activated ability's cost
+ * (`Costs.Exert`).
+ *
+ * Read off the card definition like [CantAttackUnlessSacrifice]; a face-down creature or one that
+ * has lost all abilities isn't offered the choice.
+ *
+ * Hydra Trainer (MH3).
+ */
+@SerialName("ExertAsItAttacks")
+@Serializable
+data object ExertAsItAttacks : StaticAbility {
+    override val description: String = "You may exert this creature as it attacks"
+}
+
 @SerialName("CantAttackUnlessSacrifice")
 @Serializable
 data class CantAttackUnlessSacrifice(
@@ -539,6 +599,25 @@ data class CantBeAttackedBy(
 }
 
 /**
+ * "Each opponent must attack you or a planeswalker you control with at least one creature each
+ * combat if able" (Trove of Temptation) — a requirement on the attacking *player*, not on any one
+ * creature (CR 508.1d).
+ *
+ * Whenever an opponent of this permanent's controller declares attackers, the declaration must
+ * include at least one creature attacking that controller or a planeswalker they control, as long
+ * as some creature could legally do so without its controller paying a cost (CR 508.1d — a player
+ * is never required to pay an attack cost to obey a requirement). Battles aren't named, so
+ * attacking one never satisfies it. The requirement says nothing about *which* creature, so it
+ * never makes a specific creature mandatory.
+ */
+@SerialName("OpponentsMustAttackYou")
+@Serializable
+data object OpponentsMustAttackYou : StaticAbility {
+    override val description: String =
+        "Each opponent must attack you or a planeswalker you control with at least one creature each combat if able"
+}
+
+/**
  * Sentence-subject rendering of an attacker filter: "creature with flying" → "Creatures with
  * flying". This string is user-visible — it is the attack-rejection message and the label of a
  * granted static — and the clause it heads is always plural ("Creatures without flying can't
@@ -613,4 +692,22 @@ data class BlockerCountLimit(
 ) : StaticAbility {
     override val description: String =
         "No more than $maxBlockers creature${if (maxBlockers == 1) "" else "s"} can block each combat"
+}
+
+/**
+ * Creatures matching [filter] can attack as though they had haste. This rule permission
+ * does not grant haste or allow activation of abilities with tap or untap symbol costs.
+ * Use [ConditionalStaticAbility] for a conditional permission and `Effects.GrantStaticAbility`
+ * for a duration-bound permission.
+ */
+@SerialName("CanAttackAsThoughHasty")
+@Serializable
+data class CanAttackAsThoughHasty(
+    val filter: GroupFilter = GroupFilter.source()
+) : StaticAbility {
+    override val description: String = "${filter.description} can attack as though they had haste"
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newFilter = filter.applyTextReplacement(replacer)
+        return if (newFilter !== filter) copy(filter = newFilter) else this
+    }
 }

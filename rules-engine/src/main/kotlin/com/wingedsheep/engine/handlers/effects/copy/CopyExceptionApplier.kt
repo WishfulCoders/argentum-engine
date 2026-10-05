@@ -1,10 +1,16 @@
 package com.wingedsheep.engine.handlers.effects.copy
 
+import com.wingedsheep.engine.core.CardEntityFactory
+import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.NumericKeywordValuesComponent
+import com.wingedsheep.engine.state.components.identity.ToxicComponent
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.model.CharacteristicValue
 import com.wingedsheep.sdk.model.CreatureStats
+import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CopyExceptions
 
 /**
@@ -69,17 +75,71 @@ object CopyExceptionApplier {
      *
      * A no-op fast path when the exceptions are empty, so a plain copy allocates nothing.
      */
-    fun apply(base: CardComponent, exceptions: CopyExceptions): CardComponent {
+    fun apply(
+        base: CardComponent,
+        exceptions: CopyExceptions,
+        resolvingTrigger: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
+        copierColors: Set<com.wingedsheep.sdk.core.Color> = emptySet(),
+    ): CardComponent {
         if (exceptions.isEmpty) return base
+        val addedTriggers = exceptions.addedTriggeredAbilities +
+            if (exceptions.retainResolvingTriggeredAbility && resolvingTrigger != null) listOf(resolvingTrigger)
+            else emptyList()
         return base.copy(
             name = exceptions.nameOverride ?: base.name,
+            // Each instance gets its own identity, including two copies of a once-per-turn
+            // trigger. Plain subsequent copies retain these ids rather than adding instances.
+            copyTriggeredAbilities = base.copyTriggeredAbilities + addedTriggers.mapIndexed { index, ability ->
+                ability.copy(id = com.wingedsheep.sdk.scripting.AbilityId(
+                    "copy:${base.copyTriggeredAbilities.size + index}:${ability.id.value}"
+                ))
+            },
+            copyActivatedAbilities = base.copyActivatedAbilities + exceptions.addedActivatedAbilities.mapIndexed { index, ability ->
+                ability.copy(id = com.wingedsheep.sdk.scripting.AbilityId(
+                    "copy_act:${base.copyActivatedAbilities.size + index}:${ability.id.value}"
+                ))
+            },
             typeLine = typeLine(base.typeLine, exceptions),
             baseStats = baseStats(base.baseStats, exceptions),
-            baseKeywords = base.baseKeywords + exceptions.addedKeywords,
-            colors = exceptions.overrideColors ?: (base.colors + exceptions.addedColors),
+            // Color is already derived from the indicator/CDA in the stored characteristics.
+            // A color exception also omits the copied color-defining keyword (CR 707.9d).
+            baseKeywords = (if (exceptions.retainColors || exceptions.overrideColors != null ||
+                exceptions.addedColors.isNotEmpty()) base.baseKeywords - Keyword.DEVOID
+                else base.baseKeywords) + exceptions.addedKeywords,
+            colors = if (exceptions.retainColors) copierColors
+                else exceptions.overrideColors ?: (base.colors + exceptions.addedColors),
             // "…and it has no mana cost" (Embalm / Eternalize, CR 702.128a) — mana value 0, and
             // that 0 is itself a copiable value.
             manaCost = if (exceptions.noManaCost) ManaCost.ZERO else base.manaCost,
+        )
+    }
+
+    /**
+     * Stamp the copy's numeric-keyword values onto [copy]: the N of every numeric keyword the
+     * copied object [source] has (toxic N, bushido N — the N is part of the ability, so it is a
+     * copiable value, CR 707.2) plus [exceptions]' `addedNumericKeywords`.
+     *
+     * Those values don't live on the [CardComponent] — printed numeric keywords are seeded at
+     * entity creation into [ToxicComponent] / [NumericKeywordValuesComponent] — so a copy path that
+     * builds its entity from a copied [CardComponent] alone silently loses them. Reading them off
+     * [source]'s components (rather than its definition) is what makes a copy of a copy right: the
+     * first copy's components already carry its own exception-added values.
+     */
+    fun withNumericKeywords(
+        copy: ComponentContainer,
+        source: ComponentContainer,
+        exceptions: CopyExceptions,
+    ): ComponentContainer {
+        val numeric = buildList {
+            source.get<ToxicComponent>()?.let { add(KeywordAbility.Numeric(Keyword.TOXIC, it.amount)) }
+            source.get<NumericKeywordValuesComponent>()?.values?.forEach { (keyword, n) ->
+                add(KeywordAbility.Numeric(keyword, n))
+            }
+            addAll(exceptions.addedNumericKeywords)
+        }
+        return CardEntityFactory.applyNumericKeywords(
+            copy.without<ToxicComponent>().without<NumericKeywordValuesComponent>(),
+            numeric,
         )
     }
 

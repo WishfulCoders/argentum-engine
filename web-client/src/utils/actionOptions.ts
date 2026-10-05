@@ -213,7 +213,7 @@ function reductionHintFor(action: LegalActionInfo): { hint: string } | null {
  */
 export interface KeywordAlternativeCost {
   /** Option key, also the discriminator the tests and the menu identify the row by. */
-  readonly key: 'impending' | 'evoke'
+  readonly key: 'impending' | 'evoke' | 'bestow'
   /** Button label. */
   readonly label: string
   /** The alternative mana cost, e.g. "{2}{U}". */
@@ -232,6 +232,15 @@ export interface KeywordAlternativeCost {
  * different shape of this one.
  */
 export function keywordAlternativeCostFor(cardInfo: ClientCard): KeywordAlternativeCost | null {
+  if (cardInfo.bestow) {
+    return {
+      key: 'bestow',
+      label: `Bestow ${cardInfo.name}`,
+      cost: cardInfo.bestow.cost || '{0}',
+      alternativeCostType: 'BESTOW',
+      hint: ['cast as an Aura enchanting a creature', cardInfo.bestow.additionalCostDescription].filter(Boolean).join(' — '),
+    }
+  }
   if (cardInfo.impending) {
     return {
       key: 'impending',
@@ -273,7 +282,9 @@ export function buildActionOptions(
     (a) => a.action.type === 'CastSpell' && a.actionType !== 'CastFaceDown' && a.actionType !== 'CastWithKicker'
   )
   const castAction = castActions[0] ?? null
-  const kickerAction = legalActions.find((a) => a.actionType === 'CastWithKicker')
+  // Several kicker variants can coexist — "Replicate ×1 / ×2", or a "Kicker [A] and/or [B]" card's
+  // "Kicked {G}" / "Kicked {1}{U}" / both — so every one the server offers gets its own option.
+  const kickerActions = legalActions.filter((a) => a.actionType === 'CastWithKicker')
   const morphAction = legalActions.find((a) => a.actionType === 'CastFaceDown')
   const cycleAction = legalActions.find((a) => a.action.type === 'CycleCard')
   const typecycleAction = legalActions.find((a) => a.action.type === 'TypecycleCard')
@@ -398,9 +409,10 @@ export function buildActionOptions(
     // specific face (a prepare-spell copy in exile, an adventure-only permission) is named by the
     // server after that face: "Cast Bloodline Recollector" would hide that it casts Ancestral Craving.
     const castFaceIndex = (castAction.action as { faceIndex?: number | null }).faceIndex
+    const castPrototyped = (castAction.action as { castPrototyped?: boolean }).castPrototyped === true
     options.push({
       key: 'cast',
-      label: castAction.actionType === 'CastWithAlternativeCost' || castFaceIndex != null
+      label: castAction.actionType === 'CastWithAlternativeCost' || castFaceIndex != null || castPrototyped
         ? castAction.description
         : `Cast ${cardInfo.name}`,
       ...costFieldsFor(castAction, cardInfo.manaCost),
@@ -462,9 +474,9 @@ export function buildActionOptions(
   }
 
   // 3b. Cast with kicker
-  if (kickerAction) {
+  kickerActions.forEach((kickerAction, index) => {
     options.push({
-      key: 'castWithKicker',
+      key: index === 0 ? 'castWithKicker' : `castWithKicker-${index}`,
       // Server picks the suffix — "(Kicked)", "(Offspring)", "(Bargained)", or "(with Flash)" for
       // flash-timing kickers like Ghitu Fire / Molten Exhale. Fall back to an unlabelled cast if
       // absent rather than guessing a mechanic.
@@ -474,7 +486,7 @@ export function buildActionOptions(
       action: kickerAction,
       actionType: 'castWithKicker',
     })
-  }
+  })
 
   // 4. Cycling
   if (cycleAction) {

@@ -3492,7 +3492,10 @@
                     "effect": {
                         "type": "RemoveCounters",
                         "counterType": "LORE",
-                        "count": 1,
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
                         "target": {
                             "type": "BoundVariable",
                             "name": "t2"
@@ -7466,7 +7469,10 @@
                             "body": {
                                 "type": "RemoveCounters",
                                 "counterType": "LORE",
-                                "count": 1,
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                },
                                 "target": "IterationEntity"
                             }
                         },
@@ -8945,7 +8951,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature|artifact ctrl:opponent"
+                        "baseFilter": "artifact|creature ctrl:opponent"
                     },
                     "id": "t0"
                 }
@@ -12493,7 +12499,7 @@
                     "space": {
                         "type": "IterationSpace.Group",
                         "filter": {
-                            "baseFilter": "creature Cleric ctrl:you"
+                            "baseFilter": "permanent Cleric ctrl:you"
                         }
                     },
                     "body": {
@@ -14291,7 +14297,7 @@
                             "type": "GrantMayPlayFromExile",
                             "from": "gathered1",
                             "withAnyManaType": true,
-                            "exileAfterResolve": true
+                            "insteadOfGraveyard": "EXILE"
                         }
                     ]
                 },
@@ -16734,7 +16740,7 @@
                         {
                             "type": "GrantMayPlayFromExile",
                             "from": "gathered1",
-                            "exileAfterResolve": true
+                            "insteadOfGraveyard": "EXILE"
                         },
                         {
                             "type": "GrantPlayWithoutPayingCost",
@@ -26532,19 +26538,40 @@
                 },
                 "binding": "ANY",
                 "effect": {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "destination": "Hand"
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "filter": {
-                        "baseFilter": "land ctrl:you"
-                    },
-                    "id": "t0"
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land",
+                                "player": "You"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Return a land you control to its owner's hand",
+                            "useTargetingUI": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        }
+                    ]
                 },
                 "descriptionOverride": "At the beginning of your end step, return a land you control to its owner's hand."
             }

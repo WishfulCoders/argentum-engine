@@ -11,15 +11,16 @@ import com.wingedsheep.engine.handlers.actions.ActionHandler
 import com.wingedsheep.engine.mechanics.stack.StackResolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.CrewSaddleContributorsComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent
-import com.wingedsheep.sdk.model.CharacteristicValue
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
+import com.wingedsheep.sdk.scripting.CrewSaddleCost
+import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.effects.AddCardTypeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import kotlin.reflect.KClass
 
@@ -61,8 +62,9 @@ class CrewVehicleHandler(
         }
 
         // Crew is an activated ability of the Vehicle (CR 702.122a), so a "players can't activate
-        // abilities" static (Yuriko, Blade of the Mighty; Grand Abolisher on an artifact) forbids it.
-        if (castPermissionUtils?.isActivationPreventedForPlayer(state, action.vehicleId, action.playerId) == true) {
+        // abilities" static (Yuriko, Blade of the Mighty; Grand Abolisher on an artifact) or a name
+        // lock (Pithing Needle) forbids it.
+        if (castPermissionUtils?.isActivationForbidden(state, action.vehicleId, action.playerId) == true) {
             return "An effect prevents you from activating that ability right now"
         }
 
@@ -123,7 +125,8 @@ class CrewVehicleHandler(
                 state = state,
                 projected = projected,
                 cardRegistry = cardRegistry,
-                creatureId = creatureId
+                creatureId = creatureId,
+                cost = CrewSaddleCost.CREW
             )
         }
 
@@ -141,7 +144,7 @@ class CrewVehicleHandler(
         val vehicleCard = vehicleContainer.get<CardComponent>()
             ?: return ExecutionResult.error(state, "Not a card")
 
-        val cardDef = cardRegistry.getCard(vehicleCard)
+        cardRegistry.getCard(vehicleCard)
             ?: return ExecutionResult.error(state, "Card definition not found")
 
         var currentState = state
@@ -168,7 +171,9 @@ class CrewVehicleHandler(
         // (e.g. Luxurious Locomotive). Union across activations within the turn.
         currentState = currentState.updateEntity(action.vehicleId) { c ->
             val existing = c.get<CrewSaddleContributorsComponent>()
-            c.with(
+            // Crew and saddle are activated abilities too — "was activated this turn".
+            val activated = c.get<AbilityActivatedThisTurnComponent>() ?: AbilityActivatedThisTurnComponent()
+            c.with(activated.withAnyActivated()).with(
                 CrewSaddleContributorsComponent(
                     creatureIds = (existing?.creatureIds ?: emptySet()) + action.crewCreatures,
                     crewActivations = (existing?.crewActivations ?: 0) + 1
@@ -176,23 +181,14 @@ class CrewVehicleHandler(
             )
         }
 
-        // Create the crew ability effect: Vehicle becomes an artifact creature
-        // with its base P/T until end of turn. A */* Vehicle keeps its characteristic-defining
-        // P/T (Unlicensed Hearse: the number of cards exiled with it) as a live base P/T —
-        // stamping the missing fixed value would make it a 0/0 that dies on being crewed.
-        val stats = cardDef.creatureStats
-        val basePower = (stats?.power as? CharacteristicValue.Fixed)?.value ?: 0
-        val baseToughness = (stats?.toughness as? CharacteristicValue.Fixed)?.value ?: 0
-        val dynamicPower = characteristicAmount(stats?.power)
-        val dynamicToughness = characteristicAmount(stats?.toughness)
-        val hasDynamicStats = dynamicPower != null || dynamicToughness != null
-        val crewEffect = BecomeCreatureEffect(
+        // Create the crew ability effect: "this Vehicle becomes an artifact creature until end of
+        // turn" (CR 702.122a). Only the CREATURE type is added (the Vehicle is already an artifact);
+        // crew does NOT set power and toughness — the Vehicle keeps its printed P/T, so an earlier
+        // P/T-setting effect such as Kudo, King Among Bears's base 2/2 still applies to it.
+        val crewEffect = AddCardTypeEffect(
+            cardType = "CREATURE",
             target = EffectTarget.Self,
-            power = DynamicAmount.Fixed(basePower),
-            toughness = DynamicAmount.Fixed(baseToughness),
-            keywords = cardDef.keywords,
-            dynamicPower = if (hasDynamicStats) dynamicPower ?: DynamicAmount.Fixed(basePower) else null,
-            dynamicToughness = if (hasDynamicStats) dynamicToughness ?: DynamicAmount.Fixed(baseToughness) else null
+            duration = Duration.EndOfTurn
         )
 
         // Put the crew ability on the stack
@@ -216,13 +212,6 @@ class CrewVehicleHandler(
             currentState.withPriority(action.playerId),
             allEvents
         )
-    }
-
-    /** The amount behind a printed `*` (CR 604.3), or null for a fixed printed value. */
-    private fun characteristicAmount(value: CharacteristicValue?): DynamicAmount? = when (value) {
-        is CharacteristicValue.Dynamic -> value.source
-        is CharacteristicValue.DynamicWithOffset -> DynamicAmount.Add(value.source, DynamicAmount.Fixed(value.offset))
-        is CharacteristicValue.Fixed, null -> null
     }
 
     companion object {

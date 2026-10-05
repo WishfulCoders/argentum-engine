@@ -2479,7 +2479,10 @@
                         {
                             "type": "RemoveCounters",
                             "counterType": "EGG",
-                            "count": 1,
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
                             "target": "Self"
                         },
                         {
@@ -10168,28 +10171,22 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "Gated",
-                    "gate": {
-                        "type": "Gate.WhenCondition",
-                        "condition": "WasKicked"
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
                     },
-                    "then": {
-                        "type": "CreateToken",
-                        "count": {
-                            "type": "Fixed",
-                            "amount": 2
-                        },
-                        "power": 1,
-                        "toughness": 1,
-                        "colors": [
-                            "WHITE"
-                        ],
-                        "creatureTypes": [
-                            "Soldier"
-                        ],
-                        "imageUri": "https://cards.scryfall.io/normal/front/c/c/cc7d137c-f6c0-44e5-af9f-a8bbd52d3b2a.jpg?1562702338"
-                    }
-                }
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Soldier"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/c/c/cc7d137c-f6c0-44e5-af9f-a8bbd52d3b2a.jpg?1562702338"
+                },
+                "interveningIf": "WasKicked"
             }
         ]
     },
@@ -10557,8 +10554,8 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "175",
-        "artist": "Svetlin Velinov",
+        "collectorNumber": "142",
+        "artist": "Grzegorz Rutkowski",
         "flavorText": "The Keldons didn't come to Dominaria for a vacation.",
         "imageUri": "https://cards.scryfall.io/normal/front/2/1/21b9d339-99ed-4923-8f56-be37f29a0bfa.jpg?1562732568"
     },
@@ -10710,7 +10707,7 @@
                 "id": "Slimefoot, the Stowaway:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
-                    "filter": "creature Saproling ctrl:you",
+                    "filter": "permanent Saproling ctrl:you",
                     "from": "Battlefield",
                     "to": "Graveyard"
                 },

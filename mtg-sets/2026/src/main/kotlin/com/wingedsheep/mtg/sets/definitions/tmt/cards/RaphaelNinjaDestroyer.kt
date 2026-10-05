@@ -19,8 +19,8 @@ import com.wingedsheep.sdk.scripting.effects.ManaExpiry
  * Enrage — Whenever Raphael is dealt damage, add that much {R}. Until end of turn,
  * you don't lose this mana as steps and phases end.
  *
- * Pools empty as each step and phase ends, so the "don't lose this mana" clause is
- * [ManaExpiry.UNTIL_END_OF_TURN] on the Enrage payout.
+ * The "don't lose this mana as steps and phases end" clause is
+ * [ManaExpiry.KEPT_UNTIL_END_OF_TURN] on an `AddMana` of the damage dealt.
  */
 val RaphaelNinjaDestroyer = card("Raphael, Ninja Destroyer") {
     manaCost = "{2}{R}{R}"
@@ -39,7 +39,7 @@ val RaphaelNinjaDestroyer = card("Raphael, Ninja Destroyer") {
         effect = Effects.AddMana(
             Color.RED,
             DynamicAmounts.triggerDamageAmount(),
-            expiry = ManaExpiry.UNTIL_END_OF_TURN,
+            expiry = ManaExpiry.KEPT_UNTIL_END_OF_TURN
         )
         description = "Enrage — Whenever Raphael is dealt damage, add that much {R}. Until end of turn, you don't lose this mana as steps and phases end."
     }

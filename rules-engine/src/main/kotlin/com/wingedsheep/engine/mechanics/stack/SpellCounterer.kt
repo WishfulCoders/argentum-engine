@@ -1,12 +1,15 @@
 package com.wingedsheep.engine.mechanics.stack
 
+import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.library.LibraryRevealUtils
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
+import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent
 import com.wingedsheep.engine.state.components.identity.CantBeCounteredComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -76,13 +79,7 @@ class SpellCounterer(
 
         val cardComponent = container.get<CardComponent>()
 
-        // Check if the spell can't be countered (tag component)
-        if (container.has<CantBeCounteredComponent>()) {
-            return ExecutionResult.success(state)
-        }
-
-        // Check if any permanent on the battlefield grants "can't be countered" to this spell
-        if (isGrantedCantBeCountered(state, spellId)) {
+        if (isUncounterable(state, spellId, container)) {
             return ExecutionResult.success(state)
         }
 
@@ -99,12 +96,11 @@ class SpellCounterer(
         // Put in graveyard (or exile if AfterResolveDestinationComponent is present)
         // Goliath Daydreamer-style components only exile on actual resolution; if the spell
         // is countered they go to graveyard normally.
-        val riderOnCounter = container.get<AfterResolveDestinationComponent>()
-            ?.takeIf { !it.onlyIfResolved }
+        val riderOnCounter = counterRiderZone(container)
         // A countered spell heading to its owner's graveyard is still a card being put into a
         // graveyard "from anywhere" — honor RedirectZoneChange replacements (Valgavoth, Leyline).
         val counterRedirect = if (riderOnCounter != null) {
-            com.wingedsheep.engine.handlers.effects.ZoneChangeRedirectResult(riderOnCounter.zone)
+            com.wingedsheep.engine.handlers.effects.ZoneChangeRedirectResult(riderOnCounter)
         } else {
             com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
                 .checkZoneChangeRedirect(state, spellId, Zone.STACK, Zone.GRAVEYARD, predicateEvaluator = predicateEvaluator)
@@ -123,8 +119,12 @@ class SpellCounterer(
         }
 
         // Remove stack components
+        newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
         newState = newState.updateEntity(spellId) { c ->
-            c.without<SpellOnStackComponent>().without<TargetsComponent>()
+            c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
         }
 
         return ExecutionResult.success(
@@ -184,9 +184,24 @@ class SpellCounterer(
     fun wouldReachCounterDestination(state: GameState, spellId: EntityId, countererId: EntityId?): Boolean {
         val container = state.getEntity(spellId) ?: return false
         if (spellId !in state.stack) return false
-        if (container.has<CantBeCounteredComponent>() || isGrantedCantBeCountered(state, spellId)) return false
-        if (container.get<AfterResolveDestinationComponent>()?.takeIf { !it.onlyIfResolved } != null) return false
+        if (isUncounterable(state, spellId, container)) return false
+        if (counterRiderZone(container) != null) return false
         return findExileInsteadReplacement(state, countererId) == null
+    }
+
+    /**
+     * The zone a spell's own "if it would leave the stack" rider sends it to when it is countered,
+     * or null when nothing overrides the counter's destination: an [AfterResolveDestinationComponent]
+     * that applies on a counter, or flashback's exile — CR 702.34a: "If the flashback cost was paid,
+     * exile this card instead of putting it anywhere else any time it would leave the stack".
+     */
+    private fun counterRiderZone(container: ComponentContainer): Zone? {
+        container.get<AfterResolveDestinationComponent>()?.takeIf { !it.onlyIfResolved }?.let { return it.zone }
+        val spell = container.get<SpellOnStackComponent>() ?: return null
+        return Zone.EXILE.takeIf {
+            spell.castFromZone == Zone.GRAVEYARD &&
+                spell.alternativeCost == com.wingedsheep.engine.core.AlternativeCostType.FLASHBACK
+        }
     }
 
     /**
@@ -214,7 +229,7 @@ class SpellCounterer(
 
         val cardComponent = container.get<CardComponent>()
 
-        if (container.has<CantBeCounteredComponent>() || isGrantedCantBeCountered(state, spellId)) {
+        if (isUncounterable(state, spellId, container)) {
             return ExecutionResult.success(state)
         }
 
@@ -229,9 +244,8 @@ class SpellCounterer(
 
         // A flashback/foretell-style "exile it instead" rider that applies on a counter still
         // overrides the printed destination — the same precedence [counterSpell] gives it.
-        val riderOnCounter = container.get<AfterResolveDestinationComponent>()
-            ?.takeIf { !it.onlyIfResolved }
-        val destZone = riderOnCounter?.zone ?: printedZone
+        val riderOnCounter = counterRiderZone(container)
+        val destZone = riderOnCounter ?: printedZone
         val destZoneKey = ZoneKey(ownerId, destZone)
         newState = if (riderOnCounter == null && destZone == Zone.LIBRARY && position != null) {
             val librarySize = newState.getZone(destZoneKey).size
@@ -246,8 +260,12 @@ class SpellCounterer(
         }
         val destinationObject = newState.objectRef(spellId)
 
+        newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
         newState = newState.updateEntity(spellId) { c ->
-            c.without<SpellOnStackComponent>().without<TargetsComponent>()
+            c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
         }
         if (destZone == Zone.LIBRARY) {
             newState = LibraryRevealUtils
@@ -294,7 +312,7 @@ class SpellCounterer(
         val cardComponent = container.get<CardComponent>()
 
         // Check if the spell can't be countered
-        if (container.has<CantBeCounteredComponent>() || isGrantedCantBeCountered(state, spellId)) {
+        if (isUncounterable(state, spellId, container)) {
             return ExecutionResult.success(state)
         }
 
@@ -312,10 +330,15 @@ class SpellCounterer(
         val exileZone = ZoneKey(ownerId, Zone.EXILE)
         newState = newState.addToZone(exileZone, spellId)
 
+        newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
+
         // Remove stack components and optionally grant the counter's controller a free recast
         // (Kheru Spellsnatcher).
         newState = newState.updateEntity(spellId) { c ->
-            var updated = c.without<SpellOnStackComponent>().without<TargetsComponent>()
+            var updated = c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
             if (grantFreeCast) {
                 updated = updated
                     .with(PlayWithoutPayingCostComponent(controllerId = controllerId, permanent = true))
@@ -393,8 +416,12 @@ class SpellCounterer(
         var newState = state.removeFromStack(spellId)
         val exileZone = ZoneKey(ownerId, Zone.EXILE)
         newState = newState.addToZone(exileZone, spellId)
+        newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
         newState = newState.updateEntity(spellId) { c ->
-            c.without<SpellOnStackComponent>().without<TargetsComponent>()
+            c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
         }
 
         val events = mutableListOf<GameEvent>(
@@ -546,8 +573,12 @@ class SpellCounterer(
 
         var newState = state.removeFromStack(spellId)
         newState = newState.addToZone(ZoneKey(ownerId, Zone.EXILE), spellId)
+        newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
         newState = newState.updateEntity(spellId) { c ->
-            c.without<SpellOnStackComponent>().without<TargetsComponent>()
+            c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
         }
         val then = replacement.then
         if (then != null && !isSpellCopy) {
@@ -600,6 +631,33 @@ class SpellCounterer(
             }
         }
         return null
+    }
+
+    /**
+     * Whether [spellId] can't be countered right now: tagged uncounterable (its printed
+     * `cantBeCountered`, a Cavern-style mana rider), its own `cantBeCounteredIf` holds, or a
+     * permanent or player grant covers it.
+     */
+    private fun isUncounterable(state: GameState, spellId: EntityId, container: ComponentContainer): Boolean =
+        container.has<CantBeCounteredComponent>() ||
+            ownConditionMakesUncounterable(state, spellId, container) ||
+            isGrantedCantBeCountered(state, spellId)
+
+    /**
+     * The spell's own "if …, this spell can't be countered" (Banefire's "if X is 5 or more").
+     * Evaluated against the spell as it sits on the stack: its locked-in X and its caster as `You`,
+     * so a copy (which copies X, CR 707.10) is judged on its own values.
+     */
+    private fun ownConditionMakesUncounterable(state: GameState, spellId: EntityId, container: ComponentContainer): Boolean {
+        val spell = container.get<SpellOnStackComponent>() ?: return false
+        val definitionId = container.get<CardComponent>()?.cardDefinitionId ?: return false
+        val condition = cardRegistry.getCard(definitionId)?.script?.cantBeCounteredIf ?: return false
+        val context = EffectContext(
+            sourceId = spellId,
+            controllerId = spell.casterId,
+            xValue = spell.xValue ?: spell.additionalCostPayXLifeAmount,
+        )
+        return predicateEvaluator.conditions.evaluate(state, condition, context)
     }
 
     private fun isGrantedCantBeCountered(state: GameState, spellId: EntityId): Boolean {

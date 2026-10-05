@@ -88,4 +88,28 @@ class PariahsShieldScenarioTest : FunSpec({
             d.getLifeTotal(d.player1) shouldBe 17
         }
     }
+
+    test("combat damage aimed at you lands on the equipped creature instead") {
+        val d = driver()
+        val attacker = d.activePlayer!!
+        val defender = d.getOpponent(attacker)
+
+        // Shield owner is the defending player; attach directly (equip is sorcery speed).
+        val shield = d.putPermanentOnBattlefield(defender, "Pariah's Shield")
+        val lions = d.putCreatureOnBattlefield(defender, "Savannah Lions") // 1/1
+        d.replaceState(d.state.updateEntity(shield) { it.with(AttachedToComponent(lions)) })
+        val bears = d.putCreatureOnBattlefield(attacker, "Grizzly Bears") // 2/2
+        d.removeSummoningSickness(bears)
+
+        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        d.declareAttackers(attacker, listOf(bears), defender).error shouldBe null
+        d.passPriorityUntil(Step.END_COMBAT)
+
+        withClue("the 2 combat damage never reached the player") {
+            d.getLifeTotal(defender) shouldBe 20
+        }
+        withClue("it went to the equipped creature, which 2 damage kills") {
+            d.findPermanent(defender, "Savannah Lions") shouldBe null
+        }
+    }
 })

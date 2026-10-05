@@ -21,8 +21,8 @@ For each set we've catalogued (a `definitions/<code>/` folder with a `*Set.kt`):
 
 Output: `game-server/src/main/resources/coverage/set-totals.json`, an array of
   { code, name, releaseDate, setType, standardLegal,
-    draft: [{ name, img, notPlanned? }, ...],
-    extra: [{ name, img, products, group, notPlanned? }, ...] }
+    draft: [{ name, img, landscape?, notPlanned? }, ...],
+    extra: [{ name, img, landscape?, products, group, notPlanned? }, ...] }
 Extras additionally carry `group` — a Scryfall-style section heading ("Starter Decks", "Promos",
 …) derived from their `products` (Scryfall `promo_types`) per `EXTRA_GROUPS` below — and are
 emitted pre-sorted into those sections, so the Set Completion view can break the extras out the
@@ -53,6 +53,7 @@ Run `scripts/card-status --refresh` first if your cache is stale or missing sets
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import re
 import sys
@@ -67,6 +68,9 @@ OUTPUT = REPO_ROOT / "game-server/src/main/resources/coverage/set-totals.json"
 PRODUCTS_OUTPUT = REPO_ROOT / "game-server/src/main/resources/coverage/set-products.json"
 CACHE_ROOT = Path.home() / ".cache" / "scryfall"
 CACHE_SCHEMA_VERSION = 9
+# Scryfall's oracle_cards bulk (downloaded by `just assay corpus`). Only read for print orientation,
+# which the per-set cache doesn't carry; missing file = no card flagged landscape.
+ORACLE_BULK = CACHE_ROOT / "_bulk-oracle-cards.jsonl.gz"
 REFRESH_WINDOW_DAYS = 30
 
 # Scryfall's set pages split a set's printings into named sections — "Draft Cards" first, then the
@@ -160,6 +164,32 @@ def load_cache(code: str) -> dict | None:
     return payload
 
 
+def load_landscape_names() -> set[str]:
+    """
+    Front-face names of cards **printed sideways** — split layouts (Rooms, Fire // Ice) and battles
+    (CR 310) — mirroring `CardDefinition.isLandscapePrint`, so the Set Completion hover preview can
+    rotate cards we haven't authored yet too.
+    """
+    if not ORACLE_BULK.is_file():
+        print(f"warning: {ORACLE_BULK} missing (run `just assay corpus`); no card flagged landscape",
+              file=sys.stderr)
+        return set()
+    out: set[str] = set()
+    with gzip.open(ORACLE_BULK, "rt", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip().rstrip(",")
+            if not line.startswith("{"):
+                continue
+            card = json.loads(line)
+            faces = card.get("card_faces") or []
+            type_line = (faces[0].get("type_line") if faces else card.get("type_line")) or ""
+            # Aftermath cards share the `split` layout but are printed upright.
+            is_split = card.get("layout") == "split" and "Aftermath" not in (card.get("keywords") or [])
+            if is_split or re.search(r"\bBattle\b", type_line.split("—")[0]):
+                out.add(front_face(card["name"]))
+    return out
+
+
 def is_standard_legal(payload: dict) -> bool:
     """Whether the set is currently Standard-legal, by the same rule as scripts/card-status."""
     if payload.get("set_type") not in STANDARD_SET_TYPES:
@@ -201,6 +231,7 @@ def main() -> int:
 
     exclusions = load_exclusions()
     reasons = load_reasons()
+    landscape = load_landscape_names()
 
     entries = []
     product_entries: dict[str, dict[str, list[str]]] = {}
@@ -232,6 +263,8 @@ def main() -> int:
             for n in sorted(names):
                 meta = cards.get(n) or {}
                 entry = {"name": n, "img": meta.get("image_uri")}
+                if n in landscape:
+                    entry["landscape"] = True
                 if with_group:
                     entry["products"] = products_by_front.get(n, ["other"])
                     entry["group"] = extra_group(entry["products"])

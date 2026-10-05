@@ -328,6 +328,24 @@ data object MayhemCostWasPaid : Condition {
 }
 
 /**
+ * Condition: "if it escaped" (CR 702.138b — a spell or permanent "escaped" if that spell, or the
+ * spell that became that permanent as it resolved, was cast from a graveyard with an escape
+ * ability).
+ *
+ * True for a permanent carrying the durable [com.wingedsheep.sdk.scripting.ChoiceSlot.ESCAPED]
+ * flag the engine stamps when an escape-cast permanent spell resolves, and for a spell still on the
+ * stack that was cast for its [Escape][com.wingedsheep.sdk.scripting.KeywordAbility.Escape] cost.
+ * Reads identically at resolution and during projection, so it gates an enters trigger ("sacrifice
+ * it unless it escaped" — Phlage), an enters-with-counters replacement ("escapes with a +1/+1
+ * counter", CR 702.138c) and a conditional static ("escapes with [ability]", CR 702.138d) alike.
+ */
+@SerialName("Escaped")
+@Serializable
+data object Escaped : Condition {
+    override val description: String = "it escaped"
+}
+
+/**
  * Condition: "If this spell's blight additional cost was paid"
  * Used for Lorwyn Eclipsed cards (e.g., Cinder Strike) where the effect changes
  * based on whether the optional Blight additional cost was actually paid.
@@ -365,8 +383,8 @@ data object WaterbendWasPaid : Condition {
  * Used for Lorwyn Incarnation cycle (Catharsis, Deceit, Emptiness, etc.)
  * where ETB triggers are gated on specific mana colors spent to cast.
  *
- * Checks the CastRecordComponent on the permanent for per-color mana spent.
- * Each pip in [requiredWhite], [requiredBlue], etc. must have been spent.
+ * Checks actual payment on the spell, resolved permanent, or self-cast trigger snapshot.
+ * Each required pip must have been spent; colorless mana is distinct from colored mana.
  */
 @SerialName("ManaSpentToCastIncludes")
 @Serializable
@@ -375,7 +393,8 @@ data class ManaSpentToCastIncludes(
     val requiredBlue: Int = 0,
     val requiredBlack: Int = 0,
     val requiredRed: Int = 0,
-    val requiredGreen: Int = 0
+    val requiredGreen: Int = 0,
+    val requiredColorless: Int = 0
 ) : Condition {
     override val description: String = buildString {
         append("if ")
@@ -385,6 +404,7 @@ data class ManaSpentToCastIncludes(
         repeat(requiredBlack) { parts.add("{B}") }
         repeat(requiredRed) { parts.add("{R}") }
         repeat(requiredGreen) { parts.add("{G}") }
+        repeat(requiredColorless) { parts.add("{C}") }
         append(parts.joinToString(""))
         append(" was spent to cast it")
     }
@@ -457,6 +477,10 @@ data class CastChoiceMade(val slot: com.wingedsheep.sdk.scripting.ChoiceSlot) : 
     // do. Value slots keep the generic wording.
     override val description: String = when (slot) {
         com.wingedsheep.sdk.scripting.ChoiceSlot.KICKED -> "if this spell was kicked"
+        // "Kicker [A] and/or [B]" (CR 702.33f) — the engine has no cost text here, so name the
+        // kicker by its printed position; a card prints its own wording in `description`.
+        com.wingedsheep.sdk.scripting.ChoiceSlot.FIRST_KICKER -> "if it was kicked with its first kicker"
+        com.wingedsheep.sdk.scripting.ChoiceSlot.SECOND_KICKER -> "if it was kicked with its second kicker"
         com.wingedsheep.sdk.scripting.ChoiceSlot.BARGAINED -> "if it was bargained"
         com.wingedsheep.sdk.scripting.ChoiceSlot.EVIDENCE_COLLECTED -> "if evidence was collected"
         com.wingedsheep.sdk.scripting.ChoiceSlot.SNEAK -> "if its sneak cost was paid"

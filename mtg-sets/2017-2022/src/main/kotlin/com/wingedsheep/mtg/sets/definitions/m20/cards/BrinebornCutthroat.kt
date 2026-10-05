@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Flash
  * Whenever you cast a spell during an opponent's turn, put a +1/+1 counter on this creature.
  *
- * The grow trigger uses `Triggers.you.casts()` gated by [Conditions.IsNotYourTurn] as a
+ * The grow trigger uses `Triggers.you.casts()` gated by [Conditions.IsOpponentsTurn] as a
  * fire-time trigger condition, so it only fires for spells cast on a turn that isn't the
  * controller's — the "during an opponent's turn" rider. Flash lets it be cast at instant
  * speed to enable those responses in the first place.
@@ -39,7 +39,7 @@ val BrinebornCutthroat = card("Brineborn Cutthroat") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you cast a spell during an opponent's turn, put a +1/+1 counter on this creature."
     }

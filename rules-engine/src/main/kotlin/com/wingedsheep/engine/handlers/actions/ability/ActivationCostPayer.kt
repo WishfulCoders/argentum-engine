@@ -1,10 +1,13 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.allocateFloating
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CardsDiscardedEvent
 import com.wingedsheep.engine.core.CountersRemovedEvent
 import com.wingedsheep.engine.core.GameEvent
+import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.LoyaltyChangedEvent
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.core.tapForMana
@@ -17,6 +20,8 @@ import com.wingedsheep.engine.mechanics.mana.ManaPool
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.mechanics.mana.SpellPaymentContext
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.activeManaSpendingScope
+import com.wingedsheep.engine.state.settleManaObligationPayment
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.NotedCreatureTypesComponent
@@ -117,8 +122,11 @@ internal class ActivationCostPayer(
             // floating mana actually spent, so tags for mana floated from earlier sources survive an
             // ability activation instead of being wiped (mirrors CastPaymentProcessor's threading).
             manaBySubtype = poolComponent.manaBySubtype,
-            manaBySource = poolComponent.manaBySource
-        )
+            manaBySource = poolComponent.manaBySource,
+            manaByCardType = poolComponent.manaByCardType,
+            snowMana = poolComponent.snowMana,
+            snowColorless = poolComponent.snowColorless
+        ).withSpendingColors(state, action.playerId)
 
         // For an VariablePermanents cost, X is the exiled permanents' total mana value (computed at
         // announcement); otherwise it's the action's chosen X. Identical to `action.xValue ?: 0` for
@@ -142,14 +150,27 @@ internal class ActivationCostPayer(
             ) ?: emptyList()
         }
         val phyrexianLife = phyrexianLifePayments.size * 2
-        if (phyrexianLife > currentState.lifeTotal(action.playerId)) {
+        if (!currentState.canPayLife(action.playerId, phyrexianLife)) {
             return ActivationPaymentOutcome.Failed("Insufficient life for Phyrexian mana payment")
         }
         val manaCost = if (reducedManaCost == null) null else reducedManaCost.withPhyrexianPaidByLife(phyrexianLifePayments)
             ?: return ActivationPaymentOutcome.Failed("Invalid Phyrexian mana payment")
 
+        val scopedDirect = currentState.activeManaSpendingScope(action.playerId) != null
+        val scopedAllocation = if (scopedDirect && manaCost != null) manaPool.allocateFloating(
+            manaCost, paymentContext, if (manaCost.hasX) xValue * manaCost.xCount else 0,
+            ability.xManaRestriction) else null
         if (manaCost != null) {
-            when (val tapped = activateManaAbilities(currentState, activation, manaPool, manaCost, xValue, paymentContext)) {
+            if (scopedDirect && scopedAllocation == null) {
+                return ActivationPaymentOutcome.Failed("Exact mana-activation allocation is not supported in this scope")
+            }
+            val tapped = if (scopedDirect) {
+                if ((action.paymentStrategy as? PaymentStrategy.Explicit)?.manaAbilitiesToActivate?.isNotEmpty() == true) {
+                    return ActivationPaymentOutcome.Failed("Exact explicit mana allocation is not supported in this scope")
+                }
+                ManaTapOutcome.Tapped(currentState, manaPool, emptyList())
+            } else activateManaAbilities(currentState, activation, manaPool, manaCost, xValue, paymentContext)
+            when (tapped) {
                 is ManaTapOutcome.Failed -> return ActivationPaymentOutcome.Failed(tapped.reason)
                 is ManaTapOutcome.Tapped -> {
                     currentState = tapped.state
@@ -177,6 +198,7 @@ internal class ActivationCostPayer(
 
         // Build cost payment choices from the action
         val costChoices = CostPaymentChoices(
+            targets = action.targets,
             sacrificeChoices = action.costPayment?.sacrificedPermanents ?: emptyList(),
             discardChoices = action.costPayment?.discardedCards ?: emptyList(),
             putOnLibraryChoices = action.costPayment?.cardsPutOnLibrary ?: emptyList(),
@@ -194,8 +216,16 @@ internal class ActivationCostPayer(
 
         // When using Explicit payment, mana sources were already tapped above —
         // strip the Mana portion so payAbilityCost doesn't try to deduct from the pool.
+        // Scoped payments allocate the entire fixed/X cost from the pool before the other atoms.
         // When convoke was applied, replace the mana portion with the reduced cost.
-        val costForPayment = if (action.paymentStrategy is PaymentStrategy.Explicit) {
+        if (scopedAllocation != null) {
+            manaPool = scopedAllocation.pool
+            val spent = scopedAllocation.spent
+            if (spent.total > 0) events.add(ManaSpentEvent(playerId = action.playerId,
+                reason = "Activate ${activation.sourceName}", white = spent.white, blue = spent.blue,
+                black = spent.black, red = spent.red, green = spent.green, colorless = spent.colorless))
+        }
+        val costForPayment = if (scopedDirect || action.paymentStrategy is PaymentStrategy.Explicit) {
             effectiveCost.stripManaCost()
         } else if (manaCost != null && (phyrexianLifePayments.isNotEmpty() ||
                 ((ability.hasConvoke || ability.hasWaterbend) && action.alternativePayment != null && !action.alternativePayment.isEmpty))
@@ -237,9 +267,9 @@ internal class ActivationCostPayer(
 
         // Deduct X mana from the pool. ManaPool.pay() skips X symbols ("handled by caller"),
         // so we must explicitly spend the X portion here (same pattern as CastSpellHandler.autoPay).
-        // Skip for Explicit payment — sources were already tapped to cover the full cost including X.
-        if (action.paymentStrategy !is PaymentStrategy.Explicit && manaCost != null && manaCost.hasX && xValue > 0) {
-            manaPool = spendXFromPool(manaPool, manaCost, xValue, ability.xManaRestriction)
+        // Explicit and scoped payments have already paid their entire fixed/X allocation.
+        if (!scopedDirect && action.paymentStrategy !is PaymentStrategy.Explicit && manaCost != null && manaCost.hasX && xValue > 0) {
+            manaPool = spendXFromPool(manaPool, manaCost, xValue, ability.xManaRestriction, paymentContext)
         }
 
         currentState = writeBackPool(currentState, action.playerId, poolComponent, manaPool)
@@ -255,14 +285,14 @@ internal class ActivationCostPayer(
             // planeswalker" (Inspired Tethermage) and any-kind counter triggers see it. It is a
             // cost, not an effect, so counter-placement replacements (Doubling Season) don't
             // apply — CostHandler already added exactly `change` counters.
-            val (marked, firstThisTurn) = com.wingedsheep.engine.handlers.effects.DamageUtils.recordCounterPlacement(
+            val (marked, firstThisTurn, firstOfTypeThisTurn) = com.wingedsheep.engine.handlers.effects.DamageUtils.recordCounterPlacement(
                 currentState, action.sourceId, CounterType.LOYALTY, placerId = action.playerId
             )
             currentState = marked
             events.add(
                 com.wingedsheep.engine.core.CountersAddedEvent(
                     action.sourceId, CounterType.LOYALTY, abilityCost.change, activation.sourceName,
-                    firstThisTurn, placedBy = action.playerId
+                    firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = action.playerId
                 )
             )
         } else if (abilityCost is AbilityCost.Loyalty) {
@@ -430,6 +460,7 @@ internal class ActivationCostPayer(
         return resolver.resolveSelection(
             resolver.candidates(
                 state, action.playerId, totalExileAtom.measure, totalExileAtom.filter,
+                excludeCardId = action.sourceId.takeIf { totalExileAtom.excludeSelf },
                 predicateEvaluator = predicateEvaluator
             ),
             totalExileAtom.minTotal,
@@ -476,11 +507,11 @@ internal class ActivationCostPayer(
             .orEmpty()
         val sacrificeTargetIds = chosenSacrifices + forcedSacrifices + sacrificeAllTargets +
             (action.costPayment?.variableCostPermanents ?: emptyList())
-        val sacrificedSnapshots = captureEntitySnapshots(sacrificeTargetIds, state.projectedState)
+        val sacrificedSnapshots = captureEntitySnapshots(sacrificeTargetIds, state.projectedState, state)
 
         // Mirror sacrifice snapshots for tapped-as-cost permanents — they may leave the
         // battlefield in response while the ability is on the stack.
-        val tappedSnapshots = captureEntitySnapshots(firstTapSlice, state.projectedState)
+        val tappedSnapshots = captureEntitySnapshots(firstTapSlice, state.projectedState, state)
 
         val movesSource = effectiveCost.exilesOrSacrificesSelf()
 
@@ -549,15 +580,35 @@ internal class ActivationCostPayer(
     }
 
     /**
-     * Spend the X portion of [manaCost] from [pool]: X per X symbol, colorless first unless X is
-     * color-restricted ("spend only [colors] on X"), then the allowed colors.
+     * Spend the X portion of [manaCost] from [pool]: X per X symbol — restricted mana this
+     * activation may spend first (the same order as the cast path, CastPaymentProcessor), then
+     * colorless unless X is color-restricted ("spend only [colors] on X"), then the allowed colors.
      */
-    private fun spendXFromPool(pool: ManaPool, manaCost: ManaCost, xValue: Int, xManaRestriction: Set<Color>): ManaPool {
+    private fun spendXFromPool(
+        pool: ManaPool,
+        manaCost: ManaCost,
+        xValue: Int,
+        xManaRestriction: Set<Color>,
+        paymentContext: SpellPaymentContext?,
+    ): ManaPool {
         var manaPool = pool
         val xSymbolCount = manaCost.xCount.coerceAtLeast(1)
         var xRemainingToPay = xValue * xSymbolCount
         val xColorsAllowed: Set<Color> =
             if (xManaRestriction.isEmpty()) Color.entries.toSet() else xManaRestriction
+
+        if (paymentContext != null) {
+            for (entry in manaPool.restrictedMana.toList()) {
+                if (xRemainingToPay <= 0) break
+                // A color-restricted X can't be paid with off-color or colorless restricted mana.
+                if (entry.color != null && entry.color !in xColorsAllowed) continue
+                if (entry.color == null && xManaRestriction.isNotEmpty()) continue
+                manaPool.spendRestricted(entry.color, paymentContext)?.let {
+                    manaPool = it
+                    xRemainingToPay--
+                }
+            }
+        }
 
         // Spend colorless first for X — never allowed when X is color-restricted ("spend only [colors] on X").
         if (xManaRestriction.isEmpty()) {
@@ -597,7 +648,7 @@ internal class ActivationCostPayer(
         val finalUnrestricted = manaPool.white + manaPool.blue + manaPool.black +
             manaPool.red + manaPool.green + manaPool.colorless
         val (poolAfterProvenance, _) = manaPool.consumeProvenance(maxOf(0, originalUnrestricted - finalUnrestricted))
-        return state.updateEntity(playerId) { c ->
+        val written = state.updateEntity(playerId) { c ->
             c.with(ManaPoolComponent(
                 white = manaPool.white,
                 blue = manaPool.blue,
@@ -607,8 +658,12 @@ internal class ActivationCostPayer(
                 colorless = manaPool.colorless,
                 restrictedMana = manaPool.restrictedMana,
                 manaBySubtype = poolAfterProvenance.manaBySubtype,
-                manaBySource = poolAfterProvenance.manaBySource
+                manaBySource = poolAfterProvenance.manaBySource,
+                manaByCardType = poolAfterProvenance.manaByCardType,
+                snowMana = manaPool.snowMana,
+                snowColorless = manaPool.snowColorless
             ))
         }
+        return settleManaObligationPayment(written, playerId, poolComponent.restrictedMana, manaPool.restrictedMana)
     }
 }

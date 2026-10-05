@@ -1,5 +1,9 @@
 package com.wingedsheep.engine.legalactions.utils
 
+import com.wingedsheep.engine.state.manaAbilitySourceAllowed
+
+import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
@@ -32,9 +36,11 @@ import com.wingedsheep.sdk.scripting.EquipAbilitiesAtInstantSpeed
 import com.wingedsheep.sdk.scripting.FreeFirstEquipEachTurn
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
+import com.wingedsheep.engine.state.components.identity.emblemStaticAbilitiesOf
 import com.wingedsheep.sdk.scripting.MayPlayPermanentsFromGraveyard
 import com.wingedsheep.sdk.scripting.PlayFromTopOfLibrary
 import com.wingedsheep.sdk.scripting.PlayLandsAndCastFilteredFromTopOfLibrary
+import com.wingedsheep.engine.handlers.actions.spell.allowsLand
 import com.wingedsheep.sdk.scripting.PlotFromTopOfLibrary
 import com.wingedsheep.engine.mechanics.FlashTypeGrants
 import com.wingedsheep.sdk.scripting.PlayersCantActivateAbilities
@@ -45,6 +51,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.RestrictSpellsCastPerTurn
 import com.wingedsheep.sdk.scripting.filters.unified.Scope
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
 
 /**
  * Extracted permission-checking helpers from LegalActionsCalculator: per-player cast locks, flash
@@ -58,8 +65,10 @@ class CastPermissionUtils(
     private val conditionEvaluator: ConditionEvaluator
 ) {
     /**
-     * Whether [playerId] has already cast as many spells this turn as a [RestrictSpellsCastPerTurn]
-     * permanent allows. Two scopes are folded:
+     * Whether [playerId] has already cast as many spells this turn as an *unfiltered*
+     * [RestrictSpellsCastPerTurn] permanent allows — the blanket lock that blocks every spell.
+     * Filtered caps (Phyrexian Censor's "non-Phyrexian") depend on which spell is being cast and
+     * live in [hasReachedFilteredSpellCastLimit]. Two scopes are folded:
      *
      *  - **controller-scoped** ([RestrictSpellsCastPerTurn.eachPlayer] = false) — only counts
      *    permanents [playerId] themselves controls (Yawgmoth's Agenda: "You can't cast more than
@@ -73,30 +82,42 @@ class CastPermissionUtils(
      * [playerId].
      */
     fun hasReachedSpellCastLimit(state: GameState, playerId: EntityId): Boolean {
-        var limit: Int? = null
-        // Permanents the player controls restrict them whether eachPlayer is true or false.
-        for (entityId in state.getBattlefield(playerId)) {
-            val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card) ?: continue
-            for (sa in cardDef.script.staticAbilities) {
-                if (sa is RestrictSpellsCastPerTurn) {
-                    limit = minOf(limit ?: sa.maxPerTurn, sa.maxPerTurn)
-                }
-            }
-        }
-        // Global (eachPlayer) restrictions bind every player regardless of who controls them.
-        for (entityId in state.getBattlefield()) {
-            val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card) ?: continue
-            for (sa in cardDef.script.staticAbilities) {
-                if (sa is RestrictSpellsCastPerTurn && sa.eachPlayer) {
-                    limit = minOf(limit ?: sa.maxPerTurn, sa.maxPerTurn)
-                }
-            }
-        }
-        if (limit == null) return false
+        val limit = spellCastCapsBinding(state, playerId)
+            .filter { it.spellFilter == GameObjectFilter.Any }
+            .minOfOrNull { it.maxPerTurn } ?: return false
         val castThisTurn = state.playerSpellsCastThisTurn[playerId] ?: 0
         return castThisTurn >= limit
+    }
+
+    /**
+     * The per-spell half of the [RestrictSpellsCastPerTurn] cap: true when some *filtered* cap
+     * binding [playerId] matches [spellCardId] and [playerId] has already cast
+     * [RestrictSpellsCastPerTurn.maxPerTurn] spells matching the same filter this turn (read off
+     * the turn's cast records). A spell the filter doesn't match is never blocked by it.
+     */
+    fun hasReachedFilteredSpellCastLimit(state: GameState, playerId: EntityId, spellCardId: EntityId): Boolean {
+        val caps = spellCastCapsBinding(state, playerId).filter { it.spellFilter != GameObjectFilter.Any }
+        if (caps.isEmpty()) return false
+        val records = state.spellsCastThisTurnByPlayer[playerId] ?: emptyList()
+        val context = PredicateContext(controllerId = playerId)
+        return caps.any { cap ->
+            predicateEvaluator.matches(state, state.projectedState, spellCardId, cap.spellFilter, context) &&
+                records.count { predicateEvaluator.matchesFilter(it, cap.spellFilter, context) } >= cap.maxPerTurn
+        }
+    }
+
+    /**
+     * Every [RestrictSpellsCastPerTurn] binding [playerId]: the controller-scoped ones on permanents
+     * they control plus the global ([RestrictSpellsCastPerTurn.eachPlayer]) ones anywhere.
+     */
+    private fun spellCastCapsBinding(state: GameState, playerId: EntityId): List<RestrictSpellsCastPerTurn> {
+        val controlled = state.getBattlefield(playerId).toSet()
+        return state.getBattlefield().flatMap { entityId ->
+            val card = state.getEntity(entityId)?.get<CardComponent>() ?: return@flatMap emptyList()
+            val cardDef = cardRegistry.getCard(card) ?: return@flatMap emptyList()
+            cardDef.script.staticAbilities.filterIsInstance<RestrictSpellsCastPerTurn>()
+                .filter { it.eachPlayer || entityId in controlled }
+        }
     }
 
     /**
@@ -140,6 +161,9 @@ class CastPermissionUtils(
         }
         if (hasReachedSpellCastLimit(state, playerId)) {
             return "You can't cast another spell this turn"
+        }
+        if (hasReachedFilteredSpellCastLimit(state, playerId, spellCardId)) {
+            return "You can't cast another spell of that kind this turn"
         }
         if (sharesColorWithMostRecentCast(state, spellCardId)) {
             return "You can't cast a spell that shares a color with the spell most recently cast this turn"
@@ -193,11 +217,13 @@ class CastPermissionUtils(
      */
     fun spellSpecificallyRestricted(state: GameState, playerId: EntityId, spellCardId: EntityId): Boolean =
         sharesColorWithMostRecentCast(state, spellCardId) ||
+            hasReachedFilteredSpellCastLimit(state, playerId, spellCardId) ||
             blockedByPlayersCantCastSpells(state, playerId, spellCardId)
 
     /**
      * Cheap guard: does any battlefield permanent carry a per-spell cast restriction
-     * ([CantCastSpellsSharingColorWithLastCast] or [PlayersCantCastSpells])? Lets enumeration skip
+     * ([CantCastSpellsSharingColorWithLastCast], [PlayersCantCastSpells], a filtered
+     * [RestrictSpellsCastPerTurn])? Lets enumeration skip
      * the per-card [spellSpecificallyRestricted] scan entirely in the common case where none is in
      * play. Cached once per enumeration pass by [EnumerationContext].
      */
@@ -206,7 +232,8 @@ class CastPermissionUtils(
             val cardDef = state.getEntity(id)?.get<CardComponent>()
                 ?.let { cardRegistry.getCard(it) }
             cardDef?.script?.staticAbilities?.any {
-                it is CantCastSpellsSharingColorWithLastCast || it is PlayersCantCastSpells
+                it is CantCastSpellsSharingColorWithLastCast || it is PlayersCantCastSpells ||
+                    (it is RestrictSpellsCastPerTurn && it.spellFilter != GameObjectFilter.Any)
             } == true
         }
 
@@ -215,7 +242,8 @@ class CastPermissionUtils(
      * [spellCardId] — i.e. some battlefield permanent's ability whose [affected][PlayersCantCastSpells.affected]
      * group (relative to the granter's controller) includes the caster, whose
      * [condition][PlayersCantCastSpells.condition] holds in the controller's context (the caster's,
-     * with [conditionFromCaster][PlayersCantCastSpells.conditionFromCaster]), and whose
+     * with [conditionFromCaster][PlayersCantCastSpells.conditionFromCaster]), whose
+     * [fromZones][PlayersCantCastSpells.fromZones] include the zone the card is cast from, and whose
      * [spellFilter][PlayersCantCastSpells.spellFilter] matches the card. Control is read from
      * projected state; face-down permanents (no abilities) are skipped.
      */
@@ -236,6 +264,13 @@ class CastPermissionUtils(
                     ?: container.get<ControllerComponent>()?.playerId
                     ?: continue
                 if (!affectedPlayerMatches(sa.affected, controller, castingPlayerId)) continue
+                // The "where" axis (Soulless Jailer's "from graveyards or exile"): the card is read
+                // in the zone it is being cast from — this check runs before it moves to the stack.
+                val fromZones = sa.fromZones
+                if (fromZones != null) {
+                    val castFrom = state.zones.entries.firstOrNull { spellCardId in it.value }?.key?.zoneType
+                    if (castFrom !in fromZones) continue
+                }
                 val condition = sa.condition
                 if (condition != null) {
                     // A caster-relative gate (Dosan's "during their own turns") reads the
@@ -337,12 +372,19 @@ class CastPermissionUtils(
         else -> ability
     }
 
-    fun hasPlayLandsFromTopOfLibrary(state: GameState, playerId: EntityId): Boolean {
+    /**
+     * Whether [playerId] may play [landCardId] — the land on top of their library — through a
+     * [PlayLandsAndCastFilteredFromTopOfLibrary] permission whose `landFilter` it matches (Isu the
+     * Abominable: snow lands only), or through Gwenom's play-anything permission.
+     */
+    fun hasPlayLandsFromTopOfLibrary(state: GameState, playerId: EntityId, landCardId: EntityId): Boolean {
+        val landCard = state.getEntity(landCardId)?.get<CardComponent>() ?: return false
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card) ?: continue
             if (cardDef.script.staticAbilities.any {
-                    activeStaticAbility(state, it, entityId, playerId) is PlayLandsAndCastFilteredFromTopOfLibrary
+                    val active = activeStaticAbility(state, it, entityId, playerId)
+                    active is PlayLandsAndCastFilteredFromTopOfLibrary && active.allowsLand(landCard)
                 }) {
                 return true
             }
@@ -351,18 +393,24 @@ class CastPermissionUtils(
         return playFromTopAlternativeCost(state, playerId) != null
     }
 
-    fun getCastFilteredFromTopOfLibraryFilter(state: GameState, playerId: EntityId): GameObjectFilter? {
+    /**
+     * Every live [PlayLandsAndCastFilteredFromTopOfLibrary] spell filter [playerId] controls. A list,
+     * not the first match: Isu's snow spells and Glarb's mana value 4+ spells are separate
+     * permissions, and a lands-only grant (a null `spellFilter`) contributes nothing.
+     */
+    fun getCastFilteredFromTopOfLibraryFilters(state: GameState, playerId: EntityId): List<GameObjectFilter> {
+        val filters = mutableListOf<GameObjectFilter>()
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card) ?: continue
             for (ability in cardDef.script.staticAbilities) {
                 val active = activeStaticAbility(state, ability, entityId, playerId)
                 if (active is PlayLandsAndCastFilteredFromTopOfLibrary) {
-                    return active.spellFilter
+                    active.spellFilter?.let { filters += it }
                 }
             }
         }
-        return null
+        return filters
     }
 
     /**
@@ -483,7 +531,9 @@ class CastPermissionUtils(
      *
      * [abilitySourceId] is the permanent whose equip ability is being activated. A self-restricted
      * grant ([ReduceEquipCost.onlyOwnEquip], Firion's token) only reduces its own bearer's equip
-     * abilities, so it counts only when its bearer equals [abilitySourceId]. Pass the ability's
+     * abilities, so it counts only when its bearer equals [abilitySourceId]; an others-restricted
+     * grant ([ReduceEquipCost.onlyOtherEquip], Bladehold War-Whip) counts only when it doesn't.
+     * Pass the ability's
      * source at both enumeration and payment.
      */
     fun applyEquipCostReduction(
@@ -581,11 +631,15 @@ class CastPermissionUtils(
         var total = 0
         for (entityId in state.getBattlefield(playerId)) {
             // A self-restricted grant (onlyOwnEquip) only discounts its own bearer's equip
-            // abilities: skip the whole entity when it isn't the equip ability's source. At
-            // enumeration the source is known (the permanent whose ability is listed), so this
-            // stays exact.
-            fun countsForSource(ability: com.wingedsheep.sdk.scripting.ReduceEquipCost): Boolean =
-                !ability.onlyOwnEquip || abilitySourceId == null || entityId == abilitySourceId
+            // abilities; an others-restricted grant (onlyOtherEquip, Bladehold War-Whip) only
+            // discounts every *other* permanent's. At enumeration the source is known (the
+            // permanent whose ability is listed), so both stay exact.
+            fun countsForSource(ability: com.wingedsheep.sdk.scripting.ReduceEquipCost): Boolean = when {
+                abilitySourceId == null -> true
+                ability.onlyOwnEquip -> entityId == abilitySourceId
+                ability.onlyOtherEquip -> entityId != abilitySourceId
+                else -> true
+            }
             // Printed static abilities (from the card definition), plus any granted to this entity
             // via GameState.grantedStaticAbilities (tokens have no CardDefinition — Firion's copy).
             val card = state.getEntity(entityId)?.get<CardComponent>()
@@ -659,6 +713,29 @@ class CastPermissionUtils(
     }
 
     /**
+     * The damage an activated ability's [DividedDamageEffect] divides, as known when the ability is
+     * activated — the moment its controller announces the division (CR 601.2d). A fixed total is
+     * itself; a `dynamicTotal` is evaluated against the source with the activation's X bound, so an
+     * X the text defines "as you activate this ability" (Lukka, Bound to Ruin — `xDefinedAs` plus
+     * `dynamicTotal = XValue`, CR 107.3c) is the number offered, validated and later dealt: the
+     * definition is bound onto the stack object as its X, so the executor reads the same value.
+     * [chosenX] is the controller-announced X for an ability whose cost has one.
+     */
+    fun dividedDamageTotalAtActivation(
+        state: GameState,
+        effect: DividedDamageEffect,
+        ability: ActivatedAbility,
+        sourceId: EntityId,
+        controllerId: EntityId,
+        chosenX: Int? = null
+    ): Int {
+        val dynamic = effect.dynamicTotal ?: return effect.totalDamage
+        val x = definedXValue(state, ability, sourceId, controllerId) ?: chosenX
+        val context = EffectContext(sourceId = sourceId, controllerId = controllerId, xValue = x)
+        return predicateEvaluator.amounts.evaluate(state, dynamic, context).coerceAtLeast(0)
+    }
+
+    /**
      * Substitute an ability's *defined* X (CR 107.3c) into the `{X}` symbols of its [cost], turning
      * `{X}, {T}` into `{3}, {T}` for an imprinted three-drop.
      *
@@ -681,7 +758,17 @@ class CastPermissionUtils(
         controllerId: EntityId
     ): AbilityCost {
         val x = definedXValue(state, ability, sourceId, controllerId) ?: return cost
-        return mapFirstManaComponent(cost) { it.withXAs(x) } ?: cost
+        fun priceCounters(c: AbilityCost): AbilityCost = when (c) {
+            is AbilityCost.Atom -> {
+                val atom = c.atom as? CostAtom.PayPlayerCounters
+                if (atom?.amount is DynamicAmount.XValue)
+                    AbilityCost.Atom(atom.copy(amount = DynamicAmount.Fixed(x.coerceAtLeast(0))))
+                else c
+            }
+            is AbilityCost.Composite -> c.copy(costs = c.costs.map(::priceCounters))
+            else -> c
+        }
+        return priceCounters(mapFirstManaComponent(cost) { it.withXAs(x) } ?: cost)
     }
 
     /**
@@ -703,6 +790,14 @@ class CastPermissionUtils(
      * additionally switches on power-up's *own* cost reduction — see
      * [applyPowerUpSelfReduction], which is pip-wise rather than generic-only and so runs as its own
      * step before the statics above. CR 601.2f lets multiple cost reductions apply in any order.
+     *
+     * [chosenTargetIds] are the activation's chosen targets, for a
+     * [ReduceActivatedAbilityCost.onlyIfTargetIsSource] static (Bladegraft Aspirant), which reduces
+     * only an activation targeting the static's own source. Targets are chosen before the total
+     * cost is determined (CR 601.2c, 601.2f), so at payment the list is exact. `null` means "this
+     * ability targets, but the targets aren't chosen yet" — enumeration — and offers the reduction
+     * optimistically while the static's source is a creature, as [equipReductionApplies] does. The
+     * default (no targets) never meets the restriction.
      */
     fun applyActivatedAbilityCostReduction(
         cost: AbilityCost,
@@ -710,13 +805,16 @@ class CastPermissionUtils(
         sourceId: EntityId?,
         isExhaustAbility: Boolean = false,
         isPowerUpAbility: Boolean = false,
-        isManaAbility: Boolean = false
+        isManaAbility: Boolean = false,
+        chosenTargetIds: List<EntityId>? = emptyList()
     ): AbilityCost {
         if (sourceId == null) return cost
         val reduced =
             if (isPowerUpAbility) applyPowerUpSelfReduction(cost, state, sourceId) else cost
         val (net, manaFloor) =
-            sumActivatedAbilityCostModifications(state, sourceId, isExhaustAbility, isPowerUpAbility, isManaAbility)
+            sumActivatedAbilityCostModifications(
+                state, sourceId, isExhaustAbility, isPowerUpAbility, isManaAbility, chosenTargetIds
+            )
         if (net == 0) return reduced
         // net > 0 reduces (floored), net < 0 taxes. A reduction can only shrink mana that is
         // already there; a tax applies to *every* activated ability, so a cost with no mana part
@@ -809,14 +907,17 @@ class CastPermissionUtils(
      *
      * An `exhaustOnly` reduction contributes nothing unless [isExhaustAbility] is set, and likewise
      * a `powerUpOnly` one unless [isPowerUpAbility] is set. An `excludeManaAbilities` *increase*
-     * contributes nothing when [isManaAbility] is set (Suppression Field).
+     * contributes nothing when [isManaAbility] is set (Suppression Field). An
+     * `onlyIfTargetIsSource` reduction contributes only when [chosenTargetIds] include the static's
+     * own source (see [applyActivatedAbilityCostReduction] for the `null` enumeration case).
      */
     private fun sumActivatedAbilityCostModifications(
         state: GameState,
         sourceId: EntityId,
         isExhaustAbility: Boolean,
         isPowerUpAbility: Boolean,
-        isManaAbility: Boolean
+        isManaAbility: Boolean,
+        chosenTargetIds: List<EntityId>?
     ): Pair<Int, Int> {
         var net = 0
         var floor = 0
@@ -830,6 +931,11 @@ class CastPermissionUtils(
                     is com.wingedsheep.sdk.scripting.ReduceActivatedAbilityCost -> {
                         if (ability.exhaustOnly && !isExhaustAbility) continue
                         if (ability.powerUpOnly && !isPowerUpAbility) continue
+                        if (ability.onlyIfTargetIsSource) {
+                            val targetsSource = chosenTargetIds?.contains(entityId)
+                                ?: state.projectedState.isCreature(entityId)
+                            if (!targetsSource) continue
+                        }
                         if (!activatedAbilityReductionApplies(state, entityId, ability.filter, sourceId)) continue
                         val owner = controllerId ?: continue
                         net += evaluator.evaluate(
@@ -924,6 +1030,11 @@ class CastPermissionUtils(
      * is `Creature`); abilities of noncreature permanents that animate them into creatures
      * (e.g. Vehicle Crew) are also unaffected by a `Creature` filter because the source isn't
      * yet a creature in projected state when the ability is activated.
+     *
+     * A [sourceId] off the battlefield (a card cycling or channelling from hand, a graveyard or
+     * command-zone ability) is only caught by a prohibition with
+     * [anyZone][PreventActivatedAbilities.anyZone] set — the "sources with the chosen name" wording
+     * of Pithing Needle and its kin. The others speak of permanents only.
      */
     fun isActivationPrevented(
         state: GameState,
@@ -931,6 +1042,7 @@ class CastPermissionUtils(
         abilityIsManaAbility: Boolean = false
     ): Boolean {
         val projected = state.projectedState
+        val sourceOnBattlefield = sourceId in state.getBattlefield()
         battlefield@ for (entityId in battlefieldStatics(state).activationPreventers) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card) ?: continue
@@ -939,6 +1051,7 @@ class CastPermissionUtils(
                 val prevent = ability as? PreventActivatedAbilities ?: continue
                 // "… can't be activated unless they're mana abilities" — exempt mana abilities.
                 if (prevent.nonManaAbilitiesOnly && abilityIsManaAbility) continue
+                if (!sourceOnBattlefield && !prevent.anyZone) continue
                 if (context == null) {
                     // Evaluate from the granting permanent's controller's perspective.
                     val granterController = projected.getController(entityId)
@@ -956,6 +1069,7 @@ class CastPermissionUtils(
         for (grant in state.grantedStaticAbilities) {
             val prevent = grant.ability as? PreventActivatedAbilities ?: continue
             if (prevent.nonManaAbilitiesOnly && abilityIsManaAbility) continue
+            if (!sourceOnBattlefield && !prevent.anyZone) continue
             if (!state.getBattlefield().contains(grant.entityId)) continue
             // Per-frame gate for conditional durations — the mirror of StateProjector's gate
             // for floating effects. EndedDurationExpiryCheck supplies the one-way latch.
@@ -974,6 +1088,24 @@ class CastPermissionUtils(
         }
         return false
     }
+
+    /**
+     * True when either kind of activation prohibition forbids [activatingPlayerId] from activating
+     * an ability of [sourceId]: a who-blind [PreventActivatedAbilities] lock
+     * ([isActivationPrevented] — Pithing Needle, Cursed Totem) or a who/when-scoped
+     * [PlayersCantActivateAbilities] one ([isActivationPreventedForPlayer] — Grand Abolisher,
+     * Yuriko). The single check for the activation paths that report one reason for both: cycling
+     * and typecycling, crew and saddle, and abilities activated from hand, graveyard, exile or the
+     * command zone.
+     */
+    fun isActivationForbidden(
+        state: GameState,
+        sourceId: EntityId,
+        activatingPlayerId: EntityId,
+        abilityIsManaAbility: Boolean = false
+    ): Boolean =
+        isActivationPrevented(state, sourceId, abilityIsManaAbility) ||
+            isActivationPreventedForPlayer(state, sourceId, activatingPlayerId, abilityIsManaAbility)
 
     /**
      * True when a [PlayersCantActivateAbilities] static forbids [activatingPlayerId] from
@@ -1003,6 +1135,7 @@ class CastPermissionUtils(
         activatingPlayerId: EntityId,
         abilityIsManaAbility: Boolean = false
     ): Boolean {
+        if (abilityIsManaAbility && !state.manaAbilitySourceAllowed(activatingPlayerId, sourceId, predicateEvaluator)) return true
         val projected = state.projectedState
         val sourceOnBattlefield = sourceId in state.getBattlefield()
         for (permanentId in battlefieldStatics(state).playerActivationPreventers) {
@@ -1116,7 +1249,9 @@ class CastPermissionUtils(
                 }
             }
         }
-        return false
+        // An emblem the player has (Wrenn and Realmbreaker's −7) grants it from outside every zone.
+        return typeName == com.wingedsheep.sdk.core.CardType.LAND.name &&
+            state.emblemStaticAbilitiesOf(playerId).any { (_, ability) -> ability is MayPlayLandsFromGraveyard }
     }
 
     /**
@@ -1208,7 +1343,8 @@ class CastPermissionUtils(
      */
     fun getStaticGrantedAbilitiesWithGranter(
         entityId: EntityId,
-        state: GameState
+        state: GameState,
+        projected: ProjectedState = state.projectedState,
     ): List<StaticGrantedAbility> {
         if (state.getEntity(entityId) == null) return emptyList()
 
@@ -1229,11 +1365,11 @@ class CastPermissionUtils(
                 // GrantActivatedAbility and the grant is silently dropped. Skip when the gate is false.
                 val ability = when (rawAbility) {
                     is com.wingedsheep.sdk.scripting.ConditionalStaticAbility -> {
-                        val granterController = state.projectedState.getController(permanentId)
+                        val granterController = projected.getController(permanentId)
                             ?: container.get<ControllerComponent>()?.playerId
                             ?: continue
                         val ctx = EffectContext(sourceId = permanentId, controllerId = granterController)
-                        if (!conditionEvaluator.evaluate(state, rawAbility.condition, ctx)) continue
+                        if (!conditionEvaluator.evaluate(state, rawAbility.condition, ctx, projected)) continue
                         rawAbility.ability
                     }
                     else -> rawAbility
@@ -1249,28 +1385,11 @@ class CastPermissionUtils(
                 // AbilityId so duplicate donors don't collapse and each gets its own once-per-turn
                 // budget (see donorCardsActivatedAbilities).
                 if (ability is com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards) {
-                    val receives = when (val scope = ability.receivedBy.scope) {
-                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self -> permanentId == entityId
-                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.Specific -> scope.entityId == entityId
-                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.AttachedTo ->
-                            container.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()?.targetId == entityId
-                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.SoulbondPair ->
-                            com.wingedsheep.engine.mechanics.SoulbondPairing.isInPairOf(state, permanentId, entityId)
-                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.Battlefield -> {
-                            if (ability.receivedBy.excludeSelf && permanentId == entityId) false
-                            else {
-                                val granterController = state.projectedState.getController(permanentId)
-                                granterController != null && predicateEvaluator.matches(
-                                    state, state.projectedState, entityId, ability.receivedBy.baseFilter,
-                                    PredicateContext(controllerId = granterController, sourceId = permanentId)
-                                )
-                            }
-                        }
-                    }
+                    val receives = donorGrantReaches(state, permanentId, entityId, ability, predicateEvaluator, projected)
                     if (receives) {
                         for (granted in donorCardsActivatedAbilities(
                             state, permanentId, cardRegistry, predicateEvaluator,
-                            ability.donors, ability.cardFilter, ability.oncePerTurnEach
+                            ability.donors, ability.cardFilter, ability.oncePerTurnEach, projected
                         )) {
                             result.add(StaticGrantedAbility(granted, entityId))
                         }
@@ -1292,10 +1411,10 @@ class CastPermissionUtils(
                 when (val scope = ability.filter.scope) {
                     is com.wingedsheep.sdk.scripting.filters.unified.Scope.Battlefield -> {
                         if (ability.filter.excludeSelf && permanentId == entityId) continue
-                        val granterController = state.projectedState.getController(permanentId) ?: continue
+                        val granterController = projected.getController(permanentId) ?: continue
                         val matches = predicateEvaluator.matches(
                             state,
-                            state.projectedState,
+                            projected,
                             entityId,
                             ability.filter.baseFilter,
                             PredicateContext(controllerId = granterController, sourceId = permanentId)
@@ -1333,11 +1452,11 @@ class CastPermissionUtils(
         // Granted GrantActivatedAbility statics (CR 611): a permanent that was itself *granted* an
         // ability-granting static — e.g. Roar of the Fifth People chapter II. Shared with
         // ActivateAbilityHandler so the enumerator and the handler never drift.
-        result.addAll(getGrantedStaticGrantActivatedAbilities(entityId, state))
+        result.addAll(getGrantedStaticGrantActivatedAbilities(entityId, state, projected))
 
         // GainActivatedAbilitiesOfPermanents (Sharkey, Tyrant of the Shire): permanents matching
         // [grantedTo] gain copies of the activated abilities of permanents matching [sourceFilter].
-        result.addAll(getGainedAbilitiesOfPermanents(entityId, state))
+        result.addAll(getGainedAbilitiesOfPermanents(entityId, state, projected))
 
         // Multiple granters can hand the same ability to a permanent — e.g., two Brightcap
         // Badgers each grant Saproling tokens "{T}: Add {G}." The cards share a CardDefinition
@@ -1361,7 +1480,8 @@ class CastPermissionUtils(
      */
     fun getGrantedStaticGrantActivatedAbilities(
         entityId: EntityId,
-        state: GameState
+        state: GameState,
+        projected: ProjectedState = state.projectedState,
     ): List<StaticGrantedAbility> {
         val result = mutableListOf<StaticGrantedAbility>()
         for (grantedStatic in state.grantedStaticAbilities) {
@@ -1373,10 +1493,10 @@ class CastPermissionUtils(
             when (val scope = grantAbility.filter.scope) {
                 is Scope.Battlefield -> {
                     if (grantAbility.filter.excludeSelf && granterId == entityId) continue
-                    val granterController = state.projectedState.getController(granterId) ?: continue
+                    val granterController = projected.getController(granterId) ?: continue
                     val matches = predicateEvaluator.matches(
                         state,
-                        state.projectedState,
+                        projected,
                         entityId,
                         grantAbility.filter.baseFilter,
                         PredicateContext(controllerId = granterController, sourceId = granterId)
@@ -1415,9 +1535,9 @@ class CastPermissionUtils(
      */
     fun getGainedAbilitiesOfPermanents(
         entityId: EntityId,
-        state: GameState
+        state: GameState,
+        projected: ProjectedState = state.projectedState,
     ): List<StaticGrantedAbility> {
-        val projected = state.projectedState
         val result = mutableListOf<StaticGrantedAbility>()
 
         for (granterId in battlefieldStatics(state).abilityGainGranters) {
@@ -1462,7 +1582,7 @@ class CastPermissionUtils(
                     val sourceCard = sourceEntity.get<CardComponent>() ?: continue
                     val sourceDef = cardRegistry.getCard(sourceCard) ?: continue
                     val sourceClassLevel = sourceEntity.get<com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent>()?.currentLevel
-                    for (copied in sourceDef.script.effectiveActivatedAbilities(sourceClassLevel)) {
+                    for (copied in com.wingedsheep.engine.state.components.identity.ownActivatedAbilities(sourceCard, sourceDef, sourceClassLevel)) {
                         if (copied.activateFromZone != com.wingedsheep.sdk.core.Zone.BATTLEFIELD) continue
                         if (!gain.includeManaAbilities && copied.isManaAbility) continue
                         result.add(StaticGrantedAbility(copied, granterId))
@@ -1520,7 +1640,9 @@ class CastPermissionUtils(
     /**
      * If [sourceId] is under a [com.wingedsheep.sdk.scripting.SpendAnyManaTypeForActivatedAbilities]
      * static, return [cost] with the mana portion relaxed accordingly; otherwise return [cost]
-     * unchanged. Non-mana cost components (tap, sacrifice, …) are left intact.
+     * unchanged. Non-mana cost components (tap, sacrifice, …) are left intact. Then, if [payerId]
+     * controls a [com.wingedsheep.sdk.scripting.PayLifeForColoredMana] static, the symbols they may
+     * pay with life are rewritten into their Phyrexian form.
      *
      * When several statics apply, the strongest wins: one "mana of any type" static relaxes
      * everything to generic ([com.wingedsheep.sdk.core.ManaCost.relaxColors]) and there is nothing a
@@ -1561,15 +1683,21 @@ class CastPermissionUtils(
     fun relaxAbilityCostColorsIfAny(
         state: GameState,
         sourceId: EntityId,
-        cost: AbilityCost
+        cost: AbilityCost,
+        payerId: EntityId,
     ): AbilityCost {
         val relaxations = spendRelaxationsForAbilities(state, sourceId)
-        if (relaxations.isEmpty()) return cost
+        // "For each {B} in a cost, you may pay 2 life rather than pay that mana" (K'rrik) — the
+        // activator's, applied after the spend relaxations so a widened pip keeps its life option.
+        val lifePayable = com.wingedsheep.engine.mechanics.mana.LifePayableMana.colors(state, cardRegistry, payerId)
+        if (relaxations.isEmpty() && lifePayable.isEmpty()) return cost
         val anyType = relaxations.any { it.substituteColor == null }
         val substitutes = relaxations.mapNotNull { it.substituteColor }.distinct()
-        fun relax(mana: com.wingedsheep.sdk.core.ManaCost): com.wingedsheep.sdk.core.ManaCost =
-            if (anyType) mana.relaxColors()
-            else substitutes.fold(mana) { acc, color -> acc.relaxColorsTo(color) }
+        fun relax(mana: com.wingedsheep.sdk.core.ManaCost): com.wingedsheep.sdk.core.ManaCost {
+            val spendRelaxed = if (anyType) mana.relaxColors()
+                else substitutes.fold(mana) { acc, color -> acc.relaxColorsTo(color) }
+            return lifePayable.fold(spendRelaxed) { acc, color -> acc.withLifePayable(color) }
+        }
         return when (cost) {
             is AbilityCost.Atom -> {
                 val mana = cost.manaCostOrNull ?: return cost
@@ -1650,6 +1778,7 @@ class CastPermissionUtils(
     fun getEmblemGrantedActivatedAbilities(
         entityId: EntityId,
         state: GameState,
+        projected: ProjectedState = state.projectedState,
     ): List<ActivatedAbility> = state.entities.flatMap { (emblemId, emblemContainer) ->
         val grant = emblemContainer.get<EmblemActivatedAbilityComponent>()
             ?: return@flatMap emptyList()
@@ -1657,7 +1786,7 @@ class CastPermissionUtils(
             ?: return@flatMap emptyList()
         val matches = predicateEvaluator.matches(
             state,
-            state.projectedState,
+            projected,
             entityId,
             grant.filter.baseFilter,
             PredicateContext(controllerId = controllerId, sourceId = emblemId),
@@ -1676,13 +1805,47 @@ data class StaticGrantedAbility(
 )
 
 /**
+ * Whether [receiverId] is among the permanents [granterId]'s [HasAllActivatedAbilitiesOfCards] grants
+ * to (its `receivedBy`). Shared by the activation path and the mana solver, so a donor-granted mana
+ * ability is offered, auto-tapped and counted toward affordability on the same permanents.
+ */
+fun donorGrantReaches(
+    state: GameState,
+    granterId: EntityId,
+    receiverId: EntityId,
+    ability: com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards,
+    predicateEvaluator: com.wingedsheep.engine.handlers.PredicateEvaluator,
+    projected: ProjectedState = state.projectedState,
+): Boolean = when (val scope = ability.receivedBy.scope) {
+    is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self -> granterId == receiverId
+    is com.wingedsheep.sdk.scripting.filters.unified.Scope.Specific -> scope.entityId == receiverId
+    is com.wingedsheep.sdk.scripting.filters.unified.Scope.AttachedTo ->
+        state.getEntity(granterId)?.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()?.targetId == receiverId
+    is com.wingedsheep.sdk.scripting.filters.unified.Scope.SoulbondPair ->
+        com.wingedsheep.engine.mechanics.SoulbondPairing.isInPairOf(state, granterId, receiverId)
+    is com.wingedsheep.sdk.scripting.filters.unified.Scope.Battlefield -> {
+        if (ability.receivedBy.excludeSelf && granterId == receiverId) false
+        else {
+            val granterController = projected.getController(granterId)
+            granterController != null && predicateEvaluator.matches(
+                state, projected, receiverId, ability.receivedBy.baseFilter,
+                PredicateContext(controllerId = granterController, sourceId = granterId)
+            )
+        }
+    }
+}
+
+/**
  * The activated abilities of every card in [sourceId]'s donor pool — the engine half of
  * [com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards]. [donors] selects the pool:
  * [DonorCards.LINKED_EXILE] reads the source's `LinkedExileComponent` (Territory Forge, Agatha's
  * Soul Cauldron); [DonorCards.CRAFT_MATERIALS] reads its `CraftedFromExiledComponent` (Locus of
  * Enlightenment; CR 702.167c — "the exiled cards used to craft it"); [DonorCards.YOUR_GRAVEYARD]
- * reads the graveyard of the source's *controller* (Thranduil, the Elvenking). It looks up each donor
- * card's definition and returns its `activatedAbilities`. The caller grants each with the *receiver*
+ * reads the graveyard of the source's *controller* (Thranduil, the Elvenking); [DonorCards.ALL_GRAVEYARDS]
+ * reads every player's graveyard (Mirran Safehouse). It looks up each donor card's definition and
+ * returns its `activatedAbilities` — for a land donor with basic land types, its mana abilities are
+ * the intrinsic ones those types give it (CR 305.6), so a Watery Grave donates "{T}: Add {U}" and
+ * "{T}: Add {B}" though its definition declares no mana ability. The caller grants each with the *receiver*
  * as the granter so the ability activates against that permanent (its `{T}` taps it, self-references
  * bind to it — CR 113.7, faithful to the ruling that the donor card's "this card" references become
  * references to the permanent that has the ability).
@@ -1714,12 +1877,13 @@ fun donorCardsActivatedAbilities(
     predicateEvaluator: com.wingedsheep.engine.handlers.PredicateEvaluator,
     donors: com.wingedsheep.sdk.scripting.DonorCards,
     cardFilter: com.wingedsheep.sdk.scripting.GameObjectFilter,
-    oncePerTurnEach: Boolean = false
+    oncePerTurnEach: Boolean = false,
+    projected: ProjectedState = state.projectedState,
 ): List<com.wingedsheep.sdk.scripting.ActivatedAbility> {
     // Projected controller (with the base component as fallback) — "your graveyard" follows the
     // granting permanent's *current* controller, so a stolen Thranduil reads its new controller's
     // graveyard, and it is also the context a non-trivial cardFilter is evaluated against.
-    val controllerId = state.projectedState.getController(sourceId)
+    val controllerId = projected.getController(sourceId)
         ?: state.getEntity(sourceId)?.get<ControllerComponent>()?.playerId
     val donorIds = when (donors) {
         com.wingedsheep.sdk.scripting.DonorCards.LINKED_EXILE -> state.getEntity(sourceId)
@@ -1727,6 +1891,7 @@ fun donorCardsActivatedAbilities(
         com.wingedsheep.sdk.scripting.DonorCards.CRAFT_MATERIALS -> state.getEntity(sourceId)
             ?.get<com.wingedsheep.engine.state.components.battlefield.CraftedFromExiledComponent>()?.exiledIds
         com.wingedsheep.sdk.scripting.DonorCards.YOUR_GRAVEYARD -> controllerId?.let { state.getGraveyard(it) }
+        com.wingedsheep.sdk.scripting.DonorCards.ALL_GRAVEYARDS -> state.activePlayers.flatMap { state.getGraveyard(it) }
     } ?: return emptyList()
     val unfiltered = cardFilter == com.wingedsheep.sdk.scripting.GameObjectFilter.Any
     // A filtered pool with no resolvable controller can't be evaluated — fail closed (grant nothing)
@@ -1735,12 +1900,16 @@ fun donorCardsActivatedAbilities(
     return donorIds.flatMap { donorId ->
         val card = state.getEntity(donorId)?.get<CardComponent>() ?: return@flatMap emptyList()
         if (!unfiltered && !predicateEvaluator.matches(
-                state, state.projectedState, donorId, cardFilter,
+                state, projected, donorId, cardFilter,
                 PredicateContext(controllerId = controllerId!!, sourceId = sourceId)
             )
         ) return@flatMap emptyList()
         val cardDef = cardRegistry.getCard(card)
-        val abilities = cardDef?.script?.activatedAbilities ?: emptyList()
+        val printed = cardDef?.script?.activatedAbilities ?: emptyList()
+        // Same precedence as ManaAbilityEnumerator: basic land types' intrinsic mana abilities
+        // replace the definition's own mana abilities.
+        val intrinsic = com.wingedsheep.engine.mechanics.mana.IntrinsicManaAbilities.forCard(card)
+        val abilities = if (intrinsic.isEmpty()) printed else printed.filterNot { it.isManaAbility } + intrinsic
         if (!oncePerTurnEach) abilities
         else abilities.map { ability ->
             ability.copy(

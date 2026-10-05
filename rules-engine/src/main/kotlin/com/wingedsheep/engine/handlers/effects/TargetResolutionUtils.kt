@@ -104,7 +104,9 @@ object TargetResolutionUtils {
         is EffectTarget.BoundVariable -> context.pipeline.namedTargets[target.name]?.toEntityId()
         is EffectTarget.SpecificEntity -> target.entityId
         EffectTarget.TriggeringEntity -> context.triggeringEntityId
+        EffectTarget.TargetingSource -> context.triggerContext?.targetingSourceEntityId
         is EffectTarget.DiscardedAsCost -> context.discardedAsCostCards.getOrNull(target.index)
+        is EffectTarget.RevealedAsCost -> context.revealedAsCostSnapshots.getOrNull(target.index)?.entityId
         is EffectTarget.SacrificedAsCost -> context.sacrificedPermanents.getOrNull(target.index)?.entityId
         is EffectTarget.TappedAsCost -> context.tappedPermanents.getOrNull(target.index)
         is EffectTarget.PipelineTarget ->
@@ -238,6 +240,22 @@ object TargetResolutionUtils {
     }
 
     /**
+     * The player a creature [controllerId] puts onto the battlefield "tapped and attacking"
+     * attacks (CR 508.4): the source's defending player when that is one of [controllerId]'s
+     * opponents, else an opponent already defending in this combat, else the first opponent.
+     *
+     * [resolveDefendingPlayer] alone isn't enough: when the source isn't attacking, it falls
+     * back to the trigger's player, and for "whenever you attack" (Warren Warleader) that is
+     * the attacker — the token would attack its own controller and be unblockable.
+     */
+    fun defenderForEnteringAttacker(context: EffectContext, state: GameState, controllerId: EntityId): EntityId? {
+        val opponents = state.getOpponents(controllerId)
+        resolveDefendingPlayer(context, state)?.takeIf { it in opponents }?.let { return it }
+        val defending = com.wingedsheep.engine.mechanics.combat.CombatDefenders.defendingPlayers(state)
+        return opponents.firstOrNull { it in defending } ?: opponents.firstOrNull()
+    }
+
+    /**
      * The player [attackerId] is attacking (CR 802.2a), read from combat: its own
      * `AttackingComponent` while it is still on the battlefield, else the defender frozen into its
      * battlefield-exit snapshot. A creature attacking a planeswalker or battle maps to that
@@ -333,6 +351,9 @@ object TargetResolutionUtils {
             // effect's source or its chosen target.
             Player.ControllerOfIterationEntity -> context.iterationEntityId
                 ?.let { controllerOf(state, it) }
+            // "its controller" for the permanent a continuous effect is modifying.
+            Player.ControllerOfAffectedEntity -> context.affectedEntityId
+                ?.let { controllerOf(state, it) }
             // The other end of a becomes-target trigger: whoever controls the spell or ability
             // that did the targeting (Fractured Loyalty). The trigger context carries the
             // targeting stack object; [stackObjectController] reads it while it is still on the
@@ -352,7 +373,7 @@ object TargetResolutionUtils {
             // EachTargetedPlayer by DynamicAmountEvaluator.resolveUnifiedPlayerIds. Collapsing
             // either to its first player is exactly the bug they exist to avoid, so neither gets a
             // single-player arm.
-            Player.Each, Player.EachOpponent, Player.ActivePlayerFirst,
+            Player.Each, Player.EachOpponent, Player.EachDefendingPlayer, Player.ActivePlayerFirst,
             Player.EachTargetedPlayer, Player.OwnersOfLinkedExile, is Player.InCollection -> null
         }
     }
@@ -527,6 +548,7 @@ object TargetResolutionUtils {
                 controllerId?.let { listOf(it) } ?: emptyList()
             }
             is EffectTarget.PlayerRef -> when (effectTarget.player) {
+                Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
                 Player.Each -> state.activePlayers
                 // The APNAP-ordered flavour of Player.Each (CR 101.4) — for effects whose
                 // per-player choices are made in turn order starting with the active player

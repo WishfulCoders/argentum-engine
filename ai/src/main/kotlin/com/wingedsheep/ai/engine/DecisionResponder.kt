@@ -56,6 +56,8 @@ class DecisionResponder(
     /** [com.wingedsheep.ai.engine.AiProfile.choosesLandsByColour]. Off leaves the ranking alone. */
     private val choosesLandsByColour: Boolean = false,
 ) {
+    var forcedPlayPicker: (GameState, EntityId) -> GameAction = simulator::completeForcedPlay
+
     fun respond(state: GameState, decision: PendingDecision, playerId: EntityId): DecisionResponse {
         // Try card-specific advisor first
         val sourceName = decision.context.sourceName
@@ -77,6 +79,8 @@ class DecisionResponder(
 
         // Fall through to generic logic
         return when (decision) {
+            is PlayCardDecision -> PlayCardResponse(decision.id,
+                forcedPlayPicker(state, decision.playerId))
             is ChooseTargetsDecision ->
                 respondTargets(state, decision, playerId, budgetPolicy.budgetForDecision(state, playerId))
             is SelectCardsDecision -> respondSelectCards(state, decision, playerId)
@@ -225,6 +229,23 @@ class DecisionResponder(
 
         if (min == options.size) {
             return CardsSelectedResponse(decision.id, options)
+        }
+
+        val untapChoice = (state.peekContinuation() as? Suspension)?.takeIf {
+            it.question.id == decision.id
+        }?.answer as? UntapChoiceContinuation
+        if (untapChoice != null && untapChoice.untapLimits.isNotEmpty()) {
+            // Start with a legal keep set, then release valuable permanents while every cap holds.
+            // The displayed minimum is only a lower bound when restrictions overlap or are disjoint.
+            val keep = options.toMutableSet()
+            val ranked = rankCardsContextual(state, options, playerId, wantToKeep = true)
+            for (id in ranked) {
+                keep.remove(id)
+                if (untapChoice.untapLimits.any { limit ->
+                        limit.matchingPermanents.count { it !in keep } > limit.max
+                    }) keep.add(id)
+            }
+            return CardsSelectedResponse(decision.id, options.filter { it in keep })
         }
 
         // A `minTotalManaValue` floor (collect evidence N, CR 701.59a) is a *sum* gate, so none of
@@ -500,13 +521,14 @@ class DecisionResponder(
         decision: SplitPilesDecision,
         playerId: EntityId
     ): DecisionResponse {
+        decision.suggestedPiles?.let { return PilesSplitResponse(decision.id, it) }
         // For Fact or Fiction style: opponent splits, we choose.
         // When WE split: make one pile clearly better so opponent's choice is harder.
         // Simple heuristic: put the best card alone, rest in other pile.
         val ranked = rankCardsByInfo(decision.cards, decision.cardInfo, state, playerId)
-        val pile1 = ranked.take(1)
-        val pile2 = ranked.drop(1)
-        return PilesSplitResponse(decision.id, listOf(pile1, pile2))
+        val piles = List(decision.numberOfPiles) { mutableListOf<EntityId>() }
+        for ((index, card) in ranked.withIndex()) piles[index % piles.size].add(card)
+        return PilesSplitResponse(decision.id, piles)
     }
 
     // ── Choose option ────────────────────────────────────────────────────

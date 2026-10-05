@@ -10,17 +10,12 @@ import com.wingedsheep.sdk.model.Printing
  *
  * Set Code: PTK
  * Release Date: 1999-05-01
- *
- * Scaffolded as the canonical home for cards reprinted in later sets (e.g. Eighth
- * Edition). Only the cards relocated here so far are implemented; the set is
- * otherwise incomplete.
  */
 object PortalThreeKingdomsSet : MtgSet {
 
     override val code = "PTK"
     override val displayName = "Portal Three Kingdoms"
     override val releaseDate = "1999-05-01"
-    override val incomplete = true
 
     override val cards: List<CardDefinition> by lazy {
         CardDiscovery.findIn(CARDS_PACKAGE)

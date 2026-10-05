@@ -71,6 +71,8 @@ internal class PlayerProjector(
             hasLost = hasLost,
             // Mana pool is public information in MTG - show for all players
             manaPool = container?.get<ManaPoolComponent>()?.let(::manaPool),
+            manaPaymentColors = com.wingedsheep.engine.mechanics.mana.ManaSpendingRules.colors(state, playerId)
+                .mapKeys { it.key.symbol.toString() }.mapValues { (_, colors) -> colors.map { it.symbol.toString() } },
             activeEffects = activeEffects.project(state, playerId, container),
             commanderDamage = commanderDamage(state, playerId),
             // CR 702.179 — public information, and 0 for the overwhelming majority of games.
@@ -94,9 +96,11 @@ internal class PlayerProjector(
             green = manaPoolComponent.green,
             colorless = manaPoolComponent.colorless,
             restrictedMana = manaPoolComponent.restrictedMana.map { entry ->
-                val expiryNote = if (entry.expiry == ManaExpiry.END_OF_COMBAT) {
-                    "This mana lasts until end of combat, then is lost."
-                } else null
+                val expiryNote = when (entry.expiry) {
+                    ManaExpiry.END_OF_COMBAT -> "This mana lasts until end of combat, then is lost."
+                    ManaExpiry.KEPT_UNTIL_END_OF_TURN -> "This mana lasts until end of turn."
+                    ManaExpiry.END_OF_TURN -> null
+                }
                 ClientRestrictedManaEntry(
                     color = entry.color?.symbol?.toString(),
                     restrictionDescription = listOfNotNull(

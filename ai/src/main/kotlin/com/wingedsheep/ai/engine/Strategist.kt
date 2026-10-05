@@ -27,6 +27,7 @@ import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.GameAction
+import com.wingedsheep.engine.handlers.costs.GraveyardTotalExileResolver
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.MeaningfulActionFilter
 import com.wingedsheep.engine.state.GameState
@@ -177,6 +178,7 @@ class Strategist(
         playerId: EntityId
     ): LegalAction {
         val startNanos = if (insightSink != null) System.nanoTime() else 0L
+        val forcedPlay = state.pendingDecision is com.wingedsheep.engine.core.PlayCardDecision
         val evaluationState = stateSampler?.invoke(state, playerId) ?: state
         // Combat declaration steps need the CombatAdvisor to fill in attacker/blocker maps
         // even when there's only one legal action (which is the common case — the enumerator
@@ -204,7 +206,10 @@ class Strategist(
         }
 
         val pass = legalActions.find { it.actionType == "PassPriority" }
-        val affordable = expandXCostAbilities(state, preferKickerVariants(candidatesFrom(legalActions)), playerId)
+        val candidates = if (forcedPlay) {
+            legalActions.filter { it.affordable && !it.hasUnfillableTargetRequirement }
+        } else candidatesFrom(legalActions)
+        val affordable = expandXCostAbilities(state, preferKickerVariants(candidates), playerId)
 
         if (affordable.isEmpty()) return pass ?: legalActions.first()
 
@@ -303,7 +308,9 @@ class Strategist(
         // ── Pass 3: per-card timing and advisor adjustments, in raw evaluator units ──
         val firstCandidate = if (pass != null) 1 else 0
         val adjusted = (firstCandidate until leaves.size).map { i ->
-            Triple(leaves[i], leafScores[i], adjustScore(evaluationState, leaves[i], playerId, leafScores[i], passScore))
+            val adjustment = if (forcedPlay) AdjustedScore(leafScores[i])
+                else adjustScore(evaluationState, leaves[i], playerId, leafScores[i], passScore)
+            Triple(leaves[i], leafScores[i], adjustment)
         }
         // The last sorcery-speed window of our turn: a sorcery-speed cast that only ties passing still
         // beats letting the mana go at cleanup. See [AiProfile.spendIdleManaAtSorcerySpeed].
@@ -341,7 +348,7 @@ class Strategist(
             }
 
         val best = scored.maxByOrNull { it.second }
-        val takeAction = best != null && best.second > adjustedPassScore
+        val takeAction = best != null && (forcedPlay || best.second > adjustedPassScore)
         // Whether to act is the uncorrected scores' call; which action, the correction's.
         val action = if (takeAction && actionCorrection != null) {
             scored.indices.maxBy { j ->
@@ -358,7 +365,10 @@ class Strategist(
             // AI sees the real resolved board, including effects already on the stack.
             action!!
         } else {
-            pass ?: legalActions.first()
+            if (forcedPlay) {
+                val fallback = affordable.first()
+                fallback.copy(action = chooseCommittedTargets(state, fallback, playerId, budget))
+            } else pass ?: legalActions.first()
         }
 
         if (insightSink != null) {
@@ -820,6 +830,7 @@ class Strategist(
         val targetInfos = TargetSelection.fillableRequirements(action, useMeaningfulFilter)
             ?: return heuristicTargets(state, action, playerId)
 
+        val rankTarget = TargetSelection.ranker(state, action, playerId, intents)
         // Heuristic baseline for every requirement, then refine each one by simulation.
         val chosenTargets = mutableListOf<com.wingedsheep.engine.state.components.stack.ChosenTarget>()
         val chosenIds = mutableSetOf<EntityId>()
@@ -830,11 +841,16 @@ class Strategist(
             } else {
                 info.validTargets
             }
-            val selectedId = available.maxByOrNull { TargetSelection.rank(state, it, playerId, intents) }
-                ?: return heuristicTargets(state, action, playerId)
-            chosenTargets += TargetSelection.toChosenTarget(state, info, selectedId, playerId)
-            chosenIds += selectedId
-            chosenTargetIds += selectedId
+            val picks = TargetSelection.pick(state, info, available, rankTarget)
+            if (picks.isEmpty() || picks.size < info.minTargets) return heuristicTargets(state, action, playerId)
+            picks.forEach { chosenTargets += TargetSelection.toChosenTarget(state, info, it, playerId) }
+            chosenIds += picks
+            chosenTargetIds += picks
+        }
+        // The refinement below swaps target `i` for requirement `i`, which only lines up while every
+        // requirement holds exactly one target; a multi-target slot keeps its heuristic picks.
+        if (chosenTargets.size != targetInfos.size) {
+            return withSumGatedExilePayment(state, action, TargetSelection.applyTargets(baseAction, chosenTargets))
         }
 
         // Only paid for once a requirement actually has rival targets to simulate — every
@@ -852,7 +868,7 @@ class Strategist(
             val priorIds = chosenTargetIds.take(i).toSet()
             val candidates = info.validTargets
                 .filterNot { info.mustDifferFromEarlier && it in priorIds }
-                .sortedByDescending { TargetSelection.rank(state, it, playerId, intents) }
+                .sortedByDescending(rankTarget)
                 .take(targetCandidates)
             if (candidates.size <= 1) continue
             val best = candidates.maxByOrNull { candidate ->
@@ -1024,6 +1040,7 @@ class Strategist(
         val cast = gameAction as? CastSpell ?: return gameAction
         val info = action.additionalCostInfo ?: return gameAction
         if (info.costType != "CollectEvidence" && info.costType != "ExileForTotal") return gameAction
+        if (info.exileCardTypes.isNotEmpty()) return withCardTypeUnionExilePayment(state, info, cast)
 
         // Most expensive first: the fewest cards that clear the floor.
         val pool = info.validExileTargets
@@ -1052,6 +1069,30 @@ class Strategist(
         }
         return cast.copy(
             targets = targets,
+            additionalCostPayment = (cast.additionalCostPayment ?: AdditionalCostPayment())
+                .copy(exiledCards = chosen),
+        )
+    }
+
+    /**
+     * The union-measured form of [withSumGatedExilePayment] — "with four or more card types among
+     * them" (Nethergoyf's escape). Delegates to the engine's own greedy cover so the AI and the
+     * fallback pick can't drift.
+     */
+    private fun withCardTypeUnionExilePayment(
+        state: GameState,
+        info: com.wingedsheep.engine.legalactions.AdditionalCostData,
+        cast: CastSpell,
+    ): GameAction {
+        val pool = info.validExileTargets.filter { state.getEntity(it) != null }
+        val candidates = GraveyardTotalExileResolver.Candidates(
+            cards = pool,
+            weightById = info.exileCardWeights,
+            typesById = pool.associateWith { info.exileCardTypes[it].orEmpty().toSet() },
+        )
+        val chosen = GraveyardTotalExileResolver.autoSelect(candidates, info.exileMinTotalWeight)
+        if (chosen.isEmpty()) return cast // unreachable; the engine will refuse
+        return cast.copy(
             additionalCostPayment = (cast.additionalCostPayment ?: AdditionalCostPayment())
                 .copy(exiledCards = chosen),
         )

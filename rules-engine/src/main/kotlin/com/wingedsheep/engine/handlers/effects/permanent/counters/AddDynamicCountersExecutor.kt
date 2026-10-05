@@ -47,17 +47,23 @@ class AddDynamicCountersExecutor(
             predicateEvaluator = amountEvaluator.predicates
         )
 
+        // Every placement was replaced away (a capped player already locked out this turn, or a
+        // negative modifier): nothing is placed, so nothing is recorded or announced.
+        if (modifiedCount <= 0) return EffectResult.success(state, emptyList())
+
         val firstThisTurn = DamageUtils.isFirstCounterThisTurn(state, targetId)
+        val firstOfTypeThisTurn = DamageUtils.isFirstCounterOfTypeThisTurn(state, targetId, counterType)
 
         val newState = state.updateEntity(targetId) { container ->
             container.with(current.withAdded(counterType, modifiedCount))
         }.let { DamageUtils.markCounterPlacedOnCreature(it, context.controllerId, targetId, counterType) }
+            .let { ReplacementEffectUtils.recordCounterPlacementLock(it, targetId, counterType, modifiedCount, amountEvaluator.predicates) }
 
         val entityName = state.getEntity(targetId)?.get<CardComponent>()?.name ?: ""
 
         return EffectResult.success(
             newState,
-            listOf(CountersAddedEvent(targetId, effect.counterType, modifiedCount, entityName, firstThisTurn, placedBy = context.controllerId))
+            listOf(CountersAddedEvent(targetId, effect.counterType, modifiedCount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = context.controllerId))
         )
     }
 }

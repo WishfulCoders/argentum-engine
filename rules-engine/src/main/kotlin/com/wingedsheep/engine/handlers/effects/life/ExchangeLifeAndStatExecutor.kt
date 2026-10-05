@@ -33,7 +33,9 @@ import kotlin.reflect.KClass
  *
  * If the creature isn't on the battlefield when the ability resolves, the exchange doesn't happen.
  */
-class ExchangeLifeAndStatExecutor : EffectExecutor<ExchangeLifeAndStatEffect> {
+class ExchangeLifeAndStatExecutor(
+    private val predicateEvaluator: com.wingedsheep.engine.handlers.PredicateEvaluator
+) : EffectExecutor<ExchangeLifeAndStatEffect> {
 
     override val effectType: KClass<ExchangeLifeAndStatEffect> = ExchangeLifeAndStatEffect::class
 
@@ -84,8 +86,13 @@ class ExchangeLifeAndStatExecutor : EffectExecutor<ExchangeLifeAndStatEffect> {
         // Set the player's life total to the creature's former stat. If the life side of
         // the exchange would be a life gain and gain is prevented (e.g. Sunspine Lynx),
         // that side doesn't happen — the creature's stat change above still stands.
-        val lifeSideBlocked = currentStat > currentLife &&
-            DamageUtils.isLifeGainPrevented(newState, playerId)
+        val lifeSideBlocked = (currentStat > currentLife && DamageUtils.isLifeGainPrevented(newState, playerId)) ||
+            (currentStat < currentLife && newState.isLifeLossLocked(playerId)) // CR 119.8
+        if (currentStat > currentLife && !lifeSideBlocked) {
+            val (gained, event) = DamageUtils.gainLife(newState, playerId, currentStat - currentLife,
+                predicateEvaluator = predicateEvaluator)
+            return EffectResult.success(gained, listOfNotNull(event))
+        }
         if (currentStat != currentLife && !lifeSideBlocked) {
             newState = newState.withLifeTotal(playerId, currentStat)
 

@@ -28,6 +28,9 @@ data class SelectFromCollectionContinuation(
     val allCards: List<EntityId>,
     val storeSelected: String,
     val storeRemainder: String?,
+    /** The reference collection, so discard knowledge follows aliases without tainting a new gather. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val sourceCollection: String? = null,
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
     /** Castable face indices (-1 is primary, -2 is a modal permanent back) for a spell selection. */
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
@@ -385,6 +388,7 @@ data class DiscoverMayCastContinuation(
     val storeDiscoveredAs: String? = null,
     val thenEffect: com.wingedsheep.sdk.scripting.effects.Effect? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.player
 
+import com.wingedsheep.engine.mechanics.cost.SharedCreatureTypeTapCost
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
@@ -144,7 +145,7 @@ class PayOrSufferExecutor(
                 is CostAtom.ExileFromGraveyardForTotal ->
                     EffectResult.error(state, "ExileFromGraveyardForTotal is not a PayOrSuffer cost")
                 is CostAtom.VariablePermanents -> EffectResult.error(state, "VariablePermanents payment for PayOrSuffer not supported")
-                is CostAtom.RemoveCounters -> handleRemoveCountersCost(state, effect, context, atom, sourceId, sourceCard.name, payingPlayerId)
+                is CostAtom.PayPlayerCounters, is CostAtom.RemoveCounters -> handleSharedCounterCost(state, effect, context, atom, sourceId, sourceCard.name, payingPlayerId)
             }
         }
     }
@@ -178,6 +179,7 @@ class PayOrSufferExecutor(
         val prompt = buildDiscardPrompt(cost, sourceName, effect)
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -255,6 +257,7 @@ class PayOrSufferExecutor(
         ) }
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -309,6 +312,7 @@ class PayOrSufferExecutor(
         }
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -355,6 +359,7 @@ class PayOrSufferExecutor(
         val prompt = buildSacrificePrompt(cost, sourceName, effect)
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -417,6 +422,7 @@ class PayOrSufferExecutor(
 
         val consequence = effect.consequenceDescription ?: effect.suffer.description
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -473,8 +479,11 @@ class PayOrSufferExecutor(
         controllerId: EntityId
     ): EffectResult {
         // Untapped permanents the player controls that match the filter.
-        val validPermanents = findValidUntappedPermanentsOnBattlefield(
-            state, controllerId, cost.filter, selfExclusion(cost.excludeSelf, sourceId), sourceId
+        val validPermanents = SharedCreatureTypeTapCost.eligible(
+            state, cost,
+            findValidUntappedPermanentsOnBattlefield(
+                state, controllerId, cost.filter, selfExclusion(cost.excludeSelf, sourceId), sourceId
+            )
         )
 
         // If the player doesn't have enough untapped permanents, automatically suffer.
@@ -485,6 +494,7 @@ class PayOrSufferExecutor(
         val prompt = buildTapPrompt(cost, sourceName, effect)
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -493,6 +503,7 @@ class PayOrSufferExecutor(
             sufferEffect = effect.suffer,
             requiredCount = cost.count,
             filter = cost.filter,
+            sharedCreatureType = cost.sharedCreatureType,
             random = false,
             targets = context.targets,
             namedTargets = context.pipeline.namedTargets,
@@ -556,6 +567,7 @@ class PayOrSufferExecutor(
         val prompt = buildReturnToHandPrompt(cost, sourceName, effect)
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -670,6 +682,7 @@ class PayOrSufferExecutor(
         ) }
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -704,7 +717,8 @@ class PayOrSufferExecutor(
         val playerLife = state.lifeTotal(controllerId)
 
         // If player doesn't have enough life to pay and survive, execute suffer effect
-        if (playerLife <= cost.amount) {
+        // CR 119.8 — a player who can't lose life can't pay it, so they suffer.
+        if (playerLife <= cost.amount || state.isLifeLossLocked(controllerId)) {
             return executeSufferEffect(state, effect.suffer, context)
         }
 
@@ -725,6 +739,7 @@ class PayOrSufferExecutor(
         ) }
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -766,6 +781,7 @@ class PayOrSufferExecutor(
         val prompt = buildExilePrompt(cost, sourceName, effect)
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -839,6 +855,7 @@ class PayOrSufferExecutor(
         ) }
 
         val continuation = PayOrSufferContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = controllerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -906,6 +923,7 @@ class PayOrSufferExecutor(
         ) }
 
         val continuation = PayOrSufferChoiceContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             playerId = payingPlayerId,
             sourceId = sourceId,
             objectReferences = context.objectReferences,
@@ -931,11 +949,11 @@ class PayOrSufferExecutor(
     /**
      * Handles a remove counters cost - player must remove the specified number of counters from the specified entities.
      */
-    private fun handleRemoveCountersCost(
+    private fun handleSharedCounterCost(
         state: GameState,
         effect: PayOrSufferEffect,
         context: EffectContext,
-        cost: CostAtom.RemoveCounters,
+        cost: CostAtom,
         sourceId: EntityId,
         sourceName: String,
         controllerId: EntityId
@@ -946,6 +964,7 @@ class PayOrSufferExecutor(
             cost = PayCost.Atom(cost),
             sourceId = sourceId,
             ctx = CostPaymentContext(
+                effectContext = context,
                 objectReferences = context.objectReferences,
                 onDeclined = effect.suffer,
                 targets = context.targets,
@@ -1000,8 +1019,11 @@ class PayOrSufferExecutor(
                 }
                 is CostAtom.Mana -> ManaSolver(cardRegistry, predicateEvaluator).canPay(state, playerId, atom.cost)
                 is CostAtom.ExileFrom -> findValidCardsInZone(state, playerId, atom.filter, atom.zone, sourceId).size >= atom.count
-                is CostAtom.TapPermanents -> findValidUntappedPermanentsOnBattlefield(
-                    state, playerId, atom.filter, selfExclusion(atom.excludeSelf, sourceId), sourceId
+                is CostAtom.TapPermanents -> SharedCreatureTypeTapCost.eligible(
+                    state, atom,
+                    findValidUntappedPermanentsOnBattlefield(
+                        state, playerId, atom.filter, selfExclusion(atom.excludeSelf, sourceId), sourceId
+                    )
                 ).size >= atom.count
                 is CostAtom.ReturnToHand ->
                     findBounceCandidates(state, playerId, atom, sourceId).size >= atom.count
@@ -1026,10 +1048,11 @@ class PayOrSufferExecutor(
                 // See the execute branch: unpayable rather than prompting into an error.
                 is CostAtom.CollectEvidence -> false
                 is CostAtom.ExileFromGraveyardForTotal -> false
+                is CostAtom.PayPlayerCounters -> costPaymentService().canAfford(state, playerId, cost, sourceId)
                 is CostAtom.RemoveCounters -> {
                     // Can pay if there are permanents matching the filter with enough counters.
                     // Don't exclude the source — removing counters from the source itself is a
-                    // legitimate payment, matching the logic in handleRemoveCountersCost.
+                    // legitimate payment, matching the logic in handleSharedCounterCost.
                     val candidates = if (atom.self) listOf(sourceId)
                     else BattlefieldFilterUtils.findMatchingOnBattlefield(
                         state, atom.filter.youControl(),

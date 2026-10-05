@@ -52,8 +52,9 @@ class CommandZoneAbilityEnumerator : ActionEnumerator {
                 // too, or the action would be offered and then refused.
                 if (context.castPermissionUtils.isPowerUpActivationRestricted(state, ability)) continue
 
-                // An any-zone "players can't activate abilities" (Yuriko, Blade of the Mighty).
-                if (context.castPermissionUtils.isActivationPreventedForPlayer(
+                // An any-zone "players can't activate abilities" (Yuriko, Blade of the Mighty) or
+                // name lock (Pithing Needle).
+                if (context.castPermissionUtils.isActivationForbidden(
                         state, entityId, playerId, abilityIsManaAbility = ability.isManaAbility
                     )
                 ) continue
@@ -93,6 +94,8 @@ class CommandZoneAbilityEnumerator : ActionEnumerator {
                     }
                 }
 
+                if (!com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment.canAffordAbility(state, playerId, effectiveCost)) continue
+
                 when (effectiveCost) {
                     is AbilityCost.Atom -> checkAtom(effectiveCost.atom)
                     is AbilityCost.Composite -> effectiveCost.costs.forEach { sub ->
@@ -116,10 +119,10 @@ class CommandZoneAbilityEnumerator : ActionEnumerator {
                     is AbilityCost.Composite -> effectiveCost.costs.firstNotNullOfOrNull { it.manaCostOrNull }
                     else -> null
                 }
-                val hasXCost = abilityManaCost?.hasX == true
+                val hasXCost = abilityManaCost?.hasX == true || context.costUtils.hasPlayerChosenNonManaX(effectiveCost)
                 val maxAffordableX = if (hasXCost) {
                     context.costUtils.calculateMaxAffordableX(
-                        state, playerId, ability.cost, abilityManaCost,
+                        state, playerId, effectiveCost, abilityManaCost,
                         precomputedSources = context.availableManaSources,
                         // Same source scoping the battlefield enumerator passes: cost filters
                         // routinely resolve against the ability's own permanent.

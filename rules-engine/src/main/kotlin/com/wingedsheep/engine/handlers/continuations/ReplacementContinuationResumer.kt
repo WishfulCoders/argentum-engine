@@ -24,6 +24,21 @@ class ReplacementContinuationResumer(
     )
 
     override fun autoResumers(): List<AutoResumer<*>> = listOf(
+        autoResumer(ReplacementRidersContinuation::class) { state, continuation, events, checkForMore ->
+            val result = ReplacementRiders.drain(state.copy(
+                pendingReplacementRiders = state.pendingReplacementRiders + continuation.riders),
+                services.effectExecutorRegistry::execute)
+            if (result.outcome is Outcome.Paused) ExecutionResult.propagatePause(result.state, events + result.events)
+            else checkForMore(result.state, events + result.events)
+        },
+        autoResumer(PerformLifeGainContinuation::class) { state, continuation, events, checkForMore ->
+            val (gained, event) = com.wingedsheep.engine.handlers.effects.DamageUtils.gainLifePrimitive(
+                state, continuation.playerId, continuation.amount)
+            checkForMore(gained, events + listOfNotNull(event))
+        },
+        autoResumer(RestoreReplacementChainContinuation::class) { state, continuation, events, checkForMore ->
+            checkForMore(state.copy(activeReplacementChain = continuation.previous), events)
+        },
         autoResumer(ReplacementResolveContinuation::class) { state, continuation, events, checkForMore ->
             resumeReplacementResolve(state, continuation, events, checkForMore)
         }
@@ -86,7 +101,9 @@ class ReplacementContinuationResumer(
                 when (val outcome = result.outcome) {
                     is ReplacementOutcome.Replaced -> {
                         val execCtx = result.executionContext ?: context
-                        handleReplacedOutcome(stateAfterLifecycle, outcome, execCtx, checkForMore)
+                        handleReplacedOutcome(stateAfterLifecycle, outcome, execCtx, checkForMore,
+                            drawParentChain = state.activeReplacementChain,
+                            restoreDrawChain = continuation.pendingEvent is PendingGameEvent.DrawPending)
                     }
                     is ReplacementOutcome.Consumed -> checkForMore(stateAfterLifecycle, emptyList())
                     is ReplacementOutcome.Modified -> {
@@ -139,11 +156,15 @@ class ReplacementContinuationResumer(
         state: GameState,
         outcome: ReplacementOutcome.Replaced,
         context: EffectContext?,
-        checkForMore: CheckForMore
+        checkForMore: CheckForMore,
+        drawParentChain: Set<ReplacementEffectIdentity>? = null,
+        restoreDrawChain: Boolean = false
     ): ExecutionResult {
         val resumeContinuation = ReplacementResolveContinuation
 
-        val stateWithResumeFrame = state.pushContinuation(resumeContinuation)
+        val stateWithResumeFrame = state.pushContinuation(resumeContinuation).let {
+            if (restoreDrawChain) it.pushContinuation(RestoreReplacementChainContinuation(drawParentChain)) else it
+        }
 
         // Execute the new effect
         if (context != null) {
@@ -154,7 +175,8 @@ class ReplacementContinuationResumer(
             val effectResult = services.effectExecutorRegistry.execute(stateWithResumeFrame, outcome.newEffect, context)
             if (effectResult.outcome is Outcome.Paused) {
                 // Clear chain on pause so subsequent execution is unaffected.
-                val clearedState = effectResult.state.copy(activeReplacementChain = null)
+                val clearedState = if (state.continuationStack.any { it is RestoreReplacementChainContinuation })
+                    effectResult.state else effectResult.state.copy(activeReplacementChain = null)
                 return ExecutionResult(clearedState, effectResult.events, effectResult.outcome)
             }
             val clearedState = effectResult.state.copy(activeReplacementChain = null)

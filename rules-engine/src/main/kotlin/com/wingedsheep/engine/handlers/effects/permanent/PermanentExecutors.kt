@@ -55,6 +55,7 @@ import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantHexproo
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionFromChosenColorExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionsSharedByGroupExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionFromChosenCardTypeExecutor
+import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionFromColorlessOrChosenColorExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.stats.ModifyStatsExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.stats.SwitchPowerToughnessExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.stats.SetBaseStatsExecutor
@@ -77,6 +78,7 @@ import com.wingedsheep.engine.handlers.effects.permanent.types.BecomeCreatureTyp
 import com.wingedsheep.engine.handlers.effects.permanent.types.BecomePreparedExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.UnprepareExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.BecomeSaddledExecutor
+import com.wingedsheep.engine.handlers.effects.permanent.types.BecomeMonstrousExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.BecomeRenownedExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.BecomeSolvedExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.ChangeCreatureTypeTextExecutor
@@ -136,21 +138,23 @@ class PermanentExecutors(
 
     override fun executors(): List<EffectExecutor<*>> = listOf(
         // counters
+        com.wingedsheep.engine.handlers.effects.permanent.counters.AddCountersWithLimitExecutor(amountEvaluator),
         AddCountersExecutor(predicateEvaluator = zones.predicateEvaluator),
         AddDynamicCountersExecutor(amountEvaluator = amountEvaluator),
         com.wingedsheep.engine.handlers.effects.permanent.counters.AddCountersUpToExecutor(amountEvaluator = amountEvaluator),
+        com.wingedsheep.engine.handlers.effects.permanent.counters.AddCountersOfChosenKindExecutor(predicateEvaluator = zones.predicateEvaluator),
         MoveAllLastKnownCountersExecutor(predicateEvaluator = zones.predicateEvaluator),
         AddCountersToCollectionExecutor(amountEvaluator = amountEvaluator),
         DoubleCountersExecutor(predicateEvaluator = zones.predicateEvaluator),
         GrantCounterPlacementModifierExecutor(),
-        RemoveCountersExecutor(),
+        RemoveCountersExecutor(amountEvaluator = amountEvaluator),
         RemoveAnyNumberOfCountersExecutor(amountEvaluator = amountEvaluator),
         com.wingedsheep.engine.handlers.effects.permanent.counters.PayCountersExecutor(),
-        com.wingedsheep.engine.handlers.effects.permanent.counters.PayFixedCountersExecutor(),
+        com.wingedsheep.engine.handlers.effects.permanent.counters.PayExactCountersExecutor(amountEvaluator),
         com.wingedsheep.engine.handlers.effects.permanent.counters.ConvertCountersToTokensExecutor(),
         MoveCountersEachKindMissingExecutor(predicateEvaluator = zones.predicateEvaluator),
         MoveCountersExecutor(amountEvaluator = amountEvaluator),
-        MoveChosenCountersToTargetExecutor(),
+        MoveChosenCountersToTargetExecutor(predicates = zones.predicateEvaluator, recursion = recursion),
         RemoveAllCountersExecutor(),
         RemoveAllCountersOfTypeExecutor(),
         DistributeCountersFromSelfExecutor(),
@@ -176,6 +180,7 @@ class PermanentExecutors(
         BecomeCreatureExecutor(amountEvaluator = amountEvaluator),
         BecomeSaddledExecutor(),
         BecomeRenownedExecutor(),
+        BecomeMonstrousExecutor(),
         BecomeSolvedExecutor(),
         BecomePreparedExecutor(cardRegistry),
         UnprepareExecutor(),
@@ -242,6 +247,8 @@ class PermanentExecutors(
         LockDoorExecutor(staticAbilityHandler),
         // soulbond
         PairWithSourceExecutor(),
+        // planeswalkers
+        AllowLoyaltyActivationsThisTurnExecutor(),
         // phasing
         PhaseOutExecutor(),
         PhaseOutUntilLeavesExecutor(),
@@ -252,6 +259,7 @@ class PermanentExecutors(
         GrantProtectionFromChosenColorExecutor(),
         GrantProtectionsSharedByGroupExecutor(predicateEvaluator = zones.predicateEvaluator),
         GrantProtectionFromChosenCardTypeExecutor(),
+        GrantProtectionFromColorlessOrChosenColorExecutor(),
         GrantCantBeBlockedByChosenColorExecutor()
     )
 }

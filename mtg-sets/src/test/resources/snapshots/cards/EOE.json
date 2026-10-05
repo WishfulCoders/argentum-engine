@@ -3928,6 +3928,7 @@
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
+                    "optional": true,
                     "filter": {
                         "baseFilter": "creature"
                     },
@@ -4070,7 +4071,10 @@
                             {
                                 "type": "RemoveCounters",
                                 "counterType": "PLUS_ONE_PLUS_ONE",
-                                "count": 1,
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                },
                                 "target": {
                                     "type": "PipelineTarget",
                                     "collectionName": "selected1"
@@ -4079,7 +4083,10 @@
                             {
                                 "type": "RemoveCounters",
                                 "counterType": "PLUS_ONE_PLUS_ONE",
-                                "count": 1,
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                },
                                 "target": {
                                     "type": "PipelineTarget",
                                     "collectionName": "selected1",
@@ -6508,7 +6515,6 @@
                     "creatureTypes": [
                         "Robot"
                     ],
-                    "name": "Robot",
                     "imageUri": "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130",
                     "tapped": true,
                     "artifactToken": true
@@ -9298,7 +9304,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature|artifact ctrl:opponent"
+                        "baseFilter": "artifact|creature ctrl:opponent"
                     },
                     "id": "t0"
                 }
@@ -12762,7 +12768,6 @@
                     "creatureTypes": [
                         "Robot"
                     ],
-                    "name": "Robot",
                     "imageUri": "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130",
                     "tapped": true,
                     "artifactToken": true
@@ -16325,7 +16330,10 @@
                                 "effect": {
                                     "type": "RemoveCounters",
                                     "counterType": "CHARGE",
-                                    "count": 10,
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 10
+                                    },
                                     "target": {
                                         "type": "BoundVariable",
                                         "name": "t0"

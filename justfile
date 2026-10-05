@@ -217,10 +217,16 @@ check:
     ./gradlew check
 
 # Waits out subscription usage limits; stop with `touch .claude/loop-runs/<code>.stop`.
-# Implement a whole set with headless Claude Code, one fresh session per step (e.g. just set-loop ecl)
+# Implement a set: set-loop ecl sonnet|opus|astra|codex:<model-id>|pick; no args shows help
 [group: 'ai']
-set-loop CODE:
-    scripts/set-loop "{{CODE}}"
+set-loop CODE="" MODEL="":
+    scripts/set-loop "{{CODE}}" "{{MODEL}}"
+
+# Waits out subscription usage limits; stop with `touch .claude/loop-runs/assay.stop`.
+# Widen Assay's grammar, one band per PR, over text the engine already expresses: assay-loop [model] [focus]
+[group: 'ai']
+assay-loop MODEL="" FOCUS="":
+    scripts/assay-loop "{{MODEL}}" "{{FOCUS}}"
 
 # Report implemented vs missing cards for a set (e.g., just card-status --set BLB --list)
 [group: 'build']

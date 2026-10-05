@@ -23,6 +23,7 @@ import com.wingedsheep.engine.state.components.identity.PlayWithoutPayingCostCom
 import com.wingedsheep.engine.state.components.identity.RevealedToComponent
 import com.wingedsheep.engine.state.components.stack.*
 import com.wingedsheep.engine.state.nameVisibleToAll
+import com.wingedsheep.engine.state.permissions.consumeSingleUseMayPlayFor
 import com.wingedsheep.engine.state.permissions.removeMayPlayPermissionsForCard
 import com.wingedsheep.engine.view.EventPresentationFactory
 import com.wingedsheep.sdk.core.Color
@@ -77,6 +78,7 @@ internal class SpellCaster(
         additionalCostBlightAmount: Int = 0,
         additionalCostPayXLifeAmount: Int? = null,
         declaredCostSlot: ChoiceSlot? = null,
+        additionalCostChoices: Map<ChoiceSlot, Int> = emptyMap(),
         wasBlightPaid: Boolean = false,
         wasWaterbendPaid: Boolean = false,
         additionalEntryCounters: com.wingedsheep.engine.state.components.stack.AdditionalEntryCounters? = null,
@@ -86,6 +88,7 @@ internal class SpellCaster(
         wasEvoked: Boolean = false,
         wasImpending: Boolean = false,
         wasCleaved: Boolean = false,
+        wasOverloaded: Boolean = false,
         wasSneaked: Boolean = false,
         sneakAttackDefenderId: EntityId? = null,
         wasWebSlung: Boolean = false,
@@ -101,6 +104,7 @@ internal class SpellCaster(
         beheldCards: List<EntityId> = emptyList(),
         convokedCreatures: Map<EntityId, Long> = emptyMap(),
         discardedAsCostCards: List<EntityId> = emptyList(),
+        revealedAsCostSnapshots: List<EntitySnapshot> = emptyList(),
         exiledAsCostCards: List<EntityId> = emptyList(),
         exiledAsCostSnapshots: List<EntitySnapshot> = emptyList(),
         chosenEntitySnapshots: List<EntitySnapshot> = emptyList(),
@@ -111,6 +115,7 @@ internal class SpellCaster(
         manaSpentGreen: Int = 0,
         manaSpentColorless: Int = 0,
         manaSpentOnXByColor: Map<Color, Int> = emptyMap(),
+        phyrexianLifePips: Int = 0,
         faceIndex: Int? = null,
         spentManaProvenance: com.wingedsheep.engine.mechanics.mana.SpentManaProvenance =
             com.wingedsheep.engine.mechanics.mana.SpentManaProvenance(),
@@ -129,8 +134,10 @@ internal class SpellCaster(
         // Determine which zone the spell is being cast from (before removal)
         val castFromZone = findCastFromZone(state, cardId, casterId)
 
-        // Remove from current zone (typically hand)
-        var newState = removeFromCurrentZone(state, cardId, casterId)
+        // Remove from current zone (typically hand). The spell is a new object (CR 400.7): a grant
+        // left on the card by an earlier stack life that never resolved (a countered spell whose
+        // cast trigger gave it an ability) must not follow it back onto the stack.
+        var newState = removeFromCurrentZone(state, cardId, casterId).withoutObjectGrants(cardId)
         if (castFaceDown) {
             newState = clearRevealedMorphsInHand(newState, casterId)
         }
@@ -199,6 +206,7 @@ internal class SpellCaster(
             casterId = casterId,
             xValue = boundXValue,
             declaredCostSlot = declaredCostSlot,
+            additionalCostChoices = additionalCostChoices,
             wasBlightPaid = wasBlightPaid,
             wasWaterbendPaid = wasWaterbendPaid,
             additionalEntryCounters = additionalEntryCounters,
@@ -223,6 +231,7 @@ internal class SpellCaster(
             wasEvoked = wasEvoked,
             wasImpending = wasImpending,
             wasCleaved = wasCleaved,
+            wasOverloaded = wasOverloaded,
             wasSneaked = wasSneaked,
             sneakAttackDefenderId = sneakAttackDefenderId,
             wasWebSlung = wasWebSlung,
@@ -231,6 +240,7 @@ internal class SpellCaster(
             beheldCards = beheldCards,
             convokedCreatures = convokedCreatures,
             discardedAsCostCards = discardedAsCostCards,
+            revealedAsCostSnapshots = revealedAsCostSnapshots,
             exiledAsCostCards = exiledAsCostCards,
             exiledAsCostSnapshots = exiledAsCostSnapshots,
             chosenEntitySnapshots = chosenEntitySnapshots,
@@ -241,7 +251,10 @@ internal class SpellCaster(
             manaSpentGreen = manaSpentGreen,
             manaSpentColorless = manaSpentColorless,
             manaSpentBySubtype = spentManaProvenance.bySubtype,
+            manaSpentByCardType = spentManaProvenance.byCardType,
+            manaSpentSnow = spentManaProvenance.snow,
             manaSpentOnXByColor = manaSpentOnXByColor,
+            phyrexianLifePips = phyrexianLifePips,
             faceIndex = faceIndex,
             castTimeFlags = castTimeFlags
         )
@@ -266,7 +279,7 @@ internal class SpellCaster(
             .copy(priorityPassedBy = emptySet())
         val objectOnStack = newState.objectRef(cardId)
 
-        newState = consumeCastPermissions(newState, cardId, castFaceDown)
+        newState = consumeCastPermissions(newState, cardId, casterId, castFaceDown)
         if (castFromZone == Zone.EXILE && objectBeforeCast != null) {
             newState = endGrantsUntilCastFromExile(newState, objectBeforeCast)
         }
@@ -438,8 +451,16 @@ internal class SpellCaster(
             }
         }
 
-    private fun consumeCastPermissions(state: GameState, cardId: EntityId, castFaceDown: Boolean): GameState {
-        var newState = state
+    private fun consumeCastPermissions(
+        state: GameState,
+        cardId: EntityId,
+        casterId: EntityId,
+        castFaceDown: Boolean
+    ): GameState {
+        // "Cast a spell from among those cards" (Chandra, Hope's Beacon): a single-use grant is
+        // spent for its whole group by this cast — permanent or not, and before the per-card
+        // pruning below, which would otherwise leave the rest of the group castable.
+        var newState = state.consumeSingleUseMayPlayFor(cardId, casterId)
         // Consume one-shot free-cast permissions used to play this spell. If the
         // spell is later countered or fizzles and AfterResolveDestinationComponent sends
         // it back to exile, the permission must already be gone — otherwise the
@@ -455,6 +476,9 @@ internal class SpellCaster(
             }
             updated = updated.without<com.wingedsheep.engine.state.components.identity.PlayWithCostIncreaseComponent>()
             updated = updated.without<com.wingedsheep.engine.state.components.identity.PlayWithFixedAlternativeManaCostComponent>()
+            // A runtime substitute/additional cost (Cruelclaw's discard, Amped Raptor's energy) was
+            // owed by this cast and has been paid; it must not be owed again by a later one.
+            updated = updated.without<com.wingedsheep.engine.state.components.identity.PlayWithAdditionalCostComponent>()
             // The madness offer (CR 702.35a) is spent the moment the card is cast; drop the marker
             // with the fixed madness cost it published so the two never outlive each other.
             updated = updated.without<com.wingedsheep.engine.state.components.identity.MadnessExiledComponent>()
@@ -581,7 +605,7 @@ internal class SpellCaster(
 
         // Emit BecomesTargetEvent for each permanent, spell, or player target (Rule 601.2c)
         // Also track targeting for Valiant ("first time each turn")
-        for (target in effectiveTargets) {
+        for (target in effectiveTargets.distinct()) {
             newState = StackPlacement.emitBecomesTarget(newState, target, cardId, casterId, events, sourceIsSpell = true)
         }
         return newState
@@ -636,11 +660,16 @@ internal class SpellCaster(
                 return zone
             }
         }
-        // Check all players' exile zones (cards may be in another player's exile,
-        // e.g., Villainous Wealth exiles from opponent's library)
+        // Check all players' exile and graveyard zones — the caster isn't always the owner:
+        // Villainous Wealth exiles from an opponent's library, Jetsam and The Great Work cast out of
+        // another player's graveyard. It is still a graveyard cast (flashback-style exile riders,
+        // "cast from a graveyard" triggers) even though the graveyard isn't the caster's.
         for (pid in state.turnOrder) {
             if (cardId in state.getZone(ZoneKey(pid, Zone.EXILE))) {
                 return Zone.EXILE
+            }
+            if (cardId in state.getZone(ZoneKey(pid, Zone.GRAVEYARD))) {
+                return Zone.GRAVEYARD
             }
         }
         return null

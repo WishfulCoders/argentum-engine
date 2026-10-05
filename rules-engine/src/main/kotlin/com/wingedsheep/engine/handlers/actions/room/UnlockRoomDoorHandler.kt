@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.room
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.DoorUnlockedEvent
 import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.core.ExecutionResult
@@ -109,8 +110,10 @@ class UnlockRoomDoorHandler(
                     red = poolComponent.red,
                     green = poolComponent.green,
                     colorless = poolComponent.colorless,
-                    restrictedMana = poolComponent.restrictedMana
-                )
+                    restrictedMana = poolComponent.restrictedMana,
+                    snowMana = poolComponent.snowMana,
+                    snowColorless = poolComponent.snowColorless
+                ).withSpendingColors(state, action.playerId)
                 if (!costHandler.canPayManaCost(pool, cost, unlockContext)) {
                     return "Insufficient mana in pool to unlock ${face.name}"
                 }
@@ -162,8 +165,10 @@ class UnlockRoomDoorHandler(
                     red = poolComponent.red,
                     green = poolComponent.green,
                     colorless = poolComponent.colorless,
-                    restrictedMana = poolComponent.restrictedMana
-                )
+                    restrictedMana = poolComponent.restrictedMana,
+                    snowMana = poolComponent.snowMana,
+                    snowColorless = poolComponent.snowColorless
+                ).withSpendingColors(currentState, action.playerId)
                 val newPool = costHandler.payManaCost(pool, cost, unlockContext)
                     ?: return ExecutionResult.error(currentState, "Insufficient mana in pool")
                 currentState = currentState.updateEntity(action.playerId) { c ->
@@ -175,7 +180,9 @@ class UnlockRoomDoorHandler(
                             red = newPool.red,
                             green = newPool.green,
                             colorless = newPool.colorless,
-                            restrictedMana = newPool.restrictedMana
+                            restrictedMana = newPool.restrictedMana,
+                            snowMana = newPool.snowMana,
+                            snowColorless = newPool.snowColorless
                         )
                     )
                 }
@@ -202,8 +209,10 @@ class UnlockRoomDoorHandler(
                     red = poolComponent.red,
                     green = poolComponent.green,
                     colorless = poolComponent.colorless,
-                    restrictedMana = poolComponent.restrictedMana
-                )
+                    restrictedMana = poolComponent.restrictedMana,
+                    snowMana = poolComponent.snowMana,
+                    snowColorless = poolComponent.snowColorless
+                ).withSpendingColors(currentState, action.playerId)
                 val partialResult = pool.payPartial(cost, unlockContext)
                 val poolAfterPayment = partialResult.newPool
                 val remainingCost = partialResult.remainingCost
@@ -225,7 +234,9 @@ class UnlockRoomDoorHandler(
                             red = poolAfterPayment.red,
                             green = poolAfterPayment.green,
                             colorless = poolAfterPayment.colorless,
-                            restrictedMana = poolAfterPayment.restrictedMana
+                            restrictedMana = poolAfterPayment.restrictedMana,
+                            snowMana = poolAfterPayment.snowMana,
+                            snowColorless = poolAfterPayment.snowColorless
                         )
                     )
                 }

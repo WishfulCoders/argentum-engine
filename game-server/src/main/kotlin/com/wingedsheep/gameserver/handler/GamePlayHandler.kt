@@ -19,6 +19,7 @@ import com.wingedsheep.gameserver.session.SessionRegistry
 import com.wingedsheep.gameserver.config.GameProperties
 import com.wingedsheep.gameserver.deck.EasterEggDeckInjector
 import com.wingedsheep.engine.core.GameEvent
+import com.wingedsheep.engine.core.GameRestartedEvent
 import com.wingedsheep.engine.core.PlayerLostEvent
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
@@ -920,6 +921,8 @@ class GamePlayHandler(
             // has re-seated behind the overlay) but before the spectator feed.
             notifyEliminatedSeats(gameSession)
 
+            if (allEvents.any { it is GameRestartedEvent }) beginRestartedGameMulligans(gameSession)
+
             // Update spectators. (Replay recording no longer happens here — the compact replay
             // records the input stream as actions are applied, and reconstructs snapshots on demand.)
             val spectatorState = gameSession.buildSpectatorState()
@@ -947,6 +950,26 @@ class GamePlayHandler(
         } catch (e: Exception) {
             logger.error("Error broadcasting state update", e)
         }
+    }
+
+    /**
+     * A card restarted the game (CR 727): the new game starts with mulligans like any other, so
+     * every seat gets its opening-hand decision again — AI seats answer it through the same
+     * message — and the "everyone has kept" broadcast is re-armed for this round.
+     */
+    private fun beginRestartedGameMulligans(gameSession: GameSession) {
+        mulliganBroadcastSent.remove(gameSession.sessionId)
+        val players = gameSession.getPlayers()
+        for (player in players) {
+            if (!gameSession.hasMulliganComplete(player.playerId)) sendMulliganDecision(gameSession, player)
+        }
+        // A hotseat seat has no connection of its own to answer the decision, so it keeps its seven.
+        val connected = players.map { it.playerId }.toSet()
+        val seats = gameSession.getStateSnapshot()?.turnOrder.orEmpty()
+        for (seat in seats) {
+            if (seat !in connected && !gameSession.hasMulliganComplete(seat)) gameSession.keepHand(seat)
+        }
+        checkMulliganPhaseComplete(gameSession)
     }
 
     private fun processAutoPassLoop(gameSession: GameSession, initialEvents: List<GameEvent>): List<GameEvent> {
@@ -1013,11 +1036,20 @@ class GamePlayHandler(
 
         val gameSession = getGameSession(session, playerSession) ?: return
 
-        // Forward the attacker targets to every opponent (2-player = the one opponent)
-        val serverMessage = ServerMessage.OpponentAttackerTargets(message.selectedAttackers, message.attackerTargets)
+        // Forward the attacker targets to every opponent (2-player = the one opponent), each in
+        // their own card names
+        val engineMessage = gameSession.fromSeat(
+            playerSession.playerId, message, ClientMessage.UpdateAttackerTargets.serializer()
+        ) ?: return
+        val serverMessage = ServerMessage.OpponentAttackerTargets(engineMessage.selectedAttackers, engineMessage.attackerTargets)
 
         gameSession.getOpponentIds(playerSession.playerId).forEach { opponentId ->
-            gameSession.getPlayerSession(opponentId)?.let { sender.send(it.webSocketSession, serverMessage) }
+            gameSession.getPlayerSession(opponentId)?.let {
+                sender.send(
+                    it.webSocketSession,
+                    gameSession.toSeat(opponentId, serverMessage, ServerMessage.OpponentAttackerTargets.serializer())
+                )
+            }
         }
 
         // Also forward to all spectators so they can see attacker arrows in real-time
@@ -1035,16 +1067,24 @@ class GamePlayHandler(
 
         val gameSession = getGameSession(session, playerSession) ?: return
 
-        // Forward the blocker assignments to every opponent (2-player = the one opponent)
+        // Forward the blocker assignments to every opponent (2-player = the one opponent), each in
+        // their own card names
+        val engineMessage = gameSession.fromSeat(
+            playerSession.playerId, message, ClientMessage.UpdateBlockerAssignments.serializer()
+        ) ?: return
+        val serverMessage = ServerMessage.OpponentBlockerAssignments(engineMessage.assignments)
         gameSession.getOpponentIds(playerSession.playerId).forEach { opponentId ->
             gameSession.getPlayerSession(opponentId)?.let {
-                sender.send(it.webSocketSession, ServerMessage.OpponentBlockerAssignments(message.assignments))
+                sender.send(
+                    it.webSocketSession,
+                    gameSession.toSeat(opponentId, serverMessage, ServerMessage.OpponentBlockerAssignments.serializer())
+                )
             }
         }
 
         // Also forward to all spectators so they can see blocker arrows in real-time
         for (spectator in gameSession.getSpectators()) {
-            sender.send(spectator.webSocketSession, ServerMessage.OpponentBlockerAssignments(message.assignments))
+            sender.send(spectator.webSocketSession, serverMessage)
         }
     }
 

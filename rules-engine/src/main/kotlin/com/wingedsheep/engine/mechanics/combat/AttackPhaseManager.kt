@@ -28,6 +28,8 @@ import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AttackerCountLimit
 import com.wingedsheep.sdk.scripting.CantAttackUnlessCoAttacker
+import com.wingedsheep.sdk.scripting.ExertAsItAttacks
+import com.wingedsheep.engine.state.components.battlefield.ExertedComponent
 import com.wingedsheep.sdk.scripting.MustAttack
 import com.wingedsheep.sdk.scripting.filters.unified.Scope
 import com.wingedsheep.engine.mechanics.battle.Battles
@@ -146,10 +148,24 @@ internal class AttackPhaseManager(
             return ExecutionResult.error(state, projectedMustAttackValidation)
         }
 
+        // Check "attacks a player each combat if able" (Nahiri, the Unforgiving)
+        val mustAttackPlayerValidation = validateMustAttackAPlayerRequirements(
+            state, attackingPlayer, attackers, projected, opponents
+        )
+        if (mustAttackPlayerValidation != null) {
+            return ExecutionResult.error(state, mustAttackPlayerValidation)
+        }
+
         // Check goaded requirements (CR 701.15b–c)
         val goadValidation = validateGoadedRequirements(state, attackingPlayer, attackers, projected, opponents)
         if (goadValidation != null) {
             return ExecutionResult.error(state, goadValidation)
+        }
+
+        // Check "each opponent must attack you … with at least one creature" (Trove of Temptation)
+        val attackYouValidation = validateOpponentsMustAttackYou(state, attackingPlayer, attackers, projected)
+        if (attackYouValidation != null) {
+            return ExecutionResult.error(state, attackYouValidation)
         }
 
         // Calculate (but don't pay) the attack tax. If non-zero, pause for the attacking
@@ -193,7 +209,73 @@ internal class AttackPhaseManager(
         taxEvents: List<com.wingedsheep.engine.core.GameEvent>,
         bands: List<Set<EntityId>> = emptyList()
     ): ExecutionResult {
+        // Optional costs to attack (CR 508.1g): "you may exert this creature as it attacks"
+        // (CR 701.43d). Asked after any mandatory attack cost is settled — exert never interacts
+        // with mana or sacrifices, and a cancelled tax then never leaves a stray exert prompt. No
+        // player gets priority in between, so the order is unobservable.
+        val exertable = attackers.keys.filter { canExertAsItAttacks(state, projected, it) }
+        if (exertable.isNotEmpty()) {
+            return state.suspendForDecision(
+                question = { decisionId ->
+                    SelectCardsDecision(
+                        id = decisionId,
+                        playerId = attackingPlayer,
+                        prompt = "Choose attackers to exert (they won't untap during your next untap step)",
+                        context = DecisionContext(phase = DecisionPhase.COMBAT),
+                        options = exertable,
+                        minSelections = 0,
+                        maxSelections = exertable.size,
+                        useTargetingUI = true,
+                    )
+                },
+                answer = AttackExertSelectionContinuation(
+                    attackingPlayer = attackingPlayer,
+                    attackers = attackers,
+                    exertable = exertable,
+                    bands = bands,
+                ),
+                events = taxEvents,
+            )
+        }
+        return finishAttackDeclaration(state, attackingPlayer, attackers, projected, taxEvents, bands, exerted = emptySet())
+    }
+
+    /**
+     * Whether [attackerId] carries [ExertAsItAttacks]. Read off the card definition like
+     * [AttackSacrificeCosts.requirementFor]; a face-down creature (CR 708.2) or one that has lost
+     * all abilities has no such option.
+     */
+    private fun canExertAsItAttacks(state: GameState, projected: ProjectedState, attackerId: EntityId): Boolean {
+        val container = state.getEntity(attackerId) ?: return false
+        if (container.has<FaceDownComponent>() || projected.hasLostAllAbilities(attackerId)) return false
+        val cardDef = container.get<CardComponent>()?.let { cardRegistry.getCard(it) } ?: return false
+        return cardDef.staticAbilities.any { it is ExertAsItAttacks }
+    }
+
+    /**
+     * Stamp the declaration once every attack cost, mandatory and optional, has been chosen and
+     * paid. [exerted] are the attackers the player chose to exert as they attack (CR 701.43d);
+     * each is exerted even if already exerted (CR 701.43b) and emits an [ExertedEvent] with
+     * `asItAttacks`, which fires its linked "when you do" trigger (CR 607.2h).
+     */
+    internal fun finishAttackDeclaration(
+        state: GameState,
+        attackingPlayer: EntityId,
+        attackers: Map<EntityId, EntityId>,
+        projected: ProjectedState,
+        taxEvents: List<com.wingedsheep.engine.core.GameEvent>,
+        bands: List<Set<EntityId>>,
+        exerted: Set<EntityId>,
+    ): ExecutionResult {
         var newState = state
+        val exertEvents = exerted.map { attackerId ->
+            newState = newState.updateEntity(attackerId) { it.with(ExertedComponent) }
+            ExertedEvent(
+                attackerId,
+                state.getEntity(attackerId)?.get<CardComponent>()?.name ?: "Creature",
+                asItAttacks = true,
+            )
+        }
         // Assign each band a shared id, then map every banded attacker to it (CR 702.22).
         val bandIdByAttacker: Map<EntityId, String> = buildMap {
             for (band in bands) {
@@ -207,7 +289,7 @@ internal class AttackPhaseManager(
         for ((attackerId, defenderId) in attackers) {
             val hasVigilance = projected.hasKeyword(attackerId, Keyword.VIGILANCE)
             newState = newState.updateEntity(attackerId) { container ->
-                container.with(AttackingComponent(defenderId, bandIdByAttacker[attackerId]))
+                container.with(AttackingComponent(defenderId, bandIdByAttacker[attackerId], defendingPlayerId = CombatDefenders.defendingPlayerOf(newState, defenderId)))
                     .with(AttackedThisCombatComponent)
             }
             newState = AttackedPermanents.markAttacked(newState, defenderId)
@@ -284,7 +366,7 @@ internal class AttackPhaseManager(
         val attackerNames = attackers.keys.map { state.getEntity(it)?.get<CardComponent>()?.name ?: "Creature" }
         return ExecutionResult.success(
             newState,
-            taxEvents + tapEvents + listOf(
+            taxEvents + exertEvents + tapEvents + listOf(
                 AttackersDeclaredEvent(
                     attackers.keys.toList(),
                     attackerNames,
@@ -525,29 +607,46 @@ internal class AttackPhaseManager(
     ): String? {
         for (attackerId in attackerIds) {
             val cardComponent = state.getEntity(attackerId)?.get<CardComponent>() ?: continue
-            // Tokens have no CardDefinition, so their restrictions arrive via grantedStaticAbilities
-            // (CreateTokenExecutor). Union both sources so the "can't attack alone" half of Toby's
-            // Beast token is enforced alongside printed restrictions (Scarred Puma).
-            val printed = cardRegistry.getCard(cardComponent)
-                ?.staticAbilities.orEmpty()
-            val granted = state.grantedStaticAbilities
-                .filter { it.entityId == attackerId }
-                .map { it.ability }
-            val restrictions = (printed + granted)
-                .filterIsInstance<CantAttackUnlessCoAttacker>()
-                .filter { it.filter.scope is Scope.Self }
-            for (restriction in restrictions) {
-                val context = PredicateContext(controllerId = projected.getController(attackerId) ?: attackerId)
-                val satisfied = attackerIds.any { otherId ->
-                    otherId != attackerId &&
-                        predicateEvaluator.matches(state, projected, otherId, restriction.coAttackerFilter, context)
-                }
-                if (!satisfied) {
+            for (restriction in coAttackerRestrictions(state, attackerId)) {
+                if (!coAttackerAvailable(state, projected, attackerId, restriction, attackerIds)) {
                     return "${cardComponent.name} ${restriction.description}"
                 }
             }
         }
         return null
+    }
+
+    /**
+     * The self-scoped [CantAttackUnlessCoAttacker] restrictions on [attackerId]. Tokens have no
+     * CardDefinition, so their restrictions arrive via grantedStaticAbilities (CreateTokenExecutor);
+     * both sources are unioned so the "can't attack alone" half of Toby's Beast token is enforced
+     * alongside printed restrictions (Scarred Puma).
+     */
+    private fun coAttackerRestrictions(state: GameState, attackerId: EntityId): List<CantAttackUnlessCoAttacker> {
+        val cardComponent = state.getEntity(attackerId)?.get<CardComponent>() ?: return emptyList()
+        val printed = cardRegistry.getCard(cardComponent)
+            ?.staticAbilities.orEmpty()
+        val granted = state.grantedStaticAbilities
+            .filter { it.entityId == attackerId }
+            .map { it.ability }
+        return (printed + granted)
+            .filterIsInstance<CantAttackUnlessCoAttacker>()
+            .filter { it.filter.scope is Scope.Self }
+    }
+
+    /** Whether some creature in [candidates] other than [attackerId] satisfies [restriction]. */
+    private fun coAttackerAvailable(
+        state: GameState,
+        projected: ProjectedState,
+        attackerId: EntityId,
+        restriction: CantAttackUnlessCoAttacker,
+        candidates: Collection<EntityId>
+    ): Boolean {
+        val context = PredicateContext(controllerId = projected.getController(attackerId) ?: attackerId)
+        return candidates.any { otherId ->
+            otherId != attackerId &&
+                predicateEvaluator.matches(state, projected, otherId, restriction.coAttackerFilter, context)
+        }
     }
 
     /**
@@ -782,6 +881,86 @@ internal class AttackPhaseManager(
     }
 
     /**
+     * Validate [com.wingedsheep.sdk.scripting.OpponentsMustAttackYou] (Trove of Temptation): for
+     * each player [OpponentsMustAttackYouRequirement] says must be attacked, the declaration has
+     * to send at least one creature at that player or a planeswalker they control — if able.
+     *
+     * "Able" follows CR 508.1d: some creature could attack one of those defenders without its
+     * controller paying a cost (an attack tax or a "can't attack unless you sacrifice" cost), and
+     * without breaking a requirement the creature already carries. A goaded creature whose goaders
+     * include this player is not counted while it has a non-goader player to attack (obeying one
+     * requirement by breaking another gains nothing), and an active Taunt aimed at a different
+     * player — every creature attacks the taunter — already obeys as many requirements as any
+     * declaration can, so it wins.
+     */
+    private fun validateOpponentsMustAttackYou(
+        state: GameState,
+        attackingPlayer: EntityId,
+        attackers: Map<EntityId, EntityId>,
+        projected: ProjectedState
+    ): String? {
+        val requiring = OpponentsMustAttackYouRequirement.requiringPlayers(
+            state, cardRegistry, predicateEvaluator, attackingPlayer
+        )
+        if (requiring.isEmpty()) return null
+        val taunt = state.sharedTurnTeam(attackingPlayer)
+            .firstNotNullOfOrNull { member -> state.getEntity(member)?.get<MustAttackPlayerComponent>() }
+            ?.takeIf { it.activeThisTurn }
+        val opponents = state.getOpponents(attackingPlayer)
+        val validAttackers by lazy { getValidAttackers(state, attackingPlayer) }
+        for (player in requiring) {
+            if (attackers.values.any { OpponentsMustAttackYouRequirement.isAttackOn(state, projected, it, player) }) {
+                continue
+            }
+            if (taunt != null && taunt.defenderId != player) continue
+            val defenders = OpponentsMustAttackYouRequirement.defendersOf(state, projected, player)
+            val able = validAttackers.any { attackerId ->
+                canAttackFreely(state, projected, attackingPlayer, attackerId, defenders, player, opponents, validAttackers)
+            }
+            if (able) {
+                val name = state.getEntity(player)?.get<PlayerComponent>()?.name ?: "that player"
+                return "At least one creature must attack $name or a planeswalker they control this combat"
+            }
+        }
+        return null
+    }
+
+    /**
+     * Whether [attackerId] could attack one of [defenders] (all belonging to [player]) at no cost
+     * and without breaking its goad requirement — the "if able" of
+     * [validateOpponentsMustAttackYou]. A creature that can't attack unless another creature
+     * also attacks counts only if one of [validAttackers] could be that co-attacker; otherwise a
+     * lone Scarred Puma would leave no legal declaration at all.
+     */
+    private fun canAttackFreely(
+        state: GameState,
+        projected: ProjectedState,
+        attackingPlayer: EntityId,
+        attackerId: EntityId,
+        defenders: List<EntityId>,
+        player: EntityId,
+        opponents: List<EntityId>,
+        validAttackers: List<EntityId>
+    ): Boolean {
+        if (AttackSacrificeCosts.requirementFor(state, attackerId, cardRegistry) != null) return false
+        if (coAttackerRestrictions(state, attackerId).any {
+                !coAttackerAvailable(state, projected, attackerId, it, validAttackers)
+            }) return false
+        val ctx = AttackCheckContext(state, projected, attackerId, attackingPlayer, cardRegistry)
+        val goaders = state.getEntity(attackerId)?.get<GoadedComponent>()?.goaderIds.orEmpty()
+        if (player in goaders) {
+            val hasNonGoaderPlayer = opponents.any { other ->
+                other !in goaders && attackDefenderRules.all { it.check(ctx, other) == null }
+            }
+            if (hasNonGoaderPlayer) return false
+        }
+        return defenders.any { defenderId ->
+            attackDefenderRules.all { it.check(ctx, defenderId) == null } &&
+                calculateTotalAttackTax(state, mapOf(attackerId to defenderId), projected) == 0
+        }
+    }
+
+    /**
      * The player an attack aimed at [defenderId] is really aimed at: the player themselves, a
      * planeswalker's controller, or — for a battle — its protector rather than its controller
      * (CR 310.9d).
@@ -809,6 +988,51 @@ internal class AttackPhaseManager(
             it.entityId == attackerId && it.ability is MustAttack &&
                 it.ability.filter.scope is Scope.Self
         }
+    }
+
+    /**
+     * Whether [attackerId]'s must-attack requirement can only be met by attacking a *player*
+     * ([MustAttack.playersOnly]) — projected from a printed static, or granted at runtime (Nahiri,
+     * the Unforgiving's +1: "until your next turn, up to one target creature attacks a player each
+     * combat if able").
+     */
+    private fun mustAttackAPlayer(state: GameState, attackerId: EntityId): Boolean {
+        if (state.projectedState.mustAttackPlayer(attackerId)) return true
+        return state.grantedStaticAbilities.any {
+            it.entityId == attackerId && it.ability is MustAttack &&
+                it.ability.playersOnly && it.ability.filter.scope is Scope.Self
+        }
+    }
+
+    /**
+     * Validate "attacks a player each combat if able". Attacking at all is enforced by
+     * [validateProjectedMustAttackRequirements]; this adds the defender half: a creature under the
+     * requirement that attacks a planeswalker or battle is illegal while some opponent *player* is
+     * a legal defender for it (CR 508.1d — obey as many requirements as possible). Mirrors the
+     * player-only half of goad (CR 701.15b).
+     */
+    private fun validateMustAttackAPlayerRequirements(
+        state: GameState,
+        attackingPlayer: EntityId,
+        attackers: Map<EntityId, EntityId>,
+        projected: ProjectedState,
+        opponents: List<EntityId>
+    ): String? {
+        for ((attackerId, defenderId) in attackers) {
+            if (state.getEntity(defenderId)?.has<LifeTotalComponent>() == true) continue
+            if (!mustAttackAPlayer(state, attackerId)) continue
+            val ctx = AttackCheckContext(
+                state, projected, attackerId, attackingPlayer, cardRegistry
+            )
+            val canAttackAPlayer = opponents.any { playerId ->
+                attackDefenderRules.all { rule -> rule.check(ctx, playerId) == null }
+            }
+            if (canAttackAPlayer) {
+                val cardName = state.getEntity(attackerId)?.get<CardComponent>()?.name ?: "Creature"
+                return "$cardName must attack a player this combat if able"
+            }
+        }
+        return null
     }
 
     /**

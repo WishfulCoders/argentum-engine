@@ -203,11 +203,13 @@ object Library {
         canonicalForm: Boolean = true,
         destination: SearchDestination,
         reveal: Boolean = false,
+        entersTapped: Boolean = false,
     ): Phrase<CardScript> {
         fun scriptFor(filter: GameObjectFilter) = CardScript(
             spellEffect = Patterns.Library.searchLibrary(
                 filter = filter,
                 destination = destination,
+                entersTapped = entersTapped,
                 reveal = reveal,
             )
         )
@@ -427,6 +429,23 @@ object Library {
             canonicalForm = false,
             destination = SearchDestination.BATTLEFIELD,
         ),
+        // The tapped fetch — Evolving Wilds, Rampant Growth — is the same recipe with
+        // `entersTapped`. Here the pronoun is the majority printing (Oracle prints "put it onto the
+        // battlefield tapped" about five times as often as "put that card …"), so it is canonical
+        // and "that card" is the alternate, the reverse of the untapped pair above.
+        search(
+            "search your library for {filter}, put it onto the battlefield tapped, then shuffle",
+            "search your library for a card to the battlefield tapped",
+            destination = SearchDestination.BATTLEFIELD,
+            entersTapped = true,
+        ),
+        search(
+            "search your library for {filter}, put that card onto the battlefield tapped, then shuffle",
+            "search your library for a card to the battlefield tapped (that card)",
+            canonicalForm = false,
+            destination = SearchDestination.BATTLEFIELD,
+            entersTapped = true,
+        ),
         search(
             "search your library for {filter}, reveal it, then shuffle and put that card on top",
             "search your library for a card, revealed, to the top",
@@ -437,6 +456,29 @@ object Library {
             "search your library for {filter}, put it into your hand, then shuffle",
             "search your library for a card to your hand",
             destination = SearchDestination.HAND,
+        ),
+        // The unrevealed tutor prints its anaphor both ways too — Demonic Tutor and Diabolic Tutor
+        // say "put that card into your hand", roughly one printing in twenty — so the noun is the
+        // alternate of the pronoun here, as in the reveal clause below.
+        search(
+            "search your library for {filter}, put that card into your hand, then shuffle",
+            "search your library for a card to your hand (that card)",
+            canonicalForm = false,
+            destination = SearchDestination.HAND,
+        ),
+        // The graveyard search — Entomb, Vile Entomber — is the same recipe again, and Oracle splits
+        // it almost evenly between the pronoun and the noun, so the pronoun keeps canonical for
+        // agreement with every other destination.
+        search(
+            "search your library for {filter}, put it into your graveyard, then shuffle",
+            "search your library for a card to your graveyard",
+            destination = SearchDestination.GRAVEYARD,
+        ),
+        search(
+            "search your library for {filter}, put that card into your graveyard, then shuffle",
+            "search your library for a card to your graveyard (that card)",
+            canonicalForm = false,
+            destination = SearchDestination.GRAVEYARD,
         ),
         search(
             "search your library for {filter}, reveal it, put it into your hand, then shuffle",

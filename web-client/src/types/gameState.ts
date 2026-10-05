@@ -1,6 +1,7 @@
 import { AbilityFlag, Color, CounterType, DayNight, Keyword, Phase, Step, ZoneType } from './enums'
 import { EntityId, ZoneId } from './entities'
 import { ClientEvent } from './events'
+import type { AttackMode } from './messages'
 
 /**
  * Client-facing game state DTO.
@@ -59,14 +60,22 @@ export interface ClientGameState {
   readonly dayNight?: DayNight | null
 
   /**
-   * If non-null, the affected player whose turn the viewing player is currently driving
-   * (Mindslaver-style hijack). Drives the controller banner and promoting their hand to
+   * The Free-for-All attack restriction (CR 803): `'LEFT'` / `'RIGHT'` limit each player to the
+   * neighbouring seat in that direction; absent/null when any opponent may be attacked. Fixed for
+   * the game, so a delta never carries it — the applicator keeps the full state's value. Display
+   * only: `validAttackTargets` is still what a declaration may name.
+   */
+  readonly attackMode?: AttackMode | null
+
+  /**
+   * If non-null, the affected player whose choices the viewing player is currently driving
+   * (turn, combat or stack-resolution control). Drives the controller banner and promoting their hand to
    * face-up. Null in normal play.
    */
   readonly youAreHijacking?: EntityId | null
 
   /**
-   * If non-null, the controller currently driving the viewing player's turn. Drives the
+   * If non-null, the controller currently driving the viewing player's choices. Drives the
    * affected-player banner and disabling click handlers. Null in normal play.
    */
   readonly youAreHijackedBy?: EntityId | null
@@ -314,6 +323,9 @@ export interface ClientCard {
   /** Whether this creature has the renowned designation (CR 702.112b — renown can't trigger again
    * and its renown payoffs are on). Battlefield only. */
   readonly isRenowned?: boolean
+
+  /** Whether this permanent has the monstrous designation (CR 701.37b). Battlefield only. */
+  readonly isMonstrous?: boolean
 
   /** Whether this card is plotted in exile (CR 718 — Plot keyword, castable for free on a later turn). Exile only. */
   readonly isPlotted?: boolean
@@ -605,6 +617,12 @@ export interface ClientCard {
    * can only afford to evoke never casts itself the moment you drag it out.
    */
   readonly evoke?: string | null
+
+  /** Printed bestow price; enabled options come exclusively from server legal actions. */
+  readonly bestow?: {
+    readonly cost: string
+    readonly additionalCostDescription?: string | null
+  } | null
 }
 
 /** One face of a split-layout card (CR 709). */
@@ -637,7 +655,7 @@ export interface ClientPlaneswalkerAbility {
 export interface ClientZone {
   readonly zoneId: ZoneId
 
-  /** Card IDs in this zone, in order (may be empty for hidden zones) */
+  /** Card IDs in this zone, in order. A hidden zone lists only the cards the viewer knows. */
   readonly cardIds: readonly EntityId[]
 
   /** Number of cards in the zone (always available, even for hidden zones) */
@@ -645,6 +663,9 @@ export interface ClientZone {
 
   /** Whether the contents are visible to the viewing player */
   readonly isVisible: boolean
+
+  /** Libraries only: the index from the top of each entry of `cardIds` (0 = top card). */
+  readonly positions?: readonly number[] | null
 }
 
 /**
@@ -669,6 +690,8 @@ export interface ClientPlayer {
   readonly landsPlayedThisTurn: number
   readonly hasLost: boolean
   readonly manaPool?: ClientManaPool
+  /** Server-supplied actual colors accepted for each required pip. */
+  readonly manaPaymentColors?: Readonly<Record<string, readonly string[]>>
   readonly activeEffects?: readonly ClientPlayerEffect[]
   /**
    * Per-commander combat damage dealt to this player (CR 903.10a). Empty outside Commander format.
@@ -741,6 +764,8 @@ export interface ClientPlayerEffect {
    * (e.g. The Ring's four temptations). Rendered as filled/empty pips.
    */
   readonly progress?: ClientEffectProgress
+  /** When the effect ends, e.g. "until end of turn"; absent when no end is stated. */
+  readonly duration?: string | null
 }
 
 /**
@@ -766,6 +791,8 @@ export interface ClientCardEffect {
   readonly description?: string
   /** Optional icon identifier for UI rendering */
   readonly icon?: string
+  /** When the effect ends, e.g. "until end of turn"; absent when no end is stated. */
+  readonly duration?: string | null
 }
 
 /**

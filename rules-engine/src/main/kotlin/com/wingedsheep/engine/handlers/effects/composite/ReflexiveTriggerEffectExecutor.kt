@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
@@ -63,6 +64,7 @@ class ReflexiveTriggerEffectExecutor(
     private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<ReflexiveTriggerEffect> {
     private val predicateEvaluator = amountEvaluator.predicates
+    private val manaSolver = com.wingedsheep.engine.mechanics.mana.ManaSolver(cardRegistry, predicateEvaluator)
 
     override val effectType: KClass<ReflexiveTriggerEffect> = ReflexiveTriggerEffect::class
 
@@ -158,6 +160,7 @@ class ReflexiveTriggerEffectExecutor(
             requirement = action.requirement,
             controllerId = context.controllerId,
             sourceId = context.sourceId,
+            targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
             // Carry granterId so the "may" feasibility check honors a granter-relative exclusion —
             // e.g. Dire Blunderbuss must NOT offer the sacrifice when the only artifact is the
             // granting Equipment itself. Minimal context (granterId only) matches the actual
@@ -177,7 +180,7 @@ class ReflexiveTriggerEffectExecutor(
             ).size >= action.count
         }
         is ChooseActionEffect -> action.choices.any { choice ->
-            checkFeasibility(state, context.controllerId, choice.feasibilityCheck, predicateEvaluator = predicateEvaluator)
+            checkFeasibility(state, context.controllerId, choice.feasibilityCheck, predicateEvaluator = predicateEvaluator, manaSolver = manaSolver)
         }
         is SelectFromCollectionEffect -> {
             val available = gathered?.get(action.from)
@@ -192,15 +195,15 @@ class ReflexiveTriggerEffectExecutor(
         // "You may pay {E}{E}{E}" (Guide of Souls) — an all-or-nothing player-counter payment
         // is only feasible if the payer already has at least that many. Mirrors the SacrificeEffect
         // case: without this, the "may pay" prompt would be offered even at 0 energy, and
-        // PayFixedCountersExecutor would then fail every time instead of the option never appearing.
-        is com.wingedsheep.sdk.scripting.effects.PayFixedCountersEffect -> {
+        // PayExactCountersExecutor would then fail every time instead of the option never appearing.
+        is com.wingedsheep.sdk.scripting.effects.PayExactCountersEffect -> {
             val playerId = com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
                 .resolvePlayerRef(action.player, context, state)
             val current = playerId
                 ?.let { state.getEntity(it)?.get<com.wingedsheep.engine.state.components.battlefield.CountersComponent>() }
                 ?.getCount(action.counterType)
                 ?: 0
-            current >= action.amount
+            playerId != null && current >= amountEvaluator.evaluate(state, action.amount, context).coerceAtLeast(0)
         }
         // "You may remove a counter from ~" (Leatherhead, Swamp Stalker) — with no counters left
         // there is nothing to remove, so the may-clause must be absent. Both removal executors
@@ -215,7 +218,7 @@ class ReflexiveTriggerEffectExecutor(
                 } ?: true
         is com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect ->
             countersOn(state, context, action.target, kind = action.counterType)
-                ?.let { it >= action.count } ?: true
+                ?.let { it >= amountEvaluator.evaluate(state, action.count, context) } ?: true
         // "You may pay {1} up to three times" (Hawkeye, Master Marksman) — the repeated payment's
         // floor is one repetition, so a payer who can't afford even that can't perform the action
         // at all and the may-question must be absent. Without this the executor would raise the
@@ -366,6 +369,7 @@ class ReflexiveTriggerEffectExecutor(
         context: EffectContext,
         state: GameState
     ): List<EntityId>? = when (player) {
+        is com.wingedsheep.sdk.scripting.references.Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
         is com.wingedsheep.sdk.scripting.references.Player.Each,
         is com.wingedsheep.sdk.scripting.references.Player.ActivePlayerFirst -> state.turnOrder
         is com.wingedsheep.sdk.scripting.references.Player.EachOpponent ->

@@ -25,6 +25,7 @@ fun GameSession.toPersistent(
         sideboards = getSideboardsForPersistence().mapKeys { it.key.value },
         lastProcessedMessageId = getLastMessageIdsForPersistence().mapKeys { it.key.value },
         gameLogs = getLogsForPersistence().mapKeys { it.key.value },
+        seatNames = getSeatNamesForPersistence().mapKeys { it.key.value },
         playerInfos = getPlayerPersistenceInfo().map { (playerId, info) ->
             PersistentPlayerInfo(
                 playerId = playerId.value,
@@ -78,7 +79,8 @@ fun restoreGameSession(
         decks = deckLists,
         logs = logs,
         lastIds = lastMessageIds,
-        sideboardLists = sideboards
+        sideboardLists = sideboards,
+        seatNames = persistent.seatNames.mapKeys { EntityId(it.key) },
     )
 
     // The compact-replay recording is NOT restored here — it lives in the ReplayStore, not in this

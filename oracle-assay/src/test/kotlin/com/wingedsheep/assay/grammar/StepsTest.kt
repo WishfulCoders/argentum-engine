@@ -13,6 +13,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -175,6 +176,55 @@ class StepsTest : StringSpec({
             listOf(Targets.anyNumber(GameObjectFilter.Creature))
     }
 
+    // "Another" and "other" are the quantifier rows with the source excluded — `excludeSelf` on the
+    // target filter, the spelling 88 hand-written goldens use — and "another" is English's singular
+    // for "one other", so the four rows are the singular pair and the counted plural pair.
+    "another and other exclude the source from the target" {
+        fragment("Destroy another target creature you control.") shouldBe CardFragment(
+            script = CardScript(
+                spellEffect = Effects.Destroy(Targets.bound()),
+                targetRequirements = listOf(
+                    TargetObject(
+                        filter = TargetFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true),
+                        id = Targets.SLOT,
+                    )
+                ),
+            )
+        )
+        fragment("Exile up to one other target creature.").script.targetRequirements shouldBe listOf(
+            TargetObject(optional = true, filter = TargetFilter(GameObjectFilter.Creature, excludeSelf = true), id = Targets.SLOT)
+        )
+        fragment("Tap up to two other target creatures.").script.targetRequirements shouldBe listOf(
+            TargetObject(
+                count = 2,
+                optional = true,
+                filter = TargetFilter(GameObjectFilter.Creature, excludeSelf = true),
+                id = Targets.SLOT,
+            )
+        )
+        listOf(
+            "Destroy another target creature.",
+            "Destroy up to one other target creature.",
+            "Destroy two other target creatures.",
+            "Destroy up to three other target creatures.",
+            "Return another target creature you control to its owner's hand.",
+        ).forEach { roundTrips(it) }
+        // "one other" is the singular pair's alone, exactly as bare "up to one" is.
+        Grammar.abilityLine.parseLine("Destroy up to one other target creatures.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+    }
+
+    // After a first target, "another" contrasts with *that target* (the SDK's `TargetOther`), not
+    // with the source — Drooling Groodion and Mabel's Mettle. Reading it as `excludeSelf` would let
+    // one creature take both halves, so the second position declines.
+    "another after a first target declines rather than excluding the source" {
+        listOf(
+            "Target creature gets +2/+2 until end of turn. Another target creature gets -2/-2 until end of turn.",
+            "Target creature gets +2/+2 until end of turn. Up to one other target creature gets +1/+1 until end of turn.",
+        ).forEach { Grammar.abilityLine.parseLine(it).shouldBeInstanceOf<ParseOutcome.Declined>() }
+        roundTrips("Another target creature gets +2/+2 until end of turn.")
+    }
+
     // Oracle prints the plural possessive both ways, 110 lines to 55. One rule, two spellings, and
     // the minority never prints — so Scapegoat's line survives as a variant rather than a decline.
     "the older plural possessive parses and never prints" {
@@ -282,6 +332,32 @@ class StepsTest : StringSpec({
         ).forEach { roundTrips(it) }
     }
 
+    // Square Up's golden. "has base power and toughness" is the pump's second stat-change row: the
+    // same sentence and riders, over `SetBaseStats` instead of `ModifyStats`. The two leaves are
+    // disjoint — a modifier carries its sign, a base P/T never does — so neither row reads the other.
+    "base power and toughness is a row of every pump shape" {
+        fragment("Target creature has base power and toughness 4/4 until end of turn.") shouldBe CardFragment(
+            script = CardScript(
+                spellEffect = Effects.SetBasePowerAndToughness(4, 4, Targets.bound()),
+                targetRequirements = listOf(Targets.permanent(GameObjectFilter.Creature)),
+            )
+        )
+        fragment("~ has base power and toughness 3/3 until end of turn.") shouldBe CardFragment(
+            script = CardScript(spellEffect = Effects.SetBasePowerAndToughness(3, 3, EffectTarget.Self))
+        )
+        listOf(
+            "Target creature has base power and toughness 0/0 until end of turn.",
+            "Up to one other target creature has base power and toughness 5/5 until end of turn.",
+            "Two target creatures each have base power and toughness 1/1 until end of turn.",
+            "Target creature you control has base power and toughness 4/4 and gains flying and hexproof until end of turn.",
+            "~ has base power and toughness 5/2 until end of turn.",
+        ).forEach { roundTrips(it) }
+        Grammar.abilityLine.parseLine("Target creature has base power and toughness +1/+1 until end of turn.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+        Grammar.abilityLine.parseLine("Target creature gets 1/1 until end of turn.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+    }
+
     // The pump sentence is the second family to slot the quantifier table, and its verb agrees in
     // number: one creature "gets", several "each get". Second Breakfast prints the plural.
     "the pump sentence takes every quantifier, and its verb agrees in number" {
@@ -325,6 +401,34 @@ class StepsTest : StringSpec({
             "Up to X target creatures each gain haste until end of turn.",
             "Any number of target creatures each gain double strike until end of turn.",
         ).forEach { roundTrips(it) }
+    }
+
+    // The colour is chosen on resolution, so the grant sits inside `ChooseColorThen` — the spelling
+    // all fifteen hand-written cards share. The sentence reads on a target, on the source, and on
+    // the anaphor after an earlier clause (Feat of Resistance); its plural is deliberately unread.
+    "protection from the color of your choice wraps the grant in the colour choice" {
+        fragment("Target creature gains protection from the color of your choice until end of turn.") shouldBe
+            CardFragment(
+                script = CardScript(
+                    spellEffect = Effects.ChooseColorThen(Effects.GrantProtectionFromChosenColor(Targets.bound())),
+                    targetRequirements = listOf(Targets.permanent(GameObjectFilter.Creature)),
+                )
+            )
+        fragment("~ gains protection from the color of your choice until end of turn.") shouldBe
+            CardFragment(
+                script = CardScript(
+                    spellEffect = Effects.ChooseColorThen(Effects.GrantProtectionFromChosenColor(EffectTarget.Self))
+                )
+            )
+        listOf(
+            "Target creature you control gains protection from the color of your choice until end of turn.",
+            "Up to one target creature gains protection from the color of your choice until end of turn.",
+            "{W}: ~ gains protection from the color of your choice until end of turn.",
+            "Put a +1/+1 counter on target creature you control. It gains protection from the color of your choice until end of turn.",
+        ).forEach { roundTrips(it) }
+        Grammar.abilityLine.parseLine(
+            "Two target creatures each gain protection from the color of your choice until end of turn."
+        ).shouldBeInstanceOf<ParseOutcome.Declined>()
     }
 
     // The compound sentence is where the plural rows actually pay — every quantified line the corpus
@@ -418,14 +522,15 @@ class StepsTest : StringSpec({
     }
 
     // Fail-closed the other way: a requirement carrying a restriction the phrase does not spell
-    // must not print as though it did. `excludeSelf` is "other target creature", a different card.
+    // must not print as though it did. `excludeTriggeringEntity` is "target creature other than that
+    // creature", a different card. (`excludeSelf` used to stand here; the "another" rows spell it now.)
     "a target requirement the phrase does not spell refuses to print" {
         val other = CardFragment(
             script = CardScript(
                 spellEffect = Effects.Destroy(Targets.bound()),
                 targetRequirements = listOf(
                     TargetObject(
-                        filter = TargetFilter(GameObjectFilter.Creature, excludeSelf = true),
+                        filter = TargetFilter(GameObjectFilter.Creature, excludeTriggeringEntity = true),
                         id = Targets.SLOT,
                     )
                 ),
@@ -442,10 +547,10 @@ class StepsTest : StringSpec({
         fragment("Creatures you control get +1/+1 until end of turn.") shouldBe CardFragment(
             script = CardScript(
                 spellEffect = Effects.ForEachInGroup(
-                    com.wingedsheep.sdk.scripting.filters.unified.GroupFilter(
+                    GroupFilter(
                         GameObjectFilter.Creature.youControl()
                     ),
-                    Effects.ModifyStats(1, 1, com.wingedsheep.sdk.scripting.targets.EffectTarget.IterationEntity),
+                    Effects.ModifyStats(1, 1, EffectTarget.IterationEntity),
                 )
             )
         )
@@ -456,6 +561,27 @@ class StepsTest : StringSpec({
         roundTrips("Untap all creatures you control.")
         roundTrips("Tap all other creatures.")
         roundTrips("~ deals 1 damage to each attacking creature.")
+    }
+
+    // "Other" is GroupFilter.excludeSelf on the same iteration, so the pump rows carry it as a flag
+    // and the plain rows refuse to print a group that leaves the source out.
+    "a group pump that leaves the source out reads other as excludeSelf" {
+        fragment("When ~ enters, other creatures you control get +0/+1 until end of turn.") shouldNotBe
+            fragment("When ~ enters, creatures you control get +0/+1 until end of turn.")
+        fragment("Other creatures you control get +1/+1 until end of turn.") shouldBe CardFragment(
+            script = CardScript(
+                spellEffect = Effects.ForEachInGroup(
+                    GroupFilter(
+                        GameObjectFilter.Creature.youControl(),
+                        excludeSelf = true,
+                    ),
+                    Effects.ModifyStats(1, 1, EffectTarget.IterationEntity),
+                )
+            )
+        )
+        roundTrips("Whenever ~ attacks, other creatures you control get +1/+1 until end of turn.")
+        roundTrips("When ~ enters, other creatures you control gain vigilance until end of turn.")
+        roundTrips("Whenever ~ attacks, other creatures you control get +1/+0 and gain deathtouch until end of turn.")
     }
 
     // `noRegenerate` is a field on the same iteration rather than a second effect, so the rule spans
@@ -597,6 +723,55 @@ class StepsTest : StringSpec({
         roundTrips("Sacrifice ~.")
     }
 
+    // "If you do" gates the second clause on the first having happened, not on the choice: an empty
+    // hand still "may discard", and must not draw. So it is `May(IfYouDo(…))`, never `May(A then B)`.
+    "you may do an action, and if you do, the consequence follows" {
+        fragment("You may discard a card. If you do, draw a card.") shouldBe
+            CardFragment(
+                script = CardScript(
+                    spellEffect = Effects.May(Effects.IfYouDo(Effects.Discard(1), Effects.DrawCards(1))),
+                )
+            )
+        roundTrips("You may discard a card. If you do, draw a card.")
+        roundTrips("When ~ enters, you may discard a card. If you do, draw two cards.")
+        // The plain sequence under a choice is a different model, and still its own sentence.
+        Grammar.abilityLine.printLine(
+            CardFragment(script = CardScript(spellEffect = Effects.May(Effects.Discard(1) then Effects.DrawCards(1))))
+        ) shouldNotBe "You may discard a card. If you do, draw a card."
+    }
+
+    // An empty hand can still be discarded (the Narset ruling), so the gate cannot ask whether
+    // cards moved: the criterion is `Always`, which is what Narset and Sauron already carry.
+    "discarding your hand always counts as done" {
+        fragment("You may discard your hand. If you do, draw two cards.") shouldBe
+            CardFragment(
+                script = CardScript(
+                    spellEffect = Effects.May(
+                        Effects.IfYouDo(
+                            Patterns.Hand.discardHand(),
+                            Effects.DrawCards(2),
+                            successCriterion = SuccessCriterion.Always,
+                        )
+                    ),
+                )
+            )
+        roundTrips("You may discard your hand. If you do, draw two cards.")
+    }
+
+    // Auto infers "did it happen" only from a terminal zone move; a gate over anything else would
+    // be a card the validator refuses, so the rule neither builds nor prints one.
+    "an action the SDK cannot tell happened is not gated" {
+        Grammar.abilityLine.printLine(
+            CardFragment(
+                script = CardScript(
+                    spellEffect = Effects.May(Effects.IfYouDo(Effects.DrawCards(1), Effects.DrawCards(1))),
+                )
+            )
+        ) shouldBe null
+        Grammar.abilityLine.parseLine("You may draw a card. If you do, draw a card.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+    }
+
     // Another row of the life-loss recipient list, not a slot over `Player`: the recipient is a
     // value on the effect, and one rule with a player slot would print four separate sentences.
     "defending player is a recipient row beside each opponent and target player" {
@@ -679,6 +854,19 @@ class StepsTest : StringSpec({
         roundTrips("Return each other creature you control to its owner's hand.")
     }
 
+    // Without "target" the permanent is chosen on resolution (CR 115.10a), so the sentence is a
+    // gather-choose-move pipeline with no requirement — never the targeted bounce.
+    "return a permanent you control is chosen on resolution, not targeted" {
+        val untargeted = fragment("When ~ enters, return a land you control to its owner's hand.")
+        untargeted.script.triggeredAbilities.single().targetRequirement shouldBe null
+        untargeted shouldNotBe fragment("When ~ enters, return target land you control to its owner's hand.")
+        roundTrips("When ~ enters, return a land you control to its owner's hand.")
+        roundTrips("When ~ enters, return a creature you control to its owner's hand.")
+        roundTrips("When ~ enters, return a permanent you control to its owner's hand.")
+        roundTrips("At the beginning of your end step, return a land you control to its owner's hand.")
+        roundTrips("When ~ enters, you may return a land you control to its owner's hand.")
+    }
+
     // The causative moves the subject inside "have" and drops the verb's agreement, and the model
     // gains a `Effects.May` — which is why it is a parameter on the row and not an `alsoSpelled`.
     "the causative sacrifice prints its own sentence rather than the composed may" {
@@ -693,5 +881,32 @@ class StepsTest : StringSpec({
             )
         roundTrips("You may have target opponent sacrifice a creature of their choice.")
         roundTrips("Target opponent sacrifices a creature of their choice.")
+    }
+
+    "the Ring tempts you is a whole sentence with the controller as the tempted player" {
+        fragment("The Ring tempts you.") shouldBe
+            CardFragment(script = CardScript(spellEffect = Effects.TheRingTemptsYou()))
+        roundTrips("The Ring tempts you.")
+        roundTrips("When ~ enters, the Ring tempts you.")
+    }
+
+    "proliferate is a whole sentence with no target" {
+        fragment("Proliferate.") shouldBe
+            CardFragment(script = CardScript(spellEffect = Effects.Proliferate()))
+        roundTrips("Proliferate.")
+        roundTrips("{1}{G}, Sacrifice ~: Proliferate.")
+        roundTrips("Target creature gets -1/-1 until end of turn. Proliferate.")
+    }
+
+    // "enchanted creature" is a definite description like `~`, not an anaphor, so the attached
+    // instantiation of the retargetable shape reads in a first clause, a later one and a trigger.
+    "a clause about the attached creature acts on the source's attachment" {
+        fragment("Tap enchanted creature.") shouldBe
+            CardFragment(script = CardScript(spellEffect = Effects.Tap(EffectTarget.EnchantedCreature)))
+        roundTrips("Tap enchanted creature.")
+        roundTrips("When ~ enters, tap enchanted creature.")
+        roundTrips("{G}: Regenerate enchanted creature.")
+        roundTrips("{U}: Untap enchanted creature.")
+        roundTrips("Draw a card. Untap enchanted creature.")
     }
 })

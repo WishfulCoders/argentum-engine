@@ -261,7 +261,10 @@ class AffectsFilterResolverStatePredicateTest : FunSpec({
         assertCombatStatus(removed, attacker, blocked = true, unblocked = false)
         assertCombatStatus(removed.copy(step = Step.END_COMBAT), attacker, blocked = true, unblocked = false)
         assertCombatStatus(CombatRemovalHelper.removeFromCombat(removed, attacker), attacker, blocked = false, unblocked = false)
-        val explicitlyUnblocked = CombatRemovalHelper.removeFromCombat(state, blocker, unblockSoleBlockedAttackers = true)
+        val tracked = com.wingedsheep.engine.mechanics.combat.BlockingRelationships.establish(
+            state, mapOf(blocker to listOf(attacker))
+        )
+        val explicitlyUnblocked = CombatRemovalHelper.removeFromCombat(tracked, blocker, unblockSoleBlockedAttackers = true)
         assertCombatStatus(explicitlyUnblocked, attacker, blocked = false, unblocked = true)
     }
 
@@ -304,6 +307,18 @@ class AffectsFilterResolverStatePredicateTest : FunSpec({
     // =========================================================================
     // Board history predicates
     // =========================================================================
+
+    test("continuous control reads the intermediate projected controller") {
+        val permanent = EntityId.generate()
+        val state = com.wingedsheep.engine.core.ControlHistory.beginTurn(battlefield(
+            listOf(permanent to container(playerA, creature(playerA)))
+        ))
+        val filter = filterWith(StatePredicate.ControlledSinceTurnBegan)
+        resolver.resolveAffectedEntities(state, permanent, filter) shouldContain permanent
+        val intermediate = mapOf(permanent to MutableProjectedValues(controllerId = playerB))
+        resolver.resolveAffectedEntities(state, permanent, filter, intermediate) shouldNotContain permanent
+        resolver.resolveAffectedEntities(state, permanent, filter) shouldContain permanent
+    }
 
     test("EnteredThisTurn matches only entities with EnteredThisTurnComponent") {
         val fresh = EntityId.generate()

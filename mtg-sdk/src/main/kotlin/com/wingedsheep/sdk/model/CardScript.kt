@@ -205,6 +205,14 @@ data class CardScript(
     val cantBeCountered: Boolean = false,
 
     /**
+     * "If [condition], this spell can't be countered." Checked against the spell *on the stack*
+     * whenever something tries to counter it — the condition reads the spell's own cast-time
+     * values (its X, mana spent) and its caster as `Player.You` (Banefire: X is 5 or more).
+     * Use [cantBeCountered] for the unconditional form.
+     */
+    val cantBeCounteredIf: @Serializable Condition? = null,
+
+    /**
      * Whether this spell can't be copied (CR 707.10). When true, any effect that would
      * copy this spell on the stack creates no copy.
      */
@@ -259,6 +267,13 @@ data class CardScript(
      * The variant is applied at cast time so the resolving spell only ever carries the cleaved shape.
      */
     val cleaveSpellEffect: Effect? = null,
+
+    /**
+     * Spell effect used when this spell is cast for its overload cost (CR 702.96) — the printed
+     * effect with every "target" read as "each", written out by the card author. An overloaded spell
+     * has no target requirements at all (CR 702.96b), so this effect must not read chosen targets.
+     */
+    val overloadSpellEffect: Effect? = null,
 
     /**
      * Class level abilities (for Class enchantments).
@@ -384,6 +399,21 @@ data class CardScript(
      * Wired via the `mayBeginGameOnBattlefield()` DSL helper on [com.wingedsheep.sdk.dsl.CardBuilder].
      */
     val mayStartOnBattlefield: Boolean = false,
+
+    /**
+     * "You may reveal this card from your opening hand. If you do, …" (CR 103.6b). When non-null
+     * the card carries that opening-hand action: in the same post-mulligan walk as
+     * [mayStartOnBattlefield], its owner is asked whether to reveal it, and a "yes" reveals the card
+     * and runs this effect with the card as source and its owner as controller. The payoff is
+     * almost always a delayed trigger (CR 603.7a — created "as a result of a static ability that
+     * allows a player to take an action"), e.g. Devourer of Destiny's
+     * `Effects.CreateDelayedTrigger(step = UPKEEP, fireOnPlayer = PlayerRef(You)) { … }` for
+     * "at the beginning of your first upkeep" — the trigger is created before turn 1, so its next
+     * matching step *is* the first one.
+     *
+     * Wired via the `revealFromOpeningHand(effect)` DSL helper on [com.wingedsheep.sdk.dsl.CardBuilder].
+     */
+    val openingHandReveal: Effect? = null,
 
     /**
      * "As you cast this spell" condition captures (CR 601.2i). Each is a named condition the engine

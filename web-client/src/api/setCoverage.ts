@@ -96,6 +96,8 @@ export interface CardCoverage {
   readonly implemented: boolean
   /** Set-specific Scryfall art (direct CDN URL, normal size); null if Scryfall had none. */
   readonly imageUri: string | null
+  /** Printed sideways (split layouts, battles) — the hover preview rotates it to landscape. */
+  readonly isLandscape?: boolean
   /** Non-null when we've decided never to implement this card, carrying the reason. */
   readonly notPlanned: NotPlanned | null
   /** Argentum Assay's reading, or `null` when the baked ledger has no row — see {@link AssayVerdict}. */

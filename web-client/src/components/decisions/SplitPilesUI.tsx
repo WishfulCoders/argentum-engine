@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, SplitPilesDecision } from '@/types'
 import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
+import { DraggableBanner } from './DraggableBanner'
 import styles from './DecisionUI.module.css'
 import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
@@ -11,7 +12,7 @@ import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
  * For single-card decisions: shows the card with pile buttons for quick assignment.
  * For multi-card decisions: shows cards with pile assignment toggles.
  */
-export function SplitPilesUI({
+function CardPileSplitUI({
   decision,
   responsive,
 }: {
@@ -226,4 +227,60 @@ export function SplitPilesUI({
       </button>
     </>
   )
+}
+
+export function SplitPilesUI(props: { decision: SplitPilesDecision; responsive: ResponsiveSizes }) {
+  return props.decision.useTargetingUI
+    ? <BattlefieldPileSplitUI decision={props.decision} />
+    : <CardPileSplitUI {...props} />
+}
+
+function BattlefieldPileSplitUI({ decision }: { decision: SplitPilesDecision }) {
+  const startSelection = useGameStore((s) => s.startDecisionSelection)
+  const cancelSelection = useGameStore((s) => s.cancelDecisionSelection)
+  const selection = useGameStore((s) => s.decisionSelectionState)
+  const submitPiles = useGameStore((s) => s.submitSplitPilesDecision)
+  const gameState = useGameStore((s) => s.gameState)
+  const [activePile, setActivePile] = useState(0)
+  // A restriction re-ask arrives with the engine's maximal legal blocks; start from those.
+  const [piles, setPiles] = useState<EntityId[][]>(() => decision.suggestedPiles?.map((pile) => [...pile])
+    ?? Array.from({ length: decision.numberOfPiles }, () => []))
+
+  useEffect(() => {
+    const options = (decision.pileOptions?.[activePile] ?? decision.cards).filter((id) => {
+      const otherMemberships = piles.filter((_, index) => index !== activePile).filter((pile) => pile.includes(id)).length
+      return otherMemberships < (decision.maxPileMemberships?.[id] ?? 1)
+    })
+    startSelection({ decisionId: decision.id, validOptions: options, selectedOptions: piles[activePile] ?? [],
+      minSelections: 0, maxSelections: options.length, prompt: decision.prompt })
+    return () => cancelSelection(decision.id)
+  }, [decision.id, activePile, piles, startSelection, cancelSelection])
+
+  const currentPiles = () => piles.map((pile, index) => index === activePile
+    ? [...(selection?.decisionId === decision.id ? selection.selectedOptions : pile)] : pile)
+  const switchPile = (index: number) => {
+    setPiles(currentPiles())
+    setActivePile(index)
+  }
+  const submit = () => {
+    submitPiles(decision.id, currentPiles())
+    cancelSelection(decision.id)
+  }
+  const displayedPiles = currentPiles()
+  return <DraggableBanner className={styles.sideBannerSelection}>
+    <div className={styles.bannerTitleSelection}>Blocker piles</div>
+    <p className={styles.hint}>{decision.prompt}</p>
+    <p className={styles.hint}>Select a pile, then click creatures on the battlefield to add or remove them.</p>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      {displayedPiles.map((pile, index) => <button key={index} onClick={() => switchPile(index)}
+        aria-pressed={activePile === index} data-testid={`blocker-pile-${index}`}
+        className={activePile === index ? styles.yesButton : styles.noButton}>
+        {decision.pileLabels[index] ?? `Pile ${index + 1}`} ({pile.length})
+      </button>)}
+    </div>
+    <div className={styles.hint}>
+      {(displayedPiles[activePile] ?? []).map((id) => gameState?.cards[id]?.name ?? 'Creature').join(', ') || 'Empty pile'}
+    </div>
+    <button onClick={submit} disabled={decision.requiredAssignments != null && displayedPiles.reduce((sum, pile) => sum + pile.length, 0) !== decision.requiredAssignments} className={`${styles.confirmButton} ${styles.confirmButtonSmall}`}>{decision.requiredAssignments == null ? 'Assign piles at random' : 'Confirm blocks'}</button>
+  </DraggableBanner>
 }

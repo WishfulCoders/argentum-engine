@@ -59,7 +59,8 @@ class EffectExecutorRegistry(
     playLandHandler: () -> PlayLandHandler,
     costPaymentService: () -> com.wingedsheep.engine.mechanics.cost.CostPaymentService,
     private val targetFinder: TargetFinder,
-    private val targetValidator: TargetValidator
+    private val targetValidator: TargetValidator,
+    legalActionEnumerator: () -> com.wingedsheep.engine.legalactions.LegalActionEnumerator
 ) {
     private val predicateEvaluator = zones.predicateEvaluator
     private val executors = mutableMapOf<KClass<out Effect>, EffectExecutor<*>>()
@@ -68,13 +69,13 @@ class EffectExecutorRegistry(
     init {
         // Every module that runs sub-effects receives [recurse] at construction; the reference is
         // only invoked once an effect executes, by which point the registry is fully built.
-        registerModule(LifeExecutors(zones, amountEvaluator, cardRegistry))
+        registerModule(LifeExecutors(zones, amountEvaluator, cardRegistry, replacementProcessor, ::recurse))
         registerModule(DamageExecutors(zones, amountEvaluator, decisionHandler))
         registerModule(PermanentExecutors(::recurse, zones, decisionHandler, amountEvaluator, cardRegistry))
         registerModule(ManaExecutors(amountEvaluator, cardRegistry))
         registerModule(TokenExecutors(zones, amountEvaluator, StaticAbilityHandler(cardRegistry), cardRegistry, tokenArtRegistry, targetFinder = targetFinder))
         registerModule(
-            LibraryExecutors(::recurse, zones, cardRegistry, castSpellHandler, playLandHandler, targetFinder)
+            LibraryExecutors(::recurse, zones, cardRegistry, castSpellHandler, playLandHandler, targetFinder, legalActionEnumerator)
         )
         registerModule(StackExecutors(zones, amountEvaluator, cardRegistry, spellCounterer, targetFinder = targetFinder))
         registerModule(InformationExecutors())
@@ -158,10 +159,23 @@ class EffectExecutorRegistry(
                     "(EffectExecutorCoverageTest guards this at build time)."
             )
         val instructionContext = context.withCurrentObjectReferences(state)
-        val result = executor.execute(state, effect, instructionContext)
+        val executed = executor.execute(state, effect, instructionContext)
+        val result = if (effect is com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect ||
+            effect is com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect) {
+            executed.copy(updatedCollections = EffectDiscardDestinations.propagateUnknown(
+                executed.updatedCollections, instructionContext.pipeline.storedCollections,
+                when (effect) {
+                    is com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect -> effect.from
+                    is com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect -> effect.from
+                    else -> null
+                }))
+        } else executed
         val references = instructionContext.objectReferences.authorize(result.events)
         val finished = result.copy(state = com.wingedsheep.engine.handlers.continuations.propagateObjectReferences(result.state, references))
-        return runReplacementRiders(finished, context)
+        val recorded = finished.copy(state = com.wingedsheep.engine.core.ControlHistory.record(finished.state, finished.events))
+        val completed = runReplacementRiders(recorded, context)
+        return if (context.deferGraveyardOrdering) completed
+            else com.wingedsheep.engine.mechanics.GraveyardOrdering.finish(completed)
     }
 
     /**

@@ -32,8 +32,8 @@ val RiptideSurvivor = card("Riptide Survivor") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "45"
-        artist = "Glen Angus"
+        collectorNumber = "48"
+        artist = "Thomas M. Baxa"
         flavorText = "Rootwater showed him wonders that air dwellers could scarcely comprehend."
         imageUri = "https://cards.scryfall.io/normal/front/7/5/7515187f-4821-400d-b78f-cec173df6b84.jpg?1562530669"
     }

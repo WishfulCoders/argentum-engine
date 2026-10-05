@@ -17,7 +17,6 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.DoubleFacedComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
@@ -66,9 +65,20 @@ class CreatePredefinedTokenExecutor(
         // Evaluate dynamic count if set (e.g. Lobelia's "X = the exiled card's power"),
         // otherwise use the fixed count. Coerced to >= 0 — a negative count would be a
         // bug elsewhere, but clamping defends against odd dynamic-amount edge cases.
-        val tokenCount = effect.dynamicCount?.let { dyn ->
+        val baseTokenCount = effect.dynamicCount?.let { dyn ->
             amountEvaluator.evaluate(state, dyn, context).coerceAtLeast(0)
         } ?: effect.count
+
+        // Token-count replacements (Doubling Season, Mondrak, Glory Dominus) apply to predefined
+        // tokens exactly as to CreateTokenEffect tokens — before any substitution gets a look,
+        // the same order CreateTokenExecutor uses.
+        val tokenCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(
+            TokenCreationReplacementHelper.applyCountReplacements(
+                state, tokenControllerId, baseTokenCount,
+                predicateEvaluator = amountEvaluator.predicates
+            ),
+            "predefined tokens"
+        )
 
         // Check for token creation replacement effects (e.g., Mirrormind Crown)
         val replacementResult = TokenCreationReplacementHelper.checkReplacement(
@@ -83,7 +93,7 @@ class CreatePredefinedTokenExecutor(
         val prospective = CardComponent(
             cardDefinitionId = effect.tokenType,
             name = effect.tokenType,
-            manaCost = ManaCost.ZERO,
+            manaCost = cardDef.manaCost,
             typeLine = cardDef.typeLine,
             baseStats = cardDef.creatureStats,
             baseKeywords = cardDef.keywords,
@@ -129,13 +139,15 @@ class CreatePredefinedTokenExecutor(
             val tokenComponent = CardComponent(
                 cardDefinitionId = effect.tokenType,
                 name = effect.tokenType,
-                manaCost = ManaCost.ZERO,
+                manaCost = cardDef.manaCost,
                 typeLine = cardDef.typeLine,
                 baseStats = cardDef.creatureStats,
                 baseKeywords = cardDef.keywords,
-                // Tokens have no mana cost, so a colored token's printed color lives in its
-                // color indicator (CR 204), stored on the definition as colorIdentityOverride.
-                // Fall back to the mana-cost-derived colors for tokens without an override.
+                // A token has no mana cost unless its creator defines one (CR 202.1b) — the
+                // Spellgorger Weird is a {2}{R} token — so the definition's cost is carried as
+                // printed (ManaCost.ZERO when it has none). A colored token without a cost has
+                // its color in its color indicator (CR 204), stored as colorIdentityOverride;
+                // otherwise its colors derive from that mana cost.
                 colors = cardDef.colorIdentityOverride ?: cardDef.colors,
                 ownerId = tokenControllerId,
                 imageUri = resolvedImageUri
@@ -152,6 +164,12 @@ class CreatePredefinedTokenExecutor(
             if (effect.tapped) {
                 container = container.with(TappedComponent)
             }
+
+            // Printed keyword abilities that live on their own component rather than in
+            // `baseKeywords` — toxic N above all (the Phyrexian Mite's toxic 1) — are attached the
+            // same way a card's are, so a predefined token never silently loses one.
+            container = com.wingedsheep.engine.core.CardEntityFactory
+                .applyDefinitionDecorations(container, cardDef)
 
             // Transforming double-faced tokens (CR 701.51b — Incubator). The token
             // enters with its front face up; the back face's CardDefinition is

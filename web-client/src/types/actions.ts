@@ -10,6 +10,7 @@ import { EntityId } from './entities'
 export type GameAction =
   | PassPriorityAction
   | CastSpellAction
+  | TakePlayerAction
   | ActivateAbilityAction
   | CycleCardAction
   | TypecycleCardAction
@@ -119,6 +120,8 @@ export interface CastSpellAction {
   readonly alternativePayment?: AlternativePaymentChoice
   /** Whether to cast this card face-down (for Morph creatures) */
   readonly castFaceDown?: boolean
+  /** Whether to cast this card prototyped — its prototype cost and size (CR 718.3) */
+  readonly castPrototyped?: boolean
   /** Whether the spell is being cast for an alternative cost (impending, evoke, flashback, …) */
   readonly useAlternativeCost?: boolean
   /**
@@ -133,6 +136,18 @@ export interface CastSpellAction {
    * stamps it on the cast variant it offers; the client only echoes it back.
    */
   readonly declaredCostSlot?: string
+  /**
+   * How many times the declared optional cost is paid — above 1 only for a repeatable cost
+   * (replicate). Server-stamped on each "Replicate ×N" variant; the client only echoes it back.
+   */
+  readonly declaredCostTimes?: number
+  /**
+   * Which of the card's costs under `declaredCostSlot` are paid, by printed position — set only for
+   * "Kicker [A] and/or [B]" cards, where each variant ("Kicked {G}", "Kicked {1}{U}", both) is its
+   * own server-offered cast. The client only echoes it back.
+   */
+  readonly declaredCostIndices?: readonly number[]
+  readonly additionalCostChoices?: Readonly<Record<string, number>>
   /**
    * Whether the spell's optional waterbend additional cost was elected (Avatar: The Last
    * Airbender). Set by the server on the paid cast variant; preserved through the pipeline so the
@@ -355,6 +370,8 @@ export interface ChooseManaColorAction {
 
 export interface DecisionResponse {
   readonly decisionId: string
+  readonly type?: string
+  readonly action?: GameAction
   readonly selectedEntityIds?: readonly EntityId[]
   readonly selectedIndex?: number
   readonly confirmed?: boolean
@@ -463,4 +480,11 @@ export function getActionSubject(action: GameAction): EntityId | null {
     default:
       return null
   }
+}
+
+/** A special action supplied by a resolving effect, addressed by its server permission id. */
+export interface TakePlayerAction {
+  readonly type: 'TakePlayerAction'
+  readonly playerId: EntityId
+  readonly permissionId: string
 }

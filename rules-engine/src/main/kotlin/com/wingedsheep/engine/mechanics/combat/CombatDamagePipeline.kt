@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.combat
 
+import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
+import com.wingedsheep.engine.mechanics.targeting.ColorProtection
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.DamageUtils
@@ -96,7 +98,7 @@ internal class ProtectionModifier(
             val sourceSubtypes = projected.getSubtypes(assignment.sourceId)
             val sourceSupertypes = projected.getSupertypes(assignment.sourceId)
             val sourceTypes = projected.getTypes(assignment.sourceId)
-            val protectedByColor = sourceColors.any { projected.hasKeyword(assignment.targetId, "PROTECTION_FROM_$it") }
+            val protectedByColor = ColorProtection.isProtected(projected, assignment.targetId, sourceColors)
             val protectedBySubtype = sourceSubtypes.any { projected.hasKeyword(assignment.targetId, "PROTECTION_FROM_SUBTYPE_${it.uppercase()}") }
             val protectedBySupertype = sourceSupertypes.any { projected.hasKeyword(assignment.targetId, "PROTECTION_FROM_SUPERTYPE_${it.uppercase()}") }
             val protectedByCardType = sourceTypes.any { projected.hasKeyword(assignment.targetId, "PROTECTION_FROM_CARDTYPE_${it.uppercase()}") }
@@ -106,7 +108,9 @@ internal class ProtectionModifier(
                     val tgtController = projected.getController(assignment.targetId)
                     srcController != null && tgtController != null && srcController != tgtController
                 }
-            !protectedByColor && !protectedBySubtype && !protectedBySupertype && !protectedByCardType && !protectedFromOpponent
+            val protectedFromKind = SourceKindProtection.isProtectedFromObject(state, assignment.targetId, assignment.sourceId)
+            !protectedByColor && !protectedBySubtype && !protectedBySupertype && !protectedByCardType &&
+                !protectedFromOpponent && !protectedFromKind
         }
     }
 }

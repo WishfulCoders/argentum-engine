@@ -74,7 +74,7 @@ internal object StackPlacement {
 
         // Emit BecomesTargetEvent for each permanent, spell, or player target
         // Use abilityId (the entity on the stack) as source so ward can counter it
-        for (target in targets) {
+        for (target in targets.distinct()) {
             newState = emitBecomesTarget(
                 newState, target, abilityId, ability.controllerId, events, sourceIsSpell = false
             )
@@ -150,16 +150,29 @@ internal object StackPlacement {
         // Clone cast-time state; per 707.10 the copy inherits every decision made for
         // the original. The data-class copy preserves: xValue, declaredCostSlot, wasBlightPaid,
         // wasWarped, wasEvoked, sacrificedPermanents (snapshots of P/T + subtypes), damageDistribution,
-        // chosenCreatureType, exiledCardCount, castFromZone, beheldCards, convokedCreatures (CR 707.10: an
-        // effect of the copy that refers to objects used to pay its costs uses the original's), and the
-        // manaSpent{White,Blue,Black,Red,Green,Colorless} colors. Only the caster
-        // (copy controller) and modal fields (which the caller may retarget) are
-        // overridden explicitly. Payment events (ManaSpentEvent, SpellCastEvent) are
+        // chosenCreatureType, exiledCardCount, beheldCards, convokedCreatures (CR 707.10: an
+        // effect of the copy that refers to objects used to pay its costs uses the original's).
+        // castFromZone is cleared: a copy isn't cast (707.10), so it wasn't cast from any zone —
+        // "if this spell was cast from a graveyard" is false for it (Sevinne's Reclamation ruling).
+        // Actual mana payment is not a copied decision: no mana was spent to cast the copy.
+        // Clear every payment bucket and provenance map while retaining choices such as X.
+        // The caster and modal fields may also change. Payment events (ManaSpentEvent, SpellCastEvent) are
         // deliberately not re-emitted — a copy isn't cast (707.10). For the same reason no mana
         // was spent on the copy, so a mana rider's entry keyword grant stays with the original.
         val copiedSpellComp = sourceSpell.copy(
             casterId = copyController,
+            castFromZone = null,
             entryKeywordGrants = emptyList(),
+            manaSpentWhite = 0,
+            manaSpentBlue = 0,
+            manaSpentBlack = 0,
+            manaSpentRed = 0,
+            manaSpentGreen = 0,
+            manaSpentColorless = 0,
+            manaSpentBySubtype = emptyMap(),
+            manaSpentByCardType = emptyMap(),
+            manaSpentSnow = 0,
+            manaSpentOnXByColor = emptyMap(),
             chosenModes = effectiveModes,
             modeTargetsOrdered = effectiveModeTargets,
             modeTargetRequirements = effectiveModeRequirements
@@ -177,6 +190,9 @@ internal object StackPlacement {
         )
 
         var newState = stateWithId.withEntity(copyId, container)
+        sourceContainer.get<com.wingedsheep.engine.mechanics.BestowedComponent>()?.let { bestowed ->
+            newState = newState.updateEntity(copyId) { it.with(bestowed.copy(original = bestowed.original.copy(ownerId = copyController))) }
+        }
         newState = newState.pushToStack(copyId).copy(priorityPassedBy = emptySet())
 
         val events = mutableListOf<GameEvent>(
@@ -186,13 +202,14 @@ internal object StackPlacement {
                 controllerId = copyController,
                 originalSpellId = sourceSpellId,
                 copyIndex = copyIndex,
-                copyTotal = copyTotal
+                copyTotal = copyTotal,
+                manaValue = sourceCard.manaValue
             )
         )
 
         // Emit BecomesTargetEvent for each permanent, spell, or player target — the copy is its own
         // source on the stack (ward on the target can counter the copy independently).
-        for (target in effectiveTargets) {
+        for (target in effectiveTargets.distinct()) {
             newState = emitBecomesTarget(newState, target, copyId, copyController, events, sourceIsSpell = true)
         }
 
@@ -270,7 +287,7 @@ internal object StackPlacement {
 
         // Emit BecomesTargetEvent for each permanent, spell, or player target
         // Use abilityId (the entity on the stack) as source so ward can counter it
-        for (target in targets) {
+        for (target in targets.distinct()) {
             newState = emitBecomesTarget(
                 newState, target, abilityId, ability.controllerId, events, sourceIsSpell = false
             )
@@ -303,6 +320,11 @@ internal object StackPlacement {
      * reused as the resolved permanent's entity, so marking it would leak a stale flag onto the
      * permanent. Permanents and players are tracked; `CleanupPhaseManager` clears the component for
      * every entity, players included.
+     *
+     * Callers emit once per **distinct** target: an object chosen for several instances of the word
+     * "target" still becomes the target of that spell or ability once, so its becomes-target
+     * triggers fire once (the heroic ruling: "only once per spell, even if that spell targets the
+     * creature … multiple times").
      *
      * [sourceIsSpell] is required rather than defaulted so every call site has to state whether a
      * spell or an ability did the targeting — `spellsOnly` / `abilitiesOnly` read nothing else.

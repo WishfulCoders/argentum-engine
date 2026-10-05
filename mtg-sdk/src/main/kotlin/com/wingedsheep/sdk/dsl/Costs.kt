@@ -490,13 +490,15 @@ object Costs {
 
     /**
      * Tap permanents you control (e.g., "Tap five untapped Clerics you control").
-     * Set [excludeSelf] for "tap N other untapped … you control" (excludes the source permanent).
+     * Set [excludeSelf] for "tap N other untapped … you control" (excludes the source permanent),
+     * and [sharedCreatureType] for "… that share a creature type" (Weight of Conscience).
      */
     fun TapPermanents(
         count: Int,
         filter: GameObjectFilter = GameObjectFilter.Creature,
-        excludeSelf: Boolean = false
-    ): AbilityCost = AbilityCost.Atom(CostAtom.TapPermanents(count, filter, excludeSelf))
+        excludeSelf: Boolean = false,
+        sharedCreatureType: Boolean = false
+    ): AbilityCost = AbilityCost.Atom(CostAtom.TapPermanents(count, filter, excludeSelf, sharedCreatureType))
 
     /**
      * Tap another untapped permanent you control (e.g., "Tap another untapped permanent you control").
@@ -556,6 +558,13 @@ object Costs {
      */
     fun PutCounterOnSelf(counterType: CounterType, count: Int = 1): AbilityCost =
         AbilityCost.Atom(CostAtom.PutCountersOnSelf(counterType, count))
+
+    /** Pay counters from the player paying this cost. */
+    fun PayPlayerCounters(counterType: CounterType, amount: Int = 1): AbilityCost =
+        PayPlayerCounters(counterType, DynamicAmount.Fixed(amount))
+
+    fun PayPlayerCounters(counterType: CounterType, amount: DynamicAmount): AbilityCost =
+        AbilityCost.Atom(CostAtom.PayPlayerCounters(counterType, amount))
 
     /**
      * Remove [count] counters of the specified [counterType] (or any type when null)
@@ -732,6 +741,36 @@ object Costs {
             fromZone: CostZone = CostZone.GRAVEYARD
         ): AdditionalCost = AdditionalCost.Atom(CostAtom.ExileFrom(fromZone.toZone(), filter, count))
 
+        /**
+         * "Exile [count] **other** cards matching [filter] from your graveyard" — the non-mana half
+         * of an escape cost (CR 702.138, `KeywordAbility.escape`). The card being cast is never
+         * part of the pool.
+         */
+        fun ExileOtherCards(
+            count: Int,
+            filter: GameObjectFilter = GameObjectFilter.Any,
+        ): AdditionalCost = AdditionalCost.Atom(CostAtom.ExileFrom(Zone.GRAVEYARD, filter, count, excludeSelf = true))
+
+        /**
+         * "Exile any number of **other** cards from your graveyard with [minTypes] or more card types
+         * among them" — Nethergoyf's escape cost (`KeywordAbility.escape("{2}{B}",
+         * Costs.additional.ExileOtherCardsWithCardTypes(4))`). A [CostAtom.ExileFromGraveyardForTotal]
+         * under the union measure [CardMeasure.DistinctCardTypes]: the count is free, the card types
+         * the chosen cards show between them are the constraint, and the cast isn't offered when the
+         * rest of the graveyard can't show that many.
+         */
+        fun ExileOtherCardsWithCardTypes(
+            minTypes: Int,
+            filter: GameObjectFilter = GameObjectFilter.Any,
+        ): AdditionalCost = AdditionalCost.Atom(
+            CostAtom.ExileFromGraveyardForTotal(
+                filter = filter,
+                measure = CardMeasure.DistinctCardTypes,
+                minTotal = minTypes,
+                excludeSelf = true,
+            )
+        )
+
         /** Exile a variable number (at least [minCount]) of cards matching [filter] from [fromZone] (Chill Haunting). */
         fun ExileVariableCards(
             minCount: Int = 1,
@@ -781,7 +820,10 @@ object Costs {
          * costs; use the `*OrPay` family instead when one branch pays extra *mana*. See
          * [AdditionalCost.Choice].
          */
-        fun Choice(vararg options: AdditionalCost): AdditionalCost = AdditionalCost.Choice(options.toList())
+        fun Choice(
+            vararg options: AdditionalCost,
+            choiceSlot: com.wingedsheep.sdk.scripting.ChoiceSlot? = null,
+        ): AdditionalCost = AdditionalCost.Choice(options.toList(), choiceSlot)
 
         /** Blight X — put X -1/-1 counters on a creature you control (X declared at cast time, min [minCount]). */
         fun BlightVariable(minCount: Int = 0): AdditionalCost = AdditionalCost.BlightVariable(minCount)
@@ -904,6 +946,13 @@ object Costs {
 
         /** Group multiple additional costs into one logical cost (steps run in order). */
         fun Composite(steps: List<AdditionalCost>): AdditionalCost = AdditionalCost.Composite(steps)
+
+        /** Pay counters from the player paying this cost. */
+        fun PayPlayerCounters(counterType: CounterType, amount: Int = 1): AdditionalCost =
+            PayPlayerCounters(counterType, DynamicAmount.Fixed(amount))
+
+        fun PayPlayerCounters(counterType: CounterType, amount: DynamicAmount): AdditionalCost =
+            AdditionalCost.Atom(CostAtom.PayPlayerCounters(counterType, amount))
 
         /**
          * Remove [count] counters of the specified [counterType] (or any type when null)
@@ -1037,6 +1086,10 @@ object Costs {
         /** Tap [count] untapped permanents matching [filter] **other than the source** ("another"). */
         fun TapAnother(filter: GameObjectFilter = GameObjectFilter.Any, count: Int = 1): PayCost =
             PayCost.Atom(CostAtom.TapPermanents(count, filter, excludeSelf = true))
+
+        /** A fixed counter payment from the player being asked to pay. */
+        fun PayPlayerCounters(counterType: CounterType, amount: Int = 1): PayCost =
+            PayCost.Atom(CostAtom.PayPlayerCounters(counterType, DynamicAmount.Fixed(amount)))
 
         /**
          * Remove [count] counters of the specified [counterType] (or any type when null)

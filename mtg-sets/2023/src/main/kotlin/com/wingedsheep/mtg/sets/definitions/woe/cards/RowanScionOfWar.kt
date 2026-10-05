@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * the amount of life you lost this turn. Activate only as a sorcery.
  *
  * The black/red twin of [WillScionOfPeace] — same turn-scoped, state-held discount
- * ([Effects.ReduceSpellCostsThisTurn]), reading the life-lost accumulator instead of life gained.
+ * ([Effects.ReduceSpellCosts]), reading the life-lost accumulator instead of life gained.
  * Damage taken, life-loss effects and life paid as a cost all feed that total, and life gained
  * never nets against it.
  */
@@ -40,7 +40,7 @@ val RowanScionOfWar = card("Rowan, Scion of War") {
     activatedAbility {
         cost = Costs.Tap
         timing = TimingRule.SorcerySpeed
-        effect = Effects.ReduceSpellCostsThisTurn(
+        effect = Effects.ReduceSpellCosts(
             spellFilter = GameObjectFilter.Any.withAnyColor(Color.BLACK, Color.RED),
             amount = DynamicAmounts.lifeLostThisTurn(),
         )

@@ -11,12 +11,14 @@ import com.wingedsheep.engine.handlers.actions.ActionHandler
 import com.wingedsheep.engine.mechanics.stack.StackResolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.CrewSaddleContributorsComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.CrewSaddleCost
 import com.wingedsheep.sdk.scripting.effects.BecomeSaddledEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import kotlin.reflect.KClass
@@ -35,6 +37,7 @@ import kotlin.reflect.KClass
 class SaddleMountHandler(
     private val cardRegistry: CardRegistry,
     private val stackResolver: StackResolver,
+    private val castPermissionUtils: com.wingedsheep.engine.legalactions.utils.CastPermissionUtils? = null,
 ) : ActionHandler<SaddleMount> {
     override val actionType: KClass<SaddleMount> = SaddleMount::class
 
@@ -63,6 +66,12 @@ class SaddleMountHandler(
         val projected = state.projectedState
         if (projected.getController(action.mountId) != action.playerId) {
             return "You don't control this permanent"
+        }
+
+        // Saddle is an activated ability of the Mount (CR 702.171a), so a "players can't activate
+        // abilities" static (Grand Abolisher) or a name lock (Pithing Needle) forbids it.
+        if (castPermissionUtils?.isActivationForbidden(state, action.mountId, action.playerId) == true) {
+            return "An effect prevents you from activating that ability right now"
         }
 
         val cardDef = cardRegistry.getCard(mountCard)
@@ -106,7 +115,8 @@ class SaddleMountHandler(
                 state = state,
                 projected = projected,
                 cardRegistry = cardRegistry,
-                creatureId = creatureId
+                creatureId = creatureId,
+                cost = CrewSaddleCost.SADDLE
             )
         }
 
@@ -148,7 +158,9 @@ class SaddleMountHandler(
         // Union across activations: saddle may be activated again even while already saddled.
         currentState = currentState.updateEntity(action.mountId) { c ->
             val existing = c.get<CrewSaddleContributorsComponent>()
-            c.with(
+            // Crew and saddle are activated abilities too — "was activated this turn".
+            val activated = c.get<AbilityActivatedThisTurnComponent>() ?: AbilityActivatedThisTurnComponent()
+            c.with(activated.withAnyActivated()).with(
                 CrewSaddleContributorsComponent(
                     creatureIds = (existing?.creatureIds ?: emptySet()) + action.saddleCreatures,
                     crewActivations = existing?.crewActivations ?: 0
@@ -182,6 +194,7 @@ class SaddleMountHandler(
             return SaddleMountHandler(
                 services.cardRegistry,
                 services.stackResolver,
+                services.castPermissionUtils,
             )
         }
     }

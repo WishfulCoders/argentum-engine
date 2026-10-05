@@ -32,7 +32,7 @@ val NightmareSower = card("Nightmare Sower") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, creature)
     }

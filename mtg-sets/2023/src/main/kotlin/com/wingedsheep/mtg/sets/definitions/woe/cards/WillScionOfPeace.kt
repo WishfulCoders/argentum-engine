@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * the amount of life you gained this turn. Activate only as a sorcery.
  *
  * The discount is a turn-scoped, state-held reduction
- * ([Effects.ReduceSpellCostsThisTurn]) rather than a static on Will, for two reasons the rulings
+ * ([Effects.ReduceSpellCosts]) rather than a static on Will, for two reasons the rulings
  * spell out: X is fixed when the ability *resolves* (life gained afterwards doesn't raise it), and
  * the effect lasts the turn whether or not Will survives. Only generic mana comes off (CR 601.2f).
  *
@@ -42,7 +42,7 @@ val WillScionOfPeace = card("Will, Scion of Peace") {
     activatedAbility {
         cost = Costs.Tap
         timing = TimingRule.SorcerySpeed
-        effect = Effects.ReduceSpellCostsThisTurn(
+        effect = Effects.ReduceSpellCosts(
             spellFilter = GameObjectFilter.Any.withAnyColor(Color.WHITE, Color.BLUE),
             amount = DynamicAmounts.lifeGainedThisTurn(),
         )

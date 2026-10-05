@@ -2489,7 +2489,7 @@
                                 "type": "Fixed",
                                 "amount": 3
                             },
-                            "expiry": "UNTIL_END_OF_TURN"
+                            "expiry": "KEPT_UNTIL_END_OF_TURN"
                         },
                         {
                             "type": "AddMana",
@@ -2498,10 +2498,11 @@
                                 "type": "Fixed",
                                 "amount": 3
                             },
-                            "expiry": "UNTIL_END_OF_TURN"
+                            "expiry": "KEPT_UNTIL_END_OF_TURN"
                         }
                     ]
-                }
+                },
+                "descriptionOverride": "Whenever this creature attacks, add {R}{R}{R}{G}{G}{G}. Until end of turn, you don't lose this mana as steps and phases end."
             }
         ]
     },

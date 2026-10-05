@@ -84,13 +84,28 @@ class TriggersSubjectVerbTest : DescribeSpec({
 
         it("rejects a subject the verb can't mean") {
             shouldThrow<IllegalArgumentException> { Triggers.a().isCast() }
-            shouldThrow<IllegalArgumentException> { Triggers.anyPlayer.attacks() }
+            shouldThrow<IllegalArgumentException> { Triggers.chosenOpponent.attacks() }
             shouldThrow<IllegalArgumentException> { Triggers.self.beginningOf(Step.UPKEEP) }
         }
 
         it("keeps one spelling for each zone change") {
             shouldThrow<IllegalArgumentException> { Triggers.self.leaves(to = Zone.GRAVEYARD) }
             shouldThrow<IllegalArgumentException> { Triggers.self.changesZone(to = Zone.BATTLEFIELD) }
+        }
+
+        it("becomesBlocked(by) filters the blocker, and only under self") {
+            Triggers.self.becomesBlocked(by = GameObjectFilter.Creature) shouldBe TriggerSpec(
+                EventPattern.BecomesBlockedEvent(filter = GameObjectFilter.Creature),
+                TriggerBinding.SELF,
+            )
+            Triggers.self.becomesBlocked().event shouldBe EventPattern.BecomesBlockedEvent(filter = null)
+            shouldThrow<IllegalArgumentException> {
+                Triggers.a(GameObjectFilter.Creature).becomesBlocked(by = GameObjectFilter.Creature)
+            }
+            // Under SELF the event's one filter is the blocker, so a subject filter would be misread.
+            shouldThrow<IllegalArgumentException> {
+                Triggers.self.matching(GameObjectFilter.Creature).becomesBlocked()
+            }
         }
 
         it("blocks keeps its SELF-only axes") {

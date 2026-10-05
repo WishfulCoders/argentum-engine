@@ -7,6 +7,7 @@
  */
 import type { ChosenTarget, EntityId, LegalActionInfo, GameAction, ClientGameState } from '@/types'
 import { TAP_FOR_GENERIC_LABEL_IMPROVISE, TAP_FOR_GENERIC_LABEL_WATERBEND } from '@/types'
+import { materializeX, parseManaCost } from '@/utils/manaCost'
 import type {
   PipelinePhase,
   PhaseResult,
@@ -742,10 +743,16 @@ export function enterPhase(
     }
 
     case 'convoke': {
+      // xSelection runs first, so the chosen X is materialized as generic here: each creature
+      // tapped for {1} pays down X as well as the printed generic (CR 601.2f / 702.51a).
+      const manaCost = materializeX(
+        parseManaCost(actionInfo.manaCostString ?? ''),
+        action.type === 'CastSpell' ? action.xValue : undefined,
+      ).map((s) => `{${s}}`).join('')
       store.startConvokeSelection({
         actionInfo,
         cardName: actionInfo.description.replace('Cast ', ''),
-        manaCost: actionInfo.manaCostString ?? '',
+        manaCost,
         selectedCreatures: [],
         validCreatures: actionInfo.validConvokeCreatures!,
       })
@@ -765,21 +772,13 @@ export function enterPhase(
         return total
       }
       // Tap cap: an explicit spell-level waterbend {N}; else the chosen X for "waterbend {X}";
-      // else the generic mana in the cost.
-      //
-      // Improvise counts only the *printed* generic, which is a known gap rather than the rule:
-      // CR 702.126a bounds the taps at the generic in the spell's TOTAL cost, and X is locked in
-      // before that total is determined (CR 601.2b/601.2f), so improvise does pay X-derived
-      // generic — see the Whir of Invention ruling. Four printed cards have improvise with {X}
-      // (Whir of Invention, Universal Surveillance, Saheeli's Directive, Battle at the Bridge);
-      // none is implemented yet. The cap stays at the printed generic only because the *server*
-      // does not credit taps against the X mana yet (see the TODO in CastSpellEnumerator's
-      // maxAffordableX block) — offering more here would let the player tap artifacts the cast
-      // then refuses to credit. Lift this together with that TODO.
+      // else the generic mana in the cost. Improvise bounds the taps at the generic in the
+      // spell's TOTAL cost (CR 702.126a), which includes the chosen X — the server credits taps
+      // past the printed generic against the X mana.
       const isImprovise = actionInfo.tapForGenericLabel === TAP_FOR_GENERIC_LABEL_IMPROVISE
       const maxTaps = actionInfo.tapForGenericAmount ??
         (isImprovise
-          ? genericIn(actionInfo.manaCostString ?? '')
+          ? genericIn(manaCost)
           : actionInfo.hasXCost
             ? xValue
             : genericIn(manaCost))
@@ -1046,6 +1045,9 @@ export function enterPhase(
             flags.minTotalWeight = costInfo.exileMinTotalWeight + targetTotal
             flags.cardWeights = { ...(costInfo.exileCardWeights ?? {}) }
             if (costInfo.exileWeightUnit != null) flags.weightUnit = costInfo.exileWeightUnit
+            if (costInfo.exileCardTypes != null && Object.keys(costInfo.exileCardTypes).length > 0) {
+              flags.cardTypes = { ...costInfo.exileCardTypes }
+            }
           }
           // The count floor follows the sum gate rather than leading it: any threshold above 0
           // needs at least one card, but collecting evidence 0 — Urgent Necropsy cast with no
@@ -1206,6 +1208,9 @@ export function enterPhase(
           selectedTargets: [],
           minTargets: Math.min(rawMin, maxTargets),
           maxTargets,
+          // "Select target creature (0/1)" rather than a bare "Select targets" — the server
+          // already derives the requirement's wording, the single-target path just dropped it.
+          ...(actionInfo.targetDescription ? { targetDescription: actionInfo.targetDescription } : {}),
           ...(actionInfo.requiresDamageDistribution ? { requiresDamageDistribution: true } : {}),
         })
       }

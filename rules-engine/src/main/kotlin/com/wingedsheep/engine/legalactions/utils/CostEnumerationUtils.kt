@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.legalactions.utils
 
+import com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.*
@@ -582,9 +583,11 @@ class CostEnumerationUtils(
         state: GameState,
         playerId: EntityId,
         filter: GameObjectFilter,
-        counterType: CounterType?
+        counterType: CounterType?,
+        sourceId: EntityId? = null
     ): List<CounterRemovalCreatureData> {
-        val context = PredicateContext(controllerId = playerId)
+        // The ability's source, so a "from among other …" filter (`notSourceItself()`) excludes it.
+        val context = PredicateContext(controllerId = playerId, sourceId = sourceId)
         val projected = state.projectedState
         return projected.getBattlefieldControlledBy(playerId).mapNotNull { eid ->
             if (!predicateEvaluator.matches(state, projected, eid, filter, context)) return@mapNotNull null
@@ -630,14 +633,13 @@ class CostEnumerationUtils(
     fun hasPlayerChosenNonManaX(abilityCost: AbilityCost): Boolean {
         fun isXCounterRemoval(cost: AbilityCost): Boolean =
             cost is AbilityCost.Atom &&
-                (cost.atom as? CostAtom.RemoveCounters)?.count is DynamicAmount.XValue
+                ((cost.atom as? CostAtom.RemoveCounters)?.count is DynamicAmount.XValue ||
+                    (cost.atom as? CostAtom.PayPlayerCounters)?.amount is DynamicAmount.XValue)
         return when (abilityCost) {
             AbilityCost.LoyaltyX -> true
             is AbilityCost.TapXPermanents -> true
             is AbilityCost.Atom -> isXCounterRemoval(abilityCost)
-            is AbilityCost.Composite -> abilityCost.costs.any {
-                it is AbilityCost.TapXPermanents || isXCounterRemoval(it)
-            }
+            is AbilityCost.Composite -> abilityCost.costs.any(::hasPlayerChosenNonManaX)
             else -> false
         }
     }
@@ -665,6 +667,10 @@ class CostEnumerationUtils(
             ((availableSources - fixedCost).coerceAtLeast(0)) / xSymbols
         } else {
             Int.MAX_VALUE
+        }
+
+        PlayerCounterPayment.abilityMaxX(state, playerId, abilityCost)?.let {
+            maxX = minOf(maxX, it)
         }
 
         if (abilityCost == AbilityCost.LoyaltyX) {

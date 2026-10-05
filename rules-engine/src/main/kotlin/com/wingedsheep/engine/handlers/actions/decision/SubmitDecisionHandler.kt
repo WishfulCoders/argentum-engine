@@ -60,7 +60,9 @@ class SubmitDecisionHandler(
         // After a resolution that is not always CR 117.3b's active player; see the open bug on
         // priority landing on the last decision's answerer.
         val finishedInStep = result.state.turnNumber == state.turnNumber && result.state.step == state.step
-        val settled = if (finishedInStep) result.state.withPriority(action.playerId) else result.state
+        val answer = (state.continuationStack.lastOrNull() as? Suspension)?.answer
+        val finishedBlockerPiles = answer is BlockerPilesContinuation || answer is BlockerPileRestrictionChoiceContinuation
+        val settled = if (finishedInStep && !finishedBlockerPiles) result.state.withPriority(action.playerId) else result.state
         return ExecutionResult.success(settled, events)
     }
 

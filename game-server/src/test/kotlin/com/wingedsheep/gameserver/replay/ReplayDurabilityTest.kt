@@ -1,14 +1,22 @@
 package com.wingedsheep.gameserver.replay
 
+import com.wingedsheep.engine.core.GameConfig
+import com.wingedsheep.engine.core.GameInitializer
+import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.engine.registry.CardRegistry
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.OwnerComponent
 import com.wingedsheep.gameserver.ScenarioTestBase
 import com.wingedsheep.gameserver.session.GameSession
 import com.wingedsheep.gameserver.session.PlayerSession
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.core.AttackMode
+import com.wingedsheep.sdk.core.Format
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.CharacteristicValue
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.model.Deck
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -243,6 +251,74 @@ class ReplayDurabilityTest : ScenarioTestBase() {
             // An archive row that isn't a JSON object would otherwise splice into corrupt JSON that
             // only fails in the client. Fail here, where the cause is visible.
             shouldThrow<IllegalArgumentException> { payload.copy(body = "not json").bodyFields() }
+        }
+
+        test("a record from before deck ids were shuffled rebuilds the ids its actions name") {
+            val recording = CardRegistry(parent = cardRegistry).apply { register(bear(2, 2)) }
+            val replay = recordGame(recording)
+            replay.version shouldBe CompactReplay.CURRENT_VERSION
+            val reconstructor = ReplayReconstructor(recording, null)
+            val seat = EntityId.of("pin-p1")
+            // Names of the seat's cards in the order their ids were minted.
+            fun mintedNames(version: Int): List<String> {
+                val state = reconstructor.initialState(replay.copy(version = version))
+                return state.entities.entries
+                    .filter { (_, c) -> c.get<OwnerComponent>()?.playerId == seat && c.get<CardComponent>() != null }
+                    .sortedBy { (id, _) -> id.value.removePrefix("e").toLong() }
+                    .map { (_, c) -> c.get<CardComponent>()!!.name }
+            }
+
+            mintedNames(2) shouldBe List(30) { "Forest" } + List(10) { CARD }
+            mintedNames(CompactReplay.CURRENT_VERSION) shouldNotBe mintedNames(2)
+            reconstructor.reconstruct(replay).fidelity shouldBe ReplayFidelity.EXACT
+        }
+
+        test("team replay versions preserve seating and the subsequent random stream") {
+            for (format in listOf(Format.TwoHeadedGiant(), Format.TeamVsTeam())) {
+                val setup = ReplaySetup(
+                    seed = 42L,
+                    format = format,
+                    attackMode = AttackMode.MULTIPLE,
+                    skipMulligans = true,
+                    teams = listOf(listOf(0, 1), listOf(2, 3)),
+                    players = (1..4).map {
+                        ReplayPlayerSetup("team-p$it", "Player $it", Deck(cards = List(30) { "Forest" } + List(10) { "Llanowar Elves" }))
+                    },
+                    seatRoster = emptyList(),
+                )
+                val config = GameConfig(
+                    players = setup.players.map { PlayerConfig(it.name, it.deck, playerId = EntityId(it.playerId)) },
+                    format = setup.format,
+                    attackMode = setup.attackMode,
+                    teams = setup.teams,
+                    seed = setup.seed,
+                    skipMulligans = true,
+                )
+                val reconstructor = ReplayReconstructor(cardRegistry, null)
+                val states = (3..4).map { version ->
+                    val replay = CompactReplay(
+                        version = version,
+                        gameId = "team-v$version",
+                        players = setup.players.map { ReplayPlayerInfo(it.playerId, it.name) },
+                        startedAt = Instant.now().toString(),
+                        endedAt = Instant.now().toString(),
+                        winnerName = null,
+                        setup = setup,
+                        actions = emptyList(),
+                    )
+                    val expected = GameInitializer(cardRegistry).initializeGame(
+                        config.copy(shuffledTeamSeats = version >= 4)
+                    ).state
+                    val actual = reconstructor.initialState(ReplayCodec.decode(ReplayCodec.encode(replay)))
+                    actual.turnOrder shouldBe expected.turnOrder
+                    actual.activePlayerId shouldBe expected.activePlayerId
+                    actual.entities shouldBe expected.entities
+                    actual.zones shouldBe expected.zones
+                    actual.rng shouldBe expected.rng
+                    actual
+                }
+                states[0].rng shouldNotBe states[1].rng
+            }
         }
 
         test("a v1 record (no checkpoints) still reconstructs, reported as unverified") {

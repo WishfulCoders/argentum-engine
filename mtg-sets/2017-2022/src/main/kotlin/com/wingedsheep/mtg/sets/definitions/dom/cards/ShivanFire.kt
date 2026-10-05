@@ -34,8 +34,8 @@ val ShivanFire = card("Shivan Fire") {
 
     metadata {
         rarity = Rarity.COMMON
-        collectorNumber = "175"
-        artist = "Svetlin Velinov"
+        collectorNumber = "142"
+        artist = "Grzegorz Rutkowski"
         flavorText = "The Keldons didn't come to Dominaria for a vacation."
         imageUri = "https://cards.scryfall.io/normal/front/2/1/21b9d339-99ed-4923-8f56-be37f29a0bfa.jpg?1562732568"
     }

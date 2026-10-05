@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
+import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.EngineServices
@@ -90,7 +92,7 @@ class ActivateAbilityHandler(
     override val actionType: KClass<ActivateAbility> = ActivateAbility::class
 
     private val abilityResolver = ActivatedAbilityResolver(cardRegistry, castPermissionUtils)
-    private val costTotaller = ActivationCostTotaller(castPermissionUtils, amountEvaluator = conditionEvaluator.amounts)
+    private val costTotaller = ActivationCostTotaller(castPermissionUtils, conditionEvaluator)
     private val validator = ActivationValidator(
         cardRegistry = cardRegistry,
         turnManager = turnManager,
@@ -153,11 +155,19 @@ class ActivateAbilityHandler(
         return ManaPaymentWindow.resumeIfPending(restored, result.events, manaSolver)
             ?: ExecutionResult.success(restored, result.events)
     }
-    private fun executeActivation(state: GameState, action: ActivateAbility): ExecutionResult {
+    internal fun executeWithLockedCost(state: GameState, action: ActivateAbility, cost: AbilityCost, x: Int?): ExecutionResult =
+        executeActivation(state, action, cost, x)
+
+    private fun executeActivation(state: GameState, action: ActivateAbility, lockedCost: AbilityCost? = null, lockedX: Int? = null): ExecutionResult {
         // 1. Announce (CR 602.2a–b): the ability, X, and the total cost.
         val activation = when (val announced = announce(state, action)) {
-            is Announcement.Announced -> announced.activation
+            is Announcement.Announced -> if (lockedCost == null) announced.activation else announced.activation.copy(effectiveCost = lockedCost, effectiveXValue = lockedX)
             is Announcement.Rejected -> return ExecutionResult.error(state, announced.reason)
+        }
+
+        if (lockedCost != null && lockedCost.hasTapCost() &&
+            state.getEntity(action.sourceId)?.has<com.wingedsheep.engine.state.components.battlefield.TappedComponent>() == true) {
+            return ExecutionResult.error(state, "The source is already tapped and cannot pay its tap cost")
         }
 
         // 2. Choices still to be made before any cost is paid (CR 601.2b–c): an opponent's targets,
@@ -167,6 +177,39 @@ class ActivateAbilityHandler(
         // 3. Pay the total cost (CR 601.2g–h): mana abilities first, then every cost atom.
         val paymentContext =
             buildAbilityPaymentContext(activation.cardComponent, state.projectedState, action.sourceId, activation.ability)
+        if (lockedCost == null && action.paymentStrategy is com.wingedsheep.engine.core.PaymentStrategy.AutoPay &&
+            state.playerActionPermissions.any { it.playerId == action.playerId && it.action.timing == com.wingedsheep.sdk.scripting.effects.PlayerActionTiming.ManaAbility }) {
+            var previewMana = activation.effectiveCost.extractManaCost()
+            val alternative = action.alternativePayment
+            if (previewMana != null && alternative != null && !alternative.isEmpty) {
+                if (activation.ability.hasConvoke) previewMana = alternativePaymentHandler
+                    .applyConvokeForAbility(state, previewMana, alternative, action.playerId).reducedCost
+                if (activation.ability.hasWaterbend) previewMana = alternativePaymentHandler
+                    .applyWaterbendForAbility(state, previewMana, alternative, action.playerId).reducedCost
+            }
+            val mana = previewMana?.withXAs(activation.effectiveXValue ?: 0)
+            if (mana != null && !ManaPaymentWindow.floatingManaCovers(state, action.playerId, mana)) {
+                val pool = state.getEntity(action.playerId)?.get<ManaPoolComponent>() ?: ManaPoolComponent()
+                val remaining = ManaPool(pool.white, pool.blue, pool.black, pool.red, pool.green, pool.colorless,
+                    restrictedMana = pool.restrictedMana,
+                    snowMana = pool.snowMana,
+                    snowColorless = pool.snowColorless).withSpendingColors(state, action.playerId).payPartial(mana, paymentContext).remainingCost
+                val excluded = if (activation.effectiveCost.hasTapCost()) setOf(action.sourceId) else emptySet()
+                if (manaSolver.solve(state, action.playerId, remaining, excludeSources = excluded, spellContext = paymentContext) == null) {
+                    return state.suspendForDecision(
+                        question = { id -> ManaPaymentWindow.buildDecision(
+                            state, action.playerId, mana, id, "Produce mana for ${activation.sourceName}",
+                            com.wingedsheep.engine.core.DecisionContext(sourceId = action.sourceId, sourceName = activation.sourceName,
+                                phase = com.wingedsheep.engine.core.DecisionPhase.CASTING), true, manaSolver,
+                            excludeSources = excluded, spellContext = paymentContext,
+                        ) },
+                        answer = com.wingedsheep.engine.core.ManaActionPaymentContinuation(action, mana,
+                            lockedAbilityCost = activation.effectiveCost, lockedAbilityX = activation.effectiveXValue,
+                            excludedSources = excluded, paymentContext = paymentContext),
+                    )
+                }
+            }
+        }
         val payment = when (val paid = costPayer.pay(state, activation, paymentContext)) {
             is ActivationPaymentOutcome.Paid -> paid.payment
             is ActivationPaymentOutcome.Failed -> return ExecutionResult.error(state, paid.reason)
@@ -285,6 +328,16 @@ class ActivateAbilityHandler(
         val action = activation.action
         val ability = activation.ability
         var currentState = state
+
+        // "Was activated this turn" (Cut Short): any activation of any of its abilities counts, and
+        // it stays counted even if the permanent later loses the ability. Only a permanent is
+        // "activated" — a cycled or graveyard-activated card must not carry the mark onward.
+        if (action.sourceId in currentState.getBattlefield()) {
+            currentState = currentState.updateEntity(action.sourceId) { c ->
+                val tracker = c.get<AbilityActivatedThisTurnComponent>() ?: AbilityActivatedThisTurnComponent()
+                c.with(tracker.withAnyActivated())
+            }
+        }
 
         // Track per-turn activation if the ability has an OncePerTurn or MaxPerTurn restriction.
         // `trackActivations` opts an unrestricted ability into the same tally so its own effect can
@@ -486,8 +539,11 @@ class ActivateAbilityHandler(
                 green = repeatPoolComponent.green,
                 colorless = repeatPoolComponent.colorless,
                 manaBySubtype = repeatPoolComponent.manaBySubtype,
-                manaBySource = repeatPoolComponent.manaBySource
-            )
+                manaBySource = repeatPoolComponent.manaBySource,
+                manaByCardType = repeatPoolComponent.manaByCardType,
+                snowMana = repeatPoolComponent.snowMana,
+                snowColorless = repeatPoolComponent.snowColorless
+            ).withSpendingColors(currentState, action.playerId)
 
             // Auto-tap for mana cost
             if (manaCost != null) {
@@ -504,7 +560,7 @@ class ActivateAbilityHandler(
             // mana as before. Snapshot the creature before it's tapped (Rule 113.7a) so
             // DynamicAmount.StationCharge reads its power off this instance's own snapshot.
             val repeatTapSlice = if (payment.isTapBatch) listOf(action.costPayment!!.tappedPermanents[i - 1]) else emptyList()
-            val repeatTapSnapshots = captureEntitySnapshots(repeatTapSlice, currentState.projectedState)
+            val repeatTapSnapshots = captureEntitySnapshots(repeatTapSlice, currentState.projectedState, currentState)
 
             // Pay the cost
             val repeatCostResult = costHandler.payAbilityCost(
@@ -534,7 +590,10 @@ class ActivateAbilityHandler(
                     green = repeatPool.green,
                     colorless = repeatPool.colorless,
                     manaBySubtype = repeatPoolAfterProvenance.manaBySubtype,
-                    manaBySource = repeatPoolAfterProvenance.manaBySource
+                    manaBySource = repeatPoolAfterProvenance.manaBySource,
+                    manaByCardType = repeatPoolAfterProvenance.manaByCardType,
+                    snowMana = repeatPool.snowMana,
+                    snowColorless = repeatPool.snowColorless
                 ))
             }
 

@@ -21,6 +21,7 @@ import {
 import { teamLabel } from './teamLabel'
 import { castOfferFace } from '@/utils/castFace'
 import { isBattle, tableSideOf } from '@/utils/combatTargets'
+import { attackNeighbours, type AttackNeighbours } from '@/utils/attackDirection'
 
 /**
  * Select the game state (works for both normal play and spectating).
@@ -174,6 +175,19 @@ export function useCard(cardId: EntityId | null): ClientCard | null {
 }
 
 /**
+ * A library top to bottom: the card at each position the viewer knows, `null` for a card back.
+ * The server names only the cards the viewer may identify and says where each one sits.
+ */
+export function librarySlots(zone: ClientZone | null | undefined): readonly (EntityId | null)[] {
+  if (!zone) return []
+  const slots: (EntityId | null)[] = new Array<EntityId | null>(zone.size).fill(null)
+  zone.cardIds.forEach((id, index) => {
+    slots[zone.positions?.[index] ?? index] = id
+  })
+  return slots
+}
+
+/**
  * Hook to get cards in a specific zone.
  */
 export function useZoneCards(zoneId: ZoneId): readonly ClientCard[] {
@@ -220,6 +234,20 @@ export function useViewingPlayer(): ClientPlayer | null {
     if (!gameState || !playerId) return null
     return gameState.players.find((p) => p.playerId === playerId) ?? null
   }, [gameState, playerId])
+}
+
+/**
+ * Attack left / attack right (CR 803.1) seen from the bottom-anchored seat — normally you: the one
+ * opponent it may attack and the one who may attack it. Null when the game has no such restriction
+ * or it no longer bites (two players left). Display only; `validAttackTargets` stays the authority.
+ */
+export function useAttackNeighbours(): AttackNeighbours | null {
+  const gameState = useGameStore(selectGameState)
+  const playerId = useGameStore(selectViewingPlayerId)
+  return useMemo(
+    () => (gameState ? attackNeighbours(gameState.players, gameState.attackMode, playerId) : null),
+    [gameState, playerId],
+  )
 }
 
 /**
@@ -373,7 +401,8 @@ export function useIsSharedLifeTeamGame(): boolean {
 /**
  * Multiplayer: how far off the viewer's next turn is, counted in living seats around the turn
  * order (`players` is the server's turn order) — "You're next" / "You in 2". Undefined on the
- * viewer's own turn and when either seat is unknown or out. Callers skip it for shared-turn team
+ * viewer's own turn and when either seat is unknown or the viewer is out. The active seat may be
+ * out (CR 800.4j). Callers skip it for shared-turn team
  * games (CR 805.4), where a per-seat count would mislead.
  */
 export function turnQueueHintFor(
@@ -382,12 +411,20 @@ export function turnQueueHintFor(
   viewerId: EntityId | null | undefined,
 ): string | undefined {
   if (!activePlayerId || !viewerId) return undefined
-  const living = players.filter((p) => !p.hasLost)
-  const from = living.findIndex((p) => p.playerId === activePlayerId)
-  const to = living.findIndex((p) => p.playerId === viewerId)
-  if (from < 0 || to < 0) return undefined
-  const distance = (to - from + living.length) % living.length
-  if (distance === 0) return undefined
+  const seat = players.findIndex((p) => p.playerId === activePlayerId)
+  const to = players.findIndex((p) => p.playerId === viewerId)
+  if (seat < 0 || to < 0 || players[to]!.hasLost) return undefined
+  // Walk the turn order from the active seat, counting living seats. The active seat itself may
+  // already be out — CR 800.4j: a player who leaves mid-turn leaves the turn running — and the
+  // walk still counts from it, so the seat after them reads "You're next".
+  let distance = 0
+  for (let i = 1; i <= players.length; i++) {
+    const p = players[(seat + i) % players.length]!
+    if (p.hasLost) continue
+    distance++
+    if (p.playerId === viewerId) break
+  }
+  if (players[seat]!.playerId === viewerId) return undefined
   return distance === 1 ? "You're next" : `You in ${distance}`
 }
 
@@ -988,15 +1025,29 @@ export function useGhostCards(playerId: EntityId | null): readonly ClientCard[] 
       }
     }
 
+    // 1b. Spells castable out of *another* player's graveyard (The Great Work's "cast instant and
+    // sorcery spells from any graveyard", Jetsam) — the server only offers these when a permission
+    // reaches that graveyard, so any such CastSpell action marks a ghost card.
+    for (const zone of gameState.zones) {
+      if (zone.zoneId.zoneType !== ZoneType.GRAVEYARD || zoneIdEquals(zone.zoneId, gyZoneId)) continue
+      if (!zone.cardIds || zone.cardIds.length === 0) continue
+      const otherGyCardIds = new Set(zone.cardIds)
+      for (const actionInfo of legalActions) {
+        const action = actionInfo.action
+        if (action.type !== 'CastSpell' || actionInfo.sourceZone !== 'GRAVEYARD') continue
+        if (!otherGyCardIds.has(action.cardId)) continue
+        if (actionInfo.isAffordable === false) continue
+        ghostCardIds.add(action.cardId)
+      }
+    }
+
     // 2. Top-of-library card revealed via Future Sight-like effects
     // Always show the revealed top card as a ghost card, even when it's not playable
     const libZoneId = library(playerId)
     const libZone = gameState.zones.find((z) => zoneIdEquals(z.zoneId, libZoneId))
-    if (libZone && libZone.cardIds && libZone.cardIds.length > 0) {
-      const topCardId = libZone.cardIds[0]!
-      if (gameState.cards[topCardId]) {
-        ghostCardIds.add(topCardId)
-      }
+    const topCardId = librarySlots(libZone)[0]
+    if (topCardId && gameState.cards[topCardId]) {
+      ghostCardIds.add(topCardId)
     }
 
     // 3. Exile cards playable via Mind's Desire-like effects
@@ -1034,10 +1085,7 @@ export function useRevealedLibraryTopCard(playerId: EntityId | null): ClientCard
 
     const libZoneId = library(playerId)
     const libZone = gameState.zones.find((z) => zoneIdEquals(z.zoneId, libZoneId))
-    if (!libZone || !libZone.cardIds || libZone.cardIds.length === 0) return null
-
-    // The first visible card in the library zone is the revealed top card
-    const topCardId = libZone.cardIds[0]!
-    return gameState.cards[topCardId] ?? null
+    const topCardId = librarySlots(libZone)[0]
+    return topCardId ? (gameState.cards[topCardId] ?? null) : null
   }, [gameState, playerId])
 }

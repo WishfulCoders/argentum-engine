@@ -38,7 +38,7 @@ val MerEkNightblade = card("Mer-Ek Nightblade") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "81"
+        collectorNumber = "79"
         artist = "Lucas Graciano"
         flavorText = "The blades of the Mer-Ek are as poisonous as their intentions."
         imageUri = "https://cards.scryfall.io/normal/front/f/e/fe8589b2-9527-46ba-bf9e-0dec7d84d5d2.jpg?1562796624"

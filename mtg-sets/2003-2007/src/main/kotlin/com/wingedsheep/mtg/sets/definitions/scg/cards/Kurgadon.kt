@@ -35,8 +35,8 @@ val Kurgadon = card("Kurgadon") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "121"
-        artist = "Arnie Swekel"
+        collectorNumber = "124"
+        artist = "Carl Critchlow"
         flavorText = "The Mirari's influence turned even the gentlest creatures into savage behemoths."
         imageUri = "https://cards.scryfall.io/normal/front/5/2/52a1758c-849a-4de3-b674-857c3c9bf399.jpg?1562529070"
     }

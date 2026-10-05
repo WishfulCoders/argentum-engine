@@ -81,8 +81,8 @@ class AlternativePaymentHandler(
         state = state,
         payment = payment,
         playerId = playerId,
-        allowsDelve = effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE),
-        allowsConvoke = effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE),
+        allowsDelve = effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE, cardId),
+        allowsConvoke = effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE, cardId),
         allowsHarmonize = hasHarmonize(state, cardId, cardDef),
         tapForGeneric = tapForGeneric,
     )
@@ -234,7 +234,7 @@ class AlternativePaymentHandler(
 
         // Handle Delve
         if (payment.delvedCards.isNotEmpty()) {
-            val hasDelve = effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE)
+            val hasDelve = effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE, cardId)
             if (hasDelve) {
                 val delveResult = applyDelve(currentState, reducedCost, payment.delvedCards, playerId)
                 currentState = delveResult.newState
@@ -245,7 +245,7 @@ class AlternativePaymentHandler(
 
         // Handle Convoke
         if (payment.convokedCreatures.isNotEmpty()) {
-            val hasConvoke = effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE)
+            val hasConvoke = effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE, cardId)
             if (hasConvoke) {
                 val convokeResult = applyConvoke(currentState, reducedCost, payment.convokedCreatures, playerId)
                 currentState = convokeResult.newState
@@ -427,7 +427,7 @@ class AlternativePaymentHandler(
      * Under CR 107.4e a hybrid symbol like {W/U} is itself a colored mana symbol of both
      * colors, and CR 702.51a lets convoke pay "colored mana" by tapping a creature of that
      * color — so a white creature paying convoke can cover a {W/U} pip (choosing its white
-     * half). A monocolored hybrid pip like {2/B} is also a colored symbol of its color, so a
+     * half), and a hybrid Phyrexian {R/G/P} pip is the same (CR 107.4f). A monocolored hybrid pip like {2/B} is also a colored symbol of its color, so a
      * black creature can pay its colored side. Prefer an exact colored match first so we don't
      * waste a hybrid pip when a plain colored pip is available.
      */
@@ -442,7 +442,7 @@ class AlternativePaymentHandler(
         }
 
         val hybridIndex = mutableSymbols.indexOfFirst { symbol ->
-            (symbol is ManaSymbol.Hybrid && (symbol.color1 == color || symbol.color2 == color)) ||
+            (symbol is ManaSymbol.HybridPair && (symbol.color1 == color || symbol.color2 == color)) ||
                 (symbol is ManaSymbol.MonocolorHybrid && symbol.color == color)
         }
         if (hybridIndex >= 0) {
@@ -470,12 +470,12 @@ class AlternativePaymentHandler(
     ): ManaCost {
         var reducedCost = cost
 
-        val hasDelve = effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE)
+        val hasDelve = effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE, cardId)
         if (payment.delvedCards.isNotEmpty() && hasDelve) {
             reducedCost = reduceGenericCost(reducedCost, payment.delvedCards.size)
         }
 
-        val hasConvoke = effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE)
+        val hasConvoke = effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE, cardId)
         if (payment.convokedCreatures.isNotEmpty() && hasConvoke) {
             for ((_, convokePayment) in payment.convokedCreatures) {
                 val paymentColor = convokePayment.color
@@ -497,19 +497,88 @@ class AlternativePaymentHandler(
     }
 
     /**
+     * The total *generic* mana [payment] would pay for a spell cast, counted with the same validity
+     * gates [apply] uses (so a choice [apply] would skip counts for nothing): each delved card still
+     * in the graveyard, each untapped creature you control convoked for {1} (a coloured convoke
+     * choice pays a coloured pip, not generic), and the harmonize creature's projected power.
+     *
+     * This is not capped by the generic in any cost — the caller subtracts the generic already in
+     * the total cost, and whatever is left pays the announced {X} (CR 601.2f puts X into the total
+     * cost as generic mana before convoke, delve or harmonize pay it). [harmonizeAllowed] lets the
+     * caller add a gate on harmonize (the cast-from-graveyard permission) that [apply] doesn't check.
+     */
+    fun genericReductionForSpell(
+        state: GameState,
+        payment: AlternativePaymentChoice,
+        playerId: EntityId,
+        cardDef: CardDefinition,
+        cardId: EntityId?,
+        harmonizeAllowed: Boolean = true,
+        improviseAllowed: Boolean = false,
+    ): Int {
+        if (payment.isEmpty) return 0
+        val projected = state.projectedState
+        val battlefield = state.getZone(ZoneKey(playerId, Zone.BATTLEFIELD))
+        fun tappableCreature(entityId: EntityId): Boolean {
+            if (entityId !in battlefield) return false
+            val container = state.getEntity(entityId) ?: return false
+            return projected.isCreature(entityId) && !container.has<TappedComponent>() &&
+                projected.getController(entityId) == playerId
+        }
+        var total = 0
+
+        if (payment.delvedCards.isNotEmpty() &&
+            effectivelyHasKeyword(state, playerId, cardDef, Keyword.DELVE, cardId)
+        ) {
+            val graveyard = state.getZone(ZoneKey(playerId, Zone.GRAVEYARD))
+            total += payment.delvedCards.distinct().count { it in graveyard && state.getEntity(it)?.get<CardComponent>() != null }
+        }
+
+        if (payment.convokedCreatures.isNotEmpty() &&
+            effectivelyHasKeyword(state, playerId, cardDef, Keyword.CONVOKE, cardId)
+        ) {
+            total += payment.convokedCreatures.count { (creatureId, choice) ->
+                choice.color == null && tappableCreature(creatureId)
+            }
+        }
+
+        val harmonizeCreature = payment.harmonizeCreature
+        if (harmonizeAllowed && harmonizeCreature != null && hasHarmonize(state, cardId, cardDef) &&
+            harmonizeCreature !in payment.convokedCreatures && tappableCreature(harmonizeCreature)
+        ) {
+            total += (projected.getPower(harmonizeCreature) ?: 0).coerceAtLeast(0)
+        }
+
+        // Improvise (CR 702.126a) — only when no waterbend cost claims the same taps.
+        if (improviseAllowed && payment.tapForGenericPermanents.isNotEmpty() &&
+            effectivelyHasKeyword(state, playerId, cardDef, Keyword.IMPROVISE, cardId)
+        ) {
+            total += payment.tapForGenericPermanents.distinct().count { entityId ->
+                entityId in battlefield && state.getEntity(entityId)?.has<TappedComponent>() == false &&
+                    TapForGeneric.IMPROVISE.matches(projected, entityId) &&
+                    projected.getController(entityId) == playerId
+            }
+        }
+
+        return total
+    }
+
+    /**
      * True when [cardDef] effectively has [keyword] — either printed on the card or granted by
      * a battlefield permanent [playerId] controls. Returns the printed check when
-     * state/playerId/resolver aren't available.
+     * state/playerId/resolver aren't available. [cardId] is the card being cast — a grant scoped
+     * to the zone it's cast from ("spells you cast from exile have convoke") needs it.
      */
     private fun effectivelyHasKeyword(
         state: GameState?,
         playerId: EntityId?,
         cardDef: CardDefinition,
-        keyword: Keyword
+        keyword: Keyword,
+        cardId: EntityId?
     ): Boolean {
         if (cardDef.keywords.contains(keyword)) return true
         if (state == null || playerId == null || resolver == null) return false
-        return resolver.hasKeyword(state, playerId, cardDef, keyword)
+        return resolver.hasKeyword(state, playerId, cardDef, keyword, cardId)
     }
 
     /**
@@ -603,18 +672,26 @@ class AlternativePaymentHandler(
      * Ignored unless the spell effectively has improvise (printed, or granted to it by a
      * permanent such as Ironheart, Clever Champion) — so a stale or forged choice can't tap
      * artifacts for a spell that never had the keyword.
+     *
+     * [xGeneric] is the announced {X} mana in the total cost (X times the X symbols): it is generic
+     * mana too (CR 107.3), so up to that many further artifacts may be tapped once [cost]'s generic
+     * is covered. Those taps don't touch [cost] — the caller charges X through
+     * [com.wingedsheep.engine.handlers.actions.spell.CastCostTotaller.paymentXValue], which counts
+     * them via [genericReductionForSpell].
      */
     fun applyImproviseForSpell(
         state: GameState,
         cost: ManaCost,
         payment: AlternativePaymentChoice,
         playerId: EntityId,
-        cardDef: CardDefinition
+        cardDef: CardDefinition,
+        cardId: EntityId?,
+        xGeneric: Int = 0
     ): AlternativePaymentResult {
-        if (!effectivelyHasKeyword(state, playerId, cardDef, Keyword.IMPROVISE)) {
+        if (!effectivelyHasKeyword(state, playerId, cardDef, Keyword.IMPROVISE, cardId)) {
             return AlternativePaymentResult(cost, state, emptyList())
         }
-        return applyTapForGeneric(state, cost, payment, playerId, TapForGeneric.IMPROVISE)
+        return applyTapForGeneric(state, cost, payment, playerId, TapForGeneric.IMPROVISE, xOverflow = xGeneric)
     }
 
     /**
@@ -652,9 +729,10 @@ class AlternativePaymentHandler(
         payment: AlternativePaymentChoice,
         cardDef: CardDefinition,
         state: GameState,
-        playerId: EntityId
+        playerId: EntityId,
+        cardId: EntityId?
     ): ManaCost {
-        if (!effectivelyHasKeyword(state, playerId, cardDef, Keyword.IMPROVISE)) return cost
+        if (!effectivelyHasKeyword(state, playerId, cardDef, Keyword.IMPROVISE, cardId)) return cost
         return calculateReducedCostForTapForGeneric(cost, payment, Int.MAX_VALUE)
     }
 
@@ -696,7 +774,8 @@ class AlternativePaymentHandler(
         payment: AlternativePaymentChoice,
         playerId: EntityId,
         eligibility: TapForGeneric,
-        maxGenericReduction: Int = Int.MAX_VALUE
+        maxGenericReduction: Int = Int.MAX_VALUE,
+        xOverflow: Int = 0
     ): AlternativePaymentResult {
         if (payment.tapForGenericPermanents.isEmpty() || maxGenericReduction <= 0) {
             return AlternativePaymentResult(cost, state, emptyList())
@@ -705,6 +784,7 @@ class AlternativePaymentHandler(
         var currentState = state
         var reducedCost = cost
         var applied = 0
+        var overflowed = 0
         val events = mutableListOf<GameEvent>()
 
         val battlefieldZone = ZoneKey(playerId, Zone.BATTLEFIELD)
@@ -716,7 +796,9 @@ class AlternativePaymentHandler(
             // Bound by the generic mana in the cost (CR 702.126a / waterbend: "for each generic
             // mana in that cost") and, for a spell-level waterbend cost, by its amount N.
             if (applied >= maxGenericReduction) break
-            if (reducedCost.genericAmount <= 0) break
+            // Past the cost's generic, a tap can still pay the announced {X} ([xOverflow]).
+            val paysX = reducedCost.genericAmount <= 0
+            if (paysX && overflowed >= xOverflow) break
             if (permanentId !in currentState.getZone(battlefieldZone)) continue
             val container = currentState.getEntity(permanentId) ?: continue
             // Card-backed permanents only, mirroring the eligibility scan in
@@ -733,8 +815,12 @@ class AlternativePaymentHandler(
             val (tappedState, tapEvent) = tap(currentState, permanentId)
             currentState = tappedState
             tapEvent?.let(events::add)
-            reducedCost = reduceGenericCost(reducedCost, 1)
-            applied++
+            if (paysX) {
+                overflowed++
+            } else {
+                reducedCost = reduceGenericCost(reducedCost, 1)
+                applied++
+            }
         }
 
         return AlternativePaymentResult(reducedCost, currentState, events)

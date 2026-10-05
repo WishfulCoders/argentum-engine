@@ -215,6 +215,23 @@ data object AddMainPhaseEffect : Effect {
 }
 
 /**
+ * Insert a single additional beginning phase into the current turn — untap, upkeep and draw steps
+ * (CR 501.1) — after this phase (Shadow of the Second Sun). Like [AddCombatPhaseEffect] and
+ * [AddMainPhaseEffect] it is one queued phase, and the three compose in any order.
+ *
+ * The inserted phase is part of the same turn: the active player untaps, "at the beginning of your
+ * upkeep" abilities trigger, and they draw for the draw step, but "until your next turn" effects
+ * don't end. After it the turn proceeds to whatever follows the phase it was added after — the
+ * ending phase unless another phase was queued — never a precombat main phase.
+ */
+@SerialName("AddBeginningPhase")
+@Serializable
+data object AddBeginningPhaseEffect : Effect {
+    override val description: String =
+        "There is an additional beginning phase after this phase"
+}
+
+/**
  * Give the controller additional upkeep steps after the current phase
  * (Obeka, Splitter of Seconds: "you get that many additional upkeep steps after this phase").
  *
@@ -321,6 +338,36 @@ data class TakeExtraTurnEffect(
 @Serializable
 data object EndTheTurnEffect : Effect {
     override val description: String = "End the turn"
+}
+
+/**
+ * Restart the game (CR 727). The game ends with no winner, loser or draw, and every player still in
+ * it starts a new game by the usual procedure (CR 103) — shuffled libraries, starting life totals,
+ * seven-card hands, mulligans, opening-hand actions — except that the player who controlled this
+ * effect is the starting player (CR 727.1a). Ownership never changes (CR 727.2).
+ *
+ * [exempt] names a pipeline collection whose cards sit the procedure out: they are left in exile
+ * instead of joining their owners' decks (CR 727.5). [afterRestart] is the rest of the resolving
+ * spell or ability's text: the restarting effect finishes resolving just before the new game's first
+ * untap step, and those instructions are followed then (CR 727.4). It runs with the effect's
+ * controller as its controller and the [exempt] collection under the same name.
+ *
+ * Like [EndTheTurnEffect], the engine performs the restart once the current resolution completes, so
+ * this must be the last instruction of its ability — anything after it belongs in [afterRestart].
+ * Karn Liberated: "Restart the game, leaving in exile all non-Aura permanent cards exiled with Karn.
+ * Then put those cards onto the battlefield under your control."
+ */
+@SerialName("RestartGame")
+@Serializable
+data class RestartGameEffect(
+    val exempt: String? = null,
+    val afterRestart: Effect? = null
+) : Effect {
+    override val description: String = buildString {
+        append("Restart the game")
+        if (exempt != null) append(", leaving the exempted cards in exile")
+        if (afterRestart != null) append(". Then ${afterRestart.description.replaceFirstChar { it.lowercase() }}")
+    }
 }
 
 /**
@@ -641,6 +688,56 @@ data class GrantInstantSpeedLoyaltyAbilitiesEffect(
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
         val newFilter = planeswalkerFilter.applyTextReplacement(replacer)
         return if (newFilter !== planeswalkerFilter) copy(planeswalkerFilter = newFilter) else this
+    }
+}
+
+/**
+ * [target] may tap permanents they don't control that match [permanentFilter] for mana, for
+ * [duration]; mana made that way carries [restriction].
+ *
+ * CR 602.2: only an object's controller can activate its activated abilities unless the object
+ * says otherwise — this is the "otherwise", granted from outside. CR 106.12 defines "tap [a
+ * permanent] for mana" as activating a mana ability of it that includes {T} in its cost, so only
+ * those mana abilities are lifted; the ability's controller is the player who activated it
+ * (CR 113.8), so the mana goes to them, and [restriction] rides on it (null = unrestricted). Permanents the grantee already
+ * controls are untouched — they need no permission, and the restriction never reaches their mana.
+ *
+ * Piracy: "Until end of turn, you may tap lands you don't control for mana. Spend this mana only
+ * to cast spells." — `permanentFilter = GameObjectFilter.Land`,
+ * `restriction = ManaRestriction.SpellsOnly`.
+ *
+ * A resolution-time one-shot that records a turn-scoped grant on the player, so it outlives the
+ * sorcery that made it. [permanentFilter] is matched on projected state whenever the permission
+ * is consulted, so a land that changes hands later in the turn is covered.
+ */
+@SerialName("TapForManaPermanentsYouDontControl")
+@Serializable
+data class TapForManaPermanentsYouDontControlEffect(
+    val target: EffectTarget = EffectTarget.Controller,
+    val permanentFilter: GameObjectFilter = GameObjectFilter.Land,
+    val restriction: ManaRestriction? = null,
+    val duration: Duration = Duration.EndOfTurn
+) : Effect {
+    override val description: String = buildString {
+        if (duration != Duration.Permanent) {
+            append(duration.description.replaceFirstChar { it.uppercase() })
+            append(", ")
+            append(target.description)
+        } else {
+            append(target.description.replaceFirstChar { it.uppercase() })
+        }
+        append(" may tap ")
+        append(permanentFilter.description)
+        append("s you don't control for mana")
+        if (restriction != null) {
+            append(". ")
+            append(restriction.description)
+        }
+    }
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newFilter = permanentFilter.applyTextReplacement(replacer)
+        return if (newFilter !== permanentFilter) copy(permanentFilter = newFilter) else this
     }
 }
 
@@ -1080,6 +1177,36 @@ data class LockLifeGainEffect(
 }
 
 /**
+ * Lock [target] player's life loss — they can't lose life for [duration] (CR 119.8): damage and
+ * "lose N life" leave their total unchanged, an exchange or redistribution can't lower it, and a
+ * cost that pays life can't be paid.
+ *
+ * The sibling of [LockLifeGainEffect]; "your life total can't change" (CR 119.7–8) is both locks
+ * (Flare of Fortitude). Tags the player directly, so it is independent of its source. Non-player
+ * targets are a no-op.
+ *
+ * @param target The player whose life loss is locked.
+ * @param duration How long the lock lasts (default: rest of game).
+ */
+@SerialName("LockLifeLoss")
+@Serializable
+data class LockLifeLossEffect(
+    val target: EffectTarget = EffectTarget.PlayerRef(Player.TargetPlayer),
+    val duration: Duration = Duration.Permanent
+) : Effect {
+    override val description: String = buildString {
+        append(target.description.replaceFirstChar { it.uppercase() })
+        append(" can't lose life")
+        when (duration) {
+            Duration.Permanent -> append(" for the rest of the game")
+            Duration.EndOfTurn -> append(" this turn")
+            Duration.UntilYourNextTurn -> append(" until your next turn")
+            else -> {}
+        }
+    }
+}
+
+/**
  * "The Ring tempts you" (CR 701.54). The target player gets an emblem named The Ring (if they
  * don't have one) and chooses a creature they control to become their Ring-bearer. The emblem's
  * four cumulative abilities are gated by how many times that player has been tempted.
@@ -1108,14 +1235,15 @@ data class TheRingTemptsYouEffect(
 data class ChooseNumberThenEffect(
     val then: Effect,
     val minValue: Int = 0,
-    val maxValue: Int = 16,
+    val maxValue: DynamicAmount = DynamicAmount.Fixed(16),
     val prompt: String = "Choose a number"
 ) : Effect {
     override val description: String = "Choose a number. ${then.description}"
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
         val newThen = then.applyTextReplacement(replacer)
-        return if (newThen !== then) copy(then = newThen) else this
+        val newMax = maxValue.applyTextReplacement(replacer)
+        return if (newThen !== then || newMax != maxValue) copy(then = newThen, maxValue = newMax) else this
     }
 }
 

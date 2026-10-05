@@ -1936,6 +1936,45 @@
     "colorIdentityOverride": []
 }
 
+// Erdwal Illuminator
+{
+    "name": "Erdwal Illuminator",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Spirit",
+    "oracleText": "Flying\nWhenever you investigate for the first time each turn, investigate an additional time.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Erdwal Illuminator:1",
+                "trigger": {
+                    "type": "InvestigatedEvent",
+                    "firstTimeEachTurn": true
+                },
+                "binding": "ANY",
+                "effect": "Investigate",
+                "descriptionOverride": "Whenever you investigate for the first time each turn, investigate an additional time."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "60",
+        "rarity": "UNCOMMON",
+        "artist": "Seb McKinnon",
+        "flavorText": "\"When all else fails, follow the geist's lantern.\"\n—Vallon, Thraben inspector",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/3/63df99f9-4f85-4c76-8d76-9075c9ef2b86.jpg?1783937800"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Essence Flux
 {
     "name": "Essence Flux",
@@ -2601,12 +2640,11 @@
                     }
                 },
                 "effect": {
-                    "type": "MoveToZone",
+                    "type": "ReturnSelfToBattlefieldAttached",
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
-                    },
-                    "destination": "Battlefield"
+                    }
                 },
                 "targetRequirements": [
                     {
@@ -2618,7 +2656,8 @@
                     }
                 ],
                 "timing": "SorcerySpeed",
-                "activateFromZone": "Graveyard"
+                "activateFromZone": "Graveyard",
+                "descriptionOverride": "Return this card from your graveyard to the battlefield attached to target creature. Activate only as a sorcery."
             }
         ],
         "staticAbilities": [
@@ -3108,7 +3147,7 @@
                     "space": {
                         "type": "IterationSpace.Group",
                         "filter": {
-                            "baseFilter": "creature Vampire ctrl:you"
+                            "baseFilter": "permanent Vampire ctrl:you"
                         }
                     },
                     "body": {
@@ -3273,7 +3312,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature Human ctrl:you",
+                        "baseFilter": "permanent Human ctrl:you",
                         "excludeSelf": true
                     },
                     "id": "t0"
@@ -3530,10 +3569,7 @@
                         "CostTap"
                     ]
                 },
-                "effect": {
-                    "type": "CreatePredefinedToken",
-                    "tokenType": "Clue"
-                }
+                "effect": "Investigate"
             }
         ]
     },
@@ -5906,10 +5942,7 @@
                     "step": "UPKEEP"
                 },
                 "binding": "ANY",
-                "effect": {
-                    "type": "CreatePredefinedToken",
-                    "tokenType": "Clue"
-                }
+                "effect": "Investigate"
             }
         ],
         "activatedAbilities": [
@@ -6090,7 +6123,10 @@
                         {
                             "type": "RemoveCounters",
                             "counterType": "ICE",
-                            "count": 1,
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
                             "target": "Self"
                         },
                         {
@@ -6258,10 +6294,7 @@
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
                 },
-                "effect": {
-                    "type": "CreatePredefinedToken",
-                    "tokenType": "Clue"
-                }
+                "effect": "Investigate"
             }
         ]
     },
@@ -6296,10 +6329,7 @@
                     "to": "Battlefield"
                 },
                 "binding": "ANY",
-                "effect": {
-                    "type": "CreatePredefinedToken",
-                    "tokenType": "Clue"
-                },
+                "effect": "Investigate",
                 "descriptionOverride": "Landfall — Whenever a land you control enters, investigate."
             },
             {
@@ -6807,10 +6837,7 @@
                     "to": "Graveyard"
                 },
                 "binding": "ANY",
-                "effect": {
-                    "type": "CreatePredefinedToken",
-                    "tokenType": "Clue"
-                },
+                "effect": "Investigate",
                 "descriptionOverride": "Whenever a nontoken creature you control dies, investigate."
             },
             {
@@ -7409,6 +7436,93 @@
     "colorIdentityOverride": [
         "RED"
     ]
+}
+
+// Warped Landscape
+{
+    "name": "Warped Landscape",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "{T}: Add {C}.\n{2}, {T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Warped Landscape:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Warped Landscape:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}"
+                            }
+                        },
+                        "CostTap",
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library",
+                                "filter": "basicland"
+                            },
+                            "storeAs": "searchable",
+                            "search": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "found"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield",
+                                "placement": "Tapped"
+                            }
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "280",
+        "artist": "Cliff Childs",
+        "flavorText": "Each cryptolith twists the plane's mana, bending its flow to a singular purpose.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/6/16793435-8eb3-4d57-8683-de1120eb46b6.jpg?1783937697"
+    },
+    "colorIdentityOverride": []
 }
 
 // Westvale Abbey

@@ -1,8 +1,11 @@
 package com.wingedsheep.engine.view
 
 import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.faceDownDisplayName
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -123,12 +126,13 @@ sealed interface ClientEvent {
     @SerialName("cardDrawn")
     data class CardDrawn(
         val playerId: EntityId,
-        val cardId: EntityId,
+        /** The drawn card, sent only to players entitled to its identity at draw time. */
+        val cardId: EntityId?,
         val cardName: String?,
         val isYours: Boolean? = null,
         override val description: String = when (isYours) {
             true -> if (cardName != null) "You drew $cardName" else "You drew a card"
-            false -> "Opponent drew a card"
+            false -> if (cardName != null) "Opponent drew $cardName" else "Opponent drew a card"
             null -> if (cardName != null) "Drew $cardName" else "Drew a card"
         }
     ) : ClientEvent
@@ -137,7 +141,7 @@ sealed interface ClientEvent {
     @SerialName("cardDiscarded")
     data class CardDiscarded(
         val playerId: EntityId,
-        val cardId: EntityId,
+        val cardId: EntityId?,
         val cardName: String,
         val isYours: Boolean? = null,
         override val description: String = when (isYours) {
@@ -171,7 +175,8 @@ sealed interface ClientEvent {
     @Serializable
     @SerialName("permanentLeft")
     data class PermanentLeft(
-        val cardId: EntityId,
+        /** `null` when the card moved between hidden zones and the viewer can't know which it was. */
+        val cardId: EntityId?,
         val cardName: String,
         val destination: String,
         val ownerId: EntityId? = null,
@@ -351,6 +356,15 @@ sealed interface ClientEvent {
         val permanentId: EntityId,
         val permanentName: String,
         override val description: String = "$permanentName became renowned"
+    ) : ClientEvent
+
+    /** A permanent became monstrous (CR 701.37b) — its monstrous payoffs are now switched on. */
+    @Serializable
+    @SerialName("permanentMonstrous")
+    data class PermanentMonstrous(
+        val permanentId: EntityId,
+        val permanentName: String,
+        override val description: String = "$permanentName became monstrous"
     ) : ClientEvent
 
     @Serializable
@@ -647,6 +661,18 @@ sealed interface ClientEvent {
         }
     ) : ClientEvent
 
+    @Serializable
+    @SerialName("gameRestarted")
+    data class GameRestarted(
+        val startingPlayerId: EntityId,
+        val isYourTurn: Boolean? = null,
+        override val description: String = when (isYourTurn) {
+            true -> "--- The game restarted (you take the first turn) ---"
+            false -> "--- The game restarted (opponent takes the first turn) ---"
+            null -> "--- The game restarted ---"
+        }
+    ) : ClientEvent
+
     // =========================================================================
     // Control Events
     // =========================================================================
@@ -827,23 +853,29 @@ sealed interface ClientEvent {
  */
 object ClientEventTransformer {
 
+    /** Zones whose cards no opponent sees: a move between two of them names no card. */
+    private val HIDDEN_ZONES = setOf(Zone.LIBRARY, Zone.HAND, Zone.SIDEBOARD)
+
     /**
      * Transform internal events to client events.
      *
      * @param events The internal events
      * @param viewingPlayerId The player viewing these events (for masking)
+     * @param state The state after the events, for masking cards that ended up face down
      * @return Client-friendly events
      */
     fun transform(
         events: List<GameEvent>,
-        viewingPlayerId: EntityId
+        viewingPlayerId: EntityId,
+        state: GameState? = null,
     ): List<ClientEvent> {
-        return events.flatMap { event -> transformEventToList(event, viewingPlayerId) }
+        return events.flatMap { event -> transformEventToList(event, viewingPlayerId, state) }
     }
 
     private fun transformEventToList(
         event: GameEvent,
-        viewingPlayerId: EntityId
+        viewingPlayerId: EntityId,
+        state: GameState?,
     ): List<ClientEvent> {
         // AttackersDeclaredEvent and BlockersDeclaredEvent produce multiple client events
         when (event) {
@@ -859,7 +891,7 @@ object ClientEventTransformer {
                     )
                 }
             }
-            is BlockersDeclaredEvent -> {
+            is BlockingRelationshipsEvent -> {
                 if (event.blockers.isEmpty()) return emptyList()
                 return event.blockers.flatMap { (blockerId, attackerIds) ->
                     val blockerName = event.blockerNames[blockerId] ?: "Creature"
@@ -875,7 +907,7 @@ object ClientEventTransformer {
                 }
             }
             else -> {
-                val result = transformEvent(event, viewingPlayerId)
+                val result = transformEvent(event, viewingPlayerId, state)
                 return if (result != null) listOf(result) else emptyList()
             }
         }
@@ -883,9 +915,12 @@ object ClientEventTransformer {
 
     private fun transformEvent(
         event: GameEvent,
-        viewingPlayerId: EntityId
+        viewingPlayerId: EntityId,
+        state: GameState?,
     ): ClientEvent? {
         return when (event) {
+            // Public identity bookkeeping has no separate client animation or log entry.
+            is SourceObjectsRecordedEvent -> null
             // The land-play signal drives triggers only; the client renders the land entering via
             // the accompanying ZoneChangeEvent, so no separate client event is emitted.
             is LandPlayedEvent -> null
@@ -926,22 +961,25 @@ object ClientEventTransformer {
 
             is CardsDrawnEvent -> {
                 val isYours = event.playerId == viewingPlayerId
+                val canSeeIdentity = isYours || viewingPlayerId in event.identityViewers
                 if (event.cardIds.isNotEmpty()) {
                     if (event.count > 1) {
                         // For multiple cards, show the count and names if visible
-                        val cardNamesList = if (isYours && event.cardNames.isNotEmpty()) {
+                        val cardNamesList = if (canSeeIdentity && event.cardNames.isNotEmpty()) {
                             event.cardNames
                         } else emptyList()
                         val desc = when {
                             isYours && cardNamesList.isNotEmpty() ->
                                 "You drew ${event.count} cards: ${cardNamesList.joinToString(", ")}"
                             isYours -> "You drew ${event.count} cards"
+                            canSeeIdentity && cardNamesList.isNotEmpty() ->
+                                "Opponent drew ${event.count} cards: ${cardNamesList.joinToString(", ")}"
                             else -> "Opponent drew ${event.count} cards"
                         }
                         ClientEvent.CardDrawn(
                             playerId = event.playerId,
-                            cardId = event.cardIds.first(),
-                            cardName = if (isYours) event.cardNames.firstOrNull() else null,
+                            cardId = if (canSeeIdentity) event.cardIds.first() else null,
+                            cardName = if (canSeeIdentity) event.cardNames.firstOrNull() else null,
                             isYours = isYours,
                             description = desc
                         )
@@ -949,8 +987,8 @@ object ClientEventTransformer {
                         val firstName = event.cardNames.firstOrNull()
                         ClientEvent.CardDrawn(
                             playerId = event.playerId,
-                            cardId = event.cardIds.first(),
-                            cardName = if (isYours) firstName else null,
+                            cardId = if (canSeeIdentity) event.cardIds.first() else null,
+                            cardName = if (canSeeIdentity) firstName else null,
                             isYours = isYours
                         )
                     }
@@ -962,24 +1000,29 @@ object ClientEventTransformer {
                 // both would read as two separate actions.
                 if (event.cardIds.isNotEmpty() && !event.asCyclingCost) {
                     val isYours = event.playerId == viewingPlayerId
-                    if (event.cardNames.size > 1) {
-                        val names = event.cardNames.joinToString(", ")
+                    val visibleNames = event.cardIds.mapIndexed { index, id ->
+                        if (!isYours && id in event.undefinedCharacteristics) "a card"
+                        else event.cardNames.getOrNull(index) ?: "Card"
+                    }
+                    val firstId = event.cardIds.first().takeUnless { !isYours && it in event.undefinedCharacteristics }
+                    if (visibleNames.size > 1) {
+                        val names = visibleNames.joinToString(", ")
                         val desc = when (isYours) {
                             true -> "You discarded $names"
                             false -> "Opponent discarded $names"
                         }
                         ClientEvent.CardDiscarded(
                             playerId = event.playerId,
-                            cardId = event.cardIds.first(),
-                            cardName = event.cardNames.firstOrNull() ?: "Card",
+                            cardId = firstId,
+                            cardName = visibleNames.firstOrNull() ?: "Card",
                             isYours = isYours,
                             description = desc
                         )
                     } else {
-                        val firstName = event.cardNames.firstOrNull() ?: "Card"
+                        val firstName = visibleNames.firstOrNull() ?: "Card"
                         ClientEvent.CardDiscarded(
                             playerId = event.playerId,
-                            cardId = event.cardIds.first(),
+                            cardId = firstId,
                             cardName = firstName,
                             isYours = isYours
                         )
@@ -989,10 +1032,26 @@ object ClientEventTransformer {
 
             is ZoneChangeEvent -> {
                 val isYours = event.ownerId == viewingPlayerId
+                // A move between hidden zones (a mulligan, a card put back from hand, a tuck
+                // within a library) is identified only to an owner who held the card in hand at
+                // one end. Anything else learns that a card moved, not which one: a reveal that
+                // makes it public arrives as its own event.
+                val hiddenMove = event.fromZone in HIDDEN_ZONES && event.toZone in HIDDEN_ZONES
+                val identified = !hiddenMove ||
+                    (isYours && (event.fromZone == Zone.HAND || event.toZone == Zone.HAND))
+                // A card that landed face down (manifested, foretold, exiled face down) keeps its
+                // face from everyone but its owner, who may look at it.
+                val faceDownName = if (isYours) null else state?.let { faceDownDisplayName(it, event.entityId) }
+                val movedCardId = if (identified) event.entityId else null
+                val movedCardName = when {
+                    !identified -> "card"
+                    faceDownName != null -> faceDownName
+                    else -> event.entityName
+                }
                 when (event.toZone) {
                     com.wingedsheep.sdk.core.Zone.BATTLEFIELD -> ClientEvent.PermanentEntered(
                         cardId = event.entityId,
-                        cardName = event.entityName,
+                        cardName = movedCardName,
                         controllerId = event.ownerId,
                         enteredTapped = false, // Would need to check state
                         isYours = isYours,
@@ -1000,28 +1059,28 @@ object ClientEventTransformer {
                     )
                     com.wingedsheep.sdk.core.Zone.GRAVEYARD -> ClientEvent.PermanentLeft(
                         cardId = event.entityId,
-                        cardName = event.entityName,
+                        cardName = movedCardName,
                         destination = "graveyard",
                         ownerId = event.ownerId,
                         isYours = isYours
                     )
                     com.wingedsheep.sdk.core.Zone.EXILE -> ClientEvent.PermanentLeft(
                         cardId = event.entityId,
-                        cardName = event.entityName,
+                        cardName = movedCardName,
                         destination = "exile",
                         ownerId = event.ownerId,
                         isYours = isYours
                     )
                     com.wingedsheep.sdk.core.Zone.HAND -> ClientEvent.PermanentLeft(
-                        cardId = event.entityId,
-                        cardName = event.entityName,
+                        cardId = movedCardId,
+                        cardName = movedCardName,
                         destination = "hand",
                         ownerId = event.ownerId,
                         isYours = isYours
                     )
                     com.wingedsheep.sdk.core.Zone.LIBRARY -> ClientEvent.PermanentLeft(
-                        cardId = event.entityId,
-                        cardName = event.entityName,
+                        cardId = movedCardId,
+                        cardName = movedCardName,
                         destination = "library",
                         ownerId = event.ownerId,
                         isYours = isYours
@@ -1120,6 +1179,11 @@ object ClientEventTransformer {
                 permanentName = event.entityName
             )
 
+            is BecameMonstrousEvent -> ClientEvent.PermanentMonstrous(
+                permanentId = event.entityId,
+                permanentName = event.entityName
+            )
+
             is ExertedEvent -> ClientEvent.PermanentExerted(
                 permanentId = event.entityId,
                 permanentName = event.entityName
@@ -1202,8 +1266,8 @@ object ClientEventTransformer {
             )
 
             is HandLookedAtEvent -> {
-                // Only send this event to the player who looked at the hand
-                if (event.viewingPlayerId == viewingPlayerId) {
+                // Preserve the observers entitled to the look at event time
+                if (event.viewingPlayerId == viewingPlayerId || viewingPlayerId in event.identityViewers) {
                     ClientEvent.HandLookedAt(
                         viewingPlayerId = event.viewingPlayerId,
                         targetPlayerId = event.targetPlayerId,
@@ -1271,6 +1335,11 @@ object ClientEventTransformer {
                 isYours = event.controllerId == viewingPlayerId
             )
 
+            is GameRestartedEvent -> ClientEvent.GameRestarted(
+                startingPlayerId = event.startingPlayerId,
+                isYourTurn = event.startingPlayerId == viewingPlayerId
+            )
+
             is TurnChangedEvent -> ClientEvent.TurnChanged(
                 turnNumber = event.turnNumber,
                 activePlayerId = event.activePlayerId,
@@ -1279,7 +1348,7 @@ object ClientEventTransformer {
 
             // AttackersDeclaredEvent and BlockersDeclaredEvent are handled in transformEventToList()
             is AttackersDeclaredEvent,
-            is BlockersDeclaredEvent -> null
+            is BlockersDeclaredEvent, is BlocksCreatedEvent, is RemovedFromCombatEvent -> null
 
 is PermanentsSacrificedEvent -> {
                 val names = event.permanentNames.ifEmpty { event.permanentIds.map { "Permanent" } }
@@ -1399,14 +1468,23 @@ is PermanentsSacrificedEvent -> {
             is PhaseChangedEvent,
             is StepChangedEvent,
             is TurnEndedByEffectEvent,
+            is TurnSkippedEvent,
             is PriorityChangedEvent,
             is ManaSpentEvent,
+            is ManaPoolChangedEvent,
+            is StaticAbilityGrantedEvent,
+            is CopiableCharacteristicsChangedEvent,
+            is CopiableTriggeredAbilityAddedEvent,
+            is DamagePreventionShieldCreatedEvent,
+            is BlockerDeclarationPolicyChangedEvent,
+            is TextChangedEvent,
             is LandTappedForManaEvent,
             is DecisionRequestedEvent,
             is AbilityResolvedEvent,
             is SagaChapterResolvedEvent,
             is DiscardRequiredEvent,
             is LookedAtCardsEvent,
+            is GraveyardOrderedEvent,
             is LibraryReorderedEvent,
             is KeywordGrantedEvent,
             is CitysBlessingGainedEvent,
@@ -1416,6 +1494,9 @@ is PermanentsSacrificedEvent -> {
             is RingTemptedEvent,
             is ScriedEvent,
             is SurveiledEvent,
+            // Internal signal for "whenever you proliferate" triggers; the counters themselves are
+            // surfaced by their own CountersAddedEvents.
+            is ProliferatedEvent,
             // Internal signal that fires "whenever you clash" watcher triggers (Sylvan Echoes,
             // Entangling Trap). The public reveal of both top cards and any bottom-of-library
             // move are already surfaced by their own reveal / zone-change events, so no separate
@@ -1433,6 +1514,9 @@ is PermanentsSacrificedEvent -> {
             // Cultivator); the three exiles or the Food's sacrifice are already surfaced by their
             // own zone-change / sacrifice events, so no separate client event.
             is ForagedEvent,
+            // Internal signal that fires "whenever you investigate" watcher triggers (Erdwal
+            // Illuminator); the Clue itself is already surfaced by its own zone-change event.
+            is InvestigatedEvent,
             // Internal signal that fires "whenever a creature you control explores" watcher
             // triggers; the reveal/hand/counter moves are already surfaced by their own events, so
             // no separate client event.
@@ -1499,10 +1583,13 @@ is PermanentsSacrificedEvent -> {
             // battlefield, so no separate client event.
             is PermanentUnattachedEvent -> null
 
+            is ResolutionControlEvent,
             is TurnHijackedEvent,
             is CommitCrimeEvent,
             is CardPlayedFromPermissionEvent,
-            is TargetsChosenEvent -> null
+            is TargetsChosenEvent,
+            is PlayerActionPermissionsChangedEvent,
+            is PlayerActionTakenEvent -> null
         }
     }
 }

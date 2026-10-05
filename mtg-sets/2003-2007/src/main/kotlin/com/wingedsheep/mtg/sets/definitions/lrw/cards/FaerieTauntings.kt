@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a spell during an opponent's turn, you may have each opponent lose 1 life.
  *
  * "During an opponent's turn" is every turn that isn't yours — each other player is an opponent —
- * so the trigger restriction is [Conditions.IsNotYourTurn], the same reading Glen Elendra
+ * so the trigger restriction is [Conditions.IsOpponentsTurn], the same reading Glen Elendra
  * Pranksters uses. The "may" is one decision for the whole ability, not one per opponent
  * (ruling 2007-10-01), which is exactly what wrapping the single `EachOpponent` life loss in a
  * [Effects.May] gives.
@@ -30,7 +30,7 @@ val FaerieTauntings = card("Faerie Tauntings") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         effect = Effects.May(Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)))
         description = "Whenever you cast a spell during an opponent's turn, you may have each opponent lose 1 life."
     }

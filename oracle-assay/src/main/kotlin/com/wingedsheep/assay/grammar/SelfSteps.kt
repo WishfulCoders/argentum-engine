@@ -1,9 +1,12 @@
 package com.wingedsheep.assay.grammar
 
+import com.wingedsheep.assay.normalize.Normalizer
 import com.wingedsheep.assay.syntax.Phrase
 import com.wingedsheep.assay.syntax.alternate
 import com.wingedsheep.assay.syntax.bind
+import com.wingedsheep.assay.syntax.constant
 import com.wingedsheep.assay.syntax.phrase
+import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
@@ -85,10 +88,21 @@ object SelfSteps {
         tag: String,
     ): List<Phrase<CardScript>> {
         val named = listOf(
-            selfGets(target, subject, tag),
-            selfGetsAndGains(target, subject, tag),
+            *Steps.statChanges.map { selfGets(it, target, subject, tag) }.toTypedArray(),
+            *Steps.statChanges.map { selfGetsAndGains(it, target, subject, tag) }.toTypedArray(),
             selfGainsKeywords(target, subject, tag),
             selfLosesKeyword(target, subject, tag),
+            // "~ gains protection from the color of your choice until end of turn." — Jareth, Kami of
+            // the Painted Road, and Feat of Resistance's "It gains …" after its counter. The colour is
+            // chosen on resolution, which is why the grant sits inside `ChooseColorThen` — the shape
+            // every hand-written card spells, and a row here because its object moves with the
+            // position exactly as untap's does.
+            move(
+                "{self} gains protection from the color of your choice until end of turn",
+                "gains protection from the color of your choice$tag",
+                Steps.protectionFromChosenColor(target),
+                subject,
+            ),
             move("untap {self}", "untap$tag", Effects.Untap(target), subject),
             // Untap's twin, and a row for exactly the reason untap is one: "Target creature gets
             // -1/-1 until end of turn. Tap that creature." (Stabbing Pain) is the same shape said of
@@ -96,6 +110,38 @@ object SelfSteps {
             // the rule instead of in the slot.
             move("tap {self}", "tap$tag", Effects.Tap(target), subject),
             move("regenerate {self}", "regenerate$tag", RegenerateEffect(target), subject),
+            // "That creature doesn't untap during its controller's next untap step." — the freeze
+            // after a tap (Stitched Mangler, Crippling Chill), and "~ doesn't untap during your
+            // next untap step." after the CHK pain-free duals' coloured mana. One model in every
+            // position: `AbilityFlag.DOESNT_UNTAP` over `UntilAfterAffectedControllersNextUntap`,
+            // the duration whose KDoc names this clause. Only the possessive moves — the source's
+            // controller is the reader, so Oracle says "your" of the source and "its controller's"
+            // of anything else, and each position prints the one its cards print.
+            move(
+                if (target == EffectTarget.Self) {
+                    "{self} doesn't untap during your next untap step"
+                } else {
+                    "{self} doesn't untap during its controller's next untap step"
+                },
+                "doesn't untap next untap step$tag",
+                Effects.GrantKeyword(
+                    AbilityFlag.DOESNT_UNTAP,
+                    target,
+                    Duration.UntilAfterAffectedControllersNextUntap,
+                ),
+                subject,
+            ),
+            // "If that creature would die this turn, exile it instead." — Puncturing Blow, Scorching
+            // Dragonfire, Bleed Dry: the turn-long death replacement (CR 614) a removal spell leaves
+            // on its target, as the sentence after the damage or the -X/-X. A row because its object
+            // is the clause's object, exactly as regenerate's shield is; the inner "it" is the same
+            // creature again and carries nothing a slot could vary.
+            move(
+                "if {self} would die this turn, exile it instead",
+                "exile$tag instead if it would die",
+                Effects.MarkExileOnDeath(target),
+                subject,
+            ),
             // "Transform ~." — CR 701.28, the verb a double-faced permanent's own ability uses on
             // itself: the daybound/nightbound upkeep triggers (62 lines), the "{5}{G}{G}: Transform
             // ~." activated flips, and every Innistrad front face that turns over on a condition.
@@ -229,17 +275,23 @@ object SelfSteps {
      * pronoun come back as a [com.wingedsheep.assay.gate.LineVerdict.VARIANT], which says the
      * reading was right and only the spelling moved.
      */
-    private fun selfGets(target: EffectTarget, subject: Phrase<Unit>, tag: String): Phrase<CardScript> {
-        fun scriptFor(modifiers: Pair<Int, Int>) = CardScript(
-            spellEffect = Effects.ModifyStats(modifiers.first, modifiers.second, target)
-        )
-        return phrase("{self} gets {mod} until end of turn", name = "$tag gets".trim()) {
+    private fun selfGets(
+        change: Steps.StatChange,
+        target: EffectTarget,
+        subject: Phrase<Unit>,
+        tag: String,
+    ): Phrase<CardScript> {
+        fun scriptFor(modifiers: Pair<Int, Int>) = CardScript(spellEffect = change.effect(modifiers, target))
+        return phrase(
+            "{self} ${change.singular} until end of turn",
+            name = "$tag gets${change.tag}".trim(),
+        ) {
             frontedDuration()
             slot("self", subject)
-            slot("mod", Primitives.statModifiers)
+            slot("mod", change.leaf)
             build { scriptFor(it.value("mod")) }
             match { script ->
-                val modifiers = Steps.fixedModifiers(script.spellEffect) ?: return@match null
+                val modifiers = change.read(script.spellEffect) ?: return@match null
                 if (script != scriptFor(modifiers)) return@match null
                 bind("self" to Unit, "mod" to modifiers)
             }
@@ -255,28 +307,29 @@ object SelfSteps {
      * one object. A [Steps.sequence] would need the second clause to name what it acts on.
      */
     private fun selfGetsAndGains(
+        change: Steps.StatChange,
         target: EffectTarget,
         subject: Phrase<Unit>,
         tag: String,
     ): Phrase<CardScript> {
         fun scriptFor(modifiers: Pair<Int, Int>, keywords: List<Keyword>) = CardScript(
             spellEffect = Effects.Composite(
-                listOf(Effects.ModifyStats(modifiers.first, modifiers.second, target)) +
+                listOf(change.effect(modifiers, target)) +
                     keywords.map { Effects.GrantKeyword(it, target) }
             )
         )
         return phrase(
-            "{self} gets {mod} and gains {kws} until end of turn",
-            name = "$tag gets and gains".trim(),
+            "{self} ${change.singular} and gains {kws} until end of turn",
+            name = "$tag gets and gains${change.tag}".trim(),
         ) {
             frontedDuration()
             slot("self", subject)
-            slot("mod", Primitives.statModifiers)
+            slot("mod", change.leaf)
             slot("kws", Keywords.keywordRun)
             build { scriptFor(it.value("mod"), it.value("kws")) }
             match { script ->
                 val effects = (script.spellEffect as? CompositeEffect)?.effects ?: return@match null
-                val modifiers = Steps.fixedModifiers(effects.firstOrNull()) ?: return@match null
+                val modifiers = change.read(effects.firstOrNull()) ?: return@match null
                 val keywords = Steps.grantedKeywords(effects.drop(1)) ?: return@match null
                 if (script != scriptFor(modifiers, keywords)) return@match null
                 bind("self" to Unit, "mod" to modifiers, "kws" to keywords)
@@ -700,6 +753,81 @@ object SelfSteps {
     )
 
     /**
+     * "When ~ enters, attach it to target creature you control." — the Equipment that equips itself
+     * on arrival (Maul of the Skyclaves, Meltstrider's Gear, Squire's Lightblade).
+     *
+     * The source attaches *itself*: `Effects.AttachEquipment(target)` names only the host, because
+     * `AttachEquipmentEffect` always moves the ability's source — the spelling every hand-written
+     * golden in the family carries. So, like [sacrificesSource], these are not members of
+     * [retargetable]: the object is not a slot an anaphor can move. A filtered trigger's "it" would
+     * be the *triggering* Equipment, which is `AttachTargetEquipmentToCreature` and a different
+     * sentence; it declines rather than reading as the source.
+     *
+     * Singular quantifiers only — an Equipment is attached to at most one object, and the corpus
+     * prints the bare and "up to one" forms.
+     */
+    private fun attachesSource(subject: Phrase<Unit>, tag: String): List<Phrase<CardScript>> =
+        Targets.singularQuantifiers.map { quantifier ->
+            fun scriptFor(filter: GameObjectFilter) = CardScript(
+                spellEffect = quantifier.effectOver { Effects.AttachEquipment(it) },
+                targetRequirements = listOf(quantifier.requirement(1, filter)),
+            )
+            phrase(
+                quantifier.splice("attach {self} to {q}target {filter}"),
+                name = "attach$tag to a target, ${quantifier.name}",
+            ) {
+                slot("self", subject)
+                slot("filter", Filters.filter)
+                build { scriptFor(it.value("filter")) }
+                match { script ->
+                    val requirement = script.targetRequirements.singleOrNull() ?: return@match null
+                    val filter = Targets.targetedFilter(requirement) ?: return@match null
+                    if (script != scriptFor(filter)) return@match null
+                    bind("self" to Unit, "filter" to filter)
+                }
+            }
+        }
+
+    /**
+     * "When ~ enters, it fights up to one target creature an opponent controls." — the fight
+     * (CR 701.14) between an object the position already fixes and a target the clause declares.
+     *
+     * `Effects.Fight(target1, target2)` names both fighters, so the subject is a slot that moves
+     * with the position exactly as [retargetable]'s does: the source (Mind Meanderer, Territorial
+     * Allosaurus), the attached creature (Pitiless Fists), a filtered trigger's match, or — after a
+     * clause that chose one — the earlier target ("Target creature you control gets +1/+0 until end
+     * of turn. It fights target creature you don't control.", Swift Kick). That last one is why
+     * [fighter] is a parameter rather than the [retargetable] `target`: the clause declares a target
+     * of its own, so the earlier one cannot be [Targets.bound] — it is [Targets.prior], which
+     * [Steps]' numbering resolves to the target declared before this clause.
+     *
+     * Not a member of [retargetable] for that reason, and for [attachesSource]'s: the subject is
+     * not the object the clause acts on, it is one of two. Singular quantifiers only — a fight is
+     * between two creatures, and "fights up to two target creatures" is not printed.
+     */
+    private fun fights(fighter: EffectTarget, subject: Phrase<Unit>, tag: String): List<Phrase<CardScript>> =
+        Targets.singularQuantifiers.map { quantifier ->
+            fun scriptFor(filter: GameObjectFilter) = CardScript(
+                spellEffect = quantifier.effectOver { Effects.Fight(fighter, it) },
+                targetRequirements = listOf(quantifier.requirement(1, filter)),
+            )
+            phrase(
+                quantifier.splice("{self} fights {q}target {filter}"),
+                name = "$tag fights a target, ${quantifier.name}",
+            ) {
+                slot("self", subject)
+                slot("filter", Filters.filter)
+                build { scriptFor(it.value("filter")) }
+                match { script ->
+                    val requirement = script.targetRequirements.singleOrNull() ?: return@match null
+                    val filter = Targets.targetedFilter(requirement) ?: return@match null
+                    if (script != scriptFor(filter)) return@match null
+                    bind("self" to Unit, "filter" to filter)
+                }
+            }
+        }
+
+    /**
      * The **name** alone — the half of [anaphoric] that means the source in every position there is.
      *
      * `~` is not an anaphor: it denotes the card whatever sentence it stands in, so unlike "it" it
@@ -714,7 +842,9 @@ object SelfSteps {
      * instances reading one text, which is redundancy the gate counts.
      */
     val named: List<Phrase<CardScript>> =
-        retargetable(EffectTarget.Self, Primitives.selfNamed, tag = " the named source")
+        retargetable(EffectTarget.Self, Primitives.selfNamed, tag = " the named source") +
+            attachesSource(Primitives.selfNamed, tag = " the named source") +
+            fights(EffectTarget.Self, Primitives.selfNamed, tag = " the named source")
 
     /**
      * The same vocabulary aimed at the **target an earlier clause chose** — what [Continuations]
@@ -725,7 +855,8 @@ object SelfSteps {
      * pronoun cannot dangle.
      */
     val continuing: List<Phrase<CardScript>> =
-        retargetable(Targets.bound(), Primitives.targetPronoun, tag = " the target")
+        retargetable(Targets.bound(), Primitives.targetPronoun, tag = " the target") +
+            fights(Targets.prior(), Primitives.targetPronoun, tag = " the earlier target")
 
     /**
      * The clauses whose "it" is the **source** — what every position but a filtered trigger reads.
@@ -738,7 +869,9 @@ object SelfSteps {
      * would be two readings of one text, which is ambiguity rather than a choice.
      */
     val anaphoric: List<Phrase<CardScript>> =
-        retargetable(EffectTarget.Self, Primitives.self, tag = " the source") + sacrificesSource
+        retargetable(EffectTarget.Self, Primitives.self, tag = " the source") + sacrificesSource +
+            attachesSource(Primitives.self, tag = " the source") +
+            fights(EffectTarget.Self, Primitives.self, tag = " the source")
 
     /**
      * The same vocabulary inside a **filtered** trigger, where the two spellings come apart.
@@ -755,8 +888,32 @@ object SelfSteps {
                 Primitives.itPronoun,
                 tag = " the triggering permanent",
             ) +
+            fights(EffectTarget.TriggeringEntity, Primitives.itPronoun, tag = " the triggering permanent") +
             sacrificesSource
 
-    /** Everything in this file that does not turn on the pronoun. Empty for now; the family is "it". */
-    val clauses: List<Phrase<CardScript>> = emptyList()
+    /**
+     * The same vocabulary aimed at **the permanent the source is attached to** — "When this Aura
+     * enters, tap enchanted creature.", "{G}: Regenerate enchanted creature.", "Sacrifice this Aura:
+     * Untap enchanted creature."
+     *
+     * A fourth instantiation of [retargetable], and the only one that is not an anaphor position:
+     * "enchanted creature" is a definite description, like `~`, so it denotes the same permanent in
+     * a first clause, a later one and a filtered trigger alike and is offered everywhere [Steps]
+     * offers its non-anaphoric clauses. "equipped creature" is the same phrase by the time it gets
+     * here — [com.wingedsheep.assay.normalize.Normalizer] abstracts the adjective, which is chosen
+     * by the type line rather than by the model.
+     *
+     * The model is [EffectTarget.EnchantedCreature], the hand-written corpus's spelling 96 times to
+     * `EquippedCreature`'s 29 and `EnchantedPermanent`'s 14. All three resolve to the source's
+     * attachment, so the two minority spellings are a standing SDK finding the differential
+     * reports, not a second reading: a `match` that accepted them would be two printers for one text.
+     */
+    private val attached: List<Phrase<CardScript>> = run {
+        val subject = constant("enchanted ${Normalizer.ATTACHED_NOUN}", Unit)
+        retargetable(EffectTarget.EnchantedCreature, subject, tag = " the attached creature") +
+            fights(EffectTarget.EnchantedCreature, subject, tag = " the attached creature")
+    }
+
+    /** Everything in this file that does not turn on the pronoun — the attached creature's clauses. */
+    val clauses: List<Phrase<CardScript>> = attached
 }

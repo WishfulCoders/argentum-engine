@@ -14919,8 +14919,8 @@
                 "modification": {
                     "type": "ReduceGenericBy",
                     "source": {
-                        "type": "PermanentsOnBattlefieldMatching",
-                        "filter": "creature pow>=4 ctrl:you"
+                        "type": "PermanentsYouControlMatching",
+                        "filter": "creature pow>=4"
                     }
                 }
             }
@@ -15169,7 +15169,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature|artifact ctrl:opponent"
+                        "baseFilter": "artifact|creature ctrl:opponent"
                     },
                     "id": "t0"
                 }
@@ -17982,8 +17982,7 @@
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
-                    },
-                    "damageSource": "Self"
+                    }
                 },
                 "targetRequirement": {
                     "type": "TargetObject",

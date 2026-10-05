@@ -304,6 +304,20 @@ class CardLinterTest : DescribeSpec({
     }
 
     describe("choice slots") {
+        it("recognizes a named additional-cost branch as a slot declaration") {
+            val card = instant("Branch Reader", CardScript(
+                additionalCosts = listOf(AdditionalCost.Choice(
+                    listOf(AdditionalCost.Atom(CostAtom.Sacrifice(GameObjectFilter.Creature))),
+                    choiceSlot = ChoiceSlot.ADDITIONAL_COST_BRANCH,
+                )),
+                spellEffect = Effects.If(
+                    com.wingedsheep.sdk.dsl.Conditions.CastChoiceIs(ChoiceSlot.ADDITIONAL_COST_BRANCH, "0"),
+                    Effects.DrawCards(1),
+                ),
+            ))
+            CardLinter.lint(card).shouldBeEmpty()
+        }
+
 
         it("flags a slot read with no declaration") {
             val card = instant(
@@ -790,6 +804,15 @@ class CardLinterTest : DescribeSpec({
             found.shouldHaveSize(1)
             found[0].message shouldContain "Scope.AttachedTo"
             found[0].message shouldContain "silent no-op"
+        }
+
+        it("accepts attached stats on a bestow creature but rejects the same ordinary creature") {
+            val creature = beast(CardScript(staticAbilities = listOf(ModifyStats(1, 1))))
+            findings(creature).shouldHaveSize(1)
+            val bestowed = creature.copy(
+                keywordAbilities = listOf(KeywordAbility.bestow("{3}{G}")),
+            )
+            findings(bestowed).shouldBeEmpty()
         }
 
         it("accepts the same grant on an Aura, where attach scope is the point") {

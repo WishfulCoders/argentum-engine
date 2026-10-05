@@ -347,6 +347,12 @@ class CardBuilder(private val name: String) {
     var cantBeCountered: Boolean = false
 
     /**
+     * "If [condition], this spell can't be countered" — evaluated against the spell on the stack
+     * (its X, its caster) each time something tries to counter it.
+     */
+    var cantBeCounteredIf: Condition? = null
+
+    /**
      * Whether this spell can't be copied (CR 707.10). When true, any effect that would
      * copy this spell on the stack creates no copy (e.g., Display of Power's "This spell
      * can't be copied.").
@@ -385,6 +391,12 @@ class CardBuilder(private val name: String) {
      * [leyline] DSL helper rather than by hand.
      */
     var mayStartOnBattlefield: Boolean = false
+
+    /**
+     * Opening-hand reveal payoff ("You may reveal this card from your opening hand. If you do, …").
+     * Set via the [revealFromOpeningHand] DSL helper rather than by hand.
+     */
+    var openingHandReveal: Effect? = null
 
     /**
      * Meld-result marker (CR 701.42). Set on the permanent two meld cards combine into —
@@ -531,9 +543,9 @@ class CardBuilder(private val name: String) {
 
     /**
      * Add a state-triggered ability (CR 603.8). The [condition] is polled at priority
-     * passes; when it transitions from false to true the [effect] is enqueued on the
-     * stack. The engine latches the ability per (entityId, abilityId) so it does not
-     * re-fire while the condition stays true.
+     * boundaries; when it is true the [effect] is enqueued on the stack. The original
+     * pending/stack trigger suppresses another firing until it leaves the stack.
+     * A still-true condition then triggers again.
      *
      * Example — Dandân ("When you control no Islands, sacrifice this creature"):
      * ```
@@ -950,12 +962,14 @@ class CardBuilder(private val name: String) {
             castRestrictions = spellBuilder?.restrictions ?: emptyList(),
             castTimeCreatureTypeChoice = castTimeCreatureTypeChoice,
             cantBeCountered = cantBeCountered,
+            cantBeCounteredIf = cantBeCounteredIf,
             cantBeCopied = cantBeCopied,
             conditionalFlash = conditionalFlash,
             kickerTargetRequirements = spellBuilder?.kickerTargetRequirements ?: emptyList(),
             kickerSpellEffect = spellBuilder?.kickerEffect,
             cleaveTargetRequirements = spellBuilder?.cleaveTargetRequirements ?: emptyList(),
             cleaveSpellEffect = spellBuilder?.cleaveEffect,
+            overloadSpellEffect = spellBuilder?.overloadEffect,
             classLevels = classLevelsList.toList(),
             sagaChapters = sagaChaptersList.toList(),
             selfExileOnResolve = spellBuilder?.exilesOnResolve ?: false,
@@ -965,6 +979,7 @@ class CardBuilder(private val name: String) {
             selfAlternativeCost = selfAlternativeCost,
             xManaRestriction = spellBuilder?.xManaRestriction ?: emptySet(),
             mayStartOnBattlefield = mayStartOnBattlefield,
+            openingHandReveal = openingHandReveal,
             castTimeCaptures = spellBuilder?.castTimeCaptures ?: emptyList()
         )
 
@@ -1185,6 +1200,15 @@ class SpellBuilder(private val declaredTargets: TargetList = TargetList()) : Tar
      * (mirrors how kicker uses [kickerEffect]).
      */
     var cleaveEffect: Effect? = null
+
+    /**
+     * Effect used when this spell is cast for its overload cost (CR 702.96) — the [effect] with
+     * "target" replaced by "each". Declare the keyword with
+     * `keywordAbility(KeywordAbility.overload("{cost}"))`. The overloaded spell has no targets
+     * (CR 702.96b), so this effect reads groups (`ForEachInGroup`, `GroupFilter`), never
+     * `ContextTarget`s.
+     */
+    var overloadEffect: Effect? = null
 
     /**
      * Alternate target used when this spell is cast for its cleave cost. When set, the cleaved
@@ -1581,6 +1605,10 @@ class TriggeredAbilityBuilder(private val declaredTargets: TargetList = TargetLi
      * only once each turn"). A *trigger* cap — later matching events don't trigger at all. For the
      * "Do this only once each turn" rider use [effectOncePerTurn] instead. */
     var oncePerTurn: Boolean = false
+    /** "This ability triggers only N times each turn" for N ≥ 2 (Nadu's "only twice each turn") —
+     * the [oncePerTurn] trigger cap with a count. See
+     * [com.wingedsheep.sdk.scripting.TriggeredAbility.triggersPerTurn]. */
+    var triggersPerTurn: Int? = null
     /** When true, this ability carries the "Do this only once each turn" rider: per CR 603.2h it
      * triggers on every matching event while its controller has not yet taken the indicated action
      * that turn, and stops triggering once they have. Declining an optional instance does not spend
@@ -1589,6 +1617,10 @@ class TriggeredAbilityBuilder(private val declaredTargets: TargetList = TargetLi
     /** When true, this triggered ability triggers at most once over the source's lifetime on the
      * battlefield ("This ability triggers only once"). Unlike [oncePerTurn] it is never reset. */
     var triggersOnce: Boolean = false
+    /** Marks this as a *backup* ability (CR 702.165) — the author composes the counters-and-grant
+     * effect; the flag lets "becomes the target of a backup ability" see it. See
+     * [com.wingedsheep.sdk.scripting.TriggeredAbility.isBackup]. */
+    var isBackup: Boolean = false
     /** Optional human-readable description that overrides the auto-generated one. */
     var description: String? = null
 
@@ -1646,8 +1678,10 @@ class TriggeredAbilityBuilder(private val declaredTargets: TargetList = TargetLi
             triggerRestriction = triggerRestriction,
             controlledByTriggeringEntityController = controlledByTriggeringEntityController,
             oncePerTurn = oncePerTurn,
+            triggersPerTurn = triggersPerTurn,
             effectOncePerTurn = effectOncePerTurn,
             triggersOnce = triggersOnce,
+            isBackup = isBackup,
             descriptionOverride = description
         )
     }
@@ -1756,6 +1790,16 @@ class ActivatedAbilityBuilder(private val declaredTargets: TargetList = TargetLi
     var isBoast: Boolean = false
     var holdPriority: Boolean = false
     var genericCostReduction: DynamicAmount? = null
+    /**
+     * "This ability costs [reduction] less to activate if [condition]" — a pip-wise (CR 118.7)
+     * self reduction. See [ActivatedAbility.conditionalCostReduction].
+     */
+    var conditionalCostReduction: ConditionalCostReduction? = null
+
+    /** Sets [conditionalCostReduction]: `costsLessIf("{4}{B}", Conditions.YouDrewCardsThisTurn(3))`. */
+    fun costsLessIf(reduction: String, condition: Condition) {
+        conditionalCostReduction = ConditionalCostReduction(ManaCost.parse(reduction), condition)
+    }
     /** Colors that may be spent on the `{X}` portion of this ability's cost (empty = any). */
     var xManaRestriction: Set<Color> = emptySet()
     /** Minimum legal value for `{X}` in this ability's cost (set to 1 for "X can't be 0"). */
@@ -1822,6 +1866,7 @@ class ActivatedAbilityBuilder(private val declaredTargets: TargetList = TargetLi
             isBoast = isBoast,
             holdPriority = holdPriority,
             genericCostReduction = genericCostReduction,
+            conditionalCostReduction = conditionalCostReduction,
             xManaRestriction = xManaRestriction,
             minimumXValue = minimumXValue,
             xDefinedAs = xDefinedAs,
@@ -1887,7 +1932,12 @@ class LoyaltyAbilityBuilder(
      */
     var restrictions: List<ActivationRestriction> = emptyList()
 
-
+    /**
+     * An X the ability's own text defines, locked as the ability is activated (CR 107.3c) — Lukka,
+     * Bound to Ruin's "where X is the greatest power among creatures you control as you activate
+     * this ability". The effect reads it as `DynamicAmount.XValue`. See [ActivatedAbility.xDefinedAs].
+     */
+    var xDefinedAs: DynamicAmount? = null
 
     fun build(): ActivatedAbility {
         requireNotNull(effect) { "Loyalty ability must have an effect" }
@@ -1904,7 +1954,8 @@ class LoyaltyAbilityBuilder(
             isPlaneswalkerAbility = true,
             timing = TimingRule.SorcerySpeed,
             restrictions = restrictions,
-            descriptionOverride = description
+            descriptionOverride = description,
+            xDefinedAs = xDefinedAs
         )
     }
 }

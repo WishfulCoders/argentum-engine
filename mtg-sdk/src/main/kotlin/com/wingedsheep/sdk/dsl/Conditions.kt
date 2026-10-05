@@ -29,6 +29,7 @@ import com.wingedsheep.sdk.scripting.conditions.WaterbendWasPaid as WaterbendWas
 import com.wingedsheep.sdk.scripting.conditions.SneakCostWasPaid as SneakCostWasPaidCondition
 import com.wingedsheep.sdk.scripting.conditions.WebSlungCostWasPaid as WebSlungCostWasPaidCondition
 import com.wingedsheep.sdk.scripting.conditions.MayhemCostWasPaid as MayhemCostWasPaidCondition
+import com.wingedsheep.sdk.scripting.conditions.Escaped as EscapedCondition
 import com.wingedsheep.sdk.scripting.conditions.CastChoiceMade as CastChoiceMadeCondition
 import com.wingedsheep.sdk.scripting.conditions.CastChoiceIs as CastChoiceIsCondition
 import com.wingedsheep.sdk.scripting.conditions.CastTimeFlagSet as CastTimeFlagSetCondition
@@ -39,6 +40,7 @@ import com.wingedsheep.sdk.scripting.conditions.YouChoseOtherCreatureAsRingBeare
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.conditions.IsYourTurn as IsYourTurnCondition
 import com.wingedsheep.sdk.scripting.conditions.IsNotYourTurn as IsNotYourTurnCondition
+import com.wingedsheep.sdk.scripting.conditions.IsOpponentsTurn as IsOpponentsTurnCondition
 import com.wingedsheep.sdk.scripting.conditions.IsPlayersTurn as IsPlayersTurnCondition
 import com.wingedsheep.sdk.scripting.conditions.IsInPhase as IsInPhaseCondition
 import com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisTurn
@@ -735,6 +737,47 @@ object Conditions {
     fun LifeAtLeast(threshold: Int): ConditionInterface =
         Compare(DynamicAmount.LifeTotal(Player.You), ComparisonOperator.GTE, DynamicAmount.Fixed(threshold))
 
+    // =========================================================================
+    // Poison counter conditions (via Compare)
+    // =========================================================================
+
+    /**
+     * If [player] has [count] or more poison counters. [player] must name a single player:
+     * `Player.You` (which a `ForEachPlayer` / `countPlayersWith` rebinds to the player being
+     * tested — "each opponent who has three or more poison counters") or
+     * `Player.ControllerOf("target")` ("if its controller has three or more poison counters").
+     * For "an opponent has …" use [Corrupted] / [AnOpponentHasPoisonCountersAtLeast].
+     */
+    fun PoisonCountersAtLeast(count: Int, player: Player = Player.You): ConditionInterface =
+        Compare(
+            DynamicAmount.PlayerCounterCount(CounterType.POISON, player),
+            ComparisonOperator.GTE,
+            DynamicAmount.Fixed(count)
+        )
+
+    /**
+     * If at least one opponent has [count] or more poison counters — existential over every
+     * opponent, so it holds in multiplayer when any one of them crosses the threshold.
+     */
+    fun AnOpponentHasPoisonCountersAtLeast(count: Int): ConditionInterface =
+        Compare(
+            DynamicAmount.GreatestAmongPlayers(
+                Player.EachOpponent,
+                DynamicAmount.PlayerCounterCount(CounterType.POISON, Player.You)
+            ),
+            ComparisonOperator.GTE,
+            DynamicAmount.Fixed(count)
+        )
+
+    /**
+     * Corrupted (Phyrexia: All Will Be One ability word) — "if an opponent has three or more
+     * poison counters". Use it in any slot that takes a condition: a static's
+     * `ConditionalStaticAbility`, an activation restriction, an intervening-if trigger, or
+     * [Effects.If]. For the "its controller" and "each opponent who" variants use
+     * [PoisonCountersAtLeast].
+     */
+    val Corrupted: ConditionInterface = AnOpponentHasPoisonCountersAtLeast(3)
+
     /**
      * If the controller has taken at most [threshold] turns so far — i.e. it's
      * one of their first [threshold] turns of the game. The counter increments at
@@ -966,6 +1009,25 @@ object Conditions {
         WasKickedCondition
 
     /**
+     * "If it was kicked with its [A] kicker" — the first-listed cost of a two-kicker card
+     * ("Kicker {G} and/or {1}{U}", CR 702.33b). CR 702.33f links the ability to that specific
+     * kicker, so paying only the *second* kicker leaves this false even though the spell is kicked.
+     *
+     * A facade over the durable choice-slot read ([com.wingedsheep.sdk.scripting.ChoiceSlot.FIRST_KICKER]),
+     * the same way [WasBargained] is, so it answers in every context the mechanic uses: a
+     * "when you cast this spell" trigger (Wastescape Battlemage), the spell's own resolving effect,
+     * and an enters trigger on the permanent the spell became (Thornscape Battlemage).
+     * The card declares its two kicker costs as two `KeywordAbility.kicker(...)` entries, in
+     * printed order.
+     */
+    val WasKickedWithFirstKicker: ConditionInterface =
+        CastChoiceMadeCondition(com.wingedsheep.sdk.scripting.ChoiceSlot.FIRST_KICKER)
+
+    /** "If it was kicked with its [B] kicker" — see [WasKickedWithFirstKicker] (CR 702.33f). */
+    val WasKickedWithSecondKicker: ConditionInterface =
+        CastChoiceMadeCondition(com.wingedsheep.sdk.scripting.ChoiceSlot.SECOND_KICKER)
+
+    /**
      * If this spell was **bargained** (CR 702.166b, Wilds of Eldraine) — its optional "sacrifice an
      * artifact, enchantment, or token" additional cost was declared as it was cast.
      *
@@ -1066,6 +1128,16 @@ object Conditions {
         MayhemCostWasPaidCondition
 
     /**
+     * If this spell or permanent escaped (CR 702.138b — cast from a graveyard through its
+     * [com.wingedsheep.sdk.scripting.KeywordAbility.Escape] ability). "When Phlage enters,
+     * sacrifice it unless it escaped"; gate an `EntersWithCounters` on it for "escapes with a
+     * +1/+1 counter" (CR 702.138c). Works in projection too, so a conditional static can say
+     * "escapes with [ability]" (CR 702.138d).
+     */
+    val Escaped: ConditionInterface =
+        EscapedCondition
+
+    /**
      * If this spell's blight additional cost was paid (`AdditionalCost.BlightOrPay`).
      * Used for cards like Cinder Strike whose effect changes when the optional
      * Blight path was chosen during casting.
@@ -1127,7 +1199,7 @@ object Conditions {
         CastTimeFlagSetCondition(flag)
 
     /**
-     * If specific colored mana was spent to cast this spell.
+     * If specific colored or colorless mana was spent to cast this spell.
      * Used for Lorwyn Incarnation cycle (Catharsis, Deceit, etc.)
      * Example: ManaSpentToCastIncludes(requiredWhite = 2) checks if {W}{W} was spent.
      */
@@ -1136,13 +1208,15 @@ object Conditions {
         requiredBlue: Int = 0,
         requiredBlack: Int = 0,
         requiredRed: Int = 0,
-        requiredGreen: Int = 0
+        requiredGreen: Int = 0,
+        requiredColorless: Int = 0
     ): ConditionInterface = com.wingedsheep.sdk.scripting.conditions.ManaSpentToCastIncludes(
         requiredWhite = requiredWhite,
         requiredBlue = requiredBlue,
         requiredBlack = requiredBlack,
         requiredRed = requiredRed,
-        requiredGreen = requiredGreen
+        requiredGreen = requiredGreen,
+        requiredColorless = requiredColorless
     )
 
     /**
@@ -1251,6 +1325,14 @@ object Conditions {
      */
     val SourceIsRenowned: ConditionInterface =
         SourceMatches(com.wingedsheep.sdk.scripting.GameObjectFilter.Any.renowned())
+
+    /**
+     * If this permanent is monstrous (CR 701.37b) — "as long as this creature is monstrous"
+     * (Sinuous Vermin, Domesticated Hydra). Negated by [Not] it is the "if this permanent isn't
+     * monstrous" inside `Effects.Monstrosity`.
+     */
+    val SourceIsMonstrous: ConditionInterface =
+        SourceMatches(com.wingedsheep.sdk.scripting.GameObjectFilter.Any.monstrous())
 
     /** If this creature is soulbond-paired with another creature (CR 702.95b). */
     val SourceIsPaired: ConditionInterface =
@@ -1597,6 +1679,18 @@ object Conditions {
         )
 
     /**
+     * "If you've paid or lost N or more {E} this turn" (Izzet Generatorium) — every energy counter
+     * removed from the player this turn, paid as a cost or lost to an effect
+     * ([com.wingedsheep.sdk.scripting.values.TurnTracker.ENERGY_PAID_OR_LOST]).
+     */
+    fun YouPaidOrLostEnergyThisTurn(atLeast: Int, player: Player = Player.You): ConditionInterface =
+        trackerAtLeast(
+            com.wingedsheep.sdk.scripting.values.TurnTracker.ENERGY_PAID_OR_LOST,
+            atLeast,
+            player,
+        )
+
+    /**
      * As long as you haven't activated an exhaust ability this turn — Elvish Refueler's gate on its
      * "activate exhaust abilities as though they haven't been activated" permission.
      */
@@ -1700,6 +1794,14 @@ object Conditions {
         trackerAtLeast(com.wingedsheep.sdk.scripting.values.TurnTracker.DEALT_COMBAT_DAMAGE)
 
     /**
+     * If you've been dealt combat damage since your last turn — any combat damage from the end of
+     * your previous turn until now. Negate it for "if you haven't been dealt combat damage since
+     * your last turn" (Marchesa, Resolute Monarch).
+     */
+    val YouWereDealtCombatDamageSinceYourLastTurn: ConditionInterface =
+        trackerAtLeast(com.wingedsheep.sdk.scripting.values.TurnTracker.DEALT_COMBAT_DAMAGE_SINCE_YOUR_LAST_TURN)
+
+    /**
      * If you've played a land this turn.
      * Used for cards like Rock Jockey ("can't cast unless no land was played").
      */
@@ -1785,6 +1887,13 @@ object Conditions {
      */
     val OpponentLostLifeThisTurn: ConditionInterface =
         trackerAtLeast(com.wingedsheep.sdk.scripting.values.TurnTracker.LIFE_LOST, player = Player.EachOpponent)
+
+    /**
+     * If an opponent lost life last turn — the turn before this one, whoever's it was (Feast on
+     * the Fallen).
+     */
+    val OpponentLostLifeLastTurn: ConditionInterface =
+        trackerAtLeast(com.wingedsheep.sdk.scripting.values.TurnTracker.LIFE_LOST_LAST_TURN, player = Player.EachOpponent)
 
     /**
      * If an opponent was dealt noncombat damage this turn (Whiplash Wordsmith, Grim Repriser).
@@ -1880,6 +1989,13 @@ object Conditions {
      */
     fun CardsLeftGraveyardThisTurn(count: Int): ConditionInterface =
         trackerAtLeast(com.wingedsheep.sdk.scripting.values.TurnTracker.CARDS_LEFT_GRAVEYARD, atLeast = count)
+
+    /**
+     * If a permanent was put into your hand from the battlefield this turn (Barrin, Tolarian
+     * Archmage).
+     */
+    val PermanentPutIntoYourHandFromBattlefieldThisTurn: ConditionInterface =
+        trackerAtLeast(com.wingedsheep.sdk.scripting.values.TurnTracker.PERMANENTS_PUT_INTO_HAND_FROM_BATTLEFIELD)
 
     /**
      * If you've sacrificed a Food this turn.
@@ -2033,6 +2149,38 @@ object Conditions {
         com.wingedsheep.sdk.scripting.conditions.PutCounterKindOnCreatureThisTurn(counterType, player)
 
     /**
+     * "If a [counterType] counter was put on a permanent under your control this turn" (Fairgrounds
+     * Trumpeter) — keyed on the permanent's controller at placement, not on who put the counter, and
+     * over any permanent, not just creatures. Turn history: the permanent may since have left or lost
+     * the counter. Pass `null` for "a counter" of any kind.
+     */
+    fun CounterPutOnPermanentYouControlledThisTurn(
+        counterType: CounterType?,
+        player: Player = Player.You
+    ): ConditionInterface =
+        com.wingedsheep.sdk.scripting.conditions.CounterPutOnPermanentYouControlledThisTurn(counterType, player)
+
+    /**
+     * "If a [counterType] counter was removed from a permanent you controlled this turn" (Churning
+     * Reservoir) — the removal-side mirror of [CounterPutOnPermanentYouControlledThisTurn], keyed on
+     * the permanent's controller as the counter left it. Turn history: the permanent may since have
+     * left. Pass `null` for "a counter" of any kind.
+     */
+    fun CounterRemovedFromPermanentYouControlledThisTurn(
+        counterType: CounterType?,
+        player: Player = Player.You
+    ): ConditionInterface =
+        com.wingedsheep.sdk.scripting.conditions.CounterRemovedFromPermanentYouControlledThisTurn(counterType, player)
+
+    /**
+     * "If a permanent with a [counterType] counter on it was put into a graveyard this turn"
+     * (Churning Reservoir) — game-wide, read off each permanent's last-known counters as it left the
+     * battlefield. Pass `null` for "with a counter on it" of any kind.
+     */
+    fun PermanentWithCounterPutIntoGraveyardThisTurn(counterType: CounterType?): ConditionInterface =
+        com.wingedsheep.sdk.scripting.conditions.PermanentWithCounterPutIntoGraveyardThisTurn(counterType)
+
+    /**
      * Intervening-if: "if a creature died this turn" (global — any controller).
      * Used for cards like Scorpion, Seething Striker.
      */
@@ -2126,10 +2274,17 @@ object Conditions {
         IsYourTurnCondition
 
     /**
-     * If it's not your turn.
+     * If it's not your turn. In a team game this includes an ally's turn; for "an opponent's turn"
+     * use [IsOpponentsTurn].
      */
     val IsNotYourTurn: ConditionInterface =
         IsNotYourTurnCondition
+
+    /**
+     * If it's an opponent's turn — the active player is one of your opponents, never a teammate.
+     */
+    val IsOpponentsTurn: ConditionInterface =
+        IsOpponentsTurnCondition
 
     /**
      * If it's [player]'s turn — the [Player]-parametric form of [IsYourTurn]. Wrap in [Not] for
@@ -2144,6 +2299,10 @@ object Conditions {
      */
     fun IsInPhase(vararg phases: Phase, yoursOnly: Boolean = true): ConditionInterface =
         IsInPhaseCondition(phases.toList(), yoursOnly)
+
+    /** If the current step matches, optionally restricted to the controller's turn. */
+    fun IsInStep(vararg steps: com.wingedsheep.sdk.core.Step, yoursOnly: Boolean = true): ConditionInterface =
+        com.wingedsheep.sdk.scripting.conditions.IsInStep(steps.toList(), yoursOnly)
 
     /**
      * If it's your main phase (either precombat or postcombat main, on your turn).

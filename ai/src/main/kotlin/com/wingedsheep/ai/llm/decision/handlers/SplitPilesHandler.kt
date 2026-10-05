@@ -42,6 +42,12 @@ class SplitPilesHandler : AiDecisionHandler<SplitPilesDecision> {
         state: ClientGameState,
         parser: AiResponseParser
     ): DecisionResponse? {
+        decision.suggestedPiles?.let { return PilesSplitResponse(decision.id, it) }
+        if (decision.numberOfPiles != 2) {
+            val piles = List(decision.numberOfPiles) { mutableListOf<EntityId>() }
+            for ((index, card) in decision.cards.withIndex()) piles[index % piles.size].add(card)
+            return PilesSplitResponse(decision.id, piles)
+        }
         val pile1Indices = parser.parseMultipleSelections(response, decision.cards.size - 1)
         return if (pile1Indices != null) {
             val pile1 = pile1Indices.map { decision.cards[it] }

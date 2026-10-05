@@ -39,6 +39,20 @@ class MtgSetCatalogTest : FunSpec({
         duplicates.shouldBeEmpty()
     }
 
+    // A card's definition id is `Name#SET-CN`, and art, token-art and printing lookups key on the
+    // collector number — two cards sharing one showed each other's art (Kurgadon wore Hunting
+    // Pack's `SCG-121`). A copy-pasted metadata block is the usual cause.
+    test("no two cards in a set share a collector number") {
+        val clashes = MtgSetCatalog.all.flatMap { set ->
+            set.cards
+                .filter { !it.metadata.collectorNumber.isNullOrBlank() }
+                .groupBy { it.metadata.collectorNumber }
+                .filterValues { cards -> cards.map { it.name }.distinct().size > 1 }
+                .map { (number, cards) -> "${set.code}-$number: ${cards.map { it.name }.distinct()}" }
+        }
+        clashes.shouldBeEmpty()
+    }
+
     // The same hollow-set failure GameBeansConfig guards at server boot, caught here in CI: a set
     // that contributes no cards, printings, or basic lands has almost always typo'd its
     // CARDS_PACKAGE. (All-reprint sets like Eighth Edition have no own cards but do carry printings.)

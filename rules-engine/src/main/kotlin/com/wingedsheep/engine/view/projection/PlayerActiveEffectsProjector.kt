@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.view.projection
 
+import com.wingedsheep.engine.core.engineSerializersModule
+import com.wingedsheep.engine.event.DelayedTriggeredAbility
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.DamageUtils
 import com.wingedsheep.engine.mechanics.citysblessing.CitysBlessingService
@@ -9,16 +11,28 @@ import com.wingedsheep.engine.mechanics.targeting.ControllerHexproof
 import com.wingedsheep.engine.mechanics.targeting.ControllerShroud
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.nameVisibleToAll
 import com.wingedsheep.engine.state.components.battlefield.*
 import com.wingedsheep.engine.state.components.combat.MustAttackPlayerComponent
 import com.wingedsheep.engine.state.components.identity.*
 import com.wingedsheep.engine.state.components.player.*
 import com.wingedsheep.engine.view.ClientEffectProgress
 import com.wingedsheep.engine.view.ClientPlayerEffect
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
+import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.events.DamageType
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Projects the badges shown on a player: damage shields and doublers, skipped steps and turns,
@@ -78,7 +92,8 @@ internal class PlayerActiveEffectsProjector(
 
     /** The prevention shields on one player, totalled per kind across every floating effect. */
     private class ShieldTally {
-        var preventDamageTotal = 0
+        /** Each "prevent the next N" shield's ending and amount. */
+        val preventNext = mutableListOf<Pair<String?, Int>>()
         var preventsAllDamage = false
         var preventsAllCombatDamage = false
         val preventedNextFromMatching = mutableSetOf<String>()
@@ -89,6 +104,7 @@ internal class PlayerActiveEffectsProjector(
         // because they read differently: "the next time" rather than "all damage", and Dark Sphere
         // halves rather than prevents. Pair = (source, halved).
         val preventedNextInstanceFromSources = mutableListOf<Pair<EntityId, Boolean>>()
+        val leavingAmountShields = mutableListOf<ClientPlayerEffect>()
     }
 
     /** Check floating effects for damage prevention shields on this player. */
@@ -116,13 +132,30 @@ internal class PlayerActiveEffectsProjector(
                     tally.preventsAllDamage = true
                 }
                 is SerializableModification.PreventNextDamage -> {
-                    tally.preventDamageTotal += modification.remainingAmount
+                    tally.preventNext += durationPhrase(state, floatingEffect) to modification.remainingAmount
                 }
                 is SerializableModification.PreventNextDamageFromMatching -> {
                     tally.preventedNextFromMatching.add(modification.filter.description)
                 }
                 is SerializableModification.PreventAllDamageFromSource -> {
                     tally.preventedFromSources.add(modification.damageSourceId)
+                }
+                is SerializableModification.PreventNextDamageLeavingAmount -> {
+                    val sourceRef = floatingEffect.referencedObjects.firstOrNull { it.entityId == modification.damageSourceId }
+                    val sourceName = if (sourceRef != null && state.isCurrentObject(sourceRef) &&
+                        state.logicalZone(modification.damageSourceId)?.zoneType !in setOf(Zone.HAND, Zone.LIBRARY)) {
+                        nameVisibleToAll(state, modification.damageSourceId,
+                            state.getEntity(modification.damageSourceId)?.get<CardComponent>()?.name ?: modification.sourceName)
+                    } else modification.sourceName
+                    val kind = if (modification.combatOnly) "combat damage" else "damage"
+                    val ending = durationPhrase(state, floatingEffect)?.let { " $it" } ?: ""
+                    tally.leavingAmountShields.add(ClientPlayerEffect(
+                        effectId = "prevent_next_damage_leaving_amount_${floatingEffect.id.value}",
+                        name = "Leave ${modification.amountToLeave} from $sourceName",
+                        description = "The next time $sourceName would deal $kind to you$ending, " +
+                            "prevent all but ${modification.amountToLeave} of that damage",
+                        icon = "prevent-damage"
+                    ))
                 }
                 is SerializableModification.PreventNextDamageInstanceFromSource -> {
                     tally.preventedNextInstanceFromSources.add(
@@ -136,7 +169,7 @@ internal class PlayerActiveEffectsProjector(
     }
 
     private fun ShieldTally.badges(state: GameState): List<ClientPlayerEffect> {
-        val effects = mutableListOf<ClientPlayerEffect>()
+        val effects = leavingAmountShields.toMutableList()
         if (preventsAllDamage) {
             effects.add(
                 ClientPlayerEffect(
@@ -177,13 +210,17 @@ internal class PlayerActiveEffectsProjector(
                 )
             )
         }
+        val preventDamageTotal = preventNext.sumOf { it.second }
         if (preventDamageTotal > 0) {
+            val ending = combinedEnding(preventNext.map { it.first }, preventNext.map { it.second })
             effects.add(
                 ClientPlayerEffect(
                     effectId = "prevent_damage",
                     name = "Prevent $preventDamageTotal",
-                    description = "The next $preventDamageTotal damage that would be dealt to you is prevented",
-                    icon = "prevent-damage"
+                    description = "The next $preventDamageTotal damage that would be dealt to you is prevented" +
+                        (ending?.let { " ($it)" } ?: ""),
+                    icon = "prevent-damage",
+                    duration = ending
                 )
             )
         }
@@ -249,8 +286,8 @@ internal class PlayerActiveEffectsProjector(
             effects.add(
                 ClientPlayerEffect(
                     effectId = "damage_doubled_${doubler.sourceId.value}",
-                    name = "Damage Doubled",
-                    description = "$scope dealt to you is doubled by ${doubler.sourceName}",
+                    name = "Damage ${doubler.multiplierVerb.replaceFirstChar { it.uppercase() }}",
+                    description = "$scope dealt to you is ${doubler.multiplierVerb} by ${doubler.sourceName}",
                     icon = "double-damage"
                 )
             )
@@ -354,8 +391,8 @@ internal class PlayerActiveEffectsProjector(
             )
         }
 
-        // Check for SkipNextTurnComponent (opponent will skip their turn)
-        if (container.has<SkipNextTurnComponent>()) {
+        val turnSkips = container.get<SkipNextTurnComponent>()
+        if (turnSkips != null && turnSkips.turns > turnSkips.extraTurnBypasses) {
             effects.add(
                 ClientPlayerEffect(
                     effectId = "skip_next_turn",
@@ -433,6 +470,21 @@ internal class PlayerActiveEffectsProjector(
                     effectId = "instant_speed_loyalty",
                     name = "Instant-speed loyalty",
                     description = "You may activate loyalty abilities of $rendered any time you could cast an instant this turn",
+                    icon = "lightning"
+                )
+            )
+        }
+
+        // Tapping other players' permanents for mana (Piracy).
+        container.get<com.wingedsheep.engine.state.components.player.TapForManaGrantsComponent>()?.let { component ->
+            val rendered = component.grants.joinToString(" or ") { "${it.filter.description}s" }
+            val restrictions = component.grants.mapNotNull { it.restriction?.description }.distinct()
+            val suffix = if (restrictions.isEmpty()) "" else ". " + restrictions.joinToString(". ")
+            effects.add(
+                ClientPlayerEffect(
+                    effectId = "tap_for_mana_you_dont_control",
+                    name = "Borrowed mana",
+                    description = "You may tap $rendered you don't control for mana this turn$suffix",
                     icon = "lightning"
                 )
             )
@@ -573,6 +625,28 @@ internal class PlayerActiveEffectsProjector(
             )
         }
 
+        // Check for pending "next spell has improvise / convoke / delve" riders (Archway of
+        // Innovation) — one badge per keyword, so the player sees the grant is still waiting.
+        state.pendingNextSpellKeywords
+            .filter { it.controllerId == playerId }
+            .groupBy { it.keyword }
+            .forEach { (keyword, riders) ->
+                val sourceName = riders.map { it.sourceName }.distinct().joinToString(", ")
+                val filterDesc = if (riders.any { it.spellFilter == GameObjectFilter.Any }) {
+                    ""
+                } else {
+                    riders.map { it.spellFilter.description }.distinct().joinToString("/") + " "
+                }
+                effects.add(
+                    ClientPlayerEffect(
+                        effectId = "pending_next_spell_keyword_${keyword.name.lowercase()}",
+                        name = keyword.displayName,
+                        description = "Your next ${filterDesc}spell has ${keyword.displayName.lowercase()} ($sourceName)",
+                        icon = "granted-ability"
+                    )
+                )
+            }
+
         // Check for pending "next spell can be cast without paying its mana cost" riders
         // (e.g. World War Hulk I) — the player needs to see the free cast is still available.
         val pendingFreeCasts = state.pendingFreeCastSpells.filter { it.controllerId == playerId }
@@ -625,13 +699,15 @@ internal class PlayerActiveEffectsProjector(
                 it.descriptionOverride ?: it.ability.description
             }
             val isPermanent = duration == Duration.Permanent
-            val durationSuffix = if (isPermanent) "" else " (${duration.description})"
+            val ending = durationPhrase(state, duration, playerId)
+            val durationSuffix = ending?.let { " ($it)" } ?: ""
             effects.add(
                 ClientPlayerEffect(
                     effectId = "emblem_${sourceName.lowercase().replace(" ", "_").replace(",", "")}${if (!isPermanent) "_temp" else ""}",
                     name = if (isPermanent) "$sourceName Emblem" else sourceName,
                     description = description + durationSuffix,
-                    icon = if (isPermanent) "emblem" else "triggered-ability"
+                    icon = if (isPermanent) "emblem" else "triggered-ability",
+                    duration = ending
                 )
             )
         }
@@ -639,21 +715,45 @@ internal class PlayerActiveEffectsProjector(
         // Check for event-based delayed triggers controlled by this player
         // (e.g., Flitterwing Nuisance's "whenever a creature you control deals combat
         //  damage to a player this turn, draw a card" floating ability).
-        // Step-based delayed triggers are scheduled actions, not ongoing effects, so skip them.
+        // Step-based delayed triggers are scheduled actions and get their own badges below.
         val delayedBySource = state.delayedTriggers
             .filter { it.controllerId == playerId && it.trigger != null }
-            .groupBy { it.sourceName }
+            // A face-down source (a morph granted the ability) shows its face-down name, not its face.
+            .groupBy { Triple(nameVisibleToAll(state, it.sourceId, it.sourceName), it.expiry, it.fireOnce) }
 
-        for ((sourceName, triggers) in delayedBySource) {
+        for ((key, triggers) in delayedBySource) {
+            val (sourceName, expiry, fireOnce) = key
             val first = triggers.first()
             val triggerDesc = first.trigger?.event?.description ?: "the triggered event"
             val effectDesc = first.effect.description.replaceFirstChar { it.lowercase() }
             val countSuffix = if (triggers.size > 1) " (×${triggers.size})" else ""
+            val lead = if (fireOnce) "The next time" else "Whenever"
+            val ends = expiryPhrase(state, expiry, playerId)
             effects.add(
                 ClientPlayerEffect(
-                    effectId = "delayed_trigger_${sourceName.lowercase().replace(" ", "_").replace(",", "")}",
+                    effectId = "delayed_trigger_${sourceName.lowercase().replace(" ", "_").replace(",", "")}" +
+                        "_${expiry?.let { it::class.simpleName } ?: "Never"}${if (fireOnce) "_once" else ""}",
                     name = "$sourceName$countSuffix",
-                    description = "Whenever $triggerDesc, $effectDesc. (Until end of turn)",
+                    description = "$lead $triggerDesc, $effectDesc." + (ends?.let { " (${it.replaceFirstChar { c -> c.uppercase() }})" } ?: ""),
+                    icon = "triggered-ability",
+                    duration = ends
+                )
+            )
+        }
+
+        // Step-based delayed triggers: something scheduled for a coming step ("return it at the
+        // beginning of the next end step"). The spell or ability that scheduled one resolved in
+        // the open, but nothing on the board shows it until it fires.
+        for (scheduled in state.delayedTriggers) {
+            if (scheduled.controllerId != playerId || scheduled.trigger != null) continue
+            val step = scheduled.fireAtStep ?: continue
+            effects.add(
+                ClientPlayerEffect(
+                    effectId = "scheduled_trigger_${scheduled.id}",
+                    // Both players see this badge, so a face-down source keeps its face-down name.
+                    name = nameVisibleToAll(state, scheduled.sourceId, scheduled.sourceName),
+                    description = "${scheduleText(state, scheduled, step)}: " +
+                        "${scheduledEffectText(state, scheduled.effect).replaceFirstChar { it.uppercase() }}.",
                     icon = "triggered-ability"
                 )
             )
@@ -694,5 +794,83 @@ internal class PlayerActiveEffectsProjector(
             }
         }
         return effects
+    }
+
+    /** When an event-based delayed trigger stops watching, or null when only firing ends it. */
+    private fun expiryPhrase(state: GameState, expiry: DelayedTriggerExpiry?, controllerId: EntityId): String? = when (expiry) {
+        DelayedTriggerExpiry.EndOfTurn -> "until end of turn"
+        DelayedTriggerExpiry.EndOfCombat -> "until end of combat"
+        DelayedTriggerExpiry.UntilControllersNextTurn -> durationPhrase(state, Duration.UntilYourNextTurn, controllerId)
+        DelayedTriggerExpiry.Never, null -> null
+    }
+
+    /**
+     * When a step-based delayed trigger fires: "At the beginning of the next end step", "At the
+     * beginning of Bob's next upkeep", "At the beginning of each combat this turn".
+     */
+    private fun scheduleText(state: GameState, scheduled: DelayedTriggeredAbility, step: Step): String {
+        val stepName = when (step) {
+            Step.UPKEEP -> "upkeep"
+            Step.BEGIN_COMBAT -> "combat"
+            else -> step.displayName.lowercase()
+        }
+        // Both seats read this badge, so the player is named rather than called "your".
+        val onTurnOf = scheduled.fireOnPlayerId?.let { player ->
+            "${state.getEntity(player)?.get<PlayerComponent>()?.name ?: "a player"}'s"
+        }
+        // A trigger that expires at cleanup ("at the beginning of the next combat this turn") says
+        // so: cast after the last combat, it lapses without firing.
+        val thisTurn = if (scheduled.expiry == DelayedTriggerExpiry.EndOfTurn) " this turn" else ""
+        val occasion = if (scheduled.repeatAtEachMatchingStep) {
+            "each $stepName" + (onTurnOf?.let { " on $it turn" } ?: "") + thisTurn
+        } else {
+            "${onTurnOf ?: "the"} next $stepName$thisTurn"
+        }
+        val notBefore = scheduled.notBeforeTurn?.takeIf { it > state.turnNumber }?.let { " (not before turn $it)" } ?: ""
+        return "At the beginning of $occasion$notBefore"
+    }
+
+    /**
+     * The scheduled effect's text with each object it captured named. Scheduling bakes the
+     * effect's targets into [EffectTarget.SpecificEntity] references, whose own text is only
+     * "specific entity"; it is replaced by the name every player may read. The text and the
+     * serialized effect need not mention the references in the same order, so this happens only
+     * when every reference reads the same; otherwise the placeholder stays rather than risk
+     * naming the wrong card.
+     */
+    private fun scheduledEffectText(state: GameState, effect: Effect): String {
+        val text = effect.description
+        if (SPECIFIC_ENTITY !in text) return text
+        val captured = mutableListOf<EntityId>()
+        fun collect(element: JsonElement) {
+            when (element) {
+                is JsonObject -> {
+                    if (element["type"]?.jsonPrimitive?.content == "SpecificEntity") {
+                        element["entityId"]?.jsonPrimitive?.content?.let { captured += EntityId(it) }
+                    }
+                    element.values.forEach(::collect)
+                }
+                is JsonArray -> element.forEach(::collect)
+                else -> Unit
+            }
+        }
+        collect(effectJson.encodeToJsonElement<Effect>(effect))
+        val names = captured.map { publicName(state, it) }.distinct()
+        return if (names.size == 1) text.replace(SPECIFIC_ENTITY, names.single()) else text
+    }
+
+    /** What every player may call [entityId]: a player's name, a public card's, or a placeholder. */
+    private fun publicName(state: GameState, entityId: EntityId): String {
+        state.getEntity(entityId)?.get<PlayerComponent>()?.let { return it.name }
+        val name = state.getEntity(entityId)?.get<CardComponent>()?.name ?: return "a card"
+        val hidden = state.zones.any { (key, ids) ->
+            key.zoneType in setOf(Zone.HAND, Zone.LIBRARY, Zone.SIDEBOARD) && entityId in ids
+        }
+        return if (hidden) "a card" else nameVisibleToAll(state, entityId, name)
+    }
+
+    private companion object {
+        const val SPECIFIC_ENTITY = "specific entity"
+        val effectJson = Json { serializersModule = engineSerializersModule }
     }
 }

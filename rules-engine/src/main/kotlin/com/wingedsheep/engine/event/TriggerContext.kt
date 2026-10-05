@@ -51,6 +51,17 @@ data class TriggerContext(
     val damageAmount: Int? = null,
     val step: Step? = null,
     val xValue: Int? = null,
+    /**
+     * Optional additional-cost choices on this trigger's own source spell, captured on its
+     * self-cast path. Each offered slot records whether it was declared, including false. Null
+     * means there is no self-cast snapshot. Unrelated entry choices are not part of this record.
+     * Remains authoritative if the spell leaves the stack or the same card is cast again.
+     */
+    val selfCastCostChoices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, Boolean>? = null,
+    /** Named mandatory cost branches of the source spell, frozen for its own cast triggers. */
+    val selfCastAdditionalCostChoices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, Int>? = null,
+    /** Actual payment of this trigger's own source spell; zero payment is distinct from no snapshot. */
+    val selfCastManaSpent: com.wingedsheep.engine.state.components.battlefield.CastRecordComponent? = null,
     /** Last known +1/+1 counter count when the source left the battlefield */
     val counterCount: Int? = null,
     /** Last known total counter count (all types) when the source left the battlefield */
@@ -109,6 +120,15 @@ data class TriggerContext(
      * source never left combat.
      */
     val lastKnownBlockingOrBlockedByIds: List<EntityId>? = null,
+    /**
+     * The Auras/Equipment attached to the triggering permanent as it last existed on the
+     * battlefield (CR 608.2h), frozen off [ZoneChangeEvent.lastKnown]. By resolution of a dies /
+     * leaves trigger the attachment links are gone (the host left and the SBA unattached them), so
+     * `CardSource.AttachedTo(EffectTarget.TriggeringEntity, …)` reads this instead — "attach all
+     * Equipment attached to that creature" (Rhuk, Hexgold Nabber). `null` when nothing was attached
+     * or the trigger was not a battlefield exit.
+     */
+    val lastKnownAttachmentIds: List<EntityId>? = null,
     /**
      * For SpellCastEvent triggers — number of mode picks the cast spell recorded. `null`
      * when the trigger was not driven by a spell cast. Read by
@@ -257,7 +277,8 @@ data class TriggerContext(
                     lastKnownDamageDealtByPlayers =
                         event.lastKnown?.damageDealtByPlayers?.takeIf { it.isNotEmpty() },
                     lastKnownBlockingOrBlockedByIds =
-                        event.lastKnown?.blockingOrBlockedByIds?.takeIf { it.isNotEmpty() }
+                        event.lastKnown?.blockingOrBlockedByIds?.takeIf { it.isNotEmpty() },
+                    lastKnownAttachmentIds = event.lastKnown?.attachmentIds?.takeIf { it.isNotEmpty() }
                 )
                 is DamageDealtEvent -> TriggerContext(
                     triggeringEntityId = event.targetId,
@@ -308,6 +329,13 @@ data class TriggerContext(
                     manaValueOfTriggeringSpell = event.manaValue.takeIf { it > 0 },
                     xValueOfTriggeringSpell = event.xValue
                 )
+                // A copy is a spell too (CR 707.10): "that spell" is the copy, cast by no one but
+                // controlled by the player who copied it. No mana was spent on it.
+                is com.wingedsheep.engine.core.SpellCopiedEvent -> TriggerContext(
+                    triggeringEntityId = event.copyEntityId,
+                    triggeringPlayerId = event.controllerId,
+                    manaValueOfTriggeringSpell = event.manaValue.takeIf { it > 0 }
+                )
                 is CardsDrawnEvent -> TriggerContext(triggeringPlayerId = event.playerId)
                 // A player losing the game: the loser is both the triggering player (so
                 // Player.TriggeringPlayer / a TriggeringPlayerIs condition resolves to them) and
@@ -332,6 +360,9 @@ data class TriggerContext(
                 )
                 // Surveil reuses the "cards looked at" count slot (TRIGGER_SCRY_COUNT) — the
                 // field is the number of cards looked at, common to scry and surveil.
+                is com.wingedsheep.engine.core.ProliferatedEvent -> TriggerContext(
+                    triggeringPlayerId = event.playerId
+                )
                 is com.wingedsheep.engine.core.SurveiledEvent -> TriggerContext(
                     triggeringPlayerId = event.playerId,
                     scryCount = event.count
@@ -353,6 +384,10 @@ data class TriggerContext(
                 is com.wingedsheep.engine.core.ForagedEvent -> TriggerContext(
                     triggeringPlayerId = event.playerId
                 )
+                // Investigate (CR 701.16a): the investigating player is the triggering player.
+                is com.wingedsheep.engine.core.InvestigatedEvent -> TriggerContext(
+                    triggeringPlayerId = event.playerId
+                )
                 // Solve a Case (CR 719.3a): the solving player is the triggering player, and the
                 // solved Case itself is the triggering entity — so a payoff can name either.
                 is com.wingedsheep.engine.core.CaseSolvedEvent -> TriggerContext(
@@ -364,6 +399,11 @@ data class TriggerContext(
                 // (Relic Seeker) and "whenever a creature you control becomes renowned" (Valeron
                 // Wardens) can each name what they need.
                 is com.wingedsheep.engine.core.BecameRenownedEvent -> TriggerContext(
+                    triggeringEntityId = event.entityId,
+                    triggeringPlayerId = event.controllerId
+                )
+                // Monstrosity (CR 701.37b): same shape as renown.
+                is com.wingedsheep.engine.core.BecameMonstrousEvent -> TriggerContext(
                     triggeringEntityId = event.entityId,
                     triggeringPlayerId = event.controllerId
                 )
@@ -403,7 +443,8 @@ data class TriggerContext(
                 is AttackersDeclaredEvent -> TriggerContext(
                     triggeringPlayerId = event.attackingPlayerId
                 )
-                is BlockersDeclaredEvent -> TriggerContext()
+                is BlockersDeclaredEvent, is com.wingedsheep.engine.core.BlocksCreatedEvent -> TriggerContext()
+                is com.wingedsheep.engine.core.RemovedFromCombatEvent -> TriggerContext(triggeringEntityId = event.entityId)
                 is TappedEvent -> TriggerContext(triggeringEntityId = event.entityId)
                 is UntappedEvent -> TriggerContext(triggeringEntityId = event.entityId)
                 is com.wingedsheep.engine.core.LandTappedForManaEvent -> TriggerContext(

@@ -176,6 +176,8 @@ export interface OpponentDecisionStatus {
   readonly decisionType: string
   readonly displayText: string
   readonly sourceName?: string | null
+  /** The source entity; resolve its card from the (viewer-masked) game state. */
+  readonly sourceId?: EntityId | null
 }
 
 /**
@@ -260,6 +262,8 @@ export interface StateDelta {
   readonly winnerId?: EntityId | null
   /** Day/night designation (CR 731). Null means unchanged — the game never returns to neither. */
   readonly dayNight?: ClientGameState['dayNight'] | null
+  /** Whether the Void condition holds this turn. Null means unchanged. */
+  readonly voidActive?: boolean | null
   /** Combat state changes */
   readonly combat?: ClientCombatState | null
   readonly combatCleared?: boolean | null
@@ -272,6 +276,8 @@ export interface StateDelta {
   readonly hotseat?: boolean | null
   /** The viewer's decklist, present only when a `remaining` count moved (draw, mill, tutor). */
   readonly deck?: readonly ClientDeckCard[] | null
+  /** The viewer's persistent yields, present only when they changed. */
+  readonly activeYields?: ClientGameState['activeYields'] | null
 }
 
 /**
@@ -518,6 +524,9 @@ export interface ReorderLibraryDecision extends PendingDecisionBase {
  */
 export interface OrderObjectsDecision extends PendingDecisionBase {
   readonly type: 'OrderObjectsDecision'
+  readonly orderingTitle?: string
+  readonly firstLabel?: string
+  readonly lastLabel?: string
   readonly objects: readonly EntityId[]
   readonly cardInfo?: Record<EntityId, SearchCardInfo>
 }
@@ -755,6 +764,12 @@ export interface CombatResolutionDecision extends PendingDecisionBase {
  */
 export interface SplitPilesDecision extends PendingDecisionBase {
   readonly type: 'SplitPilesDecision'
+  readonly allowUnassigned?: boolean
+  readonly pileOptions?: Readonly<Record<number, readonly EntityId[]>>
+  readonly requiredAssignments?: number | null
+  readonly suggestedPiles?: readonly (readonly EntityId[])[] | null
+  readonly maxPileMemberships?: Readonly<Record<EntityId, number>>
+  readonly useTargetingUI?: boolean
   readonly cards: readonly EntityId[]
   readonly numberOfPiles: number
   readonly pileLabels: readonly string[]
@@ -797,6 +812,11 @@ export interface BatchYesNoDecision extends PendingDecisionBase {
 /**
  * Union of all pending decision types.
  */
+export interface PlayCardDecision extends PendingDecisionBase {
+  readonly type: 'PlayCardDecision'
+  readonly cardId: EntityId
+}
+
 export type PendingDecision =
   | SelectCardsDecision
   | YesNoDecision
@@ -811,6 +831,7 @@ export type PendingDecision =
   | BudgetModalDecision
   | DistributeDecision
   | ChooseColorDecision
+  | PlayCardDecision
   | SelectManaSourcesDecision
   | AssignDamageDecision
   | CombatResolutionDecision
@@ -1197,6 +1218,12 @@ export interface AdditionalCostInfo {
   readonly exileCardWeights?: Readonly<Record<EntityId, number>>
   readonly exileWeightUnit?: string
   /**
+   * Each offered card's card types, for a cost measured by a *union* rather than a sum —
+   * Nethergoyf's "four or more card types among them". When present, the running total is the
+   * number of distinct types across the selected cards, not the sum of `exileCardWeights`.
+   */
+  readonly exileCardTypes?: Readonly<Record<EntityId, readonly string[]>>
+  /**
    * What each legal target would add to `exileMinTotalWeight` — present only for a cost whose
    * threshold is priced off the spell's targets rather than printed (Urgent Necropsy's "collect
    * evidence X, where X is the total mana value of the permanents this spell targets").
@@ -1419,6 +1446,10 @@ export interface SealedCardInfo {
    * latter being `TRANSFORM` and so invisible to a `layout === 'SPLIT'` check.
    */
   readonly isLandscape?: boolean
+  /** Mana value (CR 202.3). Absent from older servers; the client then derives it from the cost. */
+  readonly cmc?: number
+  /** Keyword abilities as `Keyword` enum names (`FLYING`, `FIRST_STRIKE`, …) — drives the pool search's `kw:`. */
+  readonly keywords?: readonly string[]
 }
 
 /**
@@ -1967,6 +1998,8 @@ export interface SpectatorDecisionStatus {
   readonly decisionType: string
   readonly displayText: string
   readonly sourceName?: string | null
+  /** The source entity; resolve its card from the (viewer-masked) game state. */
+  readonly sourceId?: EntityId | null
 }
 
 export interface SpectatorStateUpdateMessage {

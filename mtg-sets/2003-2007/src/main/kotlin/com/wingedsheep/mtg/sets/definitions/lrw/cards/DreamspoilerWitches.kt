@@ -19,8 +19,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  *
  * The Lorwyn Faerie payoff for holding up flash and instants. "During an opponent's turn" is
  * checked when the ability would trigger, so it rides on `triggerRestriction`
- * ([Conditions.IsNotYourTurn]) rather than gating the resolved effect — only players take turns,
- * so "not your turn" is exactly "an opponent's turn". Same shape as [DreamSpoilers] in Wilds of
+ * ([Conditions.IsOpponentsTurn]) rather than gating the resolved effect. It is not merely "not
+ * your turn": an ally's turn is not an opponent's. Same shape as [DreamSpoilers] in Wilds of
  * Eldraine, which is a strictly-worse reprint of this idea.
  *
  * The target is mandatory (not "up to one"), so the ability is only put on the stack when there is
@@ -40,7 +40,7 @@ val DreamspoilerWitches = card("Dreamspoiler Witches") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         val creature = target(TargetFilter.Creature)
         effect = Effects.May(Effects.ModifyStats(-1, -1, creature))
         description = "Whenever you cast a spell during an opponent's turn, you may have target " +

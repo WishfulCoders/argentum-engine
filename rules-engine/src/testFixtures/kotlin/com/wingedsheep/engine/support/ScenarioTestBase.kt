@@ -519,6 +519,8 @@ abstract class ScenarioTestBase : FunSpec() {
                 spellEffect = cardDef.spellEffect,
                 imageUri = cardDef.metadata.imageUri,
                 hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
+                hasActivatedAbility = cardDef.hasActivatedAbility,
+                hasCycling = cardDef.hasCycling,
                 originalSetCode = cardDef.setCode,
                 hasAdventure = cardDef.isAdventure,
                 isDoubleFaced = cardDef.isDoubleFaced,
@@ -802,6 +804,15 @@ abstract class ScenarioTestBase : FunSpec() {
             )
         }
 
+        /** Cast a prototype card from hand prototyped (CR 718.3). */
+        fun castSpellPrototyped(playerNumber: Int, spellName: String): ExecutionResult {
+            val playerId = if (playerNumber == 1) player1Id else player2Id
+            val cardId = state.getHand(playerId).find { entityId ->
+                state.getEntity(entityId)?.get<CardComponent>()?.name == spellName
+            } ?: error("Card '$spellName' not found in player $playerNumber's hand")
+            return execute(CastSpell(playerId, cardId, castPrototyped = true))
+        }
+
         /**
          * Cast a spell for its Cleave cost (CR 702.148), optionally targeting a permanent. Cleave
          * is an alternative cost, so this drives [CastSpell.useAlternativeCost] gated on
@@ -836,6 +847,22 @@ abstract class ScenarioTestBase : FunSpec() {
                 xValue = xValue,
                 useAlternativeCost = true,
                 alternativeCostType = AlternativeCostType.CLEAVE
+            ))
+        }
+
+        /**
+         * Cast a spell for its Overload cost (CR 702.96). An overloaded spell has no targets
+         * (CR 702.96b), so none are passed.
+         */
+        fun castSpellWithOverload(playerNumber: Int, spellName: String): ExecutionResult {
+            val playerId = if (playerNumber == 1) player1Id else player2Id
+            val cardId = state.getHand(playerId).find { entityId ->
+                state.getEntity(entityId)?.get<CardComponent>()?.name == spellName
+            } ?: error("Card '$spellName' not found in player $playerNumber's hand")
+            return execute(CastSpell(
+                playerId, cardId,
+                useAlternativeCost = true,
+                alternativeCostType = AlternativeCostType.OVERLOAD
             ))
         }
 

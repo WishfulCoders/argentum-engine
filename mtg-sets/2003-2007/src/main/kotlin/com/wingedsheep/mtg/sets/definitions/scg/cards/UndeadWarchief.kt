@@ -42,8 +42,8 @@ val UndeadWarchief = card("Undead Warchief") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "77"
-        artist = "Thomas M. Baxa"
+        collectorNumber = "78"
+        artist = "Greg Hildebrandt"
         flavorText = "It wields the banners of eighteen conquered armies."
         imageUri = "https://cards.scryfall.io/normal/front/e/6/e6b3bcfe-be82-458b-ba59-ecb84436d747.jpg?1562536237"
     }

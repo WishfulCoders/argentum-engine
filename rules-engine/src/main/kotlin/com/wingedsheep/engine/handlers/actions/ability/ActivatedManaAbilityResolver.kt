@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
 import com.wingedsheep.engine.core.AbilityActivatedEvent
+import com.wingedsheep.engine.handlers.effects.mana.ManaProvenanceTracker
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
@@ -14,6 +15,7 @@ import com.wingedsheep.engine.handlers.effects.EffectExecutorRegistry
 import com.wingedsheep.engine.handlers.effects.mana.ManaAbilityResolutionPipeline
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.activeManaSpendingScope
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.chosenColor
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -32,6 +34,9 @@ import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
+import com.wingedsheep.sdk.scripting.effects.ManaRestriction
+import com.wingedsheep.sdk.scripting.effects.AddOneManaOfEachColorAmongEffect
+import com.wingedsheep.engine.mechanics.mana.BorrowedManaAbilities
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
@@ -148,16 +153,26 @@ internal class ActivatedManaAbilityResolver(
                 finalEffect = multiplyManaProduced(finalEffect, manaMultiplier)
             }
         }
+        // Tapping a permanent you don't control under a "tap … for mana" grant (Piracy): the
+        // grant's spending restriction rides on the mana, on top of any the ability already had.
+        // Read against the pre-activation state — the grant keyed on who controlled the source then.
+        if (costsTap) {
+            val borrowedRestriction = BorrowedManaAbilities
+                .grantFor(stateBeforeActivation, action.playerId, action.sourceId, predicateEvaluator)
+                ?.restriction
+            if (borrowedRestriction != null) {
+                finalEffect = restrictManaProduced(finalEffect, borrowedRestriction)
+            }
+        }
         val context = EffectContext(
             sourceId = action.sourceId,
             objectReferences = activation.activationReferences.authorize(activationEvents),
             controllerId = action.playerId,
             granterId = activation.staticGranterId,
             targets = action.targets,
-            // Thread the chosen X so X-based mana abilities produce the right amount
-            // ("{X}, {T}, Sacrifice this: Add X mana..." — Wizard's Rockets). Without
-            // this, DynamicAmount.XValue resolves to 0 and the ability adds no mana.
-            xValue = action.xValue,
+            // Use the announced X, including values defined by a variable cost selection.
+            // The submitted action may not carry that derived value.
+            xValue = activation.effectiveXValue,
             // A mana ability resolves off the stack, so nothing else hands it the last-known
             // information its cost captured. Priest of Yawgmoth ("{T}, Sacrifice an artifact:
             // Add an amount of {B} equal to the sacrificed artifact's mana value") reads the
@@ -178,6 +193,27 @@ internal class ActivatedManaAbilityResolver(
             activatedAbility = ability,
         )
 
+        if (currentState.activeManaSpendingScope(action.playerId) != null) {
+            val frame = com.wingedsheep.engine.core.ScopedManaProductionContinuation(
+                action.playerId, action.sourceId, sourceName, cardComponent,
+                currentState.getEntity(action.playerId)?.get<ManaPoolComponent>() ?: ManaPoolComponent(),
+                ManaProvenanceTracker.sourceTag(
+                    if (action.sourceId in currentState.getBattlefield()) currentState else stateBeforeActivation,
+                    action.sourceId,
+                ), costsTap,
+            )
+            val result = effectExecutorRegistry.execute(currentState.pushContinuation(frame), finalEffect, context).toExecutionResult()
+            if (result.outcome is Outcome.Paused)
+                return ExecutionResult.propagatePause(result.state, activationEvents + result.events.filterNot {
+                    it is ManaAddedEvent && it.sourceId == action.sourceId && it.playerId == action.playerId
+                })
+            if (result.outcome !is Outcome.Done) return result
+            val (_, completed) = result.state.popContinuation()
+            return com.wingedsheep.engine.handlers.effects.mana.finishScopedManaProduction(
+                completed, frame, activationEvents + result.events, manaPipeline,
+            )
+        }
+        val stateBeforeEffect = currentState
         val effectResult = effectExecutorRegistry.execute(currentState, finalEffect, context).toExecutionResult()
         // A pause (e.g. choosing colors for "add X mana in any combination of colors") carries
         // the activation's own events out with it, so the settle boundary queues the triggers
@@ -196,7 +232,7 @@ internal class ActivatedManaAbilityResolver(
         val dampening = manaPipeline.applyLandManaDampening(
             stateBeforeActivation, currentState, cardComponent, action.playerId
         )
-        currentState = dampening.state
+        currentState = ManaProvenanceTracker.markSnowProduction(stateBeforeEffect, dampening.state, action.sourceId, action.playerId)
 
         // Emit ManaAddedEvent — if dampened, always emit 1 colorless
         val manaEvent: ManaAddedEvent? = if (dampening.dampened) {
@@ -215,6 +251,12 @@ internal class ActivatedManaAbilityResolver(
         }
 
         val eventsWithMana = if (manaEvent != null) activationEvents + manaEvent else activationEvents
+
+        // Read the production event before tagging moves plain mana into per-unit entries.
+        // Tag before triggered bonuses so those bonuses don't inherit the activation obligation.
+        currentState = com.wingedsheep.engine.state.tagManaObligationProduction(
+            stateBeforeEffect, currentState, action.playerId, action.sourceId,
+        )
 
         // Aura bonuses (Elvish Guidance), global "whenever a matching source is tapped for
         // mana" statics (Lavaleaper, Badgermole Cub, Overabundance), the land-tapped event, and
@@ -417,6 +459,27 @@ internal class ActivatedManaAbilityResolver(
             }
         }
         return multiplier
+    }
+
+    /**
+     * Adds [restriction] to the mana [effect] produces, keeping any restriction it already carries
+     * (both then apply). Recurses into a [CompositeEffect] like [multiplyManaProduced].
+     *
+     * [AddAnyColorManaSpendOnChosenTypeEffect] derives its restriction at resolution and has no
+     * field to add to, so its mana is left as is.
+     */
+    private fun restrictManaProduced(effect: Effect, restriction: ManaRestriction): Effect = when (effect) {
+        is AddManaEffect -> effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
+        is AddColorlessManaEffect ->
+            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
+        is AddManaOfChoiceEffect ->
+            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
+        is AddDynamicManaEffect ->
+            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
+        is AddOneManaOfEachColorAmongEffect ->
+            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
+        is CompositeEffect -> effect.copy(effects = effect.effects.map { restrictManaProduced(it, restriction) })
+        else -> effect
     }
 
     /**

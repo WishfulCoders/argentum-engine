@@ -49,7 +49,13 @@ internal class StackTextRenderer(
         spellOnStack: SpellOnStackComponent,
         cardDef: CardDefinition
     ): String? {
-        val effect = cardDef.script.spellEffect ?: return null
+        // An overloaded or cleaved spell resolves with its variant text (CR 702.96a / 702.148a),
+        // so that is what opponents read on the stack.
+        val effect = when {
+            spellOnStack.wasOverloaded -> cardDef.script.overloadSpellEffect
+            spellOnStack.wasCleaved -> cardDef.script.cleaveSpellEffect
+            else -> null
+        } ?: cardDef.script.spellEffect ?: return null
 
         // For modal spells with modes chosen at cast time, concatenate all chosen mode
         // descriptions (choose-N commands show every picked mode, in order, one per line).
@@ -74,6 +80,7 @@ internal class StackTextRenderer(
                 wasBlightPaid = spellOnStack.wasBlightPaid,
                 sacrificedPermanents = spellOnStack.sacrificedPermanents,
                 discardedAsCostCards = spellOnStack.discardedAsCostCards,
+                revealedAsCostSnapshots = spellOnStack.revealedAsCostSnapshots,
                 chosenEntitySnapshots = spellOnStack.chosenEntitySnapshots,
                 exiledCardCount = spellOnStack.exiledCardCount,
                 additionalCostBlightAmount = spellOnStack.additionalCostBlightAmount,
@@ -138,6 +145,7 @@ internal class StackTextRenderer(
             xValue = spellOnStack.xValue,
             sacrificedPermanents = spellOnStack.sacrificedPermanents,
             discardedAsCostCards = spellOnStack.discardedAsCostCards,
+            revealedAsCostSnapshots = spellOnStack.revealedAsCostSnapshots,
             exiledCardCount = spellOnStack.exiledCardCount,
             additionalCostBlightAmount = spellOnStack.additionalCostBlightAmount
         )

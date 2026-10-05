@@ -116,7 +116,10 @@ sealed interface ServerMessage {
         val playerId: String,
         val decisionType: String,
         val displayText: String,
-        val sourceName: String? = null
+        val sourceName: String? = null,
+        /** The spell/ability source entity, so the client can show its card from its own
+         *  (already viewer-masked) game state. */
+        val sourceId: String? = null
     )
 
     /**
@@ -424,7 +427,15 @@ sealed interface ServerMessage {
          * battles (CR 310), whose layout is `TRANSFORM` and so was invisible to the old
          * `layout == "SPLIT"` check the client used to make on its own.
          */
-        val isLandscape: Boolean = false
+        val isLandscape: Boolean = false,
+        /** Mana value (CR 202.3) — feeds the pool search's `cmc:` / `mv:` filter. */
+        val cmc: Int = 0,
+        /**
+         * Keyword abilities as `Keyword` enum names (`FLYING`, `FIRST_STRIKE`, …) — the same
+         * spelling the constructed deckbuilder's catalog ships, so the pool search's `kw:` filter
+         * reads both alike.
+         */
+        val keywords: List<String> = emptyList()
     )
 
     /**
@@ -591,8 +602,8 @@ sealed interface ServerMessage {
         val aiAssistEnabled: Boolean = true,
         /** Lobby mode axis: "TOURNAMENT" (bracket of 2-player matches) or "FREE_FOR_ALL" (one multiplayer game). */
         val gameMode: String = "TOURNAMENT",
-        /** Free-for-All attack rule (CR 802/803): "MULTIPLE", "LEFT", or "RIGHT". Ignored in tournament mode. */
-        val attackMode: String = "MULTIPLE",
+        /** Free-for-All attack rule (CR 802/803): "LEFT" (default), "RIGHT", or "MULTIPLE". Ignored in tournament mode. */
+        val attackMode: String = "LEFT",
         /**
          * Two-Headed Giant only (CR 810): true = random teams each game (the default); false = host
          * sets the teams via [teamAssignments]. Ignored outside Two-Headed Giant mode.
@@ -1035,7 +1046,9 @@ sealed interface ServerMessage {
         val playerId: String,
         val decisionType: String,
         val displayText: String,
-        val sourceName: String? = null
+        val sourceName: String? = null,
+        /** The spell/ability source entity; the client resolves its card from the masked spectator state. */
+        val sourceId: String? = null
     )
 
     /**

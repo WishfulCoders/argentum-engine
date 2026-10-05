@@ -65,7 +65,8 @@ internal class ActivationAutoTapper(
         val remainingCost = partialResult.remainingCost
 
         // The floating pool also pays toward the {X} portion before any sources are tapped —
-        // sharing the same coverage rule as CastPaymentProcessor.autoPay (ManaPool.xCoveragePlan).
+        // eligible restricted mana first, then the unrestricted coverage rule CastPaymentProcessor.autoPay
+        // shares (ManaPool.xCoverage).
         // Without this, an {X} ability whose X is solved purely by tapping sources reports "Not
         // enough mana" even when the pool already holds enough (e.g. Aladdin's Lamp activated with
         // X=4 while 4 mana float in the pool). We only reduce how much X the solver must tap for
@@ -73,7 +74,7 @@ internal class ActivationAutoTapper(
         val xSymbolCount = cost.xCount.coerceAtLeast(1)
         var xToTap = xValue * xSymbolCount
         if (xToTap > 0) {
-            xToTap -= partialResult.newPool.xCoveragePlan(xToTap, xManaRestriction).size
+            xToTap -= partialResult.newPool.xCoverage(xToTap, xManaRestriction, abilityContext)
         }
 
         // If floating pool covers everything (and no X left to tap for), no tapping needed.
@@ -131,10 +132,7 @@ internal class ActivationAutoTapper(
             currentPool = when {
                 color != null && restriction != null ->
                     currentPool.addRestricted(color, production.amount, restriction)
-                color != null ->
-                    currentPool.add(color, production.amount)
-                else ->
-                    currentPool.addColorless(production.colorless)
+                else -> currentPool.addProduction(production)
             }
         }
 
@@ -169,6 +167,9 @@ internal class ActivationAutoTapper(
                 restrictedMana = currentPool.restrictedMana,
                 manaBySubtype = currentPool.manaBySubtype,
                 manaBySource = currentPool.manaBySource,
+                manaByCardType = currentPool.manaByCardType,
+                snowMana = currentPool.snowMana,
+                snowColorless = currentPool.snowColorless
             ))
         }
 

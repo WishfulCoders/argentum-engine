@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -133,6 +134,40 @@ class TriggersTest : StringSpec({
         Grammar.abilityLine.printLine(
             CardFragment(script = CardScript(triggeredAbilities = listOf(conditioned)))
         ) shouldBe "When ~ enters, if an opponent controls more lands than you, draw a card."
+    }
+
+    // The kicker permanents' intervening-if — past tense is the only spelling Oracle prints.
+    "if it was kicked is the WasKicked intervening-if" {
+        ability("When ~ enters, if it was kicked, draw a card.").interveningIf shouldBe Conditions.WasKicked
+        roundTrips("When ~ enters, if it was kicked, draw a card.")
+        Grammar.abilityLine.parseLine("When ~ enters, if it's kicked, draw a card.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+    }
+
+    // Morbid — the global clause and its "under your control" sibling are two facades, two constants.
+    "a creature died this turn is the morbid intervening-if" {
+        ability("When ~ enters, if a creature died this turn, draw a card.").interveningIf shouldBe
+            Conditions.CreatureDiedThisTurn
+        roundTrips("When ~ enters, if a creature died this turn, draw a card.")
+        ability("At the beginning of your end step, if a creature died under your control this turn, draw a card.")
+            .interveningIf shouldBe Conditions.ControlledCreatureDiedThisTurn
+        roundTrips("At the beginning of your end step, if a creature died under your control this turn, draw a card.")
+    }
+
+    // Raid — one clause, one facade.
+    "you attacked this turn is the raid intervening-if" {
+        ability("At the beginning of your end step, if you attacked this turn, draw a card.").interveningIf shouldBe
+            Conditions.YouAttackedThisTurn
+        roundTrips("At the beginning of your end step, if you attacked this turn, draw a card.")
+    }
+
+    // Loan Shark — the spell count is the slot; one spell is "another spell" and stays out.
+    "you've cast N or more spells this turn is the spell-count intervening-if" {
+        val line = "When ~ enters, if you've cast two or more spells this turn, draw a card."
+        ability(line).interveningIf shouldBe Conditions.YouCastSpellsThisTurn(2)
+        roundTrips(line)
+        Grammar.abilityLine.parseLine("When ~ enters, if you've cast one or more spells this turn, draw a card.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
     }
 
     // The other half of the split (CR 603.2 vs CR 603.4). A `triggerRestriction` is a different
@@ -270,7 +305,7 @@ class TriggersTest : StringSpec({
         fragment("Whenever one or more cards leave your graveyard during your turn, draw a card.")
             .script.triggeredAbilities.single().triggerRestriction shouldBe Conditions.IsYourTurn
         fragment("Whenever you gain life during an opponent's turn, draw a card.")
-            .script.triggeredAbilities.single().triggerRestriction shouldBe Conditions.IsNotYourTurn
+            .script.triggeredAbilities.single().triggerRestriction shouldBe Conditions.IsOpponentsTurn
 
         roundTrips("Whenever one or more cards leave your graveyard during your turn, draw a card.")
         roundTrips("Whenever you gain life during an opponent's turn, draw a card.")
@@ -320,6 +355,41 @@ class TriggersTest : StringSpec({
             "Whenever one or more creatures attack you, draw a card.",
             "Whenever one or more of your opponents are attacked, draw a card.",
         ).forEach { line -> Grammar.abilityLine.printLine(fragment(line)) shouldBe line }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Filtered dies triggers, and the long form CR 700.4 defines "dies" by
+    // ---------------------------------------------------------------------------------------
+
+    // Ashiok's Reaper, Krenko, Ygra: every hand-written card in the family writes `.dies()` on a
+    // filtered subject, and "another" is the `another` subject rather than a filter layer.
+    "a filtered dies trigger is the a/another subject the goldens write" {
+        ability("Whenever a creature you control dies, draw a card.").trigger shouldBe
+            SdkTriggers.a(GameObjectFilter.Creature.youControl()).dies().event
+        val other = ability("Whenever another creature you control dies, draw a card.")
+        other.trigger shouldBe SdkTriggers.another(GameObjectFilter.Creature.youControl()).dies().event
+        other.binding shouldBe SdkTriggers.another(GameObjectFilter.Creature.youControl()).dies().binding
+        listOf(
+            "Whenever a creature you control dies, draw a card.",
+            "Whenever another creature you control dies, draw a card.",
+            "Whenever a nontoken creature you control dies, draw a card.",
+            "Whenever a creature an opponent controls dies, you gain 1 life.",
+        ).forEach { roundTrips(it) }
+    }
+
+    // One event, two wordings (`Triggers.self.dies()` documents both), so the long form parses to
+    // the same model and "dies" is what prints — Nutrient Block, Ashiok's Reaper.
+    "the long form of dies is a second spelling of the same event" {
+        fragment("When ~ is put into a graveyard from the battlefield, draw a card.") shouldBe
+            fragment("When ~ dies, draw a card.")
+        fragment("Whenever an enchantment you control is put into a graveyard from the battlefield, draw a card.") shouldBe
+            fragment("Whenever an enchantment you control dies, draw a card.")
+        fragment("Whenever another artifact you control is put into a graveyard from the battlefield, draw a card.") shouldBe
+            fragment("Whenever another artifact you control dies, draw a card.")
+
+        Grammar.abilityLine.printLine(
+            fragment("When ~ is put into a graveyard from the battlefield, draw a card.")
+        ) shouldBe "When ~ dies, draw a card."
     }
 
     // ---------------------------------------------------------------------------------------
@@ -451,5 +521,29 @@ class TriggersTest : StringSpec({
     // Two identical abilities is not a sentence: it is one trigger line written twice.
     "a join of an event with itself declines" {
         declines("When ~ enters and when ~ enters, draw a card.")
+    }
+
+    // Zephyr Boots, Armadillo Cloak, Kusari-Gama: the source's damage rows said of the attached
+    // creature, landing on `Triggers.attached` — the binding, not a filter.
+    "a damage trigger on enchanted creature is the attached binding" {
+        ability("Whenever enchanted creature deals combat damage to a player, draw a card.") shouldBe
+            TriggeredAbility(
+                id = AbilityId("trigger"),
+                trigger = SdkTriggers.attached.dealsCombatDamage(Recipient.AnyPlayer).event,
+                binding = SdkTriggers.attached.dealsCombatDamage(Recipient.AnyPlayer).binding,
+                effect = Effects.DrawCards(1),
+            )
+        listOf(
+            "Whenever enchanted creature deals combat damage to a player, draw a card.",
+            "Whenever enchanted creature deals combat damage, put a +1/+1 counter on ~.",
+            "Whenever enchanted creature deals damage, you gain that much life.",
+            "Whenever enchanted creature is dealt damage, draw a card.",
+        ).forEach { roundTrips(it) }
+    }
+
+    // "It" names the enchanted creature here, not the source; until a card's golden says how that
+    // is spelled, the pronoun declines rather than reading as `~`.
+    "the source pronoun does not read inside an attached damage trigger" {
+        declines("Whenever enchanted creature is dealt damage, it deals that much damage to each opponent.")
     }
 })

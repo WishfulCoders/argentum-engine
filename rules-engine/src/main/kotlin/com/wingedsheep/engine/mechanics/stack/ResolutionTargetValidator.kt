@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.stack
 
+import com.wingedsheep.engine.mechanics.targeting.HexproofFromRules
+import com.wingedsheep.engine.mechanics.targeting.ColorProtection
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
@@ -9,6 +11,7 @@ import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.mechanics.targeting.HexproofSuppression
+import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
 import com.wingedsheep.engine.mechanics.targeting.PlayerTargetRestriction
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -21,6 +24,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.*
+import com.wingedsheep.engine.handlers.ObjectReferenceEnvironment
 
 /**
  * The CR 608.2b target re-check a spell or ability makes as it resolves: every target is checked
@@ -61,13 +65,21 @@ internal class ResolutionTargetValidator(
          * "power <= the amassed Army's power" needs this to resolve the referenced entity, or every
          * target wrongly fails re-validation as unresolvable.
          */
-        storedCollections: Map<String, List<EntityId>> = emptyMap()
+        storedCollections: Map<String, List<EntityId>> = emptyMap(),
+        sourceBattlefieldTimestamp: Long? = null,
+        objectReferences: ObjectReferenceEnvironment =
+            ObjectReferenceEnvironment(),
+        lastKnownSourceSnapshot: EntitySnapshot? = null,
+        resolution: EffectContext? = null,
     ): List<ChosenTarget> {
         // Always project state for shroud/hexproof checks (Rule 702.18, 702.11)
         val projected = state.projectedState
-        val predicateContext = PredicateContext(
+        val predicateContext = (resolution?.let { PredicateContext.fromEffectContext(it) } ?: PredicateContext(
             controllerId = controllerId,
             sourceId = sourceId,
+            sourceBattlefieldTimestamp = sourceBattlefieldTimestamp,
+            objectReferences = objectReferences,
+            lastKnownSourceSnapshot = lastKnownSourceSnapshot,
             xValue = xValue,
             triggeringEntityId = triggeringEntityId,
             triggeringPlayerId = triggeringPlayerId,
@@ -76,9 +88,14 @@ internal class ResolutionTargetValidator(
             // A filter bound to an earlier named target ("target creature that player controls",
             // Ravager of the Fells) re-checks against the same choice at resolution.
             namedTargets = EffectContext.buildNamedTargets(targetRequirements, targets),
+        )).copy(
+            targets = targets,
+            namedTargets = (resolution?.pipeline?.namedTargets ?: emptyMap()) +
+                EffectContext.buildNamedTargets(targetRequirements, targets),
         )
 
-        return targets.filterIndexed { index, target ->
+        val individuallyLegal = targets.indices.filter { index ->
+            val target = targets[index]
             anyTargetStillMatches(state, projected, index, target, targetRequirements, predicateContext) &&
                 when (target) {
                     is ChosenTarget.Player ->
@@ -100,7 +117,46 @@ internal class ResolutionTargetValidator(
                         target.spellEntityId in state.stack
                     }
                 }
-        }
+        }.toSet()
+        val sharingController = targetsSharingAController(projected, state, targets, individuallyLegal, targetRequirements)
+        return targets.filterIndexed { index, _ -> index in individuallyLegal && index !in sharingController }
+    }
+
+    /**
+     * "Two target creatures controlled by different players" (Run Away Together) is a restriction on
+     * the *set* of targets, so it is re-checked as one at resolution: when two still-legal targets of a
+     * `differentControllers` requirement now share a controller, both are illegal (the card's ruling —
+     * "if both creatures are controlled by the same player …, both targets are illegal").
+     *
+     * The per-opponent distribution shape ("for each opponent, up to one target creature that player
+     * controls" — `dynamicMaxCount` set) is excluded: there each target is tied to its own player, so a
+     * control change makes only the moved creature illegal, and which one moved isn't recorded here.
+     * A target that already left the battlefield contributes no controller.
+     */
+    private fun targetsSharingAController(
+        projected: ProjectedState,
+        state: GameState,
+        targets: List<ChosenTarget>,
+        legalIndices: Set<Int>,
+        targetRequirements: List<TargetRequirement>,
+    ): Set<Int> {
+        val byRequirement = legalIndices
+            .filter { targets[it] is ChosenTarget.Permanent }
+            .groupBy { index ->
+                (getRequirementForTargetIndex(index, targetRequirements) as? TargetObject)
+                    ?.takeIf { it.differentControllers && it.dynamicMaxCount == null }
+            }
+        return byRequirement.flatMap { (requirement, indices) ->
+            if (requirement == null) return@flatMap emptyList()
+            indices
+                .groupBy { index ->
+                    val id = (targets[index] as ChosenTarget.Permanent).entityId
+                    projected.getController(id) ?: state.getEntity(id)?.get<ControllerComponent>()?.playerId
+                }
+                .values
+                .filter { it.size > 1 }
+                .flatten()
+        }.toSet()
     }
 
     /** An "any target" slot (CR 115.4) still holds a creature, planeswalker, battle or player its filter accepts. */
@@ -168,6 +224,10 @@ internal class ResolutionTargetValidator(
     ): Boolean {
         // Permanent is valid if still on battlefield
         if (target.entityId !in state.getBattlefield()) return false
+        if (targetingSourceType == TargetingSourceType.SPELL && sourceId != null &&
+            state.getEntity(sourceId)?.get<CardComponent>()?.isAura == true &&
+            !com.wingedsheep.engine.handlers.predicates.EnchantRestriction.hostAllowsAura(
+                state, projected, predicateEvaluator, sourceId, target.entityId)) return false
 
         // ...and if it's still the same object. A permanent blinked in response
         // (Personify, Cloudshift) reuses its entity id here, but it returned as a new
@@ -213,26 +273,25 @@ internal class ResolutionTargetValidator(
         val hexproofSuppressed = HexproofSuppression.isSuppressedForCaster(state, projected, target.entityId, controllerId, predicateEvaluator = predicateEvaluator)
         if (!hexproofSuppressed && projected.hasKeyword(target.entityId, "HEXPROOF") && entityController != controllerId) return false
 
-        // Check hexproof from color (Rule 702.11b)
-        if (!hexproofSuppressed && entityController != controllerId) {
-            for (color in sourceColors) {
-                if (projected.hasKeyword(target.entityId, "HEXPROOF_FROM_${color.name}")) {
-                    return false
-                }
-            }
-            // ...and from the source's card types, e.g. "hexproof from instants"
-            // (Elenda, Saint of Dusk). Same source-type resolution as protection.
-            if (sourceId != null) {
-                for (cardType in SourceTypeTargeting.sourceCardTypes(state, sourceId)) {
-                    if (projected.hasKeyword(
-                            target.entityId,
-                            "HEXPROOF_FROM_CARDTYPE_${cardType.uppercase()}"
-                        )
-                    ) {
-                        return false
-                    }
-                }
-            }
+        // Check hexproof from a quality — color, non-color, card type (Rule 702.11d). Same
+        // shared quality match as the cast-time check, so the two can't disagree.
+        if (!hexproofSuppressed && entityController != controllerId &&
+            HexproofFromRules.blockingQuality(
+                projected,
+                target.entityId,
+                sourceColors = sourceColors.mapTo(mutableSetOf()) { it.name },
+                sourceCardTypes = sourceId?.let { SourceTypeTargeting.sourceCardTypes(state, it) }.orEmpty(),
+                sourceKnown = sourceId != null && state.getEntity(sourceId) != null
+            ) != null
+        ) return false
+
+        // Protection / hexproof from a kind of source (spells, permanents cast this turn,
+        // activated or triggered abilities) — the same reading as at targeting.
+        if (SourceKindProtection.targetingError(
+                state, target.entityId, sourceId, controllerId, targetingSourceType, predicateEvaluator
+            ) != null
+        ) {
+            return false
         }
 
         // Check can't-be-targeted-by-abilities (Shanna, Sisay's Legacy)
@@ -272,10 +331,11 @@ internal class ResolutionTargetValidator(
         sourceSubtypes: Set<String>
     ): Boolean {
         // Check protection from source colors/subtypes (Rule 702.16)
-        for (color in sourceColors) {
-            if (projected.hasKeyword(target.entityId, "PROTECTION_FROM_${color.name}")) {
-                return false
-            }
+        val sourceKnown = sourceId != null && state.getEntity(sourceId) != null
+        if ((sourceKnown || sourceColors.isNotEmpty()) &&
+            ColorProtection.isProtected(projected, target.entityId, sourceColors.map { it.name })
+        ) {
+            return false
         }
         for (subtype in sourceSubtypes) {
             if (projected.hasKeyword(target.entityId, "PROTECTION_FROM_SUBTYPE_${subtype.uppercase()}")) {

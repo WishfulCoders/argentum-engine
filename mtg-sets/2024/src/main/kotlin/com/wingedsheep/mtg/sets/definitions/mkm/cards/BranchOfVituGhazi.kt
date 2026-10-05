@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * land's printed disguise cost; after the special action, the permanent is simply a land again.
  *
  * Not modelled: "you don't lose this mana as steps and phases end". Pools empty as each step and
- * phase ends and `AddManaOfChoice` has no `ManaExpiry` yet (`AddMana` takes `UNTIL_END_OF_TURN`),
+ * phase ends and `AddManaOfChoice` has no `ManaExpiry` yet (`AddMana` takes `KEPT_UNTIL_END_OF_TURN`),
  * so the two mana last only until the current step ends. The ordinary colorless mana ability
  * remains a mana ability and therefore does not use the stack.
  */

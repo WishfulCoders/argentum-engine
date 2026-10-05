@@ -227,8 +227,22 @@ class ObjectTriggerSubject internal constructor(
         return spec(BlockEvent(filter = filter, attackerFilter = attackerFilter, minBlockedAttackers = minBlockedAttackers))
     }
 
-    /** "becomes blocked". */
-    fun becomesBlocked(): TriggerSpec = spec(BecomesBlockedEvent(filter = filter))
+    /**
+     * "becomes blocked [by a creature matching [by]]". Under [Triggers.self] the bare form fires
+     * **once** however many creatures block, with the source as the triggering entity (Rampage);
+     * `by` fires once **per matching blocker**, with that blocker as the triggering entity
+     * (Sylvan Basilisk, "destroy that creature"). `by` is [Triggers.self]-only, and a
+     * `self.matching(…)` subject is rejected: the event's one filter axis is the blocker under SELF.
+     * Under [Triggers.a] the subject filter is the blocked creature ("whenever a Beast becomes blocked").
+     */
+    fun becomesBlocked(by: GameObjectFilter? = null): TriggerSpec {
+        if (binding == TriggerBinding.SELF) {
+            unfiltered("becomesBlocked")
+            return spec(BecomesBlockedEvent(filter = by))
+        }
+        require(by == null) { "becomesBlocked(by) is only supported with Triggers.self" }
+        return spec(BecomesBlockedEvent(filter = filter))
+    }
 
     /**
      * "blocks or becomes blocked [by a creature matching [by]]" — the combat partner is the
@@ -352,7 +366,9 @@ class ObjectTriggerSubject internal constructor(
      * [spellsOnly] / [abilitiesOnly] drop the other half. [firstTimeEachTurn] with [byYou] is
      * valiant. [includeSpellTargets] also fires when a matching *spell* on the stack is targeted
      * (Surrak, Elusive Hunter); [includePlayerTargets] widens to targeted players and needs an
-     * unfiltered subject (Loki, God of Mischief).
+     * unfiltered subject (Loki, God of Mischief). [ofBackupAbility] is "the target of a backup
+     * ability" (Mirror-Shield Hoplite). [targetsOnlyIt] is "… that targets only it" — every target
+     * of the spell or ability is this object (Agrus Kos, Eternal Soldier).
      */
     fun becomesTarget(
         of: GameObjectFilter? = null,
@@ -363,6 +379,8 @@ class ObjectTriggerSubject internal constructor(
         firstTimeEachTurn: Boolean = false,
         includeSpellTargets: Boolean = false,
         includePlayerTargets: Boolean = false,
+        ofBackupAbility: Boolean = false,
+        targetsOnlyIt: Boolean = false,
     ): TriggerSpec = spec(
         BecomesTargetEvent(
             targetFilter = filterOrAny,
@@ -374,6 +392,8 @@ class ObjectTriggerSubject internal constructor(
             includePlayerTargets = includePlayerTargets,
             abilitiesOnly = abilitiesOnly,
             sourceFilter = of,
+            backupAbilitiesOnly = ofBackupAbility,
+            targetsOnlyIt = targetsOnlyIt,
         )
     )
 
@@ -383,13 +403,15 @@ class ObjectTriggerSubject internal constructor(
      * "one or more [type] counters are put on" it ([type] null = any kind). [by] is "you put"
      * ([Player.You]); [firstTimeEachTurn] is "for the first time this turn" (Stalwart Successor);
      * [batch] is the "on one or more <permanents>" template (CR 603.2c) — see
-     * [CountersPlacedEvent.batch].
+     * [CountersPlacedEvent.batch]; [orPlayer] widens the recipient to "a permanent **or player**"
+     * (All Will Be One) — see [CountersPlacedEvent.includePlayers].
      */
     fun getsCounters(
         type: CounterType? = null,
         by: Player? = null,
         firstTimeEachTurn: Boolean = false,
         batch: Boolean = false,
+        orPlayer: Boolean = false,
     ): TriggerSpec = spec(
         CountersPlacedEvent(
             counterType = type,
@@ -397,6 +419,7 @@ class ObjectTriggerSubject internal constructor(
             firstTimeEachTurn = firstTimeEachTurn,
             placedBy = by,
             batch = batch,
+            includePlayers = orPlayer,
         )
     )
 
@@ -435,6 +458,16 @@ class ObjectTriggerSubject internal constructor(
         return spec(ChampionedEvent)
     }
 
+    /**
+     * "When you do" after "you may exert this creature as it attacks" (CR 701.43d) — pair with the
+     * [com.wingedsheep.sdk.scripting.ExertAsItAttacks] static it is linked to (CR 607.2h).
+     */
+    fun exertedAsItAttacks(): TriggerSpec {
+        unfiltered("exertedAsItAttacks")
+        only("exertedAsItAttacks", TriggerBinding.SELF)
+        return spec(ExertedAsItAttacksEvent)
+    }
+
     /** "crews a Vehicle" — the Vehicle is `EffectTarget.TriggeringEntity`. */
     fun crews(): TriggerSpec {
         unfiltered("crews")
@@ -453,6 +486,9 @@ class ObjectTriggerSubject internal constructor(
 
     /** "becomes renowned" (CR 702.112b). */
     fun becomesRenowned(): TriggerSpec = spec(BecameRenownedEvent(filter = filterOrAny))
+
+    /** "becomes monstrous" (CR 701.37b). */
+    fun becomesMonstrous(): TriggerSpec = spec(BecameMonstrousEvent(filter = filterOrAny))
 
     /** "becomes plotted" (CR 718) — fires for the plotted card itself, face up in exile. */
     fun becomesPlotted(): TriggerSpec {
@@ -709,6 +745,20 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
     ): TriggerSpec = spec(SpellCastEvent(spellFilter = spell, player = player, requires = requires))
 
     /**
+     * "copies a [spell] spell" — a copy put onto the stack under this player's control (CR 707.10).
+     * Copies aren't cast, so [casts] never sees them.
+     */
+    fun copies(spell: GameObjectFilter = GameObjectFilter.Any): TriggerSpec =
+        spec(SpellCopiedEvent(spellFilter = spell, player = player))
+
+    /**
+     * "casts or copies a [spell] spell" — magecraft's trigger (`castsOrCopies(GameObjectFilter.InstantOrSorcery)`).
+     * One ability with two events, so a per-turn resolution tally counts both.
+     */
+    fun castsOrCopies(spell: GameObjectFilter = GameObjectFilter.Any): TriggerSpec =
+        Triggers.or(casts(spell), copies(spell))
+
+    /**
      * "casts their [n]th [spell] spell each turn" — counts casts, not resolutions (The Queen of Dale:
      * `anOpponent.castsNth(1, GameObjectFilter.Noncreature)`).
      */
@@ -772,12 +822,14 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
     // ---- Combat ------------------------------------------------------------------------------
 
     /**
-     * "attacks [with one or more [with]]" — you declare attackers, once per combat. Only
-     * [Triggers.you]; a single creature attacking is [ObjectTriggerSubject.attacks].
+     * "attacks [with one or more [with]]" — attackers are declared, once per combat.
+     * [Triggers.you] is "whenever you attack"; [Triggers.anOpponent] is "whenever an opponent
+     * attacks with …"; [Triggers.anyPlayer] is "whenever two or more creatures attack" (Argent
+     * Dais) — any declaration. A single creature attacking is [ObjectTriggerSubject.attacks].
      */
     fun attacks(with: GameObjectFilter? = null, minAttackers: Int = 1): TriggerSpec {
-        only("attacks", Player.You)
-        return spec(YouAttackEvent(minAttackers = minAttackers, attackerFilter = with))
+        only("attacks", Player.You, Player.EachOpponent, Player.Each)
+        return spec(YouAttackEvent(minAttackers = minAttackers, attackerFilter = with, player = player))
     }
 
     /**
@@ -865,6 +917,17 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
     // ---- Life and the game -------------------------------------------------------------------
 
     /** "gains life [for the first time each turn]". */
+    /**
+     * "<player> get(s) one or more [type] counters" ([type] null = any kind) — counters placed on
+     * the *player*, whoever put them: `Triggers.you.getsCounters(CounterType.ENERGY)` is "Whenever
+     * you get one or more {E}" (Aether Revolt). "That many" is `DynamicAmounts.triggerCountersPlaced()`.
+     * See [CountersPlacedEvent.recipient].
+     */
+    fun getsCounters(type: CounterType? = null): TriggerSpec {
+        only("getsCounters", Player.You)
+        return spec(CountersPlacedEvent(counterType = type, recipient = player))
+    }
+
     fun gainsLife(firstTimeEachTurn: Boolean = false): TriggerSpec =
         spec(LifeGainEvent(player, firstTimeEachTurn = firstTimeEachTurn))
 
@@ -920,6 +983,9 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
     /** "scries" — `TRIGGER_SCRY_COUNT` is the number of cards looked at. */
     fun scries(): TriggerSpec = spec(ScriedEvent(player))
 
+    /** "proliferates" (CR 701.34) — fires even when nothing was chosen. */
+    fun proliferates(): TriggerSpec = spec(ProliferatedEvent(player))
+
     /** "surveils" (CR 701.25). */
     fun surveils(): TriggerSpec = spec(SurveiledEvent(player))
 
@@ -934,6 +1000,13 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
 
     /** "forages" (CR 701.59a) — never for a declined forage. */
     fun forages(): TriggerSpec = spec(ForagedEvent(player))
+
+    /**
+     * "investigates [for the first time each turn]" (CR 701.16a) — once per investigate, never for
+     * a plain "create a Clue token".
+     */
+    fun investigates(firstTimeEachTurn: Boolean = false): TriggerSpec =
+        spec(InvestigatedEvent(player, firstTimeEachTurn = firstTimeEachTurn))
 
     /** "solves a Case" (CR 719.3a) — once per Case, ever. */
     fun solvesACase(): TriggerSpec = spec(CaseSolvedEvent(player))

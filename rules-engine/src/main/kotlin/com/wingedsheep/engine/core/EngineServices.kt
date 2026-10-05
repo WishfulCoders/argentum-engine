@@ -94,7 +94,7 @@ class EngineServices(
      * from this whole graph, so it receives them as providers of [castSpellHandler],
      * [playLandHandler] and [costPaymentService], which are only read once an effect executes.
      */
-    val effectExecutorRegistry = EffectExecutorRegistry(
+    val effectExecutorRegistry: EffectExecutorRegistry = EffectExecutorRegistry(
         zones,
         cardRegistry = cardRegistry,
         tokenArtRegistry = tokenArtRegistry,
@@ -104,7 +104,8 @@ class EngineServices(
         playLandHandler = { playLandHandler },
         costPaymentService = { costPaymentService },
         targetFinder = targetFinder,
-        targetValidator = targetValidator
+        targetValidator = targetValidator,
+        legalActionEnumerator = { legalActionEnumerator }
     )
     val manaAbilitySideEffectExecutor = ManaAbilitySideEffectExecutor(
         zones,
@@ -123,12 +124,15 @@ class EngineServices(
         spliceTargetValidator = targetValidator
     )
     val triggerProcessor = TriggerProcessor(cardRegistry = cardRegistry, stackResolver = stackResolver, amountEvaluator = dynamicAmountEvaluator, targetFinder = targetFinder)
-    val manaSolver = ManaSolver(cardRegistry, predicateEvaluator)
+    val manaSolver = ManaSolver(cardRegistry, predicateEvaluator, scopedPlanner = { scopedManaActivationPlanner })
+    private val scopedManaActivationPlanner by lazy {
+        com.wingedsheep.engine.mechanics.mana.ScopedManaActivationPlanner(this)
+    }
     val costCalculator = CostCalculator(cardRegistry, predicateEvaluator)
     val grantedKeywordResolver = GrantedKeywordResolver(cardRegistry)
     val alternativePaymentHandler = AlternativePaymentHandler(grantedKeywordResolver)
     val costHandler = CostHandler(zones)
-    val mulliganHandler = MulliganHandler(cardRegistry)
+    val mulliganHandler = MulliganHandler(cardRegistry, effectExecutorRegistry::execute)
     val castPermissionUtils = CastPermissionUtils(cardRegistry, predicateEvaluator, conditionEvaluator)
     val legalityKernel = LegalityKernel(cardRegistry, conditionEvaluator)
     val sbaChecker = StateBasedActionChecker(zones, cardRegistry = cardRegistry)
@@ -141,13 +145,16 @@ class EngineServices(
         effectExecutor = effectExecutorRegistry::execute,
         replacementProcessor = replacementEffectProcessor
     )
-    val legalActionEnumerator = LegalActionEnumerator(
+    val legalActionEnumerator: LegalActionEnumerator = LegalActionEnumerator(
         cardRegistry, manaSolver, costCalculator, predicateEvaluator, conditionEvaluator, turnManager
     )
     val continuationHandler = ContinuationHandler(this)
     val settler = Settler(
         triggerDetector, triggerProcessor, sbaChecker, stateTriggerPoller, turnManager,
-        effectExecutor = effectExecutorRegistry::execute
+        effectExecutor = effectExecutorRegistry::execute,
+        gameRestarter = GameRestarter(cardRegistry) { state, events ->
+            mulliganHandler.beginFirstTurn(state, events, turnManager)
+        }
     )
 
     /** The cast pipeline (CR 601.2). Built last: it draws on nearly every service above. */

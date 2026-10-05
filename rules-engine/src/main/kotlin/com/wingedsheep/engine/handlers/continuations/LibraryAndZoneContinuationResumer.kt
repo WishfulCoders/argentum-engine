@@ -38,6 +38,7 @@ class LibraryAndZoneContinuationResumer(
     }
 
     override fun resumers(): List<ContinuationResumer<*>> = listOf(
+        resumer(GraveyardOrderContinuation::class, ::resumeGraveyardOrder),
         resumer(ReturnFromGraveyardContinuation::class, ::resumeReturnFromGraveyard),
         resumer(MoveCollectionOrderContinuation::class, ::resumeMoveCollectionOrder),
         resumer(PutOnBottomOfLibraryContinuation::class, ::resumePutOnBottomOfLibrary),
@@ -56,6 +57,20 @@ class LibraryAndZoneContinuationResumer(
         resumer(CastFromCollectionTargetsContinuation::class, ::resumeCastFromCollectionTargets),
         resumer(CastAnyNumberFromCollectionContinuation::class, ::resumeCastAnyNumberFromCollection)
     )
+
+    fun resumeGraveyardOrder(state: GameState, continuation: GraveyardOrderContinuation,
+        response: DecisionResponse, checkForMore: CheckForMore): ExecutionResult {
+        if (response !is OrderedResponse || response.orderedObjects.size != continuation.cards.size ||
+            response.orderedObjects.toSet() != continuation.cards.toSet())
+            return ExecutionResult.error(state, "Order each graveyard card exactly once")
+        var reordered = com.wingedsheep.engine.mechanics.GraveyardOrdering.reorder(
+            state, continuation.ownerId, continuation.cards, response.orderedObjects)
+        if (continuation.remaining.isNotEmpty()) return com.wingedsheep.engine.mechanics.GraveyardOrdering.ask(
+            reordered, continuation.remaining, continuation.events + GraveyardOrderedEvent(continuation.ownerId, response.orderedObjects), continuation.collections, continuation.numbers, continuation.chosenValues, continuation.subtypeGroups, continuation.sacrificed)
+        reordered = exposeCollectionsToNextFrame(reordered, continuation.collections, continuation.numbers,
+            continuation.chosenValues, continuation.subtypeGroups, continuation.sacrificed)
+        return checkForMore(reordered, continuation.events + GraveyardOrderedEvent(continuation.ownerId, response.orderedObjects))
+    }
 
     fun resumeReturnFromGraveyard(
         state: GameState,
@@ -127,7 +142,7 @@ class LibraryAndZoneContinuationResumer(
         for (cardId in orderedCards) {
             val currentZone = newState.zones.entries.firstOrNull { cardId in it.value }?.key
             if (currentZone != null) newState = newState.removeFromZone(currentZone, cardId)
-            if (cardId in newState.stack) newState = newState.removeFromStack(cardId)
+            if (cardId in newState.stack) newState = com.wingedsheep.engine.mechanics.CastCharacteristics.end(newState.removeFromStack(cardId), cardId)
         }
 
         // Positional entry distinguishes real arrivals from same-library ordering.
@@ -500,7 +515,9 @@ class LibraryAndZoneContinuationResumer(
             response.selectedCards.toSet()
         } else {
             val kept = mutableSetOf<EntityId>()
-            val claimedTypes = mutableSetOf<com.wingedsheep.sdk.core.CardType>()
+            // OnePerCardType: each kept card claims *one* of its types, so a multi-type card
+            // doesn't lock out every type it has — keep a card while the kept set still matches.
+            val keptTypeSets = mutableListOf<Set<String>>()
             val claimedColors = mutableSetOf<com.wingedsheep.sdk.core.Color>()
             val claimedNames = mutableSetOf<String>()
             val claimedLandTypes = mutableSetOf<com.wingedsheep.sdk.core.Subtype>()
@@ -526,12 +543,12 @@ class LibraryAndZoneContinuationResumer(
             for (cardId in response.selectedCards) {
                 val acceptsAllRestrictions = continuation.restrictions.all { restriction ->
                     when (restriction) {
-                        is SelectionRestriction.OnePerCardType -> {
-                            val cardTypes = state.getEntity(cardId)
-                                ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
-                                ?.typeLine?.cardTypes ?: emptySet()
-                            cardTypes.isEmpty() || cardTypes.none { it in claimedTypes }
-                        }
+                        is SelectionRestriction.OnePerCardType ->
+                            com.wingedsheep.engine.mechanics.targeting.OnePerCardType.canAssignDistinct(
+                                keptTypeSets + listOf(
+                                    com.wingedsheep.engine.mechanics.targeting.OnePerCardType.cardTypesOf(state, cardId)
+                                )
+                            )
                         is SelectionRestriction.OnePerColor -> {
                             val cardColors = state.getEntity(cardId)
                                 ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
@@ -579,9 +596,7 @@ class LibraryAndZoneContinuationResumer(
                     for (restriction in continuation.restrictions) {
                         when (restriction) {
                             is SelectionRestriction.OnePerCardType -> {
-                                claimedTypes += state.getEntity(cardId)
-                                    ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
-                                    ?.typeLine?.cardTypes ?: emptySet()
+                                keptTypeSets += com.wingedsheep.engine.mechanics.targeting.OnePerCardType.cardTypesOf(state, cardId)
                             }
                             is SelectionRestriction.OnePerColor -> {
                                 claimedColors += state.getEntity(cardId)
@@ -625,14 +640,14 @@ class LibraryAndZoneContinuationResumer(
         val remainder = continuation.allCards.filter { it !in acceptedSet }
 
         // Build the updated collections
-        val updatedCollections = continuation.storedCollections.toMutableMap()
-        updatedCollections[continuation.storeSelected] = selected
+        val updatedCollections = mutableMapOf(continuation.storeSelected to selected)
         if (continuation.storeRemainder != null) {
             updatedCollections[continuation.storeRemainder] = remainder
         }
 
         // Inject updated collections into the consumer frame beneath (if any)
-        val newState = exposeCollectionsToNextFrame(state, updatedCollections)
+        val newState = exposeCollectionsToNextFrame(state,
+            com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.propagateUnknown(updatedCollections, continuation.storedCollections, continuation.sourceCollection))
 
         return checkForMore(newState, emptyList())
     }
@@ -849,9 +864,10 @@ class LibraryAndZoneContinuationResumer(
             ?: return checkForMore(state, emptyList())
         val spellName = spellContainer.get<CardComponent>()?.name ?: "Unknown"
 
-        var newState = state.removeFromStack(spellId)
+        var newState = com.wingedsheep.engine.mechanics.CastCharacteristics.end(state.removeFromStack(spellId), spellId)
         newState = newState.updateEntity(spellId) { c ->
             c.without<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>()
+                .without<com.wingedsheep.engine.state.components.identity.TextReplacementComponent>()
                 .without<com.wingedsheep.engine.state.components.stack.TargetsComponent>()
         }
 
@@ -1111,6 +1127,7 @@ class LibraryAndZoneContinuationResumer(
         var stateForCast = granted
         if (continuation.thenEffect != null) {
             val thenCtx = EffectContext(
+                resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
                 sourceId = continuation.sourceId,
                 objectReferences = continuation.objectReferences,
                 controllerId = continuation.playerId,
@@ -1180,6 +1197,7 @@ class LibraryAndZoneContinuationResumer(
         val thenEffect = continuation.thenEffect
             ?: return checkForMore(state, leadingEvents)
         val ctx = EffectContext(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
             objectReferences = continuation.objectReferences,
             controllerId = continuation.playerId,

@@ -9,6 +9,7 @@ import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.isPlayerControlledByEffect
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.OwnerComponent
@@ -55,10 +56,12 @@ class GatherCardsExecutor(
                 playerIds.flatMap { playerId ->
                     // For a mill, apply ModifyMillAmount replacement effects to the announced
                     // count per milling player (CR 701.13 — "mill that many plus four instead").
-                    val effectiveCount = if (source.isMill) {
-                        MillAmountModifier.apply(state, playerId, count, predicateEvaluator = predicateEvaluator)
-                    } else {
-                        count
+                    // A scry likewise applies ModifyScryAmount (CR 701.22 — "scry that many
+                    // cards plus one instead").
+                    val effectiveCount = when {
+                        source.isMill -> MillAmountModifier.apply(state, playerId, count, predicateEvaluator)
+                        source.isScry -> ScryAmountModifier.apply(state, playerId, count, predicateEvaluator)
+                        else -> count
                     }
                     // A dynamic count can be negative — "equal to its power" read with last-known
                     // information after a -X/-X effect killed the creature (End-Blaze Epiphany).
@@ -67,11 +70,21 @@ class GatherCardsExecutor(
                 }
             }
 
+            is CardSource.BottomOfLibrary -> {
+                val count = amountEvaluator.evaluate(state, source.count, context)
+                val playerIds = resolvePlayers(source.player, context, state)
+                    ?: return EffectResult.error(state, "Could not resolve player for GatherCards")
+                playerIds.flatMap { playerId ->
+                    state.getZone(ZoneKey(playerId, Zone.LIBRARY)).takeLast(count.coerceAtLeast(0))
+                }
+            }
+
             is CardSource.FromZone -> {
                 val playerIds = resolvePlayers(source.player, context, state)
                     ?: return EffectResult.error(state, "Could not resolve player for GatherCards")
                 val allCards = playerIds.flatMap { playerId ->
-                    state.getZone(ZoneKey(playerId, source.zone))
+                    if (source.zone == Zone.SIDEBOARD && state.isPlayerControlledByEffect(playerId)) emptyList()
+                    else state.getZone(ZoneKey(playerId, source.zone))
                 }
                 val filtered = if (source.filter != GameObjectFilter.Any) {
                     val predicateContext = PredicateContext.fromEffectContext(context)
@@ -97,7 +110,8 @@ class GatherCardsExecutor(
                     ?: return EffectResult.error(state, "Could not resolve player for GatherCards")
                 val allCards = playerIds.flatMap { playerId ->
                     source.zones.flatMap { zone ->
-                        state.getZone(ZoneKey(playerId, zone))
+                        if (zone == Zone.SIDEBOARD && state.isPlayerControlledByEffect(playerId)) emptyList()
+                        else state.getZone(ZoneKey(playerId, zone))
                     }
                 }
                 if (source.filter != GameObjectFilter.Any) {
@@ -209,10 +223,20 @@ class GatherCardsExecutor(
                 // follow. The stateless overload returns null for those and the gather silently
                 // yields nothing; it is a strict subset of this one, so every other host shape
                 // resolves exactly as before.
+                //
+                // Last-known leg (CR 608.2h): once the triggering permanent has left the battlefield
+                // — "whenever an equipped creature dies, attach all Equipment attached to that
+                // creature" (Rhuk, Hexgold Nabber) — its links are gone, so the attachments frozen on
+                // the trigger's zone change identify them. They still have to be on the battlefield
+                // and match the filter now; last-known info names them, it doesn't resurrect them.
                 val hostId = context.resolveTarget(source.host, state)
-                val attachedIds = hostId
-                    ?.let { state.getEntity(it)?.get<AttachmentsComponent>()?.attachedIds }
-                    ?: emptyList()
+                val attachedIds = if (hostId != null && hostId in state.getBattlefield()) {
+                    state.getEntity(hostId)?.get<AttachmentsComponent>()?.attachedIds ?: emptyList()
+                } else if (source.host == com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity) {
+                    context.triggerContext?.lastKnownAttachmentIds ?: emptyList()
+                } else {
+                    emptyList()
+                }
                 if (attachedIds.isEmpty()) {
                     emptyList()
                 } else {
@@ -232,6 +256,10 @@ class GatherCardsExecutor(
                         is com.wingedsheep.engine.state.components.stack.ChosenTarget.Player -> null
                     }
                 }
+            }
+
+            is CardSource.SourceLinkedBattlefield -> {
+                SourceObjectRecords.gather(state, context, source.key)
             }
 
             is CardSource.FromLinkedExile -> {
@@ -364,7 +392,9 @@ class GatherCardsExecutor(
                 state.getEntity(sourceId)?.get<CardComponent>()?.name
             }
             // Per-card owners, so a multi-player reveal (e.g. each player reveals their top card)
-            // can be attributed card-by-card in the UI. Only meaningful when owners differ.
+            // can be attributed card-by-card in the UI. Sent whenever some card isn't the
+            // revealer's own — a clash reveals the chosen opponent's top card under the clasher's
+            // id, and in multiplayer the client needs to know *which* player's card that is.
             val cardOwnerIds = cards.map { cardId ->
                 state.getEntity(cardId)?.get<CardComponent>()?.ownerId ?: context.controllerId
             }
@@ -375,7 +405,7 @@ class GatherCardsExecutor(
                     cardNames = cardNames,
                     imageUris = imageUris,
                     source = sourceName,
-                    cardOwnerIds = if (cardOwnerIds.distinct().size > 1) cardOwnerIds else emptyList()
+                    cardOwnerIds = if (cardOwnerIds.any { it != context.controllerId }) cardOwnerIds else emptyList()
                 )
             )
         } else {
@@ -407,13 +437,19 @@ class GatherCardsExecutor(
             state
         }
 
-        return EffectResult.success(newState, events).copy(
-            updatedCollections = mapOf(effect.storeAs to cards)
-        )
+        val collections = mapOf(effect.storeAs to cards)
+        val sourceVariable = effect.source as? CardSource.FromVariable
+        val updatedCollections = if (sourceVariable != null) {
+            com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.propagateUnknown(
+                collections, context.pipeline.storedCollections, sourceVariable.variableName)
+        } else {
+            collections + com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.clearUnknown(context, effect.storeAs)
+        }
+        return EffectResult.success(newState, events).copy(updatedCollections = updatedCollections)
     }
 
     private fun isLibrarySource(source: CardSource): Boolean = when (source) {
-        is CardSource.TopOfLibrary -> true
+        is CardSource.TopOfLibrary, is CardSource.BottomOfLibrary -> true
         is CardSource.FromZone -> source.zone == Zone.LIBRARY
         is CardSource.FromMultipleZones -> source.zones.any { it == Zone.LIBRARY }
         else -> false
@@ -435,6 +471,7 @@ class GatherCardsExecutor(
         context: EffectContext,
         state: GameState
     ): List<com.wingedsheep.sdk.model.EntityId>? = when (player) {
+        is Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
         is Player.Each, is Player.ActivePlayerFirst -> state.turnOrder
         is Player.EachOpponent -> state.turnOrder.filter { it != context.controllerId }
         else -> resolvePlayer(player, context, state)?.let { listOf(it) }

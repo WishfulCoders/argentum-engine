@@ -80,6 +80,7 @@ class CostCalculator(
         chosenTargets: List<EntityId> = emptyList(),
         fromZone: Zone? = null,
         declaredCostSlot: ChoiceSlot? = null,
+        baseCost: ManaCost = cardDef.manaCost,
     ): ManaCost {
         var totalReduction = 0
         var totalIncrease = 0
@@ -94,7 +95,7 @@ class CostCalculator(
             if (!gatingApplies(state, casterId, cardDef, ability, declaredCostSlot)) continue
             applyToSpellCast(
                 // A self-cast modifier has no source *permanent*: the card is the spell being cast,
-                // so source-relative reduction sources read nothing.
+                // so source-relative reduction sources read nothing and "you" is the caster.
                 state, cardDef, casterId, ability.modification, chosenTargets, sourceId = null,
                 addGenericReduction = { totalReduction += it },
                 addGenericIncrease = { totalIncrease += it },
@@ -123,11 +124,11 @@ class CostCalculator(
             totalReduction += countPermanentsOfType(state, casterId, rider.forType)
         }
 
-        // Turn-scoped "spells you cast this turn that match … cost {N} less" discounts (Will /
-        // Rowan, Scion of …). The amount was fixed when the granting ability resolved, so unlike
+        // Duration-bounded "spells you cast this turn / until your next turn that match … cost {N}
+        // less" discounts (Will / Rowan, Scion of …; Ral, Leyline Prodigy). The amount was fixed when the granting ability resolved, so unlike
         // the affinity riders above nothing is recomputed here — and unlike them, a matching cast
         // does not consume the entry.
-        for (reduction in state.turnSpellCostReductions) {
+        for (reduction in state.spellCostReductions) {
             if (reduction.controllerId != casterId) continue
             if (!matchesCardDefinition(cardDef, reduction.spellFilter, null, state, state.projectedState)) continue
             totalReduction += reduction.amount
@@ -155,7 +156,7 @@ class CostCalculator(
         // reductions; the mana component is floored at {0} (it can't be reduced below {0}). Apply
         // increases first so a reduction that overshoots {0} doesn't leave a stale increase behind
         // (e.g. {U} +{1} −{2} → {U}, not {1}{U}).
-        var effectiveCost = increaseGenericCost(cardDef.manaCost, totalIncrease)
+        var effectiveCost = increaseGenericCost(baseCost, totalIncrease)
         if (coloredIncreaseSymbols.isNotEmpty()) {
             effectiveCost = increaseColoredCost(effectiveCost, coloredIncreaseSymbols)
         }
@@ -166,7 +167,10 @@ class CostCalculator(
         if (coloredReductionWithOverflow.isNotEmpty()) {
             effectiveCost = reduceColoredCostWithOverflow(effectiveCost, coloredReductionWithOverflow)
         }
-        return effectiveCost
+        // Last, once the cost is final: symbols the caster may pay with life (K'rrik) become
+        // Phyrexian. This changes how the cost may be paid, not the cost, so it follows every
+        // increase and reduction.
+        return LifePayableMana.apply(state, cardRegistry, casterId, effectiveCost)
     }
 
     /**
@@ -755,8 +759,10 @@ class CostCalculator(
      * what CR 107.1b describes: each modifier is its own calculation, so one shrunk source can never
      * eat another source's discount.
      *
-     * [sourceId] is null only for a self-cast modifier, where there is no source permanent at all
-     * (the card is the spell being cast) — that contributes 0.
+     * [sourceId] is null for a self-cast modifier, where there is no source permanent at all (the
+     * card is the spell being cast). "You" is then the caster — Deem Inferior's "for each card
+     * you've drawn this turn", Bloodsoaked Insight's "each 1 life your opponents have lost this
+     * turn" — and source-relative reads (`EffectTarget.Self`'s power) find no source and yield 0.
      */
     private fun dynamicReductionValue(
         state: GameState,
@@ -764,22 +770,19 @@ class CostCalculator(
         casterId: EntityId,
         amount: DynamicAmount
     ): Int {
-        if (sourceId == null) return 0
+        val controllerId = sourceId?.let { state.projectedState.getController(it) } ?: casterId
         return dynamicAmountEvaluator.evaluate(
             state,
             amount,
-            EffectContext(
-                sourceId = sourceId,
-                controllerId = state.projectedState.getController(sourceId) ?: casterId,
-            ),
+            EffectContext(sourceId = sourceId, controllerId = controllerId),
         ).coerceAtLeast(0)
     }
 
     /**
      * One battlefield permanent's value for [property]. Power/toughness read projected state
      * (CR 613) and fall back to the printed base when a permanent has no projected P/T; base
-     * power/toughness read the printed base directly; mana value comes from
-     * `CardDefinition.manaCost.cmc` (X-costs contribute X = 0 per CR 202.3b on the battlefield).
+     * power/toughness read the printed base directly; mana value is the permanent's own
+     * [CardComponent.manaValue], so copy and prototype values count.
      */
     private fun numericProperty(
         projectedState: ProjectedState,
@@ -794,7 +797,7 @@ class CostCalculator(
             projectedState.getToughness(entityId) ?: baseCharacteristic(card.baseStats?.toughness)
         EntityNumericProperty.BasePower -> baseCharacteristic(card.baseStats?.power)
         EntityNumericProperty.BaseToughness -> baseCharacteristic(card.baseStats?.toughness)
-        EntityNumericProperty.ManaValue -> cardDef.manaCost.cmc
+        EntityNumericProperty.ManaValue -> card.manaValue
         else -> 0
     }
 
@@ -1253,9 +1256,11 @@ class CostCalculator(
             CardPredicate.IsToken -> false
             CardPredicate.IsNontoken -> true
             CardPredicate.IsLegendary -> typeLine.isLegendary
+            CardPredicate.IsSnow -> typeLine.isSnow
             CardPredicate.IsNonlegendary -> !typeLine.isLegendary
             CardPredicate.HasNonManaActivatedAbility -> cardDef.hasNonManaActivatedAbility
             CardPredicate.HasActivatedAbility -> cardDef.hasActivatedAbility
+            CardPredicate.HasCycling -> cardDef.hasCycling
 
             is CardPredicate.HasColor -> predicate.color in cardDef.colors
             is CardPredicate.NotColor -> predicate.color !in cardDef.colors
@@ -1265,6 +1270,7 @@ class CostCalculator(
             CardPredicate.IsColored -> cardDef.colors.isNotEmpty()
             CardPredicate.IsMulticolored -> cardDef.colors.size > 1
             CardPredicate.IsMonocolored -> cardDef.colors.size == 1
+            is CardPredicate.HasExactlyColors -> cardDef.colors.size == predicate.count
 
             is CardPredicate.HasSubtype -> typeLine.hasSubtype(predicate.subtype)
             is CardPredicate.NotSubtype -> !typeLine.hasSubtype(predicate.subtype)
@@ -1305,11 +1311,14 @@ class CostCalculator(
             sourceDynamicValue(state, sourceEntityId, predicate.amount)
                 ?.let { cardDef.manaCost.cmc == it } ?: false
         is CardPredicate.PowerEqualsDynamic -> false
+        is CardPredicate.PowerAtMostDynamic -> false
         is CardPredicate.ToughnessEqualsDynamic -> false
             is CardPredicate.PowerGreaterThanEntity -> false
             is CardPredicate.PowerAtMostEntity -> false
             is CardPredicate.CouldEnchant -> false
+            CardPredicate.CouldProduceColorlessMana -> false
             is CardPredicate.PowerLessThanEntity -> false
+            is CardPredicate.CompareNumericProperty -> false
             // A printed card's power never exceeds its own base power statically (they're equal).
             CardPredicate.PowerGreaterThanBase -> false
             CardPredicate.ManaValueIsEven -> cardDef.manaCost.cmc % 2 == 0
@@ -1551,12 +1560,39 @@ class CostCalculator(
      */
     data class AlternativeCastingCostGrant(
         val manaCost: ManaCost,
-        val additionalCosts: List<AdditionalCost> = emptyList()
+        val additionalCosts: List<AdditionalCost> = emptyList(),
+        val sourceId: EntityId? = null,
+        val spellFilter: GameObjectFilter = GameObjectFilter.Any,
+        val asThoughFlash: Boolean = false
     )
+
+    /**
+     * Whether [grant] covers a spell with definition [spellCardDef] (Primal Prayers: "creature
+     * spells with mana value 3 or less"). Matched against the printed definition, like
+     * [hasFreeCastPermission]'s `spellFilter`, with the granting permanent as the predicate source.
+     */
+    fun alternativeCastingCostCovers(
+        state: GameState,
+        grant: AlternativeCastingCostGrant,
+        spellCardDef: CardDefinition
+    ): Boolean = grant.spellFilter == GameObjectFilter.Any ||
+        matchesCardDefinition(spellCardDef, grant.spellFilter, grant.sourceId, state, state.projectedState)
+
+    /**
+     * The alternative casting costs that cover [spellCardDef] specifically — every read site that
+     * prices or pays a `GRANTED` cast goes through this, so they all pick the same grant.
+     */
+    fun findAlternativeCastingCosts(
+        state: GameState,
+        casterId: EntityId,
+        spellCardDef: CardDefinition
+    ): List<AlternativeCastingCostGrant> =
+        findAlternativeCastingCosts(state, casterId).filter { alternativeCastingCostCovers(state, it, spellCardDef) }
 
     /**
      * Find alternative casting costs available to the caster from battlefield permanents.
      * Scans permanents controlled by the caster for GrantAlternativeCastingCost abilities.
+     * Unfiltered: callers pricing a specific spell use the overload taking its definition.
      *
      * @return List of alternative cost grants available (may be empty)
      */
@@ -1573,7 +1609,10 @@ class CostCalculator(
                     costs.add(
                         AlternativeCastingCostGrant(
                             manaCost = ManaCost.parse(ability.cost),
-                            additionalCosts = ability.additionalCosts
+                            additionalCosts = ability.additionalCosts,
+                            sourceId = entityId,
+                            spellFilter = ability.spellFilter,
+                            asThoughFlash = ability.asThoughFlash
                         )
                     )
                 }
@@ -1819,7 +1858,7 @@ class CostCalculator(
                 else -> { /* Battlefield reductions don't apply to alternative casting costs. */ }
             }
         }
-        return increaseGenericCost(alternativeCost, totalIncrease)
+        return LifePayableMana.apply(state, cardRegistry, casterId, increaseGenericCost(alternativeCost, totalIncrease))
     }
 
     /**

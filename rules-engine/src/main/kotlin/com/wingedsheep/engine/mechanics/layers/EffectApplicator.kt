@@ -7,6 +7,7 @@ import com.wingedsheep.engine.handlers.ConditionEvaluationContext
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.linkedexile.LinkedExileLookup
+import com.wingedsheep.engine.mechanics.targeting.ColorProtection
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ProtectionComponent
 import com.wingedsheep.engine.state.GameState
@@ -59,7 +60,8 @@ internal class EffectApplicator(
     fun applyEffect(
         effect: ContinuousEffect,
         state: GameState,
-        projectedValues: MutableMap<EntityId, MutableProjectedValues>
+        projectedValues: MutableMap<EntityId, MutableProjectedValues>,
+        restrictionSurvivesSourceAbilityRemoval: Boolean = false
     ) {
         val sourceCondition = effect.sourceCondition
         if (sourceCondition != null) {
@@ -147,6 +149,11 @@ internal class EffectApplicator(
                     if (mod.keyword == Keyword.CHANGELING.name) {
                         values.subtypes.addAll(com.wingedsheep.sdk.core.Subtype.ALL_CREATURE_TYPES)
                     }
+                }
+                is Modification.PreventEnchantment -> {
+                    values.enchantmentRestrictions.add(ActiveEnchantmentRestriction(
+                        effect.sourceId, mod.auras, mod.exceptSource, restrictionSurvivesSourceAbilityRemoval
+                    ))
                 }
                 is Modification.RemoveKeyword -> {
                     values.keywords.remove(mod.keyword)
@@ -366,10 +373,14 @@ internal class EffectApplicator(
                                     protection.subtypes.forEach { values.keywords.add("PROTECTION_FROM_SUBTYPE_${it.uppercase()}") }
                                     protection.supertypes.forEach { values.keywords.add("PROTECTION_FROM_SUPERTYPE_${it.uppercase()}") }
                                     protection.cardTypes.forEach { values.keywords.add("PROTECTION_FROM_CARDTYPE_$it") }
+                                    if (protection.multicolored) values.keywords.add(ColorProtection.PROTECTION_FROM_MULTICOLORED)
                                 }
                             }
                         }
                     }
+                }
+                is Modification.CanAttackAsThoughHasty -> {
+                    values.canAttackAsThoughHasty = true
                 }
                 is Modification.SetCantAttack -> {
                     values.cantAttack = true
@@ -385,6 +396,10 @@ internal class EffectApplicator(
                 }
                 is Modification.SetMustAttack -> {
                     values.mustAttack = true
+                }
+                is Modification.SetMustAttackPlayer -> {
+                    values.mustAttack = true
+                    values.mustAttackPlayer = true
                 }
                 is Modification.SetMustBlock -> {
                     values.mustBlock = true

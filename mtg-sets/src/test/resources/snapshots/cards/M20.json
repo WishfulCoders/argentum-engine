@@ -105,6 +105,46 @@
     ]
 }
 
+// Bloodthirsty Aerialist
+{
+    "name": "Bloodthirsty Aerialist",
+    "manaCost": "{1}{B}{B}",
+    "typeLine": "Creature — Vampire Rogue",
+    "oracleText": "Flying\nWhenever you gain life, put a +1/+1 counter on this creature.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Bloodthirsty Aerialist:1",
+                "trigger": "LifeGainEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "91",
+        "rarity": "UNCOMMON",
+        "artist": "Igor Kieryluk",
+        "flavorText": "A circus acrobat in life, she kills with such fluid grace that even her victims are awed by her performance.",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/9/29156f28-38d8-4f65-b416-089f3fd97109.jpg"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Brineborn Cutthroat
 {
     "name": "Brineborn Cutthroat",
@@ -130,7 +170,7 @@
                     "count": 1,
                     "target": "Self"
                 },
-                "triggerRestriction": "IsNotYourTurn",
+                "triggerRestriction": "IsOpponentsTurn",
                 "descriptionOverride": "Whenever you cast a spell during an opponent's turn, put a +1/+1 counter on this creature."
             }
         ]
@@ -464,6 +504,102 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Dread Presence
+{
+    "name": "Dread Presence",
+    "manaCost": "{3}{B}",
+    "typeLine": "Creature — Nightmare",
+    "oracleText": "Whenever a Swamp you control enters, choose one —\n• You draw a card and you lose 1 life.\n• This creature deals 2 damage to any target and you gain 2 life.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Dread Presence:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "land Swamp ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "DrawCards",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    {
+                                        "type": "LoseLife",
+                                        "amount": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        },
+                                        "target": "Controller"
+                                    }
+                                ]
+                            },
+                            "description": "You draw a card and you lose 1 life"
+                        },
+                        {
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "DealDamage",
+                                        "amount": {
+                                            "type": "Fixed",
+                                            "amount": 2
+                                        },
+                                        "target": {
+                                            "type": "BoundVariable",
+                                            "name": "t0"
+                                        }
+                                    },
+                                    {
+                                        "type": "GainLife",
+                                        "amount": {
+                                            "type": "Fixed",
+                                            "amount": 2
+                                        }
+                                    }
+                                ]
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "AnyTarget",
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "This creature deals 2 damage to any target and you gain 2 life"
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever a Swamp you control enters, choose one — You draw a card and you lose 1 life; or this creature deals 2 damage to any target and you gain 2 life."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "96",
+        "rarity": "RARE",
+        "artist": "Anthony Palumbo",
+        "flavorText": "It beckons silently, waiting in the darkness.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/4/0430db1a-5cad-4444-ba93-57fb32e65606.jpg?1783932995"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

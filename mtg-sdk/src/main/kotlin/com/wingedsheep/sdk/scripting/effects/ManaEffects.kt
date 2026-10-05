@@ -154,7 +154,8 @@ data class AddManaEffect(
     /**
      * When this mana leaves the pool. [ManaExpiry.END_OF_TURN] (the default) is ordinary
      * mana; [ManaExpiry.END_OF_COMBAT] is firebending-style mana that the pool keeps through
-     * combat and discards when combat ends.
+     * combat and discards when combat ends; [ManaExpiry.KEPT_UNTIL_END_OF_TURN] survives every
+     * step/phase boundary this turn (Brazen Collector).
      */
     val expiry: ManaExpiry = ManaExpiry.END_OF_TURN,
     /**
@@ -176,11 +177,10 @@ data class AddManaEffect(
             else -> "Add {${color.symbol}} for each ${a.description}"
         })
         if (restriction != null) append(". ${restriction.description}")
-        if (expiry == ManaExpiry.END_OF_COMBAT) {
-            append(". Until end of combat, you don't lose this mana as steps and phases end")
-        }
-        if (expiry == ManaExpiry.UNTIL_END_OF_TURN) {
-            append(". Until end of turn, you don't lose this mana as steps and phases end")
+        when (expiry) {
+            ManaExpiry.END_OF_COMBAT -> append(". Until end of combat, you don't lose this mana as steps and phases end")
+            ManaExpiry.KEPT_UNTIL_END_OF_TURN -> append(". Until end of turn, you don't lose this mana as steps and phases end")
+            ManaExpiry.END_OF_TURN -> Unit
         }
         for (rider in riders) append(". ${rider.description}")
     }
@@ -445,4 +445,11 @@ enum class ManaColorSource {
 
     /** The exiled cards used to craft the source (`CraftedFromExiledComponent`, printed colors). */
     CraftedMaterials,
+}
+
+/** Lose every unit of unspent mana, including restricted and combat-duration mana. */
+@SerialName("LoseUnspentMana")
+@Serializable
+data class LoseUnspentManaEffect(val target: EffectTarget = EffectTarget.Controller) : Effect {
+    override val description: String = "${target.description} loses all unspent mana"
 }

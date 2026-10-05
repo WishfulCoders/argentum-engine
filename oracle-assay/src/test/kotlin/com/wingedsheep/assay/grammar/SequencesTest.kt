@@ -109,6 +109,27 @@ class SequencesTest : StringSpec({
             fragment("Scry 2. Draw two cards. You lose 2 life.")
     }
 
+    // The elided second subject: "you" licenses "lose 1 life", so the rule spells the subject and is
+    // an alternate of the full-stop run, which is what prints.
+    "you draw and lose life is the full-stop run with its second subject elided" {
+        fragment("You draw a card and lose 1 life.") shouldBe CardFragment(
+            script = CardScript(
+                spellEffect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
+            )
+        )
+        fragment("You draw two cards and lose 2 life.") shouldBe fragment("Draw two cards. You lose 2 life.")
+        Grammar.abilityLine.printLine(fragment("You draw three cards and lose 3 life.")) shouldBe
+            "Draw three cards. You lose 3 life."
+        // Only "you" licenses the elision: a bare "lose 1 life" is no clause of its own.
+        Grammar.abilityLine.parseLine("Target player draws a card and lose 1 life.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+    }
+
+    "the X-count draw-and-lose reads with its second subject elided" {
+        fragment("You draw X cards and lose X life, where X is the number of Zombies you control.") shouldBe
+            fragment("You draw X cards and you lose X life, where X is the number of Zombies you control.")
+    }
+
     // Two declared targets are numbered by the position their clause introduces them in, and the
     // first one keeps the bare name so a single-target line folds through unchanged.
     "two clauses that each declare a target are numbered by position" {
@@ -157,6 +178,34 @@ class SequencesTest : StringSpec({
         )
     }
 
+    // The doesn't-untap band. The rider is a `SelfSteps.retargetable` member, so the demonstrative
+    // reads in the later position (Stitched Mangler) and prints back as the pronoun.
+    "the doesn't-untap rider reads the demonstrative and prints the pronoun" {
+        val line = "Tap target creature. That creature doesn't untap during its controller's next untap step."
+        fragment(line) shouldBe
+            fragment("Tap target creature. It doesn't untap during its controller's next untap step.")
+        Grammar.abilityLine.printLine(fragment(line)) shouldBe
+            "Tap target creature. It doesn't untap during its controller's next untap step."
+    }
+
+    // …and about the source it says "your", which is the spelling the CHK pain-free duals print after
+    // their coloured mana: one ability per colour, each `AddMana then` the same freeze.
+    "the source doesn't untap during your next untap step" {
+        fragment("~ doesn't untap during your next untap step.") shouldBe CardFragment(
+            script = CardScript(
+                spellEffect = Effects.GrantKeyword(
+                    AbilityFlag.DOESNT_UNTAP,
+                    EffectTarget.Self,
+                    Duration.UntilAfterAffectedControllersNextUntap,
+                )
+            )
+        )
+        roundTrips("{T}: Add {U} or {B}. ~ doesn't untap during your next untap step.")
+        // The source's controller is "you", so the other possessive is not the source's spelling.
+        Grammar.abilityLine.parseLine("~ doesn't untap during its controller's next untap step.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+    }
+
     // The `.` decline band. The name is not an anaphor — it denotes the card in any sentence — so a
     // later clause can spell it, and ninety-four lines were dying on their own full stop for want of
     // that one membership.
@@ -190,6 +239,20 @@ class SequencesTest : StringSpec({
         roundTrips("Untap target creature. It gets +2/+4 and gains reach until end of turn.")
         roundTrips("Target creature gets +2/+0 until end of turn. Regenerate it.")
         roundTrips("Put a +1/+1 counter on target creature. It gains vigilance until end of turn.")
+    }
+
+    // The removal spell's death replacement is a member of the same vocabulary: its object is the
+    // creature the damage or the shrink was aimed at, and Oracle's "that creature" is a variant of
+    // the pronoun the run canonicalizes on.
+    "the exile-instead rider marks the earlier clause's target" {
+        fragment("~ deals 3 damage to target creature. If that creature would die this turn, exile it instead.")
+            .script.spellEffect shouldBe (
+            Effects.DealDamage(3, Targets.bound()) then Effects.MarkExileOnDeath(Targets.bound())
+        )
+        roundTrips("Target creature gets -5/-5 until end of turn. If it would die this turn, exile it instead.")
+        Grammar.abilityLine.printLine(
+            fragment("~ deals 2 damage to target creature. If that creature would die this turn, exile it instead.")
+        ) shouldBe "~ deals 2 damage to target creature. If it would die this turn, exile it instead."
     }
 
     // A pronoun with nothing to point at is not a model — Creeping Tar Pit spells "it" about the

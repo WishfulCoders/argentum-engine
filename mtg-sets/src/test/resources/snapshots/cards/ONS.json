@@ -986,7 +986,10 @@
                     "body": {
                         "type": "RemoveCounters",
                         "counterType": "GOLD",
-                        "count": 2147483647,
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 2147483647
+                        },
                         "target": "IterationEntity"
                     }
                 }
@@ -1773,7 +1776,7 @@
     "metadata": {
         "collectorNumber": "189",
         "rarity": "RARE",
-        "artist": "Dario Calmese",
+        "artist": "Arnie Swekel",
         "flavorText": "\"The next one who summons a cat is going to get it.\"\n—Arcanis the Omnipotent",
         "imageUri": "https://cards.scryfall.io/normal/front/e/0/e0ddcf4a-1943-49dd-a02c-75804ce4bc3e.jpg?1562948535"
     },
@@ -3931,9 +3934,9 @@
         }
     },
     "metadata": {
-        "collectorNumber": "189",
+        "collectorNumber": "197",
         "rarity": "UNCOMMON",
-        "artist": "Christopher Rush",
+        "artist": "Greg Hildebrandt & Tim Hildebrandt",
         "flavorText": "Everyone wanted it. No one wanted to keep it.",
         "imageUri": "https://cards.scryfall.io/normal/front/b/7/b72257f5-0cf9-45ca-8dc7-a1a93bd7dd1e.jpg?1562938173"
     },
@@ -8667,45 +8670,42 @@
                     }
                 },
                 "effect": {
-                    "type": "ForEach",
-                    "space": {
-                        "type": "IterationSpace.Players",
-                        "players": "EachOpponent"
-                    },
-                    "body": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "FromZone",
-                                    "zone": "Hand"
-                                },
-                                "storeAs": "hand"
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "player": "TriggeringPlayer"
                             },
-                            {
-                                "type": "SelectFromCollection",
-                                "from": "hand",
-                                "selection": {
-                                    "type": "ChooseExactly",
-                                    "count": {
-                                        "type": "Fixed",
-                                        "amount": 1
-                                    }
-                                },
-                                "storeSelected": "discarded"
+                            "storeAs": "hand"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "hand",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             },
-                            {
-                                "type": "MoveCollection",
-                                "from": "discarded",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Graveyard"
-                                },
-                                "moveType": "Discard"
-                            }
-                        ]
-                    }
+                            "chooser": "TriggeringPlayer",
+                            "storeSelected": "discarded",
+                            "prompt": "Choose 1 card to discard"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "discarded",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard",
+                                "player": "TriggeringPlayer"
+                            },
+                            "moveType": "Discard"
+                        }
+                    ]
                 }
             }
         ]
@@ -13710,45 +13710,42 @@
                     }
                 },
                 "effect": {
-                    "type": "ForEach",
-                    "space": {
-                        "type": "IterationSpace.Players",
-                        "players": "EachOpponent"
-                    },
-                    "body": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "FromZone",
-                                    "zone": "Hand"
-                                },
-                                "storeAs": "hand"
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "player": "TriggeringPlayer"
                             },
-                            {
-                                "type": "SelectFromCollection",
-                                "from": "hand",
-                                "selection": {
-                                    "type": "ChooseExactly",
-                                    "count": {
-                                        "type": "Fixed",
-                                        "amount": 2
-                                    }
-                                },
-                                "storeSelected": "discarded"
+                            "storeAs": "hand"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "hand",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             },
-                            {
-                                "type": "MoveCollection",
-                                "from": "discarded",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Graveyard"
-                                },
-                                "moveType": "Discard"
-                            }
-                        ]
-                    }
+                            "chooser": "TriggeringPlayer",
+                            "storeSelected": "discarded",
+                            "prompt": "Choose 2 cards to discard"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "discarded",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard",
+                                "player": "TriggeringPlayer"
+                            },
+                            "moveType": "Discard"
+                        }
+                    ]
                 }
             }
         ]
@@ -14989,7 +14986,7 @@
     "metadata": {
         "collectorNumber": "116",
         "rarity": "RARE",
-        "artist": "Greg Staples",
+        "artist": "Justin Sweet",
         "flavorText": "\"The only truth is that which you shape for yourself.\"",
         "imageUri": "https://cards.scryfall.io/normal/front/f/2/f2c79e64-91bf-4e87-a4fd-3136ea67c5bb.jpg?1562946613"
     },
@@ -15844,9 +15841,9 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "116",
+        "collectorNumber": "240",
         "rarity": "UNCOMMON",
-        "artist": "Mark Tedin",
+        "artist": "Jeff Miracola",
         "flavorText": "It has learned to anticipate its master's wishes.",
         "imageUri": "https://cards.scryfall.io/normal/front/e/8/e89156b5-8bdb-41d1-a7aa-63f770a9b070.jpg?1562950377"
     },

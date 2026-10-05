@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.legalactions.enumerators
 
+import com.wingedsheep.engine.legalactions.surfacedRequirements
+import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.legalactions.ActionEnumerator
@@ -73,9 +75,10 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                 // ability activates from the battlefield, so this only guards future cards.
                 if (context.castPermissionUtils.isPowerUpActivationRestricted(state, ability)) continue
 
-                // An any-zone "players can't activate abilities" (Yuriko, Blade of the Mighty) —
-                // the same check `ActivateAbilityHandler.validate` makes off the battlefield.
-                if (context.castPermissionUtils.isActivationPreventedForPlayer(
+                // An any-zone "players can't activate abilities" (Yuriko, Blade of the Mighty) or
+                // name lock (Pithing Needle) — the same check `ActivateAbilityHandler.validate`
+                // makes off the battlefield.
+                if (context.castPermissionUtils.isActivationForbidden(
                         state, entityId, playerId, abilityIsManaAbility = ability.isManaAbility
                     )
                 ) continue
@@ -108,6 +111,8 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                 val abilityContext = com.wingedsheep.engine.mechanics.mana.buildAbilityPaymentContext(
                     cardComponent, context.projected, entityId, ability
                 )
+
+                if (!com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment.canAffordAbility(state, playerId, effectiveCost)) continue
 
                 when (effectiveCost) {
                     is AbilityCost.Atom -> when (val atom = effectiveCost.atom) {
@@ -213,11 +218,10 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                     else -> null
                 }
                 val zoneManaCostString = abilityManaCost?.toString()
-                val abilityHasXCost = abilityManaCost?.hasX == true
+                val abilityHasXCost = abilityManaCost?.hasX == true || context.costUtils.hasPlayerChosenNonManaX(effectiveCost)
                 val abilityMaxAffordableX: Int? = if (abilityHasXCost) {
-                    val availableSources = context.manaSolver.getAvailableManaCount(state, playerId, precomputedSources = context.availableManaSources)
-                    val fixedCost = abilityManaCost.cmc
-                    (availableSources - fixedCost).coerceAtLeast(0)
+                    context.costUtils.calculateMaxAffordableX(state, playerId, effectiveCost, abilityManaCost,
+                        precomputedSources = context.availableManaSources, sourceId = entityId)
                 } else null
 
                 // Compute auto-tap preview for UI highlighting (skipped in ACTIONS_ONLY mode)
@@ -227,7 +231,7 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                 // Check for target requirements
                 val targetReqs = ability.targetRequirements
                 if (targetReqs.isNotEmpty()) {
-                    val targetInfos = context.targetUtils.buildTargetInfos(state, playerId, targetReqs, sourceId = entityId)
+                    val targetInfos = context.targetUtils.buildTargetInfos(state, playerId, targetReqs, sourceId = entityId, targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY)
                     val allSatisfied = context.targetUtils.allRequirementsSatisfied(targetInfos)
                     if (!allSatisfied) continue
 
@@ -264,7 +268,7 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                                 targetCount = firstInfo.maxTargets,
                                 minTargets = firstReq.effectiveMinCount,
                                 targetDescription = firstReq.description,
-                                targetRequirements = if (targetInfos.size > 1) targetInfos else null,
+                                targetRequirements = targetInfos.surfacedRequirements(),
                                 additionalCostInfo = costInfo,
                                 hasXCost = abilityHasXCost,
                                 maxAffordableX = abilityMaxAffordableX,

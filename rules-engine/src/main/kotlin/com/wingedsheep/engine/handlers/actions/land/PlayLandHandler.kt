@@ -18,6 +18,7 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.permissions.activeMayPlayFor
+import com.wingedsheep.engine.state.permissions.consumeSingleUseMayPlayFor
 import com.wingedsheep.engine.state.permissions.hasMayPlayFor
 import com.wingedsheep.engine.state.permissions.removeMayPlayPermissionsForCard
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
@@ -35,11 +36,13 @@ import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
+import com.wingedsheep.engine.state.components.identity.emblemStaticAbilitiesOf
 import com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent
 import com.wingedsheep.sdk.scripting.MayPlayPermanentsFromGraveyard
 import com.wingedsheep.engine.legalactions.utils.LandDropUtils
 import com.wingedsheep.sdk.scripting.PlayFromTopOfLibrary
 import com.wingedsheep.sdk.scripting.PlayLandsAndCastFilteredFromTopOfLibrary
+import com.wingedsheep.engine.handlers.actions.spell.allowsLand
 import kotlin.reflect.KClass
 import com.wingedsheep.engine.core.Outcome
 
@@ -338,6 +341,11 @@ class PlayLandHandler(
         // through the stack, so StackResolver's removeMayPlayPermissionsForCard never runs
         // for them; without this, a permanent permission would silently re-authorize the
         // card if it later returned to exile.
+        // A single-use grant ("play one of those cards") is spent for its whole group, from exile or
+        // a graveyard alike — before the per-card cleanup below drops this card from it.
+        if (fromZone == Zone.EXILE || fromZone == Zone.GRAVEYARD) {
+            newState = newState.consumeSingleUseMayPlayFor(action.cardId, action.playerId)
+        }
         if (fromZone == Zone.EXILE) {
             // Record once-per-turn linked-exile permission usage (Hauken's Insight — "Once during
             // each of your turns, you may play a land or cast a spell"). Resolved against the
@@ -385,9 +393,9 @@ class PlayLandHandler(
         // every exit so counter-placement triggers still see them.
         val entersWithEvents: List<com.wingedsheep.engine.core.GameEvent> = if (cardDef != null) {
             val (afterOwn, ownEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements
-                .applyFromDefinition(newState, action.cardId, cardDef, action.playerId, predicateEvaluator = predicateEvaluator)
+                .applyFromDefinition(newState, action.cardId, cardDef, action.playerId, predicateEvaluator = predicateEvaluator, preEntryZone = sourceZoneKey)
             val (afterGlobal, globalEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements
-                .applyGlobal(afterOwn, action.cardId, action.playerId, cardRegistry, predicateEvaluator = predicateEvaluator)
+                .applyGlobal(afterOwn, action.cardId, action.playerId, cardRegistry, predicateEvaluator = predicateEvaluator, preEntryZone = sourceZoneKey)
             newState = afterGlobal
             ownEvents + globalEvents
         } else emptyList()
@@ -656,7 +664,7 @@ class PlayLandHandler(
     ): Boolean {
         val library = state.getLibrary(playerId)
         if (library.isEmpty() || library.first() != cardId) return false
-        return hasPlayFromTopOfLibrary(state, playerId)
+        return hasPlayFromTopOfLibrary(state, playerId, cardId)
     }
 
     private fun isInExileWithPlayPermission(
@@ -692,7 +700,8 @@ class PlayLandHandler(
     ): Boolean = state.activeMayPlayFor(cardId, playerId, conditionEvaluator, cardRegistry)
         .any { !it.nonLandOnly && it.landEntersTapped }
 
-    private fun hasPlayFromTopOfLibrary(state: GameState, playerId: EntityId): Boolean {
+    private fun hasPlayFromTopOfLibrary(state: GameState, playerId: EntityId, cardId: EntityId): Boolean {
+        val landCard = state.getEntity(cardId)?.get<CardComponent>() ?: return false
         for (entityId in state.getBattlefield(playerId)) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card) ?: continue
@@ -703,7 +712,9 @@ class PlayLandHandler(
                     if (!evaluateStaticGate(state, ability.condition, entityId, playerId)) continue
                     ability.ability
                 } else ability
-                if (unwrapped is PlayFromTopOfLibrary || unwrapped is PlayLandsAndCastFilteredFromTopOfLibrary) {
+                if (unwrapped is PlayFromTopOfLibrary) return true
+                // Isu the Abominable: only lands matching the permission's land filter (snow lands).
+                if (unwrapped is PlayLandsAndCastFilteredFromTopOfLibrary && unwrapped.allowsLand(landCard)) {
                     return true
                 }
             }
@@ -749,8 +760,8 @@ class PlayLandHandler(
     }
 
     /**
-     * Returns true if the player controls a permanent with [MayPlayLandsFromGraveyard]
-     * (Crucible of Worlds style — no per-turn usage tracking needed).
+     * Returns true if the player controls a permanent — or has an emblem — with
+     * [MayPlayLandsFromGraveyard] (Crucible of Worlds style — no per-turn usage tracking needed).
      */
     private fun hasLandGraveyardPlayPermission(state: GameState, playerId: EntityId): Boolean {
         for (entityId in state.getBattlefield(playerId)) {
@@ -771,7 +782,8 @@ class PlayLandHandler(
                 }
             }
         }
-        return false
+        // An emblem the player has (Wrenn and Realmbreaker's −7) grants it from outside every zone.
+        return state.emblemStaticAbilitiesOf(playerId).any { (_, ability) -> ability is MayPlayLandsFromGraveyard }
     }
 
     /**

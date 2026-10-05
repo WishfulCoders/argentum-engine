@@ -506,7 +506,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature artifact ctrl:you"
+                        "baseFilter": "artifact creature ctrl:you"
                     },
                     "id": "t0"
                 }
@@ -732,18 +732,18 @@
             "type": "Composite",
             "effects": [
                 {
-                    "type": "MarkExileOnDeath",
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 6
+                    },
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
                     }
                 },
                 {
-                    "type": "DealDamage",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 6
-                    },
+                    "type": "MarkExileOnDeath",
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
@@ -9171,7 +9171,7 @@
                         "type": "ContextProperty",
                         "key": "TRIGGER_DAMAGE_AMOUNT"
                     },
-                    "expiry": "UNTIL_END_OF_TURN"
+                    "expiry": "KEPT_UNTIL_END_OF_TURN"
                 },
                 "descriptionOverride": "Enrage — Whenever Raphael is dealt damage, add that much {R}. Until end of turn, you don't lose this mana as steps and phases end."
             }

@@ -63,6 +63,7 @@ export function KeywordIcons({
   isSuspected,
   isSolved,
   isRenowned,
+  isMonstrous,
   topOffset,
   size,
 }: {
@@ -80,6 +81,8 @@ export function KeywordIcons({
   isSolved?: boolean
   /** Whether the creature has the renowned designation (CR 702.112b). */
   isRenowned?: boolean
+  /** Whether the permanent has the monstrous designation (CR 701.37b). */
+  isMonstrous?: boolean
   /** Override the column's top offset (px) so it can clear the ring-bearer badge in the same corner. */
   topOffset?: number
   size: number
@@ -109,8 +112,9 @@ export function KeywordIcons({
   const hasSuspected = isSuspected === true
   const hasSolved = isSolved === true
   const hasRenowned = isRenowned === true
+  const hasMonstrous = isMonstrous === true
 
-  if (!hasKeywords && !hasProtections && !hasHexproofFrom && !hasSuspected && !hasSolved && !hasRenowned) return null
+  if (!hasKeywords && !hasProtections && !hasHexproofFrom && !hasSuspected && !hasSolved && !hasRenowned && !hasMonstrous) return null
 
   return (
     <div style={topOffset === undefined ? styles.keywordIconsContainer : { ...styles.keywordIconsContainer, top: topOffset }}>
@@ -127,6 +131,11 @@ export function KeywordIcons({
       {hasRenowned && (
         <div key="renowned" style={styles.keywordIconWrapper} title="Renowned (its renown has resolved and can't trigger again)">
           <KeywordGlyph name="RENOWNED" size={size} />
+        </div>
+      )}
+      {hasMonstrous && (
+        <div key="monstrous" style={styles.keywordIconWrapper} title="Monstrous (its monstrosity has resolved and can't happen again)">
+          <KeywordGlyph name="MONSTROUS" size={size} />
         </div>
       )}
       {filteredKeywords.map((keyword) => (
@@ -324,6 +333,13 @@ function getBadgeStyle(icon?: string): React.CSSProperties {
         backgroundColor: 'rgba(150, 50, 200, 0.9)',
         border: '1px solid rgba(220, 160, 255, 0.6)',
       }
+    // A pump or grant that wears off (Giant Growth, "gains haste until end of turn"): the card's
+    // numbers already show the change, so the badge is about the source and the end — amber, dashed.
+    case 'temporary-effect':
+      return {
+        backgroundColor: 'rgba(120, 85, 20, 0.92)',
+        border: '1px dashed rgba(250, 205, 110, 0.7)',
+      }
     default:
       return {}
   }
@@ -364,6 +380,8 @@ function getTooltipBorderColor(icon?: string): string {
       return 'rgba(255, 255, 255, 0.7)'
     case 'granted-ability':
       return 'rgba(220, 160, 255, 0.6)'
+    case 'temporary-effect':
+      return 'rgba(250, 205, 110, 0.6)'
     default:
       return 'rgba(150, 50, 200, 0.5)'
   }
@@ -392,38 +410,40 @@ export function ActiveEffectBadges({ effects, sizing }: {
   effects: readonly ClientCardEffect[]
   sizing?: ActiveEffectBadgeSizing
 }) {
-  const [hoveredEffect, setHoveredEffect] = React.useState<string | null>(null)
+  // Tracked by position: badges from different families can share an effectId, and each must
+  // show its own tooltip.
+  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null)
   const [tooltipPos, setTooltipPos] = React.useState<{ x: number; y: number } | null>(null)
 
   if (!effects || effects.length === 0) return null
 
-  const handleMouseEnter = (effectId: string, e: React.MouseEvent) => {
+  const handleMouseEnter = (index: number, e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
     setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
-    setHoveredEffect(effectId)
+    setHoveredIndex(index)
   }
 
   const handleMouseLeave = () => {
-    setHoveredEffect(null)
+    setHoveredIndex(null)
     setTooltipPos(null)
   }
 
-  const hoveredEffectData = effects.find(e => e.effectId === hoveredEffect)
+  const hoveredEffectData = hoveredIndex === null ? undefined : effects[hoveredIndex]
 
   return (
     <>
       <div style={sizing
         ? { ...styles.activeEffectsContainer, bottom: sizing.bottom, gap: sizing.gap }
         : styles.activeEffectsContainer}>
-        {effects.map((effect) => (
+        {effects.map((effect, index) => (
           <div
-            key={effect.effectId}
+            key={`${effect.effectId}-${index}`}
             style={{
               ...styles.activeEffectBadge,
               ...getBadgeStyle(effect.icon),
               ...(sizing ? { padding: sizing.padding, borderRadius: sizing.borderRadius } : {}),
             }}
-            onMouseEnter={(e) => handleMouseEnter(effect.effectId, e)}
+            onMouseEnter={(e) => handleMouseEnter(index, e)}
             onMouseLeave={handleMouseLeave}
           >
             <span style={sizing
@@ -436,7 +456,7 @@ export function ActiveEffectBadges({ effects, sizing }: {
           but it renders from inside a card that may sit under a transform (tapped-card
           rotation, the multiplayer board strip's translateX) — a transformed ancestor
           would re-anchor `fixed` to itself and misplace the tooltip. */}
-      {hoveredEffect && tooltipPos && hoveredEffectData?.description && createPortal(
+      {tooltipPos && hoveredEffectData?.description && createPortal(
         <div style={{
           ...styles.cardEffectTooltip,
           left: tooltipPos.x,

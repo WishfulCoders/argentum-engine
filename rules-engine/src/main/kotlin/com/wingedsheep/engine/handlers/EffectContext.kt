@@ -62,6 +62,8 @@ data class EffectContext(
      * Null for spells, triggers, and synthesized activations without an ActivatedAbility.
      */
     val activatedAbility: com.wingedsheep.sdk.scripting.ActivatedAbility? = null,
+    /** Frozen triggered rules text, including target requirements and optionality. */
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
     /**
      * The player currently under consideration as a target, bound while evaluating a
      * `TargetPlayer.restriction` / `TargetOpponent.restriction` (CR 115). Resolves
@@ -152,7 +154,7 @@ data class EffectContext(
     /**
      * Projected snapshots of permanents sacrificed as part of the cost (Rule 113.7a /
      * 608.2h — "as it last existed on the battlefield"). Captured before the zone change
-     * so downstream effects can read power, toughness, and subtypes after the permanent
+     * so downstream effects can read power, toughness, mana value, and subtypes after the permanent
      * has left the battlefield.
      */
     val sacrificedPermanents: List<EntitySnapshot> = emptyList(),
@@ -165,6 +167,12 @@ data class EffectContext(
      * ability carried no discard cost.
      */
     val discardedAsCostCards: List<EntityId> = emptyList(),
+    /**
+     * Cards revealed from hand to pay this spell's additional reveal cost, captured as the cost was
+     * paid. [EffectTarget.RevealedAsCost] resolves to the card's id; a value read uses the captured
+     * in-hand characteristics (the card's last-known information once it has left the hand).
+     */
+    val revealedAsCostSnapshots: List<EntitySnapshot> = emptyList(),
     /**
      * How many counters the resolving activated ability's costs removed — read by
      * [com.wingedsheep.sdk.scripting.values.DynamicAmount.CountersRemovedAsCost] ("the number of
@@ -311,6 +319,14 @@ data class EffectContext(
     // --- Zone state ---
     /** Zone the spell was cast from (e.g., HAND, GRAVEYARD for flashback) */
     val castFromZone: Zone? = null,
+    /**
+     * Each iterated permanent's look-back grants (conditional self-grants, Aura/Equipment-granted
+     * triggered abilities), frozen by a group loop ("destroy all creatures" as `ForEachInGroup`) before its first iteration moved
+     * anything. The loop is one simultaneous event, and leaves-the-battlefield abilities look back
+     * to before it (CR 603.10a); a single-entity move reads its entry here into
+     * `ZoneEntryOptions.lookBackGrants`. See [com.wingedsheep.engine.event.LookBackGrants].
+     */
+    val lookBackGrants: Map<EntityId, com.wingedsheep.engine.event.LookBackGrants> = emptyMap(),
     // --- Projection state ---
     /** The entity being modified during continuous effect projection (for DynamicAmount evaluation) */
     val affectedEntityId: EntityId? = null,
@@ -326,7 +342,28 @@ data class EffectContext(
      * fails closed instead of `StackOverflowError`. Lives on the (immutable) context rather than
      * on the shared registry so it stays correct under the AI's parallel state evaluation.
      */
-    val resolutionDepth: Int = 0
+    val resolutionDepth: Int = 0,
+    /** Choices prepared for this single zone-moving instruction, before any entrants move. */
+    val entryCopies: Map<EntityId, com.wingedsheep.engine.handlers.effects.copy.EntryCopyChoice> = emptyMap(),
+    /** Prepared attachment choices; a null host means the Aura cannot enter. */
+    val entryAuraHosts: Map<EntityId, EntityId?> = emptyMap(),
+    /** Prepared "as this enters, choose …" answers, stamped on each entrant as it arrives. */
+    val entryChoices: Map<EntityId, com.wingedsheep.engine.handlers.effects.EntryChoiceAnswers> = emptyMap(),
+    /** Answers belong to this one discard instruction, including explicit declines. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val discardDestinations: Map<EntityId, com.wingedsheep.sdk.scripting.effects.CardDestination.ToZone?> = emptyMap(),
+    /** Top-to-bottom library order chosen before any card in the discard batch moves. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val discardLibraryOrder: List<EntityId>? = null,
+    /** Internal pipelines used to pay ward discard costs must not pose as resolving effects. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val discardIsCost: Boolean = false,
+    /** Collection whose discard result is being committed by the current instruction. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val discardCollectionName: String? = null,
+    /** A single group-move instruction orders its arrivals after every member has moved. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val deferGraveyardOrdering: Boolean = false,
 ) {
     val activatedAbilityId: com.wingedsheep.sdk.scripting.AbilityId?
         get() = activatedAbility?.id
@@ -520,6 +557,7 @@ data class EffectContext(
             targets: List<ChosenTarget> = emptyList(),
             targetRequirements: List<TargetRequirement> = emptyList()
         ): EffectContext = EffectContext(
+            resolvingTriggeredAbility = ability.resolvingTriggeredAbility,
             sourceId = ability.sourceId,
             controllerId = ability.controllerId,
             granterId = ability.granterId,
@@ -527,6 +565,7 @@ data class EffectContext(
             sourceFaceChanges = ability.sourceFaceChanges,
             sourceBattlefieldTimestamp = ability.sourceBattlefieldTimestamp,
             objectReferences = ability.objectReferences,
+            lastKnownSourceSnapshot = ability.lastKnownSourceSnapshot,
             targets = targets,
             triggerContext = ability.triggerContext,
             triggeringEntityId = ability.triggerContext?.triggeringEntityId,

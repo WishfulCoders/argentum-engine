@@ -23,7 +23,7 @@ import org.springframework.web.socket.WebSocketSession
  * team-aware seat roster, opponent list, shared life resolution, and teammate hand visibility — and
  * that a non-team game is the unchanged degenerate case of the same code path.
  *
- * Teams are seats 0+1 (team 0) vs 2+3 (team 1) in join/turn order.
+ * Teams are players 0+1 (team 0) vs 2+3 (team 1) in join order; seating is randomized.
  */
 class TwoHeadedGiantSessionTest : ScenarioTestBase() {
 
@@ -41,6 +41,11 @@ class TwoHeadedGiantSessionTest : ScenarioTestBase() {
         }
         session.startGame()
         return session to ids
+    }
+
+    /** Every seat keeps its opening hand — nobody is offered actions before then (CR 103.8). */
+    private fun GameSession.keepAll(ids: List<EntityId>) {
+        ids.forEach { keepHand(it) }
     }
 
     init {
@@ -70,8 +75,8 @@ class TwoHeadedGiantSessionTest : ScenarioTestBase() {
             // Team 1 (ids[2], ids[3]) concedes; one concession takes the whole team out (CR 810.8b).
             session.playerConcedes(ids[2])
             session.isGameOver() shouldBe true
-            session.getWinnerIds() shouldBe listOf(ids[0], ids[1])
-            session.getWinnerId() shouldBe ids[0]
+            session.getWinnerIds() shouldContainExactlyInAnyOrder listOf(ids[0], ids[1])
+            session.getWinnerId() shouldBe session.getStateForTesting()!!.teamOf(ids[0]).first()
         }
 
         test("a teammate is not an opponent (CR 810): getOpponentIds returns only the other team") {
@@ -85,13 +90,14 @@ class TwoHeadedGiantSessionTest : ScenarioTestBase() {
         test("life totals are the shared team total for both teammates, not each raw component") {
             val (session, ids) = started2hg()
 
-            // Drive team 0's shared total to 25 (resolver writes the canonical owner = first member),
+            // Drive team 0's shared total to 25 (resolver writes the first member in turn order),
             // then corrupt the teammate's own raw component to a different value. getLifeTotals must
             // report the team total (25) for BOTH teammates — proving it routes through the resolver,
             // not the raw LifeTotalComponent. Team 1 is untouched (30 from the 2HG starting life).
             var s = session.getStateForTesting()!!
+            val nonOwner = s.teamOf(ids[0]).single { it != s.teamLifeOwnerOf(ids[0]) }
             s = s.withLifeTotal(ids[0], 25)
-            s = s.updateEntity(ids[1]) { it.with(LifeTotalComponent(99)) }
+            s = s.updateEntity(nonOwner) { it.with(LifeTotalComponent(99)) }
             session.injectStateForDevScenario(s)
             ids.forEachIndexed { i, id ->
                 session.addPlayer(PlayerSession(mockWs("ws$i"), id, "Player${i + 1}"), mapOf("Forest" to 40))
@@ -139,6 +145,7 @@ class TwoHeadedGiantSessionTest : ScenarioTestBase() {
 
         test("a teammate is offered their OWN actions while their partner holds the baton (CR 805.5)") {
             val (session, ids) = started2hg()
+            session.keepAll(ids)
             val state = session.getStateForTesting()!!
             val baton = state.priorityPlayerId!!
             val teammate = state.teamOf(baton).single { it != baton }
@@ -165,6 +172,7 @@ class TwoHeadedGiantSessionTest : ScenarioTestBase() {
                 session.addPlayer(PlayerSession(mockWs("f$i"), id, "P${i + 1}"), mapOf("Forest" to 40))
             }
             session.startGame()
+            session.keepAll(ids)
 
             val baton = session.getStateForTesting()!!.priorityPlayerId!!
             session.getLegalActions(baton) shouldNotBe emptyList<Any>()

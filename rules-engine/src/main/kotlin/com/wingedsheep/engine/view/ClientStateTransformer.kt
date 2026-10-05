@@ -7,6 +7,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.PlayerYields
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.player.HotseatControlComponent
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.view.projection.CardActiveEffectsProjector
 import com.wingedsheep.engine.view.projection.CardFacesProjector
 import com.wingedsheep.engine.view.projection.CardProjector
@@ -88,32 +89,34 @@ class ClientStateTransformer(
         for ((zoneKey, entityIds) in state.zones) {
             val isZoneVisible = visibility.isZoneVisibleTo(state, zoneKey, viewingPlayerId, isSpectator)
 
-            // For libraries we always send the full ordered list of entity IDs so the client can
-            // render a correctly sized stack. Individual card *details* are only populated for cards
-            // that have been revealed to the viewing player (Scry, Surveil, look-at-top-N, etc.).
-            // Unrevealed slots end up as opaque IDs the client renders as card backs.
+            // A hidden zone names only the cards the viewer may identify (Scry, Surveil,
+            // look-at-top-N, a revealed top card); the rest are only counted. An unknown card's ID
+            // would let a client follow it through the zone, and IDs are minted per card, so an ID
+            // can name the card outright. A library also says where each known card sits, since a
+            // partial list no longer carries positions.
             val isLibrary = zoneKey.zoneType == Zone.LIBRARY
-            val cardsWithDetails = if (isZoneVisible) {
-                entityIds
+            val knownIndices = if (isZoneVisible) {
+                entityIds.indices.toList()
             } else {
-                entityIds.filter { entityId ->
+                entityIds.indices.filter { index ->
                     visibility.isCardIdentityVisibleTo(
                         state,
                         zoneKey,
-                        entityId,
+                        entityIds[index],
                         viewingPlayerId,
                         isSpectator,
                     )
                 }
             }
-            val zoneCardIds = if (isLibrary) entityIds else cardsWithDetails
+            val cardsWithDetails = knownIndices.map { entityIds[it] }
 
             zones.add(
                 ClientZone(
                     zoneId = zoneKey,
-                    cardIds = zoneCardIds,
+                    cardIds = cardsWithDetails,
                     size = entityIds.size,
-                    isVisible = isZoneVisible || cardsWithDetails.isNotEmpty() || isLibrary
+                    isVisible = isZoneVisible || cardsWithDetails.isNotEmpty() || isLibrary,
+                    positions = if (isLibrary) knownIndices else null
                 )
             )
 
@@ -177,6 +180,18 @@ class ClientStateTransformer(
         }
         // --- FIX END ---
 
+        // A permanent spell's "as this enters" choice (Sorcerous Spyglass's card name, a Thriving
+        // land's color) is asked mid-resolution, after the spell has left the stack and before it
+        // reaches the battlefield — so it sits in no zone. Project it anyway so the decision UI and
+        // the "X is making a choice" banner can show its card; it was public on the stack a moment ago.
+        state.pendingDecision?.context?.sourceId
+            ?.takeIf { it !in cards && state.getEntity(it)?.has<SpellOnStackComponent>() == true }
+            ?.let { sourceId ->
+                val stackZoneKey = zones.first { it.zoneId.zoneType == Zone.STACK }.zoneId
+                cardProjector.project(state, sourceId, stackZoneKey, projectedState, viewingPlayerId, isSpectator)
+                    ?.let { cards[sourceId] = it }
+            }
+
         // Build player information
         val players = state.turnOrder.map { playerId ->
             playerProjector.project(state, playerId)
@@ -235,6 +250,7 @@ class ClientStateTransformer(
             combat = combat,
             voidActive = state.nonlandPermanentLeftBattlefieldThisTurn || state.spellWarpedThisTurn,
             dayNight = state.dayNight,
+            attackMode = state.attackMode.takeIf { it != com.wingedsheep.sdk.core.AttackMode.MULTIPLE },
             youAreHijacking = youAreHijacking,
             youAreHijackedBy = youAreHijackedBy,
             hotseat = hotseat,

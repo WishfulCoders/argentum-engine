@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.legalactions.enumerators
 
+import com.wingedsheep.engine.legalactions.surfacedRequirements
+import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.legalactions.ActionEnumerator
@@ -11,6 +13,7 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.KeywordAbility
 
 /**
  * Enumerates the "cast for its emerge cost" legal action (CR 702.119).
@@ -38,11 +41,6 @@ class EmergeCastEnumerator : ActionEnumerator {
 
         if (context.cantPlayCardsFromHand) return emptyList()
 
-        // The candidate pool is the same for every emerge card in hand; bail before touching the
-        // hand at all when the player controls no creature to sacrifice.
-        val candidates = EmergeCasts.sacrificeCandidates(state, playerId)
-        if (candidates.isEmpty()) return emptyList()
-
         val result = mutableListOf<LegalAction>()
         val cachedSources = context.availableManaSources
 
@@ -51,7 +49,12 @@ class EmergeCastEnumerator : ActionEnumerator {
             if (context.cantCastSpell(cardId)) continue
 
             val cardDef = context.cardRegistry.getCard(cardComponent.name) ?: continue
-            val emerge = EmergeCasts.printedEmerge(cardDef) ?: continue
+            val emerge = EmergeCasts.effectiveEmerge(
+                state, cardId, cardDef, playerId, context.cardRegistry, context.predicateEvaluator
+            ) ?: continue
+            // "Emerge from [quality]" (CR 702.119b) narrows the pool per card.
+            val candidates = EmergeCasts.sacrificeCandidates(state, playerId, emerge, context.predicateEvaluator)
+            if (candidates.isEmpty()) continue
 
             // Normal timing (CR 702.119 adds no permission of its own).
             val isInstant = cardComponent.typeLine.isInstant
@@ -93,7 +96,7 @@ class EmergeCastEnumerator : ActionEnumerator {
             val targetReqInfos = if (targetReqs.isEmpty()) {
                 emptyList()
             } else {
-                context.targetUtils.buildTargetInfos(state, playerId, targetReqs, cardId)
+                context.targetUtils.buildTargetInfos(state, playerId, targetReqs, cardId, TargetingSourceType.SPELL)
             }
             // A targeted emerge spell is only castable if every requirement has a legal target
             // right now (CR 601.2c).
@@ -132,10 +135,10 @@ class EmergeCastEnumerator : ActionEnumerator {
                     targetCount = firstReqInfo?.maxTargets ?: 1,
                     minTargets = firstReq?.effectiveMinCount ?: (firstReq?.count ?: 1),
                     targetDescription = firstReq?.description,
-                    targetRequirements = if (targetReqInfos.size > 1) targetReqInfos else null,
+                    targetRequirements = targetReqInfos.surfacedRequirements(),
                     manaCostString = baseCost.toString(),
                     additionalCostInfo = AdditionalCostData(
-                        description = "a creature to sacrifice (its mana value reduces the emerge cost)",
+                        description = "${sacrificeNoun(emerge)} to sacrifice (its mana value reduces the emerge cost)",
                         costType = "SacrificePermanent",
                         validSacrificeTargets = payableCandidates,
                         sacrificeCount = 1,
@@ -147,5 +150,11 @@ class EmergeCastEnumerator : ActionEnumerator {
         }
 
         return result
+    }
+
+    private fun sacrificeNoun(emerge: KeywordAbility.Emerge): String {
+        val filter = emerge.from ?: return "a creature"
+        val noun = filter.description.lowercase()
+        return "${filter.indefiniteArticle} $noun"
     }
 }

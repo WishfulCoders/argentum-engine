@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.consumeShieldCounter
@@ -143,7 +144,7 @@ object ZoneMovementUtils {
         val newState = state.updateEntity(entityId) { c ->
             c.with(sagaComponent)
                 .with(current.withAdded(CounterType.LORE, 1))
-        }
+        }.let { DamageUtils.markCounterOnControlledPermanent(it, entityId, CounterType.LORE, entering = true) }
         return newState to listOf(CountersAddedEvent(entityId, CounterType.LORE, 1, cardComponent.name))
     }
 
@@ -384,6 +385,7 @@ object ZoneMovementUtils {
 
         var newState = cleanupReverseAttachmentLink(state, attachmentId)
         newState = newState.updateEntity(attachmentId) { c -> c.without<AttachedToComponent>() }
+        newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, attachmentId)
 
         return newState to listOf(
             com.wingedsheep.engine.core.PermanentUnattachedEvent(
@@ -423,6 +425,11 @@ object ZoneMovementUtils {
             newState = newState.updateEntity(attachmentId) { c ->
                 c.with(AttachmentHostLeftComponent(lastKnownHostId = leavingHostId))
             }
+            // Bestow ends as the host leaves, before the next instruction can inspect creature
+            // characteristics. Keep the attachment link for leave-trigger detection until the SBA.
+            if (!attachment.has<com.wingedsheep.engine.state.components.battlefield.PhasedOutComponent>()) {
+                newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, attachmentId)
+            }
         }
         return newState
     }
@@ -434,9 +441,15 @@ object ZoneMovementUtils {
      * tapped, damage, counters, summoning sickness, combat state, attachments, etc.
      */
     fun stripBattlefieldComponents(container: ComponentContainer): ComponentContainer {
-        return container
+        // "As this enters, it becomes …" choices were baked into the card's copiable values; the
+        // card that leaves is its printed self again (CR 400.7). Runs after the copy revert: when
+        // both snapshots exist, this one is the older.
+        val unbaked = com.wingedsheep.engine.state.components.identity.EntryCharacteristicsBaking.unbake(container)
+        // A prototyped permanent is its normal-sized card again off the battlefield (CR 718.4).
+        return com.wingedsheep.engine.mechanics.PrototypeCasts.restore(unbaked)
             // Identity
             .without<ControllerComponent>()
+            .without<TextReplacementComponent>()
             .without<FaceDownComponent>()
             .without<com.wingedsheep.engine.state.components.identity.FaceDownModeComponent>()
             .without<MorphDataComponent>()
@@ -445,6 +458,12 @@ object ZoneMovementUtils {
             // (CR 400.7 / 707.2). ZoneTransitionService restores the printed
             // CardComponent before this strip runs.
             .without<com.wingedsheep.engine.state.components.identity.CopyOfComponent>()
+            // …and so do the markers that would have reverted a temporary copy later: the card is
+            // already its printed self, and a new object must not inherit a stale revert.
+            .without<com.wingedsheep.engine.state.components.identity.RevertCopyAtEndOfTurnComponent>()
+            .without<com.wingedsheep.engine.state.components.identity.RevertCopyAtNextEndStepComponent>()
+            .without<com.wingedsheep.engine.state.components.identity.RevertCopyAtYourNextTurnComponent>()
+            .without<com.wingedsheep.engine.state.components.identity.CopyWhileAttachedComponent>()
             // The Ring-bearer designation is tied to the permanent; a permanent that leaves the
             // battlefield stops being the Ring-bearer (CR 701.54e), and the object that returns is
             // a new object (CR 400.7) that must not inherit the designation (e.g. a blinked
@@ -477,6 +496,9 @@ object ZoneMovementUtils {
             .without<WasDealtDamageThisTurnComponent>()
             .without<HasDealtDamageComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.DamageDealtThisTurnComponent>()
+            // Per-turn activation tallies and "was activated this turn" belong to this object; one
+            // that leaves and returns is a new object with fresh activations (CR 400.7).
+            .without<com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent>()
             // The number chosen as it entered (Nameless Race) belongs to *this* object; one
             // that leaves and returns chooses afresh as it enters (CR 400.7).
             .without<com.wingedsheep.engine.state.components.battlefield.EnteredWithValueComponent>()
@@ -514,6 +536,7 @@ object ZoneMovementUtils {
             .without<SagaComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.SolvedComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.RenownedComponent>()
+            .without<com.wingedsheep.engine.state.components.battlefield.MonstrousComponent>()
             .without<ReplacementEffectSourceComponent>()
             .without<TimestampComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()
@@ -550,7 +573,9 @@ object ZoneMovementUtils {
         zones: ZoneTransitionService,
         state: GameState,
         entityId: EntityId,
-        canRegenerate: Boolean = true
+        canRegenerate: Boolean = true,
+        /** Frozen look-back grants when this destruction is one of a simultaneous batch. */
+        lookBackGrants: com.wingedsheep.engine.event.LookBackGrants? = null
     ): EffectResult {
         val container = state.getEntity(entityId)
             ?: return EffectResult.error(state, "Entity not found: $entityId")
@@ -594,9 +619,32 @@ object ZoneMovementUtils {
             return applyRemoveDamageReplacement(damageShieldState, entityId)
         }
 
-        // Delegate to ZoneTransitionService
-        val result = zones.moveToZone(state, entityId, Zone.GRAVEYARD)
+        // Umbra armor (CR 702.89a) — like Pyramids, not regeneration, so `canRegenerate` doesn't
+        // gate it. The Aura it spends is destroyed by this same destruction, hence the flag passes on.
+        findUmbraArmorAura(state, entityId)?.let { auraId ->
+            return applyUmbraArmor(zones, state, entityId, auraId, canRegenerate)
+        }
+
+        // "If it would die this turn, exile it instead" (Fanged Flames) covers destruction by effect too.
+        val exiledState = consumeExileOnDeath(state, entityId)
+        val result = zones.moveToZone(
+            exiledState ?: state, entityId, if (exiledState != null) Zone.EXILE else Zone.GRAVEYARD,
+            ZoneEntryOptions(lookBackGrants = lookBackGrants)
+        )
         return EffectResult.success(result.state, result.events)
+    }
+
+    /**
+     * If [entityId] carries an ExileOnDeath mark, returns the state with that mark consumed — the
+     * caller then moves the permanent to exile instead of the graveyard. Null when there is no mark.
+     */
+    fun consumeExileOnDeath(state: GameState, entityId: EntityId): GameState? {
+        val index = state.floatingEffects.indexOfFirst { effect ->
+            effect.effect.modification is com.wingedsheep.engine.mechanics.layers.SerializableModification.ExileOnDeath &&
+                entityId in effect.effect.affectedEntities
+        }
+        if (index == -1) return null
+        return state.copy(floatingEffects = state.floatingEffects.toMutableList().apply { removeAt(index) })
     }
 
     /**
@@ -911,6 +959,7 @@ object ZoneMovementUtils {
                 CardPredicate.IsNonartifact -> !cardComponent.typeLine.isArtifact
                 CardPredicate.IsPermanent -> cardComponent.typeLine.isPermanent
                 CardPredicate.IsLegendary -> cardComponent.typeLine.isLegendary
+                CardPredicate.IsSnow -> cardComponent.typeLine.isSnow
                 CardPredicate.IsNonlegendary -> !cardComponent.typeLine.isLegendary
                 CardPredicate.IsDoubleFaced -> cardComponent.isDoubleFaced
                 else -> true // For unhandled predicates, don't filter out
@@ -979,8 +1028,9 @@ object ZoneMovementUtils {
             val cid = controllerId ?: return state to emptyList()
             val newState = state.getOpponents(cid).fold(state) { acc, opponentId ->
                 acc.updateEntity(opponentId) { container ->
-                    val existing = container.get<SkipNextTurnComponent>()?.turns ?: 0
-                    container.with(SkipNextTurnComponent(existing + 1))
+                    val existing = container.get<SkipNextTurnComponent>() ?: SkipNextTurnComponent(0)
+                    container.with(existing.copy(turns = existing.turns + 1,
+                        extraTurnBypasses = existing.extraTurnBypasses + 1))
                 }
             }
             return newState to emptyList()
@@ -1159,6 +1209,54 @@ object ZoneMovementUtils {
      */
     fun applyRemoveDamageReplacement(state: GameState, entityId: EntityId): EffectResult {
         return EffectResult.success(DamageUtils.healMarkedDamage(state, entityId))
+    }
+
+    /**
+     * The Aura whose umbra armor (CR 702.89a) replaces the destruction of [entityId], or null.
+     *
+     * "If enchanted permanent would be destroyed, instead remove all damage marked on it and destroy
+     * this Aura." The keyword lives on the *Aura* and is read through projection, so a conditional
+     * self-grant (Dog Umbra) is honoured. Only one Aura is spent per destruction (per the rulings the
+     * permanent's controller picks which); the oldest by timestamp is used.
+     *
+     * @param lookupState the state whose battlefield decides which Auras shield the permanent. For a
+     *        destruction that is one of a simultaneous batch (a board wipe, one SBA pass) this is the
+     *        state before the batch began: a wipe that destroys both the Aura and its creature still
+     *        saves the creature (the Aura is "destroyed in two ways at once"), so an Aura the batch
+     *        already moved still counts, and is preferred — spending it costs nothing more.
+     */
+    fun findUmbraArmorAura(state: GameState, entityId: EntityId, lookupState: GameState = state): EntityId? {
+        val projected = lookupState.projectedState
+        val candidates = lookupState.getBattlefield().filter { auraId ->
+            lookupState.getEntity(auraId)?.get<AttachedToComponent>()?.targetId == entityId &&
+                projected.hasSubtype(auraId, "Aura") &&
+                projected.hasKeyword(auraId, Keyword.UMBRA_ARMOR)
+        }
+        if (candidates.isEmpty()) return null
+        val battlefield = state.getBattlefield().toSet()
+        return candidates.minWith(
+            compareBy<EntityId>({ it in battlefield }, {
+                lookupState.getEntity(it)?.get<TimestampComponent>()?.timestamp ?: Long.MAX_VALUE
+            })
+        )
+    }
+
+    /**
+     * Apply umbra armor's replacement (CR 702.89a): remove all damage marked on [entityId] and destroy
+     * [auraId] instead. Not regeneration — the permanent is neither tapped nor removed from combat.
+     * The Aura's own destruction is an ordinary one (indestructible, shields and redirects all apply);
+     * if it already left the battlefield in the same simultaneous batch, only the heal remains.
+     */
+    fun applyUmbraArmor(
+        zones: ZoneTransitionService,
+        state: GameState,
+        entityId: EntityId,
+        auraId: EntityId,
+        canRegenerate: Boolean = true
+    ): EffectResult {
+        val healed = DamageUtils.healMarkedDamage(state, entityId)
+        if (auraId !in healed.getBattlefield()) return EffectResult.success(healed)
+        return destroyPermanent(zones, healed, auraId, canRegenerate)
     }
 
     /**

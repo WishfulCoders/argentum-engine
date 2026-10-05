@@ -33,6 +33,7 @@ import com.wingedsheep.engine.state.components.stack.*
 import com.wingedsheep.engine.state.nameVisibleToAll
 import com.wingedsheep.engine.state.permissions.removeMayPlayPermissionsForCard
 import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
@@ -129,9 +130,35 @@ internal class PermanentEntry(
 
         // Add to battlefield — clean up any may-play permission first (mirrors the same
         // cleanup done in resolveNonPermanentSpell before the card goes to the graveyard).
+        newState.getEntity(spellId)?.get<com.wingedsheep.engine.mechanics.BestowedComponent>()?.let { bestowed ->
+            newState = com.wingedsheep.engine.mechanics.BestowCasts.restoreBaseCharacteristics(newState, spellId)
+                .updateEntity(spellId) { it.with(bestowed.copy(entered = true)) }
+        }
         newState = newState.removeMayPlayPermissionsForCard(spellId)
         newState = com.wingedsheep.engine.handlers.effects.BattlefieldEntry
             .place(newState, controllerId, spellId)
+
+        val spellRef = state.objectRef(spellId)
+        val permanentRef = newState.objectRef(spellId)
+        if (spellRef != null && permanentRef != null) {
+            newState = newState.copy(floatingEffects = newState.floatingEffects.map { floating ->
+                val remainder = floating.effect.modification as? SerializableModification.PreventNextDamageLeavingAmount
+                if (remainder?.permanentSpell == true && remainder.damageSourceId == spellId &&
+                    spellRef in floating.referencedObjects) {
+                    return@map floating.copy(
+                        effect = floating.effect.copy(modification = remainder.copy(permanentSpell = false)),
+                        referencedObjects = floating.referencedObjects.map { if (it == spellRef) permanentRef else it }
+                    )
+                }
+                val mod = floating.effect.modification as? SerializableModification.RedirectNextDamage
+                val chosen = mod?.chosenSource
+                if (chosen?.permanentSpell == true && chosen.reference == spellRef) {
+                    floating.copy(effect = floating.effect.copy(modification = mod.copy(
+                        chosenSource = chosen.copy(reference = permanentRef, permanentSpell = false)
+                    )))
+                } else floating
+            })
+        }
 
         newState = applyGlobalEntersTapped(newState, spellId, spellComponent, cardDef, controllerId)
         newState = enterSneakAttacking(newState, spellId, spellComponent, controllerId)
@@ -146,6 +173,8 @@ internal class PermanentEntry(
             spellId, nameVisibleToAll(newState, spellId, cardComponent?.name ?: "Unknown"),
             Zone.STACK, Zone.BATTLEFIELD, cardComponent?.ownerId ?: controllerId,
             xValue = spellComponent.xValue,
+            // An "enters as a copy" spell (Clone) enters under the copied name; say what it was.
+            copyOfOriginalName = copyOf?.originalCardComponent?.name?.takeIf { it != cardComponent?.name },
             enteredBattlefieldTimestamp = newState.getEntity(spellId)
                 ?.get<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()?.timestamp,
             oldObject = state.objectRef(spellId), newObject = newState.objectRef(spellId),
@@ -305,6 +334,9 @@ internal class PermanentEntry(
         val entered = updated.get<com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent>()
         var bag = entered ?: com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent()
         spellComponent.xValue?.let { bag = bag.copy(x = it) }
+        spellComponent.additionalCostChoices.forEach { (slot, index) ->
+            bag = bag.withChoice(slot, com.wingedsheep.engine.state.components.battlefield.ChoiceValue.NumberChoice(index))
+        }
         // The optional additional cost declared while casting (kicker → KICKED, bargain →
         // BARGAINED, CR 702.166b) marks the permanent under its own slot, so a bargained
         // permanent's "if it was bargained" enters trigger reads true while a kicker payoff
@@ -345,6 +377,15 @@ internal class PermanentEntry(
         if (spellComponent.wasMayhem) {
             bag = bag.withChoice(
                 com.wingedsheep.sdk.scripting.ChoiceSlot.MAYHEM_CAST,
+                com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
+            )
+        }
+        // Escape (CR 702.138b): a permanent whose spell was cast from the graveyard with escape
+        // "escaped" — durably mark it so Conditions.Escaped reads true for its whole life
+        // (Phlage's "sacrifice it unless it escaped", "escapes with a +1/+1 counter").
+        if (spellComponent.alternativeCost == com.wingedsheep.engine.core.AlternativeCostType.ESCAPE) {
+            bag = bag.withChoice(
+                com.wingedsheep.sdk.scripting.ChoiceSlot.ESCAPED,
                 com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
             )
         }
@@ -478,7 +519,8 @@ internal class PermanentEntry(
         if (spellComponent.manaSpentWhite > 0 || spellComponent.manaSpentBlue > 0 ||
             spellComponent.manaSpentBlack > 0 || spellComponent.manaSpentRed > 0 ||
             spellComponent.manaSpentGreen > 0 || spellComponent.manaSpentColorless > 0 ||
-            spellComponent.manaSpentBySubtype.isNotEmpty()) {
+            spellComponent.manaSpentBySubtype.isNotEmpty() || spellComponent.manaSpentByCardType.isNotEmpty() ||
+            spellComponent.manaSpentSnow > 0) {
             updated = updated.with(com.wingedsheep.engine.state.components.battlefield.CastRecordComponent(
                 whiteSpent = spellComponent.manaSpentWhite,
                 blueSpent = spellComponent.manaSpentBlue,
@@ -486,7 +528,9 @@ internal class PermanentEntry(
                 redSpent = spellComponent.manaSpentRed,
                 greenSpent = spellComponent.manaSpentGreen,
                 colorlessSpent = spellComponent.manaSpentColorless,
-                manaSpentBySubtype = spellComponent.manaSpentBySubtype
+                manaSpentBySubtype = spellComponent.manaSpentBySubtype,
+                manaSpentByCardType = spellComponent.manaSpentByCardType,
+                snowSpent = spellComponent.manaSpentSnow
             ))
         }
         return updated
@@ -669,8 +713,12 @@ internal class PermanentEntry(
         // placeEntryCounters call through ZoneMovementUtils.applyIntrinsicEntryCountersIfNeeded.
         val intrinsicEntryCounters = if (cardDef != null && !spellComponent.castFaceDown) {
             when {
-                cardDef.startingLoyalty != null ->
-                    CounterType.LOYALTY to cardDef.startingLoyalty!!
+                // Compleated (CR 702.150a): two fewer loyalty counters for each Phyrexian mana
+                // symbol the caster paid with life.
+                cardDef.startingLoyalty != null -> {
+                    val lifePips = if (Keyword.COMPLEATED in cardDef.keywords) spellComponent.phyrexianLifePips else 0
+                    CounterType.LOYALTY to (cardDef.startingLoyalty!! - 2 * lifePips).coerceAtLeast(0)
+                }
                 cardDef.startingDefense != null ->
                     com.wingedsheep.engine.mechanics.battle.Battles.DEFENSE_COUNTER to cardDef.startingDefense!!
                 else -> null
@@ -801,7 +849,7 @@ internal class PermanentEntry(
             }
             if (legalDefender != null && projected.isCreature(spellId)) {
                 newState = newState.updateEntity(spellId) { c ->
-                    c.with(AttackingComponent(legalDefender))
+                    c.with(AttackingComponent(legalDefender, defendingPlayerId = com.wingedsheep.engine.mechanics.combat.CombatDefenders.defendingPlayerOf(newState, legalDefender)))
                 }
                 newState = com.wingedsheep.engine.mechanics.combat.AttackedPermanents.markAttacked(newState, legalDefender)
             }

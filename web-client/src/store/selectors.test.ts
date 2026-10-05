@@ -12,8 +12,8 @@ vi.stubGlobal('localStorage', {
   removeItem: () => {},
 })
 
-const { cardIdForAction, isHighlightable, turnQueueHintFor } = await import('./selectors')
-const { entityId } = await import('../types')
+const { cardIdForAction, isHighlightable, turnQueueHintFor, librarySlots } = await import('./selectors')
+const { entityId, library } = await import('../types')
 
 // --- Fixture builders -------------------------------------------------------
 // Minimal LegalActionInfo objects — cardIdForAction/isHighlightable only read
@@ -147,10 +147,30 @@ describe('turnQueueHintFor', () => {
     expect(turnQueueHintFor(withTomb, entityId('a'), entityId('c'))).toBe("You're next")
   })
 
+  it('counts from an active player who left the game mid-turn (CR 800.4j)', () => {
+    const activeGone = [seat('a', true), seat('b'), seat('c'), seat('d')]
+    expect(turnQueueHintFor(activeGone, entityId('a'), entityId('b'))).toBe("You're next")
+    expect(turnQueueHintFor(activeGone, entityId('a'), entityId('d'))).toBe('You in 3')
+  })
+
   it('says nothing on your own turn, for an eliminated viewer, or for an unknown seat', () => {
     expect(turnQueueHintFor(table, entityId('a'), entityId('a'))).toBeUndefined()
     expect(turnQueueHintFor([seat('a'), seat('b', true), seat('c')], entityId('a'), entityId('b'))).toBeUndefined()
     expect(turnQueueHintFor(table, entityId('a'), entityId('zz'))).toBeUndefined()
     expect(turnQueueHintFor(table, null, entityId('b'))).toBeUndefined()
+  })
+})
+
+describe('librarySlots', () => {
+  const owner = entityId('p1')
+
+  it('places each known card at its position and leaves the rest as card backs', () => {
+    const zone = { zoneId: library(owner), cardIds: [entityId('bottom'), entityId('top')], positions: [3, 0], size: 4, isVisible: true }
+    expect(librarySlots(zone)).toEqual([entityId('top'), null, null, entityId('bottom')])
+  })
+
+  it('reads a library with no known cards as all card backs', () => {
+    const zone = { zoneId: library(owner), cardIds: [], positions: [], size: 2, isVisible: true }
+    expect(librarySlots(zone)).toEqual([null, null])
   })
 })

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.combat
 
+import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
@@ -29,8 +30,15 @@ object CombatDefenders {
         if (defenderId in state.turnOrder) return defenderId
         com.wingedsheep.engine.mechanics.battle.Battles.protectorOf(state, defenderId)
             ?.let { return it }
-        return state.getEntity(defenderId)?.get<ControllerComponent>()?.playerId ?: defenderId
+        return state.projectedState.getController(defenderId)
+            ?: state.getEntity(defenderId)?.get<ControllerComponent>()?.playerId ?: defenderId
     }
+
+    /** The defending seat persists when an attacked permanent is removed from combat. */
+    fun defendingPlayerOf(state: GameState, attack: AttackingComponent, projected: ProjectedState): EntityId? =
+        attack.defendingPlayerId ?: if (attack.defenderId in state.turnOrder) attack.defenderId
+        else com.wingedsheep.engine.mechanics.battle.Battles.protectorOf(state, attack.defenderId)
+            ?: projected.getController(attack.defenderId)
 
     /** Every distinct defending player in the current combat: anyone who has a creature attacking
      *  them (or their planeswalkers/battles) — and, under shared team turns (Two-Headed Giant), their
@@ -40,10 +48,15 @@ object CombatDefenders {
      *  (`sharedTurnTeam` is a singleton there), so a teammate can't block for you. */
     fun defendingPlayers(state: GameState): Set<EntityId> =
         state.getBattlefield()
-            .mapNotNull { state.getEntity(it)?.get<AttackingComponent>()?.defenderId }
-            .map { defendingPlayerOf(state, it) }
+            .mapNotNull { state.getEntity(it)?.get<AttackingComponent>() }
+            .mapNotNull { defendingPlayerOf(state, it, state.projectedState) }
             .flatMap { state.sharedTurnTeam(it) }
             .toSet()
+
+    /** Combat's defending seats, including before attack declaration. */
+    fun isCombatDefender(state: GameState, playerId: EntityId?): Boolean =
+        state.step.phase == com.wingedsheep.sdk.core.Phase.COMBAT &&
+            state.activePlayerId?.let { playerId in legalDefendingPlayers(state, it) } == true
 
     /** True if [playerId] is a defending player in the current combat. */
     fun isDefendingPlayer(state: GameState, playerId: EntityId): Boolean =
@@ -57,7 +70,7 @@ object CombatDefenders {
      *
      * - [AttackMode.MULTIPLE] — every opponent still in the game (CR 802.2).
      * - [AttackMode.LEFT] — only the opponent in the next remaining seat (CR 803.1a). Turn order
-     *   proceeds to the left (CR 103.7b), so "the player to your left" is [GameState.getNextPlayer].
+     *   proceeds to the left (CR 101.4), so "the player to your left" is [GameState.getNextPlayer].
      * - [AttackMode.RIGHT] — only the opponent in the previous remaining seat (CR 803.1b), via
      *   [GameState.getPreviousPlayer].
      *
@@ -73,6 +86,20 @@ object CombatDefenders {
             com.wingedsheep.sdk.core.AttackMode.RIGHT ->
                 setOf(state.getPreviousPlayer(attackingPlayer)).minus(attackingPlayer)
         }
+
+    /**
+     * All defending seats during combat, including before attackers are declared and seats
+     * with no attackers assigned. All opponents defend even when attack-left/right limits
+     * attack targets; shared team turns include every player on the defending team. Outside combat nobody
+     * defends. Unlike [defendingPlayersInApnapOrder], this does not inspect attack assignments.
+     */
+    fun allDefendingPlayersInApnapOrder(state: GameState): List<EntityId> {
+        if (state.step.phase != com.wingedsheep.sdk.core.Phase.COMBAT) return emptyList()
+        val active = state.activePlayerId ?: return emptyList()
+        val defenders = state.getOpponents(active)
+            .flatMap { state.sharedTurnTeam(it) }.toSet()
+        return state.apnapOrder.filter { it in defenders }
+    }
 
     /**
      * The defending players ordered for sequential block declaration: turn order starting

@@ -27,6 +27,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.scripting.AbilityId
+import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -53,7 +54,8 @@ internal class CastSpellOnStack(
  * The abilities that trigger on, and the one-shot riders consumed by, the casting of a spell — the
  * things the cast itself sets off rather than an event the settle boundary detects:
  *
- * - copy triggers: storm (CR 702.40), conspire (CR 702.78), casualty (CR 702.153);
+ * - copy triggers: storm (CR 702.40), conspire (CR 702.78), casualty (CR 702.153),
+ *   replicate (CR 702.56);
  * - riders carried by the mana that paid (Cavern of Souls, Path of Ancestry, Pyromancer's Goggles,
  *   Carnelian Orb of Dragonkind);
  * - "the next spell you cast" riders — copies (Howl of the Horde), can't-be-countered (Mistrise
@@ -96,7 +98,7 @@ internal class CastTriggers(
         )
     }
 
-    private fun copyEffect(spell: CastSpellOnStack, spellEffect: Effect, copyCount: Int) = StormCopyEffect(
+    private fun copyEffect(spell: CastSpellOnStack, spellEffect: Effect?, copyCount: Int) = StormCopyEffect(
         copyCount = copyCount,
         spellEffect = spellEffect,
         spellTargetRequirements = spell.targetRequirements,
@@ -116,12 +118,16 @@ internal class CastTriggers(
      *
      * Conspire and casualty are reflexive: "When you do, copy it and you may choose new targets for
      * the copy." — present only when their optional additional cost was paid.
+     *
+     * A permanent spell (Amphibian Downpour's storm) has no spell effect: its copies resolve into
+     * token permanents (CR 707.10f), and an Aura copy's enchant target is among
+     * [CastSpellOnStack.targetRequirements], so each copy may choose a new host like any target.
      */
     fun copyTriggers(state: GameState, spell: CastSpellOnStack, stormCount: Int): List<PendingTrigger> {
         val action = spell.action
-        val cardDef = spell.cardDef
-        val spellEffect = cardDef?.script?.spellEffect
-        if (action.castFaceDown || spellEffect == null) return emptyList()
+        val cardDef = spell.cardDef ?: return emptyList()
+        val spellEffect = cardDef.script.spellEffect
+        if (action.castFaceDown) return emptyList()
         val name = spell.cardComponent.name
 
         val conspire = if (action.conspiredCreatures.isNotEmpty()) {
@@ -130,10 +136,17 @@ internal class CastTriggers(
         val casualty = if (action.casualtyCreature != null) {
             listOf(selfTrigger(state, spell, "casualty", copyEffect(spell, spellEffect, 1), "Casualty — copy $name"))
         } else emptyList()
+        // Replicate (CR 702.56a): "When you cast this spell, if a replicate cost was paid for it,
+        // copy it for each time its replicate cost was paid." One trigger making N copies, each
+        // of which may be given new targets.
+        val replicate = if (action.declaredCostSlot == ChoiceSlot.REPLICATED && action.declaredCostTimes > 0) {
+            val times = action.declaredCostTimes
+            listOf(selfTrigger(state, spell, "replicate", copyEffect(spell, spellEffect, times), "Replicate — copy $name $times time(s)"))
+        } else emptyList()
         val storm = List(stormInstances(state, action, cardDef)) {
             selfTrigger(state, spell, "storm", copyEffect(spell, spellEffect, stormCount), "Storm — copy $name $stormCount time(s)")
         }
-        return conspire + casualty + storm
+        return conspire + casualty + replicate + storm
     }
 
     private fun stormInstances(state: GameState, action: CastSpell, cardDef: CardDefinition): Int {
@@ -145,7 +158,7 @@ internal class CastTriggers(
         }
         // Each matching permanent is a separate instance of storm (CR 702.40b), so count them all
         // rather than short-circuiting.
-        val staticGrants = grantedKeywordResolver.countGrants(state, action.playerId, cardDef, Keyword.STORM)
+        val staticGrants = grantedKeywordResolver.countGrants(state, action.playerId, cardDef, Keyword.STORM, action.cardId)
         val printed = if (cardDef.hasKeyword(Keyword.STORM)) 1 else 0
         return printed + componentGrants + staticGrants
     }
@@ -306,6 +319,7 @@ internal class CastTriggers(
         var newState = afterCopies
         newState = consumeUncounterableRiders(newState, spell)
         newState = consumeAffinityRiders(newState, spell)
+        newState = consumeKeywordRiders(newState, spell)
         newState = consumeFreeCastRiders(newState, spell)
         return ExecutionResult.success(newState, events + copyEvents)
     }
@@ -382,6 +396,18 @@ internal class CastTriggers(
         val matching = state.pendingNextSpellAffinities.filter { spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter) }
         if (matching.isEmpty()) return state
         return state.copy(pendingNextSpellAffinities = state.pendingNextSpellAffinities.filter { it !in matching })
+    }
+
+    /**
+     * "Next spell has improvise" riders (Archway of Innovation). The granted-keyword resolver
+     * already reported the keyword while the spell was being cast; consuming them here means only
+     * the *next* matching spell has it — and, like the affinity rider, a matching spell spends the
+     * rider whether or not it used the keyword.
+     */
+    private fun consumeKeywordRiders(state: GameState, spell: CastSpellOnStack): GameState {
+        val matching = state.pendingNextSpellKeywords.filter { spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter) }
+        if (matching.isEmpty()) return state
+        return state.copy(pendingNextSpellKeywords = state.pendingNextSpellKeywords.filter { it !in matching })
     }
 
     /**

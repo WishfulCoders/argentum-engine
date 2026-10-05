@@ -562,6 +562,17 @@ actionable references: invalidating a live object does not erase the event's las
 These fields are internal engine data; client event mapping continues to expose the existing game
 log shape.
 
+Graveyards store cards oldest first. `GraveyardOrdering` finishes each atomic effect, SBA pass,
+or action-cost batch: it preserves earlier cards and asks each owner to order simultaneous arrivals,
+in APNAP order. `GraveyardOrderContinuation` holds the move events and pipeline outputs until all
+owners answer; only then are events published and the next instruction or SBA pass resumed.
+Direct graveyard moves in a group loop defer this finish until the group is complete. Reordering
+uses `reorderZone`, so object identities stay intact, and emits `GraveyardOrderedEvent`.
+`GameConfig.preserveGraveyardOrder` is fixed at setup and recorded in replay setup. New games
+use owner choices; deterministic fixtures and legacy replays retain insertion order without
+questions. This setting never inspects hidden deck contents. An Aura whose valid host dies in
+an SBA pass leaves in the following pass, putting it above the host rather than in the same batch.
+
 Zone moves with a source-departure duration store `ZoneReturn` records in `GameState.zoneReturns`.
 Each record identifies the source's battlefield visit, the moved object's destination visit, and its
 previous zone. `ZoneReturnService` consumes expired records inside the zone-transition pipeline,
@@ -577,6 +588,8 @@ the existing deferred-trigger continuation preserves those references; the battl
 pending target/mode/consent frames and stacked triggered abilities. A later visit of the same card
 receives no reprieve from an old origin, and removing or declining the last pending ability leaves
 no persistent protection. Other state-based checks ignore this context.
+
+Persistent source-object histories (`GameState.sourceObjectRecords`) associate named lists of public battlefield object references with the originating source object. Each reference carries its visit generation, so blinking either the source or a recorded object creates a distinct identity. Histories remain available after the source leaves or ceases to exist: delayed triggers carry their original `ObjectReferenceEnvironment.origin`, rather than reading bookkeeping from the current entity. Reads exclude objects that have left, ceased to exist, or phased out. Recording emits `SourceObjectsRecordedEvent`; it is internal bookkeeping and produces no separate client event or decision. Histories are retained for the game because future delayed triggers may still read them; they hold no hidden-zone information.
 
 ### 2.3 Rule 613: Base State vs. Projected State
 
@@ -617,6 +630,18 @@ before falling back to timestamp ordering.
   make this impossible to resolve correctly. Recalculating from base state ensures accuracy.
 - **Inspection.** The engine (and UI) can show both "what the card says" and "what the game sees" —
   useful for debugging and player understanding.
+
+#### Effect-created player actions
+
+`GameState.playerActionPermissions` stores repeatable special actions granted to a player by an
+already-resolved effect. Each permission retains that resolution's targets, values, and object
+references; a permanent leaving and returning cannot inherit an old permission's captured target.
+`TakePlayerAction` pays through the shared cost service and executes immediately. These actions
+never become stack objects or activated abilities. Legal-action enumeration exposes them at their
+specified timing, including mana-production permissions inside a suspended payment window.
+End-of-turn permissions expire with the cleanup turn-based actions. Spell and ability mana-payment
+continuations preserve their announced total costs, reserved cost sources, and mana-spending
+context while the player produces mana.
 
 ### 2.4 Reentrant Continuations
 
@@ -672,6 +697,15 @@ recorded responses while keeping their player and choice payloads.
   be saved to disk and resumed later — enabling server restarts without losing game state.
 - **Deterministic replay.** The continuation stack is part of `GameState`. A replay log of actions
   deterministically reproduces the exact sequence of decisions and resumptions.
+
+### Resolution control lifetime
+
+After target and intervening-condition checks succeed, each stack resolution pushes
+`EndResolutionControlContinuation` below its effect, casting and finishing frames. It captures the original `ObjectRef`, so a paused permanent entry can finish its
+choices after the card changes zones. `GameState.resolutionControls` binds player input authority to
+that frame, not to priority or the stable card id. Synchronous completion and the automatic resumer
+remove the same window; countering an awaiting object removes its inactive grants. Ordinary `actorFor`
+seams provide the server and client views. No priority window or trigger detection is added here.
 
 ### 2.5 Explicit Event Emission
 
@@ -883,6 +917,14 @@ damage assignment, token creation, counter placement, draw, life gain, and disca
 replacement effects are data (not callbacks), the engine can inspect which replacements apply, handle
 ordering when multiple replacement effects compete (the affected player chooses per Rule 616.1), and
 serialize the state even when a replacement choice is pending.
+
+Life-gain replacements that execute effects use the existing replacement-result queue where damage
+arithmetic cannot suspend. A life-gain instruction drains its result before the next instruction;
+combat drains results at the settle boundary before state-based actions. The queue isolates later
+results on an automatic continuation while a result asks questions. A replacement-chain boundary
+keeps already-applied identities in scope across nested draws and suspended effects, then restores
+the parent chain. It prevents a replacement-generated gain from invoking the same replacement again
+without suppressing later independent gains.
 
 **Why model replacement effects as declarative patterns?**
 
@@ -1150,6 +1192,68 @@ activated abilities, and pain lands that cost life are tapped last.
    needed for future casts. If you have a red spell and a blue spell in hand with one Mountain and
    one Island, the solver won't tap the Island to pay for the red spell's generic cost.
 
+**Scoped mana-source restrictions.** `WithManaAbilitySources` bounds an activated-mana-ability
+source filter to a nested instruction. Its automatic continuation captures the affected player and
+resolution context, survives payment suspensions, and disappears before outer work resumes. Nested
+filters intersect. The shared activation predicate protects direct actions and menus; the solver also
+filters cached, snow and bonus-affordability paths. Matching reads projected source characteristics,
+not the objects consumed by activation costs. Existing floating mana and triggered mana abilities
+remain separate from activation eligibility. Pipeline output propagation crosses this transparent
+scope frame without discarding collections or payment metadata.
+
+**Spending identities.** `WithManaSpendingObligations` is the foundation for per-activation
+contribution policies. It converts only an activated ability's own output into exact mana entries,
+before triggered tap bonuses; one consumed entry discharges its activation identity in every
+nested scope. Existing floating mana is never retroactively tagged. Complete floating payments
+use a minimum-cost matching of exact unit buckets to fixed and X pips. A first-unit reward per
+activation maximizes distinct contributions; residual paths reassign flexible pips to reserve snow
+or a color needed by X. Unrestricted snow/plain units use separate capacity buckets rather than
+expanding a large pool into individual nodes. Repeated mono-hybrid symbols enumerate count splits,
+with equal contribution coverage preferring the smaller payment. Ordinary untagged payments keep
+their existing fast path. The immutable scope frames and entries serialize together, and empty identity fields are omitted
+from older replay shapes. The engine service graph supplies a bounded execution-backed planner
+for scoped final-spell affordability and automatic/explicit payment. It searches immutable results
+from the existing activation handler, re-enumerates projected legal mana abilities after each prefix,
+and proves exact contribution coverage before publishing any state or event. Deterministic tap
+chains pay intermediate costs from the pool and settle feeder identities; fixed triggered tap bonuses
+keep separate provenance. The final spell allocator consumes the chosen production state and settles
+all scopes. Explicit source selections exclude other sources throughout the chain. Search pays each
+cost against the current prefix: tap, self-sacrifice, positive fixed life or mana payments and named
+fixed self-counter removal compose without a separate cost simulation. Finite public cost choices
+also use real handler execution: fixed/variable battlefield sacrifices, fixed other-permanent taps,
+tap-X, mana-X, and named self-counter X. Existing number and public object-selection questions branch
+through their registered resumers; action-carried choices use the handler's normal validation.
+Fixed and X public graveyard exile costs reuse the same selection dispatch. Their real payment
+validates filters, owner/single-graveyard constraints and announced X; later prefixes see the cards
+already exiled. A shared action selection cannot represent multiple exile atoms, so the planner
+reports that shape as unsupported. Nested graveyard costs also remain unsupported while the
+activation choice extractors inspect only immediate composite children. Hidden-zone exile remains
+outside the proof boundary.
+Cost objects follow projected control rather than owner-keyed zones, including stolen permanents;
+source-relative tap filters retain the cost's source through query and payment. Choice previews are
+advisory when they lack that context; the real action remains authoritative.
+Distinct subsets are lazy, and even rejected responses/activations consume the shared budget so
+invalid name/type/measure combinations cannot cause unbounded enumeration. Repeated activations share
+the actual life, counters and pool, and receive distinct contribution identities. Sacrificed output
+retains last-known provenance. It accepts mana-only effect trees and explores their finite
+production pauses using the ordinary decision validators and continuation resumers. The existing
+node budget includes each color or split-number answer, not just activation prefixes. A bounded
+continuation drain finishes the entire activation and triggered tap bonuses while preserving
+enclosing scopes and caller work below the activation's continuation floor. The caller suspension
+and priority are restored after a complete production proof; partial production and failed branch
+events never publish. Search admits at most 256 states and returns a complete execution, an
+exhaustive impossibility proof, or explicit uncertainty. It records omitted eligible work and
+unsupported execution boundaries; merely reaching the budget does not invalidate a completed
+last node or a terminal impossibility proof. Any successful branch wins over uncertain alternatives.
+Boolean affordability accepts only a complete proof, while payment errors distinguish unknown
+feasibility from impossibility without publishing speculative state or events. No replay, event, decision
+or client contract is added. Standalone
+solvers and intermediate-ability affordability retain the independent fixed-output proof. Face-down
+boards retain a uniform source-proof boundary because legacy enumeration inspects hidden printed
+statics; complete floating payments still work. Hidden-zone/distributed-counter cost choices and
+other unsupported mana-ability execution shapes remain explicit uncertainty. Atomic manual-overactivation
+recovery and closing those proof boundaries remain required before a printed card uses the foundation.
+
 **Tier 3: Cost Execution (Engine).** The `CostHandler` physically pays costs — tapping permanents,
 deducting from the mana pool, sacrificing creatures, discarding cards, paying life. The `ManaPool`
 data class is immutable:
@@ -1222,6 +1326,15 @@ be counted twice.
   system produces Arena-quality automatic payment. Manual tapping is available as an opt-in
   `PaymentStrategy.Explicit` for edge cases.
 
+Scoped per-activation spending uses a serialized `ScopedManaProductionContinuation` beneath the
+ability's entire effect tree. Fixed siblings, number splits and repeated color decisions all finish
+before the boundary computes the pool delta and tags one activation identity. The snapshot preserves
+preexisting pool entries and the producing source's projected type/snow metadata. Dampening sees the
+whole production, including restricted entries, and separate triggered tap bonuses run only after
+tagging. Non-tapping and zero-output activations do not fire tap bonuses. This accounting boundary
+does not prove that future activations can pay a forced card play; forward planning and recovery remain
+separate work.
+
 ### 2.11 Copy Effects
 
 **Principle:** Copy effects resolve at entry time by replacing the base `CardComponent`, making
@@ -1271,6 +1384,8 @@ data class CopyOfComponent(
 
 5. **Battlefield entry.** The permanent enters the battlefield with the copied stats, types,
    keywords, and abilities as its base state.
+
+Triggered abilities capture their complete SDK rules text when detected. Target and distribution continuations carry that snapshot onto the stack; `EffectContext.forTriggeredAbility` keeps it through resolution choices. `CopyExceptions.retainResolvingTriggeredAbility` appends the snapshot to the copy’s intrinsic triggered abilities, so later copies inherit it and repeated self-copies add separate instances. Source changes cannot rewrite an ability already on the stack.
 
 **Why copy is resolved before entry, not as a continuous effect layer.**
 

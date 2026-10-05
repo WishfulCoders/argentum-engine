@@ -17,6 +17,7 @@ import com.wingedsheep.engine.state.components.battlefield.entitiesChoice
 import com.wingedsheep.engine.state.components.battlefield.chosenOpponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.GrantsStationUsingToughnessComponent
+import com.wingedsheep.engine.state.components.battlefield.LastKnownPermanentComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
@@ -24,6 +25,7 @@ import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.NumericKeywordValuesComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
+import com.wingedsheep.engine.state.components.player.PlayerCountersRemovedThisTurnComponent
 import com.wingedsheep.engine.state.components.identity.RoomComponent
 import com.wingedsheep.engine.state.components.identity.ToxicComponent
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
@@ -45,6 +47,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import kotlin.math.max
 import kotlin.math.min
+import com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent
 
 private val BASIC_LAND_SUBTYPES: Set<String> = setOf("Plains", "Island", "Swamp", "Mountain", "Forest")
 
@@ -134,6 +137,9 @@ class DynamicAmountEvaluator(
         amount: DynamicAmount,
         context: EffectContext
     ): Boolean = when (amount) {
+        is DynamicAmount.GraveyardRelativeCount ->
+            TargetResolutionUtils.resolveTarget(amount.entity, context, state) != null
+
         is DynamicAmount.EntityProperty ->
             // The enchanted-creature branch of [evaluate] has its own last-known-information
             // fallback and stays determinable even once the aura has detached.
@@ -183,12 +189,14 @@ class DynamicAmountEvaluator(
         is DynamicAmount.LastKnownSourceCounters,
         is DynamicAmount.LifeTotal,
         is DynamicAmount.ManaSpentFromSubtype,
+        DynamicAmount.SnowManaSpent,
         is DynamicAmount.ManaSpentOnX,
         is DynamicAmount.ManaValueSumOfCollection,
         DynamicAmount.PermanentsSacrificedThisWay,
         DynamicAmount.CountersRemovedAsCost,
         is DynamicAmount.PlayerCount,
         is DynamicAmount.PlayerCounterCount,
+        is DynamicAmount.CardsCycledThisGame,
         is DynamicAmount.Speed,
         DynamicAmount.SpellsCastLastTurn,
         is DynamicAmount.SpellsCastThisTurn,
@@ -196,6 +204,7 @@ class DynamicAmountEvaluator(
         DynamicAmount.StationCharge,
         is DynamicAmount.StoredCardManaValue,
         is DynamicAmount.SubtypeEnteredUnderControlThisTurn,
+        is DynamicAmount.CardTypeEnteredUnderControlThisTurn,
         is DynamicAmount.CreaturesWithSubtypeDiedThisTurn,
         DynamicAmount.TotalManaSpent,
         DynamicAmount.TotalPowerSacrificedThisWay,
@@ -265,7 +274,15 @@ class DynamicAmountEvaluator(
             // becomes a permanent still resolves it from what was paid at cast.
             is DynamicAmount.CastChoice -> {
                 val source = context.sourceId?.let { state.getEntity(it) }
-                when (amount.slot) {
+                val branchSnapshot = context.triggerContext
+                    ?.takeIf { it.triggeringEntityId == context.sourceId }?.selfCastAdditionalCostChoices
+                val branch = branchSnapshot?.get(amount.slot)
+                    ?: source?.get<SpellOnStackComponent>()?.additionalCostChoices?.get(amount.slot)
+                if (branchSnapshot != null && amount.slot == com.wingedsheep.sdk.scripting.ChoiceSlot.ADDITIONAL_COST_BRANCH) {
+                    branchSnapshot[amount.slot] ?: 0
+                } else if (branch != null) {
+                    branch
+                } else when (amount.slot) {
                     com.wingedsheep.sdk.scripting.ChoiceSlot.BLIGHT_AMOUNT ->
                         source?.blightAmountChoice() ?: context.additionalCostBlightAmount
                     // "The number of creatures that convoked it" (CR 702.51c) — every creature
@@ -293,6 +310,13 @@ class DynamicAmountEvaluator(
             is DynamicAmount.ManaSpentFromSubtype ->
                 context.sourceId?.let { ManaSpentReader.subtypeSpent(state, it, amount.subtype) } ?: 0
 
+            // A cast trigger carries its own payment snapshot (it outlives the spell object);
+            // otherwise the source's stack component or cast record holds it.
+            DynamicAmount.SnowManaSpent -> context.sourceId?.let { sourceId ->
+                context.triggerContext?.takeIf { it.triggeringEntityId == sourceId }?.selfCastManaSpent?.snowSpent
+                    ?: ManaSpentReader.snowSpent(state, sourceId)
+            } ?: 0
+
             is DynamicAmount.ManaSpentOnX -> context.manaSpentOnXByColor[amount.color] ?: 0
 
             is DynamicAmount.YourLifeTotal -> {
@@ -301,13 +325,13 @@ class DynamicAmountEvaluator(
             }
 
             is DynamicAmount.LifeTotal -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 val playerId = playerIds.firstOrNull() ?: return 0
                 state.lifeTotal(playerId)
             }
 
             is DynamicAmount.StartingLifeTotal -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 val playerId = playerIds.firstOrNull() ?: return 0
                 state.getEntity(playerId)?.get<PlayerComponent>()?.startingLifeTotal ?: 20
             }
@@ -316,7 +340,7 @@ class DynamicAmountEvaluator(
             // GameState.speed already returns, so there is no has-speed branch here. Speed is not
             // pooled in team games, unlike life and poison.
             is DynamicAmount.Speed -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 val playerId = playerIds.firstOrNull() ?: return 0
                 state.speed(playerId)
             }
@@ -325,7 +349,7 @@ class DynamicAmountEvaluator(
             // unspent mana"). Reads the base-state ManaPoolComponent.total, which is unaffected by
             // continuous projection.
             is DynamicAmount.UnspentMana -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 val playerId = playerIds.firstOrNull() ?: return 0
                 state.getEntity(playerId)?.get<ManaPoolComponent>()?.total ?: 0
             }
@@ -333,18 +357,26 @@ class DynamicAmountEvaluator(
             // How many counters of a given kind a player has (poison, energy — CR 122.1, 107.14).
             // Reads the same CountersComponent as any battlefield permanent, just keyed to the
             // player entity, so this shares counterCountOf with EntityNumericProperty.CounterCount.
-            is DynamicAmount.PlayerCounterCount -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
-                val playerId = playerIds.firstOrNull() ?: return 0
-                counterCountOf(state, playerId, amount.counterType)
-            }
+            // A multi-player scope (EachOpponent) sums, like every other player-keyed count; it
+            // used to read only the first opponent, silently ignoring the rest in multiplayer.
+            // "An opponent has N or more" is a per-player test: GreatestAmongPlayers over You.
+            is DynamicAmount.PlayerCounterCount ->
+                resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
+                    .sumOf { counterCountOf(state, it, amount.counterType) }
+
+            is DynamicAmount.CardsCycledThisGame ->
+                resolveUnifiedPlayerIds(state, amount.player, context, projectedState).sumOf { playerId ->
+                    state.getEntity(playerId)
+                        ?.get<com.wingedsheep.engine.state.components.player.CardsCycledThisGameComponent>()
+                        ?.count(amount.cardName) ?: 0
+                }
 
             // Unlocked doors among Rooms the player controls (CR 709.5). Reads per-face door
             // state off each Room's RoomComponent — a single Room entity can contribute two
             // doors, so this can't go through the entity-level AggregateBattlefield. Controller
             // is read from projection so control-changing effects move a Room's doors with it.
             is DynamicAmount.UnlockedDoors -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context).toSet()
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState).toSet()
                 val projection = resolveProjection(state, projectedState)
                 val rooms = state.getBattlefield().mapNotNull { entityId ->
                     val room = state.getEntity(entityId)?.get<RoomComponent>() ?: return@mapNotNull null
@@ -372,6 +404,7 @@ class DynamicAmountEvaluator(
             is DynamicAmount.StoredCardManaValue -> {
                 val cards = context.pipeline.storedCollections[amount.collectionName] ?: return 0
                 val cardId = cards.firstOrNull() ?: return 0
+                if (cardId in context.pipeline.storedCollections[com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.UNDEFINED + ":" + amount.collectionName].orEmpty()) return 0
                 state.getEntity(cardId)?.get<CardComponent>()?.manaValue ?: 0
             }
 
@@ -389,6 +422,7 @@ class DynamicAmountEvaluator(
                 val cardTypes = mutableSetOf<com.wingedsheep.sdk.core.CardType>()
                 for (collectionName in amount.collections) {
                     for (cardId in context.pipeline.storedCollections[collectionName].orEmpty()) {
+                        if (cardId in context.pipeline.storedCollections[com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.UNDEFINED + ":" + collectionName].orEmpty()) continue
                         val card = state.getEntity(cardId)?.get<CardComponent>() ?: continue
                         cardTypes.addAll(card.typeLine.cardTypes)
                     }
@@ -399,7 +433,8 @@ class DynamicAmountEvaluator(
             is DynamicAmount.ManaValueSumOfCollection -> {
                 val cards = context.pipeline.storedCollections[amount.collectionName] ?: return 0
                 cards.sumOf { cardId ->
-                    state.getEntity(cardId)?.get<CardComponent>()?.manaValue ?: 0
+                    if (cardId in context.pipeline.storedCollections[com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.UNDEFINED + ":" + amount.collectionName].orEmpty()) 0
+                    else state.getEntity(cardId)?.get<CardComponent>()?.manaValue ?: 0
                 }
             }
 
@@ -448,6 +483,24 @@ class DynamicAmountEvaluator(
             // zones (e.g., GRAVEYARD `Count`), which infinitely recurses if a mid-projection
             // caller (a `ConditionalStaticAbility` condition evaluated inside [EffectApplicator])
             // reaches this branch through a default-constructed [ConditionEvaluator].
+            is DynamicAmount.GraveyardRelativeCount -> {
+                val id = TargetResolutionUtils.resolveTarget(amount.entity, context, state)
+                val zone = id?.let { state.logicalZone(it) }
+                if (zone?.zoneType != Zone.GRAVEYARD) 0 else {
+                    val cards = state.getZone(zone)
+                    val index = cards.indexOf(id)
+                    if (index < 0) 0 else {
+                        val predicateContext = PredicateContext.fromEffectContext(context)
+                        // Reuse the caller's intermediate projection during layer evaluation.
+                        val projection = resolveProjection(state, projectedState)
+                        cards.indices.count { i ->
+                            (if (amount.above) i > index else i < index) &&
+                                conditions.predicates.matches(state, projection, cards[i], amount.filter, predicateContext)
+                        }
+                    }
+                }
+            }
+
             is DynamicAmount.Count ->
                 evaluateUnifiedCount(state, amount.player, amount.zone, amount.filter, context, projectedState)
 
@@ -463,7 +516,7 @@ class DynamicAmountEvaluator(
             // aggregating. Each iteration rebinds the controller so `Player.You` inside [inner]
             // means the player being measured, exactly as `ForEachPlayerEffect` does.
             is DynamicAmount.GreatestAmongPlayers ->
-                resolveUnifiedPlayerIds(state, amount.players, context).maxOfOrNull { playerId ->
+                resolveUnifiedPlayerIds(state, amount.players, context, projectedState).maxOfOrNull { playerId ->
                     evaluate(state, amount.inner, context.copy(controllerId = playerId), projectedState)
                 } ?: 0
 
@@ -474,7 +527,7 @@ class DynamicAmountEvaluator(
             // projection so control-changing effects are honored (700.5a). Face-down permanents have
             // no mana cost (CR 708.2a) and contribute nothing.
             is DynamicAmount.DevotionTo -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context).toSet()
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState).toSet()
                 if (playerIds.isEmpty()) return 0
                 val projection = resolveProjection(state, projectedState)
                 val wanted = amount.colors.toSet()
@@ -497,11 +550,11 @@ class DynamicAmountEvaluator(
             // "For each opponent" / "for each other player" — how many players the scope names.
             // resolveUnifiedPlayerIds already yields only players still in the game, so a pod that
             // has lost a player reports the live number (CR 800.4a).
-            is DynamicAmount.PlayerCount -> resolveUnifiedPlayerIds(state, amount.scope, context).size
+            is DynamicAmount.PlayerCount -> resolveUnifiedPlayerIds(state, amount.scope, context, projectedState).size
 
             is DynamicAmount.CountPlayersWith -> {
                 val eval = conditions
-                val playerIds = resolveUnifiedPlayerIds(state, amount.scope, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.scope, context, projectedState)
                 playerIds.count { playerId ->
                     eval.evaluate(state, amount.condition, context.copy(controllerId = playerId))
                 }
@@ -522,22 +575,50 @@ class DynamicAmountEvaluator(
                     return context.triggerContext?.enchantedCreatureLastKnownPower ?: 0
                 }
                 if (entityId == null) return 0
+                val pipelineTarget = amount.entity as? EffectTarget.PipelineTarget
+                if (pipelineTarget != null && entityId in context.pipeline.storedCollections[
+                        com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.UNDEFINED + ":" + pipelineTarget.collectionName
+                    ].orEmpty()) return 0
                 // Last-known-information fallback (CR 113.7a / 603.10 / 608.2h): one rule for every
                 // reference that reads a permanent after it has left the battlefield — a
                 // self-sacrificing source, or a sacrificed / tapped / chosen cost permanent. When
-                // such a reference resolves off the battlefield, read its captured snapshot's P/T
+                // such a reference resolves off the battlefield, read its captured characteristics
                 // before falling through to base characteristics. [LkiPolicy.LIVE_ONLY] references
                 // (targets, iteration, …) skip this and read the live board. Off the battlefield the
                 // projected P/T is null, so the final resolveNumericProperty yields base
                 // characteristics anyway — this replaces the former per-reference
                 // `useProjected = false` branches (Ghitu Fire-Eater, Heart-Piercer Manticore, …).
+                val staleSource = amount.entity == EffectTarget.Self &&
+                    if (context.objectReferences.captured) {
+                        !context.objectReferences.isCurrent(context.objectReferences.source, state)
+                    } else {
+                        context.sourceBattlefieldTimestamp != null && context.sourceBattlefieldTimestamp !=
+                            state.getEntity(entityId)?.get<BattlefieldEntryTimestampComponent>()?.timestamp
+                    }
+                val capturedSnapshot = context.lkiSnapshotFor(amount.entity, entityId)
+                val capturedObjectLeft = capturedSnapshot?.objectRef?.let { !state.isCurrentObject(it) } == true
                 if (lkiPolicyFor(amount.entity) == LkiPolicy.LIVE_THEN_LKI &&
-                    entityId !in state.getBattlefield()
+                    (entityId !in state.getBattlefield() || staleSource || capturedObjectLeft)
                 ) {
-                    val snapshot = context.lkiSnapshotFor(amount.entity, entityId)
-                    when (amount.numericProperty) {
-                        is EntityNumericProperty.Power -> snapshot?.power?.let { return it }
-                        is EntityNumericProperty.Toughness -> snapshot?.toughness?.let { return it }
+                    // A reference-specific capture (the cost-paid snapshot) wins; otherwise the
+                    // departed object's own battlefield-exit snapshot, which the entity carries until
+                    // its next zone change — Archfiend of the Dross killed with its upkeep trigger on
+                    // the stack counts the oil counters it left with (ruling 2023-02-04).
+                    val snapshot = capturedSnapshot
+                        ?: state.getEntity(entityId)?.get<LastKnownPermanentComponent>()?.snapshot
+                    when (val property = amount.numericProperty) {
+                        is EntityNumericProperty.Power -> {
+                            if (snapshot?.typeLine?.isCreature == false) return 0
+                            snapshot?.power?.let { return it }
+                        }
+                        is EntityNumericProperty.Toughness -> {
+                            if (snapshot?.typeLine?.isCreature == false) return 0
+                            snapshot?.toughness?.let { return it }
+                        }
+                        is EntityNumericProperty.ManaValue -> snapshot?.manaValue?.let { return it }
+                        is EntityNumericProperty.CounterCount -> snapshot?.let {
+                            return property.counterType?.let { type -> it.counters[type] ?: 0 } ?: it.totalCounters
+                        }
                         else -> { /* fall through to base characteristics */ }
                     }
                 }
@@ -575,7 +656,7 @@ class DynamicAmountEvaluator(
             }
 
             is DynamicAmount.TurnTracking -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 when (amount.tracker) {
                     TurnTracker.CREATURES_DIED -> playerIds.sumOf { playerId ->
                         state.getEntity(playerId)
@@ -642,6 +723,7 @@ class DynamicAmountEvaluator(
                             ?.get<com.wingedsheep.engine.state.components.player.LifeLostAmountThisTurnComponent>()
                             ?.amount ?: 0
                     }
+                    TurnTracker.LIFE_LOST_LAST_TURN -> playerIds.count { it in state.playersWhoLostLifeLastTurn }
                     TurnTracker.PLAYER_ATTACKED -> playerIds.count { playerId ->
                         state.getEntity(playerId)
                             ?.has<com.wingedsheep.engine.state.components.combat.PlayerAttackedThisTurnComponent>() == true
@@ -652,6 +734,8 @@ class DynamicAmountEvaluator(
                     }
                     TurnTracker.DEALT_NONCOMBAT_DAMAGE -> playerIds.count { it in state.playersDealtNoncombatDamageThisTurn }
                     TurnTracker.DEALT_NONCOMBAT_DAMAGE_LAST_TURN -> playerIds.count { it in state.playersDealtNoncombatDamageLastTurn }
+                    TurnTracker.DEALT_COMBAT_DAMAGE_SINCE_YOUR_LAST_TURN ->
+                        playerIds.count { it in state.playersDealtCombatDamageSinceTheirLastTurn }
                     TurnTracker.DEALT_COMBAT_DAMAGE_BY_LEGENDARY_CREATURE -> playerIds.count { playerId ->
                         state.getEntity(playerId)
                             ?.has<com.wingedsheep.engine.state.components.player.WasDealtCombatDamageByLegendaryCreatureThisTurnComponent>() == true
@@ -696,6 +780,11 @@ class DynamicAmountEvaluator(
                     TurnTracker.CARDS_LEFT_GRAVEYARD -> playerIds.sumOf { playerId ->
                         state.getEntity(playerId)
                             ?.get<com.wingedsheep.engine.state.components.player.CardsLeftGraveyardThisTurnComponent>()
+                            ?.count ?: 0
+                    }
+                    TurnTracker.PERMANENTS_PUT_INTO_HAND_FROM_BATTLEFIELD -> playerIds.sumOf { playerId ->
+                        state.getEntity(playerId)
+                            ?.get<com.wingedsheep.engine.state.components.player.PermanentsPutIntoHandFromBattlefieldThisTurnComponent>()
                             ?.count ?: 0
                     }
                     TurnTracker.DESCENDED -> playerIds.sumOf { playerId ->
@@ -767,11 +856,21 @@ class DynamicAmountEvaluator(
                             ?.get<com.wingedsheep.engine.state.components.player.LoyaltyAbilitiesActivatedThisTurnComponent>()
                             ?.count ?: 0
                     }
+                    TurnTracker.ENERGY_PAID_OR_LOST -> playerIds.sumOf { playerId ->
+                        state.getEntity(playerId)
+                            ?.get<PlayerCountersRemovedThisTurnComponent>()
+                            ?.count(CounterType.ENERGY) ?: 0
+                    }
+                    TurnTracker.PLUS_ONE_COUNTERS_PUT_ON_YOUR_CREATURES -> playerIds.sumOf { playerId ->
+                        state.getEntity(playerId)
+                            ?.get<com.wingedsheep.engine.state.components.player.PlusOneCountersPutOnYourCreaturesThisTurnComponent>()
+                            ?.count ?: 0
+                    }
                 }
             }
 
             is DynamicAmount.SpellsCastThisTurn -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 // excludeSelf drops the resolving spell's own record, matched by the spell's
                 // stack entity id (CastSpellRecord.sourceEntityId == context.sourceId).
                 val selfId = if (amount.excludeSelf) context.sourceId else null
@@ -857,8 +956,15 @@ class DynamicAmountEvaluator(
                 }
             }
 
+            is DynamicAmount.CardTypeEnteredUnderControlThisTurn ->
+                resolveUnifiedPlayerIds(state, amount.player, context, projectedState).sumOf { playerId ->
+                    state.getEntity(playerId)
+                        ?.get<com.wingedsheep.engine.state.components.player.PermanentsEnteredUnderControlThisTurnComponent>()
+                        ?.countOfType(amount.cardType) ?: 0
+                }
+
             is DynamicAmount.SubtypeEnteredUnderControlThisTurn -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                 val wanted = amount.subtypes.map { it.value }
                 val excludeId = if (amount.excludeTriggeringEntity) context.triggeringEntityId else null
                 playerIds.sumOf { playerId ->
@@ -879,7 +985,7 @@ class DynamicAmountEvaluator(
             // creature that was a Zubera only through a continuous effect still counts.
             is DynamicAmount.CreaturesWithSubtypeDiedThisTurn -> {
                 val wanted = amount.subtype.value
-                resolveUnifiedPlayerIds(state, amount.player, context).sumOf { playerId ->
+                resolveUnifiedPlayerIds(state, amount.player, context, projectedState).sumOf { playerId ->
                     state.getEntity(playerId)
                         ?.get<com.wingedsheep.engine.state.components.player.CreatureSubtypesDiedThisTurnComponent>()
                         ?.diedSubtypeSets
@@ -908,7 +1014,7 @@ class DynamicAmountEvaluator(
             // honored (CLAUDE.md battlefield-projection rule), restricting to actual creature types so
             // artifact/land subtypes can't inflate the count. Zero when no creature shares a type.
             is DynamicAmount.LargestSharedCreatureTypeCount -> {
-                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context).toSet()
+                val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, projectedState).toSet()
                 if (playerIds.isEmpty()) return 0
                 val projection = resolveProjection(state, projectedState)
                 val tally = HashMap<String, Int>()
@@ -1034,7 +1140,7 @@ class DynamicAmountEvaluator(
         context: EffectContext,
         explicitProjection: ProjectedState?
     ): Int {
-        val playerIds = resolveUnifiedPlayerIds(state, player, context)
+        val playerIds = resolveUnifiedPlayerIds(state, player, context, explicitProjection)
         val zoneType = resolveUnifiedZone(zone)
         val predicateContext = PredicateContext.fromEffectContext(context)
 
@@ -1067,7 +1173,7 @@ class DynamicAmountEvaluator(
         context: EffectContext,
         explicitProjection: ProjectedState?
     ): Int {
-        val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+        val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, explicitProjection)
         val predicateContext = PredicateContext.fromEffectContext(context)
         val projection = resolveProjection(state, explicitProjection)
 
@@ -1184,6 +1290,14 @@ class DynamicAmountEvaluator(
                     resolveCardNumericProperty(state, projection, it, prop)
                 }.size
             }
+            // "<N> or more <group> with the same name as one another" (Mechanized Production):
+            // bucket by name and take the biggest bucket. The projected name wins where a
+            // name-changing effect set one, as in the Yenna name predicate. A face-down permanent
+            // has no name (CR 708.2a), so it shares one with nothing.
+            Aggregation.LARGEST_SAME_NAME_GROUP -> matchingEntities.mapNotNull { entityId ->
+                if (state.getEntity(entityId)?.has<FaceDownComponent>() == true) return@mapNotNull null
+                projection.getName(entityId) ?: state.getEntity(entityId)?.get<CardComponent>()?.name
+            }.groupingBy { it }.eachCount().values.maxOrNull() ?: 0
         }
     }
 
@@ -1196,7 +1310,7 @@ class DynamicAmountEvaluator(
         context: EffectContext,
         explicitProjection: ProjectedState?
     ): Int {
-        val playerIds = resolveUnifiedPlayerIds(state, amount.player, context)
+        val playerIds = resolveUnifiedPlayerIds(state, amount.player, context, explicitProjection)
         val predicateContext = PredicateContext.fromEffectContext(context)
 
         // Non-battlefield zone: avoid reaching for [defaultProjection] entirely. The predicate
@@ -1287,16 +1401,27 @@ class DynamicAmountEvaluator(
                     resolveCardNumericProperty(state, null, it, prop)
                 }.size
             }
+            // Off the battlefield there is no projection, so the printed name is the only one.
+            Aggregation.LARGEST_SAME_NAME_GROUP -> matchingEntities.mapNotNull { entityId ->
+                state.getEntity(entityId)?.get<CardComponent>()?.name
+            }.groupingBy { it }.eachCount().values.maxOrNull() ?: 0
         }
     }
 
     private fun resolveUnifiedPlayerIds(
         state: GameState,
         player: Player,
-        context: EffectContext
+        context: EffectContext,
+        projectedState: ProjectedState?
     ): List<EntityId> {
         return when (player) {
             is Player.You -> listOf(context.controllerId)
+            // "its controller" for the permanent a continuous effect is modifying — read from the
+            // caller's projection, which mid-projection is the intermediate one (control changes
+            // are layer 2, so they are already applied by the time a layer-7 amount asks).
+            is Player.ControllerOfAffectedEntity -> listOfNotNull(
+                context.affectedEntityId?.let { controllerOf(state, resolveProjection(state, projectedState), it) }
+            )
             // "its controller" inside a ForEach over entities — a single player, or none outside
             // such a loop.
             is Player.ControllerOfIterationEntity ->
@@ -1312,6 +1437,7 @@ class DynamicAmountEvaluator(
                 .filterIsInstance<com.wingedsheep.engine.state.components.stack.ChosenTarget.Player>()
                 .map { it.playerId }
                 .distinct()
+            is Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
             is Player.Each -> state.activePlayers
             is Player.Any -> state.activePlayers
             // "those players" recorded by a `StorePlayer` step earlier in this resolution.
@@ -1383,6 +1509,7 @@ class DynamicAmountEvaluator(
                     ?: state.getEntity(entityId)?.get<CardComponent>()?.baseStats?.baseToughness
                     ?: 0
             }
+            CardNumericProperty.COUNTERS -> counterCountOf(state, entityId, counterType = null)
         }
     }
 
@@ -1611,6 +1738,7 @@ class DynamicAmountEvaluator(
         }
         if (useProjected) {
             val projection = resolveProjection(state, explicitProjected)
+            if (entityId in state.getBattlefield() && !projection.isCreature(entityId)) return 0
             val projectedValue = if (isPower) projection.getPower(entityId) else projection.getToughness(entityId)
             if (projectedValue != null) return projectedValue
         }

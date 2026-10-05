@@ -324,8 +324,23 @@ data class TargetInfo(
      * (`TargetObject.dynamicMaxCount == DynamicAmount.XValue`). The client should
      * clamp selectable targets to the chosen X after X selection.
      */
-    val xConstrainsCount: Boolean = false
+    val xConstrainsCount: Boolean = false,
+    /**
+     * True when the targets chosen for this requirement must each have a different controller
+     * (`TargetObject.differentControllers` — Run Away Together's "two target creatures controlled
+     * by different players"). Lets a chooser that fills the slot itself (the AI) spread its picks.
+     */
+    val differentControllers: Boolean = false,
 )
+
+/**
+ * The per-requirement list a [LegalAction] carries in `targetRequirements`. A single requirement
+ * normally travels flattened onto the action's own `validTargets` / `minTargets` fields, so the list
+ * is only surfaced for several requirements — or for one whose cross-target constraint
+ * ([TargetInfo.differentControllers]) the flattened fields can't express.
+ */
+fun List<TargetInfo>.surfacedRequirements(): List<TargetInfo>? =
+    takeIf { size > 1 || any { it.differentControllers } }
 
 /**
  * Information about a creature that can be tapped for Convoke.
@@ -459,6 +474,14 @@ data class AdditionalCostData(
      * unit and the client never has to know which cost it is looking at.
      */
     val exileWeightUnit: String = "",
+    /**
+     * Each offered card's card types (CR 205.2a), for a cost measured by a **union** rather than a
+     * sum — `CardMeasure.DistinctCardTypes`, Nethergoyf's "four or more card types among them".
+     * When non-empty the client's running total is the number of distinct entries across the
+     * selected cards' lists, not the sum of [exileCardWeights] (an artifact creature plus a creature
+     * shows two types, not three); [exileCardWeights] then only carries each card's own type count.
+     */
+    val exileCardTypes: Map<EntityId, List<String>> = emptyMap(),
     /**
      * What each of the spell's *legal targets* would add to [exileMinTotalWeight] if chosen —
      * non-empty only for a cost whose threshold is priced off the targets rather than printed:

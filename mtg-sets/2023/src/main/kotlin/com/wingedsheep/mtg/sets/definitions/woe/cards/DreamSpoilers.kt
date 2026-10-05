@@ -19,8 +19,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * controls gets -1/-1 until end of turn.
  *
  * "During an opponent's turn" is checked when the ability would trigger, so it rides on
- * `triggerRestriction` ([Conditions.IsNotYourTurn]) rather than gating the resolved effect —
- * only players take turns, so "not your turn" is exactly "an opponent's turn".
+ * `triggerRestriction` ([Conditions.IsOpponentsTurn]) rather than gating the resolved effect —
+ * only players take turns, so "an opponent's turn" is not merely "not your turn" — an ally's turn is not an opponent's.
  * "Up to one target" is an optional target, so the ability still resolves (doing nothing)
  * when no creature is chosen or the chosen one has left.
  */
@@ -38,7 +38,7 @@ val DreamSpoilers = card("Dream Spoilers") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         val t = target(TargetFilter.Creature.opponentControls(), optional = true)
         effect = Effects.ModifyStats(power = -1, toughness = -1, target = t)
     }

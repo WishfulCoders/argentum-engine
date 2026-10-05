@@ -134,6 +134,7 @@ class GameTestDriver {
         val initializer = GameInitializer(cardRegistry)
         val result = initializer.initializeGame(
             GameConfig(
+                preserveGraveyardOrder = false,
                 players = listOf(
                     PlayerConfig("Player 1", deck1, startingLife),
                     PlayerConfig("Player 2", deck2, startingLife)
@@ -182,6 +183,7 @@ class GameTestDriver {
         val initializer = GameInitializer(cardRegistry)
         val result = initializer.initializeGame(
             GameConfig(
+                preserveGraveyardOrder = false,
                 format = format,
                 players = decks.mapIndexed { index, deck ->
                     PlayerConfig(
@@ -678,6 +680,7 @@ class GameTestDriver {
             spellEffect = cardDef.spellEffect,
             hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
             hasActivatedAbility = cardDef.hasActivatedAbility,
+            hasCycling = cardDef.hasCycling,
             // Keep driver-minted cards in step with CardEntityFactory: precomputed printed
             // characteristics other code reads back (SpellCastPredicate.CastAsAdventure,
             // CardPredicate.HasAdventure / OriginallyPrintedInSet).
@@ -738,6 +741,7 @@ class GameTestDriver {
             spellEffect = cardDef.spellEffect,
             hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
             hasActivatedAbility = cardDef.hasActivatedAbility,
+            hasCycling = cardDef.hasCycling,
             // Keep driver-minted cards in step with CardEntityFactory: precomputed printed
             // characteristics other code reads back (SpellCastPredicate.CastAsAdventure,
             // CardPredicate.HasAdventure / OriginallyPrintedInSet).
@@ -834,6 +838,7 @@ class GameTestDriver {
             spellEffect = cardDef.spellEffect,
             hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
             hasActivatedAbility = cardDef.hasActivatedAbility,
+            hasCycling = cardDef.hasCycling,
             // Keep driver-minted cards in step with CardEntityFactory: precomputed printed
             // characteristics other code reads back (SpellCastPredicate.CastAsAdventure,
             // CardPredicate.HasAdventure / OriginallyPrintedInSet).
@@ -899,6 +904,7 @@ class GameTestDriver {
             spellEffect = cardDef.spellEffect,
             hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
             hasActivatedAbility = cardDef.hasActivatedAbility,
+            hasCycling = cardDef.hasCycling,
             // Keep driver-minted cards in step with CardEntityFactory: precomputed printed
             // characteristics other code reads back (SpellCastPredicate.CastAsAdventure,
             // CardPredicate.HasAdventure / OriginallyPrintedInSet).
@@ -1016,6 +1022,7 @@ class GameTestDriver {
             spellEffect = cardDef.spellEffect,
             hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
             hasActivatedAbility = cardDef.hasActivatedAbility,
+            hasCycling = cardDef.hasCycling,
             // Keep driver-minted cards in step with CardEntityFactory: precomputed printed
             // characteristics other code reads back (SpellCastPredicate.CastAsAdventure,
             // CardPredicate.HasAdventure / OriginallyPrintedInSet).

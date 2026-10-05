@@ -60,6 +60,18 @@ sealed interface Player {
         override val description: String = "defending player"
     }
 
+    /**
+     * All defending players in the current combat, in APNAP order, including those with
+     * no attackers assigned and before attackers are declared. Includes all opponents
+     * regardless of attack-left/right limits, respecting shared team turns. Outside combat resolves to nobody. This is a list-only reference;
+     * a single-player slot must not collapse it to one defender.
+     */
+    @SerialName("EachDefendingPlayer")
+    @Serializable
+    data object EachDefendingPlayer : Player {
+        override val description: String = "each defending player"
+    }
+
     /** All opponents */
     @SerialName("EachOpponent")
     @Serializable
@@ -237,6 +249,23 @@ sealed interface Player {
         override val description: String = "its controller"
     }
 
+    /**
+     * Controller of the permanent a continuous effect is currently modifying — "enchanted creature
+     * gets -X/-0, where X is the number of cards in **its controller's** graveyard" (Disturbing
+     * Conversion). Pairs with [com.wingedsheep.sdk.scripting.targets.EffectTarget.AffectedEntity]:
+     * the layer projector re-evaluates the amount per affected permanent, and this reads that
+     * permanent's (projected) controller rather than the effect source's.
+     *
+     * Distinct from [You] / [ControllerOfSource], which stay the Aura's controller, and from
+     * [ControllerOf], which reads a chosen target the projector has no copy of. Null outside a
+     * per-affected-entity evaluation.
+     */
+    @SerialName("ControllerOfAffectedEntity")
+    @Serializable
+    data object ControllerOfAffectedEntity : Player {
+        override val description: String = "its controller"
+    }
+
     /** Owner of a permanent (used with EffectTarget) */
     @SerialName("OwnerOf")
     @Serializable
@@ -362,9 +391,11 @@ sealed interface Player {
             You -> "your"
             AnOpponent -> "an opponent's"
             DefendingPlayer -> "defending player's"
+            EachDefendingPlayer -> "each defending player's"
             TargetOpponent -> "target opponent's"
             TargetPlayer -> "target player's"
             ControllerOfIterationEntity -> "its controller's"
+            ControllerOfAffectedEntity -> "its controller's"
             EachTargetedPlayer -> "those players'"
             is InCollection -> "those players'"
             Each -> "each player's"

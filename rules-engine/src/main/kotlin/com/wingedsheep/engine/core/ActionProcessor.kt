@@ -80,7 +80,7 @@ class ActionProcessor(
 
         // Handlers never detect triggers or check state-based actions themselves. The one settle
         // boundary does that for every action, paused or not (CR 117.5, 603.3).
-        val executed = services.settler.settle(registry.execute(state, action))
+        val executed = services.settler.settle(registry.execute(ControlHistory.initialize(state), action))
 
         // Action handlers may compose several immutable intermediate states before a nested
         // handler or resumed continuation rejects a later step. The public action contract is
@@ -127,6 +127,20 @@ class ActionProcessor(
         // Check player exists
         if (!state.turnOrder.contains(action.playerId)) {
             return "Unknown player: ${action.playerId}"
+        }
+
+        // Nobody has priority before the first turn (CR 103.8): until every player has kept, only
+        // mulligan decisions are made. A restarted game (CR 727) is back at that point.
+        if (action !is TakeMulligan && action !is KeepHand && action !is BottomCards && action !is Concede &&
+            state.turnOrder.any { state.getEntity(it)?.get<com.wingedsheep.engine.state.components.player.MulliganStateComponent>()?.hasKept == false }
+        ) {
+            return "Opening hands are still being decided"
+        }
+
+        if (state.continuationStack.any { it is FinishForcedPlayContinuation } && state.pendingDecision != null &&
+            action !is SubmitDecision && action !is Concede &&
+            !(action is ActivateAbility && com.wingedsheep.engine.mechanics.mana.ManaPaymentWindow.openFor(state, state.actorFor(action.playerId)) != null)) {
+            return "Answer the current casting decision"
         }
 
         // Split second (CR 702.61): no spells, no non-mana activated abilities. An ActivateAbility

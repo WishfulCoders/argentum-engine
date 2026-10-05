@@ -62,6 +62,8 @@ object DecisionValidators {
      */
     fun validate(decision: PendingDecision, response: DecisionResponse, state: GameState? = null): String? {
         return when (decision) {
+            is com.wingedsheep.engine.core.PlayCardDecision ->
+                if (response is com.wingedsheep.engine.core.PlayCardResponse) null else "Play the instructed card"
             is ChooseTargetsDecision -> validateTargets(decision, response, state)
             is SelectCardsDecision -> validateSelectCards(decision, response, state)
             is YesNoDecision -> validateYesNo(response)
@@ -470,6 +472,24 @@ object DecisionValidators {
             return "Expected pile split response"
         }
 
+        if (decision.allowUnassigned || decision.maxPileMemberships.isNotEmpty() || decision.pileOptions.isNotEmpty() || decision.requiredAssignments != null) {
+            if (response.piles.size != decision.numberOfPiles) return "Incorrect number of piles"
+            if (response.piles.any { it.size != it.distinct().size }) return "A pile contains duplicate cards"
+            for ((index, pile) in response.piles.withIndex()) {
+                val options = decision.pileOptions[index]
+                if (options != null && pile.any { it !in options }) return "Invalid card for pile"
+            }
+            if (decision.requiredAssignments != null && response.piles.sumOf { it.size } != decision.requiredAssignments)
+                return "Incorrect number of assignments"
+            val counts = response.piles.flatten().groupingBy { it }.eachCount()
+            if (counts.keys.any { it !in decision.cards }) return "Invalid card in pile"
+            for (card in decision.cards) {
+                val count = counts[card] ?: 0
+                if (!decision.allowUnassigned && count == 0) return "Every card must be assigned"
+                if (count > (decision.maxPileMemberships[card] ?: 1)) return "Too many piles for a card"
+            }
+            return null
+        }
         // Flattened rather than set-compared: a card can't be in two piles at once, so a split that
         // duplicates one card and drops another has the same set as a legal one (the multiplicity
         // hole [isSameCollection] closes for orderings).

@@ -12,6 +12,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent
+import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.HasDealtCombatDamageToPlayerComponent
 import com.wingedsheep.engine.state.components.battlefield.PreparedComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
@@ -331,6 +332,8 @@ internal class AffectsFilterResolver(
                         // creatures). Unknown leaves fail OPEN in evaluateWith, so leaving this
                         // unhandled silently matched every creature.
                         ControllerPredicate.ControlledByActivePlayer -> entityController == state.activePlayerId
+                        ControllerPredicate.ControlledByDefendingPlayer ->
+                            com.wingedsheep.engine.mechanics.combat.CombatDefenders.isCombatDefender(state, entityController)
                         // Owner-axis leaves read the card's owner relative to the source's
                         // controller (Laughing Jasper Flint: "creatures you control but don't own").
                         ControllerPredicate.OwnedByYou -> card.ownerId != null && card.ownerId == controller
@@ -359,6 +362,7 @@ internal class AffectsFilterResolver(
                 // Relational to another permanent (Konda's Banner's "creatures that share a color /
                 // a creature type with equipped creature"): evaluated against the intermediate
                 // projection, so the reference's layer-4/5 types and colors are the ones seen here.
+                is CardPredicate.CompareNumericProperty,
                 is CardPredicate.SharesColorWith,
                 is CardPredicate.SharesCreatureTypeWith -> relationalEvaluator.matchesCardPredicate(
                     state, relationalProjection, entityId, predicate, relationalContext
@@ -433,6 +437,8 @@ internal class AffectsFilterResolver(
         // Everything this resolver is handed is already a battlefield permanent, so the predicate
         // is trivially satisfied here; it only does work in PredicateEvaluator, where an object
         // that has left the battlefield can still be asked about.
+        // Script introspection needs a card registry, which this projection stage does not carry.
+        StatePredicate.HasManaAbility -> false
         StatePredicate.IsOnBattlefield -> true
         is StatePredicate.InZone -> predicate.zone == com.wingedsheep.sdk.core.Zone.BATTLEFIELD
         StatePredicate.IsTapped -> container.has<TappedComponent>()
@@ -464,6 +470,25 @@ internal class AffectsFilterResolver(
         // that player controls. Reads the *base* controller of the defender rather than a
         // projection — this resolver runs while the projection is being built, and a planeswalker's
         // controller is the fact being asked about, not a layered characteristic.
+        is StatePredicate.IsAttackingDefenderOf -> {
+            val referenceId = when (val reference = predicate.reference) {
+                com.wingedsheep.sdk.scripting.targets.EffectTarget.Self -> sourceId
+                com.wingedsheep.sdk.scripting.targets.EffectTarget.AffectedEntity -> entityId
+                com.wingedsheep.sdk.scripting.targets.EffectTarget.EnchantedCreature,
+                com.wingedsheep.sdk.scripting.targets.EffectTarget.EnchantedPermanent -> sourceId?.let {
+                    state.getEntity(it)?.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()?.targetId
+                }
+                is com.wingedsheep.sdk.scripting.targets.EffectTarget.SpecificEntity -> reference.entityId
+                else -> null
+            }
+            val player = referenceId?.let { if (it in state.turnOrder) it else projectedController(state, it, projectedValues) }
+            val attack = container.get<AttackingComponent>()
+            val defendingPlayer = attack?.defendingPlayerId ?: attack?.defenderId?.let {
+                if (it in state.turnOrder) it
+                else com.wingedsheep.engine.mechanics.battle.Battles.protectorOf(state, it) ?: projectedController(state, it, projectedValues)
+            }
+            player != null && defendingPlayer != null && player in state.sharedTurnTeam(defendingPlayer)
+        }
         StatePredicate.IsAttackingYouOrYourPlaneswalkers -> {
             val defenderId = container.get<AttackingComponent>()?.defenderId
             sourceController != null && defenderId != null && (
@@ -510,6 +535,8 @@ internal class AffectsFilterResolver(
         StatePredicate.IsCombatPairedWithSource -> false
         // Loop-relative; only meaningful inside a ForEach at resolution, never in projection.
         StatePredicate.IsBlockingIterationEntity -> false
+        // Role-relative ("blocking it"); needs an effect context, never present in projection.
+        is StatePredicate.IsBlockingEntity -> false
         // Source-relative: "created with the source" needs the ability's source permanent, absent
         // in group-static projection. Only meaningful in target/gather-filter contexts via
         // PredicateEvaluator. Never match here.
@@ -556,6 +583,7 @@ internal class AffectsFilterResolver(
         // group-static projection.
         StatePredicate.ExiledWithSource -> false
         StatePredicate.EnteredThisTurn -> container.has<EnteredThisTurnComponent>()
+        StatePredicate.ActivatedThisTurn -> container.get<AbilityActivatedThisTurnComponent>()?.anyActivated == true
         // Counter history — the per-permanent marker, so a group static gated on "each creature you
         // control that you've put one or more +1/+1 counters on this turn" (Kid Loki) resolves
         // during projection. Plain per-entity state with no source-relative half, so the answer here
@@ -577,18 +605,11 @@ internal class AffectsFilterResolver(
         is StatePredicate.HasDealtDamage ->
             hasDealtDamage(container, state.turnNumber, predicate)
         StatePredicate.HasDealtCombatDamageToPlayer -> container.has<HasDealtCombatDamageToPlayerComponent>()
-        // Controller comes from the in-progress projection first: an effect that changed control
-        // this turn (Act of Treason) makes the base ControllerComponent the wrong player to ask,
-        // and PredicateEvaluator reads the projected one. Falls back to base for an entity the
-        // projection hasn't reached yet, which is the same shape the keyword reads below use.
-        StatePredicate.AttackedThisTurn -> {
-            val controllerId = projectedController(state, entityId, projectedValues)
-            val attackerSet = controllerId?.let {
-                state.getEntity(it)
-                    ?.get<PlayerAttackersThisTurnComponent>()
-                    ?.attackerIds
-            } ?: emptySet()
-            entityId in attackerSet
+        StatePredicate.ControlledSinceTurnBegan ->
+            com.wingedsheep.engine.core.ControlHistory.matches(state, entityId, projectedController(state, entityId, projectedValues))
+        StatePredicate.AttackedThisTurn -> state.turnOrder.any { playerId ->
+            state.getEntity(playerId)?.get<PlayerAttackersThisTurnComponent>()
+                ?.attackerIds?.contains(entityId) == true
         }
         StatePredicate.AttackedABattleThisTurn -> {
             val controllerId = projectedController(state, entityId, projectedValues)
@@ -704,6 +725,8 @@ internal class AffectsFilterResolver(
                         ControllerPredicate.ControlledByOpponent -> auraController != sourceController
                         ControllerPredicate.ControlledByAny -> true
                         ControllerPredicate.ControlledByActivePlayer -> auraController == state.activePlayerId
+                        ControllerPredicate.ControlledByDefendingPlayer ->
+                            com.wingedsheep.engine.mechanics.combat.CombatDefenders.isCombatDefender(state, auraController)
                         else -> null
                     }
                 }
@@ -720,13 +743,17 @@ internal class AffectsFilterResolver(
                     ControllerPredicate.ControlledByOpponent -> protector != sourceController
                     ControllerPredicate.ControlledByAny -> true
                     ControllerPredicate.ControlledByActivePlayer -> protector == state.activePlayerId
+                        ControllerPredicate.ControlledByDefendingPlayer ->
+                            com.wingedsheep.engine.mechanics.combat.CombatDefenders.isCombatDefender(state, protector)
                     ControllerPredicate.OwnedByYou, ControllerPredicate.OwnedByOpponent,
                     ControllerPredicate.OwnedByTargetPlayer, ControllerPredicate.OwnedByTriggeringPlayer -> false
                     else -> null
                 }
             }
         }
-        StatePredicate.IsModified -> com.wingedsheep.engine.handlers.predicates.isModified(state, entityId)
+        StatePredicate.IsModified -> com.wingedsheep.engine.handlers.predicates.isModified(state, entityId) {
+            projectedController(state, it, projectedValues)
+        }
         // A general "attached to <filter>" host constraint whose nested filter may carry a controller
         // predicate ("a creature you control"). Group-static projection has no ability controller to
         // resolve that "you", so this predicate is only meaningful in target/condition contexts via
@@ -754,6 +781,10 @@ internal class AffectsFilterResolver(
         // (Goblin Glory Chaser) be a plain conditional static.
         StatePredicate.IsRenowned ->
             container.has<com.wingedsheep.engine.state.components.battlefield.RenownedComponent>()
+        // Monstrous (CR 701.37b) — component-backed like renowned, which is what lets "as long as
+        // this creature is monstrous, it has trample" (Domesticated Hydra) be a conditional static.
+        StatePredicate.IsMonstrous ->
+            container.has<com.wingedsheep.engine.state.components.battlefield.MonstrousComponent>()
         // Suspected (CR 701.60a) is itself a Layer-ability modification, so it is read off the
         // values accumulated so far in this projection pass — the same source `ProjectedState`
         // exposes as `isSuspected`, and the same self-referential caveat as IsModified above.
@@ -766,6 +797,8 @@ internal class AffectsFilterResolver(
         // in group-static projection never carry. Only meaningful in target/counter contexts via
         // PredicateEvaluator. Never match here.
         is StatePredicate.WasCastFromZone -> false
+        // Stack-only, like WasCastFromZone: a permanent has no chosen targets.
+        StatePredicate.HasSingleTarget -> false
         StatePredicate.HasGreatestPower -> hasGreatestPowerInProjection(state, entityId, container, projectedValues)
         StatePredicate.HasLeastPowerAmongAllCreatures -> hasLeastPowerAmongAllCreaturesInProjection(state, entityId, container, projectedValues)
         // Relational minimum-mana-value matching is intended for point-of-use filters (targeting
@@ -781,7 +814,7 @@ internal class AffectsFilterResolver(
         }
         is StatePredicate.HasCounter -> {
             val counters = container.get<CountersComponent>()
-            counters != null && counters.getCount(predicate.counterType) > 0
+            counters != null && counters.getCount(predicate.counterType) >= predicate.minCount
         }
         StatePredicate.HasLockedDoor ->
             container.get<RoomComponent>()?.lockedFaces?.isNotEmpty() == true
@@ -928,9 +961,11 @@ internal class AffectsFilterResolver(
         CardPredicate.IsToken -> container.has<com.wingedsheep.engine.state.components.identity.TokenComponent>()
         CardPredicate.IsNontoken -> !container.has<com.wingedsheep.engine.state.components.identity.TokenComponent>()
         CardPredicate.IsLegendary -> "LEGENDARY" in types
+        CardPredicate.IsSnow -> "SNOW" in types
         CardPredicate.IsNonlegendary -> "LEGENDARY" !in types
         CardPredicate.HasNonManaActivatedAbility -> card.hasNonManaActivatedAbility
         CardPredicate.HasActivatedAbility -> card.hasActivatedAbility
+        CardPredicate.HasCycling -> card.hasCycling
         is CardPredicate.HasSubtype -> if (isFaceDown) false else subtypes.any { it.equals(predicate.subtype.value, ignoreCase = true) }
         is CardPredicate.NotSubtype -> if (isFaceDown) true else subtypes.none { it.equals(predicate.subtype.value, ignoreCase = true) }
         is CardPredicate.HasAnyOfSubtypes -> if (isFaceDown) false else predicate.subtypes.any { sub -> subtypes.any { it.equals(sub.value, ignoreCase = true) } }
@@ -942,8 +977,9 @@ internal class AffectsFilterResolver(
         CardPredicate.IsColored -> colors.isNotEmpty()
         CardPredicate.IsMulticolored -> colors.size > 1
         CardPredicate.IsMonocolored -> colors.size == 1
-        is CardPredicate.HasKeyword -> predicate.keyword.name in keywords
-        is CardPredicate.NotKeyword -> predicate.keyword.name !in keywords
+        is CardPredicate.HasExactlyColors -> colors.size == predicate.count
+        is CardPredicate.HasKeyword -> keywords.containsKeyword(predicate.keyword)
+        is CardPredicate.NotKeyword -> !keywords.containsKeyword(predicate.keyword)
         is CardPredicate.PowerAtMost -> (projected?.power ?: card.baseStats?.basePower ?: 0) <= predicate.max
         is CardPredicate.PowerAtLeast -> (projected?.power ?: card.baseStats?.basePower ?: 0) >= predicate.min
         is CardPredicate.PowerEquals -> (projected?.power ?: card.baseStats?.basePower) == predicate.value
@@ -988,11 +1024,14 @@ internal class AffectsFilterResolver(
         is CardPredicate.ManaValueAtMostDynamic -> false
         is CardPredicate.ManaValueEqualsDynamic -> false
         is CardPredicate.PowerEqualsDynamic -> false
+        is CardPredicate.PowerAtMostDynamic -> false
         is CardPredicate.ToughnessEqualsDynamic -> false
         is CardPredicate.PowerGreaterThanEntity -> false
         is CardPredicate.PowerAtMostEntity -> false
         is CardPredicate.CouldEnchant -> false
+        CardPredicate.CouldProduceColorlessMana -> false
         is CardPredicate.PowerLessThanEntity -> false
+        is CardPredicate.CompareNumericProperty -> false
         CardPredicate.PowerGreaterThanBase -> {
             // Self-relative: projected power vs the object's own printed base power.
             val basePower = card.baseStats?.basePower

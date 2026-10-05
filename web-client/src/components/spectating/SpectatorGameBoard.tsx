@@ -2,6 +2,7 @@ import { useGameStore } from '@/store/gameStore.ts'
 import { SpectatorContext } from '../../contexts/SpectatorContext'
 import { GameBoard } from '../game/GameBoard'
 import { CombatArrows } from '../combat/CombatArrows'
+import { DecisionSourceThumbnail } from '../ui/DecisionSourceThumbnail'
 import type { SpectatorDecisionStatus } from '@/types'
 
 // ============================================================================
@@ -207,6 +208,7 @@ function SpectatorDecisionIndicator({
   return (
     <div style={styles.decisionIndicator}>
       <div style={styles.decisionSpinner} />
+      <DecisionSourceThumbnail sourceId={decisionStatus.sourceId} />
       <div>
         <div style={styles.decisionText}>
           {decisionStatus.playerName} is {decisionStatus.displayText.toLowerCase()}

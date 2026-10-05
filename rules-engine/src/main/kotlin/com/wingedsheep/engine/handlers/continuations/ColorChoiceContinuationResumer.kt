@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.handlers.continuations
 
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.handlers.effects.mana.ManaProvenanceTracker
 import com.wingedsheep.engine.handlers.effects.mana.ManaAbilityResolutionPipeline
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
@@ -208,6 +209,12 @@ class ColorChoiceContinuationResumer(
             contextWithColor
         )
 
+        // The activation boundary reports production and owns the tap pipeline after all parts.
+        if (state.continuationStack.any { it is ScopedManaProductionContinuation &&
+                it.sourceId == continuation.sourceId && it.playerId == continuation.controllerId }) {
+            if (effectResult.outcome is Outcome.Paused) return effectResult.toExecutionResult()
+            return checkForMore(effectResult.state, effectResult.events.toList())
+        }
         if (effectResult.outcome is Outcome.Paused) return effectResult.toExecutionResult()
 
         // The mana ability itself is now done, but only its *effect* ran — `ActivateAbilityHandler`
@@ -239,8 +246,13 @@ class ColorChoiceContinuationResumer(
             producedMana = replacement
         }
 
+        val snowMarked = ManaProvenanceTracker.markSnowProduction(state, dampening.state, sourceId, tapperId)
+        val tracked = if (continuation.baseContext.activatedAbility?.isManaAbility == true)
+            com.wingedsheep.engine.state.tagManaObligationProduction(state, snowMarked, tapperId, sourceId)
+            else snowMarked
         val finished = manaPipeline.finishTapBonuses(
-            dampening.state, sourceId, sourceCard, tapperId, producedMana, events
+            tracked,
+            sourceId, sourceCard, tapperId, producedMana, events
         )
         if (finished.outcome is Outcome.Paused) return finished
         return checkForMore(finished.newState, finished.events.toList())

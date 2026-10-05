@@ -41,6 +41,7 @@ export type ClientEvent =
   | TransformedEvent
   | CoinFlippedEvent
   | TurnChangedEvent
+  | GameRestartedEvent
   | ControlChangedEvent
   | CardCycledEvent
   | LibraryShuffledEvent
@@ -118,7 +119,7 @@ export interface StatsModifiedEvent {
 export interface CardDrawnEvent {
   readonly type: 'cardDrawn'
   readonly playerId: EntityId
-  readonly cardId: EntityId
+  readonly cardId: EntityId | null // Null unless the viewer drew it
   readonly cardName: string | null // Null if hidden from viewing player
   readonly description: string
 }
@@ -126,7 +127,7 @@ export interface CardDrawnEvent {
 export interface CardDiscardedEvent {
   readonly type: 'cardDiscarded'
   readonly playerId: EntityId
-  readonly cardId: EntityId
+  readonly cardId: EntityId | null
   readonly cardName: string
   readonly description: string
 }
@@ -143,7 +144,7 @@ export interface PermanentEnteredEvent {
 
 export interface PermanentLeftEvent {
   readonly type: 'permanentLeft'
-  readonly cardId: EntityId
+  readonly cardId: EntityId | null // Null for a move between hidden zones the viewer can't follow
   readonly cardName: string
   readonly destination: 'graveyard' | 'exile' | 'hand' | 'library'
   readonly description: string
@@ -385,6 +386,13 @@ export interface TurnChangedEvent {
   readonly type: 'turnChanged'
   readonly turnNumber: number
   readonly activePlayerId: EntityId
+  readonly isYourTurn: boolean | null
+  readonly description: string
+}
+
+export interface GameRestartedEvent {
+  readonly type: 'gameRestarted'
+  readonly startingPlayerId: EntityId
   readonly isYourTurn: boolean | null
   readonly description: string
 }

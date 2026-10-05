@@ -52,6 +52,39 @@ internal class PermanentSpellResolver(
         if (cardDef != null && !spellComponent.castFaceDown) {
             pauseForEntersAsCopy(state, spellId, spellComponent, cardComponent, cardDef, controllerId, ownerId)
                 ?.let { return it }
+        }
+        return resolveRemainingEntry(state, spellId, spellComponent, cardComponent)
+    }
+
+    /**
+     * The as-enters steps after "enters as a copy" has been settled. The copy applies first: CR
+     * 614.12 picks the entry replacements from the permanent as it would exist on the battlefield,
+     * taking into account replacement effects that already modified its entry. So once the spell
+     * has taken on the copied identity, its remaining choices and entry replacements are the copied
+     * card's — a Clone copying a "choose a color" permanent makes a color choice of its own; the
+     * original's choice is not a copiable value.
+     *
+     * Called by the clone resumer with the copy already stamped on the spell; reads the spell's
+     * current components so the copied definition drives every step.
+     */
+    fun resolveAfterEntryCopy(state: GameState, spellId: EntityId): ExecutionResult {
+        val container = state.getEntity(spellId)
+            ?: return ExecutionResult.error(state, "Spell entity not found: $spellId")
+        val spellComponent = container.get<SpellOnStackComponent>()
+            ?: return ExecutionResult.error(state, "Spell has no SpellOnStackComponent")
+        return resolveRemainingEntry(state, spellId, spellComponent, container.get<CardComponent>())
+    }
+
+    private fun resolveRemainingEntry(
+        state: GameState,
+        spellId: EntityId,
+        spellComponent: SpellOnStackComponent,
+        cardComponent: CardComponent?
+    ): ExecutionResult {
+        val controllerId = spellComponent.casterId
+        val ownerId = cardComponent?.ownerId ?: controllerId
+        val cardDef = cardComponent?.cardDefinitionId?.let { cardRegistry.getCard(it) }
+        if (cardDef != null && !spellComponent.castFaceDown) {
             pauseForFirstEntersWithChoice(state, spellId, cardComponent, cardDef, controllerId, ownerId)
                 ?.let { return it }
             pauseForRevealCounters(state, spellId, cardComponent, cardDef, controllerId, ownerId)
@@ -124,12 +157,15 @@ internal class PermanentSpellResolver(
                     ownerId = ownerId,
                     castFaceDown = spellComponent.castFaceDown,
                     additionalSubtypes = entersAsCopy.additionalSubtypes,
+                    additionalColors = entersAsCopy.additionalColors,
                     additionalKeywords = entersAsCopy.additionalKeywords,
+                    exceptions = entersAsCopy.exceptions,
                     nameOverride = entersAsCopy.nameOverride,
                     powerOverride = entersAsCopy.powerOverride,
                     toughnessOverride = entersAsCopy.toughnessOverride,
                     exileCopiedCard = entersAsCopy.exileCopiedCard,
-                    additionalCounters = entersAsCopy.additionalCounters
+                    additionalCounters = entersAsCopy.additionalCounters,
+                    duration = entersAsCopy.duration
                 )
                 return state.suspendForDecision(
                     question = { decisionId ->
@@ -409,11 +445,17 @@ internal class PermanentSpellResolver(
         controllerId: EntityId
     ): ExecutionResult {
         // Normal permanent entry
-        val (enteredState, enterEvents) = permanentEntry.enterPermanentOnBattlefield(state, spellId, spellComponent, cardComponent, cardDef)
-        val sagaEvents = if (cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga) {
-            listOf(CountersAddedEvent(spellId, CounterType.LORE, 1, cardDef.name))
+        val (afterEntry, enterEvents) = permanentEntry.enterPermanentOnBattlefield(state, spellId, spellComponent, cardComponent, cardDef)
+        val isSagaEntry = cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga
+        val sagaEvents = if (isSagaEntry) {
+            listOf(CountersAddedEvent(spellId, CounterType.LORE, 1, cardDef!!.name))
         } else {
             emptyList()
+        }
+        val enteredState = if (isSagaEntry) {
+            com.wingedsheep.engine.handlers.effects.DamageUtils.markCounterOnControlledPermanent(afterEntry, spellId, CounterType.LORE, entering = true)
+        } else {
+            afterEntry
         }
 
         // The generic "as this permanent enters, …" replacement ([OnEnterRun]). The move path

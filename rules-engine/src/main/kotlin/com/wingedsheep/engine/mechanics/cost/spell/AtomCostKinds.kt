@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.cost.spell
 
+import com.wingedsheep.engine.mechanics.cost.SharedCreatureTypeTapCost
+import com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment
 import com.wingedsheep.engine.core.CardsRevealedEvent
 import com.wingedsheep.engine.core.CountersRemovedEvent
 import com.wingedsheep.engine.core.ZoneChangeEvent
@@ -18,6 +20,7 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ExiledFromZoneComponent
+import com.wingedsheep.engine.state.components.stack.captureCardInHandSnapshots
 import com.wingedsheep.engine.state.components.stack.captureEntitySnapshots
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
@@ -110,8 +113,8 @@ internal object SacrificeCostKind : SpellCostKind<CostAtom.Sacrifice> {
         val projected = state.projectedState
         val sacrificed = check.payment?.sacrificedPermanents ?: emptyList()
         val filterDesc = cost.filter.description
-        if (sacrificed.size < cost.count) {
-            return "You must sacrifice ${cost.count} $filterDesc to cast this spell"
+        if (sacrificed.size != cost.count || sacrificed.distinct().size != cost.count) {
+            return "You must sacrifice exactly ${cost.count} $filterDesc to cast this spell"
         }
         for (permId in sacrificed) {
             val permContainer = state.getEntity(permId)
@@ -124,8 +127,11 @@ internal object SacrificeCostKind : SpellCostKind<CostAtom.Sacrifice> {
             if (permId !in state.getBattlefield()) {
                 return "Sacrificed permanent is not on the battlefield: $permId"
             }
-            // Use unified filter with projected state
-            val context = PredicateContext(controllerId = check.playerId)
+            // Use unified filter with projected state. An additional cost with an X has that X
+            // announced with the spell (CR 107.3a; unannounced is 0), so "sacrifice an artifact or
+            // creature with mana value X" (Nahiri's Sacrifice) only accepts a permanent of the X
+            // the spell carries to resolution.
+            val context = PredicateContext(controllerId = check.playerId, xValue = check.action.xValue ?: 0)
             if (!check.predicateEvaluator.matches(state, projected, permId, cost.filter, context)) {
                 return "${permCard.name} doesn't match the required filter: $filterDesc"
             }
@@ -137,7 +143,7 @@ internal object SacrificeCostKind : SpellCostKind<CostAtom.Sacrifice> {
         // Snapshot projected subtypes and P/T before zone change
         // (Rule 113.7a / 608.2h — "as it last existed on the battlefield")
         val sacrificed = ledger.payment.sacrificedPermanents
-        ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(sacrificed, ledger.state.projectedState))
+        ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(sacrificed, ledger.state.projectedState, ledger.state))
         for (permId in sacrificed) {
             if (ledger.state.getEntity(permId) == null) continue
             ledger.sacrifice(permId)
@@ -157,7 +163,7 @@ internal object SacrificeAllCostKind : SpellCostKind<CostAtom.SacrificeAll> {
     override fun pay(ledger: SpellCostLedger, cost: CostAtom.SacrificeAll): String? {
         val all = ledger.costHandler.sacrificeAllCandidates(ledger.state, cost, ledger.playerId)
         // Snapshot before any of them leaves (CR 608.2h) — "the sacrificed creatures' total power".
-        ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(all, ledger.state.projectedState))
+        ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(all, ledger.state.projectedState, ledger.state))
         for (permId in all) ledger.sacrifice(permId)
         return null
     }
@@ -252,7 +258,9 @@ internal object DiscardHandCostKind : SpellCostKind<CostAtom.DiscardHand> {
 
 /** "Exile a creature card from your graveyard" — exile [CostAtom.ExileFrom.count] cards from a zone. */
 internal object ExileFromCostKind : SpellCostKind<CostAtom.ExileFrom> {
-    // A spell's additional cost has no source permanent, so `excludeSelf` has nothing to exclude here.
+    // The card being cast is on the stack by the time its costs are paid (CR 601.2a before 601.2h),
+    // so it is never part of its own exile pool — which is exactly what escape's "exile five
+    // *other* cards from your graveyard" says. `canPay` has no cast in hand and can't exclude it.
     override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom.ExileFrom, costHandler: CostHandler): Boolean {
         val perZone = costHandler.exileCandidatesByOwner(state, cost, payerId, sourceId = null).values.map { it.size }
         return if (cost.singleZone) perZone.any { it >= cost.count } else perZone.sum() >= cost.count
@@ -262,6 +270,7 @@ internal object ExileFromCostKind : SpellCostKind<CostAtom.ExileFrom> {
         val validExileTargets = env.costUtils.findExileTargets(
             env.state, env.playerId, cost.filter, cost.zone,
             cost.anyPlayersZone, cost.singleZone, cost.count,
+            excludeSelfId = env.castCardId,
         )
         offer.exileTargets = validExileTargets
         offer.exileMinCount = cost.count
@@ -298,12 +307,15 @@ internal object ExileFromCostKind : SpellCostKind<CostAtom.ExileFrom> {
         val state = check.state
         val exiled = check.payment?.exiledCards ?: emptyList()
         val zoneDesc = cost.zone.name.lowercase()
-        if (exiled.size < cost.count) {
+        if (exiled.distinct().size < cost.count) {
             return "You must exile ${cost.count} ${cost.filter.description}(s) from your $zoneDesc"
         }
         val zoneCards = state.getZone(ZoneKey(check.playerId, cost.zone))
         val context = PredicateContext(controllerId = check.playerId)
         for (cardId in exiled) {
+            if (cardId == check.action.cardId) {
+                return "A spell can't exile itself to pay its own cost"
+            }
             if (cardId !in zoneCards) {
                 return "Card to exile is not in your $zoneDesc"
             }
@@ -406,7 +418,7 @@ internal object CollectEvidenceCostKind : SpellCostKind<CostAtom.CollectEvidence
         // can't reach it, the caster can't choose to collect evidence at all, so this rejection
         // *is* the 601.2e illegal-cast rewind rather than a discount.
         val required = CostAtomAmounts.evaluate(check.state, cost.amount, check.action.xValue, check.action.targets)
-        if (!CollectEvidenceResolver.isLegalSelection(check.state, check.playerId, required, exiled, predicateEvaluator = check.predicateEvaluator)) {
+        if (!CollectEvidenceResolver.isLegalSelection(check.state, check.playerId, required, exiled, excludeCardId = check.action.cardId, predicateEvaluator = check.predicateEvaluator)) {
             return "You must exile cards with total mana value $required or " +
                 "greater from your graveyard to collect evidence $required"
         }
@@ -433,18 +445,19 @@ internal object CollectEvidenceCostKind : SpellCostKind<CostAtom.CollectEvidence
 }
 
 /**
- * Exile cards from your graveyard with a summed measure — the filtered generalization behind collect
- * evidence. An activated-ability cost: it only reaches the casting context through an alternative
- * cost's presentation rail.
+ * Exile any number of cards from your graveyard whose measure reaches a floor — a sum (Baron Helmut
+ * Zemo's pips) or a union of card types (Nethergoyf's escape cost, "four or more card types among
+ * them"). [GraveyardTotalExileResolver] owns the legality rule, so enumeration, validation and
+ * payment can't drift; the spell being cast is on the stack by the time costs are paid (CR 601.2a
+ * before 601.2h), so it is never in its own pool.
  */
 internal object ExileFromGraveyardForTotalCostKind : SpellCostKind<CostAtom.ExileFromGraveyardForTotal> {
-    // Not payable as a *spell's* additional cost today: nothing offers this atom in a cast context,
-    // and the cast-time picker has no sum-gated exile mode to raise, so an unreachable one would be
-    // offered and then fail at payment. Fails closed until a printed card needs it, matching the
-    // "prefer absent to unpayable" rule collect evidence follows.
-    override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom.ExileFromGraveyardForTotal, costHandler: CostHandler) = false
+    // Fails closed (CR 118.3): a graveyard that can't reach the floor means the cast isn't offered.
+    override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom.ExileFromGraveyardForTotal, costHandler: CostHandler) =
+        GraveyardTotalExileResolver.canPay(state, payerId, cost.measure, cost.minTotal, cost.filter, predicateEvaluator = costHandler.predicateEvaluator)
 
-    override fun enumerate(env: SpellCostEnumeration, cost: CostAtom.ExileFromGraveyardForTotal, offer: SpellCostOffer) = true
+    override fun enumerate(env: SpellCostEnumeration, cost: CostAtom.ExileFromGraveyardForTotal, offer: SpellCostOffer) =
+        canPayFrom(env, cost, emptyList())
 
     override fun candidates(env: SpellCostEnumeration, cost: CostAtom.ExileFromGraveyardForTotal) =
         GraveyardTotalExileResolver
@@ -462,28 +475,61 @@ internal object ExileFromGraveyardForTotalCostKind : SpellCostKind<CostAtom.Exil
         return "Exile from graveyard" to info
     }
 
-    // Never offered as a spell's additional cost (see canPay), so no payment can satisfy it here.
-    override fun selectionSupplied(cost: CostAtom.ExileFromGraveyardForTotal, payment: AdditionalCostPayment) = false
+    override fun selectionSupplied(cost: CostAtom.ExileFromGraveyardForTotal, payment: AdditionalCostPayment) =
+        payment.exiledCards.isNotEmpty()
+
+    // A GameAction is client-supplied: the submitted selection is re-checked against the pool and
+    // the floor. The cast card is already on the stack here, so it can't appear in the pool.
+    override fun validate(check: SpellCostCheck, cost: CostAtom.ExileFromGraveyardForTotal): String? {
+        val candidates = GraveyardTotalExileResolver.candidates(
+            check.state, check.playerId, cost.measure, cost.filter,
+            excludeCardId = check.action.cardId, predicateEvaluator = check.predicateEvaluator,
+        )
+        val exiled = check.payment?.exiledCards ?: emptyList()
+        if (!GraveyardTotalExileResolver.isLegalSelection(candidates, cost.minTotal, exiled)) {
+            return "Those cards don't pay this cost: ${cost.description}"
+        }
+        return null
+    }
+
+    override fun pay(ledger: SpellCostLedger, cost: CostAtom.ExileFromGraveyardForTotal): String? {
+        val candidates = GraveyardTotalExileResolver.candidates(
+            ledger.state, ledger.playerId, cost.measure, cost.filter,
+            excludeCardId = ledger.action.cardId, predicateEvaluator = ledger.costHandler.predicateEvaluator,
+        )
+        val toExile = GraveyardTotalExileResolver.resolveSelection(candidates, cost.minTotal, ledger.payment.exiledCards)
+        if (toExile.isEmpty()) return "Cannot pay ${cost.description}"
+        val (exiledState, events) = GraveyardTotalExileResolver.exile(ledger.zones, ledger.state, toExile)
+        ledger.state = exiledState
+        ledger.events.addAll(events)
+        ledger.exiledAsCostCards.addAll(toExile)
+        ledger.exiledCardCount = toExile.size
+        return null
+    }
 }
 
 /** "Tap an untapped artifact you control" (Zahid, Guardian of the Great Door). */
 internal object TapPermanentsCostKind : SpellCostKind<CostAtom.TapPermanents> {
     override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom.TapPermanents, costHandler: CostHandler) =
-        costHandler.findUntappedMatchingPermanentsUnified(state, payerId, cost.filter).size >= cost.count
+        SharedCreatureTypeTapCost.eligible(
+            state, cost, costHandler.findUntappedMatchingPermanentsUnified(state, payerId, cost.filter)
+        ).size >= cost.count
 
     // Mirrors ReturnToHand's selection model — permanents you control, chosen by the caster — but
     // the payment taps instead of bouncing.
     override fun enumerate(env: SpellCostEnumeration, cost: CostAtom.TapPermanents, offer: SpellCostOffer): Boolean {
-        val validTapTargets = env.costUtils.findAbilityTapTargets(env.state, env.playerId, cost.filter)
-            .let { if (cost.excludeSelf) it.filter { id -> id != env.castCardId } else it }
+        val validTapTargets = candidates(env, cost)
         offer.tapTargets = validTapTargets
         offer.tapCount = cost.count
         return validTapTargets.size >= cost.count
     }
 
     override fun candidates(env: SpellCostEnumeration, cost: CostAtom.TapPermanents) =
-        env.costUtils.findAbilityTapTargets(
-            env.state, env.playerId, cost.filter, if (cost.excludeSelf) env.castCardId else null
+        SharedCreatureTypeTapCost.eligible(
+            env.state, cost,
+            env.costUtils.findAbilityTapTargets(
+                env.state, env.playerId, cost.filter, if (cost.excludeSelf) env.castCardId else null
+            )
         )
 
     override fun selectionCount(cost: CostAtom.TapPermanents) = cost.selectionCount
@@ -524,6 +570,9 @@ internal object TapPermanentsCostKind : SpellCostKind<CostAtom.TapPermanents> {
             if (!check.predicateEvaluator.matches(state, projected, permId, cost.filter, context)) {
                 return "${permCard.name} doesn't match the required filter: ${cost.filter.description}"
             }
+        }
+        if (!SharedCreatureTypeTapCost.satisfiedBy(state, cost, tapped)) {
+            return "The tapped permanents must share a creature type"
         }
         return null
     }
@@ -729,7 +778,7 @@ internal object VariablePermanentsCostKind : SpellCostKind<CostAtom.VariablePerm
                 ledger.events.addAll(tapEvents)
             }
             PermanentCostAction.SACRIFICE -> {
-                ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(chosen, ledger.state.projectedState))
+                ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(chosen, ledger.state.projectedState, ledger.state))
                 for (permId in chosen) {
                     if (ledger.state.getEntity(permId) == null) continue
                     ledger.sacrifice(permId)
@@ -804,10 +853,13 @@ internal object RevealFromHandCostKind : SpellCostKind<CostAtom.RevealFromHand> 
     }
 
     // Revealing publishes the cards and moves nothing, so paying is the event alone — the cards
-    // stay in hand and are still castable later.
+    // stay in hand and are still castable later. Each card's in-hand characteristics are captured
+    // too, for "the revealed card's power" (`EffectTarget.RevealedAsCost`): its ruling reads the
+    // power the card last had in hand if it has left by resolution.
     override fun pay(ledger: SpellCostLedger, cost: CostAtom.RevealFromHand): String? {
         val revealed = ledger.payment.revealedCards
         if (revealed.isNotEmpty()) {
+            ledger.revealedAsCostSnapshots.addAll(captureCardInHandSnapshots(ledger.state, revealed))
             ledger.events.add(
                 CardsRevealedEvent(
                     revealingPlayerId = ledger.playerId,
@@ -930,17 +982,17 @@ internal object PayLifeCostKind : SpellCostKind<CostAtom.PayLife> {
     // CR 810.9a — affordability uses the team's shared total in Two-Headed Giant.
     // CR 119.4 — a player may pay life only if their life total is >= the payment.
     override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom.PayLife, costHandler: CostHandler) =
-        state.lifeTotal(payerId) >= cost.amount
+        state.canPayLife(payerId, cost.amount)
 
     // Mode-level and cast-level affordability gate, so "discard a card or pay 3 life" doesn't
     // surface a Pay-3-Life action to a caster with fewer than 3 life (Bitter Triumph). Validation
     // still backstops it.
     override fun enumerate(env: SpellCostEnumeration, cost: CostAtom.PayLife, offer: SpellCostOffer) =
-        env.state.lifeTotal(env.playerId) >= cost.amount
+        env.state.canPayLife(env.playerId, cost.amount)
 
     override fun validate(check: SpellCostCheck, cost: CostAtom.PayLife): String? {
         // CR 119.4 — you can't pay life unless you have at least that much (CR 810.9a — team total)
-        if (check.state.lifeTotal(check.playerId) < cost.amount) {
+        if (!check.state.canPayLife(check.playerId, cost.amount)) {
             return "Not enough life to pay ${cost.amount} life"
         }
         return null
@@ -959,4 +1011,43 @@ internal object PayLifeCostKind : SpellCostKind<CostAtom.PayLife> {
  */
 internal object AbilityOnlyAtomCostKind : SpellCostKind<CostAtom> {
     override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom, costHandler: CostHandler) = false
+}
+
+/** Player-counter costs have no selection payload; their amount is announced with the spell. */
+internal object PlayerCountersCostKind : SpellCostKind<CostAtom.PayPlayerCounters> {
+    // "Equal to its mana value" is per-cast — this generic gate has no spell to price it against —
+    // so, like PayLifeEqualToManaValueOfSpell, it is checked at validation instead.
+    override fun canPay(state: GameState, payerId: EntityId, cost: CostAtom.PayPlayerCounters, costHandler: CostHandler): Boolean =
+        cost.amount == CostAtom.PayPlayerCounters.SOURCE_MANA_VALUE ||
+            PlayerCounterPayment.available(state, payerId, cost.counterType) >=
+            CostAtomAmounts.evaluate(state, cost.amount)
+
+    override fun enumerate(env: SpellCostEnumeration, cost: CostAtom.PayPlayerCounters, offer: SpellCostOffer): Boolean =
+        PlayerCounterPayment.available(env.state, env.playerId, cost.counterType) >=
+            CostAtomAmounts.evaluate(env.state, cost.amount, sourceId = env.castCardId)
+
+    override fun canPayFrom(env: SpellCostEnumeration, cost: CostAtom.PayPlayerCounters, candidates: List<EntityId>): Boolean =
+        enumerate(env, cost, SpellCostOffer())
+
+    override fun validate(check: SpellCostCheck, cost: CostAtom.PayPlayerCounters): String? {
+        val amount = CostAtomAmounts.evaluate(
+            check.state, cost.amount, check.action.xValue, check.action.targets, sourceId = check.action.cardId
+        )
+        return if (amount < 0 || PlayerCounterPayment.available(
+                check.state, check.playerId, cost.counterType) < amount) "Not enough ${cost.counterType.printed} counters" else null
+    }
+
+    override fun paysUnprompted(cost: CostAtom.PayPlayerCounters): Boolean = true
+
+    override fun pay(ledger: SpellCostLedger, cost: CostAtom.PayPlayerCounters): String? {
+        val amount = CostAtomAmounts.evaluate(
+            ledger.state, cost.amount, ledger.action.xValue, ledger.action.targets, sourceId = ledger.action.cardId
+        )
+        val (state, events) = PlayerCounterPayment.pay(
+            ledger.state, ledger.action.playerId, cost.counterType, amount
+        ) ?: return "Not enough ${cost.counterType.printed} counters"
+        ledger.state = state
+        ledger.events.addAll(events)
+        return null
+    }
 }

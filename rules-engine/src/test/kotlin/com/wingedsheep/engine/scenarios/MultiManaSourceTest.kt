@@ -10,7 +10,11 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityCost
+import com.wingedsheep.sdk.scripting.TimingRule
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -22,9 +26,31 @@ import com.wingedsheep.engine.core.Outcome
  */
 class MultiManaSourceTest : FunSpec({
 
+    // Temple of the False God without its five-lands restriction.
+    val temple = card("Test Two-Colorless Land") {
+        typeLine = "Land"
+        activatedAbility {
+            cost = AbilityCost.Tap
+            effect = Effects.AddColorlessMana(2)
+            manaAbility = true
+            timing = TimingRule.ManaAbility
+        }
+    }
+
+    // A non-basic Forest: ranks behind basics, ahead of nothing — so the temple outranks it.
+    val grove = card("Test Nonbasic Grove") {
+        typeLine = "Land"
+        activatedAbility {
+            cost = AbilityCost.Tap
+            effect = Effects.AddMana(Color.GREEN)
+            manaAbility = true
+            timing = TimingRule.ManaAbility
+        }
+    }
+
     fun createDriver(): GameTestDriver {
         val driver = GameTestDriver()
-        driver.registerCards(TestCards.all)
+        driver.registerCards(TestCards.all + listOf(temple, grove))
         return driver
     }
 
@@ -186,6 +212,47 @@ class MultiManaSourceTest : FunSpec({
             solution!!.sources.size shouldBe 5
             // Aberration should not be in the tapped sources
             solution.sources.none { it.entityId == aberration } shouldBe true
+        }
+
+        test("a {C}{C} land is not tapped for the last generic when a single-mana land can pay it") {
+            // Two basics tap first; the third generic then fell to the {C}{C} land (it outranks a
+            // non-basic), floating a wasted {C} — four mana tapped for a {3} morph.
+            val driver = createDriver()
+            driver.initMirrorMatch(deck = Deck.of("Forest" to 20), skipMulligans = true)
+            val activePlayer = driver.activePlayer!!
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+            repeat(2) { driver.putLandOnBattlefield(activePlayer, "Forest") }
+            val templeId = driver.putLandOnBattlefield(activePlayer, "Test Two-Colorless Land")
+            val groveId = driver.putLandOnBattlefield(activePlayer, "Test Nonbasic Grove")
+
+            val registry = CardRegistry()
+            registry.register(TestCards.all + listOf(temple, grove))
+            val solver = ManaSolver(cardRegistry = registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+            val solution = solver.solve(driver.state, activePlayer, ManaCost.parse("{3}"))
+
+            solution shouldNotBe null
+            solution!!.manaProduced.values.sumOf { if (it.color != null) it.amount else it.colorless } shouldBe 3
+            solution.sources.any { it.entityId == groveId } shouldBe true
+            solution.sources.none { it.entityId == templeId } shouldBe true
+        }
+
+        test("a {C}{C} land pays two generic in one tap when it fits exactly") {
+            val driver = createDriver()
+            driver.initMirrorMatch(deck = Deck.of("Forest" to 20), skipMulligans = true)
+            val activePlayer = driver.activePlayer!!
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+            val templeId = driver.putLandOnBattlefield(activePlayer, "Test Two-Colorless Land")
+            val groveId = driver.putLandOnBattlefield(activePlayer, "Test Nonbasic Grove")
+
+            val registry = CardRegistry()
+            registry.register(TestCards.all + listOf(temple, grove))
+            val solver = ManaSolver(cardRegistry = registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+            val solution = solver.solve(driver.state, activePlayer, ManaCost.parse("{3}"))
+
+            solution shouldNotBe null
+            solution!!.sources.map { it.entityId }.toSet() shouldBe setOf(templeId, groveId)
         }
 
         test("getAvailableManaCount includes multi-mana production") {

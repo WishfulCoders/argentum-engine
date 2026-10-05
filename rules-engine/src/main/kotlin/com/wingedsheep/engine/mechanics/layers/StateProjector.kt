@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.layers
 
+import com.wingedsheep.engine.mechanics.targeting.ColorProtection
+import com.wingedsheep.engine.mechanics.targeting.HexproofFromRules
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
@@ -13,12 +15,15 @@ import com.wingedsheep.engine.state.components.battlefield.chosenCreatureType
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownModeComponent
+import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
 import com.wingedsheep.engine.state.components.identity.HexproofFromComponent
 import com.wingedsheep.engine.state.components.identity.ProtectionComponent
 import com.wingedsheep.engine.state.components.identity.RingBearerComponent
 import com.wingedsheep.engine.state.components.identity.ToxicComponent
 import com.wingedsheep.engine.state.components.identity.TextChanges
 import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.Duration
@@ -63,7 +68,8 @@ private val KEYWORD_COUNTER_MAP = mapOf(
     CounterType.HEXPROOF to Keyword.HEXPROOF.name,
     CounterType.REACH to Keyword.REACH.name,
     CounterType.HASTE to Keyword.HASTE.name,
-    CounterType.MENACE to Keyword.MENACE.name
+    CounterType.MENACE to Keyword.MENACE.name,
+    CounterType.EXALTED to Keyword.EXALTED.name
 )
 
 class StateProjector {
@@ -83,6 +89,7 @@ class StateProjector {
     )
     private val dynamicAmountEvaluator = conditionEvaluator.amounts
     private val filterResolver = AffectsFilterResolver(conditionEvaluator.predicates)
+    private val predicateEvaluator = conditionEvaluator.predicates
     private val effectApplicator = EffectApplicator(conditionEvaluator)
     private val effectSorter = EffectSorter()
 
@@ -131,10 +138,14 @@ class StateProjector {
                             protection.subtypes.forEach { add("PROTECTION_FROM_SUBTYPE_${it.uppercase()}") }
                             protection.supertypes.forEach { add("PROTECTION_FROM_SUPERTYPE_${it.uppercase()}") }
                             protection.cardTypes.forEach { add("PROTECTION_FROM_CARDTYPE_$it") }
+                            protection.sourceKinds.forEach { add(SourceKindProtection.protectionKeyword(it)) }
+                            if (protection.multicolored) add(ColorProtection.PROTECTION_FROM_MULTICOLORED)
                         }
                         container.get<HexproofFromComponent>()?.let { hexproof ->
                             hexproof.colors.forEach { add("HEXPROOF_FROM_${it.name}") }
                             hexproof.cardTypes.forEach { add("HEXPROOF_FROM_CARDTYPE_$it") }
+                            hexproof.nonColors.forEach { add(HexproofFromRules.nonColorKeyword(it)) }
+                            hexproof.sourceKinds.forEach { add(SourceKindProtection.hexproofKeyword(it)) }
                         }
                         container.get<ToxicComponent>()?.let { add("TOXIC_${it.amount}") }
                         // Dash supplies haste from the live marker on every projection.
@@ -180,7 +191,8 @@ class StateProjector {
         applyTextReplacements(state, projectedValues)
 
         // Collect all active continuous effects
-        val effects = collectContinuousEffects(state, projectedValues)
+        val effects = collectContinuousEffects(state, projectedValues) +
+            com.wingedsheep.engine.mechanics.BestowCasts.effects(state)
 
         // Sort effects by layer and dependency
         val sortedEffects = effectSorter.sortByLayerAndDependency(effects, state)
@@ -226,16 +238,18 @@ class StateProjector {
             effectApplicator.applyEffect(effect.copy(affectedEntities = lockAffected(effect, effect.affectedEntities)), state, projectedValues)
         }
 
-        // Re-resolve controller-dependent filters for layers 3-6 now that control is established
+        // Re-resolve controller-dependent filters for layers 3-6 now that control is established.
+        // No CR 613.6 lock here: a group is locked where its first part actually applies, below —
+        // locking now would freeze a Layer-4 part's set before the creature-dependent re-resolve
+        // (Kudo, King Among Bears would miss a Vehicle crewed this turn).
         val nonControlNonPTEffects = sortedEffects.filter { it.layer != Layer.CONTROL && it.layer != Layer.POWER_TOUGHNESS }
             .map { effect -> applyControllerGate(effect, projectedValues) }
             .map { effect ->
-                val resolved = if (effect.affectsFilter != null && filterResolver.isControllerDependentFilter(effect.affectsFilter)) {
-                    filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues)
+                if (effect.affectsFilter != null && filterResolver.isControllerDependentFilter(effect.affectsFilter)) {
+                    effect.copy(affectedEntities = filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues))
                 } else {
-                    effect.affectedEntities
+                    effect
                 }
-                effect.copy(affectedEntities = lockAffected(effect, resolved))
             }
 
         // === Layers 3-4 (Text + Type) ===
@@ -256,7 +270,11 @@ class StateProjector {
             filter != null && filterResolver.isCreatureDependentFilter(filter)
         }
         for (effect in plainTypeEffects) {
-            effectApplicator.applyEffect(effect, state, projectedValues)
+            effectApplicator.applyEffect(
+                effect.copy(affectedEntities = lockAffected(effect, effect.affectedEntities)),
+                state,
+                projectedValues
+            )
         }
         for (effect in creatureDependentTypeEffects) {
             val resolved = effect.affectsFilter
@@ -298,7 +316,14 @@ class StateProjector {
 
         // === Layers 5-6 (Color + Ability) ===
         for (effect in postTypeEffects) {
-            effectApplicator.applyEffect(effect, state, projectedValues)
+            if (effect.modification is Modification.CanAttackAsThoughHasty) continue
+            // CR 613.6: a prohibition belonging to an effect begun in an earlier layer
+            // keeps applying even when the source loses the ability during Layer 6.
+            val startedBeforeAbility = effect.groupId?.let { groupId ->
+                (groupFirstLayer[effect.sourceId to groupId]?.ordinal ?: Int.MAX_VALUE) < Layer.ABILITY.ordinal
+            } ?: false
+            effectApplicator.applyEffect(effect, state, projectedValues,
+                restrictionSurvivesSourceAbilityRemoval = startedBeforeAbility)
         }
 
         // Rule 122.1b: re-apply keyword counters after Layer 6.
@@ -414,6 +439,56 @@ class StateProjector {
         // Growth, Aggressive Urge), and lord-style anthems alike.
         applyAffectedPowerAtMostSourceGate(state, projectedValues)
 
+        // Attack-as-though permissions modify the rules after characteristics are established.
+        // Removing the recipient's abilities cannot remove an external permission; removing the
+        // source's ability does. Re-resolve filters against final characteristics (including P/T).
+        for (rawEffect in sortedEffects) {
+            if (rawEffect.modification !is Modification.CanAttackAsThoughHasty) continue
+            if (rawEffect.fromStaticAbility && projectedValues[rawEffect.sourceId]?.let {
+                    it.lostAllAbilities || it.isFaceDown
+                } == true) continue
+            val effect = applyControllerGate(rawEffect, projectedValues)
+            val affected = effect.affectsFilter?.let {
+                filterResolver.resolveAffectedEntities(state, effect.sourceId, it, projectedValues)
+            } ?: effect.affectedEntities
+            effectApplicator.applyEffect(effect.copy(affectedEntities = affected), state, projectedValues)
+        }
+
+        // Runtime-granted statics use the holder as their source and retain existing duration gates.
+        fun applyGrantedAttackPermission(ability: com.wingedsheep.sdk.scripting.StaticAbility, holder: EntityId) {
+            when (ability) {
+                is com.wingedsheep.sdk.scripting.CanAttackAsThoughHasty -> {
+                    val filter = when (val scope = ability.filter.scope) {
+                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self -> AffectsFilter.Self
+                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.AttachedTo -> AffectsFilter.AttachedPermanent
+                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.SoulbondPair -> AffectsFilter.SoulbondPair
+                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.Specific -> AffectsFilter.SpecificEntities(setOf(scope.entityId))
+                        is com.wingedsheep.sdk.scripting.filters.unified.Scope.Battlefield -> AffectsFilter.Generic(ability.filter)
+                    }
+                    for (id in filterResolver.resolveAffectedEntities(state, holder, filter, projectedValues)) {
+                        projectedValues[id]?.canAttackAsThoughHasty = true
+                    }
+                }
+                is com.wingedsheep.sdk.scripting.ConditionalStaticAbility -> {
+                    val context = com.wingedsheep.engine.handlers.ConditionEvaluationContext.Projection(
+                        holder, projectedValues[holder], projectedValues)
+                    if (conditionEvaluator.evaluate(state, ability.condition, context)) {
+                        applyGrantedAttackPermission(ability.ability, holder)
+                    }
+                }
+                is com.wingedsheep.sdk.scripting.CompositeStaticAbility ->
+                    ability.abilities.forEach { applyGrantedAttackPermission(it, holder) }
+                else -> Unit
+            }
+        }
+        for (grant in state.grantedStaticAbilities) {
+            val holder = projectedValues[grant.entityId] ?: continue
+            if (holder.lostAllAbilities) continue
+            if (!com.wingedsheep.engine.mechanics.durations.GrantDurationGate.holds(
+                    state, grant.entityId, grant.sourceId, grant.duration)) continue
+            applyGrantedAttackPermission(grant.ability, grant.entityId)
+        }
+
         // Transfer the locally owned sets into the final projection. No later step mutates them;
         // intermediate projections still copy their sets because subsequent layers can change them.
         val finalValues = projectedValues.mapValues { (_, v) ->
@@ -424,6 +499,7 @@ class StateProjector {
                 baseToughness = v.baseToughness,
                 name = v.name,
                 keywords = v.keywords,
+                enchantmentRestrictions = v.enchantmentRestrictions.toList(),
                 colors = v.colors,
                 types = v.types,
                 subtypes = v.subtypes,
@@ -431,9 +507,11 @@ class StateProjector {
                 isFaceDown = v.isFaceDown,
                 isSuspected = v.isSuspected,
                 cantAttack = v.cantAttack,
+                canAttackAsThoughHasty = v.canAttackAsThoughHasty,
                 cantBlock = v.cantBlock,
                 cantBeTurnedFaceUp = v.cantBeTurnedFaceUp,
                 mustAttack = v.mustAttack,
+                mustAttackPlayer = v.mustAttackPlayer,
                 mustBlock = v.mustBlock,
                 cantBeBlockedExceptByFilters = v.cantBeBlockedExceptByFilters.toList(),
                 canOnlyBlockCreaturesWithFilters = v.canOnlyBlockCreaturesWithFilters.toList(),
@@ -462,7 +540,66 @@ class StateProjector {
             )
         }
 
-        return ProjectedState(state, finalValues, crossZoneGrants)
+        return ProjectedState(
+            state,
+            finalValues,
+            crossZoneGrants,
+            collectCrossZoneCardTypes(state, sortedEffects, projectedValues, finalValues)
+        )
+    }
+
+    /**
+     * The off-battlefield half of cross-zone card-type grants (Encroaching Mycosynth: "The same is
+     * true for permanent spells you control and nonland permanent cards you own that aren't on the
+     * battlefield"). Layer 4 above only touched battlefield permanents; here each
+     * [Modification.AddType] carrying a [Modification.CrossZoneReach] adds its type to the spells its
+     * source's controller controls and the cards that player owns outside the battlefield, when they
+     * match the reach's card predicates (printed characteristics — a non-battlefield object has no
+     * projection entry). Computed eagerly because such grants are rare: the loop never runs without
+     * one, so the common state pays one `filter` over the effect list.
+     */
+    private fun collectCrossZoneCardTypes(
+        state: GameState,
+        sortedEffects: List<ContinuousEffect>,
+        projectedValues: Map<EntityId, MutableProjectedValues>,
+        finalValues: Map<EntityId, ProjectedValues>
+    ): Map<EntityId, Set<String>> {
+        val grants = sortedEffects.filter { (it.modification as? Modification.AddType)?.crossZone != null }
+        if (grants.isEmpty()) return emptyMap()
+        val eligibilityProjection = ProjectedState(state, finalValues)
+        val result = HashMap<EntityId, MutableSet<String>>()
+        for (effect in grants) {
+            val mod = effect.modification as Modification.AddType
+            val reach = mod.crossZone ?: continue
+            val controllerId = projectedValues[effect.sourceId]?.controllerId ?: continue
+            val context = com.wingedsheep.engine.handlers.PredicateContext(
+                controllerId = controllerId,
+                sourceId = effect.sourceId
+            )
+            val candidates = buildList {
+                if (reach.includeControlledSpells) {
+                    state.stack.filterTo(this) { id ->
+                        val container = state.getEntity(id)
+                        container?.has<SpellOnStackComponent>() == true &&
+                            (container.get<ControllerComponent>()?.playerId
+                                ?: container.get<SpellOnStackComponent>()?.casterId) == controllerId
+                    }
+                }
+                if (reach.includeOwnedCardsOutsideBattlefield) {
+                    for (zone in OWNED_ZONES_OUTSIDE_BATTLEFIELD) {
+                        state.getZone(controllerId, zone).filterTo(this) { id ->
+                            state.getEntity(id)?.get<CardComponent>()?.ownerId == controllerId
+                        }
+                    }
+                }
+            }
+            for (id in candidates) {
+                if (predicateEvaluator.matches(state, eligibilityProjection, id, reach.eligibility, context)) {
+                    result.getOrPut(id) { mutableSetOf() }.add(mod.type)
+                }
+            }
+        }
+        return result
     }
 
     private fun Sublayer?.isAfterBaseStats(): Boolean =
@@ -521,15 +658,24 @@ class StateProjector {
             values.types.removeAll(oldSubtypesInTypes)
             values.types.addAll(transformedSubtypes)
 
+            // Rewrite the original set together: Forestwalk -> Islandwalk must not consume
+            // a separate printed Islandwalk before its own replacement is applied.
+            val landwalkKeywords = values.keywords.filter { keyword ->
+                com.wingedsheep.sdk.core.Subtype.ALL_BASIC_LAND_TYPES.any { "${it.uppercase()}WALK" == keyword }
+            }
+            values.keywords.removeAll(landwalkKeywords.toSet())
+            landwalkKeywords.forEach { keyword ->
+                val landType = com.wingedsheep.sdk.core.Subtype.ALL_BASIC_LAND_TYPES.first { "${it.uppercase()}WALK" == keyword }
+                values.keywords.add("${textReplacement.replaceCreatureType(landType).uppercase()}WALK")
+            }
+
             val protectionSubtypePrefix = "PROTECTION_FROM_SUBTYPE_"
             val protectionKeywords = values.keywords.filter { it.startsWith(protectionSubtypePrefix) }
+            values.keywords.removeAll(protectionKeywords.toSet())
             for (keyword in protectionKeywords) {
                 val originalSubtype = keyword.removePrefix(protectionSubtypePrefix)
                 val transformed = textReplacement.applyToCreatureType(originalSubtype).uppercase()
-                if (transformed != originalSubtype) {
-                    values.keywords.remove(keyword)
-                    values.keywords.add("$protectionSubtypePrefix$transformed")
-                }
+                values.keywords.add("$protectionSubtypePrefix$transformed")
             }
 
             // Rewrite protection-from-color keywords for color-word changes (Crystal Spray:
@@ -541,13 +687,11 @@ class StateProjector {
                 kw.startsWith(colorPrefix) &&
                     com.wingedsheep.sdk.core.Color.entries.any { it.name == kw.removePrefix(colorPrefix) }
             }
+            values.keywords.removeAll(colorProtectionKeywords.toSet())
             for (keyword in colorProtectionKeywords) {
                 val originalColor = com.wingedsheep.sdk.core.Color.valueOf(keyword.removePrefix(colorPrefix))
                 val transformed = textReplacement.replaceColor(originalColor)
-                if (transformed != originalColor) {
-                    values.keywords.remove(keyword)
-                    values.keywords.add("$colorPrefix${transformed.name}")
-                }
+                values.keywords.add("$colorPrefix${transformed.name}")
             }
         }
     }
@@ -936,3 +1080,6 @@ class StateProjector {
         }
     }
 }
+
+/** The zones "cards you own that aren't on the battlefield" reach (the stack is the spells half). */
+private val OWNED_ZONES_OUTSIDE_BATTLEFIELD = listOf(Zone.HAND, Zone.LIBRARY, Zone.GRAVEYARD, Zone.EXILE, Zone.COMMAND)

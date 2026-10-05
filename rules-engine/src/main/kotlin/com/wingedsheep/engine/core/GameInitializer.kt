@@ -89,6 +89,20 @@ data class GameConfig(
      * value for reproducible runs (replays, MCTS, the cross-engine parity harness, tests).
      */
     val seed: Long? = null,
+    /**
+     * Hand each deck its entity ids in a seeded shuffled order rather than in decklist order, so an
+     * id never names its card. False reproduces games recorded before ids were shuffled, whose
+     * recorded actions name the old ids.
+     */
+    val shuffledDeckIds: Boolean = true,
+    /**
+     * In a team game whose starting team is drawn at random, also shuffle the seats *within* each
+     * team, so teammates don't always sit in lobby-join order. False reproduces team games recorded
+     * before seats were mixed, whose RNG stream didn't include those shuffles.
+     */
+    val shuffledTeamSeats: Boolean = true,
+    /** Owner chooses simultaneous graveyard arrivals, independent of hidden deck contents. */
+    val preserveGraveyardOrder: Boolean = true,
 )
 
 /**
@@ -159,7 +173,8 @@ class GameInitializer(
         // is recorded on the result so the game is reproducible later. This clock read is the one
         // sanctioned non-determinism boundary — once seeded, the engine is a pure function again.
         val resolvedSeed: Long = config.seed ?: System.nanoTime()
-        var state = GameState(format = config.format, attackMode = config.attackMode, rng = GameRng.seeded(resolvedSeed))
+        var state = GameState(preserveGraveyardOrder = config.preserveGraveyardOrder, format = config.format, attackMode = config.attackMode, rng = GameRng.seeded(resolvedSeed))
+        var idRng = GameRng.seeded(resolvedSeed).split().first
         val playerIds = mutableListOf<EntityId>()
 
         // Validate Commander-format prerequisites up front. Each player must designate a
@@ -219,7 +234,8 @@ class GameInitializer(
                     hasKept = config.skipMulligans,  // Auto-keep if skipping mulligans
                     // CR 800.6: in a multiplayer game (began with >2 players) the first mulligan
                     // is free. Two-player games keep the plain London Mulligan.
-                    freeMulligan = config.players.size > 2
+                    freeMulligan = config.players.size > 2,
+                    skipped = config.skipMulligans,
                 )
             )
 
@@ -248,14 +264,24 @@ class GameInitializer(
 
         // 2. Set turn order. In a team game with shared team turns (CR 805.1) the members of each
         // team must sit in adjacent seats, so the order is built team-by-team — teammates are never
-        // interleaved; only the order *between* teams is chosen or randomized (CR 805.3, which team
-        // goes first). [config.startingPlayerIndex] selects the starting team (the team containing
-        // that player). Non-team games shuffle individual players exactly as before.
+        // interleaved. [config.startingPlayerIndex] selects the starting team (the team containing
+        // that player) and keeps the seats as listed; otherwise the seats within each team and the
+        // order between teams (CR 805.3, which team goes first) are both randomized. Non-team games
+        // shuffle individual players exactly as before.
         val teams = config.teams
         val shuffledOrder: List<EntityId> = if (teams != null) {
-            val teamMemberIds = teams.map { members -> members.map { playerIds[it] } }
             val startTeam = config.startingPlayerIndex
                 ?.let { sp -> teams.indexOfFirst { sp in it }.takeIf { it >= 0 } }
+            val teamMemberIds = teams.map { members ->
+                val ids = members.map { playerIds[it] }
+                if (startTeam == null && config.shuffledTeamSeats) {
+                    val (shuffled, shuffledState) = state.nextRandom { shuffle(ids) }
+                    state = shuffledState
+                    shuffled
+                } else {
+                    ids
+                }
+            }
             val orderedTeams = if (startTeam != null) {
                 teamMemberIds.subList(startTeam, teamMemberIds.size) + teamMemberIds.subList(0, startTeam)
             } else {
@@ -267,7 +293,7 @@ class GameInitializer(
             if (startTeam == null && !config.format.sharesTeamTurns) {
                 // CR 808.4 (Team vs. Team): the randomly chosen team's first player is its *centre*
                 // seat when the team is odd-sized and the seat to the left of its midpoint when it
-                // is even — index size/2 either way, since turn order runs to the left (CR 103.7b).
+                // is even — index size/2 either way, since turn order runs to the left (CR 101.4).
                 // Turn order then continues around the table from that seat, so the rest of that
                 // team comes last. With shared team turns (CR 805) the team takes one turn and its
                 // first-listed member is just the representative, so the seating stays as built.
@@ -345,26 +371,33 @@ class GameInitializer(
             val libraryEntries: List<CardEntry> = playerConfig.deck.cardEntries.ifEmpty {
                 playerConfig.deck.cards.map { CardEntry(it) }
             }
-            for (entry in libraryEntries) {
-                val cardDef = cardRegistry.requireCard(entry.name)
-                val (cardId, stateWithId) = state.newEntity()
-                state = stateWithId
-                val cardContainer = createCardEntity(cardDef, playerId, entry.printing)
-                state = state.withEntity(cardId, cardContainer)
-                state = state.addToZone(ZoneKey(playerId, Zone.LIBRARY), cardId)
-            }
-
             // Sideboard: the cards this player owns *outside the game* (CR 100.4). They begin in
             // the private [Zone.SIDEBOARD] and are reachable only by "wish" effects. They are not
             // shuffled (the sideboard is unordered) and never drawn into the opening hand. Empty
             // for almost every deck.
-            for (entry in playerConfig.deck.sideboard) {
-                val cardDef = cardRegistry.requireCard(entry.name)
-                val (cardId, stateWithId) = state.newEntity()
-                state = stateWithId
-                val cardContainer = createCardEntity(cardDef, playerId, entry.printing)
+            val entries = libraryEntries.map { it to Zone.LIBRARY } +
+                playerConfig.deck.sideboard.map { it to Zone.SIDEBOARD }
+
+            // Hand the deck its ids in a shuffled order. Ids are minted one per card, so minting
+            // them in decklist order would let anyone who knows the list read a hidden card off
+            // its id — a face-down permanent's, say. The order comes from its own stream so the
+            // game's RNG, and with it every seeded game's library order, is unchanged.
+            val ids = entries.map {
+                val (id, next) = state.newEntity()
+                state = next
+                id
+            }
+            val idOrder = if (config.shuffledDeckIds) {
+                val (shuffled, nextIdRng) = idRng.shuffle(ids)
+                idRng = nextIdRng
+                shuffled
+            } else ids
+            for ((entry, cardId) in entries.zip(idOrder)) {
+                val (cardEntry, zone) = entry
+                val cardDef = cardRegistry.requireCard(cardEntry.name)
+                val cardContainer = createCardEntity(cardDef, playerId, cardEntry.printing)
                 state = state.withEntity(cardId, cardContainer)
-                state = state.addToZone(ZoneKey(playerId, Zone.SIDEBOARD), cardId)
+                state = state.addToZone(ZoneKey(playerId, zone), cardId)
             }
 
             if (commanderEntityIds.isNotEmpty()) {
@@ -429,55 +462,6 @@ class GameInitializer(
         val libraryKey = ZoneKey(playerId, Zone.LIBRARY)
         val (library, newState) = state.nextRandom { shuffle(state.getZone(libraryKey)) }
         return newState.reorderZone(libraryKey, library)
-    }
-
-    /**
-     * Draw cards for a player.
-     */
-    private fun drawCards(
-        state: GameState,
-        playerId: EntityId,
-        count: Int
-    ): Pair<GameState, List<GameEvent>> {
-        var currentState = state
-        val events = mutableListOf<GameEvent>()
-        val drawnCardIds = mutableListOf<EntityId>()
-
-        val libraryKey = ZoneKey(playerId, Zone.LIBRARY)
-        val handKey = ZoneKey(playerId, Zone.HAND)
-
-        repeat(count) {
-            val library = currentState.getZone(libraryKey)
-            if (library.isEmpty()) {
-                events.add(DrawFailedEvent(playerId, "Library is empty"))
-                return currentState to events
-            }
-
-            // Draw from top of library (first element)
-            val cardId = library.first()
-            drawnCardIds.add(cardId)
-
-            // Move card from library to hand
-            currentState = currentState.removeFromZone(libraryKey, cardId)
-            val oldObjectRef = currentState.objectRef(cardId)
-            currentState = currentState.addToZone(handKey, cardId)
-
-            events.add(ZoneChangeEvent(
-                entityId = cardId,
-                entityName = currentState.getEntity(cardId)
-                    ?.get<CardComponent>()?.name ?: "Unknown",
-                fromZone = Zone.LIBRARY,
-                toZone = Zone.HAND,
-                ownerId = playerId,
-                oldObject = oldObjectRef,
-                newObject = currentState.objectRef(cardId)
-            ))
-        }
-
-        val cardNames = drawnCardIds.map { currentState.getEntity(it)?.get<CardComponent>()?.name ?: "Card" }
-        events.add(CardsDrawnEvent(playerId, drawnCardIds.size, drawnCardIds, cardNames))
-
-        return currentState to events
     }
 
     /**
@@ -728,6 +712,56 @@ class GameInitializer(
     }
 
     companion object {
+        /**
+         * Draw an opening hand of [count] cards for [playerId] — game setup and a restarted game
+         * (CR 727) alike.
+         */
+        internal fun drawCards(
+            state: GameState,
+            playerId: EntityId,
+            count: Int
+        ): Pair<GameState, List<GameEvent>> {
+            var currentState = state
+            val events = mutableListOf<GameEvent>()
+            val drawnCardIds = mutableListOf<EntityId>()
+
+            val libraryKey = ZoneKey(playerId, Zone.LIBRARY)
+            val handKey = ZoneKey(playerId, Zone.HAND)
+
+            repeat(count) {
+                val library = currentState.getZone(libraryKey)
+                if (library.isEmpty()) {
+                    events.add(DrawFailedEvent(playerId, "Library is empty"))
+                    return currentState to events
+                }
+
+                // Draw from top of library (first element)
+                val cardId = library.first()
+                drawnCardIds.add(cardId)
+
+                // Move card from library to hand
+                currentState = currentState.removeFromZone(libraryKey, cardId)
+                val oldObjectRef = currentState.objectRef(cardId)
+                currentState = currentState.addToZone(handKey, cardId)
+
+                events.add(ZoneChangeEvent(
+                    entityId = cardId,
+                    entityName = currentState.getEntity(cardId)
+                        ?.get<CardComponent>()?.name ?: "Unknown",
+                    fromZone = Zone.LIBRARY,
+                    toZone = Zone.HAND,
+                    ownerId = playerId,
+                    oldObject = oldObjectRef,
+                    newObject = currentState.objectRef(cardId)
+                ))
+            }
+
+            val cardNames = drawnCardIds.map { currentState.getEntity(it)?.get<CardComponent>()?.name ?: "Card" }
+            events.add(CardsDrawnEvent(playerId, drawnCardIds.size, drawnCardIds, cardNames))
+
+            return currentState to events
+        }
+
         /**
          * Create a simple two-player game for testing.
          * Both players get the same deck.

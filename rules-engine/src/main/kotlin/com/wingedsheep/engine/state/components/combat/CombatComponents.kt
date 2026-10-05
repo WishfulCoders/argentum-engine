@@ -21,6 +21,8 @@ data class AttackingComponent(
      * defending player" still means the one it was attacking before (CR 508.5).
      */
     val attackTargetRemoved: Boolean = false,
+    /** Defending seat when this attack began; survives the attacked permanent leaving combat. */
+    val defendingPlayerId: EntityId? = null,
 ) : Component
 
 /**
@@ -333,3 +335,7 @@ data class PlayerAttackedPlayersThisTurnComponent(
 data class GoadedComponent(
     val goaderIds: Set<EntityId>
 ) : Component
+
+/** Object identities that have blocked this attacker during the current combat, even after departure. */
+@Serializable
+data class BlockersThisCombatComponent(val blockers: Set<com.wingedsheep.engine.state.ObjectRef>) : Component

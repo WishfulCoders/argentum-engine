@@ -37,6 +37,13 @@ data class CrossZoneSubtypeGrant(
 /**
  * Projected values for an entity after all effects are applied.
  */
+data class ActiveEnchantmentRestriction(
+    val sourceId: EntityId,
+    val auras: com.wingedsheep.sdk.scripting.GameObjectFilter,
+    val exceptSource: Boolean,
+    val survivesSourceAbilityRemoval: Boolean = false
+)
+
 data class ProjectedValues(
     val power: Int? = null,
     val toughness: Int? = null,
@@ -51,6 +58,7 @@ data class ProjectedValues(
     val baseToughness: Int? = null,
     val name: String? = null,
     val keywords: Set<String> = emptySet(),
+    val enchantmentRestrictions: List<ActiveEnchantmentRestriction> = emptyList(),
     val colors: Set<String> = emptySet(),
     val types: Set<String> = emptySet(),
     val subtypes: Set<String> = emptySet(),
@@ -58,9 +66,11 @@ data class ProjectedValues(
     val isFaceDown: Boolean = false,
     val isSuspected: Boolean = false,
     val cantAttack: Boolean = false,
+    val canAttackAsThoughHasty: Boolean = false,
     val cantBlock: Boolean = false,
     val cantBeTurnedFaceUp: Boolean = false,
     val mustAttack: Boolean = false,
+    val mustAttackPlayer: Boolean = false,
     val mustBlock: Boolean = false,
     val cantBeBlockedExceptByFilters: List<com.wingedsheep.sdk.scripting.GameObjectFilter> = emptyList(),
     val canOnlyBlockCreaturesWithFilters: List<com.wingedsheep.sdk.scripting.GameObjectFilter> = emptyList(),
@@ -86,8 +96,24 @@ class ProjectedState(
      * Active cross-zone "is the chosen type" grants (Conspiracy / Leyline of Transformation).
      * Empty for virtually every game state, so [crossZoneGrantedSubtypes] short-circuits to no-op.
      */
-    val crossZoneSubtypeGrants: List<CrossZoneSubtypeGrant> = emptyList()
+    val crossZoneSubtypeGrants: List<CrossZoneSubtypeGrant> = emptyList(),
+    /**
+     * Card types granted to **non-battlefield** objects (spells on the stack, cards in
+     * hand/library/graveyard/exile/command) by cross-zone `GrantCardType`s — Encroaching
+     * Mycosynth's "the same is true for permanent spells you control and nonland permanent cards
+     * you own that aren't on the battlefield". Resolved eagerly by `StateProjector`; empty for
+     * virtually every game state. Battlefield permanents get the type through Layer 4 instead.
+     */
+    private val crossZoneCardTypes: Map<EntityId, Set<String>> = emptyMap()
 ) {
+    /**
+     * The card types a cross-zone `GrantCardType` adds to a non-battlefield object (see
+     * [crossZoneCardTypes]). Read by `PredicateEvaluator`'s type predicates for objects with no
+     * projection entry, so a Mycosynth-granted artifact drives "artifact spell" / "artifact card"
+     * checks everywhere a filter is evaluated.
+     */
+    fun crossZoneGrantedCardTypes(entityId: EntityId): Set<String> = crossZoneCardTypes[entityId] ?: emptySet()
+
     fun getBaseState(): GameState = baseState
 
     /**
@@ -149,7 +175,7 @@ class ProjectedState(
         getKeywords(entityId).contains(keyword)
 
     fun hasKeyword(entityId: EntityId, keyword: Keyword): Boolean =
-        hasKeyword(entityId, keyword.name)
+        getKeywords(entityId).containsKeyword(keyword)
 
     fun hasKeyword(entityId: EntityId, flag: com.wingedsheep.sdk.core.AbilityFlag): Boolean =
         hasKeyword(entityId, flag.name)
@@ -196,6 +222,9 @@ class ProjectedState(
 
     fun isLegendary(entityId: EntityId): Boolean = hasType(entityId, "LEGENDARY")
 
+    /** CR 205.4g — a snow permanent; its mana is the only mana that pays `{S}` (CR 107.4h). */
+    fun isSnow(entityId: EntityId): Boolean = hasType(entityId, "SNOW")
+
     fun getSubtypes(entityId: EntityId): Set<String> = projectedValues[entityId]?.subtypes ?: emptySet()
 
     /**
@@ -212,6 +241,8 @@ class ProjectedState(
 
     fun isSuspected(entityId: EntityId): Boolean = projectedValues[entityId]?.isSuspected == true
 
+    fun canAttackAsThoughHasty(entityId: EntityId): Boolean = projectedValues[entityId]?.canAttackAsThoughHasty == true
+
     fun cantAttack(entityId: EntityId): Boolean = projectedValues[entityId]?.cantAttack == true
 
     fun cantBlock(entityId: EntityId): Boolean = projectedValues[entityId]?.cantBlock == true
@@ -220,6 +251,8 @@ class ProjectedState(
         projectedValues[entityId]?.cantBeTurnedFaceUp == true
 
     fun mustAttack(entityId: EntityId): Boolean = projectedValues[entityId]?.mustAttack == true
+
+    fun mustAttackPlayer(entityId: EntityId): Boolean = projectedValues[entityId]?.mustAttackPlayer == true
 
     fun mustBlock(entityId: EntityId): Boolean = projectedValues[entityId]?.mustBlock == true
 
@@ -268,6 +301,7 @@ internal fun buildIntermediateProjectedState(
             basePower = v.basePower,
             baseToughness = v.baseToughness,
             keywords = v.keywords.toSet(),
+            enchantmentRestrictions = v.enchantmentRestrictions.toList(),
             colors = v.colors.toSet(),
             types = v.types.toSet(),
             subtypes = v.subtypes.toSet(),
@@ -275,9 +309,11 @@ internal fun buildIntermediateProjectedState(
             isFaceDown = v.isFaceDown,
             isSuspected = v.isSuspected,
             cantAttack = v.cantAttack,
+            canAttackAsThoughHasty = v.canAttackAsThoughHasty,
             cantBlock = v.cantBlock,
             cantBeTurnedFaceUp = v.cantBeTurnedFaceUp,
             mustAttack = v.mustAttack,
+            mustAttackPlayer = v.mustAttackPlayer,
             mustBlock = v.mustBlock,
             cantBeBlockedExceptByFilters = v.cantBeBlockedExceptByFilters.toList(),
             canOnlyBlockCreaturesWithFilters = v.canOnlyBlockCreaturesWithFilters.toList(),
@@ -287,4 +323,19 @@ internal fun buildIntermediateProjectedState(
         )
     }
     return ProjectedState(state, frozen)
+}
+
+/**
+ * Whether a projected keyword-string set gives its object [keyword] — either the bare name or the
+ * numeric `<KEYWORD>_<n>` form printed and granted numeric keywords project as (printed toxic 2 is
+ * `TOXIC_2`, "gains toxic 1" adds `TOXIC_1`). "A creature with toxic" asks about the keyword, not
+ * any particular N, so both forms answer it; `PROTECTION_FROM_RED` and friends don't, because only
+ * a digit suffix is a numeric instance.
+ */
+fun Set<String>.containsKeyword(keyword: Keyword): Boolean {
+    val name = keyword.name
+    if (name in this) return true
+    if (isEmpty()) return false
+    val prefix = "${name}_"
+    return any { it.length > prefix.length && it.startsWith(prefix) && it.substring(prefix.length).all(Char::isDigit) }
 }

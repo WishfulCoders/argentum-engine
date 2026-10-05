@@ -649,7 +649,8 @@ object BoardPresence : BoardFeature {
         }
 
         // ── Speed ──
-        if (Keyword.HASTE.name in keywords && container.has<SummoningSicknessComponent>()) {
+        if ((Keyword.HASTE.name in keywords || projected.canAttackAsThoughHasty(entityId)) &&
+            container.has<SummoningSicknessComponent>()) {
             value += 0.5 // haste is most valuable the turn it enters
         }
 
@@ -659,7 +660,8 @@ object BoardPresence : BoardFeature {
         value += plusCounters * 0.5
 
         // Summoning sickness reduces immediate threat
-        if (container.has<SummoningSicknessComponent>() && Keyword.HASTE.name !in keywords) {
+        if (container.has<SummoningSicknessComponent>() && Keyword.HASTE.name !in keywords &&
+            !projected.canAttackAsThoughHasty(entityId)) {
             value *= 0.85
         }
 
@@ -1116,7 +1118,8 @@ object ThreatAssessment : BoardFeature {
                         !(lockedCreaturesAreInert && state.getEntity(entityId)
                             ?.let { isLockedTapped(projected, entityId, it) } == true) &&
                         !projected.cantAttack(entityId) &&
-                        state.getEntity(entityId)?.has<SummoningSicknessComponent>() != true
+                        (state.getEntity(entityId)?.has<SummoningSicknessComponent>() != true ||
+                            projected.hasKeyword(entityId, Keyword.HASTE) || projected.canAttackAsThoughHasty(entityId))
                 }
                 .sumOf { (projected.getPower(it) ?: 0).coerceAtLeast(0) }
         }
@@ -1158,7 +1161,8 @@ object ThreatAssessment : BoardFeature {
                     projected.isCreature(entityId) &&
                         Keyword.FLYING.name in projected.getKeywords(entityId) &&
                         state.getEntity(entityId)?.has<TappedComponent>() != true &&
-                        state.getEntity(entityId)?.has<SummoningSicknessComponent>() != true
+                        (state.getEntity(entityId)?.has<SummoningSicknessComponent>() != true ||
+                            projected.hasKeyword(entityId, Keyword.HASTE) || projected.canAttackAsThoughHasty(entityId))
                 }
                 .sumOf { (projected.getPower(it) ?: 0).coerceAtLeast(0) }
         }

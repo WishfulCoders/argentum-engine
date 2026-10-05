@@ -114,8 +114,10 @@ object Triggers {
         surface: String,
         spec: TriggerSpec,
         effect: Phrase<CardScript> = Steps.step,
+        alsoSpelled: List<String> = emptyList(),
     ): Prefix = Prefix(
         phrase(surface, name = surface) {
+            alsoSpelled.forEach { alsoSpelled(it, "$it (alternate spelling)") }
             build { spec }
             match { if (it == spec) bind() else null }
         },
@@ -329,13 +331,17 @@ object Triggers {
         surface: String,
         name: String,
         noun: Phrase<GameObjectFilter>,
+        alsoSpelled: List<String> = emptyList(),
         spec: (GameObjectFilter) -> TriggerSpec,
     ): Prefix =
         // [Steps.triggeredStep], not [Steps.step]: this trigger's event mentions an object of its
         // own, so "it" in the effect clause is that object rather than the source. See the
         // third-anaphor section on [SelfSteps]; the differential caught Tattered Ratter reading
         // "Whenever a Rat you control becomes blocked, it gets +2/+0" as pumping the *Ratter*.
-        slottedTriggerRule(surface, name, noun, Steps.triggeredStep, { triggeredFilter(it.event) }, spec)
+        slottedTriggerRule(
+            surface, name, noun, Steps.triggeredStep, { triggeredFilter(it.event) }, spec,
+            alsoSpelled = alsoSpelled,
+        )
 
     /**
      * [filteredTriggerRule]'s shape, with the slot's *type* and the event's reader as parameters.
@@ -364,8 +370,10 @@ object Triggers {
         // step triggers slot a `TriggerSpec` under `{when}`, and calling that "filter" would leave
         // every template in the file lying about what it holds.
         slotName: String = "filter",
+        alsoSpelled: List<String> = emptyList(),
     ): Prefix = Prefix(
         phrase(surface, name = name) {
+            alsoSpelled.forEach { alsoSpelled(it, "$it (alternate spelling)") }
             slot(slotName, noun)
             build { spec(it.value(slotName)) }
             match { triggerSpec ->
@@ -480,6 +488,40 @@ object Triggers {
             }
         },
         Steps.triggeredStep,
+    )
+
+    /**
+     * "Whenever you draw your second card each turn, …" — the ordinal draw trigger, and
+     * [nthCastRule]'s twin over `NthCardDrawnEvent`.
+     *
+     * The same shape for the same reasons: the drawer is a parameter of the event, so it is a row
+     * with its possessive baked into the prefix ("you draw **your**", "an opponent draws **their**")
+     * rather than a subject vocabulary, and the ordinal is the one slot. What differs is the effect
+     * clause. A draw event names **no object** — CR 121.2 makes every draw its own event, so the
+     * trigger counts draws and never binds the drawn card — so "it" in the payoff can only be the source, and
+     * the payoff is [Steps.step]'s source cascade, as the expend row's is. [Steps.triggeredStep]
+     * would offer a third anaphor with nothing behind it.
+     *
+     * "Whenever you draw your **first or second** card each turn" (Lady Octopus) is not a row: it is
+     * one ability over two events, which this surface's single ordinal cannot spell.
+     */
+    private fun nthDrawRule(prefix: String, name: String, player: Player): Prefix = Prefix(
+        phrase("$prefix {ordinal} card each turn", name = name) {
+            slot("ordinal", Cardinals.ordinal)
+            build { SdkTriggers.player(player).drawsNth(it.int("ordinal")) }
+            match { spec ->
+                val event = spec.event as? EventPattern.NthCardDrawnEvent ?: return@match null
+                if (SdkTriggers.player(player).drawsNth(event.nthCard) != spec) return@match null
+                bind("ordinal" to event.nthCard)
+            }
+        },
+        Steps.step,
+    )
+
+    private val drawPrefixes: List<Prefix> = listOf(
+        nthDrawRule("whenever you draw your", "whenever you draw your nth card", Player.You),
+        nthDrawRule("whenever an opponent draws their", "whenever an opponent draws their nth card", Player.EachOpponent),
+        nthDrawRule("whenever a player draws their", "whenever a player draws their nth card", Player.Each),
     )
 
     // ---------------------------------------------------------------------------------------
@@ -740,9 +782,72 @@ object Triggers {
             ) { batchSubject(it, other).leaveWithoutDying() }
         }
 
+    /**
+     * "Whenever **enchanted creature** deals combat damage to a player, …" — the source's own damage
+     * rows below, said of the creature an Aura or Equipment is attached to. "equipped creature" is
+     * the same phrase by the time it gets here (the normalizer abstracts the adjective).
+     *
+     * The SDK spells the subject as a binding rather than a filter — `Triggers.attached` is
+     * `Triggers.self` with `TriggerBinding.ATTACHED` — so these are the same events over the same
+     * recipients, and the rows mirror the source's one for one rather than adding a recipient the
+     * source's rows do not read. What differs is the payoff: "it" is not the source any more, so
+     * the constant rows take [Steps.attachedDamageStep], which keeps `~` and "that many" and drops
+     * the source pronoun. The filtered-recipient row takes [Steps.triggeredStep] exactly as the
+     * source's does, its "that creature" being the recipient the filter matched.
+     */
+    private fun attachedDamagePrefixes(): List<Prefix> {
+        val subject = "enchanted ${Normalizer.ATTACHED_NOUN}"
+        val attached = SdkTriggers.attached
+        return listOf(
+            triggerRule(
+                "whenever $subject deals combat damage to a player",
+                attached.dealsCombatDamage(Recipient.AnyPlayer),
+                effect = Steps.attachedDamageStep,
+            ),
+            triggerRule(
+                "whenever $subject deals combat damage to a creature",
+                attached.dealsCombatDamage(Recipient.AnyCreature),
+                effect = Steps.attachedDamageStep,
+            ),
+            triggerRule(
+                "whenever $subject deals combat damage",
+                attached.dealsCombatDamage(),
+                effect = Steps.attachedDamageStep,
+            ),
+            triggerRule(
+                "whenever $subject deals damage",
+                attached.dealsDamage(),
+                effect = Steps.attachedDamageStep,
+            ),
+            slottedTriggerRule(
+                surface = "whenever $subject deals damage to {filter}",
+                name = "whenever the attached creature deals damage to a filtered recipient",
+                noun = Filters.indefinite,
+                effect = Steps.triggeredStep,
+                valueOf = { spec ->
+                    ((spec.event as? EventPattern.DealsDamageEvent)?.recipient as? Recipient.Object)?.filter
+                },
+                spec = { attached.dealsDamage(Recipient.Object(it)) },
+            ),
+            triggerRule(
+                "whenever $subject is dealt damage",
+                attached.isDealtDamage(),
+                effect = Steps.attachedDamageStep,
+            ),
+        )
+    }
+
     private val eventPrefixes: List<Prefix> = listOf(
         triggerRule("when ${Normalizer.SELF} enters", SdkTriggers.self.enters()),
-        triggerRule("when ${Normalizer.SELF} dies", SdkTriggers.self.dies()),
+        // CR 700.4 defines "dies" as "is put into a graveyard from the battlefield", and Oracle
+        // still prints the long form wherever the object is not a creature — Nutrient Block, Spine
+        // of Ish Sah, the Wellspring cycle. One event (`Triggers.self.dies()` documents both
+        // wordings), so the long form is a second spelling and "dies" is the one that prints.
+        triggerRule(
+            "when ${Normalizer.SELF} dies",
+            SdkTriggers.self.dies(),
+            alsoSpelled = listOf("when ${Normalizer.SELF} is put into a graveyard from the battlefield"),
+        ),
         triggerRule("when ${Normalizer.SELF} leaves the battlefield", SdkTriggers.self.leaves()),
         triggerRule("whenever ${Normalizer.SELF} attacks", SdkTriggers.self.attacks()),
         triggerRule("whenever ${Normalizer.SELF} blocks", SdkTriggers.self.blocks()),
@@ -813,6 +918,7 @@ object Triggers {
             spec = { SdkTriggers.self.dealsDamage(Recipient.Object(it)) },
         ),
         triggerRule("whenever ${Normalizer.SELF} is dealt damage", SdkTriggers.self.isDealtDamage()),
+    ) + attachedDamagePrefixes() + listOf(
         // Valiant, and one row rather than a shape over `BecomesTargetEvent`'s six flags: the SDK
         // publishes the whole configuration as `Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)`, which is the lowering this file's
         // rule says to call rather than restate. The other flag combinations (by an opponent, a
@@ -893,6 +999,22 @@ object Triggers {
             "whenever the source or another permanent enters",
             Filters.filter,
         ) { SdkTriggers.a(it).enters() },
+        // "Whenever a creature you control dies, …" — Blood Artist's sibling rows, and the per-object
+        // reading (CR 603.2c): three creatures dying together give three triggers. The batch
+        // ("whenever one or more creatures you control die") is [batchPrefixes]' to write. The pair
+        // differs only in whether the source counts, which is the printed word "another" and so a row
+        // rather than a slot — the same split as the enters pair above. The long form CR 700.4
+        // defines "dies" by is how Oracle spells it for noncreatures (Ashiok's Reaper's "an
+        // enchantment you control", Krenko's "an artifact"); hand-written cards write both with
+        // `.dies()`, so it is a second spelling of the one event and "dies" prints.
+        filteredTriggerRule(
+            "whenever {filter} dies", "whenever a permanent dies", Filters.indefinite,
+            alsoSpelled = listOf("whenever {filter} is put into a graveyard from the battlefield"),
+        ) { SdkTriggers.a(it).dies() },
+        filteredTriggerRule(
+            "whenever another {filter} dies", "whenever another permanent dies", Filters.filter,
+            alsoSpelled = listOf("whenever another {filter} is put into a graveyard from the battlefield"),
+        ) { SdkTriggers.another(it).dies() },
         filteredTriggerRule(
             "whenever {filter} becomes blocked", "whenever a creature becomes blocked", Filters.indefinite,
         ) { SdkTriggers.a(it).becomesBlocked() },
@@ -947,7 +1069,7 @@ object Triggers {
      * drift the kernel's [com.wingedsheep.assay.syntax.PhraseBuilder.alsoSpelled] exists to make
      * impossible one rule at a time and this list makes impossible across a whole family.
      */
-    private val prefixes: List<Prefix> = eventPrefixes + castPrefixes + phasePrefixes + batchPrefixes
+    private val prefixes: List<Prefix> = eventPrefixes + castPrefixes + drawPrefixes + phasePrefixes + batchPrefixes
 
     /** The `when` clause vocabulary as one alternation, for the contexts that slot it. */
     private val event: Phrase<TriggerSpec> = oneOf("a trigger event", prefixes.map { it.phrase })
@@ -1007,7 +1129,7 @@ object Triggers {
     private val restrictions: List<Restriction> = listOf(
         Restriction(" during your turn", "during your turn", SdkConditions.IsYourTurn),
         Restriction(
-            " during an opponent's turn", "during an opponent's turn", SdkConditions.IsNotYourTurn,
+            " during an opponent's turn", "during an opponent's turn", SdkConditions.IsOpponentsTurn,
         ),
     )
 

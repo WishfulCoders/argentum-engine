@@ -328,7 +328,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "DOOM",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "restrictions": [
@@ -998,7 +1001,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "PLUS_ONE_PLUS_ZERO",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "interveningIf": {
@@ -1044,31 +1050,62 @@
                     ]
                 },
                 "effect": {
-                    "type": "AddDynamicCounters",
-                    "counterType": "PLUS_ONE_PLUS_ZERO",
-                    "amount": {
-                        "type": "IfPositive",
-                        "amount": {
-                            "type": "Min",
-                            "left": "XValue",
-                            "right": {
-                                "type": "Subtract",
-                                "left": {
-                                    "type": "Fixed",
-                                    "amount": 4
-                                },
-                                "right": {
-                                    "type": "EntityProperty",
-                                    "entity": "Self",
-                                    "numericProperty": {
-                                        "type": "CounterCount",
-                                        "counterType": "PLUS_ONE_PLUS_ZERO"
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": "Self",
+                            "filter": {
+                                "cardPredicates": [
+                                    "IsPermanent"
+                                ],
+                                "statePredicates": [
+                                    "IsSource",
+                                    {
+                                        "type": "InZone",
+                                        "zone": "Battlefield"
                                     }
-                                }
+                                ]
                             }
                         }
                     },
-                    "target": "Self"
+                    "then": {
+                        "type": "ChooseNumberThen",
+                        "then": {
+                            "type": "AddCountersWithLimit",
+                            "counterType": "PLUS_ONE_PLUS_ZERO",
+                            "amount": "XValue",
+                            "totalLimit": {
+                                "type": "Fixed",
+                                "amount": 4
+                            },
+                            "target": "Self"
+                        },
+                        "maxValue": {
+                            "type": "IfPositive",
+                            "amount": {
+                                "type": "Min",
+                                "left": "XValue",
+                                "right": {
+                                    "type": "Subtract",
+                                    "left": {
+                                        "type": "Fixed",
+                                        "amount": 4
+                                    },
+                                    "right": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": {
+                                            "type": "CounterCount",
+                                            "counterType": "PLUS_ONE_PLUS_ZERO"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "prompt": "Put how many +1/+0 counters on Clockwork Avian?"
+                    }
                 },
                 "restrictions": [
                     {
@@ -1094,7 +1131,7 @@
         "collectorNumber": "45",
         "rarity": "RARE",
         "artist": "Randy Asplund-Faith",
-        "imageUri": "https://cards.scryfall.io/normal/front/1/d/1dea8c2f-4aea-478d-aee7-cba1f74edd6c.jpg?1562901278"
+        "imageUri": "https://cards.scryfall.io/normal/front/1/d/1dea8c2f-4aea-478d-aee7-cba1f74edd6c.jpg?1783948363"
     },
     "colorIdentityOverride": []
 }
@@ -2977,97 +3014,6 @@
         "toughness": 0
     },
     "script": {
-        "staticAbilities": [
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "SetBasePowerToughnessStatic",
-                    "power": 3,
-                    "toughness": 3,
-                    "filter": {
-                        "baseFilter": "permanent",
-                        "scope": "Self"
-                    }
-                },
-                "condition": {
-                    "type": "SourceChosenModeIs",
-                    "modeId": "3/3"
-                }
-            },
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "SetBasePowerToughnessStatic",
-                    "power": 2,
-                    "toughness": 2,
-                    "filter": {
-                        "baseFilter": "permanent",
-                        "scope": "Self"
-                    }
-                },
-                "condition": {
-                    "type": "SourceChosenModeIs",
-                    "modeId": "2/2 flying"
-                }
-            },
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "GrantKeyword",
-                    "keyword": "FLYING",
-                    "filter": {
-                        "baseFilter": "permanent",
-                        "scope": "Self"
-                    }
-                },
-                "condition": {
-                    "type": "SourceChosenModeIs",
-                    "modeId": "2/2 flying"
-                }
-            },
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "SetBasePowerToughnessStatic",
-                    "power": 1,
-                    "toughness": 6,
-                    "filter": {
-                        "baseFilter": "permanent",
-                        "scope": "Self"
-                    }
-                },
-                "condition": {
-                    "type": "SourceChosenModeIs",
-                    "modeId": "1/6 defender"
-                }
-            },
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "GrantSubtype",
-                    "subtype": "Wall"
-                },
-                "condition": {
-                    "type": "SourceChosenModeIs",
-                    "modeId": "1/6 defender"
-                }
-            },
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "GrantKeyword",
-                    "keyword": "DEFENDER",
-                    "filter": {
-                        "baseFilter": "permanent",
-                        "scope": "Self"
-                    }
-                },
-                "condition": {
-                    "type": "SourceChosenModeIs",
-                    "modeId": "1/6 defender"
-                }
-            }
-        ],
         "replacementEffects": [
             {
                 "type": "EntersWithChoice",
@@ -3075,15 +3021,36 @@
                 "modeOptions": [
                     {
                         "id": "3/3",
-                        "label": "3/3 artifact creature"
+                        "label": "3/3 artifact creature",
+                        "becomes": {
+                            "power": 3,
+                            "toughness": 3
+                        }
                     },
                     {
                         "id": "2/2 flying",
-                        "label": "2/2 artifact creature with flying"
+                        "label": "2/2 artifact creature with flying",
+                        "becomes": {
+                            "power": 2,
+                            "toughness": 2,
+                            "keywords": [
+                                "FLYING"
+                            ]
+                        }
                     },
                     {
                         "id": "1/6 defender",
-                        "label": "1/6 Wall artifact creature with defender"
+                        "label": "1/6 Wall artifact creature with defender",
+                        "becomes": {
+                            "power": 1,
+                            "toughness": 6,
+                            "keywords": [
+                                "DEFENDER"
+                            ],
+                            "subtypes": [
+                                "Wall"
+                            ]
+                        }
                     }
                 ]
             }

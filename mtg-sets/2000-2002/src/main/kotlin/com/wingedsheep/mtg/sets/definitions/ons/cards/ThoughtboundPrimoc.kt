@@ -38,8 +38,8 @@ val ThoughtboundPrimoc = card("Thoughtbound Primoc") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "116"
-        artist = "Mark Tedin"
+        collectorNumber = "240"
+        artist = "Jeff Miracola"
         flavorText = "It has learned to anticipate its master's wishes."
         imageUri = "https://cards.scryfall.io/normal/front/e/8/e89156b5-8bdb-41d1-a7aa-63f770a9b070.jpg?1562950377"
     }

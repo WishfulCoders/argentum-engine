@@ -5,6 +5,7 @@ import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.TransformedEvent
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.EntersWithReplacements
 import com.wingedsheep.engine.handlers.effects.ZoneEntryOptions
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionResult
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
@@ -434,6 +435,7 @@ internal fun buildCardComponentForDfcFace(
     // (otherwise a transformed permanent silently reports the default `false`).
     hasNonManaActivatedAbility = face.hasNonManaActivatedAbility,
     hasActivatedAbility = face.hasActivatedAbility,
+    hasCycling = face.hasCycling,
     manaValueOverride = manaValueOverride,
 )
 
@@ -468,12 +470,22 @@ internal fun returnDfcFace(
         ?: return ZoneTransitionResult(state, emptyList())
     val prepared = prepareDfcFaceSwap(state, cardRegistry, entityId, destinationFace)
         ?: return ZoneTransitionResult(state, emptyList())
-    return zones.moveToZone(
+    val origin = prepared.logicalZone(entityId)
+    val moved = zones.moveToZone(
         prepared,
         entityId,
         Zone.BATTLEFIELD,
         options = ZoneEntryOptions(controllerId = ownerId, tapped = tapped)
     )
+    if (moved.actualDestination != Zone.BATTLEFIELD) return moved
+    // The returned face's own enters-with replacements (CR 614.1c) — and any global ones — apply
+    // as it enters, like every other non-stack battlefield entry: Ral, Leyline Prodigy's "enters
+    // with an additional loyalty counter … for each instant and sorcery spell you've cast this turn".
+    val (entered, entryEvents) = EntersWithReplacements.applyOnEntry(
+        moved.state, entityId, ownerId, cardRegistry,
+        predicateEvaluator = zones.predicateEvaluator, preEntryZone = origin
+    )
+    return moved.copy(state = entered, events = moved.events + entryEvents)
 }
 
 /**

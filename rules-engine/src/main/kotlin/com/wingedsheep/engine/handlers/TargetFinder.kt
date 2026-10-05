@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers
 
+import com.wingedsheep.engine.mechanics.targeting.HexproofFromRules
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
@@ -10,6 +11,7 @@ import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.mechanics.targeting.ControllerHexproof
 import com.wingedsheep.engine.mechanics.targeting.ControllerShroud
+import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
 import com.wingedsheep.engine.mechanics.targeting.PlayerTargetRestriction
 import com.wingedsheep.engine.mechanics.targeting.StackObjectTargeting
 import com.wingedsheep.sdk.core.Keyword
@@ -30,8 +32,10 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
 enum class TargetingSourceType {
     /** The source is a spell (instant/sorcery/aura/etc.) */
     SPELL,
-    /** The source is an activated or triggered ability */
-    ABILITY,
+    /** The source is an activated ability (including loyalty and mana abilities that target) */
+    ACTIVATED_ABILITY,
+    /** The source is a triggered ability, reflexive ones included */
+    TRIGGERED_ABILITY,
     /** Unknown or default — no source-type-based restrictions apply */
     ANY
 }
@@ -123,7 +127,9 @@ class TargetFinder(
                 // (or, for "enchanted creature deals damage to any other target", the attached creature).
                 val baseTargets = findLegalTargets(state, requirement.baseRequirement, controllerId, sourceId, ignoreTargetingRestrictions, targetingSourceType, triggeringEntityId, pipelineContext)
                 val excludeId = requirement.excludeSourceId
-                    ?: if (requirement.excludeAttachedCreature) {
+                    ?: if (!requirement.excludeSource) {
+                        null
+                    } else if (requirement.excludeAttachedCreature) {
                         sourceId?.let { state.getEntity(it)?.get<AttachedToComponent>()?.targetId }
                     } else {
                         sourceId
@@ -173,6 +179,13 @@ class TargetFinder(
         targetingSourceType: TargetingSourceType,
         sourceId: EntityId? = null
     ): Boolean {
+        // Protection / hexproof from a kind of source — spells, permanents cast this turn,
+        // activated or triggered abilities. Protection isn't controller-gated; the helper gates
+        // the hexproof half on the target's controller itself.
+        if (SourceKindProtection.targetingError(state, entityId, sourceId, controllerId, targetingSourceType, predicateEvaluator) != null) {
+            return true
+        }
+
         // Source-card-type restriction (Artifact Ward) is checked first because, unlike the
         // opponent-ability restriction, it is NOT controller-gated: a matching source can't target
         // the warded creature even if the same player controls both. It still only blocks abilities
@@ -296,6 +309,13 @@ class TargetFinder(
             val container = state.getEntity(entityId) ?: return@filter false
             container.get<CardComponent>() ?: return@filter false
             val entityController = container.get<ControllerComponent>()?.playerId
+
+            if (sourceId != null &&
+                (ignoreTargetingRestrictions || targetingSourceType == TargetingSourceType.SPELL ||
+                    (targetingSourceType == TargetingSourceType.ANY && sourceId !in state.getBattlefield())) &&
+                state.getEntity(sourceId)?.get<CardComponent>()?.isAura == true &&
+                !com.wingedsheep.engine.handlers.predicates.EnchantRestriction.hostAllowsAura(
+                    state, projected, predicateEvaluator, sourceId, entityId)) return@filter false
 
             if (!ignoreTargetingRestrictions) {
                 // Check hexproof/shroud
@@ -642,25 +662,16 @@ class TargetFinder(
         if (entityController == controllerId || sourceId == null) return false
         // Try projected colors first (for permanents on the battlefield),
         // then fall back to base CardComponent colors (for spells in hand/on stack)
-        var sourceColors = projected.getColors(sourceId)
-        if (sourceColors.isEmpty()) {
-            sourceColors = state.getEntity(sourceId)?.get<CardComponent>()
-                ?.colors?.map { it.name }?.toSet() ?: emptySet()
+        val sourceColors = projected.getColors(sourceId).ifEmpty {
+            state.getEntity(sourceId)?.get<CardComponent>()?.colors?.map { it.name }?.toSet().orEmpty()
         }
-        if (sourceColors.any { colorName -> projected.hasKeyword(entityId, "HEXPROOF_FROM_$colorName") }) {
-            return true
-        }
-        // Hexproof from monocolored: a source with exactly one color can't target (CR 105.2).
-        if (sourceColors.size == 1 && projected.hasKeyword(entityId, "HEXPROOF_FROM_MONOCOLORED")) {
-            return true
-        }
-        // Hexproof from multicolored: a source with two or more colors can't target (CR 105.2b).
-        if (sourceColors.size >= 2 && projected.hasKeyword(entityId, "HEXPROOF_FROM_MULTICOLORED")) {
-            return true
-        }
-        return SourceTypeTargeting.sourceCardTypes(state, sourceId).any { cardType ->
-            projected.hasKeyword(entityId, "HEXPROOF_FROM_CARDTYPE_${cardType.uppercase()}")
-        }
+        return HexproofFromRules.blockingQuality(
+            projected,
+            entityId,
+            sourceColors = sourceColors,
+            sourceCardTypes = SourceTypeTargeting.sourceCardTypes(state, sourceId),
+            sourceKnown = state.getEntity(sourceId) != null
+        ) != null
     }
 
     /**

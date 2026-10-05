@@ -11,6 +11,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.player.EndTheTurnRequestedComponent
 import com.wingedsheep.engine.state.components.player.MulliganStateComponent
 import com.wingedsheep.sdk.scripting.effects.Effect
+import com.wingedsheep.sdk.scripting.EventPattern
 
 /**
  * The engine's single settle boundary. [ActionProcessor] runs it once after every accepted action.
@@ -40,6 +41,10 @@ import com.wingedsheep.sdk.scripting.effects.Effect
  * exception is CR 603.3b's second part, abilities that trigger on an attack-caused ability
  * triggering (Firebender Ascension). That wave is scoped by `causedByAttack`, which is what makes
  * it terminate.
+ *
+ * Because every action's and every SBA's events pass through here, turn history that no single
+ * emitter owns is recorded alongside detection: [CounterHistory] credits counters removed from
+ * permanents, whatever path removed them.
  */
 class Settler(
     private val triggerDetector: TriggerDetector,
@@ -51,17 +56,22 @@ class Settler(
      * Runs a prevention effect's owed result (see [ReplacementRiders]). Combat damage isn't an
      * effect, so the results its prevention owes are run here, before detection and SBAs.
      */
-    private val effectExecutor: ((GameState, Effect, EffectContext) -> EffectResult)? = null
+    private val effectExecutor: ((GameState, Effect, EffectContext) -> EffectResult)? = null,
+    /** Carries out a "restart the game" once the resolution that asked for it is over (CR 727). */
+    private val gameRestarter: GameRestarter? = null
 ) {
 
     fun settle(executed: ExecutionResult): ExecutionResult {
         if (executed.outcome is Outcome.Rejected) return executed
         if (executed.state.gameOver) return executed.copy(state = executed.state.withoutPendingTriggers())
+        val current = restartIfRequested(executed)
         // Nothing has happened yet before the first turn begins: mulligans draw and shuffle, but
-        // no one receives priority, and no permanent can have triggered.
-        if (mulligansInProgress(executed.state)) return executed
+        // no one receives priority, and no permanent can have triggered. A restarted game is back
+        // at that point, and nothing from the game it ended can trigger in the new one.
+        if (mulligansInProgress(current.state)) return current
 
-        val result = runReplacementRiders(endTheTurnIfRequested(executed))
+        val raw = runReplacementRiders(endTheTurnIfRequested(current))
+        val result = com.wingedsheep.engine.mechanics.GraveyardOrdering.finish(raw)
         if (result.outcome is Outcome.Rejected) return result
         val state = result.state
         // A lone priority pass changes nothing on the board, so there is nothing to detect,
@@ -103,6 +113,18 @@ class Settler(
         return ended.copy(events = result.events + ended.events)
     }
 
+    /**
+     * A "restart the game" effect (CR 727) records its request while its ability resolves; the game
+     * is restarted once that resolution is over, whether or not it stopped to ask a question first.
+     */
+    private fun restartIfRequested(result: ExecutionResult): ExecutionResult {
+        val request = result.state.pendingRestart ?: return result
+        val restarter = gameRestarter ?: return result
+        if (result.state.pendingDecision != null) return result
+        val restarted = restarter.restart(result.state, request)
+        return restarted.copy(events = result.events + restarted.events)
+    }
+
     private fun runReplacementRiders(result: ExecutionResult): ExecutionResult {
         val executor = effectExecutor ?: return result
         if (result.state.pendingReplacementRiders.isEmpty() || result.outcome !is Outcome.Done) return result
@@ -121,7 +143,7 @@ class Settler(
 
     /** Queue every trigger [events] caused, including those of a step they began. */
     private fun detect(state: GameState, events: List<GameEvent>): GameState {
-        var working = state
+        var working = ControlHistory.record(CounterHistory.record(state, events), events)
         val triggers = triggerDetector.detectTriggers(working, events).toMutableList()
 
         val stepChanged = events.filterIsInstance<StepChangedEvent>().lastOrNull()
@@ -150,6 +172,7 @@ class Settler(
             state = sba.state
             // SBA-caused triggers join the queue whether or not the SBA stopped for a choice (the
             // legend rule); the ones already waiting stay put until the choice is answered.
+            state = ControlHistory.record(CounterHistory.record(state, sba.events), sba.events)
             state = state.enqueue(triggerDetector.detectTriggers(state, sba.events))
             if (sba.pendingDecision != null) return ExecutionResult.propagatePause(state, events)
             if (state.gameOver) return ExecutionResult.success(state.withoutPendingTriggers(), events)
@@ -160,7 +183,8 @@ class Settler(
             if (state.pendingTriggers.isEmpty()) break
 
             val waiting = apnapOrder(state, state.pendingTriggers)
-            val placed = triggerProcessor.processTriggers(state.withoutPendingTriggers(), waiting)
+            val placementState = state.withoutPendingTriggers()
+            val placed = triggerProcessor.processTriggers(placementState, waiting)
             events += placed.events
             if (placed.outcome is Outcome.Rejected) return ExecutionResult(placed.state, events, placed.outcome)
             placedAny = true
@@ -173,6 +197,16 @@ class Settler(
                 state = state.enqueue(triggerDetector.detectTriggers(state, attackCaused))
             }
             if (placed.pendingDecision != null) return ExecutionResult.propagatePause(state, events)
+            // An automatically removed state trigger immediately fires again. With no state
+            // change or player choice, repeating this wave cannot reach priority (CR 104.4b).
+            if (waiting.any { it.ability.trigger == EventPattern.StateConditionMetEvent } &&
+                state == placementState && stateTriggerPoller.poll(state).pendingTriggers.isNotEmpty()
+            ) {
+                return ExecutionResult.success(
+                    state.copy(gameOver = true, winnerId = null),
+                    events + GameEndedEvent(null, GameEndReason.INFINITE_LOOP)
+                )
+            }
         }
 
         if (placedAny) state = state.withPriority(state.priorityPlayerId)

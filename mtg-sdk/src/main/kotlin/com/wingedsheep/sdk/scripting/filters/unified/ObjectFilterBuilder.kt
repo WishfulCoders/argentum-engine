@@ -11,6 +11,8 @@ import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
+import com.wingedsheep.sdk.scripting.values.CardNumericProperty
 
 /**
  * The one fluent builder surface for narrowing an object filter — "tapped", "you control",
@@ -54,6 +56,16 @@ interface ObjectFilterBuilder<out Self> {
 
     /** Restrict to monocolored objects (exactly one color). Colorless objects do not match. */
     fun monocolored() = withCardPredicate(CardPredicate.IsMonocolored)
+
+    /** Restrict to objects that are exactly [count] colors (CR 105.2). */
+    fun exactlyColors(count: Int) = withCardPredicate(CardPredicate.HasExactlyColors(count))
+
+    /** Restrict to objects that are *not* exactly [count] colors — "that isn't exactly two colors". */
+    fun notExactlyColors(count: Int) =
+        withCardPredicate(CardPredicate.Not(CardPredicate.HasExactlyColors(count)))
+
+    /** Match a permanent's current mana abilities, including intrinsic and granted abilities. */
+    fun withManaAbility() = withStatePredicate(StatePredicate.HasManaAbility)
 
     /** Add a subtype requirement */
     fun withSubtype(subtype: Subtype) = withCardPredicate(CardPredicate.HasSubtype(subtype))
@@ -107,6 +119,12 @@ interface ObjectFilterBuilder<out Self> {
      */
     fun withCardPredicate(predicate: CardPredicate): Self =
         mapObjectFilter { it.copy(cardPredicates = it.cardPredicates + predicate) }
+
+    /** Restrict to cards with a cycling ability, typecycling included ("card with a cycling ability"). */
+    fun withCycling() = withCardPredicate(CardPredicate.HasCycling)
+
+    /** Restrict to lands that could produce colorless mana ("a land you control could produce {C}"). */
+    fun couldProduceColorlessMana() = withCardPredicate(CardPredicate.CouldProduceColorlessMana)
 
     /** Add a keyword requirement */
     fun withKeyword(keyword: Keyword) = withCardPredicate(CardPredicate.HasKeyword(keyword))
@@ -197,6 +215,14 @@ interface ObjectFilterBuilder<out Self> {
         withCardPredicate(CardPredicate.ManaValueAtMostDynamic(amount))
 
     /**
+     * Power at most a resolved [DynamicAmount] — "power X or less, where X is the number of lands you
+     * control" (Invasion of Lorwyn). Re-read on resolution like [manaValueAtMostDynamic]; an object
+     * with no power never matches.
+     */
+    fun powerAtMostDynamic(amount: DynamicAmount) =
+        withCardPredicate(CardPredicate.PowerAtMostDynamic(amount))
+
+    /**
      * Mana value **exactly** a resolved [DynamicAmount] — "a creature card with mana value equal to
      * the number of harmony counters on this artifact" (Instrument of the Bards).
      *
@@ -246,6 +272,13 @@ interface ObjectFilterBuilder<out Self> {
     fun basePowerOrToughness(value: Int) = withCardPredicate(
         CardPredicate.Or(listOf(CardPredicate.BasePowerEquals(value), CardPredicate.BaseToughnessEquals(value)))
     )
+
+    /** Compares a candidate's numeric property with any late-bound amount. */
+    fun compareNumericProperty(
+        property: CardNumericProperty,
+        operator: ComparisonOperator,
+        amount: DynamicAmount,
+    ) = withCardPredicate(CardPredicate.CompareNumericProperty(property, operator, amount))
 
     /** Power at most */
     fun powerAtMost(max: Int) = withCardPredicate(CardPredicate.PowerAtMost(max))
@@ -301,6 +334,9 @@ interface ObjectFilterBuilder<out Self> {
 
     /** Must not be legendary */
     fun nonlegendary() = withCardPredicate(CardPredicate.IsNonlegendary)
+
+    /** Must have the snow supertype — "snow land", "snow permanent" (CR 205.4g). */
+    fun snow() = withCardPredicate(CardPredicate.IsSnow)
 
     /** Must not be a basic land ("nonbasic land", e.g. Rocket Volley, Shivan Harvest). */
     fun nonbasic() = withCardPredicate(CardPredicate.Not(CardPredicate.IsBasicLand))
@@ -514,7 +550,14 @@ interface ObjectFilterBuilder<out Self> {
      * attacking enchanted player" (Curse of Hospitality). The attachment-scoped sibling of
      * [attackingAnOpponent]; only meaningful on an Aura that enchants a player.
      */
+    /** Scope an attacker to the defending side of a referenced player or permanent. */
+    fun attackingDefenderOf(reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity) =
+        withStatePredicate(StatePredicate.IsAttackingDefenderOf(reference))
+
     fun attackingEnchantedPlayer() = withStatePredicate(StatePredicate.IsAttackingEnchantedPlayer)
+
+    /** Current controller has controlled this battlefield object continuously since this turn began. */
+    fun controlledSinceTurnBegan() = withStatePredicate(StatePredicate.ControlledSinceTurnBegan)
 
     /**
      * Must have been declared as an attacker at least once during the current turn.
@@ -711,6 +754,14 @@ interface ObjectFilterBuilder<out Self> {
     fun blockingIterationEntity() = withStatePredicate(StatePredicate.IsBlockingIterationEntity)
 
     /**
+     * Blocking the creature [reference] names (CR 509), read live — "each creature blocking it"
+     * when "it" is a role such as the triggering creature (Ib Halfheart, Goblin Tactician). Gather
+     * before a removal in the same resolution to hold the group across it.
+     */
+    fun blockingEntity(reference: EffectTarget.SingleEntity) =
+        withStatePredicate(StatePredicate.IsBlockingEntity(reference))
+
+    /**
      * Must be a token created by the effect's source permanent (CR 111 provenance), recognized via
      * the source's stamped `CreatedByComponent`. "Tokens created with this creature" (Tetravus).
      */
@@ -808,6 +859,7 @@ interface ObjectFilterBuilder<out Self> {
 
     /** Must have entered the battlefield this turn */
     fun enteredThisTurn() = withStatePredicate(StatePredicate.EnteredThisTurn)
+    fun activatedThisTurn() = withStatePredicate(StatePredicate.ActivatedThisTurn)
 
     /**
      * Must currently be in a graveyard *and* have been put there from the battlefield
@@ -835,6 +887,9 @@ interface ObjectFilterBuilder<out Self> {
 
     /** Must have the renowned designation (CR 702.112b) — see [StatePredicate.IsRenowned]. */
     fun renowned() = withStatePredicate(StatePredicate.IsRenowned)
+
+    /** Must have the monstrous designation (CR 701.37b) — see [StatePredicate.IsMonstrous]. */
+    fun monstrous() = withStatePredicate(StatePredicate.IsMonstrous)
 
     /**
      * Must have crewed (CR 702.122) or saddled (CR 702.171) the effect's source permanent this
@@ -867,8 +922,12 @@ interface ObjectFilterBuilder<out Self> {
      */
     fun withDisguise() = withStatePredicate(StatePredicate.HasDisguiseAbility)
 
-    /** Must have a counter of the specified type */
-    fun withCounter(counterType: CounterType) = withStatePredicate(StatePredicate.HasCounter(counterType))
+    /**
+     * Must have a counter of the specified type — or, with [atLeast], that many or more of them
+     * ("with three or more +1/+1 counters on them": `withCounter(PLUS_ONE_PLUS_ONE, atLeast = 3)`).
+     */
+    fun withCounter(counterType: CounterType, atLeast: Int = 1) =
+        withStatePredicate(StatePredicate.HasCounter(counterType, atLeast))
 
     /** Must not have a counter of the specified type. Other counter types are allowed. */
     fun withoutCounter(counterType: CounterType) =
@@ -988,6 +1047,12 @@ interface ObjectFilterBuilder<out Self> {
     fun notCastFromZone(zone: Zone) =
         withStatePredicate(StatePredicate.Not(StatePredicate.WasCastFromZone(zone)))
 
+    /**
+     * Must be a spell or ability on the stack with exactly one chosen target — "target instant or
+     * sorcery spell with a single target" (Hydroelectric Specimen). See [StatePredicate.HasSingleTarget].
+     */
+    fun withSingleTarget() = withStatePredicate(StatePredicate.HasSingleTarget)
+
     // =============================================================================
     // Fluent Builder Methods - Controller Predicates
     // =============================================================================
@@ -1020,6 +1085,8 @@ interface ObjectFilterBuilder<out Self> {
 
     /** Must be controlled by the active player (the player whose turn it is) */
     fun controlledByActivePlayer() = withControllerPredicate(ControllerPredicate.ControlledByActivePlayer)
+
+    fun defendingPlayerControls() = withControllerPredicate(ControllerPredicate.ControlledByDefendingPlayer)
 
     /** Must be controlled by the target opponent */
     fun targetOpponentControls() = withControllerPredicate(ControllerPredicate.ControlledByTargetOpponent)

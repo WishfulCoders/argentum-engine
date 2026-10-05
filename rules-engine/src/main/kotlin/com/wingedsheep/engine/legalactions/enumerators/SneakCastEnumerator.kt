@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.legalactions.enumerators
 
+import com.wingedsheep.engine.legalactions.surfacedRequirements
+import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.legalactions.ActionEnumerator
@@ -69,7 +71,7 @@ class SneakCastEnumerator : ActionEnumerator {
             val targetReqInfos = if (targetReqs.isEmpty()) {
                 emptyList()
             } else {
-                context.targetUtils.buildTargetInfos(state, playerId, targetReqs, cardId)
+                context.targetUtils.buildTargetInfos(state, playerId, targetReqs, cardId, TargetingSourceType.SPELL)
             }
             // A targeted sneak spell (e.g. a "Technique") is only castable if every requirement
             // has a legal target right now (CR 601.2c).
@@ -107,7 +109,7 @@ class SneakCastEnumerator : ActionEnumerator {
                     targetCount = firstReqInfo?.maxTargets ?: 1,
                     minTargets = firstReq?.effectiveMinCount ?: (firstReq?.count ?: 1),
                     targetDescription = firstReq?.description,
-                    targetRequirements = if (targetReqInfos.size > 1) targetReqInfos else null,
+                    targetRequirements = targetReqInfos.surfacedRequirements(),
                     manaCostString = sneakMana.toString(),
                     additionalCostInfo = bounceCostInfo,
                     autoTapPreview = autoTapPreview
@@ -144,7 +146,7 @@ class SneakCastEnumerator : ActionEnumerator {
                 val targetReqInfos = if (targetReqs.isEmpty()) {
                     emptyList()
                 } else {
-                    context.targetUtils.buildTargetInfos(state, playerId, targetReqs, cardId)
+                    context.targetUtils.buildTargetInfos(state, playerId, targetReqs, cardId, TargetingSourceType.SPELL)
                 }
                 if (targetReqInfos.isNotEmpty() && !context.targetUtils.allRequirementsSatisfied(targetReqInfos)) continue
 
@@ -176,7 +178,7 @@ class SneakCastEnumerator : ActionEnumerator {
                         targetCount = firstReqInfo?.maxTargets ?: 1,
                         minTargets = firstReq?.effectiveMinCount ?: (firstReq?.count ?: 1),
                         targetDescription = firstReq?.description,
-                        targetRequirements = if (targetReqInfos.size > 1) targetReqInfos else null,
+                        targetRequirements = targetReqInfos.surfacedRequirements(),
                         manaCostString = sneakMana.toString(),
                         additionalCostInfo = bounceCostInfo,
                         autoTapPreview = autoTapPreview

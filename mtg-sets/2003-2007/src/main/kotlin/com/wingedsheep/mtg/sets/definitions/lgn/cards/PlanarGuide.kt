@@ -1,11 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
 
 /**
  * Planar Guide
@@ -25,11 +28,19 @@ val PlanarGuide = card("Planar Guide") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{W}"), Costs.ExileSelf)
-        effect = Effects.ExileGroupAndLink(GroupFilter.AllCreatures) then
-            Effects.CreateDelayedTrigger(
+        // The source is already exiled by the cost, so the end-step return can't read a linked
+        // pile off it: the trigger carries the exiled creatures itself.
+        effect = Effects.Pipeline {
+            val exiledCreatures = gather(CardSource.BattlefieldMatching(GameObjectFilter.Creature))
+            exile(exiledCreatures)
+            run(Effects.CreateDelayedTrigger(
                 step = Step.END,
-                effect = Effects.ReturnLinkedExileUnderOwnersControl()
-            )
+                effect = Effects.Pipeline {
+                    move(exiledCreatures, CardDestination.ToZone(Zone.BATTLEFIELD), underOwnersControl = true)
+                },
+                carryCollections = listOf(exiledCreatures.key)
+            ))
+        }
     }
 
     metadata {

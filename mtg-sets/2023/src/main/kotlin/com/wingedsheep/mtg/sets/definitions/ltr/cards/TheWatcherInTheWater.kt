@@ -49,7 +49,7 @@ val TheWatcherInTheWater = card("The Watcher in the Water") {
     // Whenever you draw a card during an opponent's turn, create a 1/1 blue Tentacle creature token.
     triggeredAbility {
         trigger = Triggers.you.draws()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

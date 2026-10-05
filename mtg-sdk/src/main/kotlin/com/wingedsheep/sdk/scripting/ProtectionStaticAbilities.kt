@@ -310,11 +310,17 @@ data class GrantProtectionToController(
         "You have protection from " + when (val s = scope) {
             is ProtectionScope.Color -> s.color.displayName.lowercase()
             is ProtectionScope.Colors -> s.colors.joinToString(" and ") { it.displayName.lowercase() }
+            is ProtectionScope.NonColor -> "non" + s.color.displayName.lowercase()
+            ProtectionScope.Multicolored -> "multicolored"
             is ProtectionScope.CardType -> s.cardType.lowercase() + "s"
             is ProtectionScope.Subtype -> s.subtype + "s"
             is ProtectionScope.Supertype -> s.supertype.lowercase() + " permanents"
             ProtectionScope.Everything -> "everything"
             ProtectionScope.EachOpponent -> "each of your opponents"
+            ProtectionScope.Spells -> "spells"
+            ProtectionScope.PermanentsCastThisTurn -> "permanents that were cast this turn"
+            ProtectionScope.ActivatedAbilities -> "activated abilities"
+            ProtectionScope.TriggeredAbilities -> "triggered abilities"
         }
 }
 

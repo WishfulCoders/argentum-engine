@@ -550,6 +550,993 @@ family. Portal is a deliberately simple set, which is what makes it the right fi
 318 alternate spellings above are mostly its doing, because a card printing "A and B" or "A, then B"
 now reads correctly and prints back as the full-stop form.
 
+## The "another target" band
+
+The first band of the unattended grammar loop, keyed on the tail family `another target creature …`
+(**102 lines over 102 cards**, 41 of them hand-written). The prefix probe — rewrite "another target"
+to "target" and reparse — said **44 cards** would finish; the band delivered **48 hand-written cards
+read whole (7,099 → 7,147)**, because the same rows also read "up to one other target" and "two other
+target".
+
+### "Another" is a quantifier row, not a noun phrase
+
+"Another target creature you control", "up to one other target creature", "two other target
+creatures" differ from the rows beside them in one field: the requirement cannot choose the object
+whose ability it is. The SDK carries that as `TargetFilter.excludeSelf`, and 88 goldens spell "another
+target" that way. So these are four more rows of `Targets.quantifiers` — the singular pair and the
+counted plural pair — and every family that already takes the table (destroy, exile, tap, bounce, the
+pump, the grants, the combat restrictions, the singular damage and counter rows) reads them for free.
+The one test that used `excludeSelf` as its example of an unspelled field now uses
+`excludeTriggeringEntity`.
+
+### After a first target, "another" is about that target
+
+The differential found the reading's edge within one run. "Target creature gets +2/+2 until end of
+turn. **Another** target creature gets -2/-2 until end of turn." (Drooling Groodion) and "… **Up to one
+other** target creature gets +1/+1" (Mabel's Mettle) contrast the second target with the *first*,
+which the SDK spells `TargetOther` — distinct from earlier targets of the same ability. Read as
+`excludeSelf`, both round-trip byte-perfectly and let one creature take both halves. `Steps.merge`
+now refuses a self-excluding requirement anywhere but first, and those lines decline.
+
+### What the differential found
+
+Differential **6,730 compared / 52 divergent → 6,776 / 53**. Of the seven new divergences:
+
+- **two parser bugs, fixed** — Drooling Groodion and Mabel's Mettle, above.
+- **four card bugs, fixed** — Aetherjacket ("Destroy another target artifact") had no self-exclusion
+  at all; Earth Kingdom Protectors, Intrepid Provisioner and Tributary Vaulter read "another target
+  Ally / Human / Merfolk you control" as a *creature* of that type, where a bare subtype names a
+  permanent (CR 109.2). Only their goldens moved.
+- **one standing SDK finding** — Clammy Prowler spells its single "another target attacking creature"
+  as `TargetOther(TargetObject(…))`. With one target the two are the same requirement, and the SDK has
+  both; `excludeSelf` is the majority (88 goldens) and prints. The single-target `TargetOther` cards
+  are the minority spelling of one concept, not a grammar gap.
+
+## The "you may … If you do, …" band
+
+The second loop band, keyed on the tail family `you do, draw …` (**68 lines over 43 whole cards** by
+the prefix probe). It delivered **17 hand-written cards read whole (7,147 → 7,164)**: the rest of the
+family's lines decline on their *payload* — "sacrifice another creature", gain control, an
+intervening-if in front of the choice — which is the fronted-duration lesson again.
+
+### An action where the pay-gates have a cost
+
+"You may discard a card. If you do, draw a card." is the pay-gates' shape with an action in the
+cost's place: `Effects.May(Effects.IfYouDo(action, then))`, the spelling the facade's own KDoc gives
+the sentence. It is **not** `May(A then B)`: "if you do" asks whether the action was
+performed, so an empty hand that "may discard" must not draw. The success criterion is derived, never
+slotted — `SuccessCriterion.Auto` over an action it can infer from (a terminal zone move), and
+`Always` for "discard your hand", which a ruling (Narset, Jeskai Waymaster) makes doable with an empty
+hand and which Narset, Vaultguard Trooper and Sauron already carry. An action Auto cannot read ("you
+may draw a card. If you do, …") declines rather than building a card the validator refuses. The rule
+is sentence-terminal and one-declarer for `conditionalClause`'s reason: a target on both sides of the
+gate has no single reading.
+
+### What the differential found
+
+Differential **6,776 compared / 53 divergent → 6,789 / 53**, the same 53. The three new divergences
+were all **card bugs, fixed**: Abandon Attachments, Flaring Cinder (both triggers) and Byway Barterer
+spelled "if you do" as `May(A then B)`, so the draw happened whether or not anything was discarded.
+Only their goldens moved.
+
+## The exile-until-leaves band
+
+The third loop band, keyed on the tail family `until ~ leaves …` (**71 lines over 39 whole cards** by
+the prefix probe, over the whole corpus). It delivered **22 hand-written cards read whole (7,164 →
+7,186)** and took the family off the implemented tail entirely (34 cards → 0); the gap to the probe is
+the unimplemented half of the corpus plus lines whose *other* sentences still decline.
+
+### One sentence, two abilities
+
+"When ~ enters, exile target creature an opponent controls until ~ leaves the battlefield." is, in
+42 of 46 goldens, **two** triggered abilities: `Effects.ExileUntilLeaves(target)` on the printed
+trigger, and a `Triggers.self.leaves()` ability running `Effects.ReturnLinkedExileUnderOwnersControl()`.
+The exile half is one more row family beside "exile {q}target {filter}" — singular quantifiers only,
+because the effect takes one target and no card spells a plural one through `ForEachTargetEffect`.
+The return half is a *lowering* of the first, the same shape as amplify and equip: a step rule can
+only return an effect, so `Grammar.triggerLine` and `activatedLine` append the return whenever the
+line's script exiles until the source leaves, and refuse to print one that lacks it — an exile whose
+card never comes back is not what the sentence says.
+
+### What the differential found
+
+Differential **6,789 compared / 53 divergent → 6,810 / 55**. Both new divergences are one **standing
+SDK finding**: Memory Trap and Ossification spell the sentence as
+`Effects.MoveUntilSourceLeaves(target, Zone.EXILE)`, the one-shot "until" whose return is not a
+triggered ability — the reading the Comprehensive Rules give "until" durations on one-shot effects.
+Two spellings of one concept; the grammar prints the majority (42 goldens), so the two cards stay
+divergent until the corpus converges on one of them.
+
+## The "if it was kicked" band
+
+The fourth loop band, keyed on the tail family `it was kicked, …` (**66 lines over 35 whole cards**
+by the prefix probe, over the whole corpus). It delivered **12 hand-written cards read whole (7,186 →
+7,198)**; the rest of the family's cards decline on their payload or are unimplemented.
+
+### A row spelled by analogy
+
+`Conditions` already held `WasKicked` — as "it's kicked", written beside "it's bargained". Oracle
+prints the kicker condition **only** in the past tense: "if it was kicked" 81 times, "it's kicked" never.
+Bargain is the opposite case — the present is its cost-position spelling ("costs {2} less to cast if
+it's bargained") and its trigger form ("if it was bargained", 7 cards) is a positional question this
+band leaves open. So the fix is one word in an existing row, not a new one: **count a row's spelling in
+the corpus before trusting the analogy it was written from.** The row sat unreached because no card
+could print it.
+
+### What the differential found
+
+Differential **6,810 compared / 55 divergent → 6,822 / 55**. The two new divergences were both **card
+bugs, fixed**: Sergeant-at-Arms spelled its intervening-if (CR 603.4) as an `Effects.If` inside the
+effect, so an unkicked Sergeant still put its trigger on the stack; Nullpriest of Oblivion returned its target with
+`PutOntoBattlefield`, dropping the graveyard guard `PutOntoBattlefieldFromGraveyard` carries. Only their
+goldens moved.
+
+## The group counter band
+
+The fifth loop band, keyed on the tail family `each creature you …` (**92 lines over 39 whole cards**
+by the prefix probe, over the whole corpus; the counter sentences alone probe to about 24). It
+delivered **14 hand-written cards read whole (7,198 → 7,212)** — Abzan Ascendancy, Cathars' Crusade,
+Leader's Talent and their kin.
+
+### The counter verb's group twin
+
+"Put a +1/+1 counter on each creature you control." is `Effects.ForEachInGroup(GroupFilter(filter),
+AddCounters(kind, n, IterationEntity))` in every golden that prints it — the shape `groupStep` already
+builds for "tap all" and "deals 1 damage to each". So the band is two rows, not a construct: the
+target rule's two quantities (the article for one, a number word from two) over "each" and a singular
+noun from `Filters.filter`. The rest of the family — "untap each creature you control", the dynamic
+"put X counters on each", "each creature you control with toughness less than …" — declines on
+something else and stays ranked.
+
+### What the differential found
+
+Differential **6,822 compared / 55 divergent → 6,834 / 55**. The three new divergences were all
+**card bugs, fixed**: Minwu, White Mage and Indulgent Aristocrat read "each Cleric / Vampire you
+control" as creatures, where the bare tribal noun names every permanent with the subtype (a kindred
+permanent gets the counter too); Greenbelt Radical fused its two sentences — "put a +1/+1 counter on
+each creature you control. Creatures you control gain trample" — into one iteration, where the text
+names the group twice and so gathers it twice. Only their goldens moved.
+
+## The tapped-fetch band
+
+The sixth loop band, keyed on the tail family `, put it …` (**73 lines over 36 whole cards** by the
+prefix probe, over the whole corpus). It delivered **26 hand-written cards read whole (7,214 →
+7,240)** — Evolving Wilds, Terramorphic Expanse, Fabled Passage's plainer kin, Rampant Growth.
+
+### One flag, two printings
+
+"Search your library for a basic land card, put it onto the battlefield tapped, then shuffle." is
+`Patterns.Library.searchLibrary(filter, BATTLEFIELD, entersTapped = true)` in every golden — the
+recipe the untapped search rows already build, with the one parameter they left at its default. So the
+band is two more rows over `Library.search`'s shared shape. The anaphor runs the other way from the
+untapped pair: Oracle prints "put **it** onto the battlefield tapped" about five times as often as
+"put **that card** …", so the pronoun is canonical and "that card" is the alternate.
+
+### What the differential found
+
+Differential **6,836 compared / 55 divergent → 6,862 / 55**. The one new divergence was a **card
+bug, fixed**: Escape Tunnel searched with `reveal = true`, showing the fetched land to every player
+though its Oracle text reveals nothing. Only its golden moved.
+
+## The graveyard exile-cost band
+
+The seventh loop band, keyed on the tail family `from your graveyard: …` (**68 lines over 33 whole
+cards** by the prefix probe, over the whole corpus). It delivered **17 hand-written cards read whole
+(7,240 → 7,257)** — the Renew cycle, Cobbled Lancer, Bramble Wurm, Seasoned Cryomancer and their kin.
+
+### One cost value, two printings, and the zone decides
+
+"{3}{U}, Exile this card from your graveyard: Draw a card." is `AbilityCost.ExileSelf` in every golden
+— the same value the battlefield's "Exile ~" builds — with `activateFromZone = GRAVEYARD` on the
+ability. The SDK keeps the zone on the ability and not on the cost, so the two printings cannot be two
+rows of `Costs`: one value with two surfaces is printing left to alternation order. CR 113.6m makes the
+zone a consequence of the cost ("an ability whose cost … specifies that it moves the object it's on
+out of a particular zone functions only in that zone"), so `Costs.fromGraveyard` reads the trailing
+exile and `Activated`'s cost slot carries the zone it names beside the cost, onto the field the
+recursion band already derives from a self-moving *effect*. Printing chooses the graveyard spelling
+only when the ability works from the graveyard **and** its last cost exiles it; `abilityFor`'s
+reconstruction checks the choice, so nothing else can borrow the spelling.
+
+### What the differential found
+
+Differential **6,862 compared / 56 divergent → 6,878 / 56**. No new divergence: all sixteen newly
+compared cards agree with their goldens.
+
+## The filtered dies band
+
+The eighth loop band. Its family never ranked as one: "Whenever a creature you control dies, …" is
+read up to the verb and declines there, so the tail ranking splits it by whatever follows the comma —
+`dies, put a …`, `dies, you may …`, `dies, create a …` and 54 more, **265 lines** in all, none of them
+in the top forty. Summed, the prefix probe (`dies,` → `enters,`) finished **75 whole cards** over the
+whole corpus, and the long-form self trigger `When ~ is …` another 32. It delivered **30 hand-written
+cards read whole (7,261 → 7,291)**.
+
+### Two rows, one per subject, and the long form is a spelling
+
+`Triggers.a(filter).dies()` and `Triggers.another(filter).dies()` are what every hand-written card in
+the family writes, and they split on the printed word "another" exactly as the enters pair does, so
+they are two `filteredTriggerRule` rows beside it. CR 700.4 defines *dies* as "is put into a graveyard
+from the battlefield", and Oracle still prints the long form wherever the object is not a creature —
+Nutrient Block, Ashiok's Reaper's "an enchantment you control", Krenko's "an artifact". The SDK's own
+`dies()` documents both wordings as one event, so the long form is an `alsoSpelled` surface on the
+self row and both filtered rows, and "dies" is what prints — the precedent the enters-or-dies
+contraction set for Ichor Wellspring.
+
+### What the differential found
+
+Differential **6,882 compared / 56 divergent → 6,912 / 56**. Four new divergences, all **card bugs,
+fixed**, and only their goldens moved:
+
+- **Slimefoot, the Stowaway**, **Boggart Cursecrafter**, **Laid to Rest** — "a Saproling / another
+  Goblin / a Human you control dies" is the bare tribal noun, which names *permanents*; the cards
+  watched creatures only. CR 700.4 does not restrict "dies" to creatures, so a Kindred permanent of the
+  type dying is the difference.
+- **Abzan Ascendancy** — "a nontoken creature you control" was written with the `another` subject,
+  which excludes the source; the text does not.
+
+## The damage-by-its-power band
+
+The ninth loop band, tail key `its power to …`: "~ deals damage equal to **its power** to any target"
+(Spikeshot Goblin), "{T}, Sacrifice ~: **It** deals damage equal to its power to any target" (Ghitu
+Fire-Eater), "When ~ dies, it deals damage equal to its power to each opponent" (Heartfire Hero), and
+the filtered-trigger form "Whenever a creature you control enters, it deals damage equal to its power
+to any target" (Warstorm Surge). **58 lines**; the prefix probe (`→ 3 damage to`) finished 32 whole
+cards, but that probe also finished the bites by reading their later "It" as the source, so the
+honest ceiling was about 21. It delivered **8 hand-written cards read whole (7,294 → 7,302)** and the
+family fell to one line; the rest of the reached cards decline elsewhere (Valiant, backup, a second
+ability).
+
+### The amount and the dealer move together
+
+The counted damage rows read `Amounts.count`, which deliberately has no "its power": "its" names a
+different object in every position, which is why `lifeByProperty` instantiates the amount per
+position. Damage is that shape with one more thing that moves — **who deals it**. In a first clause
+the subject is the source, which `DealDamageEffect` assumes with no `damageSource`; in a filtered
+trigger "it" is the matched creature, and Warstorm Surge's model names it as the dealer *and* as the
+amount's object. So `damageByProperty` slots subject and possessive together and refuses a model
+whose dealer and amount disagree. The fixed recipients ("any target", "each opponent", "that
+player", …) became one `DamageRecipient` table that the counted rows now read too, so the two
+families cannot drift on whom damage can be dealt to.
+
+After a subject that names the source, Oracle writes "its", never "~'s", so "its" prints here — the
+opposite of the life sentences, where "its" is an alternate of the name.
+
+**Not in this band: the bite.** "Target creature you control deals damage equal to its power to …"
+and its later clause "It deals damage equal to its power to target creature you don't control" put
+the dealer on a target and introduce a second target from a continuation. That is its own family.
+
+### What the differential found
+
+Differential **6,915 compared / 56 divergent → 6,922 / 58**. Two new divergences, both **standing
+SDK findings** — two spellings of one meaning, left as they are:
+
+- **Cinder Shade** — "{R}, Sacrifice ~: It deals damage equal to its power" is written
+  `EntityProperty(SacrificedAsCost, Power)`; the grammar reads `EntityProperty(Self, Power)`, which
+  the engine resolves through the last-known snapshot (Ghitu Fire-Eater writes it that way).
+- **Jagged-Scar Archers** — names `damageSource = Self` explicitly; no `damageSource` means the same
+  thing, and Spikeshot Goblin writes it that way.
+
+## The artifact creature token band
+
+The tenth loop band, tail keys `artifact creature token …` and `artifact creature token.`: "create a
+1/1 colorless Thopter **artifact** creature token with flying". **126 lines** over two keys; the probe
+(` artifact creature token` → ` creature token`) finished 29 + 35 whole cards over the corpus. It
+delivered **29 hand-written cards read whole (7,302 → 7,331)** — the two keys reach many of the same
+cards, so the summed probe double-counts.
+
+### A slot over the noun, not a row per kind
+
+`CreateTokenEffect` carries the token's extra card types as two booleans, `artifactToken` and
+`enchantmentToken`, and the printed word sits *inside* the noun phrase, in front of "creature". So it
+is one slot, `{kind} token(s)`, over three constants — "creature", "artifact creature", "enchantment
+creature" — with disjoint values. It crosses the count, the tapped entry, the keyword rider and the
+"for each" tally without touching any of them, where a row per kind would have tripled every
+`createToken` instantiation. Both booleans set is printed once in Oracle ("enchantment artifact
+creature token"), in the opposite order to a type line's, so no row spells it and it declines.
+
+### What the differential found
+
+Differential **6,922 compared / 58 divergent → 6,949 / 59**. Six new divergences: five **card bugs,
+fixed** (only their goldens moved), and one standing finding.
+
+- **Gravpack Monoist**, **Sami, Ship's Engineer** — set the token's `name` to "Robot". CR 111.4: a
+  token whose ability doesn't name it is named for its subtypes plus the word "Token", which is what
+  `CreateTokenExecutor` derives when `name` is unset.
+- **Pentavus** ("Sacrifice a Pentavite"), **Spider-Slayer, Hatred Honed** ("deals damage to a
+  Spider") — the bare tribal noun names permanents; both cards wrote creatures.
+- **Baxter Stockman** — "target artifact creature you control" listed its predicates as creature,
+  artifact; `GameObjectFilter.ArtifactCreature` is the facade, and the order is part of the value.
+- **Gadget Technician** (standing) — "When this creature enters or is turned face up" is two
+  abilities in the grammar and one `AnyOf` trigger on the card; the entry band's two-spelling finding.
+
+
+## The Ring-tempts band
+
+The eleventh loop band, tail key `the Ring tempts …`: "When ~ enters, **the Ring tempts you**." (CR
+701.54). **22 lines**; the probe (`the Ring tempts you` → `you draw a card`) finished 10 whole cards. It
+delivered **18 hand-written cards read whole (7,336 → 7,354)** — more than the probe, whose
+substitute sentence is not itself read in every position the Ring sentence takes.
+
+### A whole sentence, one effect
+
+The keyword action has no variable — the tempted player is the controller, `TheRingTemptsYouEffect`'s
+default — so it is a `constantClause` in `Steps`' sentence list beside "you skip your next turn", landing
+on `Effects.TheRingTemptsYou()`, the facade all 46 LTR golden slots use. The trigger side, "Whenever the
+Ring tempts you", is a different family and stays declined.
+
+### What the differential found
+
+Differential **6,954 compared / 59 divergent → 6,972 / 59**. One new divergence, a **card bug, fixed**:
+Gollum, Patient Plotter's "Return this card from your graveyard to your hand" was a bare
+`Effects.Move(Self, HAND)`; the grammar reads the graveyard-functional return as
+`Effects.ReturnToHandFromGraveyard(Self)` (`fromZone = Graveyard`), the spelling most graveyard-activated
+self-returns already use, and the card now does too.
+
+## The attached-creature band
+
+The twelfth loop band, tail key `enchanted creature.`: "When this Aura enters, **tap enchanted
+creature**.", "{G}: **Regenerate enchanted creature**." **95 lines**; the probe (`enchanted creature.` →
+`target creature.`) finished 28 whole cards over the corpus. It delivered **14 hand-written cards read
+whole (7,355 → 7,369)**.
+
+### A fourth instantiation, and the first that is not an anaphor
+
+`SelfSteps.retargetable` already held every verb the family needs — tap, untap, regenerate, exile,
+bounce, counters, pumps, grants — instantiated for the source, the target pronoun and a filtered
+trigger's "it". "Enchanted creature" is a definite description like `~`, so it denotes the source's
+attachment in every position: one more instantiation over `EffectTarget.EnchantedCreature`, offered
+through `SelfSteps.clauses` wherever `Steps` offers its non-anaphoric clauses. "Equipped creature" is
+the same phrase by the time it arrives; normalization abstracts the adjective.
+
+### What the differential found
+
+Differential **6,973 compared / 59 divergent → 6,987 / 62**. Five new divergences, all two SDK
+spellings of one value, none behavioural:
+
+- **Serpent Skin**, **Thrull Retainer** — regenerated their enchanted creature through
+  `EnchantedPermanent`, the minority spelling (14 uses to `EnchantedCreature`'s 96); both moved to
+  the majority, and only their goldens moved.
+- **Adventuring Gear** (standing) — `EquippedCreature` on an Equipment; the three attachment targets
+  resolve identically, and the adjective is the type line's, not the model's.
+- **Fae Flight**, **Aquitect's Defenses** (standing) — "enchanted creature gains hexproof" written as
+  `Effects.GrantHexproof` (`GrantEvasionKeywordEffect`), which the SDK's own KDoc calls identical to
+  `GrantKeyword` for a permanent; the grammar prints the majority `GrantKeyword`.
+
+## The untap-lock band
+
+The thirteenth loop band, tail key `doesn't untap during …`: "**Enchanted creature doesn't untap during
+its controller's untap step.**" — Shackles, Claustrophobia, Charmed Sleep and the rest of the lock
+Auras. **94 lines**; the probe (`doesn't untap during its controller's untap step` → `has flying`)
+finished 29 whole cards over the corpus. It delivered **9 hand-written cards read whole (7,369 →
+7,378)**, and took the family from 94 lines to 35.
+
+### A keyword-shaped grant with no keyword word
+
+The SDK grants the lock as `GrantKeyword("DOESNT_UNTAP")` at the aura default filter — the
+`AbilityFlag` riding the static's string field, which the untap step reads off projected keywords. So
+the rule is `Statics.attachedKeyword` with a sentence of its own rather than a new row in
+`Keywords.keyword`: the flag has no printed keyword, and a row there would let the printer produce
+"has doesn't untap". The conditional self form ("~ doesn't untap during your untap step if …") is the
+same grant aimed at `GroupFilter.source()` inside a `ConditionalStaticAbility`, the shape Goblin Rock
+Sled and Bombur carry; the unconditional self form stays the card flag `Grammar.flagLine` already reads.
+
+What is left in the family is the *one-shot* lock — "it doesn't untap during its controller's next
+untap step", "for as long as you control ~" — which is an effect with a duration, not a static, and
+a different band.
+
+### What the differential found
+
+Differential **6,987 compared / 62 divergent → 6,996 / 62**. Nothing new diverged: every lock Aura
+already spelled the grant the one way.
+
+## The self-attach band
+
+The fourteenth loop band, tail key `attach it to …`: "When this Equipment enters, **attach it to
+target creature you control**." — Meltstrider's Gear, Squire's Lightblade, Pirate's Cutlass and the
+rest of the Equipment that equips itself on arrival. **55 lines**; the probe (`attach it to target
+creature you control` → `put a +1/+1 counter on target creature you control`) finished 28 whole cards
+over the corpus. It delivered **17 hand-written cards read whole (7,378 → 7,395)**.
+
+### The source is not a slot
+
+`Effects.AttachEquipment(target)` names only the host — `AttachEquipmentEffect` always moves the
+ability's source — so the rule sits beside `sacrificesSource` rather than in `retargetable`: the
+object is the source in every position the rule is offered, and a filtered trigger's "it" (the
+Equipment that *triggered*, which the SDK spells `AttachTargetEquipmentToCreature`) declines instead
+of reading as the source. Singular quantifiers only, through the same `Targets.Quantifier` rows the
+targeted verbs use; "it" is the alternate and `~` is what prints, as for every other source clause.
+
+### What the differential found
+
+Differential **6,996 compared / 62 divergent → 7,013 / 62**. One new divergence, a **card bug,
+fixed**: Pirate's Cutlass targeted `CreatureYouControl.withSubtype(PIRATE)`, but "target Pirate you
+control" is a bare subtype noun and so a *permanent* (CR 109.2); the card now targets
+`PermanentYouControl.withSubtype(PIRATE)` and only its golden moved. Dwarven Mattock carries the
+same shape but does not read whole yet, so the differential does not reach it.
+
+## The instant-or-sorcery card band
+
+The fifteenth loop band, tail key `or sorcery card …`: "Return target **instant or sorcery card**
+from your graveyard to your hand", "Exile an instant or sorcery card from your graveyard" — the type
+phrase every spellslinger recursion and graveyard cost prints. **76 lines**; the probe (`instant or
+sorcery card` → `creature card`) finished 22 whole cards over the corpus. It delivered **11
+hand-written cards read whole (7,395 → 7,406)**.
+
+### One row, before its prefix
+
+`GameObjectFilter.InstantOrSorcery` is a `CardPredicate.Or` — the "artifact or enchantment" shape —
+so it is one more `TypeNoun` row, and that one row serves every position the cascade is instantiated
+for. It sits before the bare "instant" row, the order `Stack` already keeps for "instant or sorcery
+spell". It carries no plural: Oracle's plural is "instant and sorcery cards", which card position
+spells from the singular type phrase, and a bare "instants and sorceries" is not a group noun the
+cards use.
+
+### What the differential found
+
+Differential **7,013 compared / 62 divergent → 7,023 / 62**. One new divergence, a **card bug,
+fixed**: Postmortem Professor's "Return this card **from your graveyard** to the battlefield" used
+`Effects.PutOntoBattlefield`, dropping the graveyard guard; it now uses
+`Effects.PutOntoBattlefieldFromGraveyard`, and only its golden moved.
+
+## The attached damage-trigger band
+
+The sixteenth loop band, tail key `enchanted creature deals …`: "**Whenever equipped creature deals
+combat damage to a player**, create a Treasure token." — the Swords, the Jittes, Armadillo Cloak,
+Sleeper's Robe. **84 lines**; the probe (`enchanted creature deals` → `~ deals`) finished 17 whole
+cards over the corpus. It delivered **6 hand-written cards read whole (7,406 → 7,412)**.
+
+### The same rows under a different binding
+
+`Triggers.attached` is `Triggers.self` with `TriggerBinding.ATTACHED`, so the band is the source's
+six damage rows said of "enchanted creature" — combat damage to a player, to a creature, with no
+recipient, any damage, damage to a filtered recipient, and "is dealt damage" — and no recipient the
+source's rows do not already read. The payoff is where they differ: "it" is the enchanted creature
+now, not the source, so the constant rows take a fourth cascade, `Steps.attachedDamageStep` — the
+damage cascade with `~` and "that many" but without the source pronoun. Pain for All's "it deals that
+much damage" declines rather than reading as the Aura. The filtered-recipient row takes
+`triggeredStep` exactly as the source's does.
+
+### What the differential found
+
+Differential **7,023 compared / 62 divergent → 7,029 / 63**. Two new divergences:
+
+- **Card bug, fixed**: Necromantic Thirst returned its target with `ReturnToHandFromGraveyard`, the
+  *self*-return facade whose KDoc says a targeted return writes plain `ReturnToHand` (the target's
+  graveyard zone is re-checked on resolution). Only its golden moved.
+- **Standing SDK finding**: Lost Jitte puts its counter on `EquippedCreature` where the grammar builds
+  `EnchantedCreature` — the minority-spelling finding `SelfSteps`' attached clauses already name.
+
+## The painland rider band
+
+The seventeenth loop band, tail key `~ deals # …`: "{T}: Add {U} or {R}. **~ deals 1 damage to
+you.**" — the painlands and the Talismans. **28 lines**; the probe (drop the rider sentence) finished
+25 whole cards over the corpus. It delivered **30 hand-written cards read whole (7,412 → 7,442)**.
+
+### Two gaps, one of them a missing row
+
+The rider was blocked twice. "~ deals 1 damage to you" was not a sentence at all: `damageRecipients`
+named every player but the controller, so "you" is one more row — `PlayerRef(Player.You)`, the
+spelling 52 hand-written "damage to you" lines use — and that row reaches the counted and the
+"equal to" forms in every position at once. That is where the delivery beat the probe: the upkeep
+costs of the Arabian Nights djinns and the "becomes tapped" pain of City of Brass needed only the
+row.
+
+The second gap is the choice form. "Add {U} or {R}." denotes two abilities, and the sentence after it
+belongs to both, so `Activated.choiceWithRider` reads it once through `Steps.step` and builds each
+ability as `AddMana(colour) then rider` — exactly what Shivan Reef's golden holds. `match` insists
+every ability carries the same rider, and refuses one with targets: two abilities would hold two
+target slots for one printed "target".
+
+### What the differential found
+
+Differential **7,029 compared / 63 divergent → 7,058 / 69**. All six new divergences are **standing
+SDK findings**, one spelling: City of Brass, Juzám Djinn, Serendib Efreet, Callous Inspector,
+Midnight Reaper and Dark Bargain deal their damage to `EffectTarget.Controller`, where the majority
+(52 lines to 22) writes `PlayerRef(Player.You)` — two SDK values for "you", the minority left to
+report. Midnight Reaper also spells `damageSource = Self` explicitly, the Jagged-Scar finding; Dark
+Bargain's golden splices its `Patterns.Library` sequence flat with `then`, where the grammar keeps the
+first sentence's composite whole.
+
+## The opponents' controller band
+
+The eighteenth loop band, tail key `your opponents control …`: "Creatures **your opponents control**
+get -2/-0 until end of turn", "~ gets +1/+1 for each Swamp **your opponents control**". The probe
+(swap in "an opponent controls") finished 29 whole cards over the corpus. It delivered **13
+hand-written cards read whole (7,442 → 7,455)**.
+
+### One clause, inflected; one row, added
+
+The controller clause agrees in number with its noun. The cascade spelled only the singular, "creature
+**an opponent controls**", in both numbers, so the plural "creatures your opponents control" — 351
+prints corpus-wide against 26 of "creatures an opponent controls" — declined, and `FiltersTest` pinned
+the decline as if it were a third `ControllerPredicate`. It is not: Maha's golden holds the same
+`ctrl:opponent`. `Filters.byController` now prints "your opponents control" in the plural and keeps the
+singular form there as an alternate, so the 26 minority prints read as VARIANTs.
+
+The counted positions are a different model. "the number of artifacts your opponents control" is
+`battlefield(Player.EachOpponent, Artifact)` in every hand-written card (Gaea's Avenger, Angry Mob,
+Pygmy Kavu), not a whole-battlefield tally over an opponent-controlled filter — so `Amounts.scopes`
+gains the row, and the empty row refuses the opponent clause the way it already refused "you control".
+Without that refusal the gate reported both readings' printer gap as three print mismatches.
+
+### What the differential found
+
+Differential **7,058 compared / 69 divergent → 7,068 / 69**. Two divergences surfaced and both were
+**card bugs** of the minority-spelling kind: **Crusading Knight** and **Marauding Knight** counted
+their opponents' Swamps and Plains with `count(EachOpponent, BATTLEFIELD, …)`, the `Count` spelling of
+a battlefield tally that `AggregateBattlefield` is canonical for. Both now write
+`battlefield(EachOpponent, …).count()`; the value is the same and only their goldens moved.
+
+## The delirium band
+
+The nineteenth loop band, tail key `card types among …`: "~ gets +2/+2 as long as **there are four or
+more card types among cards in your graveyard**." The probe (swap in "you control an artifact")
+finished 27 whole cards over the corpus. It delivered **25 more cards read whole in the verdict ledger
+(10,196 → 10,221)**, but only **4 hand-written ones (7,455 → 7,459)** — most delirium cards in the
+corpus are Shadows over Innistrad and Eldritch Moon commons nobody has authored yet, so they land as
+⚡ Assay-ready rather than as differential coverage.
+
+### One shape, two aggregations
+
+The condition is threshold's graveyard count with the tally swapped: `AggregateZone(You, GRAVEYARD,
+DISTINCT_TYPES)` rather than `Count`. `Conditions.Delirium` and its permanent-only sibling
+`DistinctPermanentTypesInGraveyard` (Matzalantli's gate) already name both compositions, so the
+grammar is one private shape with the noun as its row — "card types" or "permanent types" — and the
+threshold as its slot. `match` rebuilds through the facade and compares the whole `Compare`, so a
+filtered or opponent-side tally refuses to print. Because the row is in `Conditions`, every position
+that slots the vocabulary got it at once: statics' "as long as", intervening-ifs, "Activate only if",
+and "This spell costs {2} less to cast if". What still declines in the family is payload — "unless
+there are …", "while there are …", "Activate only if … and only as a sorcery" — keyed now on what
+blocks it.
+
+### What the differential found
+
+Differential **7,068 compared / 69 divergent → 7,070 / 69**. Nothing new diverged: Wildfire
+Wickerfolk spells its gate as `Conditions.CompareAmounts(...)` rather than the facade, and the two
+build the same value.
+
+## The morbid band
+
+The twentieth loop band, tail key `a creature died …`: "When ~ enters, **if a creature died this
+turn**, …" The probe (swap in "you control an artifact") finished 21 whole cards over the corpus. It
+delivered **22 more cards read whole in the verdict ledger (10,221 → 10,243)** and **8 hand-written
+ones (7,459 → 7,467)**.
+
+### Two clauses, two facades
+
+The SDK already names both readings: `Conditions.CreatureDiedThisTurn` is global — any player's
+creature counts — and `Conditions.ControlledCreatureDiedThisTurn` is "a creature died **under your
+control** this turn" (Denethor, Faramir, Sméagol, Barrensteppe Siege). Each printed clause is one
+whole condition with a facade of its own, so the band is two `constant` rows beside the life-state
+conditions, and every position that slots `Conditions` read them at once: intervening-ifs, "Activate
+only if", "… instead if", and "This spell costs {3} less to cast if". The subtype-filtered spellings
+("if a Zombie died this turn") build `CreatureWithSubtypeDiedThisTurn` and stay out of this band.
+
+### What the differential found
+
+Differential **7,070 compared / 69 divergent → 7,078 / 71**. Both new divergences are standing SDK
+findings this grammar already names, surfaced because their last declining line now reads:
+**Dreaded Bat-Cloud** writes its reduction as `FixedIfCreatureDiedThisTurn`, the minority half of the
+`FixedIf…` / `OnlyIf` split `SpellCosts.kt` documents, and **Skirsdag High Priest** taps "two untapped
+creatures you control" with `excludeSelf = true`, the same {T}-plus-tap-others split Devout Chaplain
+already shows. No card moved.
+
+## The fight band
+
+The twenty-first loop band, tail key `fights target creature …`: "Target creature you control
+**fights** target creature you don't control." (Savage Punch, Contested Cliffs, Domri's −2), "When ~
+enters, **it fights** up to one target creature an opponent controls." (Mind Meanderer), "When this
+Aura enters, **enchanted creature fights** …" (Pitiless Fists), and the later clause "Target creature
+you control gets +1/+0 until end of turn. **It fights** target creature you don't control." (Swift
+Kick). **36 lines**; the probe (drop the fought target → "gets +1/+1 until end of turn") finished 17
+whole cards, an upper bound because it also deleted the second target. It delivered **9 hand-written
+cards read whole (7,467 → 7,476)** and 24 more in the verdict ledger (10,243 → 10,267). "Target creature fights **another** target creature" stays declined: that "another" is the SDK's `TargetOther`, which the grammar does not produce.
+
+### The subject is a slot; the earlier target is a name of its own
+
+`Effects.Fight(target1, target2)` names both fighters, so `SelfSteps.fights` is `attachesSource`'s
+shape with the subject as a slot: the source, the attached creature and a filtered trigger's match each
+instantiate it, as `retargetable` is instantiated. The later clause is the new part. Its "it" is the
+first clause's target *and* it declares a target of its own, so it cannot read `Targets.SLOT`, which
+its own declaration owns. It reads `Targets.PRIOR`, and `Steps.renumbered` resolves that to the slot
+the previous declaring clause was given (and `clauseParts` folds it back when printing). In first
+position there is nothing for it to name, so the line declines. The two-target sentence is
+`fightTargets`, the second rule after `exchangeControl` to declare two targets in one clause.
+
+### What the differential found
+
+Differential **7,078 compared / 71 divergent → 7,087 / 72**. Five new divergences, all five card
+bugs, fixed:
+
+- **Swift Kick, Ruthless Predation, Bushwhack** — "target creature you **don't control**" was written
+  `opponentControls()`. In a duel the two are the same; in Two-Headed Giant a teammate's creature is
+  one you don't control but not an opponent's. The grammar reads `Not(ControlledByYou)`, the spelling
+  Skemfar Elderhall and Plague Wind already use.
+- **Sawblade Slinger** — "target **Zombie** an opponent controls" was `Creature.withSubtype`; a bare
+  creature-type noun names every permanent with the subtype.
+- **Kapow!** — wrapped its fight in an `If` re-checking both targets' filters. An illegal target
+  already resolves to nothing (CR 608.2b), so the fight does nothing without it. The gate was
+  removed; the card now reads like Troll Negotiations and Swift Kick.
+
+Sawblade Slinger still diverges on a **standing finding**: its modal *trigger* sets
+`countsAsModalSpell = false`, and the flag only matters on a spell.
+
+
+## The kicker entry band
+
+The twenty-second loop band, tail key `~ was kicked, …`: "**If ~ was kicked**, it enters with two
++1/+1 counters on it." (Academy Drake, Llanowar Elite), and the Invasion sibling that adds "**and
+with flying**" (Faerie Squadron, Kavu Titan, Pouncing Kavu). **38 lines**; the probe (drop the
+condition → "~ enters with …") finished 16 whole cards; it cannot see the keyword half, so it is
+an estimate rather than a bound either way. It delivered **15 hand-written cards read whole (7,476 → 7,491)** and 22
+more in the verdict ledger (10,267 → 10,289).
+
+### One sentence, two replacement effects
+
+The goldens spell the counters as `EntersWithCounters(selfOnly = true, condition = WasKicked)` and
+the keyword as a *second* replacement, `EntersWithKeywords` gated on the same condition — the shape
+`EntersWithKeywords`' own KDoc names with Kavu Titan. So the family yields a list, and the
+replacement line now slots `Replacements.replacements`, a one-effect lift beside the kicker rows,
+rather than one effect. The condition is a word, not a `Conditions` slot: its subject is the source
+("~ was kicked"), which the condition vocabulary spells "it was kicked" from the trigger position.
+The keyword is a single `Keywords.keyword` because every printed line names exactly one.
+
+### What the differential found
+
+Differential **7,087 compared / 72 divergent → 7,102 / 72**. All fifteen newly compared cards
+agree with their goldens; no card moved.
+
+
+## The can't-attack-or-block band
+
+The twenty-third loop band, tail key `can't attack or …`: "**Enchanted creature can't attack or
+block.**" (Pacifism, Compulsory Rest, Luminous Bonds and the rest of the white Aura removal), the same
+sentence over the source and over a plural group, and "**~ can't attack or block unless** {condition}."
+(Ketramose, Tiger-Dillo, Blind-Spot Giant). **78 lines**; the probe (→ "has flying") finished 15
+whole cards corpus-wide. It delivered **7 hand-written cards read whole (7,491 → 7,498)** and 20 more in
+the verdict ledger (10,289 → 10,309).
+
+### One sentence, two statics
+
+The SDK has no joint restriction: the goldens carry `CantAttack` then `CantBlock` over one
+`GroupFilter`, because attack and block declarations read them separately (CR 508.1, 509.1). So the
+family is a line rule yielding a list, like the attached keyword run, and it reuses the combat band's
+`Subject` table whole — the round trip through its spelling is what refuses a reversed pair, a split
+pair, or a group the sentence cannot say. The "unless" form is `CantAttackUnless` + `CantBlockUnless`
+sharing one `Conditions` slot, and it is **source-only**: the condition vocabulary's "it" is the
+source, which under "enchanted creature" would be the wrong permanent.
+
+The unless form finished no hand-written card: every one of them declines inside the condition
+("you control **another** Giant", "seven or more cards **in exile**", "it has an even number of
+counters"), so its payload is `Conditions`, the fronted-duration lesson again. Arrest's family
+("…, and its activated abilities can't be activated", five cards) is the next row: the activation lock
+is `PreventActivatedAbilities(Permanent.attachedToBySource())`, and four of the five print "enchanted
+**permanent**", a subject the attachment normalization does not spell yet.
+
+### What the differential found
+
+Differential **7,102 compared / 72 divergent → 7,108 / 72**. All six newly compared cards agree with
+their goldens; no card moved.
+
+
+## The base power and toughness band
+
+The twenty-fourth loop band, tail key `has base power …`: "Target creature **has base power and
+toughness 4/4** until end of turn." (Square Up, Multiply by Zero, Diminish), the source's own
+("{4}{G/U}: ~ has base power and toughness 5/5 until end of turn.", Brokers Initiate, Marsh
+Flitter), the quantified rows ("up to one other target creature has …", Chrome Host Hulk), the
+"and gains {kws}" rider (Water Wings) and the later clause's "that creature has …" (Taranika).
+**30 lines**; the probe (→ "gets +1/+1") finished 15 cards. It delivered **7 hand-written cards read
+whole (7,498 → 7,505)** and 14 more in the verdict ledger (10,309 → 10,323), and the family fell from
+30 lines to 5.
+
+### A stat change is a row, not a sentence
+
+Every rider the pump takes is one Oracle prints on this sentence too, so `Steps.StatChange` makes the
+verb phrase an axis of the four pump shapes (`pumpTargetPermanent`, `pumpAndGrantTarget`, and
+`SelfSteps`' `selfGets` / `selfGetsAndGains`, which reach the source, the anaphors and the filtered
+trigger's match through `retargetable`). The `gets` row is `Effects.ModifyStats` over the signed
+`Primitives.statModifiers`; the new row is `Effects.SetBasePowerAndToughness` over the unsigned
+`Primitives.basePowerToughness`. The leaves are disjoint, so neither row reads the other, and both
+facades default to `Duration.EndOfTurn`, so the duration stays the template's. The pump row keeps
+its rule names.
+
+The probe overstated by two: the rest of the 15 decline on another clause. Wings of Velis Vel and
+Glamer Gifter on "gains all creature types", Genemorph Imago on its "… instead" upgrade, Flexible
+Waterbender on the waterbend cost, Quandrix Charm on its "counter unless" mode. Zhalfirin Shapecraft
+now reads line by line but lands in "lines do not fold": a spell printed as two lines is two spell
+effects. The static "Enchanted creature has base power and toughness 0/2, has defender, …" (Stasis
+Field, Deep Freeze) is a separate family (a `SetBasePowerToughnessStatic`, not an effect) and
+is not in this band.
+
+### What the differential found
+
+Differential **7,108 compared / 72 divergent → 7,113 / 72**. All five newly compared cards agree
+with their goldens; no card moved.
+
+
+## The chosen-colour protection band
+
+The twenty-fifth loop band, tail key `protection from the …`: "Target creature you control **gains
+protection from the color of your choice** until end of turn." (Thornscape Master, Blessed Breath,
+Sygg), the source's own ("{W}: ~ gains protection from …", Jareth, Kami of the Painted Road) and the
+anaphor after an earlier clause ("Put a +1/+1 counter on target creature you control. It gains …",
+Feat of Resistance). **26 lines** of the family's 44; the probe (→ "flying") finished 24 cards. It
+delivered **9 hand-written cards read whole (7,505 → 7,514)**.
+
+### The choice is inside the effect, and that is the whole model
+
+The colour is chosen on resolution, after targets, so every hand-written card spells
+`Effects.ChooseColorThen(Effects.GrantProtectionFromChosenColor(t))` and the grant facade defaults to
+`Duration.EndOfTurn`. `Steps.protectionFromChosenColor` builds that once; the target rule rides the
+**singular** quantifier rows only (bare and "up to one"), and the self and anaphor sides are one
+`move` row of `SelfSteps.retargetable`, so the source, the triggering entity and the later clause's
+"it" come for free. The plural "each gain protection from the color of your choice" stays declined on
+purpose: it is one choice for every target, which a per-target iteration around the choice would not
+say. The family's other half — "the chosen color" after an entry choice, "the card type of your
+choice", "the chosen player" — is different SDK shapes and not in this band.
+
+### What the differential found
+
+Differential **7,113 compared / 72 divergent → 7,121 / 72**. The one new divergence was a card bug:
+Sygg, River Guide targeted a Merfolk *creature*, where "target Merfolk" is any Merfolk permanent (the
+bare tribal noun, as Sawblade Slinger's Zombie was). Fixed to `GameObjectFilter.Permanent.withSubtype`;
+it is the only card that moved in the golden, and the other seven newly compared cards agree.
+
+## The soulshift band
+
+The twenty-sixth loop band, tail key `Soulshift #`: the Kamigawa keyword line "Soulshift 4". **25
+lines** across the corpus; the probe (→ "Flying") finished 21 cards. It delivered **10 hand-written
+cards read whole (7,554 → 7,564)** — ten of the twelve soulshift cards. Thief of Hope and He Who
+Hungers still decline on a different line each.
+
+### A keyword that is lowered, so the rule calls the lowering
+
+Soulshift is equip's shape and amplify's: one printed line, two card slots. Every hand-written card
+writes `soulshift(n)`, which adds `Numeric(SOULSHIFT, n)` *and* the optional dies trigger CR 702.46a
+spells out ("return target Spirit card with mana value N or less from your graveyard to your hand").
+A `numericKeyword` row would have read the keyword and silently dropped the trigger. So it is a line
+rule in `Grammar` beside `equipLine`, and its build half calls the DSL method itself inside a
+throwaway `card { }` and keeps both halves, re-minting the ability id to a constant. The lowering has
+one definition, and `match` rebuilds the whole fragment for its `n` and compares it, so a keyword
+without its trigger, or with a trigger for a different `n`, refuses to print. The grammar's existing
+trigger rules read the reminder sentence into the same model, which is a useful check that the two
+agree, but the line rule does not depend on it.
+
+### What the differential found
+
+Differential **7,160 compared / 73 divergent → 7,170 / 73**. All ten newly compared cards agree with
+their goldens; no card moved.
+
+## The investigate band
+
+The twenty-seventh loop band, tail key `investigate.`: the keyword action as a whole effect — "When ~
+enters, **investigate**.", "{4}, {T}: Investigate.", "Whenever ~ deals combat damage to a player,
+investigate." and "investigate twice". **39 lines**; the probe (→ "draw a card.") finished 12 cards.
+It delivered **16 hand-written cards read whole (7,564 → 7,580)** — more than the probe, because
+"investigate twice" reads too, and the probe's stand-in only counted the singular.
+
+### A keyword action that is an existing noun
+
+CR 701.16a defines investigating as creating a Clue token, and `Effects.Investigate` and
+`Effects.CreateClue` build the same `CreatePredefinedTokenEffect("Clue")`. `Tokens` already printed
+that model as "create a Clue token" and its KDoc had reserved the keyword spelling for this: the two
+rows ("investigate", "investigate twice") are `alternate`s beside the predefined-token rows, so they
+read into the Clue model and print back as the noun form — a `VARIANT`. A canonical row would have
+given one model two printed forms. "Investigate once for each …", "investigate X times" and "Target
+player investigates" stay declined: a dynamic count and a non-default controller are different values.
+
+### What the differential found
+
+Differential **7,170 compared / 73 divergent → 7,186 / 73**. All sixteen newly compared cards agree
+with their goldens; no card moved.
+
+## The three-type list band
+
+The twenty-eighth loop band, tail key `, enchantment, or …`: the flexible-Naturalize target noun —
+"destroy target **artifact, enchantment, or creature with flying**", "artifact, enchantment, or
+land", "creature, enchantment, or planeswalker". **24 lines**; the probe (dropping the first two
+members) finished 16 cards. It delivered **10 hand-written cards read whole (7,607 → 7,617)**; the
+rest of the family is unimplemented cards, Atraxa's Fall's four-type list, and the plural.
+
+### Two model shapes, and the last member decides
+
+The SDK spells a three-type union two ways and the cards use both, split cleanly by whether the last
+member carries a quality. Three bare types are one flat `CardPredicate.Or` — the shape
+`GameObjectFilter.ArtifactEnchantmentOrLand` and `ArtifactCreatureOrEnchantment` publish and Creeping
+Mold and Get Lost write. A qualified last member ("creature with flying", "tapped creature") is the
+`GameObjectFilter.or` fold, `(Artifact or Enchantment) or Creature.withKeyword(FLYING)`, nested
+because `or` is binary — what Broken Wings, Spider Food, Exorcise and five more write. So
+`Filters.threeTypeList` builds the flat union when the last member is a bare type and the fold
+otherwise, and its `match` proposes a decomposition and rebuilds it, so the fold of three bare types
+and the flat union over a qualified member each refuse to print. The list exists only as the singular
+uncontrolled noun: the plural changes the conjunction, and a controller clause after it would leave
+its scope ambiguous.
+
+### What the differential found
+
+Differential **7,213 compared / 73 divergent → 7,223 / 73**. One card bug, a spelling: **Shower of
+Arrows** wrote the flat raw `CardPredicate.Or` over a qualified member, the only compared card
+outside the fold; it now writes the fold like its eight siblings. Behaviour is unchanged — the
+engine matches both shapes the same way. Mutant Chain Reaction writes the same raw shape but is not
+yet compared (its token line declines), so it is left for the band that reaches it.
+
+## The two-symbol mana band
+
+The twenty-ninth loop band, tail key `{§}{§}.`: an "Add" of **different** mana symbols — Nantuko
+Elder's "{T}: Add {C}{G}.", the Signets' "{1}, {T}: Add {W}{U}.", the karoos and the Ice Age
+sacrifice lands' "Add {W}{B}." **52 lines**; the probe (collapsing the pair to "{G}.") finished 31
+cards. It delivered **39 hand-written cards read whole (7,617 → 7,656)** — more than the probe,
+because the same leaf now reads three-symbol strings and the restricted form below.
+
+### One leaf, one effect per run
+
+`Mana.production` was a run of one symbol and declined a mixed string rather than read its first
+symbol. The cards spell the mixed string one way only: one effect per run of a symbol, in printed
+order, chained with `then` — `Effects.AddColorlessMana(1) then Effects.AddMana(Color.GREEN, 1)`. The
+leaf now splits the string into runs and builds exactly that, and writes a plain `CompositeEffect` of
+writable runs back as their concatenation. Two adjacent runs of the same symbol print as one run and
+read back as one effect, so the token's own re-read refuses them; a composite carrying
+`stopOnError` or a description override refuses the same way. "Add {R}{G}. Spend this mana only to
+cast face-down spells …" rides along: a restriction over a composite is the one restriction every
+run carries, and none when they differ.
+
+### What the differential found
+
+Differential **7,223 compared / 73 divergent → 7,262 / 73**. All thirty-nine newly compared cards
+agree with their goldens; no card moved.
+
+## The soft-counter band
+
+The thirtieth loop band, tail key `unless its controller …`: "Counter target spell unless its
+controller pays {2}." — Mana Leak, Lose Focus, Wizard Replica, Spectral Denial's `{X}`, and
+Syncopate's "If that spell is countered this way, exile it instead …" rider. **116 lines**; the
+probe (dropping " unless its controller pays {N}") finished 55 cards. It delivered **19 hand-written
+cards read whole (7,657 → 7,676)**. The probe overstated by the usual mechanism: deleting the tax
+also deletes what the tax is *paid by* — "{1} for each Wizard", "{X}, where X is ~'s power", "mana
+equal to …" — and the "If they do, …" riders (Divert Disaster, Don't Make a Sound) that stay on the
+counter as `onPaid`.
+
+### Three facades, split on the model
+
+The cards spell a soft counter two ways, and the split is not habit. A fixed tax is a mana cost,
+`Effects.CounterUnlessPays("{2}")` (33 cards). `{X}` is the spell's own X (CR 107.3a), a *number*, so
+it is `CounterUnlessDynamicPays(xValue())`. And the exile rider exists only on the dynamic facade, so
+a riding fixed tax is `CounterUnlessDynamicPays(fixed(3), exileOnCounter = true)` — No More Lies. One
+rule per rider reads all three; its `match` maps the condition back to the printed cost and rebuilds,
+so a fixed tax spelled dynamically *without* the rider (Reasonable Doubt, still declining on its
+suspect line) refuses to print rather than becoming a second reading. Any other X declines.
+
+### What the differential found
+
+Differential **7,263 compared / 73 divergent → 7,281 / 73**. One newly compared card diverged, on
+its *other* line: Spectral Denial counted "each creature you control with power 4 or greater" with
+`PermanentsOnBattlefieldMatching(Creature.youControl().powerAtLeast(4))` — the "regardless of who
+controls them" source with the controller folded into the filter — where every other "you control"
+reduction uses `PermanentsYouControlMatching`. Same behaviour, minority spelling; the card moved to
+the majority one.
+
+## The raid band
+
+The thirty-first loop band, tail key `you attacked this …`: raid's condition — "At the beginning of
+your end step, if you attacked this turn, …", "When ~ enters, if you attacked this turn, …",
+"Activate only if you attacked this turn." **38 lines**; the probe (dropping the "if" clause)
+finished 14 cards. It delivered **11 hand-written cards read whole (7,676 → 7,687)**. The clause is
+one facade, `Conditions.YouAttackedThisTurn`, printed in the past simple only, so it is one
+`constant` row in `Conditions` and reaches every position that slots the vocabulary — the
+intervening-if, the activation restriction and the conditional clause at once. The probe's other
+three cards decline on their payloads ("target opponent discards a card", the mana-value return);
+"you attacked with N or more creatures this turn" is the counted sibling,
+`Conditions.YouAttackedWithCreaturesThisTurn`, and is left for a band of its own.
+
+### What the differential found
+
+Differential **7,281 compared / 73 divergent → 7,292 / 73**. The three newly compared cards that
+diverged were all Khans of Tarkir raid cards, and all three were card bugs. Bloodsoaked Champion and
+Timely Hordemate returned "from your graveyard to the battlefield" through the unguarded
+`PutOntoBattlefield` / bare `Move`, dropping the `fromZone` guard the sentence carries; both moved to
+`Effects.PutOntoBattlefieldFromGraveyard`. Wingmate Roc gained life "for each attacking creature"
+counted over `attackingCreaturesYouControl()` — the same number in a duel, a different one when a
+teammate attacks alongside it — and now counts every attacking creature, as Respite does.
+
+## The chosen-type band
+
+The thirty-second loop band, tail key `of the chosen …`: "Creatures you control of the chosen type
+get +1/+1." — Etchings of the Chosen, Cover of Darkness, and every lord over the creature type its
+source chose as it entered — plus the singular noun, "Whenever a permanent you control of the chosen
+type enters, …". **65 lines**; the probe (dropping " of the chosen type") finished 20 cards. It
+delivered **6 hand-written cards read whole (7,687 → 7,693)**, and the family fell to 8 lines, all
+"of the chosen *color*" — a different field. The probe overstated because deleting the qualifier also
+deletes what it qualifies elsewhere on the card: "~ is the chosen type in addition to its other
+types", "enters with an additional +1/+1 counter", "spend this mana only to cast a spell of the
+chosen type", "landwalk of the chosen type" each decline on their own construct.
+
+### One phrase, two fields, split by position
+
+The SDK spells "of the chosen type" twice and the split is by position, not habit. On a plural lord
+it is `GroupFilter.chosenSubtypeKey` — a field on the *group*, which is what every hand-written lord
+writes through `GroupFilter.ChosenSubtypeCreatures()` — so it is a row of the lord product in
+`Statics`, beside "other". On a singular noun (a trigger subject, a target, a sacrifice) it is
+`CardPredicate.HasChosenSubtype` via `withChosenSubtype()`, a `Filters` layer offered in singular
+position only. Offering the layer in plural position too would have given the lord sentence two
+models. Only the default key is printed: a pipeline's own stored choice (Walking Desecration) has a
+key the text does not name and refuses to print.
+
+### What the differential found
+
+Differential **7,292 compared / 73 divergent → 7,293 / 73**. The one newly compared card agrees with
+its golden; no card moved.
+
+## The targeted drain band
+
+The thirty-third loop band, tail key `opponent loses # …`: "Target opponent loses 2 life and you gain
+2 life." — Highway Robber, Vengeful Bloodwitch, Dakmor Ghoul, Collective Brutality's third mode, and
+the activated and dies-trigger payoffs that print the same clause. **53 lines**; the probe (→"target
+player loses") finished 14 cards. It delivered **10 hand-written cards read whole (7,698 → 7,708)**.
+
+### One row, for the draw's reason
+
+The life rows already read "target player loses {n} life" and "each opponent loses {n} life"; the
+targeted opponent was the missing cell between them. It is a row of its own rather than a widening of
+"target player" because `TargetOpponent` is a requirement of its own, not a narrowing of
+`TargetPlayer` — the draws and the discards made the same split for the same reason — so the subject
+picks the requirement and both rows keep a single printer. Being a `lifeChanges` row, it reaches the
+numeral, the "equal to …" clause and the characteristic forms at once.
+
+### What the differential found
+
+Differential **7,293 compared / 73 divergent → 7,302 / 73**. Both newly compared cards that diverged
+were card bugs, fixed: Diregraf Captain's dies trigger watched "another Zombie *creature*" where a
+bare tribal noun is any Zombie permanent (a kindred Zombie dies too), and Dubious Delicacy's enters
+trigger had dropped "up to one", so the target was mandatory. Only their goldens moved.
+
+## The proliferate band
+
+The thirty-fourth loop band, tail key `Proliferate.`: "Proliferate." on its own, after a mana or
+tap-sacrifice cost (Contagion Clasp, Copper Longlegs, High Perfect Morcant), and as the last sentence
+of a spell or a mode (Unnatural Restoration, Whisper of the Dross). **27 lines**; the probe
+(→"Draw a card.") finished 23 cards. It delivered **20 hand-written cards read whole (7,708 →
+7,728)**.
+
+### One constant clause
+
+Proliferate (CR 701.34) has no variable: the permanents and players are chosen on resolution, so
+`Effects.Proliferate()` carries no target, and the sentence is the unit — a `sentenceClauses` row
+beside "the Ring tempts you". The targeted single-object form (`Effects.Proliferate(target)`,
+Powerful Broker) is printed as a different sentence and is left to its own rule.
+
+### What the differential found
+
+Differential **7,302 compared / 73 divergent → 7,322 / 73**. All twenty newly compared cards agree
+with their hand-written models; nothing to classify.
+
+## The exile-instead band
+
+The thirty-fifth loop band, tail key `that creature would …`: "~ deals 5 damage to target creature.
+**If that creature would die this turn, exile it instead.**" — Puncturing Blow, Scorching
+Dragonfire, Obliterating Bolt, Bleed Dry's -13/-13, Nine-Ringed Bo's ping. **19 lines**; the probe
+(drop the sentence) finished 15 cards. It delivered **9 hand-written cards read whole (7,728 →
+7,737)**; the rest of the probe's cards decline again on their own payload once the rider reads.
+
+### A row of the later clause, not a sentence of its own
+
+`Effects.MarkExileOnDeath(target)` is a turn-long death replacement (CR 614) on the object the
+earlier clause aimed at, so it is a member of `SelfSteps.retargetable` beside "regenerate {self}":
+the subject is the family's slot and the inner "it" is the same object again, with nothing a slot
+could vary. As a later clause the subject is the target pronoun, so Oracle's "that creature" reads
+as a variant of the canonical "it" — the measurement the later clause already made for every verb.
+
+### What the differential found
+
+Differential **7,322 compared / 73 divergent → 7,331 / 73**. Five newly compared cards diverged, all
+five on order, all card spellings, fixed to the printed order: **Agate Assault, Bot Bashing Time,
+Feed the Flames, Nine-Ringed Bo** placed the mark before the damage, and **Smite the Deathless**
+put both its indestructible removal and the mark first. The mark is a floating effect and the
+creature dies only to state-based actions after the spell finishes resolving (CR 704.3), so both
+orders do the same thing — and twenty-two other cards already wrote the printed one. Two of the
+five carried comments asserting the opposite; those were corrected with the code. Only their
+goldens moved.
+
 ## The later clause
 
 The `.` family came back to the top of the tail ranking — **213 cards, 129 of them solely, over 216
@@ -1300,7 +2287,7 @@ a number word, "X") and the keyword rider — plus a colour *run* with `keywordR
 keywords print in `Keyword`'s declaration order: both are `Color`/`Keyword`'s own, and a card that
 built its set the other way round still prints the sentence Oracle prints. The predefined nouns
 (Food, Treasure, Clue, Blood, Map, Lander, Shard) are a second family, each row calling the facade
-the SDK publishes for it — with "investigate" deliberately left out, because CR 701.36a makes it the
+the SDK publishes for it — with "investigate" deliberately left out, because CR 701.16a makes it the
 same model as "create a Clue token" and two canonical spellings would leave printing undecided.
 
 **An ability word is printed shape, and belongs to normalization.** CR 207.2c: *"they have no
@@ -4275,6 +5262,368 @@ target. Both scenario tests pass unchanged after the fix.
 
 Corpus-wide the differential is back to its baseline **51** with **15 more cards compared**, so the
 band cost no divergences and closed one.
+
+## The artifact/creature type pair, in both orders
+
+"Destroy target **artifact or creature**", "Sacrifice an **artifact or creature**", "Whenever another
+**creature or artifact** you control dies" — the pair sat in no tail row of its own, because the
+decline landed on whatever followed the noun ("or creature.", "or creature an …", "or artifact you
+…"), so it was ten mid-table families rather than one. `Filters.TYPES` had every other two-type pair
+the corpus prints and not this one.
+
+The band is two rows, and the reason it is two is the finding. The SDK publishes
+`GameObjectFilter.CreatureOrArtifact` and the cards also write the `or` fold `Artifact or Creature`;
+both are an ordered `CardPredicate.Or`, so they are two values, and Oracle prints the pair in both
+orders. The cards nearly follow the print — "artifact or creature" is the fold, "creature or
+artifact" the named filter — so each printed order is the row for its own value, exactly like
+"artifact or enchantment", and neither needs an `alternate`. No plural: "artifacts and creatures" is
+not a spelling the singular says anything about, the same write-off the other pairs carry.
+
+### What it moved
+
+Probe ≈44 whole cards across the ten tail keys; delivered **+44** (7,739 → 7,783 over the
+implemented population).
+
+### What the differential found
+
+Twenty-two new divergences, twenty of them card spellings fixed in the band:
+
+- **Eighteen cards wrote `CreatureOrArtifact` for printed "artifact or creature"** — Putrefy, Cat-Owl,
+  the seven that exile or tap "target artifact or creature an opponent controls",
+  the sacrifice costs, the ONE oil-counter cards. Behaviourally identical (an `Or` is unordered at
+  runtime), but the value is the print-order one, so the goldens move only in member order.
+- **Dreg Recycler [MOM]** used `Effects.DrainLife(1)`, which gains life equal to the life *actually
+  lost*; the card says "you gain 1 life", a fixed amount. Now `LoseLife(EachOpponent) then
+  GainLife(1)`, the spelling every other fixed drain uses.
+- **Dune Drifter [DFT]** and **Lorehold Charm [SOS]** returned a graveyard card with
+  `PutOntoBattlefield`, dropping the graveyard guard `PutOntoBattlefieldFromGraveyard` exists to
+  carry; Lorehold Charm also distributed the mana-value cap over both `Or` members.
+
+Two stay as standing findings: **Tarrian's Soulcleaver** spells its counter target
+`EquippedCreature`, the minority of the attached-creature spellings `SelfSteps` already names; and
+**Dune Drifter**'s "mana value X or less" in an enters trigger is `CastX` on the card (correctly — the
+spell is gone when the trigger resolves) where the grammar reads `ManaValueAtMostX`. The second is a
+grammar finding outside this band: X inside a permanent's own enters trigger means the cast X.
+
+## Toughness N or greater / or less
+
+"Destroy target creature with **toughness 4 or greater**", "Tap all creatures with **toughness 2 or
+less**" — `Filters` had the power pair as two quality rows and nothing for toughness, though
+`CardPredicate.ToughnessAtLeast` / `ToughnessAtMost` and their `toughnessAtLeast(n)` /
+`toughnessAtMost(n)` builders are what every hand-written card already uses. The band is the two
+sibling rows in the quality layer, so every noun position that offers the power clause — singular,
+plural, card, controller-first — offers this one too. No `alternate`: Oracle prints the toughness
+clause one way.
+
+### What it moved
+
+Probe 24 lines / 17 whole cards corpus-wide (dropping the clause); over the implemented population,
+where the family reaches 11 cards, delivered **+6** (7,783 → 7,789), and the verdict ledger moved
+exactly the probe's **17** (10,739 → 10,756 read whole) with no card leaving `whole`. The rest decline
+on their payload — "can't be blocked by creatures with …", a second ability on the card.
+
+### What the differential found
+
+Nothing new: the six cards it finished were compared and all six agree (7,373 → 7,379 compared,
+divergent unchanged at 75). The hand-written spellings of this predicate were already right.
+
+## Draw and lose life, with the second subject elided
+
+"You draw two cards **and lose 2 life**." — Night's Whisper, Moonglove Extractor, Decode
+Transmissions, Visions of Villainy, and the upkeep and end-step drains on Doctor Doom and its kin. The grammar read the full-stop spelling ("Draw two cards. You
+lose 2 life.") and the subject-repeated join ("…and you lose 2 life"), but not the ellipsis newer
+Oracle wording prints, where "lose 2 life" has no subject of its own. The band is two `alternate`
+rows over the model the full-stop run already builds (`DrawCards(n) then LoseLife(n, Controller)`),
+plus an `alsoSpelled` on the X-count draw-and-lose in `Amounts` ("you draw X cards and lose X life,
+where X is …").
+
+The subject is spelled into the template rather than made a fourth join of `tailsOf`, because a bare
+"and lose N life" tail cannot see who the clause before it named: Oracle prints the same ellipsis
+after plural subjects ("any number of target players each mill a card and lose 1 life"), where the
+loser is someone else.
+
+The rows are offered at the sentence-terminal clause position, not as clause-run members. The gate
+said why in one run: inside "Surveil 1, then **you draw a card and lose 1 life**." (Hymn of the
+Faller) a two-effect clause folds into a *nested* composite, which no card carries and nothing can
+print. Flattening nested composites in `merge` instead was tried and broke 235 lines — other rules
+build composites the cards deliberately keep as one element. Hymn declines until the run can read
+the elided subject as a tail of its own.
+
+### What it moved
+
+Probe 19 lines / 12 whole cards corpus-wide; over the implemented population delivered **+8**
+(7,790 → 7,798), compared 7,380 → 7,385.
+
+### What the differential found
+
+One new divergence, a standing finding: **Visions of Villainy [MSH]** writes its "costs {1} less if
+you control a Villain" as `ReduceGenericBy(FixedIfControlFilter)`, the `FixedIf…` half of the
+`FixedIf…` / `OnlyIf` split the spell-cost band recorded. No card bugs.
+
+## Doesn't untap during the next untap step
+
+"Tap target creature an opponent controls. **That creature doesn't untap during its controller's
+next untap step.**" (Stitched Mangler) and "{T}: Add {U} or {B}. **~ doesn't untap during your next
+untap step.**" (Waterveil Cavern and the other four Champions of Kamigawa duals). The grammar read
+exactly one spelling of the freeze — "It doesn't …" as a `Continuations` row with the pronoun frozen
+into its template — so the demonstrative and the source both died on the sentence. Tail key "doesn't
+untap during …".
+
+The fix is the `.` band's third question applied: the row spelled by hand what its family
+parameterizes. It is now a `SelfSteps.retargetable` member, one model in every position —
+`GrantKeyword(DOESNT_UNTAP, target, UntilAfterAffectedControllersNextUntap)` — so the later position
+reads "it" / "that creature" / "that permanent" and prints the pronoun, and the source position reads
+the name. Only the possessive moves with the position: the source's controller is the reader, so
+Oracle says "your next untap step" of the source and "its controller's" of anything else, and each
+instantiation takes the one its cards print. The mana half needed nothing: `Activated.choiceWithRider`
+already copies any step onto each colour's ability, which is how the painlands landed.
+
+### What it moved
+
+Probe 46 lines / 22 whole cards corpus-wide (dropping the sentence; 18 for the "next untap step"
+subset). Over the implemented population delivered **+6** (7,798 → 7,804): the five CHK duals and
+Stitched Mangler. The rest of the family is other sentences — "tap that creature" over a trigger's
+subject (Kashi-Tribe Warriors, Mercurial Kite), the plural "They don't untap during their
+controller's …", the static "during its controller's untap step" with a condition — and declines on
+them.
+
+### What the differential found
+
+Nothing new: compared 7,385 → 7,391, divergent unchanged at 76, and the six cards agree. The
+hand-written spellings were already the SDK's one model for the clause.
+
+## That was dealt damage this turn
+
+"Destroy target creature **that was dealt damage this turn**." (Crushing Pain, Initiate of Blood,
+Stingblade Assassin, Unsparing Boltcaster and the rest). Tail key "that was dealt …". The SDK has one
+spelling — `StatePredicate.WasDealtDamageThisTurn`, written through the `wasDealtDamageThisTurn()`
+builder — so the band is one quality row in `Filters`, beside the counter and power/toughness rows.
+It is a trailing clause and sits after the controller clause, which is where Oracle prints it
+("creature an opponent controls that was dealt damage this turn"), and it strips the top of the
+*state* predicate stack the way `withCounter` does.
+
+Singular only. No card prints the plural ("creatures that were dealt damage this turn"), so the
+plural cascade has no row for it.
+
+### What it moved
+
+Probe 23 lines / 19 whole cards corpus-wide (dropping the clause). Over the implemented population
+delivered **+6** (7,804 → 7,810), compared 7,391 → 7,396. The rest of the family is
+"any target that was dealt damage this turn" (Needle Drop; "any target" has no filter to qualify),
+the cost-reduction "if it targets a creature that …", and cards with a second unread line.
+
+### What the differential found
+
+One new divergence, a card bug, fixed: **Unsparing Boltcaster [TDM]** wrote "it deals 5 damage" as
+`DealDamage(5, t, damageSource = Self)`. A null `damageSource` already means the ability's source,
+and it is the spelling the other "When this creature enters, it deals …" cards use. The explicit
+`Self` is also not quite the same thing: the executor resolves an explicit source at resolution and
+skips the damage when that fails, where the null path falls back to last-known information. The card
+now writes the null default.
+
+## Other creatures you control, until end of turn
+
+"Whenever this creature attacks, **other creatures you control** get +1/+1 until end of turn." (Syr
+Alin, Drogskol Shieldmate, Loxodon Sergeant, Syr Vondam). Tail key "other creatures you …". The
+grammar read the mass pump and the mass keyword grant over a plain group, and "tap all other
+creatures" over a group that leaves the source out — but not the pumps with the word "other", so the
+sentence died on it. The model is the one the plain rows build with `GroupFilter.excludeSelf` set,
+and that field is a fact about the iteration's relation to the source rather than about what a
+member is, so it is a flag on `parameterizedGroupStep` and `groupPumpAndGrant` — the shape
+`otherGroupStep` already had — not a `Filters` layer. Three rows: "get", "gain", "get … and gain".
+The plain rows' reconstruct-and-compare already refused a group carrying `excludeSelf`, which is why
+nothing printed the wrong sentence before.
+
+### What it moved
+
+Probe 28 lines / 16 whole cards corpus-wide (dropping "other"). Over the implemented population
+delivered **+7** (7,810 → 7,817), compared 7,396 → 7,403. The rest of the family is a quoted granted
+ability, a power-qualified group ("with power 4 or greater"), perpetual effects, and counted amounts.
+
+### What the differential found
+
+Two new divergences, both card bugs of the bare-tribal-noun kind earlier bands fixed: **Hamlet
+Captain [ISD]** ("other Humans you control") and **Vulture, Scheming Scavenger [SPM]** ("other
+Villains you control") filtered on creatures, where a bare subtype noun names permanents of that
+type. Both now write `GameObjectFilter.Permanent.withSubtype(…)`; divergent back to 76.
+
+## Return a permanent you control, chosen on resolution
+
+"When this land enters, **return a land you control to its owner's hand**." (the ten Karoo bounce
+lands, Zell Dincht, Shrieking Drake, Emancipation Angel). Tail key "a land you …". The grammar read
+the targeted bounce and the cost-position "Return a land you control …:" but not the effect without
+"target", which CR 115.10a says creates no target: the permanent is chosen as the ability resolves,
+your own shroud or hexproof permanent is a legal choice, and nothing can become illegal and fizzle
+it. One rule in `Steps`, the sibling of `Graveyard`'s "exile a card from a graveyard": gather your
+permanents of the kind with `BattlefieldMatching(filter, player = You)`, choose exactly one with the
+targeting UI, move it to hand — the pipeline Shrieking Drake was already written as. "You control"
+is the gather's `player`, not a controller predicate on the filter.
+
+### What it moved
+
+Probe 22 lines / 14 whole cards corpus-wide. Over the implemented population delivered **+12**
+(7,817 → 7,829), compared 7,403 → 7,415. Arid Archway shares the sentence but its second one ("If
+another Desert was returned this way, surveil 1") reads the chosen card back, and stays declined.
+
+### What the differential found
+
+Nothing new — divergent stays at 76 — because the band's card bugs were fixed on the way in rather
+than found by the gate. The ten Karoo lands and **Zell Dincht [FIN]** were written as a *targeted*
+bounce, with a KDoc conceding the text has no "target" and calling it "practically equivalent". It is
+not: the choice moved to when the trigger is put on the stack, and a land with shroud or hexproof
+could not be chosen. All eleven now gather, choose and move. **Emancipation Angel [AVR]** already did,
+but gathered `Any.youControl()` where the card prints "a permanent", so its filter is now
+`Permanent` with the player on the gather, and it shows the battlefield picker like the Drake.
+
+## Who discards: "that player", "target opponent", "each opponent" N
+
+"Whenever ~ deals combat damage to a player, **that player discards a card**." (Blazing Specter,
+Cabal Slaver, Oppression, Necrogen Mists), "**Target opponent discards two cards.**", "**Each opponent
+discards two cards.**" (Unnerve). Tail keys "that player discards …", "opponent discards a …" and
+"opponent discards two …". `Hand` already had `discard`'s subject-per-template shape over
+`Patterns.Hand.discardCards` — "discard", "target player discards", "have target opponent discard" —
+and the band is rows in it: "that player" is `PlayerRef(Player.TriggeringPlayer)` with no
+requirement, the reading `Steps`' damage recipients already give the phrase; "target opponent" is the
+bound slot over `Targets.opponent()`. "Each opponent discards N cards" is the count split over
+`eachOpponentDiscards`, its own per-opponent recipe, and the random discard became the same
+subject shape over `discardRandom`.
+
+### The causative moved into its row
+
+"Have target opponent discard a card" was a bare row, gated by `mayClause` from outside. Harmless
+while it was the one row printing a targeted opponent's discard; the moment "target opponent
+discards a card" printed the same model it would have printed every plain discard as "have …". So
+the row is now the whole "you may have target opponent discard a card" over `Effects.May`, which is
+`Steps`' forced-sacrifice causative one verb over, and the plain sentence prints as itself.
+
+### What it moved
+
+Probe 33 lines / 16 whole cards for "that player" and 38 / 9 for "target opponent". Over the
+implemented population delivered **+17** (7,830 → 7,847), compared 7,416 → 7,432.
+
+### What the differential found
+
+Four new divergences on the first run. **Ozai's Cruelty [TLA]** was the grammar's: "~ deals 2 damage
+to target player. That player discards two cards." read the second sentence as the *triggering*
+player, which on a spell is nobody. After a declared target "that player" is that target — or, in
+"return target permanent to its owner's hand, then that player discards", its owner — so `Steps`'
+run fold now declines a line that both declares a target and names the triggering player. No
+previously confirmed card moved. The other three were cards: **Headhunter** and **Silent Specter
+[ONS]** made *each opponent* discard where the text makes the damaged player discard — the same in
+two-player and wrong in multiplayer — and **Unnerve [USG]** discarded one card where it prints two.
+All three are fixed; divergent is back to 76.
+
+## The tutor's "put that card"
+
+"Search your library for a card, **put that card into your hand**, then shuffle." (Demonic Tutor,
+Diabolic Tutor, Planar Portal) and "…**put that card into your graveyard**, then shuffle." (Entomb,
+Vile Entomber). Tail key ", put that …". `Library.search` already had a row per destination with the
+anaphor as an `alternate` for the battlefield and the reveal clause; the hand had only the pronoun,
+and the graveyard had no row at all. Three rows over `Patterns.Library.searchLibrary`: "put that card
+into your hand" as the alternate of "put it" (Oracle prints the pronoun 372 times to 20), and the
+graveyard destination in both spellings — split 7 to 6 in Oracle, so the pronoun stays canonical for
+agreement with every other destination.
+
+### What it moved
+
+Probe 19 lines / 11 whole cards corpus-wide. Over the implemented population delivered **+7**
+(7,847 → 7,854), compared 7,432 → 7,439. Gamble's "…put that card into your hand, discard a card at
+random, then shuffle" is a different sentence and stays declined.
+
+### What the differential found
+
+Two new divergences. **Diabolic Intent [PLS]** searched for a *creature* card where it prints "a
+card"; fixed. **Grim Tutor [S99]** is a standing SDK finding, and the card is the right half of it:
+it chooses exactly one card where `searchLibrary` always chooses up to one. CR 701.23b lets a player
+fail to find only when the search names a stated quality, so an unqualified "search for a card" must
+find one if the library has one — every `searchLibrary(filter = Any)` tutor, Demonic Tutor included,
+can currently fail to find. Divergent 76 → 77.
+
+## Your second card each turn
+
+"**Whenever you draw your second card each turn**, put a +1/+1 counter on ~." (Knights of Dol Amroth,
+Erudite Wizard, Tiger-Seal, Thopter Fabricator). Tail key "you draw your …". `Triggers` already read
+the ordinal *cast* trigger — `nthCastRule`, the caster baked into each row with its possessive and
+`Cardinals.ordinal` as the one slot — and the draw trigger is the same shape over
+`Triggers.<player>.drawsNth(n)`: three rows ("you draw your", "an opponent draws their", "a player draws
+their") into `NthCardDrawnEvent`. The one difference is the payoff's cascade. A draw event binds no
+object, so "it" in the effect can only be the source and the rule slots `Steps.step`, as the expend
+trigger does, rather than the triggered-object cascade the cast rule needs. Lady Octopus's "your first
+**or** second card" is one ability over two events and stays declined.
+
+### What it moved
+
+The ledger's first probe said 58 lines and **0** cards, because it substituted "you draw a card" — a
+trigger the grammar does not read either. Re-probed with a prefix it does read, the family measured
+30 lines / 15 whole cards over the implemented population, and delivered exactly that: **+15**
+(7,854 → 7,869), compared 7,439 → 7,454. A probe whose stand-in is itself unreadable measures nothing.
+
+### What the differential found
+
+One new divergence, a card. **Private Eye [MKM]** targeted a *creature* Detective where it prints
+"target Detective" — a bare subtype names a permanent (CR 109.2), the same finding as Diregraf
+Captain's and Sygg's. Fixed; divergent back to 77.
+
+## Entering with a counter, if
+
+"~ enters with a +1/+1 counter on it **if you attacked this turn**." (raid, morbid, the Myojin's "if
+you cast it from your hand"). Tail key "counter on it …". `Replacements` already read the bare
+sentence into `EntersWithCounters(selfOnly = true)` and refused any value with a `condition`; the
+conditional form is the same two rules with a trailing `{cond}` slot, so a null condition prints bare
+and a non-null one trails — disjoint halves of one field. The slot is `Conditions.condition` plus two
+rows whose "it" is the entering permanent ("you cast it", "you cast it from your hand"), kept out of
+the shared vocabulary because the pronoun is positional: The Sibsig Ceremony's "Whenever a creature
+you control enters, if you cast it" is `TriggeringEntityWasCast`. `WasKicked` (fronted by the kicker
+sentence) and `WasBargained` (a cost-position tense) are refused as trailing clauses. One row joins
+`Conditions` itself — "you've cast {n} or more spells this turn", `YouCastSpellsThisTurn(n)` from two
+up — which every position slotting the vocabulary picks up.
+
+### What it moved
+
+Probe 29 lines / 16 whole cards corpus-wide by dropping the clause, which overstated: revolt ("a
+permanent left the battlefield under your control"), "if you control a modified creature" and
+Epochrasite's next line still decline. Over the implemented population delivered **+13** (7,869 →
+7,882), compared 7,454 → 7,467; the baked ledger moved 10,948 → 10,969, with Loan Shark and Xerex
+Strobe-Knight finished by the spell-count row in their own positions. Six Myojin now stop on "~ has
+indestructible as long as it has a divinity counter on it.", the family's next row.
+
+### What the differential found
+
+One new divergence and no card bug. **Brightspear Zealot [EOE]** holds its "+2/+0 as long as" as
+`GrantDynamicStats` over two fixed amounts where the grammar reads `ModifyStats` — the fixed-bonus
+`GrantDynamicStats` spelling the gate has already recorded as one concept with two spellings, neither
+broken. Divergent 77 → 78.
+
+## When you control no Islands
+
+"**When you control no Islands**, sacrifice ~." (Dandân, Pirate Ship, Sea Serpent, Vodalian Knights)
+and Drop of Honey's "When there are no creatures on the battlefield, sacrifice ~." Tail key "When you
+control …". A state trigger (CR 603.8) is not an event trigger and the SDK does not pretend it is:
+`StateTriggeredAbility(condition, effect)` lives in `CardScript.stateTriggeredAbilities`, a list the
+grammar had never filled. So the band is a new fragment slot — `CardFragment.merge`, the
+differential's modelled slots and its id canonicalization, and the compiler's id re-mint all widened
+together — and one template, `StateTriggers.line`, "when {condition}, {effect}" over the shared
+`Conditions` and `Steps.step`. Two rows join `Conditions`: "you control no {plural}" and "there are no
+{plural} on the battlefield", both the `negate` flag on `YouControl` / `AnyPlayerControls` because that
+is how 55 goldens spell it against 6 `Not` wrappers. "Whenever" (Homarid's tide counters) and a
+targeted payoff decline: the first has nothing in the model to choose its word, the second has no
+requirement field to land in.
+
+### What it moved
+
+Probe 28 lines / 18 whole cards corpus-wide by replacing the whole line, which overstated because the
+conditions vary (phylactery counters, the chosen player's colour). Over the implemented population
+delivered **+8** (7,882 → 7,890), compared 7,467 → 7,475.
+
+### What the differential found
+
+Seven new readings to classify. **Goblins of the Flarg [DRK]** watched for a *creature* Dwarf where it
+prints "a Dwarf"; a bare subtype names a permanent (CR 109.2), fixed. The other six, Goblins
+included, are one standing SDK finding: the cards spell the sacrifice `SacrificeTarget(Self)` (58 card
+sources) where the grammar reads "sacrifice ~" as `SacrificeSelfEffect` (201). They are not the same
+value to the engine either — `SacrificeTargetExecutor` honours `CANT_BE_SACRIFICED`, Sigarda's
+immunity and the projected controller, and `SacrificeSelfExecutor` does none of that — so the cards
+were left as written rather than moved onto the weaker executor. Divergent 78 → 84.
 
 ## The differential gate
 

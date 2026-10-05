@@ -24,7 +24,7 @@ import type {
 /**
  * Extract the relevant player ID from an event for log coloring.
  */
-function getEventPlayerId(event: { type: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string }): EntityId | null {
+function getEventPlayerId(event: { type: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string; startingPlayerId?: string }): EntityId | null {
   switch (event.type) {
     case 'lifeChanged': return event.playerId as EntityId
     case 'cardDrawn': return event.playerId as EntityId
@@ -41,6 +41,7 @@ function getEventPlayerId(event: { type: string; playerId?: string; casterId?: s
     case 'transformed': return event.controllerId as EntityId
     case 'coinFlipped': return event.playerId as EntityId
     case 'turnChanged': return event.activePlayerId as EntityId
+    case 'gameRestarted': return event.startingPlayerId as EntityId
     case 'permanentsSacrificed': return event.playerId as EntityId
     case 'cardCycled': return event.playerId as EntityId
     case 'libraryShuffled': return event.playerId as EntityId
@@ -81,7 +82,7 @@ function appendGameLogTail(
   const entries: LogEntry[] = reusable > 0 ? existing.slice(0, reusable) : []
   const now = Date.now()
   for (let i = reusable; i < log.length; i++) {
-    const e = log[i] as { type: string; description: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string }
+    const e = log[i] as { type: string; description: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string; startingPlayerId?: string }
     entries.push({
       description: e.description,
       playerId: getEventPlayerId(e),
@@ -94,7 +95,8 @@ function appendGameLogTail(
 
 function getEventLogType(eventType: string): 'action' | 'turn' | 'combat' | 'system' {
   switch (eventType) {
-    case 'turnChanged': return 'turn'
+    case 'turnChanged':
+    case 'gameRestarted': return 'turn'
     case 'creatureAttacked':
     case 'creatureBlocked': return 'combat'
     case 'abilityFizzled':
@@ -403,6 +405,9 @@ function processStateUpdate(
         ...(cardsRevealedEvent.cardOwnerIsYours
           ? { cardOwnerIsYours: revealOverlayIndices.map((i) => cardsRevealedEvent.cardOwnerIsYours![i]!) }
           : {}),
+        ...(cardsRevealedEvent.cardOwnerIds && cardsRevealedEvent.cardOwnerIds.length > 0
+          ? { cardOwnerIds: revealOverlayIndices.map((i) => cardsRevealedEvent.cardOwnerIds![i]!) }
+          : {}),
       }
     : null
 
@@ -435,15 +440,15 @@ function processStateUpdate(
   const cardDrawnEvents = msg.events.filter((e) => e.type === 'cardDrawn') as {
     type: 'cardDrawn'
     playerId: EntityId
-    cardId: EntityId
+    cardId: EntityId | null
     cardName: string | null
   }[]
 
   cardDrawnEvents.forEach((event, index) => {
     const isOpponent = event.playerId !== playerId
-    const card = resolvedState.cards[event.cardId]
+    const card = event.cardId ? resolvedState.cards[event.cardId] : undefined
     newDrawAnimations.push({
-      id: `draw-${event.cardId}-${Date.now()}-${index}`,
+      id: `draw-${event.cardId ?? event.playerId}-${Date.now()}-${index}`,
       cardId: event.cardId,
       cardName: event.cardName,
       imageUri: card?.imageUri ?? null,
@@ -697,7 +702,7 @@ function processStateUpdate(
            msg.pendingDecision.nonSelectableOptions ?? []
          )
           ? null
-          : { cardIds: filteredReveal.cardIds, cardNames: filteredReveal.cardNames, imageUris: filteredReveal.imageUris, source: filteredReveal.source, isYourReveal: filteredReveal.revealingPlayerId === playerId, fromZone: filteredReveal.fromZone ?? null, toZone: filteredReveal.toZone ?? null, ...(filteredReveal.cardOwnerIsYours ? { cardOwnerIsYours: filteredReveal.cardOwnerIsYours } : {}) })
+          : { cardIds: filteredReveal.cardIds, cardNames: filteredReveal.cardNames, imageUris: filteredReveal.imageUris, source: filteredReveal.source, isYourReveal: filteredReveal.revealingPlayerId === playerId, revealingPlayerId: filteredReveal.revealingPlayerId, fromZone: filteredReveal.fromZone ?? null, toZone: filteredReveal.toZone ?? null, ...(filteredReveal.cardOwnerIsYours ? { cardOwnerIsYours: filteredReveal.cardOwnerIsYours } : {}), ...(filteredReveal.cardOwnerIds ? { cardOwnerIds: filteredReveal.cardOwnerIds } : {}) })
       : cardsRevealedEvent ? null : state.revealedCardsInfo,
     // The opponent's streamed declaration previews expire with their own declaration step.
     opponentAttackerTargets: keepAttackerPreview(resolvedState.currentStep, resolvedState.combat != null)
@@ -815,6 +820,7 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
         matchIntro: {
           playerName,
           opponentName,
+          opponentNames: msg.players.filter((p) => !p.isYou).map((p) => p.name),
           ...(round != null ? { round } : {}),
           ...(playerRecord != null ? { playerRecord } : {}),
           ...(opponentRecord != null ? { opponentRecord } : {}),

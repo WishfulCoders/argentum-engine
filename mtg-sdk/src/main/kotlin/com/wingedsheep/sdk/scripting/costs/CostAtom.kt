@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.costs
 
+import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
@@ -316,8 +317,12 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
     ) : CostAtom {
         override val selectionCount: Int get() = count
         override val description: String get() {
-            val what = if (excludeSelf && count == 1) "another ${filter.description}"
-            else quantify(count, filter.description)
+            val what = when {
+                excludeSelf && count == 1 -> "another ${filter.description}"
+                // "Exile five other cards from your graveyard" (escape, CR 702.138).
+                excludeSelf -> quantify(count, "other ${filter.description}")
+                else -> quantify(count, filter.description)
+            }
             return when {
                 anyPlayersZone && singleZone -> "exile $what from a single ${zone.name.lowercase()}"
                 anyPlayersZone -> "exile $what from a ${zone.name.lowercase()}"
@@ -336,13 +341,19 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
      *
      * @property excludeSelf when true the cost's source permanent is excluded from the candidate
      *   pool — "tap another untapped [filter] you control".
+     * @property sharedCreatureType when true the [count] tapped permanents must all have at least
+     *   one creature type in common — "tap two untapped creatures you control that share a creature
+     *   type" (Weight of Conscience). The [Sacrifice.distinctNames] twin: the cost is only payable
+     *   when some creature type is held by at least [count] candidates, and a payment whose chosen
+     *   permanents have no common creature type is rejected.
      */
     @SerialName("AtomTapPermanents")
     @Serializable
     data class TapPermanents(
         val count: Int = 1,
         val filter: GameObjectFilter = GameObjectFilter.Any,
-        val excludeSelf: Boolean = false
+        val excludeSelf: Boolean = false,
+        val sharedCreatureType: Boolean = false
     ) : CostAtom {
         override val selectionCount: Int get() = count
         override val description: String get() = buildString {
@@ -350,6 +361,7 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
             if (count == 1) append(if (excludeSelf) "another untapped ${filter.description}" else "an untapped ${filter.description}")
             else append("$count untapped ${filter.description}s")
             append(" you control")
+            if (sharedCreatureType) append(" that share a creature type")
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): CostAtom {
@@ -385,6 +397,47 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
         override fun applyTextReplacement(replacer: TextReplacer): CostAtom {
             val newFilter = filter.applyTextReplacement(replacer)
             return if (newFilter !== filter) copy(filter = newFilter) else this
+        }
+    }
+
+    /** Pay counters from the paying player, before the spell or ability resolves.
+     * Amounts are fixed, announced X, the announced targets' total mana value, or the cost's own
+     * source's mana value ([SOURCE_MANA_VALUE] — the spell being cast: Amped Raptor's "by paying an
+     * amount of {E} equal to its mana value rather than paying its mana cost"). Every one of those
+     * is known at CR 601.2f, when the total cost is determined. [SOURCE_MANA_VALUE] is priced on
+     * spell costs only; on an activated ability's cost it is unpayable rather than free.
+     * A resolution-pipeline amount is not a cost and must not silently price as zero.
+     */
+    @SerialName("AtomPayPlayerCounters")
+    @Serializable
+    data class PayPlayerCounters(
+        val counterType: CounterType,
+        val amount: DynamicAmount = DynamicAmount.Fixed(1),
+    ) : CostAtom {
+        init {
+            require(amount is DynamicAmount.Fixed && amount.amount >= 0 ||
+                amount is DynamicAmount.XValue ||
+                amount == SOURCE_MANA_VALUE ||
+                amount == DynamicAmount.ContextProperty(
+                    ContextPropertyKey.TARGETS_TOTAL_MANA_VALUE
+                )) { "Player-counter costs require a nonnegative fixed amount, X, its source's mana value, or target mana value" }
+        }
+        override val description: String get() = when (amount) {
+            is DynamicAmount.Fixed -> "pay ${amount.amount} ${counterType.printed} counters"
+            is DynamicAmount.XValue -> "pay X ${counterType.printed} counters"
+            SOURCE_MANA_VALUE -> "pay an amount of ${counterType.printed} counters equal to its mana value"
+            else -> "pay the targets' total mana value in ${counterType.printed} counters"
+        }
+
+        companion object {
+            /**
+             * "Equal to its mana value" — the mana value of the spell the cost is paid for. The same
+             * value as `DynamicAmounts.sourceManaValue()`, which is how cards spell it.
+             */
+            val SOURCE_MANA_VALUE: DynamicAmount = DynamicAmount.EntityProperty(
+                com.wingedsheep.sdk.scripting.targets.EffectTarget.Self,
+                com.wingedsheep.sdk.scripting.values.EntityNumericProperty.ManaValue,
+            )
         }
     }
 
@@ -616,9 +669,19 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
      * matching graveyard cards cannot reach [minTotal] can't choose to pay, so the ability is not
      * offered at all rather than offered and refused.
      *
+     * The same shape also carries a *union* measure — [CardMeasure.DistinctCardTypes], Nethergoyf's
+     * escape cost "exile any number of other cards from your graveyard with four or more card types
+     * among them" — where the chosen cards' measure is the size of the union of their card types
+     * rather than a sum. The measure decides how the selection is totalled; everything else
+     * (variable count, fail-closed gate, overpay legal) is identical.
+     *
      * @property filter which graveyard cards may be chosen.
-     * @property measure the per-card quantity that is summed toward [minTotal].
-     * @property minTotal the floor the chosen cards' summed [measure] must meet or exceed.
+     * @property measure the per-card quantity that is totalled toward [minTotal].
+     * @property minTotal the floor the chosen cards' totalled [measure] must meet or exceed.
+     * @property excludeSelf "any number of **other** cards" — the object paying the cost is never in
+     *   the pool. For a spell this only changes the wording (the spell is on the stack by the time
+     *   costs are paid, CR 601.2a before 601.2h); for an ability whose source sits in the graveyard it
+     *   also drops that source from the pool.
      */
     @SerialName("AtomExileFromGraveyardForTotal")
     @Serializable
@@ -626,6 +689,7 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
         val filter: GameObjectFilter = GameObjectFilter.Any,
         val measure: CardMeasure,
         val minTotal: Int,
+        val excludeSelf: Boolean = false,
     ) : CostAtom {
         init {
             require(minTotal >= 1) {
@@ -642,6 +706,7 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
             // `filter.description` is a noun phrase without the head noun ("black", "artifact"),
             // and reads "card" for the unfiltered case — so append "cards" only when it isn't
             // already the head noun itself.
+            if (excludeSelf) append("other ")
             if (filter != GameObjectFilter.Any) append("${filter.description} ")
             append("cards from your graveyard with ")
             append(measure.thresholdPhrase(minTotal))
@@ -804,7 +869,8 @@ enum class VariableCostMeasure {
 }
 
 /**
- * A per-card quantity that a variable-size *card* selection can be summed against —
+ * A per-card quantity that a variable-size *card* selection is totalled against (summed, or for
+ * [DistinctCardTypes] unioned) —
  * the graveyard-side counterpart of [VariableCostMeasure] (which measures battlefield permanents).
  *
  * Kept separate rather than folded into [VariableCostMeasure] because the two answer different
@@ -872,5 +938,23 @@ sealed interface CardMeasure {
 
         override val unitLabel: String
             get() = "${colors.joinToString(" or ") { it.displayName.lowercase() }} mana symbols"
+    }
+
+    /**
+     * How many distinct card types (CR 205.2a; on a graveyard card: artifact, battle, creature, enchantment, instant,
+     * kindred, land, planeswalker, sorcery; never supertypes or subtypes) appear **among** the
+     * chosen cards — Nethergoyf's "with four or more card types among them".
+     *
+     * **A union, not a sum.** An artifact creature and a second creature together show two card
+     * types, not three: each card contributes its *set* of card types, and the selection's measure
+     * is the size of their union. That is why this measure can't be expressed by summing per-card
+     * weights, and why the engine ships each card's types to the picker rather than a number.
+     * Read off the card's printed type line, like every other graveyard measure.
+     */
+    @SerialName("MeasureDistinctCardTypes")
+    @Serializable
+    data object DistinctCardTypes : CardMeasure {
+        override fun thresholdPhrase(minTotal: Int): String = "$minTotal or more card types among them"
+        override val unitLabel: String get() = "card types"
     }
 }

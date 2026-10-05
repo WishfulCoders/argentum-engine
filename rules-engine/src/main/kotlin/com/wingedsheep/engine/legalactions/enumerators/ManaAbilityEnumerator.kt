@@ -1,13 +1,17 @@
 package com.wingedsheep.engine.legalactions.enumerators
+
+import com.wingedsheep.engine.mechanics.cost.SharedCreatureTypeTapCost
+import com.wingedsheep.engine.handlers.costs.CostAtomAmounts
+import com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.chosenCreatureType
-
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.legalactions.ActionEnumerator
 import com.wingedsheep.engine.legalactions.AdditionalCostData
 import com.wingedsheep.engine.legalactions.EnumerationContext
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.mechanics.SummoningSicknessRules
+import com.wingedsheep.engine.mechanics.mana.BorrowedManaAbilities
 import com.wingedsheep.engine.mechanics.mana.IntrinsicManaAbilities
 import com.wingedsheep.engine.mechanics.mana.LandManaColorInspector
 import com.wingedsheep.engine.mechanics.mana.ManaColorSetResolver
@@ -56,7 +60,11 @@ class ManaAbilityEnumerator(
         val playerId = context.playerId
         val projected = context.projected
 
-        for (entityId in context.battlefieldPermanents) {
+        // Permanents the player doesn't control but may tap for mana under a grant (Piracy) —
+        // only their {T} mana abilities are offered (CR 106.12). Empty without a grant.
+        val borrowed = BorrowedManaAbilities.borrowable(state, playerId, predicateEvaluator)
+
+        for (entityId in context.battlefieldPermanents + borrowed.keys) {
             val container = state.getEntity(entityId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
 
@@ -126,7 +134,9 @@ class ManaAbilityEnumerator(
                 cardDef == null -> emptyList()
                 else -> cardDef.script.effectiveActivatedAbilities(classLevel).filter { it.isManaAbility }
             }
-            val manaAbilities = ownManaAbilities + grantedManaAbilities + staticManaAbilities
+            val manaAbilities = (ownManaAbilities + grantedManaAbilities + staticManaAbilities).let { all ->
+                if (entityId in borrowed) all.filter(BorrowedManaAbilities::isTapManaAbility) else all
+            }
 
             // Apply text-changing effects to mana ability costs
             val manaTextReplacement = TextChanges.merge(context.globalTextChanges, container.get<TextReplacementComponent>())
@@ -159,6 +169,8 @@ class ManaAbilityEnumerator(
                 var sacrificeCost: CostAtom.Sacrifice? = null
                 var affordable = true
 
+                if (!com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment.canAffordAbility(state, playerId, effectiveCost)) continue
+
                 when (effectiveCost) {
                     is AbilityCost.Tap -> {
                         if (!context.costUtils.canPayTapCost(state, entityId)) affordable = false
@@ -169,9 +181,12 @@ class ManaAbilityEnumerator(
                     is AbilityCost.Atom -> when (val atom = effectiveCost.atom) {
                         is CostAtom.TapPermanents -> {
                             tapCost = atom
-                            tapTargets = context.costUtils.findAbilityTapTargets(
-                                state, playerId, atom.filter,
-                                if (atom.excludeSelf) entityId else null
+                            tapTargets = SharedCreatureTypeTapCost.eligible(
+                                state, atom,
+                                context.costUtils.findAbilityTapTargets(
+                                    state, playerId, atom.filter,
+                                    if (atom.excludeSelf) entityId else null
+                                )
                             )
                             if (tapTargets.size < atom.count) affordable = false
                         }
@@ -196,8 +211,13 @@ class ManaAbilityEnumerator(
                         // "Remove a charge counter from this land: Add one mana of any color" (the
                         // vivid lands) — unpayable once the counters are gone, and the same gate the
                         // non-mana enumerator applies.
+                        is CostAtom.PayPlayerCounters -> {
+                            val needed = CostAtomAmounts.evaluate(state, atom.amount)
+                            if (PlayerCounterPayment.available(
+                                    state, playerId, atom.counterType) < needed) affordable = false
+                        }
                         is CostAtom.RemoveCounters -> {
-                            if (!canPayRemoveCounters(state, playerId, container.get<CountersComponent>(), atom, context)) affordable = false
+                            if (!canPayRemoveCounters(state, playerId, entityId, container.get<CountersComponent>(), atom, context)) affordable = false
                         }
                         // A bare mana cost (Three Tree Mascot's "{1}: Add one mana of any color") —
                         // the same solver question ActivateAbilityHandler.validate asks, or the
@@ -254,9 +274,12 @@ class ManaAbilityEnumerator(
                                     }
                                     is CostAtom.TapPermanents -> {
                                         tapCost = atom
-                                        tapTargets = context.costUtils.findAbilityTapTargets(
-                                            state, playerId, atom.filter,
-                                            if (atom.excludeSelf) entityId else null
+                                        tapTargets = SharedCreatureTypeTapCost.eligible(
+                                            state, atom,
+                                            context.costUtils.findAbilityTapTargets(
+                                                state, playerId, atom.filter,
+                                                if (atom.excludeSelf) entityId else null
+                                            )
                                         )
                                         if (tapTargets.size < atom.count) {
                                             affordable = false; break
@@ -272,8 +295,15 @@ class ManaAbilityEnumerator(
                                         }
                                     }
                                     // "{T}, Remove a charge counter from this land: …" — see above.
+                                    is CostAtom.PayPlayerCounters -> {
+                                        val needed = CostAtomAmounts.evaluate(state, atom.amount)
+                                        if (PlayerCounterPayment.available(
+                                                state, playerId, atom.counterType) < needed) {
+                                            affordable = false; break
+                                        }
+                                    }
                                     is CostAtom.RemoveCounters -> {
-                                        if (!canPayRemoveCounters(state, playerId, container.get<CountersComponent>(), atom, context)) {
+                                        if (!canPayRemoveCounters(state, playerId, entityId, container.get<CountersComponent>(), atom, context)) {
                                             affordable = false; break
                                         }
                                     }
@@ -541,6 +571,7 @@ class ManaAbilityEnumerator(
     private fun canPayRemoveCounters(
         state: GameState,
         playerId: EntityId,
+        sourceId: EntityId,
         counters: CountersComponent?,
         atom: CostAtom.RemoveCounters,
         context: EnumerationContext,
@@ -551,7 +582,7 @@ class ManaAbilityEnumerator(
             val type = atom.counterType?.let { it }
             if (type != null) counters?.getCount(type) ?: 0 else counters?.counters?.values?.sum() ?: 0
         } else {
-            context.costUtils.buildRemoveCountersPermanents(state, playerId, atom.filter, atom.counterType)
+            context.costUtils.buildRemoveCountersPermanents(state, playerId, atom.filter, atom.counterType, sourceId)
                 .sumOf { it.availableCounters }
         }
         return available >= needed

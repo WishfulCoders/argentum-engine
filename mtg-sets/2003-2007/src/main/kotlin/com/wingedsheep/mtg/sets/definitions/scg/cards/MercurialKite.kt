@@ -37,8 +37,8 @@ val MercurialKite = card("Mercurial Kite") {
 
     metadata {
         rarity = Rarity.COMMON
-        collectorNumber = "40"
-        artist = "Wayne England"
+        collectorNumber = "39"
+        artist = "Richard Sardinha"
         flavorText = "Aven scouts admired the kites' ability to identify and|track their prey. Commanders admired their ability to|knock that prey out of the sky."
         imageUri = "https://cards.scryfall.io/normal/front/a/6/a6bc8655-ae27-40be-8d61-e80a5924e955.jpg?1562533105"
     }

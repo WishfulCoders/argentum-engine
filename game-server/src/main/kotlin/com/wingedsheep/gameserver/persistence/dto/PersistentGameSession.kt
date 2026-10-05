@@ -2,6 +2,7 @@ package com.wingedsheep.gameserver.persistence.dto
 
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.view.ClientEvent
+import com.wingedsheep.sdk.core.Zone
 import kotlinx.serialization.Serializable
 
 /**
@@ -25,7 +26,24 @@ data class PersistentGameSession(
     val playerInfos: List<PersistentPlayerInfo>,
     val lobbyId: String?,
     val sideboards: Map<String, List<String>> = emptyMap(),  // playerId.value -> sideboard card names
+    val seatNames: Map<String, PersistentSeatNames> = emptyMap(),  // playerId.value -> that seat's card names
 )
+
+/**
+ * One browser seat's card names ([com.wingedsheep.gameserver.session.SeatIdentities]). Kept across a
+ * restart: a seat that came back with none would see a renamed card under its engine id again, which
+ * its game log may already tie to the card.
+ */
+@Serializable
+data class PersistentSeatNames(
+    val names: Map<String, String>,  // engine id -> the seat's name for it
+    val retired: Set<String>,
+    val lastSeen: Map<String, PersistentSighting>,  // engine id -> where the seat last saw it
+    val namesIssued: Int,
+)
+
+@Serializable
+data class PersistentSighting(val zone: Zone, val zoneOpen: Boolean)
 
 /**
  * Persistent player info - contains only the data needed to restore a player's session.

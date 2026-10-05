@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.combat.rules
 
+import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
+import com.wingedsheep.engine.mechanics.targeting.ColorProtection
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
@@ -479,12 +481,9 @@ class ProtectionFromColorRule : BlockEvasionRule {
         val attackerName = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>()?.name ?: "Creature"
         val blockerName = ctx.state.getEntity(ctx.blockerId)?.get<CardComponent>()?.name ?: "Creature"
 
-        for (colorName in ctx.projected.getColors(ctx.blockerId)) {
-            if (ctx.projected.hasKeyword(ctx.attackerId, "PROTECTION_FROM_$colorName")) {
-                return "$attackerName has protection from ${colorName.lowercase()} and can't be blocked by $blockerName"
-            }
-        }
-        return null
+        val quality = ColorProtection.matchedQuality(ctx.projected, ctx.attackerId, ctx.projected.getColors(ctx.blockerId))
+            ?: return null
+        return "$attackerName has protection from ${ColorProtection.describe(quality)} and can't be blocked by $blockerName"
     }
 }
 
@@ -503,6 +502,19 @@ class ProtectionFromEachOpponentRule : BlockEvasionRule {
         val attackerName = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>()?.name ?: "Creature"
         val blockerName = ctx.state.getEntity(ctx.blockerId)?.get<CardComponent>()?.name ?: "Creature"
         return "$attackerName has protection from each of its controller's opponents and can't be blocked by $blockerName"
+    }
+}
+
+/**
+ * Protection from a kind of source (CR 702.16f): an attacker with protection from permanents that
+ * were cast this turn can't be blocked by a creature cast this turn (Emrakul, the World Anew).
+ */
+class ProtectionFromSourceKindRule : BlockEvasionRule {
+    override fun check(ctx: BlockCheckContext): String? {
+        if (!SourceKindProtection.isProtectedFromObject(ctx.state, ctx.attackerId, ctx.blockerId)) return null
+        val attackerName = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>()?.name ?: "Creature"
+        val blockerName = ctx.state.getEntity(ctx.blockerId)?.get<CardComponent>()?.name ?: "Creature"
+        return "$attackerName has protection from permanents that were cast this turn and can't be blocked by $blockerName"
     }
 }
 
@@ -748,6 +760,7 @@ fun defaultBlockEvasionRules(
     CantBeBlockedExceptByColorRule(),
     CantBeBlockedByColorRule(),
     CantBeBlockedExceptByRule(predicateEvaluator),
+    CantBeBlockedExceptByCollectionRule(predicateEvaluator),
     CantBeBlockedUnlessDefenderSharesCreatureTypeRule(),
     CantBeBlockedIfDefenderControlsRule(predicateEvaluator),
     CantBeBlockedWhilePropertyAtMostRule(),
@@ -757,6 +770,7 @@ fun defaultBlockEvasionRules(
     ProtectionFromSupertypeRule(),
     ProtectionFromCardTypeRule(),
     ProtectionFromEachOpponentRule(),
+    ProtectionFromSourceKindRule(),
     CanOnlyBlockCreaturesWithRule(predicateEvaluator),
     CantBlockCreaturesWithGreaterPowerRule(),
     CantBeBlockedByCreaturesWithLessPowerRule(),

@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
+import com.wingedsheep.engine.mechanics.mana.BorrowedManaAbilities
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.PaymentStrategy
@@ -119,7 +121,7 @@ internal class ActivationValidator(
             ?: checkTapSymbolSummoningSickness(state, action, container, effectiveCost)
             ?: checkActivationRestrictions(state, action, ability)
             ?: checkTargets(state, action, cardComponent, effectiveCost, effectiveTargetReqs)
-            ?: checkDamageDistribution(action, ability)
+            ?: checkDamageDistribution(state, action, ability)
     }
 
     /**
@@ -179,9 +181,10 @@ internal class ActivationValidator(
             val inZone = state.getZone(ownerId, ability.activateFromZone).contains(action.sourceId)
             if (!inZone) return "This ability can only be activated from the ${ability.activateFromZone.name.lowercase()}"
             if (ownerId != action.playerId) return "You don't own this card"
-            // An unqualified "players can't activate abilities" (Yuriko, Blade of the Mighty)
-            // reaches abilities of cards in every zone, not just permanents.
-            if (castPermissionUtils.isActivationPreventedForPlayer(
+            // An unqualified "players can't activate abilities" (Yuriko, Blade of the Mighty) and
+            // a name lock on "sources" (Pithing Needle) reach abilities of cards in every zone,
+            // not just permanents.
+            if (castPermissionUtils.isActivationForbidden(
                     state, action.sourceId, action.playerId, abilityIsManaAbility = ability.isManaAbility
                 )
             ) {
@@ -207,6 +210,11 @@ internal class ActivationValidator(
     ): String? {
         val anyPlayerMay = LegalityKernel.anyPlayerMay(ability)
         if (anyPlayerMay) return null
+        // "You may tap lands you don't control for mana" (Piracy) — the permission lives on the
+        // activating player, and reaches only {T} mana abilities (CR 106.12).
+        if (BorrowedManaAbilities.isTapManaAbility(ability) &&
+            BorrowedManaAbilities.grantFor(state, action.playerId, action.sourceId, predicateEvaluator) != null
+        ) return null
         // Use projected controller to account for control-changing effects (e.g., Annex)
         val projected = state.projectedState
         val controller = projected.getController(action.sourceId)
@@ -236,7 +244,7 @@ internal class ActivationValidator(
         // creature face up …'"). Same own-vs-granted split as the lost-all-abilities check below.
         if (container.has<FaceDownComponent>()) {
             val isOwnAbility =
-                cardDef?.script?.effectiveActivatedAbilities(classLevel)?.any { it.id == action.abilityId } == true ||
+                com.wingedsheep.engine.state.components.identity.ownActivatedAbilities(cardComponent, cardDef, classLevel).any { it.id == action.abilityId } ||
                     action.abilityId.value.startsWith("class_level_up_") ||
                     IntrinsicManaAbilities.lookup(action.abilityId) != null
             if (isOwnAbility) {
@@ -277,7 +285,7 @@ internal class ActivationValidator(
             val isIntrinsicMana = IntrinsicManaAbilities.lookup(action.abilityId) != null
             val intrinsicSurvives = isIntrinsicMana &&
                 state.projectedState.hasBasicLandTypesSetByEffect(action.sourceId)
-            val isOwnAbility = (cardDef?.script?.effectiveActivatedAbilities(classLevel)?.any { it.id == action.abilityId } == true)
+            val isOwnAbility = (com.wingedsheep.engine.state.components.identity.ownActivatedAbilities(cardComponent, cardDef, classLevel).any { it.id == action.abilityId })
                 || action.abilityId.value.startsWith("class_level_up_")
                 || isIntrinsicMana
             if (isOwnAbility && !intrinsicSurvives) {
@@ -334,6 +342,7 @@ internal class ActivationValidator(
         val resolver = GraveyardTotalExileResolver
         val candidates = resolver.candidates(
             state, action.playerId, atom.measure, atom.filter,
+            excludeCardId = action.sourceId.takeIf { atom.excludeSelf },
             predicateEvaluator = predicateEvaluator
         )
         return if (!resolver.isLegalSelection(candidates, atom.minTotal, submitted)) {
@@ -361,11 +370,12 @@ internal class ActivationValidator(
             return "Loyalty abilities can only be activated at sorcery speed"
         }
         // Rule 606.3: Only one loyalty ability per planeswalker per turn
-        // (Oath of Teferi allows two activations per turn)
+        // (Oath of Teferi, or a one-shot grant on this planeswalker, allows two per turn)
         val tracker = container.get<AbilityActivatedThisTurnComponent>()
         if (tracker != null && tracker.loyaltyActivationCount > 0) {
-            val maxActivations = getMaxLoyaltyActivations(state, action.playerId)
-            if (tracker.hasReachedLoyaltyLimit(maxActivations)) {
+            val playerMax = getMaxLoyaltyActivations(state, action.playerId)
+            if (tracker.hasReachedLoyaltyLimit(playerMax)) {
+                val maxActivations = tracker.effectiveLoyaltyLimit(playerMax)
                 return if (maxActivations > 1) {
                     "Loyalty abilities can only be activated $maxActivations times per planeswalker each turn"
                 } else {
@@ -577,7 +587,7 @@ internal class ActivationValidator(
                 // and X-bounded "mana value X or less" reanimation targets (Fabrication Foundry)
                 // need the chosen X to validate — mirror the spell path.
                 xValue = effectiveXValue,
-                targetingSourceType = TargetingSourceType.ABILITY
+                targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY
             )
         } else if (controllerTargetReqs.isNotEmpty() && action.targets.isEmpty()) {
             // An empty target list is only illegal when at least one controller-chosen
@@ -599,9 +609,10 @@ internal class ActivationValidator(
      * division is chosen as the ability is activated (CR 601.2d), so it arrives on the action
      * rather than being asked for at resolution. Absence is legal — the executor then raises a
      * resolution-time DistributeDecision, which is how non-interactive controllers divide — but
-     * anything present must be a well-formed division of exactly the printed total.
+     * anything present must be a well-formed division of exactly the total as activated — the
+     * printed number, or a dynamic total evaluated now (Lukka, Bound to Ruin's defined X).
      */
-    private fun checkDamageDistribution(action: ActivateAbility, ability: ActivatedAbility): String? {
+    private fun checkDamageDistribution(state: GameState, action: ActivateAbility, ability: ActivatedAbility): String? {
         val distribution = action.damageDistribution ?: return null
         val dividedDamage = ability.effect as? DividedDamageEffect
             ?: return "This ability does not divide damage among its targets"
@@ -609,9 +620,12 @@ internal class ActivationValidator(
         if (distribution.keys != chosenTargetIds) {
             return "Damage distribution targets must match chosen targets"
         }
+        val total = castPermissionUtils.dividedDamageTotalAtActivation(
+            state, dividedDamage, ability, action.sourceId, action.playerId, chosenX = action.xValue
+        )
         val totalDistributed = distribution.values.sum()
-        if (totalDistributed != dividedDamage.totalDamage) {
-            return "Total distributed damage ($totalDistributed) must equal ${dividedDamage.totalDamage}"
+        if (totalDistributed != total) {
+            return "Total distributed damage ($totalDistributed) must equal $total"
         }
         // CR 601.2d: each target in the division must be assigned at least 1 damage.
         if (distribution.values.any { it < 1 }) {
@@ -641,7 +655,9 @@ internal class ActivationValidator(
             green = poolComponent.green,
             colorless = poolComponent.colorless,
             restrictedMana = poolComponent.restrictedMana,
-        )
+            snowMana = poolComponent.snowMana,
+            snowColorless = poolComponent.snowColorless
+        ).withSpendingColors(state, playerId)
         return when (cost) {
             is AbilityCost.Atom -> {
                 val mana = cost.manaCostOrNull

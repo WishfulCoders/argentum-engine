@@ -30,9 +30,9 @@ import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 
 /** Life the caster can pay, and the CR 119.4 rejection when they can't. */
 private fun rejectUnaffordableLife(check: SpellCostCheck, required: Int, message: () -> String): String? {
-    val currentLife = check.state.lifeTotal(check.playerId) // CR 810.9a — team's shared total
-    // CR 119.4 — you can't pay life unless you have at least that much
-    return if (currentLife < required) message() else null
+    // CR 119.4 — you can't pay life unless you have at least that much (CR 810.9a — team's shared
+    // total); CR 119.8 — nor at all while you can't lose life.
+    return if (!check.state.canPayLife(check.playerId, required)) message() else null
 }
 
 /**
@@ -43,6 +43,8 @@ private fun blight(ledger: SpellCostLedger, targetId: EntityId, amount: Int) {
     val targetContainer = ledger.state.getEntity(targetId) ?: return
     val counters = targetContainer.get<CountersComponent>() ?: CountersComponent()
     val firstThisTurn = DamageUtils.isFirstCounterThisTurn(ledger.state, targetId)
+    val firstOfTypeThisTurn =
+        DamageUtils.isFirstCounterOfTypeThisTurn(ledger.state, targetId, CounterType.MINUS_ONE_MINUS_ONE)
     ledger.state = ledger.state.updateEntity(targetId) { c ->
         c.with(counters.withAdded(CounterType.MINUS_ONE_MINUS_ONE, amount))
     }
@@ -55,6 +57,7 @@ private fun blight(ledger: SpellCostLedger, targetId: EntityId, amount: Int) {
         amount = amount,
         entityName = targetContainer.get<CardComponent>()?.name ?: "Creature",
         firstThisTurn = firstThisTurn,
+        firstOfTypeThisTurn = firstOfTypeThisTurn,
         placedBy = ledger.playerId
     ))
 }
@@ -112,11 +115,12 @@ internal object PayLifePerTargetCostKind : SpellCostKind<AdditionalCost.PayLifeP
 internal object PayXLifeCostKind : SpellCostKind<AdditionalCost.PayXLife> {
     // X = 0 is always legal (default minCount = 0); a higher minCount requires enough life to pay it.
     override fun canPay(state: GameState, payerId: EntityId, cost: AdditionalCost.PayXLife, costHandler: CostHandler) =
-        cost.minCount <= 0 || state.lifeTotal(payerId) >= cost.minCount
+        state.canPayLife(payerId, cost.minCount)
 
     // Surface the cap (current life total) so the client can bound the X slider (0..payXLifeMaxX).
     override fun enumerate(env: SpellCostEnumeration, cost: AdditionalCost.PayXLife, offer: SpellCostOffer): Boolean {
-        val currentLife = env.state.lifeTotal(env.playerId)
+        // CR 119.8 — a player who can't lose life can pay only X = 0.
+        val currentLife = if (env.state.isLifeLossLocked(env.playerId)) 0 else env.state.lifeTotal(env.playerId)
         offer.payXLifeCost = cost
         offer.payXLifeMaxX = currentLife
         return currentLife >= cost.minCount
@@ -130,9 +134,9 @@ internal object PayXLifeCostKind : SpellCostKind<AdditionalCost.PayXLife> {
         if (amount < 0) {
             return "Pay X life: X cannot be negative"
         }
-        val currentLife = check.state.lifeTotal(check.playerId)
-        if (amount > currentLife) {
-            return "Pay X life: X ($amount) cannot exceed your life total ($currentLife)"
+        if (!check.state.canPayLife(check.playerId, amount)) {
+            val currentLife = check.state.lifeTotal(check.playerId)
+            return "Pay X life: can't pay $amount life (life total $currentLife)"
         }
         return null
     }
@@ -235,7 +239,7 @@ internal object SacrificeForCostReductionCostKind : SpellCostKind<AdditionalCost
 
     override fun pay(ledger: SpellCostLedger, cost: AdditionalCost.SacrificeCreaturesForCostReduction): String? {
         val sacrificed = ledger.payment.sacrificedPermanents
-        ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(sacrificed, ledger.state.projectedState))
+        ledger.sacrificedSnapshots.addAll(captureEntitySnapshots(sacrificed, ledger.state.projectedState, ledger.state))
         for (permId in sacrificed) {
             if (ledger.state.getEntity(permId) == null) continue
             ledger.sacrifice(permId)
@@ -585,7 +589,7 @@ internal object ChooseEntityCostKind : SpellCostKind<AdditionalCost.ChooseEntity
                 val battlefieldChosen = chosen.filter { it in ledger.state.getBattlefield() }
                 if (battlefieldChosen.isNotEmpty()) {
                     ledger.chosenEntitySnapshots.addAll(
-                        captureEntitySnapshots(battlefieldChosen, ledger.state.projectedState)
+                        captureEntitySnapshots(battlefieldChosen, ledger.state.projectedState, ledger.state)
                     )
                 }
             }

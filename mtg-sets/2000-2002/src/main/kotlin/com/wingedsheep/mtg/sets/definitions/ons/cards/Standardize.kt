@@ -25,7 +25,7 @@ val Standardize = card("Standardize") {
     metadata {
         rarity = Rarity.RARE
         collectorNumber = "116"
-        artist = "Greg Staples"
+        artist = "Justin Sweet"
         flavorText = "\"The only truth is that which you shape for yourself.\""
         imageUri = "https://cards.scryfall.io/normal/front/f/2/f2c79e64-91bf-4e87-a4fd-3136ea67c5bb.jpg?1562946613"
     }

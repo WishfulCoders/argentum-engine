@@ -27,10 +27,12 @@ class LibraryExecutors(
      */
     private val castSpellHandler: () -> CastSpellHandler,
     private val playLandHandler: () -> PlayLandHandler,
-    private val targetFinder: TargetFinder
+    private val targetFinder: TargetFinder,
+    private val legalActionEnumerator: () -> com.wingedsheep.engine.legalactions.LegalActionEnumerator
 ) : ExecutorModule {
 
     override fun executors(): List<EffectExecutor<*>> = listOf(
+        ForcePlayExecutor(legalActionEnumerator),
         ScryExecutor(recursion),
         ClashExecutor(recursion),
         SurveilExecutor(recursion),
@@ -66,6 +68,7 @@ class LibraryExecutors(
         ChooseOptionPipelineExecutor(cardRegistry = cardRegistry),
         NoteCreatureTypePipelineExecutor(),
         GatherCardsExecutor(zones.predicateEvaluator),
+        RecordSourceObjectsExecutor(),
         CopyCardIntoCollectionExecutor(),
         CopyCollectionIntoCollectionExecutor(),
         GrantSuspendExecutor(),

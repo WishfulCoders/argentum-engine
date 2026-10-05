@@ -465,4 +465,7 @@ internal fun PendingDecision.toStructuredDecisionPayload(): StructuredDecisionPa
     is ChooseColorDecision,
     is ChooseNumberDecision,
     is ChooseOptionDecision -> null
+    // A forced play's options are the card's ordinary cast / land-play actions, emitted as
+    // LegalActionView entries (isDecisionOption); the card is the view's subjectEntityId.
+    is com.wingedsheep.engine.core.PlayCardDecision -> null
 }

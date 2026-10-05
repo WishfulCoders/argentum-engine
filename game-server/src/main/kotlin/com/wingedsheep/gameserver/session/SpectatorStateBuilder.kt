@@ -84,6 +84,7 @@ class SpectatorStateBuilder(
     private fun createDecisionStatus(decision: PendingDecision, playerName: String): ServerMessage.SpectatorDecisionStatus {
         val displayText = when (decision) {
             is SelectCardsDecision -> "Selecting cards"
+            is com.wingedsheep.engine.core.PlayCardDecision -> "Playing a card"
             is ChooseTargetsDecision -> "Choosing targets"
             is YesNoDecision -> "Making a choice"
             is BatchYesNoDecision -> "Making a choice"
@@ -91,7 +92,7 @@ class SpectatorStateBuilder(
             is ChooseColorDecision -> "Choosing a color"
             is ChooseNumberDecision -> "Choosing a number"
             is DistributeDecision -> "Distributing"
-            is OrderObjectsDecision -> "Ordering blockers"
+            is OrderObjectsDecision -> decision.orderingTitle ?: "Ordering blockers"
             is SplitPilesDecision -> "Splitting piles"
             is SearchLibraryDecision -> "Searching library"
             is ReorderLibraryDecision -> "Reordering cards"
@@ -107,7 +108,8 @@ class SpectatorStateBuilder(
             playerId = decision.playerId.value,
             decisionType = decision::class.simpleName ?: "Unknown",
             displayText = displayText,
-            sourceName = decision.context.sourceName
+            sourceName = decision.context.sourceName,
+            sourceId = decision.context.sourceId?.value
         )
     }
 

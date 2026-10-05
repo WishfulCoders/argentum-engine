@@ -141,6 +141,7 @@ class EffectAndTriggerContinuationResumer(
         //    Fall through to the regular put-on-stack path with `selectedTargets = []`.
         if (selectedTargets.isEmpty() && continuation.elseEffect != null) {
             val elseComponent = TriggeredAbilityOnStackComponent(
+                resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
                 sourceId = continuation.sourceId,
                 sourceName = continuation.sourceName,
                 sourceBattlefieldTimestamp = continuation.sourceBattlefieldTimestamp,
@@ -152,7 +153,8 @@ class EffectAndTriggerContinuationResumer(
                 triggerContext = continuation.triggerContext,
                 xValue = continuation.triggerContext?.xValue,
                 carriedPipeline = continuation.carriedPipeline,
-                interveningIf = continuation.interveningIf
+                interveningIf = continuation.interveningIf,
+                isBackup = continuation.isBackup
             )
             val stackResult = services.stackResolver.putTriggeredAbility(state, elseComponent, emptyList())
             if (stackResult.outcome !is Outcome.Done) return stackResult
@@ -194,6 +196,7 @@ class EffectAndTriggerContinuationResumer(
         }
 
         val abilityComponent = TriggeredAbilityOnStackComponent(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
             sourceName = continuation.sourceName,
             sourceBattlefieldTimestamp = continuation.sourceBattlefieldTimestamp,
@@ -208,7 +211,8 @@ class EffectAndTriggerContinuationResumer(
             triggerContext = continuation.triggerContext,
             xValue = continuation.triggerContext?.xValue,
             carriedPipeline = continuation.carriedPipeline,
-            interveningIf = continuation.interveningIf
+            interveningIf = continuation.interveningIf,
+            isBackup = continuation.isBackup
         )
 
         val stackResult = services.stackResolver.putTriggeredAbility(
@@ -277,6 +281,7 @@ class EffectAndTriggerContinuationResumer(
         ) }
 
         val distributionContinuation = TriggerDamageDistributionContinuation(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
             sourceName = continuation.sourceName,
             sourceBattlefieldTimestamp = continuation.sourceBattlefieldTimestamp,
@@ -289,7 +294,8 @@ class EffectAndTriggerContinuationResumer(
             selectedTargets = selectedTargets,
             targetRequirements = alignedRequirements,
             totalDamage = total,
-            interveningIf = continuation.interveningIf
+            interveningIf = continuation.interveningIf,
+            isBackup = continuation.isBackup
         )
 
         return state.suspendForDecision(question, distributionContinuation, emptyList())
@@ -310,6 +316,7 @@ class EffectAndTriggerContinuationResumer(
         }
 
         val abilityComponent = TriggeredAbilityOnStackComponent(
+            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
             sourceName = continuation.sourceName,
             sourceBattlefieldTimestamp = continuation.sourceBattlefieldTimestamp,
@@ -321,7 +328,8 @@ class EffectAndTriggerContinuationResumer(
             triggerContext = continuation.triggerContext,
             xValue = continuation.triggerContext?.xValue,
             damageDistribution = response.distribution,
-            interveningIf = continuation.interveningIf
+            interveningIf = continuation.interveningIf,
+            isBackup = continuation.isBackup
         )
 
         val stackResult = services.stackResolver.putTriggeredAbility(
@@ -531,14 +539,15 @@ class EffectAndTriggerContinuationResumer(
                 is Gate.MayDecide -> continuation.then
                 is Gate.MayPay ->
                     CompositeEffect(listOf(gate.cost, continuation.then), stopOnError = true)
-                // WhenCondition, DoAction, MayPayX and OnceEachTurn never push this (yes/no)
-                // continuation — the first and fourth resolve synchronously in the executor, the
-                // second via the action-drain GatedActionContinuation, the third via the
-                // number-chooser MayPayXContinuation — so these branches are unreachable, present
-                // only for exhaustiveness.
+                // WhenCondition, DoAction, MayPayX, MayPayAnyAmountOfLife and OnceEachTurn never
+                // push this (yes/no) continuation — WhenCondition and OnceEachTurn resolve
+                // synchronously in the executor, DoAction via the action-drain
+                // GatedActionContinuation, the two pay-X gates via their number-chooser
+                // continuations — so these branches are unreachable, present only for exhaustiveness.
                 is Gate.WhenCondition -> continuation.then
                 is Gate.DoAction -> continuation.then
                 is Gate.MayPayX -> continuation.then
+                is Gate.MayPayAnyAmountOfLife -> continuation.then
                 is Gate.OnceEachTurn -> continuation.then
             }
         } else {

@@ -4014,41 +4014,14 @@
                     }
                 },
                 {
-                    "type": "Gated",
-                    "gate": {
-                        "type": "Gate.WhenCondition",
-                        "condition": {
-                            "type": "All",
-                            "conditions": [
-                                {
-                                    "type": "EntityMatches",
-                                    "entity": {
-                                        "type": "BoundVariable",
-                                        "name": "t0"
-                                    },
-                                    "filter": "creature ctrl:you"
-                                },
-                                {
-                                    "type": "EntityMatches",
-                                    "entity": {
-                                        "type": "BoundVariable",
-                                        "name": "t1"
-                                    },
-                                    "filter": "creature ctrl:opponent"
-                                }
-                            ]
-                        }
+                    "type": "Fight",
+                    "target1": {
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
-                    "then": {
-                        "type": "Fight",
-                        "target1": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        },
-                        "target2": {
-                            "type": "BoundVariable",
-                            "name": "t1"
-                        }
+                    "target2": {
+                        "type": "BoundVariable",
+                        "name": "t1"
                     }
                 }
             ]
@@ -10225,7 +10198,29 @@
                                     },
                                     "order": "ControllerChooses"
                                 },
-                                "EmitSurveiledEvent"
+                                {
+                                    "type": "Gated",
+                                    "gate": {
+                                        "type": "Gate.WhenCondition",
+                                        "condition": {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "EntityProperty",
+                                                "entity": "TriggeringEntity",
+                                                "numericProperty": {
+                                                    "type": "CounterCount",
+                                                    "counterType": null
+                                                }
+                                            },
+                                            "operator": "GT",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 0
+                                            }
+                                        }
+                                    },
+                                    "then": "EmitSurveiledEvent"
+                                }
                             ]
                         }
                     ]
@@ -10618,7 +10613,7 @@
                     "type": "DealsDamageEvent",
                     "recipient": {
                         "type": "RecipientObject",
-                        "filter": "creature Spider"
+                        "filter": "permanent Spider"
                     }
                 },
                 "effect": {
@@ -13573,7 +13568,7 @@
                     "space": {
                         "type": "IterationSpace.Group",
                         "filter": {
-                            "baseFilter": "creature Villain ctrl:you",
+                            "baseFilter": "permanent Villain ctrl:you",
                             "excludeSelf": true
                         }
                     },

@@ -110,7 +110,7 @@ class StructuredDecisionPayloadTest : ScenarioTestBase() {
                 OrderObjectsDecision("order", p1, "Order", context, listOf(a, b), mapOf(a to card)),
                 SplitPilesDecision(
                     "split", p1, "Split", context, listOf(a, b), 2,
-                    listOf("One", "Two"), mapOf(a to card),
+                    pileLabels = listOf("One", "Two"), cardInfo = mapOf(a to card),
                 ),
                 ChooseOptionDecision("option", p1, "Option", context, listOf("A", "B")),
                 ChooseReplacementDecision(

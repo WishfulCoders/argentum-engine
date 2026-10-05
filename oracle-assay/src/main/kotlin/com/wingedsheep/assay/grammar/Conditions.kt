@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.conditions.NotCondition
+import com.wingedsheep.sdk.scripting.conditions.PlayerCastSpellsThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PutCounterKindOnCreatureThisTurn
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
 import com.wingedsheep.sdk.scripting.references.Player
@@ -55,9 +56,12 @@ object Conditions {
     private fun existence(
         template: String,
         name: String,
+        // "you control **a** Beast" counts one, "you control **no** Islands" counts none, and the
+        // determiner decides the noun's number — so the plural rows slot a plural noun phrase.
+        noun: Phrase<GameObjectFilter> = Filters.indefinite,
         condition: (GameObjectFilter) -> Condition,
     ): Phrase<Condition> = phrase(template, name = name) {
-        slot("filter", Filters.indefinite)
+        slot("filter", noun)
         build { condition(it.value("filter")) }
         match { value ->
             val filter = existenceFilter(value) ?: return@match null
@@ -172,6 +176,21 @@ object Conditions {
         existence("an opponent controls no {filter}", "an opponent controls none of a permanent") {
             SdkConditions.OpponentControls(it, negate = true)
         },
+        // "When you control no Islands, sacrifice ~." — the Arabian Nights sea creatures' state
+        // trigger, and Drop of Honey's "when there are no creatures on the battlefield". Both are the
+        // `negate` flag rather than `Not` around the positive: unlike "no opponent controls" above,
+        // that is how the hand-written cards spell these two clauses (55 goldens hold
+        // `Exists(You, negate)` against 6 wrapped ones), so the flag is the majority value here.
+        // The noun is [Filters.pluralSubject] — the controller is already in the sentence, so a noun
+        // that could print its own "you control" clause would be a second place to say it.
+        existence("you control no {filter}", "you control none of a permanent", Filters.pluralSubject) {
+            SdkConditions.YouControl(it, negate = true)
+        },
+        existence(
+            "there are no {filter} on the battlefield",
+            "no permanent of a kind on the battlefield",
+            Filters.pluralSubject,
+        ) { SdkConditions.AnyPlayerControls(it, negate = true) },
         // "This spell costs {2} less to cast if it's bargained." — Hamlet Glutton. The SDK reads the
         // durable cast-choice slot rather than naming a condition per mechanic, and `WasBargained`
         // is the facade over exactly that read, so the rule is a constant and the mechanic's other
@@ -193,7 +212,12 @@ object Conditions {
             ),
         ),
         constant("it's bargained", SdkConditions.WasBargained),
-        constant("it's kicked", SdkConditions.WasKicked),
+        // "When ~ enters, **if it was kicked**, …" — the kicker permanents' intervening-if. Past
+        // tense is the only printed spelling (81 cards); the row used to read "it's kicked" by
+        // analogy with "it's bargained" above, which Oracle never prints. Bargain is the other way
+        // round: the present is its cost-position spelling, so its trigger form ("if it was
+        // bargained") is a separate, positional question this row doesn't answer.
+        constant("it was kicked", SdkConditions.WasKicked),
         // The life-state conditions Bloomburrow's Bats and Lizards check. Each is one whole clause
         // with a facade of its own, so they are constants rather than a shape: `Conditions` names
         // the gained/lost pair and both of its joins, and the printed English draws the same
@@ -211,6 +235,18 @@ object Conditions {
         constant("you gained and lost life this turn", SdkConditions.YouGainedAndLostLifeThisTurn),
         constant("you've lost life this turn", SdkConditions.YouLostLifeThisTurn),
         constant("an opponent lost life this turn", SdkConditions.OpponentLostLifeThisTurn),
+        // Morbid's condition and its controller-scoped sibling. "A creature died this turn" is global
+        // — any player's creature counts — and "under your control" narrows it to your own; the
+        // SDK names the two as separate facades, so each printed clause is one constant. The
+        // subtype-filtered spellings ("a Zombie died this turn") are a different model and stay out.
+        constant("a creature died this turn", SdkConditions.CreatureDiedThisTurn),
+        constant("a creature died under your control this turn", SdkConditions.ControlledCreatureDiedThisTurn),
+        // Raid's condition — "At the beginning of your end step, if you attacked this turn, …",
+        // "Activate only if you attacked this turn." One whole clause, one facade, past simple its
+        // only printed spelling. "You attacked with N or more creatures this turn" is the counted
+        // sibling, `YouAttackedWithCreaturesThisTurn`, left for a band of its own.
+        constant("you attacked this turn", SdkConditions.YouAttackedThisTurn),
+        spellsCastThisTurn(),
         discardedACardThisTurn,
         eitherControlled,
         countAtLeast(
@@ -267,7 +303,36 @@ object Conditions {
             Zone.GRAVEYARD,
             ComparisonOperator.GTE,
         ),
+        // Delirium and Matzalantli's gate — the same graveyard count by *distinct types* rather than
+        // by cards. The noun is the row and the threshold the slot: "card types" and "permanent
+        // types" are two `Aggregation`s with a facade each, and both print the one sentence shape.
+        graveyardTypes("card", SdkConditions::Delirium),
+        graveyardTypes("permanent", SdkConditions::DistinctPermanentTypesInGraveyard),
     )
+
+    /**
+     * "There are four or more card types among cards in your graveyard" — delirium's condition.
+     *
+     * A row of its own rather than a member of [zoneCount], because the amount is a different value:
+     * `AggregateZone` over a distinct-type aggregation, not a `Count` of the zone. The facades own
+     * that composition, so `build` calls them and `match` rebuilds through the same facade and
+     * compares the whole model — a filtered or opponent-side tally refuses to print rather than
+     * reading as your whole graveyard.
+     */
+    private fun graveyardTypes(kind: String, condition: (Int) -> Condition): Phrase<Condition> =
+        phrase(
+            "there are {n} or more $kind types among cards in your graveyard",
+            name = "$kind types in your graveyard",
+        ) {
+            slot("n", Cardinals.word)
+            build { condition(it.int("n")) }
+            match { value ->
+                val compare = value as? Compare ?: return@match null
+                val limit = (compare.right as? DynamicAmount.Fixed)?.amount ?: return@match null
+                if (!Cardinals.spellable(limit) || value != condition(limit)) return@match null
+                bind("n" to limit)
+            }
+        }
 
     /**
      * "There are seven or more cards in your graveyard", "that player has two or fewer cards in
@@ -371,6 +436,28 @@ object Conditions {
                 val kind = condition.counterType ?: return@match null
                 if (value != SdkConditions.PutCounterKindOnCreatureThisTurn(kind)) return@match null
                 bind("kind" to kind)
+            }
+        }
+
+    /**
+     * "you've cast two or more spells this turn" — Effortless Master, Loan Shark, Illvoi Infiltrator.
+     *
+     * The count is the slot and the rest is the facade's default: any spell, from any zone, cast by
+     * you. A golden carrying a filter or a zone ("…instant and sorcery spells…", the Prairie Dog
+     * cycle's "from your hand") is a different sentence and the reconstruct-and-compare refuses to
+     * print it here. The threshold starts at two because that is where the printed shape starts —
+     * a single spell is "you've cast another spell this turn", whose "another" depends on whether
+     * the spell asking is itself on the stack, which is a question this row cannot answer.
+     */
+    private fun spellsCastThisTurn(): Phrase<Condition> =
+        phrase("you've cast {n} or more spells this turn", name = "you cast a count of spells this turn") {
+            slot("n", Cardinals.word)
+            build { SdkConditions.YouCastSpellsThisTurn(it.int("n")) }
+            match { value ->
+                val atLeast = (value as? PlayerCastSpellsThisTurn)?.atLeast ?: return@match null
+                if (atLeast < 2 || !Cardinals.spellable(atLeast)) return@match null
+                if (value != SdkConditions.YouCastSpellsThisTurn(atLeast)) return@match null
+                bind("n" to atLeast)
             }
         }
 

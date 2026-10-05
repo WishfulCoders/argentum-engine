@@ -181,7 +181,17 @@ data class PreventDamageEffect(
      * target this turn", Candles' Glow). The Samite Ministration colour-scoped cousin is
      * [gainLifeFromColors].
      */
-    val gainLifeFromPrevented: Boolean = false
+    val gainLifeFromPrevented: Boolean = false,
+    /**
+     * Narrow the recipients to **players**: only damage that would be dealt to a player is
+     * prevented, and damage to a creature, planeswalker or battle neither is prevented nor spends
+     * the shield — "the next time target creature would deal combat damage to one or more players
+     * this combat, prevent that damage" (Ria Ivor, Bane of Bladehold). Honoured by the
+     * source-side prevent-and-react shield ([PreventionDirection.FromTarget] with an [onPrevented]
+     * reaction), which also honours [scope] and [duration]; any other lowering rejects it rather
+     * than prevent damage to the wrong recipients.
+     */
+    val toPlayersOnly: Boolean = false
 ) : Effect {
     override val description: String = buildString {
         append("Prevent ")
@@ -201,7 +211,10 @@ data class PreventDamageEffect(
                 append(recipientGroup.description.replaceFirstChar { it.lowercase() })
             }
             direction == PreventionDirection.ToTarget -> append("that would be dealt to ${target.description}")
-            direction == PreventionDirection.FromTarget -> append("${target.description} would deal")
+            direction == PreventionDirection.FromTarget -> {
+                append("${target.description} would deal")
+                if (toPlayersOnly) append(" to players")
+            }
             else -> append("that would be dealt to and dealt by ${target.description}")
         }
         when (sourceFilter) {
@@ -865,3 +878,25 @@ data class RemoveSuspectedEffect(
 }
 
 
+
+/** Establish a blocking relationship during resolution, without declaring blockers. */
+@SerialName("BecomeBlocking")
+@Serializable
+data class BecomeBlockingEffect(
+    val blocker: EffectTarget,
+    val attacker: EffectTarget,
+) : Effect {
+    override val description: String = "${blocker.description} blocks ${attacker.description}"
+}
+
+/** Restrict blockers to a remembered collection of objects or a current characteristic filter. */
+@Serializable
+@SerialName("GrantCantBeBlockedExceptByCollection")
+data class GrantCantBeBlockedExceptByCollectionEffect(
+    val target: EffectTarget,
+    val collection: String,
+    val alternativeFilter: GameObjectFilter,
+    val duration: Duration
+) : Effect {
+    override val description: String = "Can't be blocked except by the chosen creatures or ${alternativeFilter.description}"
+}

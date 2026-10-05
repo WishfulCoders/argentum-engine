@@ -1563,6 +1563,77 @@
     ]
 }
 
+// Spawning Pit
+{
+    "name": "Spawning Pit",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "Sacrifice a creature: Put a charge counter on this artifact.\n{1}, Remove two charge counters from this artifact: Create a 2/2 colorless Spawn artifact creature token.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Spawning Pit:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomSacrifice",
+                        "filter": "creature"
+                    }
+                },
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "CHARGE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            },
+            {
+                "id": "Spawning Pit:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomRemoveCounters",
+                                "counterType": "CHARGE",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                },
+                                "self": true
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Spawn"
+                    ],
+                    "artifactToken": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "141",
+        "rarity": "UNCOMMON",
+        "artist": "Tony Szczudlo",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/6/36a3345d-1190-45f4-8191-897b4dcec376.jpg?1783944418"
+    }
+}
+
 // Spire Golem
 {
     "name": "Spire Golem",
@@ -1689,6 +1760,46 @@
         "imageUri": "https://cards.scryfall.io/normal/front/0/0/00cd61eb-a526-46db-8675-334663e0d63a.jpg"
     },
     "colorIdentityOverride": []
+}
+
+// Vedalken Engineer
+{
+    "name": "Vedalken Engineer",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Vedalken Artificer",
+    "oracleText": "{T}: Add two mana of any one color. Spend this mana only to cast artifact spells or activate abilities of artifacts.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Vedalken Engineer:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "restriction": {
+                        "type": "CardTypeSpellsOrAbilitiesOnly",
+                        "cardType": "ARTIFACT",
+                        "allowAbilities": true
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "35",
+        "artist": "Lars Grant-West",
+        "flavorText": "Art is unknown to the vedalken—for them, all creations must serve a purpose.",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/0/d06a2d9a-9401-4711-97b6-825652090c4d.jpg"
+    }
 }
 
 // Viridian Acolyte

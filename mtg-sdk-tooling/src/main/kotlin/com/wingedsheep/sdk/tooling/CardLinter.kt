@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.StaticAbility
 import com.wingedsheep.sdk.serialization.CardSerialization
 import kotlinx.serialization.json.Json
@@ -265,7 +266,8 @@ object CardLinter {
      */
     private fun crossesLibraryBoundary(tree: JsonElement): Boolean {
         val fromLibrary = anyNode(tree) { node, type ->
-            type == "TopOfLibrary" || (type in ZONE_SOURCE_NODES && namesLibrary(node))
+            type == "TopOfLibrary" || type == "BottomOfLibrary" ||
+                (type in ZONE_SOURCE_NODES && namesLibrary(node))
         }
         val toLibrary = anyNode(tree) { node, type -> type == "ToZone" && namesLibrary(node) }
         if (!fromLibrary && !toLibrary) return false
@@ -400,7 +402,8 @@ object CardLinter {
      *
      * Attachability is judged across the whole physical card — either side of a DFC and any
      * [com.wingedsheep.sdk.model.CardFace] counts — so a creature that transforms into an Aura is
-     * not flagged for the attach-scope abilities on its other face.
+     * not flagged for the attach-scope abilities on its other face. Bestow also permits attachment
+     * despite the printed creature type: its alternative cast makes the card an Aura.
      */
     private fun checkAttachedScope(
         card: CardDefinition,
@@ -480,8 +483,11 @@ object CardLinter {
                 // mismatch on its own, and this check has no business double-reporting it.
                 script.auraTarget != null
 
-        if (attaches(card.typeLine, card.script) || card.equipCost != null) return true
-        if (card.cardFaces.any { attaches(it.typeLine, it.script) }) return true
+        if (attaches(card.typeLine, card.script) || card.equipCost != null ||
+            card.keywordAbilities.any { it is KeywordAbility.Bestow }) return true
+        if (card.cardFaces.any { face ->
+                attaches(face.typeLine, face.script)
+            }) return true
         return card.backFace?.let { canEverBeAttached(it) } ?: false
     }
 
@@ -568,10 +574,10 @@ object CardLinter {
                     checkOpponentChoosers(
                         cardName,
                         value,
-                        withinActivatedAbility || key == "activatedAbilities",
+                        withinActivatedAbility || key == "activatedAbilities" || key == "addedActivatedAbilities",
                         findings,
                         withinTriggeredAbility ||
-                            key == "triggeredAbilities" ||
+                            key == "triggeredAbilities" || key == "addedTriggeredAbilities" ||
                             key == "stateTriggeredAbilities"
                     )
                 }
@@ -648,6 +654,7 @@ object CardLinter {
         put("Discover" to "storeDiscoveredAs", write(Space.COLLECTION))
         put("CopyCardIntoCollection" to "storeAs", write(Space.COLLECTION))
         put("CopyCollectionIntoCollection" to "storeAs", write(Space.COLLECTION))
+        put("ForcePlay" to "storePlayedTo", write(Space.COLLECTION))
         put("CastFromCollectionWithoutPayingCost" to "storeCastTo", write(Space.COLLECTION))
         put("CounterAllOnStack" to "storeCountAs", write(Space.COLLECTION))
         put("Behold" to "storeAs", write(Space.COLLECTION))
@@ -677,11 +684,12 @@ object CardLinter {
             "MakePlotted",
             "GrantPlayWithAdditionalCost", "GrantPlayWithCostIncrease", "FilterCollection",
             "ChooseOnePerCategory",
-            "StoreCardName", "CastFromCollectionWithoutPayingCost", "PlayFromCollectionWithoutPayingCost",
+            "StoreCardName", "ForcePlay", "CastFromCollectionWithoutPayingCost", "PlayFromCollectionWithoutPayingCost",
             "CastAnyNumberFromCollectionWithoutPayingCost", "ExileFromStorage",
-            "CopyCollectionIntoCollection", "RecordChosenLinkedExile",
+            "CopyCollectionIntoCollection", "RecordChosenLinkedExile", "RecordSourceObjects",
             "PairWithSource", "EmitChampionedEvent",
         )) put(type to "from", read(Space.COLLECTION))
+        put("GrantCantBeBlockedExceptByCollection" to "collection", read(Space.COLLECTION))
         put("ChoosePile" to "pileA", read(Space.COLLECTION))
         put("ChoosePile" to "pileB", read(Space.COLLECTION))
         put("ForEachCapturedController" to "collection", read(Space.COLLECTION))
@@ -702,6 +710,7 @@ object CardLinter {
         put("TapUntapCollection" to "collectionName", read(Space.COLLECTION))
         put("AddCountersToCollection" to "collectionName", read(Space.COLLECTION))
         put("DealDamagePerEntityInZone" to "collectionName", read(Space.COLLECTION))
+        put("DistributeDamageAmongCollection" to "collectionName", read(Space.COLLECTION))
         put("DistinctEntitiesInCollections" to "collections", read(Space.COLLECTION))
         put("DistinctCardTypesInCollections" to "collections", read(Space.COLLECTION))
         put("ExcludeOtherCollection" to "otherCollectionName", read(Space.COLLECTION))
@@ -758,6 +767,8 @@ object CardLinter {
                 listOf(Kind.READ to (Space.CHOSEN to "chosenCreatureType"))
             // Guile's counter replacement hands the card it exiled to its `then` rider under this
             // well-known name (the engine seeds it when the rider runs).
+            type == "ReplaceLifeGainWith" ->
+                listOf(Kind.WRITE to (Space.NUMBER to com.wingedsheep.sdk.scripting.ReplaceLifeGainWith.AMOUNT))
             type == "ExileCounteredSpellInstead" ->
                 listOf(
                     Kind.WRITE to (
@@ -826,6 +837,8 @@ object CardLinter {
         // Mayhem (CR 702.187): the engine stamps the "mayhem cost was paid" flag on a resolved
         // permanent / into the resolution context when the Mayhem cost is paid (see StackResolver).
         "Mayhem" to listOf("MAYHEM_CAST"),
+        // Escape (CR 702.138b): an escape-cast permanent is stamped "escaped" (see PermanentEntry).
+        "Escape" to listOf("ESCAPED"),
         "BlightVariable" to listOf("BLIGHT_AMOUNT"),
         "BlightOrPay" to listOf("BLIGHT_AMOUNT"),
         // Resolution-time color choices: ChooseColorThen sets EffectContext.chosenColor for its
@@ -864,6 +877,7 @@ object CardLinter {
         "GrantLandwalkOfChosenType" to "LAND_TYPE",
         "NotOfSourceChosenType" to "CREATURE_TYPE",
         "SneakCostWasPaid" to "SNEAK",
+        "Escaped" to "ESCAPED",
         "SourceChosenModeIs" to "MODE",
         "CardTypeEqualsChosenComponent" to "CARD_TYPE",
         "ConvokedSource" to "CONVOKED_CREATURES",
@@ -884,6 +898,8 @@ object CardLinter {
         val declaredModeIds = mutableSetOf<String>()
         val reads = mutableListOf<Pair<String, String>>() // slot to nodeType
         val modeIdReads = mutableListOf<String>()
+        /** How many kicker costs the card lists — two ("Kicker [A] and/or [B]") declare FIRST/SECOND_KICKER. */
+        var kickerCosts = 0
     }
 
     /** One pass over the whole card (all faces) collecting slot declarations and reads. */
@@ -912,9 +928,18 @@ object CardLinter {
                 // The optional-additional-cost keyword (serial name "Kicker") declares whichever
                 // slot its own mechanic uses: KICKED for kicker/multikicker/offspring, BARGAINED
                 // for bargain (CR 702.166b).
+                if (type == "ChoiceCost") {
+                    (element["choiceSlot"] as? JsonPrimitive)?.contentOrNull
+                        ?.let { slots.declared.add(it) }
+                }
                 if (type == "Kicker") {
                     val declaredSlot = (element["declaredSlot"] as? JsonPrimitive)?.contentOrNull
                     slots.declared.add(declaredSlot ?: "KICKED")
+                    // "Kicker [A] and/or [B]" (CR 702.33f): the engine stamps which kicker was paid.
+                    if ((declaredSlot ?: "KICKED") == "KICKED" && ++slots.kickerCosts >= 2) {
+                        slots.declared.add("FIRST_KICKER")
+                        slots.declared.add("SECOND_KICKER")
+                    }
                 }
                 if (type == "SourceChosenModeIs") {
                     (element["modeId"] as? JsonPrimitive)?.contentOrNull
@@ -1052,7 +1077,7 @@ object CardLinter {
             "staticAbilities", "replacementEffects", "sagaChapters", "classLevels",
         )
         val orderedSpellFields = listOf("castTimeCaptures", "additionalCosts", "selfAlternativeCost")
-        val deferredSpellFields = listOf("spellEffect", "kickerSpellEffect", "cleaveSpellEffect")
+        val deferredSpellFields = listOf("spellEffect", "kickerSpellEffect", "cleaveSpellEffect", "overloadSpellEffect")
 
         // A declared cast-time creature-type choice writes the chosen type before resolution.
         if (script["castTimeCreatureTypeChoice"]?.takeIf { it !is JsonNull } != null) {
@@ -1282,6 +1307,7 @@ object CardLinter {
         "TriggeringEntity",
         "IterationEntity",
         "DiscardedAsCost",
+        "RevealedAsCost",
         "LibraryTop",
         "LinkedExiledCard",
     )

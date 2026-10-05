@@ -120,6 +120,32 @@ data class GrantProtectionFromChosenCardTypeEffect(
 }
 
 /**
+ * Grant "protection from colorless or from the color of your choice" to a target (CR 702.16).
+ *
+ * The colour-axis sibling of [GrantProtectionFromChosenCardTypeEffect], self-contained for the same
+ * reason: the choice set is fixed — Colorless plus the five colors — and colorless is not a color
+ * (CR 105.4), so the ordinary [ChooseColorThenEffect] can't offer it. The executor presents a
+ * choose-option decision and, on response, grants a floating `PROTECTION_FROM_<COLOR>` or
+ * `PROTECTION_FROM_COLORLESS` keyword for [duration]. Protection from colorless matches any source
+ * with no colors — artifacts, Eldrazi, colorless spells and abilities of colorless sources — at
+ * every protection read site (targeting, attaching, blocking, damage). Angelic Intervention.
+ *
+ * @property target The permanent to protect (defaults to the ability's first target).
+ * @property duration How long the protection lasts (defaults to end of turn).
+ */
+@SerialName("GrantProtectionFromColorlessOrChosenColor")
+@Serializable
+data class GrantProtectionFromColorlessOrChosenColorEffect(
+    val target: EffectTarget = EffectTarget.ContextTarget(0),
+    val duration: Duration = Duration.EndOfTurn
+) : Effect {
+    override val description: String = buildString {
+        append("${target.description} gains protection from colorless or from the color of your choice")
+        if (duration.description.isNotEmpty()) append(" ${duration.description}")
+    }
+}
+
+/**
  * Grant a **player** protection from [scope] (CR 702.16) for [duration].
  *
  * The player-level counterpart of the creature protection statics — used by
@@ -154,11 +180,17 @@ data class GrantPlayerProtectionEffect(
 fun ProtectionScope.protectionDescription(): String = when (this) {
     is ProtectionScope.Color -> color.name.lowercase()
     is ProtectionScope.Colors -> colors.joinToString(" and ") { it.name.lowercase() }
+    is ProtectionScope.NonColor -> "non" + color.name.lowercase()
+    ProtectionScope.Multicolored -> "multicolored"
     is ProtectionScope.CardType -> cardType.lowercase() + "s"
     is ProtectionScope.Subtype -> subtype + "s"
     is ProtectionScope.Supertype -> supertype.lowercase() + " permanents"
     ProtectionScope.Everything -> "everything"
     ProtectionScope.EachOpponent -> "each opponent"
+    ProtectionScope.Spells -> "spells"
+    ProtectionScope.PermanentsCastThisTurn -> "permanents that were cast this turn"
+    ProtectionScope.ActivatedAbilities -> "activated abilities"
+    ProtectionScope.TriggeredAbilities -> "triggered abilities"
 }
 
 /**

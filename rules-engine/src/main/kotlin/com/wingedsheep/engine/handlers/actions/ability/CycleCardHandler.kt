@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.CardCycledEvent
 import com.wingedsheep.engine.core.CardsDiscardedEvent
 import com.wingedsheep.engine.core.CycleCard
@@ -26,6 +27,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.player.CardsCycledThisGameComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
@@ -63,8 +65,9 @@ class CycleCardHandler(
         }
 
         // Cycling is an activated ability of the card in hand (CR 702.29a): an any-zone
-        // "players can't activate abilities" (Yuriko, Blade of the Mighty) forbids it.
-        if (castPermissionUtils?.isActivationPreventedForPlayer(state, action.cardId, action.playerId) == true) {
+        // "players can't activate abilities" (Yuriko, Blade of the Mighty) or a name lock on
+        // "sources" (Pithing Needle) forbids it.
+        if (castPermissionUtils?.isActivationForbidden(state, action.cardId, action.playerId) == true) {
             return "An effect prevents you from activating that ability right now"
         }
 
@@ -177,8 +180,10 @@ class CycleCardHandler(
             black = poolComponent.black,
             red = poolComponent.red,
             green = poolComponent.green,
-            colorless = poolComponent.colorless
-        )
+            colorless = poolComponent.colorless,
+            snowMana = poolComponent.snowMana,
+            snowColorless = poolComponent.snowColorless
+        ).withSpendingColors(currentState, action.playerId)
 
         val partialResult = pool.payPartial(cyclingCost)
         val poolAfterPayment = partialResult.newPool
@@ -200,7 +205,9 @@ class CycleCardHandler(
                     black = poolAfterPayment.black,
                     red = poolAfterPayment.red,
                     green = poolAfterPayment.green,
-                    colorless = poolAfterPayment.colorless
+                    colorless = poolAfterPayment.colorless,
+                    snowMana = poolAfterPayment.snowMana,
+                    snowColorless = poolAfterPayment.snowColorless
                 )
             )
         }
@@ -259,6 +266,12 @@ class CycleCardHandler(
         val discardResult = zones.discardCards(currentState, action.playerId, listOf(action.cardId), asCyclingCost = true)
         currentState = discardResult.state
         events.addAll(discardResult.events)
+
+        // "Cycled a card named X N times this game" (Yidaro, Wandering Monster) — counted before
+        // the event so a "when you cycle" trigger already sees this cycle.
+        currentState = currentState.updateEntity(action.playerId) { player ->
+            player.with((player.get<CardsCycledThisGameComponent>() ?: CardsCycledThisGameComponent()).record(cardComponent.name))
+        }
 
         // Emit cycling event (for cycling triggers like Astral Slide)
         events.add(CardCycledEvent(action.playerId, action.cardId, cardComponent.name, announcedX))

@@ -253,9 +253,11 @@ particular that `remaining` means "copies you haven't seen", which is not always
 ### Face-up top card
 
 The Deck pile itself renders its top card face up — with an amber ring, an 👁 badge and the normal
-hover preview — whenever the server sent details for entry **0** of that library's `cardIds`. The
-library zone is always transmitted in full (opaque ids for unknown cards), so position is all the
-client needs; the decision about *which* cards carry details is entirely the server's, and it makes
+hover preview — whenever the server names a card at position 0 of that library. A library zone
+lists only the cards the viewer may identify, each with its index from the top in `positions`;
+the rest are counted by `size` and never named, because an entity ID is enough to follow a card
+and, with a known decklist, to read it. `librarySlots` turns the zone into top-to-bottom slots
+(`null` for a card back). The decision about *which* cards are named is entirely the server's, and it makes
 it for a public reveal (Future Sight, Goblin Spy), a private peek ("you may look at the top card of
 your library any time"), and a scry/surveil the viewer just performed alike. `ZonePiles.tsx` never
 asks why. `TopOfLibraryClientViewTest` pins both halves of the contract: position 0 is the top, and
@@ -498,8 +500,11 @@ are gated on `players.length > 2`).
   selected attacker has an explicit defender. When exactly one player is a legal attack
   target (attack left/right — CR 803.1, last opponent standing) the sticky defender is
   pre-assigned so the popup never asks; a restriction banner names who can legally be
-  attacked (phrased with the lobby's `attackMode` when known) and rail chips of
-  unattackable living seats dim with a 🚫 marker. Arrows against the viewed defender render
+  attacked (phrased with `ClientGameState.attackMode`) and rail chips and shared-strip name
+  plates of unattackable living seats dim with a 🚫 marker. Under attack left/right the rail
+  also carries a direction header for the whole game, and the one seat you can attack / the
+  one that can attack you are tagged ⚔ TARGET / 🛡 ATTACKS YOU on their chip and plate
+  (`useAttackNeighbours` — display only, standing down once two players remain). Arrows against the viewed defender render
   per-creature in the defender's seat color; attacks on boards visible in a shared-strip
   view end on the defender's name plate; attacks on off-screen boards bundle
   into one arrow to the defender's rail chip with a creature-count badge (`CombatArrows`),

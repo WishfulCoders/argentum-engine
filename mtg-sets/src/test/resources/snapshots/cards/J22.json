@@ -1,3 +1,87 @@
+// Agrus Kos, Eternal Soldier
+{
+    "name": "Agrus Kos, Eternal Soldier",
+    "manaCost": "{3}{W}",
+    "typeLine": "Legendary Creature — Spirit Soldier",
+    "oracleText": "Vigilance\nWhenever Agrus Kos becomes the target of an ability that targets only it, you may pay {1}{R/W}. If you do, copy that ability for each other creature you control that ability could target. Each copy targets a different one of those creatures. ({R/W} can be paid with either {R} or {W}.)",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "keywords": [
+        "VIGILANCE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Agrus Kos, Eternal Soldier:1",
+                "trigger": {
+                    "type": "BecomesTargetEvent",
+                    "abilitiesOnly": true,
+                    "targetsOnlyIt": true
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "PayManaCost",
+                            "cost": "{1}{R/W}"
+                        }
+                    },
+                    "then": {
+                        "type": "CopyForEachOtherPossibleTarget",
+                        "target": "TargetingSource",
+                        "candidates": {
+                            "cardPredicates": [
+                                "IsCreature"
+                            ],
+                            "controllerPredicate": "ControlledByYou"
+                        }
+                    }
+                },
+                "descriptionOverride": "Whenever Agrus Kos becomes the target of an ability that targets only it, you may pay {1}{R/W}. If you do, copy that ability for each other creature you control that ability could target. Each copy targets a different one of those creatures."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "1",
+        "rarity": "RARE",
+        "artist": "Victor Adame Minguez",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/a/ea531418-6c7c-4e23-b681-6bfdd4a3eb79.jpg?1783919197",
+        "rulings": [
+            {
+                "date": "2022-12-02",
+                "text": "The last ability triggers whenever Agrus Kos, Eternal Soldier becomes the target of an ability that targets it and no other object or player. It doesn't matter who controls the ability."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "If an ability has multiple targets, but it's targeting Agrus Kos with all of them, the last ability triggers. In that case, each of the copies will also target only one of those creatures."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "Any creature you control that can't be targeted by the copied ability (due to protection abilities, targeting restrictions, or any other reason) is just ignored. No copy is created for that creature."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "The controller of Agrus Kos controls all the copies, no matter which player controlled the original ability. That player chooses the order the copies are put on the stack. The original ability will be on the stack beneath those copies and will resolve last."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "If the ability that's copied is modal (that is, it says \"Choose one —\" or the like), the copies will have the same mode. Their controller can't choose a different one."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "If the ability that's copied has an X whose value was determined as it was put on the stack, the copies have the same value of X."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "WHITE"
+    ]
+}
+
 // Deadly Plot
 {
     "name": "Deadly Plot",
@@ -60,6 +144,110 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Distinguished Conjurer
+{
+    "name": "Distinguished Conjurer",
+    "manaCost": "{1}{W}",
+    "typeLine": "Creature — Human Wizard",
+    "oracleText": "Whenever another creature you control enters, you gain 1 life.\n{4}{W}, {T}: Exile another target creature you control, then return it to the battlefield under its owner's control.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Distinguished Conjurer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Distinguished Conjurer:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{4}{W}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Exile"
+                        },
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Battlefield"
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you",
+                            "excludeSelf": true
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "4",
+        "rarity": "UNCOMMON",
+        "artist": "Nils Hamm",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/0/d0eaeec2-d1d4-4494-9c5d-cebfd7f088de.jpg?1783919197",
+        "rulings": [
+            {
+                "date": "2022-12-02",
+                "text": "When the card exiled by the second ability returns to the battlefield, it will be a new object with no connection to the card that was exiled. Auras attached to the exiled creature will be put into their owners' graveyards. Any Equipment will become unattached and remain on the battlefield. Any counters on the exiled creature will cease to exist."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "If a token is exiled this way, it will cease to exist and won't return to the battlefield."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "Distinguished Conjurer's first ability triggers whenever any creature other than itself enters the battlefield under your control, including those returned by its last ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -223,6 +411,471 @@
     ]
 }
 
+// Isu the Abominable
+{
+    "name": "Isu the Abominable",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Legendary Snow Creature — Yeti",
+    "oracleText": "You may look at the top card of your library any time.\nYou may play snow lands and cast snow spells from the top of your library.\nWhenever another snow permanent you control enters, you may pay {G}, {W}, or {U}. If you do, put a +1/+1 counter on Isu.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 5
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Isu the Abominable:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": {
+                        "cardPredicates": [
+                            "IsPermanent",
+                            "IsSnow"
+                        ],
+                        "controllerPredicate": "ControlledByYou"
+                    },
+                    "to": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "ChooseAction",
+                    "choices": [
+                        {
+                            "label": "Pay {G}: put a +1/+1 counter on Isu",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "PayManaCost",
+                                        "cost": "{G}"
+                                    },
+                                    {
+                                        "type": "AddCounters",
+                                        "counterType": "PLUS_ONE_PLUS_ONE",
+                                        "count": 1,
+                                        "target": "Self"
+                                    }
+                                ]
+                            },
+                            "feasibilityCheck": {
+                                "type": "CanPayMana",
+                                "cost": "{G}"
+                            }
+                        },
+                        {
+                            "label": "Pay {W}: put a +1/+1 counter on Isu",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "PayManaCost",
+                                        "cost": "{W}"
+                                    },
+                                    {
+                                        "type": "AddCounters",
+                                        "counterType": "PLUS_ONE_PLUS_ONE",
+                                        "count": 1,
+                                        "target": "Self"
+                                    }
+                                ]
+                            },
+                            "feasibilityCheck": {
+                                "type": "CanPayMana",
+                                "cost": "{W}"
+                            }
+                        },
+                        {
+                            "label": "Pay {U}: put a +1/+1 counter on Isu",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "PayManaCost",
+                                        "cost": "{U}"
+                                    },
+                                    {
+                                        "type": "AddCounters",
+                                        "counterType": "PLUS_ONE_PLUS_ONE",
+                                        "count": 1,
+                                        "target": "Self"
+                                    }
+                                ]
+                            },
+                            "feasibilityCheck": {
+                                "type": "CanPayMana",
+                                "cost": "{U}"
+                            }
+                        },
+                        {
+                            "label": "Don't pay",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "staticAbilities": [
+            "LookAtTopOfLibrary",
+            {
+                "type": "PlayLandsAndCastFilteredFromTopOfLibrary",
+                "spellFilter": {
+                    "cardPredicates": [
+                        "IsSnow"
+                    ]
+                },
+                "landFilter": {
+                    "cardPredicates": [
+                        "IsLand",
+                        "IsSnow"
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "12",
+        "rarity": "MYTHIC",
+        "artist": "Victor Adame Minguez",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/e/1e1d50c3-3219-49cb-8f63-c1faff93215c.jpg?1783919194",
+        "rulings": [
+            {
+                "date": "2022-12-02",
+                "text": "You must pay all costs and follow all timing rules for cards played from the top of your library this way. For example, you may play a snow land this way only while the stack is empty during one of your own main phases, and only if you haven't played a land yet this turn."
+            },
+            {
+                "date": "2022-12-02",
+                "text": "The top card of your library is still in your library and not in your hand. You can't discard cards from the top of your library or activate abilities of cards on top of your library that normally work in your hand."
+            }
+        ]
+    }
+}
+
+// Kenessos, Priest of Thassa
+{
+    "name": "Kenessos, Priest of Thassa",
+    "manaCost": "{1}{U}",
+    "typeLine": "Legendary Creature — Merfolk Cleric",
+    "oracleText": "If you would scry a number of cards, scry that many cards plus one instead.\n{3}{G/U}: Look at the top card of your library. If it's a Kraken, Leviathan, Octopus, or Serpent creature card, you may put it onto the battlefield. If you don't put the card onto the battlefield, you may put it on the bottom of your library.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 3
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Kenessos, Priest of Thassa:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{3}{G/U}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "creature Kraken|Leviathan|Octopus|Serpent",
+                            "storeSelected": "selected1",
+                            "storeRemainder": "remainder1",
+                            "selectedLabel": "Put onto the battlefield",
+                            "remainderLabel": "Leave"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "remainder1",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected3",
+                            "selectedLabel": "Put on bottom",
+                            "remainderLabel": "Leave on top"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected3",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "placement": "Bottom"
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "ModifyScryAmount",
+                "modifier": 1
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "13",
+        "rarity": "RARE",
+        "artist": "Joshua Raphael",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/b/0ba97da8-0106-4e8b-b58b-8f2d63e3d618.jpg?1783919191"
+    }
+}
+
+// Magnanimous Magistrate
+{
+    "name": "Magnanimous Magistrate",
+    "manaCost": "{5}{W}",
+    "typeLine": "Creature — Human Advisor",
+    "oracleText": "This creature enters with five reprieve counters on it.\nWhenever another nontoken creature you control dies, if its mana value was 1 or greater, you may remove that many reprieve counters from this creature. If you do, return that card to the battlefield under its owner's control.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Magnanimous Magistrate:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature nontoken ctrl:you",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "RemoveCounters",
+                            "counterType": "REPRIEVE",
+                            "count": {
+                                "type": "EntityProperty",
+                                "entity": "TriggeringEntity",
+                                "numericProperty": "ManaValue"
+                            },
+                            "target": "Self"
+                        }
+                    },
+                    "then": {
+                        "type": "MoveToZone",
+                        "target": "TriggeringEntity",
+                        "destination": "Battlefield"
+                    }
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": "TriggeringEntity",
+                        "numericProperty": "ManaValue"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithCounters",
+                "counterType": "REPRIEVE",
+                "count": 5,
+                "selfOnly": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "7",
+        "rarity": "UNCOMMON",
+        "artist": "Marie Magny",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/6/a6649e6c-bbd8-43db-9f3f-a24b32aed4e4.jpg?1783919194"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Merfolk Pupil
+{
+    "name": "Merfolk Pupil",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Merfolk Wizard",
+    "oracleText": "When this creature enters, draw a card, then discard a card.\n{1}{U}, Exile this card from your graveyard: Draw a card, then discard a card.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Merfolk Pupil:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand"
+                                    },
+                                    "storeAs": "hand"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "hand",
+                                    "selection": {
+                                        "type": "ChooseExactly",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "discarded",
+                                    "prompt": "Choose 1 card to discard"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "discarded",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Graveyard"
+                                    },
+                                    "moveType": "Discard"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Merfolk Pupil:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}{U}"
+                            }
+                        },
+                        "CostExileSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand"
+                                    },
+                                    "storeAs": "hand"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "hand",
+                                    "selection": {
+                                        "type": "ChooseExactly",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "discarded",
+                                    "prompt": "Choose 1 card to discard"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "discarded",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Graveyard"
+                                    },
+                                    "moveType": "Discard"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "activateFromZone": "Graveyard"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "15",
+        "artist": "Caroline Gariba",
+        "flavorText": "Maintaining a personal bubble is even more important when you have gills.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/2/42aacf99-39d1-4299-8557-6cc10ce9e35f.jpg"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Mild-Mannered Librarian
 {
     "name": "Mild-Mannered Librarian",
@@ -279,6 +932,406 @@
         "rarity": "UNCOMMON",
         "artist": "Justyna Dura",
         "imageUri": "https://cards.scryfall.io/normal/front/3/e/3eee6f29-ef06-47f6-99af-fb0ff88f09d0.jpg?1782699338"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Ogre Battlecaster
+{
+    "name": "Ogre Battlecaster",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Ogre Shaman",
+    "oracleText": "First strike\nWhenever this creature attacks, you may cast target instant or sorcery card from your graveyard by paying {R}{R} in addition to its other costs. If that spell would be put into a graveyard, exile it instead. When you cast that spell, this creature gets +X/+0 until end of turn, where X is that spell's mana value.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FIRST_STRIKE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ogre Battlecaster:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "ChosenTargets",
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": "Gate.MayDecide",
+                            "then": {
+                                "type": "Gated",
+                                "gate": {
+                                    "type": "Gate.DoAction",
+                                    "action": {
+                                        "type": "CastFromCollectionWithoutPayingCost",
+                                        "from": "gathered0",
+                                        "payManaCost": true,
+                                        "storeCastTo": "battlecasterCast",
+                                        "insteadOfGraveyard": "EXILE",
+                                        "additionalManaCost": "{R}{R}"
+                                    },
+                                    "successCriterion": {
+                                        "type": "SuccessCriterion.CollectionNonEmpty",
+                                        "name": "battlecasterCast"
+                                    }
+                                },
+                                "then": {
+                                    "type": "ReflexiveTrigger",
+                                    "action": {
+                                        "type": "Composite",
+                                        "effects": []
+                                    },
+                                    "optional": false,
+                                    "reflexiveEffect": {
+                                        "type": "ModifyStats",
+                                        "powerModifier": {
+                                            "type": "StoredCardManaValue",
+                                            "collectionName": "battlecasterCast"
+                                        },
+                                        "toughnessModifier": {
+                                            "type": "Fixed",
+                                            "amount": 0
+                                        },
+                                        "target": "Self"
+                                    },
+                                    "descriptionOverride": "This creature gets +X/+0 until end of turn, where X is that spell's mana value."
+                                }
+                            },
+                            "descriptionOverride": "You may cast target instant or sorcery card from your graveyard by paying {R}{R} in addition to its other costs."
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "instant|sorcery own:you",
+                        "zone": "Graveyard"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "Whenever this creature attacks, you may cast target instant or sorcery card from your graveyard by paying {R}{R} in addition to its other costs. If that spell would be put into a graveyard, exile it instead. When you cast that spell, this creature gets +X/+0 until end of turn, where X is that spell's mana value."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "36",
+        "rarity": "RARE",
+        "artist": "Javier Charro",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/9/298f1ab2-4c66-4d91-8f6a-1bad230632df.jpg?1783919183",
+        "rulings": [
+            {
+                "date": "2022-12-02",
+                "text": "You must cast the spell as Ogre Battlecaster's triggered ability resolves. You can't wait and cast it later."
+            }
+        ]
+    }
+}
+
+// Plundering Predator
+{
+    "name": "Plundering Predator",
+    "manaCost": "{4}{R}",
+    "typeLine": "Creature — Dragon",
+    "oracleText": "Flying\nWhen this creature enters, you may discard a card. If you do, draw a card.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Plundering Predator:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.DoAction",
+                            "action": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromZone",
+                                            "zone": "Hand"
+                                        },
+                                        "storeAs": "hand"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "hand",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "discarded",
+                                        "prompt": "Choose 1 card to discard"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "discarded",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        },
+                                        "moveType": "Discard"
+                                    }
+                                ]
+                            }
+                        },
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "37",
+        "artist": "Lucas Graciano",
+        "flavorText": "You can gather a tidy fortune if you can avoid getting clobbered by falling treasure.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/4/f48b3f46-0e62-4f44-8064-857cd3040659.jpg"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Primeval Herald
+{
+    "name": "Primeval Herald",
+    "manaCost": "{3}{G}",
+    "typeLine": "Creature — Elf Scout",
+    "oracleText": "Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)\nWhenever this creature enters or attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 1
+    },
+    "keywords": [
+        "TRAMPLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Primeval Herald:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Library",
+                                    "filter": "basicland"
+                                },
+                                "storeAs": "searchable",
+                                "search": true
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "searchable",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "found"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "found",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Battlefield",
+                                    "placement": "Tapped"
+                                }
+                            },
+                            "ShuffleLibrary",
+                            "EmitLibrarySearchedEvent"
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "Primeval Herald:2",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Library",
+                                    "filter": "basicland"
+                                },
+                                "storeAs": "searchable",
+                                "search": true
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "searchable",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "found"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "found",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Battlefield",
+                                    "placement": "Tapped"
+                                }
+                            },
+                            "ShuffleLibrary",
+                            "EmitLibrarySearchedEvent"
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "42",
+        "rarity": "UNCOMMON",
+        "artist": "Tatiana Kirgetova",
+        "flavorText": "When they call, nature answers.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/b/fbb0a91b-246b-4c1f-9b98-2ad6ff1ba124.jpg"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Runadi, Behemoth Caller
+{
+    "name": "Runadi, Behemoth Caller",
+    "manaCost": "{2}{G}",
+    "typeLine": "Legendary Creature — Cat Shaman",
+    "oracleText": "Whenever you cast a creature spell with mana value 5 or greater, that creature enters with X additional +1/+1 counters on it, where X is its mana value minus 4.\nCreatures you control with three or more +1/+1 counters on them have haste.\n{T}: Add {G}.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Runadi, Behemoth Caller:1",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "ManaValueAtLeast",
+                                "min": 5
+                            }
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddDynamicCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "amount": {
+                        "type": "Subtract",
+                        "left": {
+                            "type": "EntityProperty",
+                            "entity": "TriggeringEntity",
+                            "numericProperty": "ManaValue"
+                        },
+                        "right": {
+                            "type": "Fixed",
+                            "amount": 4
+                        }
+                    },
+                    "target": "TriggeringEntity"
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Runadi, Behemoth Caller:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "GREEN"
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantKeyword",
+                "keyword": "HASTE",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature"
+                        ],
+                        "statePredicates": [
+                            {
+                                "type": "HasCounter",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "minCount": 3
+                            }
+                        ],
+                        "controllerPredicate": "ControlledByYou"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "44",
+        "rarity": "RARE",
+        "artist": "Billy Christian",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/4/f4f5500f-e82c-44f3-8be8-cee4c86824b1.jpg?1783919179"
     },
     "colorIdentityOverride": [
         "GREEN"
@@ -406,5 +1459,39 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Towering Gibbon
+{
+    "name": "Towering Gibbon",
+    "manaCost": "{3}{G}",
+    "typeLine": "Creature — Ape",
+    "oracleText": "Reach\nTowering Gibbon's power is equal to the greatest mana value among creatures you control.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": "creature",
+                "aggregation": "MAX",
+                "property": "MANA_VALUE"
+            }
+        },
+        "toughness": 4
+    },
+    "keywords": [
+        "REACH"
+    ],
+    "metadata": {
+        "collectorNumber": "46",
+        "rarity": "UNCOMMON",
+        "artist": "Chris Seaman",
+        "flavorText": "\"Don't worry, folks. We're perfectly safe here. That's a banana processing plant.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/1/b14a22aa-0f79-4497-a7ff-08d92d14bc0f.jpg"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }

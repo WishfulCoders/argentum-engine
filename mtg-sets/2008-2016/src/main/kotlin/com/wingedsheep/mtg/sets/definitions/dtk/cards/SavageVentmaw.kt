@@ -18,8 +18,8 @@ import com.wingedsheep.sdk.scripting.effects.ManaExpiry
  * Whenever this creature attacks, add {R}{R}{R}{G}{G}{G}. Until end of turn, you don't
  * lose this mana as steps and phases end.
  *
- * Pools empty as each step and phase ends, so the "until end of turn, you don't lose this mana"
- * clause is [ManaExpiry.UNTIL_END_OF_TURN] on each colour's mana.
+ * The "until end of turn, you don't lose this mana as steps and phases end" clause is
+ * [ManaExpiry.KEPT_UNTIL_END_OF_TURN]: the mana survives every step/phase-end emptying this turn.
  */
 val SavageVentmaw = card("Savage Ventmaw") {
     manaCost = "{4}{R}{G}"
@@ -35,8 +35,10 @@ val SavageVentmaw = card("Savage Ventmaw") {
 
     triggeredAbility {
         trigger = Triggers.self.attacks()
-        effect = Effects.AddMana(Color.RED, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN) then
-            Effects.AddMana(Color.GREEN, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN)
+        effect = Effects.AddMana(Color.RED, 3, expiry = ManaExpiry.KEPT_UNTIL_END_OF_TURN) then
+            Effects.AddMana(Color.GREEN, 3, expiry = ManaExpiry.KEPT_UNTIL_END_OF_TURN)
+        description = "Whenever this creature attacks, add {R}{R}{R}{G}{G}{G}. Until end of turn, you " +
+            "don't lose this mana as steps and phases end."
     }
 
     metadata {

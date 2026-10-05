@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.event
 
+import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.handlers.DependentTargetSelection
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.DecisionHandler
@@ -19,12 +20,15 @@ import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
 import com.wingedsheep.sdk.dsl.LibraryPatterns
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityId
+import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
+import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.isConsentGate
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
@@ -182,6 +186,7 @@ class TriggerProcessor(
             requirement = targetRequirement,
             controllerId = trigger.controllerId,
             sourceId = trigger.sourceId,
+            targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
             triggeringEntityId = trigger.triggerContext.triggeringEntityId,
             // Carry the triggering player so a "target … that player controls" filter
             // (ControllerPredicate.ControlledByTriggeringPlayer / ControlledByReferencedPlayer over
@@ -313,8 +318,8 @@ class TriggerProcessor(
             currentState = currentState.removeDelayedTriggers(setOf(delayedId))
         }
 
-        // Mark once-per-turn triggers as fired so they don't trigger again this turn
-        if (ability.oncePerTurn) {
+        // Count a per-turn-capped trigger's firing so it stops triggering once the cap is spent
+        if (ability.perTurnTriggerCap != null) {
             currentState = markTriggerFired(currentState, trigger.sourceId, ability.id)
         }
         // Mark "triggers only once" abilities as fired so they never trigger again while the
@@ -429,6 +434,7 @@ class TriggerProcessor(
             requirement = targetRequirement,
             controllerId = trigger.controllerId,
             sourceId = trigger.sourceId,
+            targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
             triggeringEntityId = trigger.triggerContext.triggeringEntityId,
             // Carry the triggering player so a "target … that player controls" filter
             // (ControllerPredicate.ControlledByTriggeringPlayer / ControlledByReferencedPlayer over
@@ -548,6 +554,7 @@ class TriggerProcessor(
             requirement = targetRequirement,
             controllerId = trigger.controllerId,
             sourceId = trigger.sourceId,
+            targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
             triggeringEntityId = trigger.triggerContext.triggeringEntityId,
             // Carry the triggering player so a "target … that player controls" filter
             // (ControllerPredicate.ControlledByTriggeringPlayer / ControlledByReferencedPlayer over
@@ -656,6 +663,7 @@ class TriggerProcessor(
                 requirement = req,
                 controllerId = trigger.controllerId,
                 sourceId = trigger.sourceId,
+                targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
                 triggeringEntityId = trigger.triggerContext.triggeringEntityId,
                 // Carry the triggering player so "target … that player controls" filters
                 // (ControllerPredicate.ControlledByReferencedPlayer over Player.TriggeringPlayer)
@@ -736,14 +744,12 @@ class TriggerProcessor(
             // for an unlimited requirement) would wrongly clamp the decision to a single target.
             val legalCount = allLegalTargets[index]?.size ?: 0
             val maxTargets = when {
-                // "Up to one ... of each card type" can never take more targets than there are
-                // distinct card types among the legal ones.
+                // "Up to one ... of each card type" can never take more targets than can each
+                // claim a distinct card type — a maximum matching, not the count of types present.
                 (req as? com.wingedsheep.sdk.scripting.targets.TargetObject)?.onePerCardType == true ->
-                    minOf(
-                        legalCount,
+                    com.wingedsheep.engine.mechanics.targeting.OnePerCardType.maxDistinctAssignment(
                         allLegalTargets[index].orEmpty()
-                            .flatMapTo(mutableSetOf()) { com.wingedsheep.engine.mechanics.targeting.OnePerCardType.cardTypesOf(state, it) }
-                            .size,
+                            .map { com.wingedsheep.engine.mechanics.targeting.OnePerCardType.cardTypesOf(state, it) }
                     )
                 req.unlimited -> legalCount
                 else -> req.count
@@ -796,6 +802,7 @@ class TriggerProcessor(
             legalTargets = allLegalTargets,
             effectHint = effectHint,
             answer = TriggeredAbilityContinuation(
+                resolvingTriggeredAbility = trigger.rulesText,
                 sourceId = trigger.sourceId,
                 sourceName = trigger.sourceName,
                 sourceBattlefieldTimestamp = trigger.sourceBattlefieldTimestamp,
@@ -809,7 +816,8 @@ class TriggerProcessor(
                 targetRequirements = allRequirements,
                 sequentialTargets = if (sequential) emptyList() else null,
                 carriedPipeline = trigger.carriedPipeline,
-                interveningIf = ability.interveningIf
+                interveningIf = ability.interveningIf,
+                isBackup = ability.isBackup
             ),
         )
 
@@ -836,6 +844,7 @@ class TriggerProcessor(
         val ability = trigger.ability
 
         val abilityComponent = TriggeredAbilityOnStackComponent(
+            resolvingTriggeredAbility = trigger.rulesText,
             sourceId = trigger.sourceId,
             sourceBattlefieldTimestamp = trigger.sourceBattlefieldTimestamp,
             objectReferences = trigger.objectReferences,
@@ -859,7 +868,9 @@ class TriggerProcessor(
             carriedPipeline = trigger.carriedPipeline,
             // CR 603.4 — the intervening-"if" travels with the object so the resolver can check it
             // the second time. A `triggerRestriction` deliberately does not.
-            interveningIf = ability.interveningIf
+            interveningIf = ability.interveningIf,
+            isBackup = ability.isBackup,
+            stateTriggerAbilityId = ability.id.takeIf { ability.trigger == EventPattern.StateConditionMetEvent }
         )
 
         val causedByAttack = isAttackCausedTrigger(trigger)
@@ -901,8 +912,8 @@ class TriggerProcessor(
      *
      * A [ModalEffect.dynamicChooseCount] ("choose up to X") is evaluated here, once, against the
      * state the ability is going onto the stack in — CR 601.2c (reached via 603.3d) fixes the count
-     * at that moment, so it can't drift as the picks are made. The floor drops to 0 because "up to"
-     * always permits picking none; that mirrors the resolution-time evaluation in
+     * at that moment, so it can't drift as the picks are made. An explicit dynamic minimum is
+     * evaluated in the same context; otherwise the floor drops to 0 for "up to". This mirrors
      * [com.wingedsheep.engine.handlers.effects.composite.ModalEffectExecutor], which still serves
      * modal *activated* abilities and nested modals.
      */
@@ -911,14 +922,18 @@ class TriggerProcessor(
         ability: TriggeredAbilityOnStackComponent,
         modal: ModalEffect
     ): Pair<Int, Int> {
-        val dynamic = modal.dynamicChooseCount
-            ?: return modal.chooseCount to modal.minChooseCount
-        val evaluated = amountEvaluator.evaluate(
-            state,
-            dynamic,
-            EffectContext.forTriggeredAbility(ability)
-        )
-        return evaluated.coerceIn(0, modal.modes.size) to 0
+        if (modal.dynamicChooseCount == null && modal.dynamicMinChooseCount == null) {
+            return modal.chooseCount to modal.minChooseCount
+        }
+        val context = EffectContext.forTriggeredAbility(ability)
+        val floor = modal.dynamicMinChooseCount?.let {
+            amountEvaluator.evaluate(state, it, context)
+        } ?: if (modal.dynamicChooseCount != null) 0 else modal.minChooseCount
+        val minimum = floor.coerceIn(0, modal.modes.size)
+        val maximum = modal.dynamicChooseCount?.let {
+            amountEvaluator.evaluate(state, it, context)
+        } ?: modal.chooseCount
+        return maximum.coerceIn(minimum, modal.modes.size) to minimum
     }
 
     /**
@@ -1190,6 +1205,7 @@ class TriggerProcessor(
         requirement = requirement,
         controllerId = ability.controllerId,
         sourceId = ability.sourceId,
+        targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
         triggeringEntityId = ability.triggerContext?.triggeringEntityId,
         pipelineContext = com.wingedsheep.engine.handlers.PredicateContext(
             controllerId = ability.controllerId,
@@ -1309,6 +1325,8 @@ class TriggerProcessor(
             is SelectionMode.ChooseExactly -> sel.count
             else -> null
         }
+        // A scry's selection is "any number of the looked-at cards", so its X lives on the gather.
+        is GatherCardsEffect -> (effect.source as? CardSource.TopOfLibrary)?.takeIf { it.isScry }?.count
         is CompositeEffect -> effect.effects.firstNotNullOfOrNull { findSelectionAmount(it) }
         // Library macros (scry/surveil) are opaque nodes — expand to their pipeline before walking.
         else -> LibraryPatterns.expandMacro(effect)?.let { findSelectionAmount(it) }
@@ -1569,7 +1587,7 @@ class TriggerProcessor(
         ability.copy(effect = loweredEffectBudget(ability.effect, ability.id))
 
     /**
-     * Mark a once-per-turn triggered ability as fired on its source entity.
+     * Count one firing of a per-turn-capped triggered ability on its source entity.
      */
     private fun markTriggerFired(state: GameState, sourceId: EntityId, abilityId: AbilityId): GameState {
         val entity = state.getEntity(sourceId) ?: return state

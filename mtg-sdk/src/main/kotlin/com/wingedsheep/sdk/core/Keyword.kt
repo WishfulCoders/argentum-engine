@@ -40,6 +40,12 @@ enum class Keyword(val displayName: String) {
     FLANKING("Flanking"),
 
     /**
+     * Exalted (CR 702.83) — engine-live: the "attacks alone" pump is derived from the projected
+     * keyword, one trigger per instance. See [com.wingedsheep.sdk.scripting.Exalted].
+     */
+    EXALTED("Exalted"),
+
+    /**
      * Banding (CR 702.22). As they declare attackers, a player may group one or more
      * attacking creatures with banding plus up to one without banding into a "band"
      * (CR 702.22c). A band attacks the same defender and is blocked as a group.
@@ -60,6 +66,16 @@ enum class Keyword(val displayName: String) {
     WARD("Ward"),
     PROTECTION("Protection"),
     PROTECTION_FROM_EACH_OPPONENT("Protection from each opponent"),
+
+    /**
+     * Umbra armor (CR 702.89a; printed as "totem armor" before 2023, CR 702.89b). A static ability
+     * on an Aura: "If enchanted permanent would be destroyed, instead remove all damage marked on it
+     * and destroy this Aura." Carried by the **Aura**, not its host, and read through projection, so a
+     * conditional self-grant ("Otherwise, this Aura has umbra armor" — Dog Umbra) works like any
+     * keyword grant. The engine applies it at every destruction chokepoint (destroy effects, board
+     * wipes, the lethal-damage/deathtouch state-based action); see `ZoneMovementUtils.findUmbraArmorAura`.
+     */
+    UMBRA_ARMOR("Umbra armor"),
 
     // ── Speed ────────────────────────────────────────────────
     HASTE("Haste"),
@@ -217,6 +233,15 @@ enum class Keyword(val displayName: String) {
     MAYHEM("Mayhem"),
 
     /**
+     * Escape [cost] (CR 702.138, Theros Beyond Death). "You may cast this card from your graveyard
+     * by paying [cost] rather than paying its mana cost." The cost is usually mana plus "exile N
+     * other cards from your graveyard". Like [MAYHEM] and unlike [FLASHBACK]/[HARMONIZE] the spell
+     * is NOT exiled on resolution — an escaped permanent stays, and "escapes with …" riders read
+     * `Conditions.Escaped`. See [com.wingedsheep.sdk.scripting.KeywordAbility.Escape].
+     */
+    ESCAPE("Escape"),
+
+    /**
      * Madness [cost] (CR 702.35). "If you discard this card, discard it into exile. When you do,
      * cast it for its madness cost or put it into your graveyard."
      *
@@ -248,6 +273,9 @@ enum class Keyword(val displayName: String) {
      */
     DISTURB("Disturb"),
     EVOKE("Evoke"),
+    BESTOW("Bestow"),
+    /** Prototype (CR 702.160) — see [com.wingedsheep.sdk.scripting.KeywordAbility.Prototype]. */
+    PROTOTYPE("Prototype"),
 
     /**
      * Sneak [cost] (CR 702.190, Teenage Mutant Ninja Turtles).
@@ -339,6 +367,14 @@ enum class Keyword(val displayName: String) {
      * [com.wingedsheep.sdk.scripting.GrantKeywordToOwnSpells.keywordParameter] (granted).
      */
     CASUALTY("Casualty"),
+
+    /**
+     * Replicate (CR 702.56). "As an additional cost to cast this spell, you may pay [cost] any
+     * number of times" plus "when you cast this spell, copy it for each time its replicate cost was
+     * paid." Carried by [com.wingedsheep.sdk.scripting.KeywordAbility.replicate] on the
+     * optional-additional-cost rail, declaring [com.wingedsheep.sdk.scripting.ChoiceSlot.REPLICATED].
+     */
+    REPLICATE("Replicate"),
 
     /**
      * Bargain (CR 702.166, Wilds of Eldraine). A static ability that functions while the spell is
@@ -436,11 +472,25 @@ enum class Keyword(val displayName: String) {
      * explicitly ([com.wingedsheep.sdk.model.CardScript.cleaveSpellEffect] /
      * [com.wingedsheep.sdk.model.CardScript.cleaveTargetRequirements]) — a structural swap done at
      * cast time, not a cosmetic text edit, so e.g. a delayed triggered ability inside brackets is
-     * never created at all (Alchemist's Gambit ruling). Cleave never changes mana value (CR 202.3b —
+     * never created at all (Alchemist's Gambit ruling). Cleave never changes mana value (CR 118.9c —
      * mana value is always computed from the printed mana cost). Wired by the `cleave(cost) { }` DSL
      * helper on [com.wingedsheep.sdk.dsl.CardBuilder].
      */
     CLEAVE("Cleave"),
+
+    /**
+     * Overload [cost] (CR 702.96, Return to Ravnica). Two static abilities that function while a
+     * spell with overload is on the stack (CR 702.96a): "You may choose to pay [cost] rather than pay
+     * this spell's mana cost" and "If you chose to pay this spell's overload cost, change its text by
+     * replacing all instances of the word 'target' with the word 'each.'" An overloaded spell has no
+     * targets (CR 702.96b).
+     *
+     * Modelled like [CLEAVE]: an alternative cost ([com.wingedsheep.sdk.scripting.KeywordAbility.Overload])
+     * whose paid branch swaps in the "each" variant the card author writes explicitly
+     * ([com.wingedsheep.sdk.model.CardScript.overloadSpellEffect]) and drops every target
+     * requirement. Never changes mana value (CR 118.9c).
+     */
+    OVERLOAD("Overload"),
 
     /**
      * Daybound (CR 702.145, Innistrad: Midnight Hunt / Crimson Vow). Found on the **front** faces of
@@ -643,6 +693,17 @@ enum class Keyword(val displayName: String) {
     TRAINING("Training"),
 
     /**
+     * Mentor (CR 702.134, Ravnica Allegiance). A triggered ability: "Whenever this creature
+     * attacks, put a +1/+1 counter on target attacking creature with lesser power."
+     *
+     * The keyword itself is display-only; the behavior is composed by the `mentor()` DSL helper on
+     * [com.wingedsheep.sdk.dsl.CardBuilder] (or [com.wingedsheep.sdk.dsl.mentorTriggeredAbility] for a
+     * grant) — an attack trigger targeting `Creature.attacking().powerLessThanEntity(Self)`. The
+     * power comparison reads the mentor creature's last-known power once it has left the battlefield.
+     */
+    MENTOR("Mentor"),
+
+    /**
      * Evolve (CR 702.100, Gatecrash). A triggered ability: "Whenever a creature you control enters,
      * if that creature's power is greater than this creature's power and/or that creature's
      * toughness is greater than this creature's toughness, put a +1/+1 counter on this creature."
@@ -749,6 +810,31 @@ enum class Keyword(val displayName: String) {
      * source Equipment to that token.
      */
     JOB_SELECT("Job select"),
+
+    /**
+     * For Mirrodin! (Phyrexia: All Will Be One). A keyword ability on Equipment:
+     * "When this Equipment enters, create a 2/2 red Rebel creature token, then attach
+     * this to it."
+     *
+     * Display-only on the keyword; the behavior is the enters-the-battlefield triggered
+     * ability wired by the `forMirrodin()` DSL helper on
+     * [com.wingedsheep.sdk.dsl.CardBuilder] — the same create-then-attach token-pipeline
+     * chain as [JOB_SELECT], with a 2/2 red Rebel in place of the 1/1 colorless Hero.
+     */
+    FOR_MIRRODIN("For Mirrodin!"),
+
+    /**
+     * Compleated (CR 702.150). A static ability on planeswalkers with Phyrexian mana in their
+     * cost: "If this permanent would enter with one or more loyalty counters on it and the player
+     * who cast it chose to pay life for any part of its cost represented by Phyrexian mana
+     * symbols, it instead enters the battlefield with that many loyalty counters minus two for
+     * each of those mana symbols."
+     *
+     * Read by the engine at resolution: the cast records how many Phyrexian pips were paid with
+     * life on the spell, and the planeswalker's starting-loyalty entry replacement subtracts two
+     * per pip when the card has this keyword.
+     */
+    COMPLEATED("Compleated"),
 
     // ── Ability words (display prefix, no uniform mechanic) ──
     /**

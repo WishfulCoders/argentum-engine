@@ -35,6 +35,18 @@ data object IsNotYourTurn : Condition {
 }
 
 /**
+ * Condition: "If it's an opponent's turn" — the active player is one of the controller's
+ * opponents. Distinct from [IsNotYourTurn] in a team game: a teammate's turn is "not your turn" but
+ * is never an opponent's turn (CR 808.4 Team vs. Team, where each teammate takes their own turn), so
+ * "whenever you cast a spell during an opponent's turn" must not fire on an ally's turn.
+ */
+@SerialName("IsOpponentsTurn")
+@Serializable
+data object IsOpponentsTurn : Condition {
+    override val description: String = "if it's an opponent's turn"
+}
+
+/**
  * Condition: "If it's [player]'s turn" — the [Player]-parametric form of [IsYourTurn], for a
  * turn check relative to a player other than the ability's controller. Pairs with
  * `Conditions.Not(...)` for the "if it's not their turn" wording where "their" is a non-controller
@@ -386,6 +398,74 @@ data class PutCounterKindOnCreatureThisTurn(
     override val description: String =
         "if ${player.description} put one or more ${counterType?.let { "${it.printed} " } ?: ""}counters on a " +
             "creature this turn"
+}
+
+/**
+ * Condition: "if a [counterType] counter was put on a permanent under [player]'s control this turn"
+ * — Fairgrounds Trumpeter's end-step gate.
+ *
+ * ### Why this is not `PutCounterKindOnCreatureThisTurn`
+ *
+ * That condition is keyed on the player who *put* the counter and only counts creatures ("you've
+ * put one or more +1/+1 counters on a creature"). This one is keyed on the *recipient's controller*
+ * and counts any permanent: an opponent's Wither creature putting -1/-1 counters on your land-creature,
+ * or your own Proliferate on your artifact, both count here, and a counter you put on an opponent's
+ * creature does not. The two axes are orthogonal, so neither can be spelled as a parameter of the
+ * other without one of them answering a question its name doesn't ask.
+ *
+ * Turn history, not a board scan: the permanent had to be under [player]'s control as the counter
+ * was placed, and it doesn't matter whether it still is or still has the counter (the card's
+ * ruling). `null` [counterType] is the kind-agnostic reading.
+ */
+@SerialName("CounterPutOnPermanentYouControlledThisTurn")
+@Serializable
+data class CounterPutOnPermanentYouControlledThisTurn(
+    val counterType: CounterType? = null,
+    val player: Player = Player.You
+) : Condition {
+    override val description: String =
+        "if ${counterType?.let { "a ${it.printed} counter" } ?: "a counter"} was put on a permanent " +
+            "${player.description} controlled this turn"
+}
+
+/**
+ * Condition: "if a [counterType] counter was removed from a permanent [player] controlled this turn"
+ * — the first half of Churning Reservoir's activation gate.
+ *
+ * The removal-side mirror of [CounterPutOnPermanentYouControlledThisTurn]: keyed on who controlled
+ * the permanent *as the counter left it*, whoever removed it and however (a cost, an effect, a -1/-1
+ * and +1/+1 annihilation). Turn history, not a board scan: the permanent may since have left the
+ * battlefield or changed control. Counters leaving a player, or a card that isn't a permanent (a
+ * suspended card's time counters), don't count. `null` [counterType] is "a counter" of any kind.
+ */
+@SerialName("CounterRemovedFromPermanentYouControlledThisTurn")
+@Serializable
+data class CounterRemovedFromPermanentYouControlledThisTurn(
+    val counterType: CounterType? = null,
+    val player: Player = Player.You
+) : Condition {
+    override val description: String =
+        "if ${counterType?.let { "a ${it.printed} counter" } ?: "a counter"} was removed from a " +
+            "permanent ${player.description} controlled this turn"
+}
+
+/**
+ * Condition: "if a permanent with a [counterType] counter on it was put into a graveyard this turn"
+ * — the second half of Churning Reservoir's activation gate.
+ *
+ * Game-wide: any permanent, any controller, from the battlefield to a graveyard. The counter is read
+ * off the permanent's last-known information as it left, so a permanent that died with the counter
+ * counts even though the card in the graveyard has none. `null` [counterType] is "with a counter on
+ * it" of any kind.
+ */
+@SerialName("PermanentWithCounterPutIntoGraveyardThisTurn")
+@Serializable
+data class PermanentWithCounterPutIntoGraveyardThisTurn(
+    val counterType: CounterType? = null
+) : Condition {
+    override val description: String =
+        "if a permanent with ${counterType?.let { "a ${it.printed} counter" } ?: "a counter"} on it " +
+            "was put into a graveyard this turn"
 }
 
 /**

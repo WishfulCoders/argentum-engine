@@ -34,6 +34,29 @@ object ManaSpentReader {
         return IntArray(5)
     }
 
+    /** Colorless mana actually spent, including payment of generic costs. */
+    fun colorlessSpent(state: GameState, entityId: EntityId): Int {
+        val container = state.getEntity(entityId) ?: return 0
+        return container.get<SpellOnStackComponent>()?.manaSpentColorless
+            ?: container.get<CastRecordComponent>()?.colorlessSpent ?: 0
+    }
+
+    /** Freeze a cast's payment for abilities that outlive the spell object. */
+    fun snapshot(state: GameState, entityId: EntityId): CastRecordComponent {
+        val container = state.getEntity(entityId) ?: return CastRecordComponent()
+        container.get<SpellOnStackComponent>()?.let {
+            return CastRecordComponent(
+                whiteSpent = it.manaSpentWhite, blueSpent = it.manaSpentBlue,
+                blackSpent = it.manaSpentBlack, redSpent = it.manaSpentRed,
+                greenSpent = it.manaSpentGreen, colorlessSpent = it.manaSpentColorless,
+                manaSpentBySubtype = it.manaSpentBySubtype,
+                manaSpentByCardType = it.manaSpentByCardType,
+                snowSpent = it.manaSpentSnow
+            )
+        }
+        return container.get<CastRecordComponent>() ?: CastRecordComponent()
+    }
+
     /** Total mana (all colors plus colorless) spent to cast [entityId]; 0 if it wasn't cast. */
     fun totalSpent(state: GameState, entityId: EntityId): Int {
         val container = state.getEntity(entityId) ?: return 0
@@ -66,6 +89,28 @@ object ManaSpentReader {
         val container = state.getEntity(entityId) ?: return 0
         container.get<SpellOnStackComponent>()?.let { return it.manaSpentBySubtype[subtype] ?: 0 }
         container.get<CastRecordComponent>()?.let { return it.manaSpentBySubtype[subtype] ?: 0 }
+        return 0
+    }
+
+    /**
+     * How much mana from snow sources was spent to cast [entityId] — the "{S} spent" of CR 107.4h —
+     * same stack-then-cast-record read as [subtypeSpent]. Backs `DynamicAmount.SnowManaSpent`.
+     */
+    fun snowSpent(state: GameState, entityId: EntityId): Int {
+        val container = state.getEntity(entityId) ?: return 0
+        return container.get<SpellOnStackComponent>()?.manaSpentSnow
+            ?: container.get<CastRecordComponent>()?.snowSpent ?: 0
+    }
+
+    /**
+     * How many mana units produced by a source of [cardType] were spent to cast [entityId] — same
+     * stack-then-cast-record read as [subtypeSpent]. Backs
+     * `SpellCastPredicate.PaidWithManaFromCardType` (Inga and Esika's "mana from creatures").
+     */
+    fun cardTypeSpent(state: GameState, entityId: EntityId, cardType: com.wingedsheep.sdk.core.CardType): Int {
+        val container = state.getEntity(entityId) ?: return 0
+        container.get<SpellOnStackComponent>()?.let { return it.manaSpentByCardType[cardType] ?: 0 }
+        container.get<CastRecordComponent>()?.let { return it.manaSpentByCardType[cardType] ?: 0 }
         return 0
     }
 }

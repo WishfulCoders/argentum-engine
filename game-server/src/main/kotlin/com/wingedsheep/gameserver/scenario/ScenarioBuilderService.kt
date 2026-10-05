@@ -161,6 +161,7 @@ class ScenarioBuilderService(
         request.activePlayer?.let { builder.withActivePlayer(it) }
         request.priorityPlayer?.let { builder.withPriorityPlayer(it) }
         request.teams?.let { builder.withTeams(it, teamVsTeam = request.teamVsTeam == true) }
+        request.attackMode?.let { builder.withAttackMode(it) }
 
         val (state, playerIds) = builder.build()
         return ScenarioBuildResult(state, playerIds, registry)
@@ -205,7 +206,7 @@ class ScenarioBuilderService(
      */
     private class ScenarioBuilder(private val cardRegistry: CardRegistry) {
         private val entityIdCounter = AtomicLong(1000)
-        private var state = GameState()
+        private var state = GameState(preserveGraveyardOrder = true)
 
         private val playerIds = mutableListOf<EntityId>()
 
@@ -462,6 +463,12 @@ class ScenarioBuilderService(
             return this
         }
 
+        /** The Free-for-All attack rule (CR 802 / 803) — what a lobby's `attackMode` threads through `GameConfig`. */
+        fun withAttackMode(mode: com.wingedsheep.sdk.core.AttackMode): ScenarioBuilder {
+            state = state.copy(attackMode = mode)
+            return this
+        }
+
         fun build(): Pair<GameState, List<EntityId>> {
             return state to playerIds.toList()
         }
@@ -498,6 +505,7 @@ class ScenarioBuilderService(
                 // craft material filter). Omitting them made scenario permanents look ability-less.
                 hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
                 hasActivatedAbility = cardDef.hasActivatedAbility,
+                hasCycling = cardDef.hasCycling,
                 // Mirror CardEntityFactory so CardPredicate.HasAdventure (Frantic Firebolt's
                 // graveyard tally) sees adventurer cards created in dev scenarios.
                 hasAdventure = cardDef.isAdventure,

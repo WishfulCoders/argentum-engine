@@ -189,9 +189,21 @@ class PreventDamageExecutor(
                 effectSourceName = context.sourceId?.let { state.getEntity(it)?.get<CardComponent>()?.name },
                 onPrevented = effect.onPrevented,
                 preventDamage = effect.preventDamage,
-                objectReferences = context.objectReferences
+                objectReferences = context.objectReferences,
+                combatOnly = effect.scope == PreventionScope.CombatOnly,
+                playersOnly = effect.toPlayersOnly,
+                duration = effect.duration
             )
             return EffectResult.success(newState)
+        }
+
+        // Only the prevent-and-react source shield above can tell a player recipient from a
+        // permanent one; any other lowering would prevent damage to the wrong recipients.
+        if (effect.toPlayersOnly) {
+            return EffectResult.error(
+                state,
+                "PreventDamageEffect.toPlayersOnly needs direction = FromTarget with an onPrevented reaction"
+            )
         }
 
         // Determine affected entities
@@ -222,7 +234,7 @@ class PreventDamageExecutor(
             sourceFilter != null && effect.nextInstanceOnly &&
             effect.direction == PreventionDirection.ToTarget -> {
                 val targetId = context.resolveTarget(effect.target)
-                    ?: return EffectResult.error(state, "Could not resolve target for PreventDamageEffect")
+                    ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
                 modification = SerializableModification.PreventNextDamageFromMatching(sourceFilter)
             }
@@ -277,7 +289,7 @@ class PreventDamageExecutor(
             effect.direction == PreventionDirection.ToTarget &&
             effect.amount == null -> {
                 val targetId = context.resolveTarget(effect.target)
-                    ?: return EffectResult.error(state, "Could not resolve target for PreventDamageEffect")
+                    ?: return EffectResult.success(state)
                 state.getEntity(targetId) ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
                 modification = SerializableModification.PreventAllDamageTo(combatOnly = true)
@@ -306,7 +318,7 @@ class PreventDamageExecutor(
             // controller life for what it prevents (Candles' Glow).
             effect.amount != null -> {
                 val targetId = context.resolveTarget(effect.target)
-                    ?: return EffectResult.error(state, "Could not resolve target for PreventDamageEffect")
+                    ?: return EffectResult.success(state)
                 val effectAmount = effect.amount!!
                 val amount = amountEvaluator.evaluate(state, effectAmount, context)
                 if (amount <= 0) return EffectResult.success(state)
@@ -321,7 +333,7 @@ class PreventDamageExecutor(
             effect.direction == PreventionDirection.ToTarget &&
             effect.scope == PreventionScope.AllDamage -> {
                 val targetId = context.resolveTarget(effect.target)
-                    ?: return EffectResult.error(state, "Could not resolve target for PreventDamageEffect")
+                    ?: return EffectResult.success(state)
                 state.getEntity(targetId) ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
                 modification = SerializableModification.PreventAllDamageTo()

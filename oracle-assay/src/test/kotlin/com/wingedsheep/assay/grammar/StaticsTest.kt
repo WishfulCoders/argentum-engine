@@ -3,6 +3,7 @@ package com.wingedsheep.assay.grammar
 import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.assay.syntax.parseLine
 import com.wingedsheep.assay.syntax.printLine
+import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
@@ -23,6 +24,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.dsl.Conditions as SdkConditions
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -68,6 +70,31 @@ class StaticsTest : StringSpec({
             CardFragment(script = CardScript(staticAbilities = listOf(ModifyStats(1, 2))))
         roundTrips("Enchanted creature gets +1/+2.")
         roundTrips("Enchanted creature gets -3/-0.")
+    }
+
+    // Shackles. The untap lock is the DOESNT_UNTAP flag riding GrantKeyword's string field at the
+    // aura default filter.
+    "the untap-lock aura is the DOESNT_UNTAP grant at the aura default" {
+        fragment("Enchanted creature doesn't untap during its controller's untap step.") shouldBe
+            CardFragment(script = CardScript(staticAbilities = listOf(GrantKeyword(AbilityFlag.DOESNT_UNTAP.name))))
+        roundTrips("Enchanted creature doesn't untap during its controller's untap step.")
+        // A lock aimed anywhere but the attached creature is a different sentence.
+        Grammar.abilityLine.printLine(
+            CardFragment(
+                script = CardScript(
+                    staticAbilities = listOf(GrantKeyword(AbilityFlag.DOESNT_UNTAP.name, GroupFilter.source())),
+                ),
+            ),
+        ) shouldBe null
+    }
+
+    // Goblin Rock Sled. Conditional, so no longer a card flag: the same grant aimed at the source,
+    // wrapped in the condition.
+    "the conditional self untap lock wraps the source-aimed grant" {
+        val line = "~ doesn't untap during your untap step if you control a Forest."
+        val ability = fragment(line).script.staticAbilities.single().shouldBeInstanceOf<ConditionalStaticAbility>()
+        ability.ability shouldBe GrantKeyword(AbilityFlag.DOESNT_UNTAP.name, GroupFilter.source())
+        roundTrips(line)
     }
 
     // Flight. GrantKeyword holds a String, so reading it back has to find the enum constant rather
@@ -162,6 +189,21 @@ class StaticsTest : StringSpec({
             )
         )
         roundTrips("~ gets +3/+0 as long as there are seven or more cards in your graveyard.")
+    }
+
+    // Delirium. The same graveyard, counted by distinct types through the facade the cards use;
+    // "permanent types" is the sibling aggregation and the same sentence.
+    "delirium is the graveyard type count the facade builds" {
+        fragment(
+            "~ gets +1/+1 as long as there are four or more card types among cards in your graveyard."
+        ).script.staticAbilities shouldBe listOf(
+            ConditionalStaticAbility(
+                ability = ModifyStats(1, 1, GroupFilter.source()),
+                condition = SdkConditions.Delirium(),
+            )
+        )
+        roundTrips("~ gets +1/+1 as long as there are four or more card types among cards in your graveyard.")
+        roundTrips("~ gets +1/+1 as long as there are four or more permanent types among cards in your graveyard.")
     }
 
     // The Doran family. Two rules and one flag: the qualifier is a clause inside the noun phrase

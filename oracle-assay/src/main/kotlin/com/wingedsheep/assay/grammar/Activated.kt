@@ -92,16 +92,21 @@ object Activated {
      * "return this card **from your graveyard** to your hand" and CR 113.6m does the rest. So
      * [Recursion.functionsIn] reads it off the cost and the effect for the same reason
      * [producesMana] reads mana-ability-ness off them, and 74 cards stopped refusing to print over a
-     * field their own sentence already determined.
+     * field their own sentence already determined. The cost can say it too — "Exile this card from
+     * your graveyard" — and [Payment] carries that zone in; an ability whose cost and effect *both*
+     * name one is a shape no card prints, so it refuses rather than choosing.
      */
     private fun abilityFor(
-        cost: AbilityCost,
+        payment: Payment,
         script: CardScript,
         restrictions: List<ActivationRestriction> = emptyList(),
         sorcerySpeed: Boolean = false,
     ): ActivatedAbility? {
+        val cost = payment.cost
         val effect = script.spellEffect ?: return null
         val targets = script.targetRequirements
+        val derivedZone = Recursion.functionsIn(effect, cost)
+        if (payment.zone != null && derivedZone != null) return null
         if (script != CardScript(spellEffect = effect, targetRequirements = targets)) return null
         if (removesTheSource(cost) && Slots.readsPropertyOf(script, entity = "Source", property = "CounterCount")) return null
         val manaAbility = targets.isEmpty() && producesMana(effect) && !movesLibraryCard(cost, effect)
@@ -117,7 +122,7 @@ object Activated {
             },
             isManaAbility = manaAbility,
             restrictions = restrictions,
-            activateFromZone = Recursion.functionsIn(effect, cost) ?: Zone.BATTLEFIELD,
+            activateFromZone = payment.zone ?: derivedZone ?: Zone.BATTLEFIELD,
         )
     }
 
@@ -234,7 +239,7 @@ object Activated {
     private fun crossesLibraryBoundary(effect: Effect): Boolean {
         val fromLibrary = anyEffect(effect) {
             it is GatherCardsEffect && it.source.let { source ->
-                source is CardSource.TopOfLibrary ||
+                source is CardSource.TopOfLibrary || source is CardSource.BottomOfLibrary ||
                     (source is CardSource.FromZone && source.zone == Zone.LIBRARY) ||
                     (source is CardSource.FromMultipleZones && Zone.LIBRARY in source.zones)
             }
@@ -269,13 +274,52 @@ object Activated {
         else -> false
     }
 
+    /**
+     * An activation cost together with the zone its printing names, when it names one.
+     *
+     * Not a model of the text: both fields are SDK values copied straight onto the ability. It exists
+     * because "Exile ~" and "Exile ~ from your graveyard" are the one `AbilityCost.ExileSelf`, and the
+     * word that tells them apart lands on `ActivatedAbility.activateFromZone` — a field the cost slot
+     * cannot reach. CR 113.6m makes that zone a consequence of the cost ("an ability whose cost …
+     * specifies that it moves the object it's on out of a particular zone functions only in that
+     * zone"), so the cost rule reports it and [abilityFor] derives the field, as it does for the
+     * self-moving effects [Recursion.functionsIn] reads.
+     */
+    private data class Payment(val cost: AbilityCost, val zone: Zone? = null)
+
+    private val payment: Phrase<Payment> = oneOf(
+        "an activation cost",
+        phrase("{cost}", name = "an activation cost on the battlefield") {
+            slot("cost", Costs.cost)
+            build { Payment(it.value("cost")) }
+            match { paid -> if (paid.zone == null) bind("cost" to paid.cost) else null }
+        },
+        phrase("{cost}", name = "an activation cost paid from the graveyard") {
+            slot("cost", Costs.fromGraveyard)
+            build { Payment(it.value("cost"), Zone.GRAVEYARD) }
+            match { paid -> if (paid.zone == Zone.GRAVEYARD) bind("cost" to paid.cost) else null }
+        },
+    )
+
+    /**
+     * The payment [ability] was printed with: the graveyard spelling when the ability works from the
+     * graveyard and the card's last cost exiles it, the bare cost otherwise. [abilityFor]'s
+     * reconstruction is what checks the guess, so a graveyard ability whose zone comes from its
+     * effect instead still prints through the bare cost.
+     */
+    private fun paymentOf(ability: ActivatedAbility): Payment {
+        val last = (ability.cost as? AbilityCost.Composite)?.costs?.lastOrNull() ?: ability.cost
+        val exilesFromGraveyard = ability.activateFromZone == Zone.GRAVEYARD && last == AbilityCost.ExileSelf
+        return Payment(ability.cost, Zone.GRAVEYARD.takeIf { exilesFromGraveyard })
+    }
+
     /** "{cost}: {effect}" — one ability, whatever [Steps] can read after the colon. */
     private val single: Phrase<List<ActivatedAbility>> =
         phrase("{cost}: {effect}", name = "an activated ability") {
-            slot("cost", Costs.cost)
+            slot("cost", payment)
             slot("effect", Steps.step)
             build { bindings ->
-                abilityFor(bindings.value("cost"), bindings.value("effect"))?.let { listOf(it) }
+                abilityFor(bindings.value<Payment>("cost"), bindings.value("effect"))?.let { listOf(it) }
             }
             match { abilities ->
                 val ability = abilities.singleOrNull() ?: return@match null
@@ -283,8 +327,8 @@ object Activated {
                     spellEffect = ability.effect,
                     targetRequirements = ability.targetRequirements,
                 )
-                if (abilityFor(ability.cost, script)?.copy(id = ability.id) != ability) return@match null
-                bind("cost" to ability.cost, "effect" to script)
+                if (abilityFor(paymentOf(ability), script)?.copy(id = ability.id) != ability) return@match null
+                bind("cost" to paymentOf(ability), "effect" to script)
             }
         }
 
@@ -298,27 +342,77 @@ object Activated {
      */
     private val choice: Phrase<List<ActivatedAbility>> =
         phrase("{cost}: {alternatives}", name = "an activated mana ability with a choice") {
-            slot("cost", Costs.cost)
+            slot("cost", payment)
             slot(
                 "alternatives",
                 oneOf("several kinds of mana", Mana.addedAlternatives, Mana.addedAlternativesRestricted),
             )
             build { bindings ->
-                val cost = bindings.value<AbilityCost>("cost")
+                val payment = bindings.value<Payment>("cost")
                 val built = bindings.value<List<Effect>>("alternatives")
-                    .map { abilityFor(cost, CardScript(spellEffect = it)) }
+                    .map { abilityFor(payment, CardScript(spellEffect = it)) }
                 if (built.any { it == null }) null else built.filterNotNull()
             }
             match { abilities ->
                 if (abilities.size < 2) return@match null
-                val cost = abilities.first().cost
+                val payment = paymentOf(abilities.first())
                 val printable = abilities.all { ability ->
-                    ability.cost == cost &&
-                        abilityFor(cost, CardScript(spellEffect = ability.effect))
-                            ?.copy(id = ability.id) == ability
+                    abilityFor(payment, CardScript(spellEffect = ability.effect))
+                        ?.copy(id = ability.id) == ability
                 }
                 if (!printable) return@match null
-                bind("cost" to cost, "alternatives" to abilities.map { it.effect })
+                bind("cost" to payment, "alternatives" to abilities.map { it.effect })
+            }
+        }
+
+    /**
+     * "{T}: Add {U} or {R}. ~ deals 1 damage to you." — [choice] with a sentence after the mana,
+     * which the painlands and the Talismans print.
+     *
+     * The rider is one sentence that follows the choice, so it belongs to every ability the choice
+     * denotes: the hand-written cards spell each one `Effects.AddMana(colour) then rider`, and that
+     * is what this builds. The rider is any [Steps] line, read once and copied onto each ability,
+     * and `match` insists every ability carries the *same* one — two abilities with different
+     * riders were not printed as one line. A rider that targets is refused: the abilities would
+     * share one target slot on paper and hold two in the model.
+     *
+     * Disjoint from [choice] by model: [Mana.addedAlternatives] refuses anything that is not a bare
+     * mana effect, and this refuses anything that is.
+     */
+    private val choiceWithRider: Phrase<List<ActivatedAbility>> =
+        phrase("{cost}: {alternatives} {rider}", name = "an activated mana ability with a choice and a rider") {
+            slot("cost", payment)
+            slot("alternatives", Mana.addedAlternatives)
+            slot("rider", Steps.step)
+            build { bindings ->
+                val rider = bindings.value<CardScript>("rider")
+                val after = rider.spellEffect ?: return@build null
+                if (rider != CardScript(spellEffect = after)) return@build null
+                val payment = bindings.value<Payment>("cost")
+                val built = bindings.value<List<Effect>>("alternatives")
+                    .map { abilityFor(payment, CardScript(spellEffect = it then after)) }
+                if (built.any { it == null }) null else built.filterNotNull()
+            }
+            match { abilities ->
+                if (abilities.size < 2) return@match null
+                val payment = paymentOf(abilities.first())
+                val split = abilities.map { ability ->
+                    val parts = (ability.effect as? CompositeEffect)?.effects ?: return@match null
+                    if (parts.size != 2) return@match null
+                    parts[0] to parts[1]
+                }
+                val after = split.first().second
+                if (split.any { it.second != after }) return@match null
+                val printable = abilities.zip(split).all { (ability, parts) ->
+                    abilityFor(payment, CardScript(spellEffect = parts.first then after))
+                        ?.copy(id = ability.id) == ability
+                }
+                if (!printable) return@match null
+                bind(
+                    "cost" to payment,
+                    "alternatives" to split.map { it.first },
+                    "rider" to CardScript(spellEffect = after),
+                )
             }
         }
 
@@ -333,13 +427,13 @@ object Activated {
      */
     private val restricted: Phrase<List<ActivatedAbility>> =
         phrase("{cost}: {effect} {restrictions}", name = "an activated ability with a restriction") {
-            slot("cost", Costs.cost)
+            slot("cost", payment)
             slot("effect", Steps.step)
             slot("restrictions", Restrictions.activationSentence)
             build { bindings ->
                 val restrictions = bindings.value<List<ActivationRestriction>>("restrictions")
                 if (restrictions.isEmpty()) return@build null
-                abilityFor(bindings.value("cost"), bindings.value("effect"), restrictions)?.let { listOf(it) }
+                abilityFor(bindings.value<Payment>("cost"), bindings.value("effect"), restrictions)?.let { listOf(it) }
             }
             match { abilities ->
                 val ability = abilities.singleOrNull() ?: return@match null
@@ -348,10 +442,10 @@ object Activated {
                     spellEffect = ability.effect,
                     targetRequirements = ability.targetRequirements,
                 )
-                if (abilityFor(ability.cost, script, ability.restrictions)?.copy(id = ability.id) != ability) {
+                if (abilityFor(paymentOf(ability), script, ability.restrictions)?.copy(id = ability.id) != ability) {
                     return@match null
                 }
-                bind("cost" to ability.cost, "effect" to script, "restrictions" to ability.restrictions)
+                bind("cost" to paymentOf(ability), "effect" to script, "restrictions" to ability.restrictions)
             }
         }
 
@@ -367,10 +461,10 @@ object Activated {
      */
     private val sorcerySpeed: Phrase<List<ActivatedAbility>> =
         phrase("{cost}: {effect} activate only as a sorcery.", name = "an activated ability at sorcery speed") {
-            slot("cost", Costs.cost)
+            slot("cost", payment)
             slot("effect", Steps.step)
             build { bindings ->
-                abilityFor(bindings.value("cost"), bindings.value("effect"), sorcerySpeed = true)
+                abilityFor(bindings.value<Payment>("cost"), bindings.value("effect"), sorcerySpeed = true)
                     ?.let { listOf(it) }
             }
             match { abilities ->
@@ -380,15 +474,15 @@ object Activated {
                     spellEffect = ability.effect,
                     targetRequirements = ability.targetRequirements,
                 )
-                if (abilityFor(ability.cost, script, sorcerySpeed = true)?.copy(id = ability.id) != ability) {
+                if (abilityFor(paymentOf(ability), script, sorcerySpeed = true)?.copy(id = ability.id) != ability) {
                     return@match null
                 }
-                bind("cost" to ability.cost, "effect" to script)
+                bind("cost" to paymentOf(ability), "effect" to script)
             }
         }
 
     val abilities: Phrase<List<ActivatedAbility>> =
-        oneOf("an activated ability", single, restricted, sorcerySpeed, choice)
+        oneOf("an activated ability", single, restricted, sorcerySpeed, choice, choiceWithRider)
 
     /**
      * `"{T}: Regenerate target Sliver."` — one activated ability inside the quotation marks a

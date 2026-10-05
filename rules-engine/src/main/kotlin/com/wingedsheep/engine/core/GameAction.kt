@@ -5,6 +5,7 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityId
+import com.wingedsheep.sdk.scripting.AdditionalCost
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ChoiceSlot
@@ -68,6 +69,12 @@ data class CastSpell(
     val additionalCostPayment: AdditionalCostPayment? = null,
     val castFaceDown: Boolean = false,
     /**
+     * Cast the card prototyped (CR 718.3): the spell uses the card's
+     * [com.wingedsheep.sdk.scripting.KeywordAbility.Prototype] mana cost, colors, power and
+     * toughness. Not an alternative cost, so it combines with [useAlternativeCost] or a free cast.
+     */
+    val castPrototyped: Boolean = false,
+    /**
      * The optional-additional-cost mechanic this cast declares (CR 601.2b), or `null` when the
      * spell is cast without it — the single rail shared by every
      * [com.wingedsheep.sdk.scripting.KeywordAbility.OptionalAdditionalCost] keyword: kicker,
@@ -80,6 +87,25 @@ data class CastSpell(
      * is never mistaken for a kicked one.
      */
     val declaredCostSlot: ChoiceSlot? = null,
+    /**
+     * How many times the declared optional cost is paid (CR 601.2b "announces their intentions to
+     * pay any or all of those costs"). Always 1 for a once-only cost; a repeatable one
+     * ([com.wingedsheep.sdk.scripting.KeywordAbility.OptionalAdditionalCost.multi] — replicate,
+     * CR 702.56a) may declare more, and the handler charges the cost that many times over.
+     * Ignored when [declaredCostSlot] is null.
+     */
+    val declaredCostTimes: Int = 1,
+    /**
+     * Which of the card's optional costs under [declaredCostSlot] this cast pays, by printed
+     * position (0 = first). Only meaningful for a card that lists two costs under one slot —
+     * "Kicker [A] and/or [B]" (CR 702.33b), where each kicker may be paid independently and the
+     * spell is kicked if either is (CR 702.33d): `{0}`, `{1}`, or `{0, 1}`. Empty means *every*
+     * cost under the slot, which is the only shape for a single-cost slot. Ignored when
+     * [declaredCostSlot] is null.
+     */
+    val declaredCostIndices: Set<Int> = emptySet(),
+    /** Explicit branches of named additional-cost choices; retained independently of payment. */
+    val additionalCostChoices: Map<ChoiceSlot, Int> = emptyMap(),
     /**
      * Whether the spell's *optional* waterbend additional cost was elected (Avatar: The Last
      * Airbender — [com.wingedsheep.sdk.scripting.SpellWaterbendCost] with `optional = true`).
@@ -214,7 +240,13 @@ data class GraveyardCastRiderSelection(
      * Yawgmoth's Agenda when both apply to one card, and the handler's auto-pick could apply or skip
      * the exile the player didn't choose.
      */
-    val exileInsteadOfGraveyard: Boolean = false
+    val exileInsteadOfGraveyard: Boolean = false,
+    /**
+     * The grant's own additional cost (a continuous retrace grant — Six's "discard a land card").
+     * Part of the identity so a player holding both a free grant and a retrace grant picks which
+     * one they cast through — and thus whether they discard — rather than the handler choosing.
+     */
+    val additionalCost: AdditionalCost? = null
 )
 
 /**
@@ -236,6 +268,14 @@ enum class AlternativeCostType {
      */
     MAYHEM,
     /**
+     * Escape ([com.wingedsheep.sdk.scripting.KeywordAbility.Escape], CR 702.138) — graveyard, at the
+     * spell's normal timing. Pays the escape mana instead of the mana cost plus its bundled
+     * non-mana half (usually "exile N other cards from your graveyard"). Like [MAYHEM] and unlike
+     * [FLASHBACK]/[HARMONIZE] the spell is NOT exiled on resolution; a resolving permanent is
+     * marked as having escaped (CR 702.138b).
+     */
+    ESCAPE,
+    /**
      * Disturb ([com.wingedsheep.sdk.scripting.KeywordAbility.Disturb], CR 702.146) — graveyard, at
      * the *back* face's normal timing. Pays the disturb mana instead of the mana cost and puts the
      * card on the stack transformed (back face up, CR 712.8c), so the spell's type line, targets and
@@ -254,6 +294,7 @@ enum class AlternativeCostType {
     DASH,
     /** Evoke ([com.wingedsheep.sdk.scripting.KeywordAbility.Evoke]) — hand. */
     EVOKE,
+    BESTOW,
     /**
      * Emerge ([com.wingedsheep.sdk.scripting.KeywordAbility.Emerge], CR 702.119) — hand, at the
      * spell's normal timing. Pays the emerge mana *reduced by the sacrificed creature's mana value*
@@ -285,6 +326,12 @@ enum class AlternativeCostType {
      * `cleaveTargetRequirements`).
      */
     CLEAVE,
+    /**
+     * Overload ([com.wingedsheep.sdk.scripting.KeywordAbility.Overload], CR 702.96) — hand. Pays the
+     * overload mana instead of the mana cost; the spell has no targets (CR 702.96b) and resolves with
+     * its "each" variant ([com.wingedsheep.sdk.model.CardScript.overloadSpellEffect]).
+     */
+    OVERLOAD,
     /**
      * Miracle ([com.wingedsheep.sdk.scripting.KeywordAbility.Miracle], printed or granted) — hand,
      * legal only while the card carries an open miracle window
@@ -755,3 +802,8 @@ data class UnlockRoomDoor(
     val faceId: RoomFaceId,
     val paymentStrategy: PaymentStrategy = PaymentStrategy.AutoPay
 ) : GameAction
+
+/** Repeatable special action created by a resolving effect; never an activated ability. */
+@Serializable
+@SerialName("TakePlayerAction")
+data class TakePlayerAction(override val playerId: EntityId, val permissionId: String) : GameAction

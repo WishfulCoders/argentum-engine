@@ -60,6 +60,22 @@ enum class ChoiceSlot {
     KICKED,
 
     /**
+     * Whether the spell was kicked with its **first-listed** kicker cost — the `[A]` of
+     * "Kicker [A] and/or [B]" (CR 702.33b, 702.33f; Wastescape Battlemage's `{G}` kicker). A present
+     * value means that kicker was paid. Stamped only for a card with two kicker costs, alongside
+     * [KICKED] (paying either kicker kicks the spell, CR 702.33d). Read back through
+     * [com.wingedsheep.sdk.dsl.Conditions.WasKickedWithFirstKicker].
+     */
+    FIRST_KICKER,
+
+    /**
+     * Whether the spell was kicked with its **second-listed** kicker cost — the `[B]` of
+     * "Kicker [A] and/or [B]" (CR 702.33f). The [FIRST_KICKER] counterpart; read back through
+     * [com.wingedsheep.sdk.dsl.Conditions.WasKickedWithSecondKicker].
+     */
+    SECOND_KICKER,
+
+    /**
      * Whether the spell's **bargain** additional cost was declared when cast (CR 702.166b, Wilds of
      * Eldraine — "you may sacrifice an artifact, enchantment, or token as you cast this spell"). A
      * present value means the spell was *bargained*. Read back through
@@ -107,6 +123,14 @@ enum class ChoiceSlot {
     TEAMWORK,
 
     /**
+     * Whether the spell's **replicate** cost was paid at least once (CR 702.56a). The number of
+     * payments rides on the cast itself (`CastSpell.declaredCostTimes`), because only the cast
+     * trigger that copies the spell reads it. Distinct from [KICKED] so a replicated spell never
+     * reads as kicked to "whenever you cast a kicked spell" payoffs.
+     */
+    REPLICATED,
+
+    /**
      * Whether the spell's sneak cost was paid when cast (CR 702.190, e.g. Leonardo, Leader
      * in Blue). A present value means "cast for its sneak cost". Read back through
      * [com.wingedsheep.sdk.scripting.conditions.SneakCostWasPaid].
@@ -141,6 +165,15 @@ enum class ChoiceSlot {
      * paid" abilities to its own Mayhem ability.
      */
     MAYHEM_CAST,
+
+    /**
+     * Whether the object escaped (CR 702.138b) — it was cast from a graveyard through its
+     * [Escape][com.wingedsheep.sdk.scripting.KeywordAbility.Escape] ability. A present value means
+     * "escaped". Stamped on the resolving permanent by the engine and read back through
+     * [com.wingedsheep.sdk.scripting.conditions.Escaped] for "sacrifice it unless it escaped"
+     * (Phlage) and "escapes with …" riders (CR 702.138c–d).
+     */
+    ESCAPED,
 
     /** The X declared for a `blight X` additional cost when cast (e.g. Soul Immolation). */
     BLIGHT_AMOUNT,
@@ -201,4 +234,7 @@ enum class ChoiceSlot {
      * that is not tied to casting.
      */
     CHOSEN_NUMBER,
+
+    /** Zero-based branch of a declared additional-cost choice. */
+    ADDITIONAL_COST_BRANCH,
 }

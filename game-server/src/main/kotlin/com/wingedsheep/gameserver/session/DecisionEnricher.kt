@@ -120,6 +120,7 @@ class DecisionEnricher(private val cardRegistry: CardRegistry) {
     ): ServerMessage.OpponentDecisionStatus {
         val displayText = when (decision) {
             is SelectCardsDecision -> "Selecting cards"
+            is com.wingedsheep.engine.core.PlayCardDecision -> "Playing a card"
             is ChooseTargetsDecision -> "Choosing targets"
             is YesNoDecision -> "Making a choice"
             is BatchYesNoDecision -> "Making a choice"
@@ -127,7 +128,7 @@ class DecisionEnricher(private val cardRegistry: CardRegistry) {
             is ChooseColorDecision -> "Choosing a color"
             is ChooseNumberDecision -> "Choosing a number"
             is DistributeDecision -> "Distributing"
-            is OrderObjectsDecision -> "Ordering blockers"
+            is OrderObjectsDecision -> decision.orderingTitle ?: "Ordering blockers"
             is SplitPilesDecision -> "Splitting piles"
             is SearchLibraryDecision -> "Searching library"
             is ReorderLibraryDecision -> "Reordering cards"
@@ -142,7 +143,8 @@ class DecisionEnricher(private val cardRegistry: CardRegistry) {
             playerId = decision.playerId.value,
             decisionType = decision::class.simpleName ?: "Unknown",
             displayText = displayText,
-            sourceName = maskedSourceName(decision, state, viewerId)
+            sourceName = maskedSourceName(decision, state, viewerId),
+            sourceId = decision.context.sourceId?.value
         )
     }
 }

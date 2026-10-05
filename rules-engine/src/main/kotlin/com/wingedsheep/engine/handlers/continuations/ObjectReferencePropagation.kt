@@ -9,10 +9,16 @@ import com.wingedsheep.engine.state.GameState
  * a suspension's answer is not itself a stack frame — reaching it needs the extra hop.
  */
 internal fun AnswerContinuation.objectReferences(): ObjectReferenceEnvironment? = when (this) {
+    is EffectCopyAuraEntryContinuation -> context.objectReferences
+    is EffectCopyEntryContinuation -> context.objectReferences
+    is EffectEntryChoiceContinuation -> context.objectReferences
+    is EffectDiscardDestinationContinuation -> context.objectReferences
+    is EffectDiscardOrderContinuation -> context.objectReferences
     is CounterUnlessPaysContinuation -> objectReferences
     is MayPayManaContinuation -> effectContext.objectReferences
     is MayPayManaSelectionContinuation -> effectContext.objectReferences
     is MayPayXContinuation -> effectContext.objectReferences
+    is MayPayLifeXContinuation -> effectContext.objectReferences
     is CounterUnlessPaysManaSelectionContinuation -> objectReferences
     is WardTapPermanentsSubCostContinuation -> objectReferences
     is AddDynamicManaContinuation -> objectReferences
@@ -28,6 +34,7 @@ internal fun AnswerContinuation.objectReferences(): ObjectReferenceEnvironment? 
     is DistributeCountersContinuation -> objectReferences
     is RemoveAnyNumberOfCountersContinuation -> objectReferences
     is AddCountersUpToContinuation -> objectReferences
+    is AddCountersOfChosenKindContinuation -> objectReferences
     is PayCountersContinuation -> objectReferences
     is MoveChosenCountersToTargetContinuation -> objectReferences
     is AmassContinuation -> objectReferences
@@ -37,6 +44,8 @@ internal fun AnswerContinuation.objectReferences(): ObjectReferenceEnvironment? 
     is DistributeDamageContinuation -> objectReferences
     is DeflectDamageSourceChoiceContinuation -> objectReferences
     is PreventDamageFromChosenSourceContinuation -> objectReferences
+    is PreventNextDamageLeavingAmountContinuation -> context.objectReferences
+    is RedirectDamageSourceContinuation -> objectReferences
     is OptionalRedirectEffectContinuation -> effectContext.objectReferences
     is EachPlayerDiscardsOrLoseLifeContinuation -> objectReferences
     is DrawUpToContinuation -> objectReferences
@@ -59,6 +68,7 @@ internal fun AnswerContinuation.objectReferences(): ObjectReferenceEnvironment? 
     is ChooseReplacementContinuation -> objectReferences
     is BecomeCreatureTypeContinuation -> objectReferences
     is ChooseCardTypeForProtectionContinuation -> objectReferences
+    is ChooseColorOrColorlessForProtectionContinuation -> objectReferences
     is EachPlayerChoosesCreatureTypeContinuation -> objectReferences
     is SelectFromCollectionContinuation -> objectReferences
     is MoveCollectionOrderContinuation -> objectReferences
@@ -118,10 +128,16 @@ internal fun ContinuationFrame.objectReferences(): ObjectReferenceEnvironment? =
 }
 
 internal fun AnswerContinuation.withObjectReferences(refs: ObjectReferenceEnvironment): AnswerContinuation = when (this) {
+    is EffectCopyAuraEntryContinuation -> copy(context = context.copy(objectReferences = refs))
+    is EffectCopyEntryContinuation -> copy(context = context.copy(objectReferences = refs))
+    is EffectEntryChoiceContinuation -> copy(context = context.copy(objectReferences = refs))
+    is EffectDiscardDestinationContinuation -> copy(context = context.copy(objectReferences = refs))
+    is EffectDiscardOrderContinuation -> copy(context = context.copy(objectReferences = refs))
     is CounterUnlessPaysContinuation -> copy(objectReferences = refs)
     is MayPayManaContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is MayPayManaSelectionContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is MayPayXContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
+    is MayPayLifeXContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is CounterUnlessPaysManaSelectionContinuation -> copy(objectReferences = refs)
     is WardTapPermanentsSubCostContinuation -> copy(objectReferences = refs)
     is AddDynamicManaContinuation -> copy(objectReferences = refs)
@@ -137,6 +153,7 @@ internal fun AnswerContinuation.withObjectReferences(refs: ObjectReferenceEnviro
     is DistributeCountersContinuation -> copy(objectReferences = refs)
     is RemoveAnyNumberOfCountersContinuation -> copy(objectReferences = refs)
     is AddCountersUpToContinuation -> copy(objectReferences = refs)
+    is AddCountersOfChosenKindContinuation -> copy(objectReferences = refs)
     is PayCountersContinuation -> copy(objectReferences = refs)
     is MoveChosenCountersToTargetContinuation -> copy(objectReferences = refs)
     is AmassContinuation -> copy(objectReferences = refs)
@@ -146,6 +163,8 @@ internal fun AnswerContinuation.withObjectReferences(refs: ObjectReferenceEnviro
     is DistributeDamageContinuation -> copy(objectReferences = refs)
     is DeflectDamageSourceChoiceContinuation -> copy(objectReferences = refs)
     is PreventDamageFromChosenSourceContinuation -> copy(objectReferences = refs)
+    is PreventNextDamageLeavingAmountContinuation -> copy(context = context.copy(objectReferences = refs))
+    is RedirectDamageSourceContinuation -> copy(objectReferences = refs)
     is OptionalRedirectEffectContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is EachPlayerDiscardsOrLoseLifeContinuation -> copy(objectReferences = refs)
     is DrawUpToContinuation -> copy(objectReferences = refs)
@@ -168,6 +187,7 @@ internal fun AnswerContinuation.withObjectReferences(refs: ObjectReferenceEnviro
     is ChooseReplacementContinuation -> copy(objectReferences = refs)
     is BecomeCreatureTypeContinuation -> copy(objectReferences = refs)
     is ChooseCardTypeForProtectionContinuation -> copy(objectReferences = refs)
+    is ChooseColorOrColorlessForProtectionContinuation -> copy(objectReferences = refs)
     is EachPlayerChoosesCreatureTypeContinuation -> copy(objectReferences = refs)
     is SelectFromCollectionContinuation -> copy(objectReferences = refs)
     is MoveCollectionOrderContinuation -> copy(objectReferences = refs)

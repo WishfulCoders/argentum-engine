@@ -1863,6 +1863,75 @@
     ]
 }
 
+// Imperial Aerosaur
+{
+    "name": "Imperial Aerosaur",
+    "manaCost": "{3}{W}",
+    "typeLine": "Creature — Dinosaur",
+    "oracleText": "Flying\nWhen this creature enters, another target creature you control gets +1/+1 and gains flying until end of turn.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Imperial Aerosaur:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "ModifyStats",
+                            "powerModifier": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "toughnessModifier": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "FLYING",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you",
+                        "excludeSelf": true
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "14",
+        "rarity": "UNCOMMON",
+        "artist": "Jesper Ejsing",
+        "flavorText": "Its assistance is unnervingly similar to its hunting technique.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/d/7d08f90b-9b98-4237-9826-578fb812d412.jpg?1783935802"
+    }
+}
+
 // Imperial Lancer
 {
     "name": "Imperial Lancer",
@@ -2298,7 +2367,7 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomSacrifice",
-                                "filter": "creature|artifact"
+                                "filter": "artifact|creature"
                             }
                         }
                     ]
@@ -2639,7 +2708,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature Pirate ctrl:you"
+                        "baseFilter": "permanent Pirate ctrl:you"
                     },
                     "id": "t0"
                 }
@@ -2723,6 +2792,60 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Pounce
+{
+    "name": "Pounce",
+    "manaCost": "{1}{G}",
+    "typeLine": "Instant",
+    "oracleText": "Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+    "script": {
+        "spellEffect": {
+            "type": "Fight",
+            "target1": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "target2": {
+                "type": "BoundVariable",
+                "name": "t1"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "t0"
+            },
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature"
+                        ],
+                        "controllerPredicate": {
+                            "type": "ControllerNot",
+                            "predicate": "ControlledByYou"
+                        }
+                    }
+                },
+                "id": "t1"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "200",
+        "artist": "Lucas Graciano",
+        "flavorText": "The drive to hunt and feed is raw instinct for dinosaurs. The trick is simply to channel it in the right direction.",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/b/2b96cba6-33d7-4e1d-88f7-da3da681540d.jpg"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -3746,7 +3869,8 @@
                         "NameEqualsChosenComponent"
                     ]
                 },
-                "nonManaAbilitiesOnly": true
+                "nonManaAbilitiesOnly": true,
+                "anyZone": true
             }
         ],
         "replacementEffects": [
@@ -4234,7 +4358,10 @@
                                     {
                                         "type": "RemoveCounters",
                                         "counterType": "LANDMARK",
-                                        "count": 3,
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 3
+                                        },
                                         "target": "Self"
                                     },
                                     "Transform",
@@ -4309,6 +4436,42 @@
         "artist": "Cliff Childs",
         "imageUri": "https://cards.scryfall.io/normal/front/c/0/c0f9c733-0818-4a03-8f0c-a163d09e0fff.jpg?1783935704"
     }
+}
+
+// Trove of Temptation
+{
+    "name": "Trove of Temptation",
+    "manaCost": "{3}{R}",
+    "typeLine": "Enchantment",
+    "oracleText": "Each opponent must attack you or a planeswalker you control with at least one creature each combat if able.\nAt the beginning of your end step, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Trove of Temptation:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Treasure"
+                }
+            }
+        ],
+        "staticAbilities": [
+            "OpponentsMustAttackYou"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "171",
+        "rarity": "UNCOMMON",
+        "artist": "Jonas De Ro",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/b/fb2df914-bb56-449e-9ef8-8b1012a76f64.jpg"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
 }
 
 // Unfriendly Fire

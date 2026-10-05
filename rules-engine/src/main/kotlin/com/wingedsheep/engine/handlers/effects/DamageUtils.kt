@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.mechanics.targeting.ColorProtection
+import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.DamageDealtEvent
@@ -116,7 +118,17 @@ data class ActiveDamageDoubler(
     val sourceName: String,
     /** Whether the doubling is scoped to combat or noncombat damage (CR 616 damage-type filter). */
     val damageType: DamageType,
-)
+    /** The factor damage is scaled by — 2 for "double", 3 for "triple" (City on Fire). */
+    val multiplier: Int = 2,
+) {
+    /** "doubled", "tripled", or "multiplied by N" — the badge wording. */
+    val multiplierVerb: String
+        get() = when (multiplier) {
+            2 -> "doubled"
+            3 -> "tripled"
+            else -> "multiplied by $multiplier"
+        }
+}
 
 /**
  * What [DamageUtils.applyDamagePreventionShields] did to one damage instance.
@@ -129,6 +141,13 @@ data class PreventionShieldResult(
     val state: GameState,
     val remainingDamage: Int,
     val lifeGains: Map<EntityId, Int> = emptyMap(),
+)
+
+/** Partial prevention whose counter removal must be emitted even for unpreventable damage. */
+data class CounterPreventionResult(
+    val state: GameState,
+    val remainingDamage: Int,
+    val events: List<EngineGameEvent>,
 )
 
 /**
@@ -196,7 +215,8 @@ object DamageUtils {
          * lethal (CR 120.4a) is dealt to that creature's controller instead (Gandalf's Sanction:
          * "Excess damage is dealt to that creature's controller instead.").
          */
-        excessToController: Boolean = false
+        excessToController: Boolean = false,
+        damageSourceRef: com.wingedsheep.engine.state.ObjectRef? = sourceId?.let(state::objectRef)
     ): EffectResult {
         if (amount <= 0) return EffectResult.success(state)
 
@@ -211,15 +231,15 @@ object DamageUtils {
             if (state.getEntity(targetId)?.has<DamageUnpreventableThisTurnComponent>() == true) {
                 Triple(state, null, 0)
             } else {
-                checkDamageRedirection(state, targetId, amount, sourceId = sourceId)
+                checkDamageRedirection(state, targetId, amount, sourceId = sourceId, damageSourceRef = damageSourceRef)
             }
         if (redirectTargetId != null) {
-            val redirectResult = dealDamageToTarget(zones, redirectState, redirectTargetId, redirectAmount, sourceId, cantBePrevented, isCombatDamage, appliedRedirects)
+            val redirectResult = dealDamageToTarget(zones, redirectState, redirectTargetId, redirectAmount, sourceId, cantBePrevented, isCombatDamage, appliedRedirects, damageSourceRef = damageSourceRef)
             val remainingDamage = amount - redirectAmount
             return if (remainingDamage > 0) {
                 // Partial redirection — deal remaining damage to original target
                 val afterRedirect = redirectResult.state
-                val remainingResult = dealDamageToTarget(zones, afterRedirect, targetId, remainingDamage, sourceId, cantBePrevented, isCombatDamage, appliedRedirects)
+                val remainingResult = dealDamageToTarget(zones, afterRedirect, targetId, remainingDamage, sourceId, cantBePrevented, isCombatDamage, appliedRedirects, damageSourceRef = damageSourceRef)
                 EffectResult.success(remainingResult.state, redirectResult.events + remainingResult.events)
             } else {
                 redirectResult
@@ -235,7 +255,7 @@ object DamageUtils {
             if (staticRedirectTo != null && staticRedirectSource != null) {
                 return dealDamageToTarget(
                     zones, state, staticRedirectTo, amount, sourceId, cantBePrevented, isCombatDamage,
-                    appliedRedirects + staticRedirectSource
+                    appliedRedirects + staticRedirectSource, damageSourceRef = damageSourceRef
                 )
             }
         }
@@ -248,12 +268,17 @@ object DamageUtils {
             }
 
             val projected = state.projectedState
-            val sourceColors = projected.getColors(sourceId)
-            for (colorName in sourceColors) {
-                if (projected.hasKeyword(targetId, "PROTECTION_FROM_$colorName")) {
-                    // Damage is prevented — return success with no state change
-                    return EffectResult.success(state)
-                }
+            // A permanent's colors are projected; a spell's are its card's unless an effect
+            // recolored it on the stack. A source with no card can't be judged colorless.
+            val sourceCard = state.getEntity(sourceId)?.get<CardComponent>()
+            val sourceColors = projected.getColors(sourceId).ifEmpty {
+                if (sourceId in state.getBattlefield()) emptySet() else sourceCard?.colors?.map { it.name }?.toSet().orEmpty()
+            }
+            if ((sourceCard != null || sourceColors.isNotEmpty()) &&
+                ColorProtection.isProtected(projected, targetId, sourceColors)
+            ) {
+                // Damage is prevented — return success with no state change
+                return EffectResult.success(state)
             }
             val sourceSubtypes = projected.getSubtypes(sourceId)
             for (subtype in sourceSubtypes) {
@@ -266,6 +291,11 @@ object DamageUtils {
                 if (projected.hasKeyword(targetId, "PROTECTION_FROM_CARDTYPE_${cardType.uppercase()}")) {
                     return EffectResult.success(state)
                 }
+            }
+
+            // Protection from a kind of source — spells, permanents cast this turn (CR 702.16e)
+            if (SourceKindProtection.isProtectedFromObject(state, targetId, sourceId)) {
+                return EffectResult.success(state)
             }
 
             // Protection from each opponent (Rule 702.16e)
@@ -358,7 +388,7 @@ object DamageUtils {
         if (!cantBePrevented) {
             // Check for deflection/reflection shields (Deflecting Palm, Eye for an Eye).
             if (sourceId != null) {
-                when (val deflect = checkDeflectDamageShield(newState, targetId, effectiveAmount, sourceId)) {
+                when (val deflect = checkDeflectDamageShield(newState, targetId, effectiveAmount, sourceId, isCombatDamage, isPlayer)) {
                     is DeflectOutcome.Prevented -> return deflect.result
                     is DeflectOutcome.Reflected -> {
                         newState = deflect.state
@@ -393,6 +423,13 @@ object DamageUtils {
                 gainEvent?.let { preventionLifeEvents.add(it) }
             }
         }
+        val perPoint = applyPerPointCounterPrevention(
+            newState, targetId, effectiveAmount, sourceId, isCombatDamage, zones.predicateEvaluator,
+            cantBePrevented = cantBePrevented
+        )
+        newState = perPoint.state
+        effectiveAmount = perPoint.remainingDamage
+        shieldCounterEvents = shieldCounterEvents + perPoint.events
         if (effectiveAmount <= 0) return EffectResult.success(newState, shieldCounterEvents + reflectEvents + preventionLifeEvents)
 
         val events = mutableListOf<EngineGameEvent>()
@@ -479,9 +516,15 @@ object DamageUtils {
                 }
                 // CR 702.80 / 122.6a: the -1/-1 counters are put on the creature by the wither
                 // source's controller, so "whenever you put counters" triggers see them as yours.
+                val witherPlacer = newState.projectedState.getController(sourceId)
+                val (afterMark, firstThisTurn, firstOfTypeThisTurn) = recordCounterPlacement(
+                    newState, targetId, CounterType.MINUS_ONE_MINUS_ONE, placerId = witherPlacer
+                )
+                newState = afterMark
                 events.add(CountersAddedEvent(targetId, CounterType.MINUS_ONE_MINUS_ONE, effectiveAmount,
                     newState.getEntity(targetId)?.get<CardComponent>()?.name ?: "Creature",
-                    placedBy = newState.projectedState.getController(sourceId)))
+                    firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn,
+                    placedBy = witherPlacer))
                 // Wither only changes the FORM of the damage (CR 702.80a); the creature was still
                 // dealt damage by this source, so a deathtouch source still marks it for
                 // destruction as an SBA (CR 702.2b / 704.5h) even though nothing is marked as
@@ -644,7 +687,7 @@ object DamageUtils {
             val excessResult = dealDamageToTarget(
                 zones, newState, targetControllerId, creatureExcessDamage, sourceId,
                 cantBePrevented = cantBePrevented, isCombatDamage = isCombatDamage,
-                appliedRedirects = appliedRedirects, excessToController = false
+                appliedRedirects = appliedRedirects, excessToController = false, damageSourceRef = damageSourceRef
             )
             newState = excessResult.state
             events.addAll(excessResult.events)
@@ -785,6 +828,8 @@ object DamageUtils {
         // Presence guard stays per-player (every player carries a LifeTotalComponent); the value,
         // however, is the team's shared total (CR 810.9a) — read/write via the resolver.
         if (state.getEntity(playerId)?.get<LifeTotalComponent>() == null) return state to null
+        // CR 119.8 — a player who can't lose life doesn't; nothing changes and nothing is emitted.
+        if (amount > 0 && state.isLifeLossLocked(playerId)) return state to null
         val currentLife = state.lifeTotal(playerId)
         val lossAmount = if (applyLifeLossModification) {
             applyStaticLifeLossModification(state, playerId, amount, predicateEvaluator = predicateEvaluator)
@@ -850,7 +895,7 @@ object DamageUtils {
         val controllerId = container.get<ControllerComponent>()?.playerId ?: spellOnStack.casterId
         val cardDef = container.get<CardComponent>()
             ?.let { cardRegistry.getCard(it) } ?: return false
-        return GrantedKeywordResolver(cardRegistry).hasKeyword(state, controllerId, cardDef, keyword)
+        return GrantedKeywordResolver(cardRegistry).hasKeyword(state, controllerId, cardDef, keyword, sourceId)
     }
 
     /**
@@ -863,7 +908,7 @@ object DamageUtils {
      *
      * Unlike life loss, life *gain* can be both prevented and modified before it happens:
      * - [isLifeGainPrevented] is checked first; a prevented gain performs no mutation
-     *   (CR 119.5 effects like Sulfuric Vortex / Erebos).
+     *   (life-gain prohibitions such as Sulfuric Vortex / Erebos).
      * - When [applyLifeGainModification] is true the amount is run through
      *   [LifeGainModifiers] (CR 614 ModifyLifeGain replacements — Alhammarret's Archive,
      *   Leyline of Hope — applied once per life-gain event). True for normal "gain N life";
@@ -882,12 +927,20 @@ object DamageUtils {
         predicateEvaluator: PredicateEvaluator
     ): Pair<GameState, LifeChangedEvent?> {
         if (isLifeGainPrevented(state, playerId)) return state to null
+        if (com.wingedsheep.engine.handlers.effects.life.LifeGainReplacements.applies(state, playerId, amount, predicateEvaluator)) {
+            return com.wingedsheep.engine.handlers.effects.life.LifeGainReplacements.queue(state, playerId, amount) to null
+        }
         val gainAmount = if (applyLifeGainModification) {
             LifeGainModifiers.apply(state, playerId, amount, predicateEvaluator = predicateEvaluator)
         } else {
             amount
         }
-        if (gainAmount <= 0) return state to null
+        return gainLifePrimitive(state, playerId, gainAmount)
+    }
+
+    /** Apply a gain whose replacement chain has already completed. */
+    fun gainLifePrimitive(state: GameState, playerId: EntityId, gainAmount: Int): Pair<GameState, LifeChangedEvent?> {
+        if (gainAmount <= 0 || isLifeGainPrevented(state, playerId)) return state to null
         // Presence guard stays per-player; the value is the team's shared total (CR 810.9a).
         if (state.getEntity(playerId)?.get<LifeTotalComponent>() == null) return state to null
         val currentLife = state.lifeTotal(playerId)
@@ -916,8 +969,35 @@ object DamageUtils {
     }
 
     /**
+     * Whether no [counterType] counter has been put on the permanent [targetId] yet this turn — the
+     * per-kind twin of [isFirstCounterThisTurn], read *before* the placement is marked, to stamp
+     * [com.wingedsheep.engine.core.CountersAddedEvent.firstOfTypeThisTurn] for "if it's the first
+     * time **+1/+1** counters have been put on that permanent this turn" (Botanical Brawler). It
+     * answers from the kinds recorded on the permanent's
+     * [com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent], so a
+     * shield counter earlier in the turn does not close the +1/+1 window. Unlike
+     * [isFirstCounterThisTurn] it is not creature-only: that card watches any permanent.
+     */
+    fun isFirstCounterOfTypeThisTurn(state: GameState, targetId: EntityId, counterType: CounterType): Boolean =
+        state.getEntity(targetId)
+            ?.get<com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent>()
+            ?.counterTypes?.contains(counterType) != true
+
+    /**
+     * What [recordCounterPlacement] learned about a placement: the [state] with it marked, and the
+     * two first-this-turn windows read *before* marking — any kind ([firstThisTurn]) and this kind
+     * ([firstOfTypeThisTurn]). Destructures as `(state, firstThisTurn, firstOfTypeThisTurn)`.
+     */
+    data class CounterPlacementRecord(
+        val state: GameState,
+        val firstThisTurn: Boolean,
+        val firstOfTypeThisTurn: Boolean
+    )
+
+    /**
      * Mark that [placerId] put one or more counters on the creature [targetId] this turn.
-     * Only marks when [targetId] is a creature in the projected state.
+     * The per-permanent marker is stamped on any battlefield permanent; the placer's record only
+     * when [targetId] is a creature in the projected state.
      * Records [counterType] in the PutCounterOnCreatureThisTurnComponent on the placing player's
      * entity — its presence answers "if you put a counter on a creature this turn" (Lasting
      * Tarfire) and the recorded kind answers "one or more +1/+1 counters" (Sigardian Paladin) —
@@ -940,21 +1020,25 @@ object DamageUtils {
         targetId: EntityId,
         counterType: CounterType
     ): GameState {
-        if (!state.projectedState.isCreature(targetId)) return state
-        val byController = state.projectedState.getController(targetId) == placerId
-        return state
-            .updateEntity(placerId) { container ->
-                val existing = container
-                    .get<com.wingedsheep.engine.state.components.player.PutCounterOnCreatureThisTurnComponent>()
-                    ?: com.wingedsheep.engine.state.components.player.PutCounterOnCreatureThisTurnComponent()
-                container.with(existing.with(counterType))
-            }
-            .updateEntity(targetId) { container ->
-                val existing = container
-                    .get<com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent>()
-                    ?: com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent()
-                container.with(existing.with(counterType, byController))
-            }
+        val recorded = markCounterOnControlledPermanent(state, targetId, counterType)
+        if (targetId !in recorded.getBattlefield()) return recorded
+        val byController = recorded.projectedState.getController(targetId) == placerId
+        // The per-permanent marker is stamped on any permanent, so the per-kind window
+        // ([isFirstCounterOfTypeThisTurn]) closes on a noncreature too; the any-kind window and the
+        // placer's "on a creature" record stay creature-only.
+        val marked = recorded.updateEntity(targetId) { container ->
+            val existing = container
+                .get<com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent>()
+                ?: com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent()
+            container.with(existing.with(counterType, byController))
+        }
+        if (!marked.projectedState.isCreature(targetId)) return marked
+        return marked.updateEntity(placerId) { container ->
+            val existing = container
+                .get<com.wingedsheep.engine.state.components.player.PutCounterOnCreatureThisTurnComponent>()
+                ?: com.wingedsheep.engine.state.components.player.PutCounterOnCreatureThisTurnComponent()
+            container.with(existing.with(counterType))
+        }
     }
 
     /**
@@ -1005,18 +1089,56 @@ object DamageUtils {
         counterType: CounterType,
         placerId: EntityId? = null,
         byController: Boolean = false
-    ): Pair<GameState, Boolean> {
+    ): CounterPlacementRecord {
         val placedByController = byController ||
             (placerId != null && state.projectedState.getController(targetId) == placerId)
         val first = state.getEntity(targetId)
             ?.has<com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent>() != true
-        val newState = state.updateEntity(targetId) { container ->
+        val firstOfType = isFirstCounterOfTypeThisTurn(state, targetId, counterType)
+        val newState = markCounterOnControlledPermanent(state, targetId, counterType, entering = byController)
+            .updateEntity(targetId) { container ->
             val existing = container
                 .get<com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent>()
                 ?: com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent()
             container.with(existing.with(counterType, placedByController))
         }
-        return newState to first
+        return CounterPlacementRecord(newState, first, firstOfType)
+    }
+
+    /**
+     * Record [counterType] on the [com.wingedsheep.engine.state.components.player.CountersPutOnYourPermanentsThisTurnComponent]
+     * of whoever controls the permanent [targetId] as the counter is placed — "if a +1/+1 counter was
+     * put on a permanent under your control this turn" (Fairgrounds Trumpeter). Keyed on the
+     * recipient's controller, not the placer, and over any permanent type.
+     *
+     * Both placement funnels — [markCounterPlacedOnCreature] and [recordCounterPlacement] — call
+     * this, so every path that stamps a counter-history marker also feeds this record; the few
+     * emitters outside those funnels (cost payments, saga lore, the graveyard-cast entry rider) call
+     * it directly. Recording is idempotent per kind, so a path that goes through both funnels is fine.
+     *
+     * The controller is the *projected* one for a permanent on the battlefield. With [entering] — a
+     * permanent entering with counters (CR 122.6), not on the battlefield yet — it falls back to the
+     * entering object's base controller. Anything else off the battlefield (a suspended card, a
+     * spell) is not a permanent and records nothing.
+     */
+    fun markCounterOnControlledPermanent(
+        state: GameState,
+        targetId: EntityId,
+        counterType: CounterType,
+        entering: Boolean = false
+    ): GameState {
+        val controllerId = when {
+            targetId in state.getBattlefield() -> state.projectedState.getController(targetId)
+            entering -> state.getEntity(targetId)
+                ?.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
+            else -> null
+        } ?: return state
+        return state.updateEntity(controllerId) { container ->
+            val existing = container
+                .get<com.wingedsheep.engine.state.components.player.CountersPutOnYourPermanentsThisTurnComponent>()
+                ?: com.wingedsheep.engine.state.components.player.CountersPutOnYourPermanentsThisTurnComponent()
+            container.with(existing.with(counterType))
+        }
     }
 
     /**
@@ -1251,35 +1373,24 @@ object DamageUtils {
         ) {
             return true
         }
-        for (entityId in state.getBattlefield()) {
-            val container = state.getEntity(entityId) ?: continue
-            val replacementComponent = container.get<ReplacementEffectSourceComponent>() ?: continue
-
-            for (effect in replacementComponent.replacementEffects) {
-                if (effect !is PreventLifeGain) continue
-
-                val lifeGainEvent = effect.appliesTo
-                if (lifeGainEvent !is com.wingedsheep.sdk.scripting.EventPattern.LifeGainEvent) continue
-
-                val sourceControllerId = replacementHostController(state, entityId)
-                when (lifeGainEvent.player) {
-                    Player.Each, Player.Any -> return true
-                    Player.You -> if (playerId == sourceControllerId) return true
-                    // "Your opponents can't gain life." — Gríma Wormtongue (LTR). A real opponent
-                    // test: the controller's teammate is not their opponent (CR 102.3 / 810.9g).
-                    Player.EachOpponent ->
-                        if (sourceControllerId != null && state.isOpponentOf(playerId, sourceControllerId)) return true
-                    // "Enchanted player can't gain life." — Grievous Wound. The host is an Aura
-                    // attached to the locked player; compare against its attachment target.
-                    Player.EnchantedPlayer -> {
-                        val enchanted = container
-                            .get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()
-                            ?.targetId
-                        if (enchanted == playerId) return true
-                    }
-                    else -> {}
-                }
+        for (active in com.wingedsheep.engine.replacement.ActiveReplacements.all(state)) {
+            val effect = active.effect as? PreventLifeGain ?: continue
+            if (!active.granted && (state.projectedState.hasLostAllAbilities(active.sourceId) ||
+                state.projectedState.isFaceDown(active.sourceId))) continue
+            val lifeGainEvent = effect.appliesTo as? com.wingedsheep.sdk.scripting.EventPattern.LifeGainEvent ?: continue
+            val controllerId = active.controllerId
+            val prohibitedSeats = if (state.format.sharesTeamLife) state.teamOf(playerId) else listOf(playerId)
+            val matches = when (lifeGainEvent.player) {
+                Player.Each, Player.Any -> true
+                Player.You -> controllerId in prohibitedSeats
+                Player.EachOpponent, Player.AnOpponent, Player.TargetOpponent ->
+                    prohibitedSeats.any { state.isOpponentOf(it, controllerId) }
+                Player.EnchantedPlayer -> state.getEntity(active.sourceId)
+                    ?.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()
+                    ?.targetId in prohibitedSeats
+                else -> false
             }
+            if (matches) return true
         }
         return false
     }
@@ -1516,6 +1627,26 @@ object DamageUtils {
             }
         }
 
+        // A source's required properties are rechecked when damage occurs, not frozen at choice.
+        if (remainingDamage > 0 && sourceId != null) {
+            for (i in updatedEffects.indices) {
+                if (remainingDamage <= 0) break
+                if (i in toRemove) continue
+                val floating = updatedEffects[i]
+                val mod = floating.effect.modification as? SerializableModification.PreventNextDamageLeavingAmount ?: continue
+                if (targetId !in floating.effect.affectedEntities || mod.damageSourceId != sourceId) continue
+                if (mod.combatOnly && !isCombatDamage) continue
+                if (floating.referencedObjects.any { !state.isCurrentObject(it) }) continue
+                if (!predicateEvaluator.matches(state, state.projectedState, sourceId, mod.eligibleSource,
+                        PredicateContext(controllerId = floating.controllerId, sourceId = floating.sourceId))) continue
+                val reducedDamage = minOf(remainingDamage, mod.amountToLeave)
+                if (reducedDamage < remainingDamage) {
+                    remainingDamage = reducedDamage
+                    toRemove.add(i)
+                }
+            }
+        }
+
         // Remove fully consumed shields in reverse order to maintain indices
         for (idx in toRemove.sortedDescending()) {
             updatedEffects.removeAt(idx)
@@ -1565,13 +1696,18 @@ object DamageUtils {
         targetId: EntityId,
         damageAmount: Int,
         inBatch: Boolean = false,
-        sourceId: EntityId? = null
+        sourceId: EntityId? = null,
+        damageSourceRef: com.wingedsheep.engine.state.ObjectRef? = sourceId?.let(state::objectRef),
+        chosenSourcesOnly: Boolean = false
     ): Triple<GameState, EntityId?, Int> {
+        if (damageAmount <= 0) return Triple(state, null, 0)
         var workingState = state
         var shieldIndex = -1
         for ((index, effect) in state.floatingEffects.withIndex()) {
             val modification = effect.effect.modification
             if (modification !is SerializableModification.RedirectNextDamage) continue
+            if (chosenSourcesOnly && modification.chosenSource == null) continue
+            if (modification.chosenSource != null && modification.chosenSource.reference != damageSourceRef) continue
             if (!OptionalDamageRedirect.redirectShieldCovers(workingState, effect, modification, targetId)) continue
             if (!modification.optional) {
                 shieldIndex = index
@@ -1635,7 +1771,7 @@ object DamageUtils {
      * full amount to, plus the replacement source's id (so the caller can mark it applied
      * and prevent redirect loops). Returns (null, null) when nothing applies.
      */
-    private fun findStaticDamageRedirect(
+    fun findStaticDamageRedirect(
         state: GameState,
         targetId: EntityId,
         amount: Int,
@@ -1747,13 +1883,17 @@ object DamageUtils {
      * @param targetId The entity about to receive damage (the protected player — the shield's affected entity)
      * @param damageAmount The amount of damage about to be dealt (and thus prevented)
      * @param sourceId The entity dealing the damage
+     * @param isCombatDamage Whether this is combat damage — a combat-only shield ignores anything else
+     * @param isPlayerRecipient Whether [targetId] is a player — a players-only shield ignores permanents
      * @return ExecutionResult if a shield matched (damage prevented, event emitted), null otherwise
      */
     fun checkDeflectDamageShield(
         state: GameState,
         targetId: EntityId,
         damageAmount: Int,
-        sourceId: EntityId
+        sourceId: EntityId,
+        isCombatDamage: Boolean,
+        isPlayerRecipient: Boolean
     ): DeflectOutcome? {
         val sourceEntity = state.getEntity(sourceId)
         val originatingSourceId = sourceEntity
@@ -1764,6 +1904,8 @@ object DamageUtils {
             val mod = effect.effect.modification
             mod is SerializableModification.PreventNextDamageFromSourceShield &&
                 (mod.damageSourceId == sourceId || mod.damageSourceId == originatingSourceId) &&
+                (!mod.combatOnly || isCombatDamage) &&
+                (!mod.playersOnly || isPlayerRecipient) &&
                 (effect.effect.affectedEntities.isEmpty() || targetId in effect.effect.affectedEntities)
         }
         if (shieldIndex == -1) return null
@@ -1962,6 +2104,67 @@ object DamageUtils {
     )
 
     /**
+     * Counter-bounded, per-point prevention. Floating shields run first so a paid prevention
+     * shield can preserve counters. Each matching ability is applied once to the remaining
+     * damage; unpreventable damage still spends counters (CR 615.12).
+     */
+    fun applyPerPointCounterPrevention(
+        state: GameState,
+        targetId: EntityId,
+        damageAmount: Int,
+        sourceId: EntityId?,
+        isCombatDamage: Boolean,
+        predicateEvaluator: PredicateEvaluator,
+        cantBePrevented: Boolean = false,
+    ): CounterPreventionResult {
+        // Most damage recipients have no counters. Avoid a battlefield replacement scan (and
+        // prevention-shutoff scan) entirely in that common path.
+        if (damageAmount <= 0 ||
+            state.getEntity(targetId)?.get<CountersComponent>()?.counters?.values?.any { it > 0 } != true ||
+            targetId !in state.getBattlefield()
+        ) {
+            return CounterPreventionResult(state, damageAmount, emptyList())
+        }
+        var newState = state
+        var remaining = damageAmount
+        val events = mutableListOf<EngineGameEvent>()
+        var preventionDisabled: Boolean? = if (cantBePrevented) true else null
+        for (active in com.wingedsheep.engine.replacement.ActiveReplacements.all(state)) {
+            val effect = active.effect as? com.wingedsheep.sdk.scripting.PreventDamagePerCounter ?: continue
+            if (remaining <= 0) break
+            val projected = newState.projectedState
+            if (!active.granted && (projected.hasLostAllAbilities(active.sourceId) || projected.isFaceDown(active.sourceId))) continue
+            val pattern = effect.appliesTo
+            val damageTypeMatches = when (pattern.damageType) {
+                DamageType.Any -> true
+                DamageType.Combat -> isCombatDamage
+                DamageType.NonCombat -> !isCombatDamage
+            }
+            if (!damageTypeMatches || !pattern.amount.matches(remaining)) continue
+            if (!damageSourceMatches(newState, projected, pattern.source, sourceId,
+                    active.sourceId, active.controllerId, targetId, predicateEvaluator)) continue
+            if (!damageRecipientMatches(newState, projected, pattern.recipient, targetId,
+                    active.sourceId, active.controllerId, predicateEvaluator)) continue
+            val counters = newState.getEntity(targetId)?.get<CountersComponent>() ?: continue
+            val present = counters.getCount(effect.counterType)
+            val removed = minOf(present, remaining)
+            if (removed <= 0) continue
+            newState = newState.updateEntity(targetId) { it.with(counters.withRemoved(effect.counterType, removed)) }
+            events.add(com.wingedsheep.engine.core.CountersRemovedEvent(
+                targetId, effect.counterType, removed,
+                if (projected.isFaceDown(targetId)) "Face-down permanent"
+                else newState.getEntity(targetId)?.get<CardComponent>()?.name ?: "Permanent",
+                remainingCount = present - removed, byDamagePrevention = true
+            ))
+            val disabled = preventionDisabled ?: isDamagePreventionDisabled(
+                state, targetId, sourceId, predicateEvaluator = predicateEvaluator
+            ).also { preventionDisabled = it }
+            if (!disabled) remaining -= removed
+        }
+        return CounterPreventionResult(newState, remaining, events)
+    }
+
+    /**
      * Whether a [DoubleDamage]'s source filter is attachment-scoped — "damage *equipped/enchanted
      * creature* would deal" (Mjölnir, Hammer of Thor).
      *
@@ -2027,6 +2230,7 @@ object DamageUtils {
                         sourceId = entityId,
                         sourceName = container.get<CardComponent>()?.name ?: "A permanent",
                         damageType = damageEvent.damageType,
+                        multiplier = effect.multiplier,
                     )
                 )
             }
@@ -2085,6 +2289,7 @@ object DamageUtils {
                         sourceId = entityId,
                         sourceName = container.get<CardComponent>()?.name ?: "A permanent",
                         damageType = damageEvent.damageType,
+                        multiplier = effect.multiplier,
                     )
                 )
             }
@@ -2272,8 +2477,9 @@ object DamageUtils {
                 if (!recipientMatches) continue
 
                 // Each DoubleDamage source is its own replacement effect and applies once
-                // (CR 616.1), so two Twinflame Tyrants quadruple rather than double.
-                amplifiedAmount *= 2
+                // (CR 616.1), so two Twinflame Tyrants quadruple rather than double. City on Fire
+                // scales by its own multiplier (3).
+                amplifiedAmount *= effect.multiplier
             }
         }
 
@@ -2452,21 +2658,35 @@ object DamageUtils {
             }
         }
 
-        // Turn-duration noncombat-damage amplification (Taii Wakeen, Perfect Shot): every source
-        // the effect's controller controls deals +bonus noncombat damage to any permanent or
-        // player this turn (CR 616). No opponent restriction — applies to the controller's own
-        // permanents too. Multiple installs stack additively.
-        if (sourceId != null && !isCombatDamage) {
-            val sourceController = projected.getController(sourceId)
-                ?: state.getEntity(sourceId)?.get<ControllerComponent>()?.playerId
-            if (sourceController != null) {
-                for (floating in state.floatingEffects) {
-                    val mod = floating.effect.modification
-                    if (mod !is com.wingedsheep.engine.mechanics.layers.SerializableModification.AmplifyNoncombatDamage) continue
-                    if (floating.controllerId != sourceController) continue
-                    amplifiedAmount += mod.bonus
-                }
+        // Turn-duration damage amplification (Taii Wakeen, Perfect Shot; Rankle and Torbran): a
+        // floating +bonus replacement (CR 616) scoped by its own DamageEvent pattern, "you" being the
+        // effect's controller. It outlives the source that installed it, which still answers "this
+        // permanent" when the pattern names it. Multiple installs stack additively.
+        for (floating in state.floatingEffects) {
+            val mod = floating.effect.modification
+            if (mod !is com.wingedsheep.engine.mechanics.layers.SerializableModification.AmplifyDamage) continue
+            val damageEvent = mod.appliesTo
+            val damageTypeMatches = when (damageEvent.damageType) {
+                is DamageType.Any -> true
+                is DamageType.Combat -> isCombatDamage
+                is DamageType.NonCombat -> !isCombatDamage
             }
+            if (!damageTypeMatches) continue
+            if (!damageEvent.amount.matches(amplifiedAmount)) continue
+            val hostId = floating.sourceId ?: floating.controllerId
+            if (!damageSourceMatches(
+                    state, projected, damageEvent.source, sourceId,
+                    hostId = hostId, hostControllerId = floating.controllerId, recipientId = targetId,
+                    predicateEvaluator = predicateEvaluator
+                )
+            ) continue
+            if (!damageRecipientMatches(
+                    state, projected, damageEvent.recipient, targetId,
+                    hostId = hostId, hostControllerId = floating.controllerId,
+                    predicateEvaluator = predicateEvaluator
+                )
+            ) continue
+            amplifiedAmount += mod.bonus
         }
 
         // Cap damage replacements (Divine Presence): clamp the would-be amount to a maximum.
@@ -2563,6 +2783,24 @@ object DamageUtils {
         return amplifiedAmount
     }
 
+    /** Whether a matching life-loss lock forbids any loss, independent of the amount exchanged.
+     * A zero multiplier with no positive modifier is the existing life-loss prohibition shape.
+     * Amount reductions that merely happen to reduce this particular loss to zero are replacements,
+     * not prohibitions, and must not cancel the other half of a life-total exchange.
+     */
+    fun isLifeLossPrevented(
+        state: GameState,
+        playerId: EntityId,
+        predicateEvaluator: PredicateEvaluator
+    ): Boolean {
+        if (state.isLifeLossLocked(playerId)) return true
+        var prevented = false
+        forEachLifeLossReplacement<ModifyLifeLoss>(state, playerId, predicateEvaluator, { it.restrictions }) {
+            if (it.multiplier == 0 && it.modifier <= 0) prevented = true
+        }
+        return prevented
+    }
+
     /**
      * Apply life-loss replacement effects (ModifyLifeLoss) to a life-loss amount.
      *
@@ -2583,6 +2821,8 @@ object DamageUtils {
         predicateEvaluator: PredicateEvaluator
     ): Int {
         if (amount <= 0) return 0
+        // CR 119.8 — a player-scoped "can't lose life" lock (LockLifeLossEffect).
+        if (state.isLifeLossLocked(losingPlayerId)) return 0
 
         var modifiedAmount = amount
         forEachLifeLossReplacement<ModifyLifeLoss>(state, losingPlayerId, predicateEvaluator, { it.restrictions }) { effect ->
@@ -2862,9 +3102,12 @@ object DamageUtils {
                 newState = newState.updateEntity(counterHolderId) { c ->
                     c.with(updatedCounters)
                 }
+                val (afterMark, firstThisTurn, firstOfTypeThisTurn) =
+                    recordCounterPlacement(newState, counterHolderId, counterType, placerId = sourceControllerId)
+                newState = afterMark
 
                 val entityName = counterHolder.get<CardComponent>()?.name ?: ""
-                events.add(CountersAddedEvent(counterHolderId, effect.counterType, amount, entityName, placedBy = sourceControllerId))
+                events.add(CountersAddedEvent(counterHolderId, effect.counterType, amount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = sourceControllerId))
 
                 // Check sacrifice threshold (state-triggered ability approximation)
                 val totalCounters = updatedCounters.getCount(counterType)

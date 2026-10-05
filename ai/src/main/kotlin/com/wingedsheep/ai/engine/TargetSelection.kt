@@ -17,6 +17,9 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
+import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Picking targets for a spell or ability without simulating anything.
@@ -64,7 +67,7 @@ object TargetSelection {
                 BoardPresence.permanentValue(state, projected, entityId, card, intents)
             } else 0.0
             // Opponent creatures: higher value = better target for removal
-            // Own creatures: higher value = better target for pump/bite source
+            // Friendly creatures rank below opponents in this removal-oriented fallback.
             if (isOpponent) value + 10.0 else -value
         } else if (card != null && intents.isEnabled) {
             // Phase 6. This branch used to be a flat `0.0`, which meant an opponent's Oblivion
@@ -80,12 +83,43 @@ object TargetSelection {
     }
 
     /**
+     * Rank candidates for this action, reading the activated effect rather than its source card.
+     * A pure, fixed stat boost wants a friendly creature; removal keeps the usual ranking.
+     * Unknown, mixed, granted and multi-requirement abilities keep the existing fallback.
+     * Resolve the ability once per action, outside the candidate sorting hot path.
+     */
+    fun ranker(
+        state: GameState,
+        action: LegalAction,
+        playerId: EntityId,
+        intents: IntentCatalog = IntentCatalog.NONE,
+    ): (EntityId) -> Double {
+        val activation = action.action as? ActivateAbility
+        val name = activation?.let { state.getEntity(it.sourceId)?.get<CardComponent>()?.name }
+        val ability = if (name != null) intents.activatedAbility(name, activation.abilityId) else null
+        val effect = ability?.effect as? ModifyStatsEffect
+        val requirement = ability?.targetRequirements?.singleOrNull()
+        val targetsRequirement = when (val target = effect?.target) {
+            is EffectTarget.BoundVariable -> target.name == requirement?.id
+            is EffectTarget.ContextTarget -> target.index == 0 && requirement != null
+            else -> false
+        }
+        val power = (effect?.powerModifier as? DynamicAmount.Fixed)?.amount
+        val toughness = (effect?.toughnessModifier as? DynamicAmount.Fixed)?.amount
+        val beneficial = targetsRequirement && power != null && toughness != null &&
+            power >= 0 && toughness >= 0 && (power > 0 || toughness > 0)
+        return { entityId ->
+            val value = rank(state, entityId, playerId, intents)
+            if (beneficial && state.projectedState.isCreature(entityId)) -value else value
+        }
+    }
+
+    /**
      * For spells/abilities that require target selection, fill in heuristic
      * targets so the action can actually resolve.
      *
-     * Multi-target spells: for each requirement, pick the highest-value
-     * opponent creature (or lowest-value own creature, depending on context).
-     * Single-target spells: pick the best target by creature value.
+     * Pure stat-boosting activated abilities prefer high-value friendly creatures.
+     * Other actions keep the removal-oriented ranking: high-value opposing creatures first.
      *
      * This is the cheap path — one heuristic target per requirement, no simulation. The action the
      * Strategist actually commits routes through `chooseCommittedTargets`, which refines it.
@@ -109,6 +143,7 @@ object TargetSelection {
         if (targetsAlreadyFilled(baseAction) != false) return action.action
         val targetInfos = fillableRequirements(action, fillPartialRequirements) ?: return action.action
 
+        val rankTarget = ranker(state, action, playerId, intents)
         val chosenTargets = mutableListOf<ChosenTarget>()
         val chosenIds = mutableSetOf<EntityId>()
         for ((index, info) in targetInfos.withIndex()) {
@@ -130,14 +165,19 @@ object TargetSelection {
             // (or the engine) to reject. Either beats `first()` on an empty list, which is what this
             // used to do — an `?: available.first()` that could only ever run when `available` was
             // empty, and so could only ever throw.
-            val selectedId = available.maxByOrNull { rank(state, it, playerId, intents) }
-                ?: return if (targetInfos.drop(index).all { it.minTargets == 0 }) {
+            val picks = pick(state, info, available, rankTarget)
+            if (picks.isEmpty()) {
+                return if (targetInfos.drop(index).all { it.minTargets == 0 }) {
                     applyTargets(baseAction, chosenTargets)
                 } else {
                     action.action
                 }
-            chosenTargets += toChosenTarget(state, info, selectedId, playerId)
-            chosenIds += selectedId
+            }
+            // A mandatory multi-target slot the board can't fill (two creatures controlled by
+            // different players, with every creature under one player) has no legal list.
+            if (picks.size < info.minTargets) return action.action
+            picks.forEach { chosenTargets += toChosenTarget(state, info, it, playerId) }
+            chosenIds += picks
         }
         return applyTargets(baseAction, chosenTargets)
     }
@@ -221,6 +261,32 @@ object TargetSelection {
             else -> return cast
         }
         return cast.copy(additionalCostPayment = payment)
+    }
+
+    /**
+     * The heuristic picks for one requirement: the best-ranked candidate, or — when the requirement
+     * demands several ("two target creatures") — the best [TargetInfo.minTargets] of them, each
+     * from a controller not already used when [TargetInfo.differentControllers] is set. Returns
+     * fewer than required when [available] can't supply them; empty when it is empty.
+     */
+    fun pick(
+        state: GameState,
+        info: TargetInfo,
+        available: List<EntityId>,
+        rankTarget: (EntityId) -> Double,
+    ): List<EntityId> {
+        val needed = maxOf(1, info.minTargets)
+        val picks = mutableListOf<EntityId>()
+        val controllers = mutableSetOf<EntityId>()
+        for (candidate in available.sortedByDescending(rankTarget)) {
+            if (picks.size == needed) break
+            if (info.differentControllers) {
+                val controller = state.projectedState.getController(candidate)
+                if (controller != null && !controllers.add(controller)) continue
+            }
+            picks += candidate
+        }
+        return picks
     }
 
     /**

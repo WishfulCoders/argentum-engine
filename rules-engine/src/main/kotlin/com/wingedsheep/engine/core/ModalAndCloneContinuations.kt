@@ -2,6 +2,7 @@ package com.wingedsheep.engine.core
 
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
@@ -84,6 +85,7 @@ data class ModalContinuation(
      */
     val recordChosenModesThisTurn: Boolean = false,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -129,6 +131,7 @@ data class ModalPreChosenContinuation(
     val sourceName: String?,
     val xValue: Int? = null,
     val triggeringEntityId: EntityId? = null,
+    val triggerContext: com.wingedsheep.engine.event.TriggerContext? = null,
     /**
      * The enclosing resolution's pipeline, so the modes still queued behind a paused one read the
      * same stored collections/numbers the modes before them did. Without it a choose-two modal
@@ -138,6 +141,7 @@ data class ModalPreChosenContinuation(
         com.wingedsheep.engine.handlers.PipelineState.EMPTY,
     val remainingEntries: List<PreTargetedEffectEntry>,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AutomaticContinuation
 
 /**
@@ -196,6 +200,7 @@ data class ModalChosenModeTailContinuation(
     val outerNamedTargets: Map<String, ChosenTarget> = emptyMap(),
     val pipeline: com.wingedsheep.engine.handlers.PipelineState = com.wingedsheep.engine.handlers.PipelineState.EMPTY,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AutomaticContinuation
 
 /**
@@ -229,6 +234,7 @@ data class ModalTargetContinuation(
     val outerNamedTargets: Map<String, ChosenTarget> = emptyMap(),
     val pipeline: com.wingedsheep.engine.handlers.PipelineState = com.wingedsheep.engine.handlers.PipelineState.EMPTY,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -244,6 +250,7 @@ data class ModalTargetContinuation(
  * @property castFaceDown Whether the spell was cast face-down
  * @property optional Whether the copy is optional (Clone is optional)
  * @property additionalSubtypes Subtypes to add to the copy (e.g., "Bird" for Mockingbird)
+ * @property additionalColors Colors added to the copy's colors (Lazotep Convert: black)
  * @property additionalKeywords Keywords to grant to the copy (e.g., FLYING for Mockingbird)
  * @property nameOverride When non-null, the copy keeps this name instead of the copied object's
  *   name (Superior Spider-Man: "except his name is Superior Spider-Man")
@@ -262,12 +269,17 @@ data class CloneEntersContinuation(
     val ownerId: EntityId,
     val castFaceDown: Boolean,
     val additionalSubtypes: List<String> = emptyList(),
+    val additionalColors: Set<Color> = emptySet(),
     val additionalKeywords: List<Keyword> = emptyList(),
+    val exceptions: com.wingedsheep.sdk.scripting.effects.CopyExceptions =
+        com.wingedsheep.sdk.scripting.effects.CopyExceptions.None,
     val nameOverride: String? = null,
     val powerOverride: Int? = null,
     val toughnessOverride: Int? = null,
     val exileCopiedCard: Boolean = false,
-    val additionalCounters: DynamicAmount? = null
+    val additionalCounters: DynamicAmount? = null,
+    /** [com.wingedsheep.sdk.scripting.EntersAsCopy.duration] — `EndOfTurn` tags the copy to revert at cleanup. */
+    val duration: com.wingedsheep.sdk.scripting.Duration = com.wingedsheep.sdk.scripting.Duration.Permanent
 ) : AnswerContinuation
 
 /**
@@ -278,7 +290,7 @@ data class CloneEntersContinuation(
  * [CloneEntersContinuation]).
  *
  * The resumer copies the chosen object's copiable characteristics (CR 707.2) onto the entity, adds
- * any [additionalSubtypes] / [additionalKeywords] and overrides, taps the entity if
+ * any [additionalSubtypes] / [additionalColors] / [additionalKeywords] and overrides, taps the entity if
  * [tappedIfCopied] and a copy was actually made, optionally exiles the copied card, then fires the
  * entry's ETB triggers off a synthesized [ZoneChangeEvent] (so the copied identity's landfall /
  * "when ~ enters" triggers see the final characteristics). Declining leaves the permanent as its
@@ -297,13 +309,18 @@ data class CloneEntersOnBattlefieldContinuation(
     val controllerId: EntityId,
     val fromZone: Zone? = null,
     val additionalSubtypes: List<String> = emptyList(),
+    val additionalColors: Set<Color> = emptySet(),
     val additionalKeywords: List<Keyword> = emptyList(),
+    val exceptions: com.wingedsheep.sdk.scripting.effects.CopyExceptions =
+        com.wingedsheep.sdk.scripting.effects.CopyExceptions.None,
     val nameOverride: String? = null,
     val powerOverride: Int? = null,
     val toughnessOverride: Int? = null,
     val exileCopiedCard: Boolean = false,
     val tappedIfCopied: Boolean = false,
     val additionalCounters: DynamicAmount? = null,
+    /** See [CloneEntersContinuation.duration]. */
+    val duration: com.wingedsheep.sdk.scripting.Duration = com.wingedsheep.sdk.scripting.Duration.Permanent,
     /** Actual entry refs, retained across every as-enters decision. */
     val entryOldObject: com.wingedsheep.engine.state.ObjectRef? = null,
     val entryNewObject: com.wingedsheep.engine.state.ObjectRef? = null
@@ -415,7 +432,9 @@ data class EntersWithChoiceOnBattlefieldContinuation(
     val syntheticRiotRemaining: Int = 0,
     /** Actual entry refs, retained across every as-enters decision. */
     val entryOldObject: com.wingedsheep.engine.state.ObjectRef? = null,
-    val entryNewObject: com.wingedsheep.engine.state.ObjectRef? = null
+    val entryNewObject: com.wingedsheep.engine.state.ObjectRef? = null,
+    /** The printed name of a permanent that entered as a copy, for the entry event. */
+    val copyOfOriginalName: String? = null
 ) : AnswerContinuation
 
 /**
@@ -565,6 +584,7 @@ data class BudgetModalContinuation(
     val remainingBudget: Int,
     val selectedModeIndices: List<Int> = emptyList(),
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -669,4 +689,5 @@ data class ChooseActionContinuation(
     val namedTargets: Map<String, ChosenTarget> = emptyMap(),
     val triggeringEntityId: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation

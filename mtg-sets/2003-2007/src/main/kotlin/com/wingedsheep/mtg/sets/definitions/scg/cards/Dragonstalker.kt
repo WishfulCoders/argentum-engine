@@ -27,8 +27,8 @@ val Dragonstalker = card("Dragonstalker") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "7"
-        artist = "Daren Bader"
+        collectorNumber = "11"
+        artist = "Ron Spencer"
         flavorText = "It hunts the hunters of the skies."
         imageUri = "https://cards.scryfall.io/normal/front/5/8/58017ff1-74d2-4be2-976a-8dff53e16150.jpg?1562529448"
     }

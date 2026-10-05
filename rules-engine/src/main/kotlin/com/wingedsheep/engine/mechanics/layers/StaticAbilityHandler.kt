@@ -1,5 +1,8 @@
 package com.wingedsheep.engine.mechanics.layers
 
+import com.wingedsheep.sdk.scripting.SpendManaAsColor
+import com.wingedsheep.sdk.scripting.conditions.Condition
+import com.wingedsheep.engine.state.components.battlefield.ManaSpendingGrant
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.components.battlefield.CantBeBlockedWhilePropertyAtMostComponent
@@ -18,6 +21,7 @@ import com.wingedsheep.engine.state.components.battlefield.ReplacementEffectSour
 import com.wingedsheep.engine.state.components.battlefield.SuppressesHexproofForGroupComponent
 import com.wingedsheep.engine.state.components.battlefield.SuppressesWardForGroupComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.GrantsDredgeToGraveyardCardsComponent
 import com.wingedsheep.engine.state.components.identity.GrantsMadnessToOwnedCardsComponent
 import com.wingedsheep.engine.state.components.identity.RoomFaceStatics
 import com.wingedsheep.sdk.model.CardDefinition
@@ -39,7 +43,6 @@ import com.wingedsheep.sdk.scripting.MustAttack
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.CompositeStaticAbility
 import com.wingedsheep.sdk.scripting.conditions.Compare
-import com.wingedsheep.sdk.scripting.conditions.Condition
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
 import com.wingedsheep.sdk.scripting.EquipAbilitiesAtInstantSpeed
 import com.wingedsheep.sdk.scripting.FreeFirstEquipEachTurn
@@ -132,6 +135,7 @@ import com.wingedsheep.sdk.scripting.GrantKeywordToOwnSpells
 import com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.GrantWarpToCardsInHand
+import com.wingedsheep.sdk.scripting.GrantEmergeToOwnSpells
 import com.wingedsheep.sdk.scripting.GrantMiracleToCardsInHand
 import com.wingedsheep.sdk.scripting.GraveyardCardsHaveFlashback
 import com.wingedsheep.sdk.scripting.LookAtFaceDownCreatures
@@ -158,7 +162,7 @@ import com.wingedsheep.sdk.scripting.PlayersCantCastSpells
 import com.wingedsheep.sdk.scripting.PreventActivatedAbilities
 import com.wingedsheep.sdk.scripting.PreventCycling
 import com.wingedsheep.sdk.scripting.SuppressEntersTriggers
-import com.wingedsheep.sdk.scripting.ConvertEmptyingManaToRed
+import com.wingedsheep.sdk.scripting.ConvertEmptyingMana
 import com.wingedsheep.sdk.scripting.PreventManaPoolEmptying
 import com.wingedsheep.sdk.scripting.RetainUnspentColoredMana
 import com.wingedsheep.sdk.scripting.MultiplyManaOnSourceTap
@@ -240,6 +244,23 @@ class StaticAbilityHandler(
         // RoomFaceStatics is what lets a Room face's continuous statics project once its door is
         // unlocked; the component is re-baked on later unlocks by RoomDoorUnlocker.
         val allStaticAbilities = RoomFaceStatics.activeStaticAbilities(container, cardDefinition)
+
+        val spending = mutableListOf<ManaSpendingGrant>()
+        fun collectSpending(ability: StaticAbility, conditions: List<Condition> = emptyList()) {
+            when (ability) {
+                is SpendManaAsColor -> spending.add(
+                    ManaSpendingGrant(ability, conditions)
+                )
+                is ConditionalStaticAbility -> collectSpending(ability.ability, conditions + ability.condition)
+                is CompositeStaticAbility -> ability.abilities.forEach { collectSpending(it, conditions) }
+                else -> Unit
+            }
+        }
+        allStaticAbilities.forEach { collectSpending(it) }
+        val card = result.get<CardComponent>()
+        if (card != null && card.manaSpendingGrants != spending) {
+            result = result.with(card.copy(manaSpendingGrants = spending.toList()))
+        }
 
         // Convert static abilities to continuous effect data, tagging each ability's effects with
         // a shared group id when it touches more than one layer (CR 613.6 — see toGroupedEffectData).
@@ -331,6 +352,14 @@ class StaticAbilityHandler(
             .map { it.filter }
         if (madnessGrantFilters.isNotEmpty()) {
             result = result.with(GrantsMadnessToOwnedCardsComponent(madnessGrantFilters))
+        }
+
+        // Add component for "[filter] cards in your graveyard have dredge N" (The Necrobloom) —
+        // read off the permanent by DredgeReplacements at draw time.
+        val dredgeGrants = allStaticAbilities
+            .filterIsInstance<com.wingedsheep.sdk.scripting.GraveyardCardsHaveDredge>()
+        if (dredgeGrants.isNotEmpty()) {
+            result = result.with(GrantsDredgeToGraveyardCardsComponent(dredgeGrants))
         }
 
         // Add component for "ward abilities of creatures matching filter don't trigger"
@@ -604,6 +633,22 @@ class StaticAbilityHandler(
      */
     private fun convertStaticAbility(ability: StaticAbility): ContinuousEffectData? {
         return when (ability) {
+            is com.wingedsheep.sdk.scripting.CanAttackAsThoughHasty -> {
+                ContinuousEffectData(
+                    modification = Modification.CanAttackAsThoughHasty,
+                    affectsFilter = if (ability.filter.scope is com.wingedsheep.sdk.scripting.filters.unified.Scope.Battlefield) {
+                        AffectsFilter.Generic(ability.filter)
+                    } else {
+                        convertGroupFilter(ability.filter)
+                    }
+                )
+            }
+            is com.wingedsheep.sdk.scripting.PreventEnchantment -> {
+                ContinuousEffectData(
+                    modification = Modification.PreventEnchantment(ability.auras, ability.exceptSource),
+                    affectsFilter = convertGroupFilter(ability.filter)
+                )
+            }
             is GrantKeyword -> {
                 ContinuousEffectData(
                     modification = Modification.GrantKeyword(ability.keyword),
@@ -737,7 +782,7 @@ class StaticAbilityHandler(
             }
             is MustAttack -> {
                 ContinuousEffectData(
-                    modification = Modification.SetMustAttack,
+                    modification = if (ability.playersOnly) Modification.SetMustAttackPlayer else Modification.SetMustAttack,
                     affectsFilter = convertGroupFilter(ability.filter)
                 )
             }
@@ -825,8 +870,19 @@ class StaticAbilityHandler(
                 )
             }
             is GrantCardType -> {
+                val crossZone = if (ability.includeControlledSpells || ability.includeOwnedCardsOutsideBattlefield) {
+                    Modification.CrossZoneReach(
+                        includeControlledSpells = ability.includeControlledSpells,
+                        includeOwnedCardsOutsideBattlefield = ability.includeOwnedCardsOutsideBattlefield,
+                        // Off the battlefield only the card predicates qualify an object; the
+                        // controller/state half of the filter describes the battlefield group.
+                        eligibility = com.wingedsheep.sdk.scripting.GameObjectFilter(
+                            cardPredicates = ability.filter.baseFilter.cardPredicates
+                        )
+                    )
+                } else null
                 ContinuousEffectData(
-                    modification = Modification.AddType(ability.cardType.uppercase()),
+                    modification = Modification.AddType(ability.cardType.uppercase(), crossZone),
                     affectsFilter = convertGroupFilter(ability.filter)
                 )
             }
@@ -967,12 +1023,15 @@ class StaticAbilityHandler(
             is BlockerCountLimit,
             is CanAttackDespiteDefender,
             is CanBlockAnyNumber,
+            is com.wingedsheep.sdk.scripting.MustBlockEachAttacker,
             is com.wingedsheep.sdk.scripting.CanBlockAsThoughUntapped,
             is CantAttackUnless,
             is com.wingedsheep.sdk.scripting.CantAttackUnlessSacrifice,
+            is com.wingedsheep.sdk.scripting.ExertAsItAttacks,
             is CantAttackUnlessCoAttacker,
             is CantBeAttackedBy,
             is CantBeAttackedWhileAttached,
+            is com.wingedsheep.sdk.scripting.OpponentsMustAttackYou,
             is CantBeBlockedBy,
             is CantBeBlockedByCreaturesWithLessPower,
             is CantBeBlockedByMoreThan,
@@ -991,6 +1050,7 @@ class StaticAbilityHandler(
             // Combat: damage assignment (CombatDamageManager / CombatDamageUtils / DamageUtils):
             is com.wingedsheep.sdk.scripting.CreaturesDamagedBySourceAreDoomed,
             is AssignCombatDamageAsUnblocked,
+            is com.wingedsheep.sdk.scripting.AssignUnblockedCombatDamageToDefendingCreature,
             is AssignDamageEqualToToughness,
             is DivideCombatDamageFreely,
             is NoncombatDamageBonus,
@@ -1001,10 +1061,13 @@ class StaticAbilityHandler(
             is CantCastSpellsSharingColorWithLastCast,
             is CastSpellTypesFromTopOfLibrary,
             is com.wingedsheep.sdk.scripting.SpendAnyManaTypeForSpells,
+            is com.wingedsheep.sdk.scripting.PayLifeForColoredMana,
+            is SpendManaAsColor,
             is GrantAdditionalLandDrop,
             is GrantFlashToSpellType,
             is GrantMayCastFromLinkedExile,
             is GrantWarpToCardsInHand,
+            is GrantEmergeToOwnSpells,
             is GrantMiracleToCardsInHand,
             is MayCastFromGraveyard,
             is GraveyardCardsHaveFlashback,
@@ -1028,7 +1091,7 @@ class StaticAbilityHandler(
             is PlotFromTopOfLibrary,
             is PlayersCantCastSpells,
             is com.wingedsheep.sdk.scripting.PlayersCantPlayLands,
-            is com.wingedsheep.sdk.scripting.LandsCantEnterTheBattlefield,
+            is com.wingedsheep.sdk.scripting.CantEnterTheBattlefield,
             is RestrictSpellsCastPerTurn,
 
             // Spell costs (CostCalculator):
@@ -1070,9 +1133,10 @@ class StaticAbilityHandler(
             is DamagePersistsThroughCleanup,
             is NoMaximumHandSize,
             is com.wingedsheep.sdk.scripting.SkipDrawStep,
+            is com.wingedsheep.sdk.scripting.SkipUntapStep,
             is SetMaximumHandSize,
             is PreventManaPoolEmptying,
-            is ConvertEmptyingManaToRed,
+            is ConvertEmptyingMana,
             is RetainUnspentColoredMana,
             is com.wingedsheep.sdk.scripting.LegendRuleDoesNotApplyTo,
             is UntapDuringOtherUntapSteps,
@@ -1109,6 +1173,7 @@ class StaticAbilityHandler(
             is StationUsingToughness,
             is SuppressHexproofForGroup,
             is com.wingedsheep.sdk.scripting.GrantMadnessToOwnedCards,
+            is com.wingedsheep.sdk.scripting.GraveyardCardsHaveDredge,
             is SuppressWardForGroup -> null
         }
     }
@@ -1176,6 +1241,7 @@ class StaticAbilityHandler(
             // Damage replacement/modification:
             is PreventDamage,
             is com.wingedsheep.sdk.scripting.PreventDamageByRemovingCounter,
+            is com.wingedsheep.sdk.scripting.PreventDamagePerCounter,
             is DoubleDamage,
             is com.wingedsheep.sdk.scripting.HalveDamage,
             is ModifyDamageAmount,
@@ -1191,6 +1257,7 @@ class StaticAbilityHandler(
             // Life gain/loss:
             is PreventLifeGain,
             is com.wingedsheep.sdk.scripting.ModifyLifeGain,
+            is com.wingedsheep.sdk.scripting.ReplaceLifeGainWith,
             is com.wingedsheep.sdk.scripting.ModifyLifeLoss,
             is com.wingedsheep.sdk.scripting.LifeLossFloor,
             // Life payment (Ashiok, Wicked Manipulator) — consulted from the battlefield by
@@ -1199,12 +1266,17 @@ class StaticAbilityHandler(
             // Draws:
             is com.wingedsheep.sdk.scripting.PreventDraw,
             is com.wingedsheep.sdk.scripting.ReplaceDrawWith,
+            is com.wingedsheep.sdk.scripting.OptionalEffectDiscardDestination,
+            is com.wingedsheep.sdk.scripting.OptionalSkipTurnWith,
             is com.wingedsheep.sdk.scripting.ModifyDrawAmount,
             // Mill:
             is com.wingedsheep.sdk.scripting.ModifyMillAmount,
+            // Scry:
+            is com.wingedsheep.sdk.scripting.ModifyScryAmount,
             // Counter placement:
             is com.wingedsheep.sdk.scripting.ModifyCounterPlacement,
             is com.wingedsheep.sdk.scripting.DoubleCounterPlacement,
+            is com.wingedsheep.sdk.scripting.CapCounterPlacementThisTurn,
             is com.wingedsheep.sdk.scripting.EntersWithCounters,
             is com.wingedsheep.sdk.scripting.EntersWithDynamicCounters,
             is com.wingedsheep.sdk.scripting.EntersWithKeywords,
@@ -1219,8 +1291,9 @@ class StaticAbilityHandler(
             is com.wingedsheep.sdk.scripting.RedirectZoneChangeWith,
             is com.wingedsheep.sdk.scripting.PreventExtraTurns,
             // Keyword-action modification, consulted from the battlefield when the action happens:
-            // explore (Twists and Turns) and connive (Leader, Super-Genius).
+            // explore (Twists and Turns), connive (Leader, Super-Genius), proliferate (Tekuthal).
             is com.wingedsheep.sdk.scripting.ModifyKeywordAction,
+            is com.wingedsheep.sdk.scripting.RepeatKeywordAction,
             // Token creation:
             is com.wingedsheep.sdk.scripting.ReplaceTokenCreationWithAttachedCopy,
             is com.wingedsheep.sdk.scripting.MultiplyTokenCreation,

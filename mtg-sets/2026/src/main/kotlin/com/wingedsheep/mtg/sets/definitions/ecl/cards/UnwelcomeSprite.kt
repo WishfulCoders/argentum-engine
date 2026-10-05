@@ -30,7 +30,7 @@ val UnwelcomeSprite = card("Unwelcome Sprite") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         effect = Patterns.Library.surveil(2)
     }
 

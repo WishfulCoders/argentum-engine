@@ -46,7 +46,19 @@ data class ManaPoolComponent(
      * `treasureMana`. Powers Alchemist's Talent level 3, Bat Colony, and the LCI mana-source lands.
      */
     val manaBySubtype: Map<com.wingedsheep.sdk.core.Subtype, Int> = emptyMap(),
-    val manaBySource: Map<EntityId, Int> = emptyMap()
+    val manaBySource: Map<EntityId, Int> = emptyMap(),
+    /**
+     * Producing-source card type → floating units carrying it (Inga and Esika: "mana from
+     * creatures"). Same snapshot-at-production, proportional-consumption rules as [manaBySubtype].
+     */
+    val manaByCardType: Map<com.wingedsheep.sdk.core.CardType, Int> = emptyMap(),
+    /**
+     * Floating units per color (and [snowColorless]) produced by a snow source — the mana a `{S}`
+     * pip demands (CR 107.4h). Exact, not proportional: see
+     * [com.wingedsheep.engine.mechanics.mana.ManaPool.snowMana] for the invariant and spend order.
+     */
+    val snowMana: Map<Color, Int> = emptyMap(),
+    val snowColorless: Int = 0
 ) : Component {
     /**
      * Add mana of a specific color.
@@ -81,22 +93,39 @@ data class ManaPoolComponent(
      */
     fun spend(color: Color, amount: Int = 1): ManaPoolComponent? {
         val current = getAmount(color)
-        return if (current >= amount) {
-            when (color) {
-                Color.WHITE -> copy(white = white - amount)
-                Color.BLUE -> copy(blue = blue - amount)
-                Color.BLACK -> copy(black = black - amount)
-                Color.RED -> copy(red = red - amount)
-                Color.GREEN -> copy(green = green - amount)
-            }
-        } else null
+        if (current < amount) return null
+        val spent = when (color) {
+            Color.WHITE -> copy(white = white - amount)
+            Color.BLUE -> copy(blue = blue - amount)
+            Color.BLACK -> copy(black = black - amount)
+            Color.RED -> copy(red = red - amount)
+            Color.GREEN -> copy(green = green - amount)
+        }
+        // Non-snow units go first, so the snow mark only shrinks once no plain unit is left.
+        val snow = snowMana[color] ?: 0
+        val left = current - amount
+        return if (snow <= left) spent
+        else spent.copy(snowMana = if (left > 0) snowMana + (color to left) else snowMana - color)
     }
 
     /**
      * Spend colorless mana.
      */
     fun spendColorless(amount: Int): ManaPoolComponent? =
-        if (colorless >= amount) copy(colorless = colorless - amount) else null
+        if (colorless >= amount) copy(colorless = colorless - amount, snowColorless = minOf(snowColorless, colorless - amount)) else null
+
+    /** Floating units that came from a snow source. */
+    val snowTotal: Int get() = snowColorless + snowMana.values.sum()
+
+    /**
+     * Mark [amount] of the floating units of [color] (null = colorless) as snow mana — produced by
+     * a snow source (CR 107.4h). The mana must already be in the pool; the mark is capped at it.
+     */
+    fun markSnow(color: Color?, amount: Int): ManaPoolComponent {
+        if (amount <= 0) return this
+        return if (color == null) copy(snowColorless = minOf(colorless, snowColorless + amount))
+        else copy(snowMana = snowMana + (color to minOf(getAmount(color), (snowMana[color] ?: 0) + amount)))
+    }
 
     /**
      * Total mana available.
@@ -104,24 +133,40 @@ data class ManaPoolComponent(
     val total: Int get() = white + blue + black + red + green + colorless + restrictedMana.size
 
     /**
-     * Add mana provenance tags for [amount] units produced by [sourceId] carrying [subtypes].
-     * Increments the per-source counter and each per-subtype counter. See [ManaProvenanceTracker].
+     * Add mana provenance tags for [amount] units produced by the source [tag] describes.
+     * Increments the per-source counter and each per-subtype / per-card-type counter. See [ManaProvenanceTracker].
      */
-    fun withProvenance(sourceId: EntityId, subtypes: Set<com.wingedsheep.sdk.core.Subtype>, amount: Int): ManaPoolComponent {
+    fun withProvenance(tag: ManaSourceTag, amount: Int): ManaPoolComponent {
         if (amount <= 0) return this
-        val newBySource = manaBySource + (sourceId to ((manaBySource[sourceId] ?: 0) + amount))
-        val newBySubtype = if (subtypes.isEmpty()) manaBySubtype else buildMap {
+        val newBySource = manaBySource + (tag.sourceId to ((manaBySource[tag.sourceId] ?: 0) + amount))
+        val newBySubtype = if (tag.subtypes.isEmpty()) manaBySubtype else buildMap {
             putAll(manaBySubtype)
-            subtypes.forEach { put(it, (get(it) ?: 0) + amount) }
+            tag.subtypes.forEach { put(it, (get(it) ?: 0) + amount) }
         }
-        return copy(manaBySubtype = newBySubtype, manaBySource = newBySource)
+        val newByCardType = if (tag.cardTypes.isEmpty()) manaByCardType else buildMap {
+            putAll(manaByCardType)
+            tag.cardTypes.forEach { put(it, (get(it) ?: 0) + amount) }
+        }
+        return copy(manaBySubtype = newBySubtype, manaBySource = newBySource, manaByCardType = newByCardType)
+    }
+
+    /**
+     * Tag the last [amount] restricted entries — the ones a mana effect just appended — with the
+     * producing source, so restricted mana answers provenance questions like unrestricted mana does.
+     */
+    fun withRestrictedProvenance(tag: ManaSourceTag, amount: Int): ManaPoolComponent {
+        if (amount <= 0 || restrictedMana.isEmpty()) return this
+        val firstTagged = (restrictedMana.size - amount).coerceAtLeast(0)
+        return copy(restrictedMana = restrictedMana.mapIndexed { i, entry ->
+            if (i >= firstTagged) entry.copy(source = tag) else entry
+        })
     }
 
     /**
      * Check if pool is empty. Includes the provenance tags so a stale tag without backing mana
      * still triggers the end-of-step pool reset.
      */
-    val isEmpty: Boolean get() = total == 0 && manaBySubtype.isEmpty() && manaBySource.isEmpty()
+    val isEmpty: Boolean get() = total == 0 && manaBySubtype.isEmpty() && manaBySource.isEmpty() && manaByCardType.isEmpty()
 
     /**
      * Add restricted mana to the pool.
@@ -147,20 +192,41 @@ data class ManaPoolComponent(
         copy(restrictedMana = restrictedMana.filterNot { it.expiry == expiry })
 
     /**
-     * Convert every restricted-mana entry whose expiry matches [expiry] into an equal amount of
-     * plain red mana instead of discarding it (Ozai, the Phoenix King: firebending mana that would
-     * be lost as combat ends "becomes red instead", CR 614). The converted mana drops its combat
-     * expiry and spend restriction — it is ordinary red mana that persists until the next mana-loss
-     * point (end-of-turn cleanup, where Ozai's static converts it to red again). Ordinary mana and
-     * other-expiry restricted entries are untouched; a pool with no matching entries is unchanged.
+     * Convert every restricted-mana entry whose expiry matches [expiry] into mana of [color] instead
+     * of discarding it (Ozai, the Phoenix King: firebending mana that would be lost as combat ends
+     * "becomes red instead", CR 614.1a). Only the colour and the expiry change: the entry keeps its
+     * spend restriction and riders (Omnath, Locus of All ruling) and now lasts as ordinary mana until
+     * the next mana-loss point. Ordinary mana and other-expiry restricted entries are untouched; a
+     * pool with no matching entries is unchanged.
      */
-    fun convertExpiredToRed(expiry: ManaExpiry): ManaPoolComponent {
-        val expiring = restrictedMana.count { it.expiry == expiry }
-        if (expiring == 0) return this
-        return copy(
-            red = red + expiring,
-            restrictedMana = restrictedMana.filterNot { it.expiry == expiry }
-        )
+    fun convertExpired(expiry: ManaExpiry, color: Color): ManaPoolComponent {
+        if (restrictedMana.none { it.expiry == expiry }) return this
+        val (converting, kept) = restrictedMana.partition { it.expiry == expiry }
+        return copy(restrictedMana = kept).withConverted(converting, color)
+    }
+
+    /**
+     * Add [entries] back recoloured to [color] as ordinary (end-of-turn) mana. An entry that carries
+     * a real restriction or a rider stays a restricted entry — only its colour changes; one that was
+     * only stored restricted to carry an expiry (`AnySpend`, no riders — firebending) becomes plain
+     * mana of [color].
+     */
+    private fun withConverted(entries: List<RestrictedManaEntry>, color: Color): ManaPoolComponent {
+        val (plain, restricted) = entries.partition { it.restriction == ManaRestriction.AnySpend && it.riders.isEmpty() }
+        val recoloured = restricted.map { it.copy(color = color, expiry = ManaExpiry.END_OF_TURN) }
+        return copy(restrictedMana = restrictedMana + recoloured).let { if (plain.isNotEmpty()) it.add(color, plain.size) else it }
+    }
+
+    /**
+     * End "until end of turn, you don't lose this mana" (CR 514.2 — cleanup ends until-end-of-turn
+     * effects): every [ManaExpiry.KEPT_UNTIL_END_OF_TURN] entry becomes ordinary mana, so the cleanup
+     * step's own emptying takes it. A pool with no such entries is unchanged.
+     */
+    fun expireTurnKeptMana(): ManaPoolComponent {
+        if (restrictedMana.none { it.expiry == ManaExpiry.KEPT_UNTIL_END_OF_TURN }) return this
+        return copy(restrictedMana = restrictedMana.map {
+            if (it.expiry == ManaExpiry.KEPT_UNTIL_END_OF_TURN) it.copy(expiry = ManaExpiry.END_OF_TURN) else it
+        })
     }
 
     /**
@@ -172,33 +238,35 @@ data class ManaPoolComponent(
      * Empty the pool as a step or phase ends (CR 500.5 / 703.4q), the engine's turn-based
      * mana-loss action. This is the single emptying primitive for every mana-loss point, applying
      * the per-player mana-loss statics:
-     *  - [convertToRed] = true (Ozai, the Phoenix King, [ConvertEmptyingManaToRed]): the would-be-lost
-     *    mana becomes that many plain red mana instead of emptying (CR 614).
+     *  - [convertTo] non-null ([com.wingedsheep.sdk.scripting.ConvertEmptyingMana] — Ozai, the Phoenix
+     *    King to red; Omnath, Locus of All to black): the would-be-lost mana becomes that colour
+     *    instead of emptying (CR 614.1a). Plain and colorless mana becomes that many plain mana of
+     *    [convertTo]; a restricted entry is recoloured but keeps its restriction and riders (Omnath's
+     *    ruling), so conversion never frees mana from a spending restriction.
      *  - [retain] non-empty (The Last Agni Kai, [RetainUnspentManaComponent]): mana of those colours —
      *    plain counters and same-colour ordinary restricted entries — survives; everything else empties.
      *  - neither: the ordinary mana empties.
-     * [convertToRed] takes precedence over [retain] (Ozai fully replaces the loss).
+     * [convertTo] takes precedence over [retain] (the conversion fully replaces the loss).
      *
-     * **Firebending mana is preserved.** Restricted entries with [ManaExpiry.END_OF_COMBAT] "last
-     * until end of combat", not until the end of each step — so they survive every step/phase-end
-     * emptying within combat and are handled instead by `CombatManager.endCombat`. Only ordinary
-     * ([ManaExpiry.END_OF_TURN]) mana is subject to this action. (At end of turn no combat-duration
-     * mana remains, so preservation is a no-op there.)
-     *
-     * **Turn-duration mana** ([ManaExpiry.UNTIL_END_OF_TURN], Brazen Collector) is preserved the same
-     * way at every boundary except the one that ends the turn ([endOfTurn]: the cleanup step ending).
+     * **Firebending and turn-duration mana are preserved.** Restricted entries with
+     * [ManaExpiry.END_OF_COMBAT] "last until end of combat", not until the end of each step — so they
+     * survive every step/phase-end emptying within combat and are handled instead by
+     * `CombatManager.endCombat`. [ManaExpiry.KEPT_UNTIL_END_OF_TURN] entries ("until end of turn, you
+     * don't lose this mana as steps and phases end" — Brazen Collector) likewise survive; end-of-turn
+     * cleanup downgrades them via [expireTurnKeptMana] before its own emptying. Only ordinary
+     * ([ManaExpiry.END_OF_TURN]) mana is subject to this action.
      */
-    fun emptyAtBoundary(convertToRed: Boolean, retain: Set<Color>, endOfTurn: Boolean = false): ManaPoolComponent {
-        fun kept(e: RestrictedManaEntry) = e.expiry == ManaExpiry.END_OF_COMBAT ||
-            (e.expiry == ManaExpiry.UNTIL_END_OF_TURN && !endOfTurn)
-        val preserved = restrictedMana.filter(::kept)
-        val lostRestricted = restrictedMana.filterNot(::kept)
+    fun emptyAtBoundary(convertTo: Color?, retain: Set<Color>): ManaPoolComponent {
+        val preserved = restrictedMana.filter { it.expiry != ManaExpiry.END_OF_TURN }
+        val lostRestricted = restrictedMana.filter { it.expiry == ManaExpiry.END_OF_TURN }
         return when {
-            convertToRed -> {
-                // Count the would-be-lost mana the way `total` does (provenance tags are markers on
-                // already-counted colour mana, not extra mana); the tags don't carry over.
-                val lostTotal = white + blue + black + red + green + colorless + lostRestricted.size
-                ManaPoolComponent(red = lostTotal, restrictedMana = preserved)
+            convertTo != null -> {
+                // Provenance tags are markers on already-counted colour mana, not extra mana; the
+                // pool-level tags don't carry over a mana-loss boundary.
+                val lostPlain = white + blue + black + red + green + colorless
+                ManaPoolComponent(restrictedMana = preserved)
+                    .withConverted(lostRestricted, convertTo)
+                    .let { if (lostPlain > 0) it.add(convertTo, lostPlain) else it }
             }
             retain.isNotEmpty() -> ManaPoolComponent(
                 white = if (Color.WHITE in retain) white else 0,
@@ -207,8 +275,10 @@ data class ManaPoolComponent(
                 red = if (Color.RED in retain) red else 0,
                 green = if (Color.GREEN in retain) green else 0,
                 colorless = 0,
-                restrictedMana = preserved + lostRestricted.filter { it.color != null && it.color in retain }
-                // Provenance tags do not survive a mana-loss boundary.
+                restrictedMana = preserved + lostRestricted.filter { it.color != null && it.color in retain },
+                // Provenance tags do not survive a mana-loss boundary, but snow is a property of
+                // the retained mana itself (it came from a snow source), so it stays.
+                snowMana = snowMana.filterKeys { it in retain }
             )
             else -> ManaPoolComponent(restrictedMana = preserved)
         }
@@ -246,14 +316,34 @@ data class RetainUnspentManaComponent(
  * @param riders Side-effects applied to a spell when this mana is spent on it
  *   (e.g. [ManaSpellRider.MakesSpellUncounterable] for Cavern of Souls).
  * @param expiry When this mana leaves the pool. [ManaExpiry.END_OF_TURN] is ordinary mana;
- *   [ManaExpiry.END_OF_COMBAT] is firebending-style mana cleared by `CombatManager.endCombat`.
+ *   [ManaExpiry.END_OF_COMBAT] is firebending-style mana cleared by `CombatManager.endCombat`;
+ *   [ManaExpiry.KEPT_UNTIL_END_OF_TURN] survives step/phase ends until end-of-turn cleanup.
  */
 @Serializable
 data class RestrictedManaEntry(
     val color: Color?,
     val restriction: ManaRestriction,
     val riders: Set<ManaSpellRider> = emptySet(),
-    val expiry: ManaExpiry = ManaExpiry.END_OF_TURN
+    val expiry: ManaExpiry = ManaExpiry.END_OF_TURN,
+    /** The source that produced this unit, snapshotted at production; null when untracked. */
+    val source: ManaSourceTag? = null,
+    /** Outstanding per-activation spending identities; spending one unit discharges its siblings. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val obligationIds: Set<String> = emptySet(),
+)
+
+/**
+ * What produced a unit of mana, snapshotted when it was made: the source's id, subtypes, card
+ * types and whether it was snow. See [com.wingedsheep.engine.handlers.effects.mana.ManaProvenanceTracker].
+ */
+@Serializable
+data class ManaSourceTag(
+    val sourceId: EntityId,
+    val subtypes: Set<com.wingedsheep.sdk.core.Subtype> = emptySet(),
+    val cardTypes: Set<com.wingedsheep.sdk.core.CardType> = emptySet(),
+    /** The source was a snow permanent, so this mana pays `{S}` and counts as "{S} spent" (CR 107.4h). */
+    val isSnow: Boolean = false
 )
 
 /**
@@ -339,7 +429,12 @@ data class MulliganStateComponent(
      * subsequent mulligans count as normal. Set once at game setup from the table size and carried
      * through bottoming — see [GameInitializer]. False for two-player games (London Mulligan as-is).
      */
-    val freeMulligan: Boolean = false
+    val freeMulligan: Boolean = false,
+    /**
+     * The game was set up without a mulligan phase (`GameConfig.skipMulligans` — training and
+     * self-play drivers that can't answer one). A restarted game (CR 727) skips it too.
+     */
+    val skipped: Boolean = false,
 ) : Component {
     companion object {
         const val STARTING_HAND_SIZE = 7
@@ -381,7 +476,17 @@ data class MulliganStateComponent(
  * "an additional combat phase followed by an additional main phase" (Aggravated Assault).
  */
 @Serializable
-enum class ExtraPhaseKind { COMBAT, MAIN }
+enum class ExtraPhaseKind {
+    COMBAT,
+    MAIN,
+
+    /**
+     * A full beginning phase — untap, upkeep and draw steps (CR 501.1) — inserted into the current
+     * turn (Shadow of the Second Sun). It is not a new turn: "until your next turn" effects don't
+     * end, and the turn proceeds to whatever follows the inserted phase, never a precombat main.
+     */
+    BEGINNING
+}
 
 /**
  * One entry in the additional-phase queue ([AdditionalPhasesComponent]): a phase [kind] plus, for a
@@ -391,25 +496,38 @@ enum class ExtraPhaseKind { COMBAT, MAIN }
  * an unrestricted combat phase can be queued together without any lockstep bookkeeping. MAIN entries
  * never carry a restriction (`null`).
  *
- * @param kind Whether this entry inserts a combat phase or a postcombat main phase.
+ * @param kind Which phase this entry inserts.
  * @param attackerRestriction For a COMBAT entry, the "only these can attack" filter, or `null` for
  *   the ordinary "any creature can attack" combat phase.
+ * @param createdBy The source of the effect that created this phase, and [createdAt] the game
+ *   timestamp it resolved at. Together they identify one *creation*: CR 500.8 runs the most recently
+ *   created phase first, while phases one effect creates together ("an additional combat phase
+ *   followed by an additional main phase") keep the order that effect gave them.
  */
 @Serializable
 data class QueuedPhase(
     val kind: ExtraPhaseKind,
-    val attackerRestriction: GameObjectFilter? = null
-)
+    val attackerRestriction: GameObjectFilter? = null,
+    val createdBy: EntityId? = null,
+    val createdAt: Long = 0
+) {
+    fun sameCreationAs(other: QueuedPhase): Boolean =
+        createdBy == other.createdBy && createdAt == other.createdAt
+}
 
 /**
  * Component tracking the queue of additional phases to be inserted into the current turn, in the
  * order they should occur (CR 500.8). When the postcombat main phase would advance to the end step,
  * if this component exists the game drains the queue one entry at a time — redirecting to a fresh
- * combat phase ([ExtraPhaseKind.COMBAT]) or postcombat main phase ([ExtraPhaseKind.MAIN]).
+ * combat phase ([ExtraPhaseKind.COMBAT]), postcombat main phase ([ExtraPhaseKind.MAIN]) or
+ * beginning phase ([ExtraPhaseKind.BEGINNING]).
  *
- * Built atomically: [com.wingedsheep.sdk.scripting.effects.AddCombatPhaseEffect] appends a COMBAT
- * entry, [com.wingedsheep.sdk.scripting.effects.AddMainPhaseEffect] appends a MAIN entry. Composing
- * the two (Aggravated Assault, All-Out Assault) yields `[COMBAT, MAIN]`; the combat atom alone
+ * Built atomically: [com.wingedsheep.sdk.scripting.effects.AddCombatPhaseEffect] queues a COMBAT
+ * entry, [com.wingedsheep.sdk.scripting.effects.AddMainPhaseEffect] a MAIN entry and
+ * [com.wingedsheep.sdk.scripting.effects.AddBeginningPhaseEffect] a BEGINNING entry. The most
+ * recently created phases go to the front of the queue (CR 500.8), but entries one effect creates
+ * together stay in that effect's order ([QueuedPhase.sameCreationAs]). Composing combat and main
+ * (Aggravated Assault, All-Out Assault) yields `[COMBAT, MAIN]`; the combat atom alone
  * (Great Train Heist, Raph & Leo, Éomer, Fear of Missing Out) yields `[COMBAT]` and adds no main.
  * A COMBAT entry may carry an attacker restriction (Bumi, Unleashed) — see [QueuedPhase].
  *
@@ -467,6 +585,15 @@ data class AdditionalUpkeepStepsComponent(
  */
 @Serializable
 data object InAdditionalUpkeepStepComponent : Component
+
+/**
+ * Marker placed on the active player while the game is inside an *inserted* beginning phase
+ * ([ExtraPhaseKind.BEGINNING]). Its draw step must not fall through into a precombat main phase:
+ * advancing out of it drains the extra-phase queue instead, or proceeds to the end step when the
+ * queue is empty. Consumed by that advance, and swept at end-of-turn cleanup.
+ */
+@Serializable
+data object InAdditionalBeginningPhaseComponent : Component
 
 /**
  * Component tracking additional end steps to be inserted into the current turn (Y'shtola Rhul).
@@ -936,6 +1063,17 @@ data class CantGainLifeComponent(
 ) : Component
 
 /**
+ * Component indicating that a player can't lose life (CR 119.8). Conferred by
+ * [com.wingedsheep.sdk.scripting.effects.LockLifeLossEffect]; the sibling of [CantGainLifeComponent].
+ * Consulted by [com.wingedsheep.engine.state.GameState.isLifeLossLocked] — every life-loss and
+ * life-payment path reads it through there.
+ */
+@Serializable
+data class CantLoseLifeComponent(
+    val removeOn: PlayerEffectRemoval = PlayerEffectRemoval.Permanent
+) : Component
+
+/**
  * Component indicating that a player cannot activate planeswalkers' loyalty abilities for the
  * rest of this turn. Applied by effects like Revel in Silence. Sibling of [CantCastSpellsComponent].
  *
@@ -1046,6 +1184,29 @@ data class LoyaltyAbilitiesActivatedThisTurnComponent(
 @Serializable
 data class InstantSpeedLoyaltyGrantsComponent(
     val filters: List<GameObjectFilter> = emptyList(),
+    val removeOn: PlayerEffectRemoval = PlayerEffectRemoval.EndOfTurn
+) : Component
+
+/**
+ * One "you may tap [filter] you don't control for mana" permission, and the spending restriction
+ * the mana it makes carries (null = unrestricted).
+ */
+@Serializable
+data class TapForManaGrant(
+    val filter: GameObjectFilter,
+    val restriction: com.wingedsheep.sdk.scripting.effects.ManaRestriction? = null,
+)
+
+/**
+ * A player's turn-scoped permissions to tap permanents they don't control for mana (Piracy), set by
+ * [com.wingedsheep.sdk.scripting.effects.TapForManaPermanentsYouDontControlEffect]. Grants stack by
+ * appending; the component is removed whole at cleanup when [removeOn] is
+ * [PlayerEffectRemoval.EndOfTurn]. Read through
+ * [com.wingedsheep.engine.mechanics.mana.BorrowedManaAbilities].
+ */
+@Serializable
+data class TapForManaGrantsComponent(
+    val grants: List<TapForManaGrant> = emptyList(),
     val removeOn: PlayerEffectRemoval = PlayerEffectRemoval.EndOfTurn
 ) : Component
 
@@ -1204,6 +1365,15 @@ data class OpponentCreaturesExiledThisTurnComponent(
 ) : Component
 
 /**
+ * Marks that this player has investigated (CR 701.16a) during the current turn. Set by the
+ * `InvestigateExecutor` after each investigate and cleared at end of turn by CleanupPhaseManager;
+ * read to compute `InvestigatedEvent.firstThisTurn` ("whenever you investigate for the first time
+ * each turn", Erdwal Illuminator).
+ */
+@Serializable
+data object InvestigatedThisTurnComponent : Component
+
+/**
  * Tracks whether this player has gained life during the current turn.
  * Set whenever life is gained by this player.
  * Cleared at end of turn by CleanupPhaseManager.
@@ -1256,6 +1426,34 @@ data class LifeLostAmountThisTurnComponent(val amount: Int = 0) : Component
  */
 @Serializable
 data class CardsLeftGraveyardThisTurnComponent(val count: Int = 0) : Component
+
+/**
+ * Counts the cards this player has cycled this game, keyed on the cycled card's name. Never
+ * cleared — the scope is the whole game. Bumped by the cycling and typecycling handlers when the
+ * card is discarded to pay the cost (CR 702.29f: typecycling is cycling).
+ *
+ * Backs [com.wingedsheep.sdk.scripting.values.DynamicAmount.CardsCycledThisGame] — "if you've
+ * cycled a card named Yidaro, Wandering Monster four or more times this game".
+ */
+@Serializable
+data class CardsCycledThisGameComponent(val countsByName: Map<String, Int> = emptyMap()) : Component {
+    val total: Int get() = countsByName.values.sum()
+
+    fun count(cardName: String?): Int = if (cardName == null) total else countsByName[cardName] ?: 0
+
+    fun record(cardName: String): CardsCycledThisGameComponent =
+        CardsCycledThisGameComponent(countsByName + (cardName to (countsByName[cardName] ?: 0) + 1))
+}
+
+/**
+ * Tracks the number of permanents (tokens included) put into this player's hand from the
+ * battlefield this turn, keyed on the owner. Cleared at end of turn by CleanupPhaseManager.
+ *
+ * Used for "if a permanent was put into your hand from the battlefield this turn" (Barrin,
+ * Tolarian Archmage).
+ */
+@Serializable
+data class PermanentsPutIntoHandFromBattlefieldThisTurnComponent(val count: Int = 0) : Component
 
 /**
  * Tracks the number of this player's (owned) cards that were put into exile this turn. Tokens are
@@ -1524,6 +1722,8 @@ data class EnteredPermanentRecord(
  *    battlefield under your control this turn", Bioengineered Future) and the
  *    `PermanentTypeEnteredBattlefieldThisTurn` condition (Mechan Shieldmate's "as long as an
  *    artifact entered the battlefield under your control this turn").
+ *  - [countOfType] → `DynamicAmount.CardTypeEnteredUnderControlThisTurn` ("if three or more
+ *    artifacts entered the battlefield under your control this turn", Malcator, Purity Overseer).
  *  - [entries] directly → `DynamicAmount.SubtypeEnteredUnderControlThisTurn` ("each other Zombie
  *    that entered the battlefield under your control this turn", Geralf, the Fleshwright).
  */
@@ -1564,6 +1764,108 @@ data class PutCounterOnCreatureThisTurnComponent(
 }
 
 /**
+ * The kinds of counter this player can't get for the rest of the turn, because a
+ * `CapCounterPlacementThisTurn` replacement already applied to them ("instead you get one poison
+ * counter and you can't get additional poison counters this turn" — Melira, the Living Cure).
+ * Cleared at end of turn by CleanupPhaseManager.
+ *
+ * The lock is the replacement's result, so it outlives the replacement's source: it's recorded on
+ * the player as the capped placement happens, never re-derived from the board.
+ */
+@Serializable
+data class CountersLockedThisTurnComponent(
+    val kinds: Set<CounterType> = emptySet()
+) : Component {
+    fun with(kind: CounterType): CountersLockedThisTurnComponent =
+        if (kind in kinds) this else copy(kinds = kinds + kind)
+}
+
+/**
+ * The kinds of counter put this turn on permanents this player controlled at the moment each
+ * counter was placed — whoever put them there. Cleared at end of turn by CleanupPhaseManager.
+ *
+ * The recipient-controller sibling of [PutCounterOnCreatureThisTurnComponent], which is keyed on the
+ * *placing* player and only sees creatures. This one answers "if a +1/+1 counter was put on a
+ * permanent under your control this turn" (Fairgrounds Trumpeter), read through
+ * `CounterPutOnPermanentYouControlledThisTurn`. Its ruling fixes both axes: the permanent had to be
+ * yours *as the counter was placed*, and it doesn't matter whether you still control it or whether
+ * it still has the counter — so the fact is recorded at placement time, never derived from the board.
+ */
+@Serializable
+data class CountersPutOnYourPermanentsThisTurnComponent(
+    val kinds: Set<CounterType> = emptySet()
+) : Component {
+    /** This turn's record plus one more placement of [kind]. */
+    fun with(kind: CounterType): CountersPutOnYourPermanentsThisTurnComponent =
+        if (kind in kinds) this else copy(kinds = kinds + kind)
+}
+
+/**
+ * The kinds of counter removed this turn from permanents this player controlled at the moment each
+ * counter left — whoever removed them, however. Cleared at end of turn by CleanupPhaseManager.
+ *
+ * The removal-side mirror of [CountersPutOnYourPermanentsThisTurnComponent], read through
+ * `CounterRemovedFromPermanentYouControlledThisTurn` (Churning Reservoir). Recorded by
+ * `CounterHistory.recordRemovals` at the settle boundary, from every `CountersRemovedEvent`, so no
+ * removal path has to remember to call it.
+ */
+@Serializable
+data class CountersRemovedFromYourPermanentsThisTurnComponent(
+    val kinds: Set<CounterType> = emptySet()
+) : Component {
+    fun with(kind: CounterType): CountersRemovedFromYourPermanentsThisTurnComponent =
+        if (kind in kinds) this else copy(kinds = kinds + kind)
+}
+
+/**
+ * How many +1/+1 counters this player has put on creatures they controlled this turn. Cleared at end
+ * of turn by CleanupPhaseManager. Recorded by `CounterHistory.recordPlacements` at the settle boundary
+ * from every `CountersAddedEvent` whose placer controls the creature, so no placement path has to
+ * remember to call it — entering-with counters (CR 122.6a), moved counters (CR 122.5) and
+ * proliferate all arrive the same way. Backs
+ * [com.wingedsheep.sdk.scripting.values.TurnTracker.PLUS_ONE_COUNTERS_PUT_ON_YOUR_CREATURES]
+ * (Iridescent Hornbeetle).
+ */
+@Serializable
+data class PlusOneCountersPutOnYourCreaturesThisTurnComponent(
+    val count: Int = 0
+) : Component
+
+/**
+ * How many counters of each kind were removed from this player themself this turn — energy paid
+ * as a cost or lost to an effect, poison removed, and so on. Cleared at end of turn by
+ * CleanupPhaseManager. Recorded by `CounterHistory.recordRemovals` at the settle boundary from every
+ * `CountersRemovedEvent` whose entity is the player, so neither the cost payer nor any effect has
+ * to remember to call it. Backs
+ * [com.wingedsheep.sdk.scripting.values.TurnTracker.ENERGY_PAID_OR_LOST] (Izzet Generatorium).
+ */
+@Serializable
+data class PlayerCountersRemovedThisTurnComponent(
+    val amounts: Map<CounterType, Int> = emptyMap()
+) : Component {
+    fun with(kind: CounterType, amount: Int): PlayerCountersRemovedThisTurnComponent =
+        copy(amounts = amounts + (kind to (amounts[kind] ?: 0) + amount))
+
+    fun count(kind: CounterType): Int = amounts[kind] ?: 0
+}
+
+/**
+ * The kinds of counter that were on permanents this player controlled as they were put into a
+ * graveyard from the battlefield this turn, read off each one's last-known counters. Cleared at end
+ * of turn by CleanupPhaseManager.
+ *
+ * Credited to the last-known controller like `ArtifactsDiedThisTurnComponent`; the game-wide
+ * `PermanentWithCounterPutIntoGraveyardThisTurn` (Churning Reservoir) reads every player's record.
+ */
+@Serializable
+data class PermanentsWithCountersPutIntoGraveyardThisTurnComponent(
+    val kinds: Set<CounterType> = emptySet()
+) : Component {
+    fun with(added: Collection<CounterType>): PermanentsWithCountersPutIntoGraveyardThisTurnComponent =
+        if (kinds.containsAll(added)) this else copy(kinds = kinds + added)
+}
+
+/**
  * Marks a player as having been dealt combat damage this turn.
  * Cleared at end of turn by CleanupPhaseManager.
  * Used for YouWereDealtCombatDamageThisTurn condition.
@@ -1599,19 +1901,18 @@ data class CombatDamageReceivedThisTurnComponent(
 data object WasDealtCombatDamageByLegendaryCreatureThisTurnComponent : Component
 
 /**
- * Component indicating that a player should skip their entire next [turns] turns.
- * Applied by effects like Last Chance (which gives the opponent an "extra turn" by skipping the
- * other player's turn in a 2-player game) and Ral Zarek, Guest Lecturer's ultimate (skip several
- * turns).
+ * Pending real turn skips and scheduling bypasses used to insert another player's extra turns.
+ * Real skips wait for actual turn occurrences; bypasses are consumed before turn replacements.
+ * Re-applying either kind accumulates it without replacing the other kind.
  *
- * One skipped turn is consumed each time the affected player's turn would start: [turns] is
- * decremented, the turn is skipped, and the component is removed once the count reaches zero.
- * Re-applying it adds to the remaining count rather than overwriting (multiple skip effects stack).
- *
- * @property turns How many of the player's upcoming turns remain to be skipped (≥ 1 while present).
+ * @property turns Total pending skips and bypasses (positive while this component is present).
  */
 @Serializable
-data class SkipNextTurnComponent(val turns: Int = 1) : Component
+data class SkipNextTurnComponent(
+    val turns: Int = 1,
+    /** Scheduling bypasses for another player's extra turns; these are not actual turn occurrences. */
+    val extraTurnBypasses: Int = 0,
+) : Component
 
 /**
  * Marks that an "end the turn" effect (CR 724.1) has resolved this turn and the end-the-turn

@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.events
 
+import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
@@ -123,6 +124,9 @@ sealed interface Recipient {
 
         /** "A player or battle" — the March of the Machine combat-damage wording (Archpriest of Shadows). */
         val AnyPlayerOrBattle: Recipient = AnyOf(listOf(AnyPlayer, Object(GameObjectFilter.Battle)))
+
+        /** "An opponent or battle" — Bloodfeather Phoenix's "deals damage to an opponent or battle". */
+        val OpponentOrBattle: Recipient = AnyOf(listOf(Opponent, Object(GameObjectFilter.Battle)))
 
         /** "A creature or player" — Ertha Jo, Frontier Mentor's "an ability that targets a creature or player". */
         val CreatureOrPlayer: Recipient = AnyOf(listOf(Object(GameObjectFilter.Creature), AnyPlayer))
@@ -302,6 +306,22 @@ sealed interface SpellCastPredicate {
     }
 
     /**
+     * At least [atLeast] mana produced by a source of card type [cardType] was spent on the cast —
+     * Inga and Esika's "if three or more mana from creatures was spent to cast it" is
+     * `PaidWithManaFromCardType(CardType.CREATURE, atLeast = 3)`. The source's card types are
+     * snapshotted when the mana is produced (projected, so an animated land counts as a creature),
+     * and restricted mana ("spend this mana only to cast a creature spell") carries the tag too.
+     * The spell's payment never changes, so as a trigger condition this reads the same when the
+     * trigger is put on the stack and when it resolves.
+     */
+    @SerialName("SpellPaidWithManaFromCardType")
+    @Serializable
+    data class PaidWithManaFromCardType(val cardType: CardType, val atLeast: Int = 1) : SpellCastPredicate {
+        override val description = if (atLeast <= 1) "using mana from a ${cardType.displayName.lowercase()}"
+            else "with $atLeast or more mana from ${cardType.displayName.lowercase()}s spent to cast it"
+    }
+
+    /**
      * Mana produced by the trigger's own source permanent was spent on the cast — "Whenever you cast
      * a … spell using mana produced by [this]" (Tecutlan, the Searing Rift / Barracks of the Thousand
      * / The Myriad Pools). Matched against the source that produced the mana, not a subtype, so it
@@ -356,7 +376,7 @@ sealed interface SpellCastPredicate {
      * chosen targets: a spell targeting both the source and another permanent satisfies
      * [TargetsSource] but not this. A spell with **no** targets never satisfies it either. A spell
      * with several instances of "target" all pointed at the source does — the copies made by
-     * [com.wingedsheep.sdk.scripting.effects.CopySpellForEachOtherPossibleTargetEffect] then have to
+     * [com.wingedsheep.sdk.scripting.effects.CopyForEachOtherPossibleTargetEffect] then have to
      * be legal for each of those instances (CR 707.10d).
      */
     @SerialName("SpellTargetsOnlySource")

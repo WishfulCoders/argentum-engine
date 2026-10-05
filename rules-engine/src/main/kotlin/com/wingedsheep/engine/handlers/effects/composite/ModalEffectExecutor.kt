@@ -145,6 +145,7 @@ class ModalEffectExecutor(
         ) }
 
         val continuation = ModalContinuation(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             controllerId = context.controllerId,
             sourceId = context.sourceId,
             objectReferences = context.objectReferences,
@@ -185,11 +186,13 @@ class ModalEffectExecutor(
         )
         val sourceName = context.sourceId?.let { id -> state.getEntity(id)?.get<CardComponent>()?.name }
         val baseCtx = PreTargetedEffectContext(
+            resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             controllerId = context.controllerId,
             sourceId = context.sourceId,
             sourceName = sourceName,
             xValue = context.xValue,
             triggeringEntityId = context.triggeringEntityId,
+            triggerContext = context.triggerContext,
             // The resolution so far, carried into each mode. A mode's effect can read what an
             // earlier step of the same resolution stored — Cemetery Desecrator's two modes both
             // spell X as `StoredCardManaValue("exiledCard")`, the collection its reflexive
@@ -214,7 +217,8 @@ class ModalEffectExecutor(
             modeTargetsOrdered: List<List<com.wingedsheep.engine.state.components.stack.ChosenTarget>>,
             modeTargetRequirements: Map<Int, List<com.wingedsheep.sdk.scripting.targets.TargetRequirement>>
         ): List<PreTargetedEffectEntry> {
-            return chosenModes.mapIndexed { ordinal, modeIndex ->
+            // Execute in printed mode order while retaining each pick's own target slice.
+            return chosenModes.withIndex().sortedBy { it.value }.map { (ordinal, modeIndex) ->
                 val mode = effect.modes.getOrNull(modeIndex)
                 val targets = modeTargetsOrdered.getOrNull(ordinal) ?: emptyList()
                 val reqs = modeTargetRequirements[modeIndex]
@@ -246,6 +250,7 @@ internal data class PreTargetedEffectContext(
     val sourceName: String?,
     val xValue: Int?,
     val triggeringEntityId: com.wingedsheep.sdk.model.EntityId?,
+    val triggerContext: com.wingedsheep.engine.event.TriggerContext? = null,
     /**
      * Pipeline state the enclosing resolution had already built — stored collections, numbers,
      * chosen values — which each mode's own [EffectContext] inherits. Only the per-mode
@@ -255,7 +260,8 @@ internal data class PreTargetedEffectContext(
      * 702.47b: each spliced card's text is its own resolution).
      */
     val pipeline: PipelineState = PipelineState.EMPTY,
-    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment()
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null
 )
 
 /**
@@ -319,6 +325,7 @@ internal fun processPreTargetedEffectQueue(
     }
 
     val effectContext = EffectContext(
+        resolvingTriggeredAbility = ctx.resolvingTriggeredAbility,
         sourceId = ctx.sourceId,
         objectReferences = ctx.objectReferences,
         controllerId = ctx.controllerId,
@@ -331,7 +338,9 @@ internal fun processPreTargetedEffectQueue(
             namedTargets = ctx.pipeline.namedTargets +
                 EffectContext.buildNamedTargets(head.targetRequirements, head.targets)
         ),
-        triggeringEntityId = ctx.triggeringEntityId
+        triggeringEntityId = ctx.triggeringEntityId,
+        triggeringPlayerId = ctx.triggerContext?.triggeringPlayerId,
+        triggerContext = ctx.triggerContext
     )
 
     // Pre-push the tail continuation so that if the effect pauses, our frame sits
@@ -340,12 +349,14 @@ internal fun processPreTargetedEffectQueue(
 
         state.pushContinuation(
             ModalPreChosenContinuation(
+                resolvingTriggeredAbility = ctx.resolvingTriggeredAbility,
                 controllerId = ctx.controllerId,
                 sourceId = ctx.sourceId,
             objectReferences = ctx.objectReferences,
                 sourceName = ctx.sourceName,
                 xValue = ctx.xValue,
                 triggeringEntityId = ctx.triggeringEntityId,
+                triggerContext = ctx.triggerContext,
                 pipeline = ctx.pipeline,
                 remainingEntries = tail
             )

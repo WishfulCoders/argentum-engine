@@ -51,6 +51,20 @@ data class AssignAsUnblockedContinuation(
 ) : AnswerContinuation
 
 /**
+ * Resume combat damage after the player picks (or declines to pick) a creature for an unblocked
+ * attacker with AssignUnblockedCombatDamageToDefendingCreature (Cunning Giant) to assign its
+ * combat damage to.
+ *
+ * @property attackerId The unblocked attacking creature with the ability
+ * @property firstStrike Whether this is during the first strike combat damage step
+ */
+@Serializable
+data class AssignUnblockedToCreatureContinuation(
+    val attackerId: EntityId,
+    val firstStrike: Boolean = false
+) : AnswerContinuation
+
+/**
  * Resume after player has distributed damage among targets.
  *
  * Used for effects like Forked Lightning where the player divides damage
@@ -189,4 +203,44 @@ data class OptionalRedirectEffectContinuation(
     val choiceKey: String,
     val effect: Effect,
     val effectContext: com.wingedsheep.engine.handlers.EffectContext
+) : AnswerContinuation
+
+/** Captured recipients and source choices survive the resolution-time source decision. */
+@Serializable
+data class RedirectDamageSourceContinuation(
+    val controllerId: EntityId,
+    val sourceId: EntityId?,
+    val protectedId: EntityId,
+    val protectedRef: com.wingedsheep.engine.state.ObjectRef?,
+    val redirectToId: EntityId,
+    val redirectToRef: com.wingedsheep.engine.state.ObjectRef?,
+    val duration: com.wingedsheep.sdk.scripting.Duration,
+    val choices: List<com.wingedsheep.engine.handlers.effects.combat.ChosenDamageSource>,
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment()
+) : AnswerContinuation
+
+@Serializable
+data class BlockerPilesContinuation(
+    val blockingPlayer: EntityId,
+    val attackers: List<EntityId>,
+) : AnswerContinuation
+
+@Serializable
+data class BlockerPileRestrictionChoiceContinuation(
+    val blockingPlayer: EntityId,
+    val attackers: List<EntityId>,
+    val candidates: Map<EntityId, List<EntityId>>,
+    val assignmentCount: Int,
+) : AnswerContinuation
+
+/** Carries the resolved amount and source object identities across the source-choice decision. */
+@Serializable
+data class PreventNextDamageLeavingAmountContinuation(
+    val context: com.wingedsheep.engine.handlers.EffectContext,
+    val targetId: EntityId,
+    val amountToLeave: Int,
+    val eligibleSource: com.wingedsheep.sdk.scripting.GameObjectFilter,
+    val scope: com.wingedsheep.sdk.scripting.effects.PreventionScope,
+    val duration: com.wingedsheep.sdk.scripting.Duration,
+    val choices: List<com.wingedsheep.engine.handlers.effects.combat.ChosenDamageSource>
 ) : AnswerContinuation

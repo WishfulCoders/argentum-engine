@@ -1,5 +1,8 @@
 package com.wingedsheep.engine.handlers.actions.spell
 
+import com.wingedsheep.engine.mechanics.mana.allocateFloating
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
+import com.wingedsheep.engine.handlers.effects.mana.ManaProvenanceTracker
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PaymentStrategy
@@ -7,8 +10,13 @@ import com.wingedsheep.engine.handlers.CostHandler
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.life.LifePaymentService
 import com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor
+import com.wingedsheep.engine.mechanics.mana.ScopedManaPlanResult
+import com.wingedsheep.engine.mechanics.mana.ScopedManaSearchLimit
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.activeManaSpendingScope
+import com.wingedsheep.engine.state.remainingManaObligations
+import com.wingedsheep.engine.state.settleManaObligationPayment
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
@@ -53,7 +61,13 @@ data class PaymentResult(
      * stack object so it can be read at resolution via `DynamicAmount.ManaSpentOnX`
      * (e.g. Soul Burn's "gain life equal to the {B} spent on X"). Empty when X is unrestricted.
      */
-    val xManaSpentByColor: Map<Color, Int> = emptyMap()
+    val xManaSpentByColor: Map<Color, Int> = emptyMap(),
+    /**
+     * How many Phyrexian mana symbols the caster chose to pay with 2 life instead of mana
+     * (CR 107.4f). Carried onto the spell so compleated (CR 702.150a) can reduce the resolving
+     * planeswalker's starting loyalty.
+     */
+    val phyrexianLifePips: Int = 0
 )
 
 /**
@@ -75,7 +89,10 @@ class CastPaymentProcessor(
         colorless = component.colorless,
         restrictedMana = component.restrictedMana,
         manaBySubtype = component.manaBySubtype,
-        manaBySource = component.manaBySource
+        manaBySource = component.manaBySource,
+        manaByCardType = component.manaByCardType,
+        snowMana = component.snowMana,
+        snowColorless = component.snowColorless
     )
 
     private fun toComponent(pool: ManaPool) = ManaPoolComponent(
@@ -87,40 +104,36 @@ class CastPaymentProcessor(
         colorless = pool.colorless,
         restrictedMana = pool.restrictedMana,
         manaBySubtype = pool.manaBySubtype,
-        manaBySource = pool.manaBySource
+        manaBySource = pool.manaBySource,
+        manaByCardType = pool.manaByCardType,
+        snowMana = pool.snowMana,
+        snowColorless = pool.snowColorless
     )
 
     /**
      * Provenance of mana freshly tapped by the solver during a payment (AutoPay / Explicit). The
-     * floating-pool tags don't cover it — this mana never entered the pool — so we read each tapped
-     * source's subtypes from state and pair them with the source id. Combined with the pool's
-     * consumed provenance to form the full [SpentManaProvenance] for the payment.
+     * floating-pool tags don't cover it — this mana never entered the pool — so we snapshot each
+     * tapped source the same way [ManaProvenanceTracker] does at production. Combined with the
+     * pool's consumed provenance to form the full [SpentManaProvenance] for the payment.
      */
     private fun tappedSourceProvenance(state: GameState, manaProduced: Map<EntityId, com.wingedsheep.engine.mechanics.mana.ManaProduction>): SpentManaProvenance {
         if (manaProduced.isEmpty()) return SpentManaProvenance()
         val bySubtype = mutableMapOf<com.wingedsheep.sdk.core.Subtype, Int>()
+        val byCardType = mutableMapOf<com.wingedsheep.sdk.core.CardType, Int>()
         val sourceIds = mutableSetOf<EntityId>()
+        var snow = 0
         for ((sourceId, production) in manaProduced) {
             // `amount` counts coloured mana and defaults to 1, so a colorless production
             // (`ManaProduction(colorless = n)`) carries only its `colorless`
             val amount = if (production.color != null) production.amount else production.colorless
             if (amount <= 0) continue
             sourceIds.add(sourceId)
-            val subtypes = state.getEntity(sourceId)
-                ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
-                ?.typeLine?.subtypes ?: emptySet()
-            for (subtype in subtypes) bySubtype[subtype] = (bySubtype[subtype] ?: 0) + amount
+            if (production.snow) snow += amount
+            val tag = ManaProvenanceTracker.sourceTag(state, sourceId)
+            for (subtype in tag.subtypes) bySubtype.merge(subtype, amount, Int::plus)
+            for (cardType in tag.cardTypes) byCardType.merge(cardType, amount, Int::plus)
         }
-        return SpentManaProvenance(bySubtype, sourceIds)
-    }
-
-    /** Merge two provenance snapshots (summing subtype counts, unioning source ids). */
-    private fun mergeProvenance(a: SpentManaProvenance, b: SpentManaProvenance): SpentManaProvenance {
-        if (a.isEmpty) return b
-        if (b.isEmpty) return a
-        val bySubtype = a.bySubtype.toMutableMap()
-        for ((subtype, count) in b.bySubtype) bySubtype[subtype] = (bySubtype[subtype] ?: 0) + count
-        return SpentManaProvenance(bySubtype, a.sourceIds + b.sourceIds)
+        return SpentManaProvenance(bySubtype, sourceIds, byCardType, snow)
     }
 
     fun processPayment(
@@ -143,12 +156,40 @@ class CastPaymentProcessor(
         }
         val lifeToPay = lifePayments.size * 2
         val currentLife = state.lifeTotal(action.playerId)
-        if (lifeToPay > currentLife) {
+        if (lifeToPay > 0 && lifeToPay > currentLife) {
             return PaymentResult(state, emptyList(), "Insufficient life for Phyrexian mana payment")
         }
         val manaCost = effectiveCost.withPhyrexianPaidByLife(lifePayments)
             ?: return PaymentResult(state, emptyList(), "Invalid Phyrexian mana payment")
-        val manaResult = when (action.paymentStrategy) {
+        val scoped = state.activeManaSpendingScope(action.playerId) != null
+        var productionState = state
+        val rawManaResult = if (scoped && action.paymentStrategy !is PaymentStrategy.FromPool) {
+            val chosen = (action.paymentStrategy as? PaymentStrategy.Explicit)?.manaAbilitiesToActivate?.toSet()
+            val excluded = if (chosen == null) emptySet() else state.getBattlefield().filter { it !in chosen }.toSet()
+            val plan = manaSolver.planScopedActivations(state, action.playerId, manaCost, spellContext,
+                xValue * manaCost.xCount.coerceAtLeast(1), xManaRestriction, excluded, reservedLife = lifeToPay)
+            fun floatingOrFailure(message: String): PaymentResult =
+                payFromPool(state, action.playerId, manaCost, cardName, xValue, spellContext, xManaRestriction)
+                    .let { if (it.error == null) it else it.copy(error = message) }
+            when (plan) {
+                ScopedManaPlanResult.Impossible -> PaymentResult(state, emptyList(),
+                    "No exact scoped activation allocation available")
+                is ScopedManaPlanResult.Unknown -> {
+                    val message = "Automatic mana payment could not determine whether this cost can be paid"
+                    // Only a standalone solver needs this fallback; a paused production pool
+                    // must not bypass the execution planner's incomplete-production boundary.
+                    if (plan.reasons == setOf(ScopedManaSearchLimit.NO_EXECUTION_PROVIDER)) floatingOrFailure(message)
+                    else PaymentResult(state, emptyList(), message)
+                }
+                is ScopedManaPlanResult.Found -> {
+                    productionState = plan.execution.state
+                    val paid = payFromPool(plan.execution.state, action.playerId, manaCost, cardName, xValue,
+                        spellContext, xManaRestriction)
+                    if (paid.error != null) PaymentResult(state, emptyList(), paid.error)
+                    else paid.copy(events = plan.execution.events + paid.events)
+                }
+            }
+        } else when (action.paymentStrategy) {
             is PaymentStrategy.FromPool -> payFromPool(state, action.playerId, manaCost, cardName, xValue, spellContext, xManaRestriction)
             is PaymentStrategy.AutoPay -> autoPay(state, action.playerId, manaCost, cardName, xValue, spellContext, xManaRestriction = xManaRestriction)
             is PaymentStrategy.Explicit -> explicitPay(
@@ -162,12 +203,23 @@ class CastPaymentProcessor(
                 xManaRestriction
             )
         }
-        if (manaResult.error != null || lifePayments.isEmpty()) return manaResult
+        if (rawManaResult.error != null) return rawManaResult
+        val manaResult = if (scoped) {
+            val before = productionState.getEntity(action.playerId)?.get<ManaPoolComponent>()?.restrictedMana.orEmpty()
+            val after = rawManaResult.state.getEntity(action.playerId)?.get<ManaPoolComponent>()?.restrictedMana.orEmpty()
+            val settled = settleManaObligationPayment(rawManaResult.state, action.playerId, before, after)
+            if (settled.remainingManaObligations(action.playerId)) {
+                return PaymentResult(state, emptyList(), "Every scoped mana activation must contribute mana to the instructed play")
+            }
+            rawManaResult.copy(state = settled)
+        } else rawManaResult
+        if (lifePayments.isEmpty()) return manaResult
         val lifePayment = LifePaymentService.pay(zones, manaResult.state, action.playerId, lifeToPay)
             ?: return PaymentResult(state, emptyList(), "Unable to pay life for Phyrexian mana")
         return manaResult.copy(
             state = lifePayment.first,
-            events = manaResult.events + lifePayment.second
+            events = manaResult.events + lifePayment.second,
+            phyrexianLifePips = lifePayments.size
         )
     }
 
@@ -182,15 +234,19 @@ class CastPaymentProcessor(
     ): PaymentResult {
         val poolComponent = state.getEntity(playerId)?.get<ManaPoolComponent>()
             ?: ManaPoolComponent()
-        val pool = toManaPool(poolComponent)
+        val pool = toManaPool(poolComponent).withSpendingColors(state, playerId)
+
+        if (state.activeManaSpendingScope(playerId) != null) {
+            return payAllocatedFromPool(state, playerId, pool, cost, cardName, xValue, spellContext, xManaRestriction)
+        }
 
         // Pay base cost first
         var poolAfterPayment = costHandler.payManaCost(pool, cost, spellContext)
             ?: return PaymentResult(state, emptyList(), "Insufficient mana in pool")
 
         // Track mana spent for the event (unrestricted only — restricted changes tracked by count difference)
-        val unrestrictedBefore = ManaPool(poolComponent.white, poolComponent.blue, poolComponent.black, poolComponent.red, poolComponent.green, poolComponent.colorless)
-        val unrestrictedAfter = ManaPool(poolAfterPayment.white, poolAfterPayment.blue, poolAfterPayment.black, poolAfterPayment.red, poolAfterPayment.green, poolAfterPayment.colorless)
+        val unrestrictedBefore = ManaPool(poolComponent.white, poolComponent.blue, poolComponent.black, poolComponent.red, poolComponent.green, poolComponent.colorless, snowMana = poolComponent.snowMana, snowColorless = poolComponent.snowColorless)
+        val unrestrictedAfter = ManaPool(poolAfterPayment.white, poolAfterPayment.blue, poolAfterPayment.black, poolAfterPayment.red, poolAfterPayment.green, poolAfterPayment.colorless, snowMana = poolAfterPayment.snowMana, snowColorless = poolAfterPayment.snowColorless)
         val restrictedSpent = poolComponent.restrictedMana.size - poolAfterPayment.restrictedMana.size
 
         var whiteSpent = poolComponent.white - poolAfterPayment.white
@@ -270,11 +326,14 @@ class CastPaymentProcessor(
             return PaymentResult(state, emptyList(), "Insufficient mana in pool for X cost")
         }
 
-        // Consume provenance tags proportional to unrestricted mana pulled from the pool.
-        // Restricted mana doesn't participate (tagged mana is always unrestricted). Everything is
-        // paid from the pool here, so there is no freshly-tapped-source provenance to add.
+        // Consume provenance tags proportional to unrestricted mana pulled from the pool, plus the
+        // tags on each restricted unit spent. Everything is paid from the pool here, so there is
+        // no freshly-tapped-source provenance to add.
         val unrestrictedSpent = (whiteSpent + blueSpent + blackSpent + redSpent + greenSpent + colorlessSpent) - restrictedSpent
-        val (poolWithProvenanceUpdated, spentProvenance) = poolAfterPayment.consumeProvenance(maxOf(0, unrestrictedSpent))
+        val (poolWithProvenanceUpdated, unrestrictedProvenance) = poolAfterPayment.consumeProvenance(maxOf(0, unrestrictedSpent))
+        val spentProvenance = unrestrictedProvenance +
+            SpentManaProvenance.ofConsumedRestricted(poolComponent.restrictedMana, poolAfterPayment.restrictedMana) +
+            SpentManaProvenance(snow = poolComponent.snowTotal - poolAfterPayment.snowTotal)
 
         val newState = state.updateEntity(playerId) { container ->
             container.with(toComponent(poolWithProvenanceUpdated))
@@ -302,6 +361,37 @@ class CastPaymentProcessor(
         )
     }
 
+    private fun payAllocatedFromPool(
+        state: GameState,
+        playerId: EntityId,
+        before: ManaPool,
+        cost: ManaCost,
+        cardName: String,
+        xValue: Int,
+        context: SpellPaymentContext?,
+        xColors: Set<Color>,
+    ): PaymentResult {
+        val allocation = before.allocateFloating(cost, context, xValue * cost.xCount.coerceAtLeast(1), xColors)
+            ?: return PaymentResult(state, emptyList(), "Insufficient mana in pool for complete allocation")
+        val after = allocation.pool
+        val restrictedSpent = before.restrictedMana.size - after.restrictedMana.size
+        val (updated, ordinaryProvenance) = after.consumeProvenance(allocation.spent.total - restrictedSpent)
+        val provenance = ordinaryProvenance +
+            SpentManaProvenance.ofConsumedRestricted(before.restrictedMana, after.restrictedMana) +
+            SpentManaProvenance(snow = before.snowTotal - after.snowTotal)
+        val spent = allocation.spent
+        return PaymentResult(
+            state.updateEntity(playerId) { it.with(toComponent(updated)) },
+            listOf(ManaSpentEvent(playerId = playerId, reason = "Cast $cardName",
+                white = spent.white, blue = spent.blue, black = spent.black,
+                red = spent.red, green = spent.green, colorless = spent.colorless)),
+            null,
+            consumedRiders = ridersConsumedDuringPayment(before.restrictedMana, after.restrictedMana),
+            spentManaProvenance = provenance,
+            xManaSpentByColor = allocation.xSpentByColor,
+        )
+    }
+
     private fun autoPay(
         state: GameState,
         playerId: EntityId,
@@ -318,7 +408,7 @@ class CastPaymentProcessor(
         // Use floating mana first
         val poolComponent = state.getEntity(playerId)?.get<ManaPoolComponent>()
             ?: ManaPoolComponent()
-        val pool = toManaPool(poolComponent)
+        val pool = toManaPool(poolComponent).withSpendingColors(state, playerId)
 
         val partialResult = pool.payPartial(cost, spellContext)
         var poolAfterPayment = partialResult.newPool
@@ -402,7 +492,9 @@ class CastPaymentProcessor(
                 (poolComponent.colorless - poolAfterPayment.colorless)
         )
         val (poolWithProvenanceUpdated, poolProvenance) = poolAfterPayment.consumeProvenance(poolUnrestrictedSpent)
-        var spentProvenance = poolProvenance
+        var spentProvenance = poolProvenance +
+            SpentManaProvenance.ofConsumedRestricted(poolComponent.restrictedMana, poolAfterPayment.restrictedMana) +
+            SpentManaProvenance(snow = poolComponent.snowTotal - poolAfterPayment.snowTotal)
 
         currentState = currentState.updateEntity(playerId) { container ->
             container.with(toComponent(poolWithProvenanceUpdated))
@@ -416,7 +508,7 @@ class CastPaymentProcessor(
             solutionConsumedRiders = solution.consumedRiders
             // Mana tapped directly for this payment carries the provenance of its source (read from
             // the pre-payment [state], where every tapped source still exists with its type line).
-            spentProvenance = mergeProvenance(spentProvenance, tappedSourceProvenance(state, solution.manaProduced))
+            spentProvenance = spentProvenance + tappedSourceProvenance(state, solution.manaProduced)
             // Fold the X portion the solver tapped (allowed colors only) into the X-by-color tally.
             for ((color, amount) in solution.xRestrictedManaSpent) {
                 xSpentByColor[color] = (xSpentByColor[color] ?: 0) + amount

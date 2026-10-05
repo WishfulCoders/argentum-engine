@@ -2,6 +2,7 @@ package com.wingedsheep.assay.grammar
 
 import com.wingedsheep.assay.syntax.Bindings
 import com.wingedsheep.assay.syntax.Phrase
+import com.wingedsheep.assay.syntax.alternate
 import com.wingedsheep.assay.syntax.bind
 import com.wingedsheep.assay.syntax.constant
 import com.wingedsheep.assay.syntax.oneOf
@@ -23,7 +24,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 /**
  * "Create a 1/1 green Insect creature token." — the token clauses.
  *
- * One shape with four slots (the count, the stats, the colours, the creature types) plus an optional
+ * One shape with five slots (the count, the stats, the colours, the creature types, the card types) plus an optional
  * granted run, and a *row* per printed variation, because English changes several words at once: the
  * article and the noun's number move with the count, and the keyword rider is a suffix the kernel's
  * fixed templates cannot make optional. Six rows out of two axes is what the axes cost; nothing
@@ -186,6 +187,28 @@ object Tokens {
         types.takeIf { it.isNotEmpty() }?.map { Subtype(it) }
 
     /**
+     * The token's card types in front of "creature" — "1/1 colorless Thopter **artifact** creature
+     * token", "1/1 white Glimmer **enchantment** creature token".
+     *
+     * A slot over the noun rather than a row per kind, because the word sits inside the noun phrase
+     * and crosses every other axis — count, tapped, keyword rider, tally — without changing any of
+     * them. `CreateTokenEffect` carries the two kinds as two booleans, so the slot's value is the
+     * pair and the three constants take disjoint values; printing is decided by the model.
+     *
+     * "Enchantment artifact creature token" (one Oracle line) is left out: both booleans set is a
+     * value the corpus prints once and in the opposite order to the type line's own, so the row
+     * would be a convention invented from one example. It declines and is counted.
+     */
+    private data class TokenKind(val artifact: Boolean, val enchantment: Boolean)
+
+    private val kind: Phrase<TokenKind> = oneOf(
+        "a token's card types",
+        constant("creature", TokenKind(artifact = false, enchantment = false)),
+        constant("artifact creature", TokenKind(artifact = true, enchantment = false)),
+        constant("enchantment creature", TokenKind(artifact = false, enchantment = true)),
+    )
+
+    /**
      * How many tokens a clause makes, as the two things that vary with it: the printed count and
      * the amount the model holds.
      *
@@ -252,7 +275,7 @@ object Tokens {
         suffixName: String = "",
         tally: Amounts.Scope? = null,
     ): Phrase<CardScript> {
-        val noun = if (count.plural) "creature tokens" else "creature token"
+        val noun = if (count.plural) "{kind} tokens" else "{kind} token"
         val rider = if (keywords) " with {kws}" else ""
         val entry = if (tapped) "tapped " else ""
         val counted = if (tally == null) "" else " for each {filter}${tally.surface}"
@@ -268,6 +291,7 @@ object Tokens {
             colours: Set<Color>,
             types: List<Subtype>,
             granted: Set<Keyword>,
+            kind: TokenKind,
         ) = CardScript(
             spellEffect = Effects.CreateToken(
                 count = amount,
@@ -277,6 +301,8 @@ object Tokens {
                 creatureTypes = types.map { it.value }.toSet(),
                 keywords = granted,
                 tapped = tapped,
+                artifactToken = kind.artifact,
+                enchantmentToken = kind.enchantment,
             )
         )
 
@@ -286,6 +312,7 @@ object Tokens {
             slot("t", Primitives.cardinal)
             slot("color", colours)
             slot("types", typeRun)
+            slot("kind", kind)
             if (keywords) slot("kws", Keywords.keywordRun)
             if (tally != null) slot("filter", Filters.filter)
             build { bindings ->
@@ -305,6 +332,7 @@ object Tokens {
                     bindings.value("color"),
                     bindings.value("types"),
                     granted,
+                    bindings.value("kind"),
                 )
             }
             match { script ->
@@ -336,6 +364,7 @@ object Tokens {
                         token.colors,
                         types,
                         token.keywords,
+                        TokenKind(token.artifactToken, token.enchantmentToken),
                     )
                 ) {
                     return@match null
@@ -346,6 +375,7 @@ object Tokens {
                     "t" to token.toughness,
                     "color" to token.colors,
                     "types" to types,
+                    "kind" to TokenKind(token.artifactToken, token.enchantmentToken),
                     "kws" to token.keywords.sortedBy { it.ordinal },
                     "filter" to counting,
                 )
@@ -369,15 +399,6 @@ object Tokens {
      * **The token noun is a proper noun.** It stands mid-sentence where [Subtype] words also do, and
      * `SentenceCase` has already lowercased the line's first letter, so the templates are written
      * exactly as printed and the capital is real rather than restored.
-     *
-     * ### A collision this file is deliberately one half of
-     *
-     * "Investigate" (CR 701.36a) *is* "create a Clue token" — `Effects.Investigate` and
-     * `Effects.CreateClue` are the same call — so the two printed forms denote one model. Only the
-     * noun form is registered here. The keyword-action spelling declines, which names the gap; what
-     * it must never become is a second canonical rule, because then one model would have two printed
-     * forms and nothing would decide which the printer emits. When the keyword-action family is
-     * written, "investigate" belongs in it as an `alternate`.
      */
     /**
      * One predefined token noun, and the two facades the SDK gives it.
@@ -431,6 +452,22 @@ object Tokens {
         }
     }
 
+    /**
+     * "Investigate." / "investigate twice." — the keyword action (CR 701.16a). Investigating
+     * creates a Clue, but it is its own model (`InvestigateEffect`) rather than the Clue row's:
+     * "whenever you investigate" (Erdwal Illuminator) watches the action, and a card that only
+     * says "create a Clue token" has not investigated. So both spellings are canonical, each for
+     * its own model.
+     */
+    private val investigate: List<Phrase<CardScript>> =
+        listOf("investigate" to 1, "investigate twice" to 2).map { (text, times) ->
+            val script = CardScript(spellEffect = Effects.Investigate(times))
+            phrase<CardScript>(text, name = text) {
+                build { script }
+                match { if (it == script) bind() else null }
+            }
+        }
+
     /** One token clause, for the sentences that wrap it — see [Granted]. */
     val clause: Phrase<CardScript> get() = oneOf("a token clause", clauses)
 
@@ -475,7 +512,8 @@ object Tokens {
             // word only, so the X row is left out rather than written against nothing.
             PREDEFINED.flatMap { token ->
                 counts.dropLast(1).map { createPredefined(it, token) }
-            }
+            } +
+            investigate
 
     /**
      * "Create that many Blood tokens." — Olivia's Attendants; "…create that many 1/1 green Elf

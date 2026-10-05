@@ -12,6 +12,8 @@ import { CommandZone } from './CommandZone'
 import { ZonePile } from './ZonePiles'
 import { styles } from './styles'
 import { isLoneTargetRequirement } from '@/utils/targeting.ts'
+import { defendingPlayerOf } from '@/utils/combatTargets'
+import { AttackRelationTag, useAttackRelation } from '../AttackRelationTag'
 
 /** Height of a shared-strip cell's name-plate band (the pill plus its top margin). */
 export const CELL_PLATE_BAND = 34
@@ -221,7 +223,7 @@ export function OpponentBoardArea({
   } = useCellHandMetrics()
   // A bottom-half cell's board is oriented like a player's own, so its hand hangs the same way
   // as yours (face toward the bottom edge) rather than inverted like an opponent's.
-  const cellHandInverted = !bottomHalf
+  const cellHandInverted = !bottomHalf && !(isAlly && hideHand)
   // A driven seat normally reclaims its full-size interactive fan inside the cell — unless the
   // hand has been lifted out of the cell entirely ([liftHand]), in which case the lifted copy is
   // the interactive one and the cell must not draw a second.
@@ -239,7 +241,12 @@ export function OpponentBoardArea({
       : effectiveCellHand === 'fan' ? cellHandBand
         : effectiveCellHand === 'count' ? CELL_HAND_COUNT_BAND
           : 0
-  const reservationBand = hideHand ? cellHandOwn + CELL_PLATE_BAND : handReservation
+  // A teammate (Two-Headed Giant, 2v2, ...) on either row keeps its open hand *below* its lands, hanging from the
+  // bottom edge like your own, so the plate stays alone at the top and the board sits under it.
+  const handBelowBoard = hideHand && isAlly && !drivesOwnHand && effectiveCellHand === 'fan'
+  const reservationBand = handBelowBoard
+    ? CELL_PLATE_BAND
+    : hideHand ? cellHandOwn + CELL_PLATE_BAND : handReservation
 
   /* Opponent hand — fixed at top of screen in grid layout; absolute inside the
      strip cell in strip layout (a strip cell starts at the viewport top, so the
@@ -404,7 +411,9 @@ export function OpponentBoardArea({
             // Only the inverted fan spills *upward*; pushing it down by the overhang is what
             // keeps its top row from drawing straight through the name plate. A normal fan
             // spills downward instead — that half is reserved in the band below.
-            top: CELL_PLATE_BAND + (cellHandInverted ? FAN_EDGE_OVERHANG : 0),
+            ...(handBelowBoard
+              ? { bottom: FAN_EDGE_OVERHANG }
+              : { top: CELL_PLATE_BAND + (cellHandInverted ? FAN_EDGE_OVERHANG : 0) }),
             left: 0,
             right: 0,
             height: cellHandHeight,
@@ -484,6 +493,7 @@ export function OpponentBoardArea({
       {!plateAtBottom && <div style={{ height: reservationBand, flexShrink: 0 }} aria-hidden />}
       {boardBlock}
       {plateAtBottom && <div style={{ height: reservationBand, flexShrink: 0 }} aria-hidden />}
+      {handBelowBoard && <div style={{ height: cellHandOwn, flexShrink: 0 }} aria-hidden />}
     </div>
   )
 }
@@ -695,6 +705,21 @@ export function BoardNamePlate({
   const isDefenderAssignTarget =
     isDefenderTarget &&
     ((combatState?.selectedAttackers.length ?? 0) > 0 || draggingAttackerId !== null)
+  // Mirrors the rail chip: while declaring, a living seat that can't be attacked at all — neither
+  // the player nor anything they defend — dims with a 🚫, so the legal boards read at a glance.
+  // Your own plate (team-game bottom row) never reads as restricted — it's the attacking seat.
+  const cards = useGameStore((state) => state.gameState?.cards)
+  const ownPlayerId = useGameStore((state) => state.playerId)
+  const actingSeat = combatState?.actingSeat ?? ownPlayerId
+  const isAttackRestricted =
+    declaringAttackers &&
+    !player.hasLost &&
+    playerId !== actingSeat &&
+    !isDefenderTarget &&
+    !(combatState?.validAttackTargets ?? []).some(
+      (id) => id !== playerId && defendingPlayerOf(id, cards) === playerId,
+    )
+  const attackRelation = useAttackRelation(playerId)
 
   // Player-as-target (mirrors RailChip's crosshair handling).
   const isTargetingSelected = targetingState?.selectedTargets.includes(playerId) ?? false
@@ -761,9 +786,11 @@ export function BoardNamePlate({
           ? `Attack ${player.name}`
           : isPlayerTargetable || isPlayerTargetSelected
             ? (isPlayerTargetSelected ? `Unselect ${player.name}` : `Target ${player.name}`)
-            : handCount != null
-              ? `${player.name} — ${handCount} ${handCount === 1 ? 'card' : 'cards'} in hand`
-              : player.name
+            : isAttackRestricted
+              ? `${player.name} — can't be attacked this combat`
+              : handCount != null
+                ? `${player.name} — ${handCount} ${handCount === 1 ? 'card' : 'cards'} in hand`
+                : player.name
       }
       onClick={interactive ? handleClick : undefined}
       style={{
@@ -792,9 +819,16 @@ export function BoardNamePlate({
           : isPlayerTargetSelected
             ? '0 0 10px rgba(255, 255, 0, 0.6)'
             : 'none',
-        transition: 'border-color 150ms, box-shadow 150ms',
+        opacity: isAttackRestricted ? 0.55 : 1,
+        filter: isAttackRestricted ? 'saturate(0.5)' : 'none',
+        transition: 'border-color 150ms, box-shadow 150ms, opacity 200ms',
       }}
     >
+      {isAttackRestricted && (
+        <span aria-hidden style={{ fontSize: 10, lineHeight: 1, flexShrink: 0 }}>
+          🚫
+        </span>
+      )}
       <span
         aria-hidden
         style={{
@@ -835,6 +869,7 @@ export function BoardNamePlate({
           ALLY
         </span>
       )}
+      {attackRelation && <AttackRelationTag relation={attackRelation} />}
       {handCount != null && <HandCountBadge count={handCount} />}
       {!sharedLifeTeam && (
         <span

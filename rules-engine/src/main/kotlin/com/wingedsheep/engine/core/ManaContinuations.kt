@@ -41,6 +41,7 @@ data class CounterUnlessPaysContinuation(
     val controllerId: EntityId? = null,
     val onPaid: Effect? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -118,6 +119,24 @@ data class MayPayXContinuation(
     val playerId: EntityId,
     val sourceName: String?,
     val effect: Effect,
+    val maxX: Int,
+    val effectContext: EffectContext
+) : AnswerContinuation
+
+/**
+ * Resume after the payer names how much life to pay for a "you may pay any amount of life" gate
+ * ([com.wingedsheep.sdk.scripting.effects.Gate.MayPayAnyAmountOfLife], Necrodominance). The life
+ * twin of [MayPayXContinuation]: X > 0 is paid and [effect] runs with X bound; 0 declines and runs
+ * [otherwise], as does a payment that can no longer be made.
+ *
+ * @property maxX The payable ceiling that was offered, re-checked on resume.
+ */
+@Serializable
+data class MayPayLifeXContinuation(
+    val playerId: EntityId,
+    val sourceName: String?,
+    val effect: Effect,
+    val otherwise: Effect? = null,
     val maxX: Int,
     val effectContext: EffectContext
 ) : AnswerContinuation
@@ -202,6 +221,7 @@ data class CounterUnlessPaysManaSelectionContinuation(
      */
     val waterbend: Boolean = false,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -465,6 +485,7 @@ data class WardTapPermanentsSubCostContinuation(
     /** See [CounterUnlessPaysManaSelectionContinuation.wardSourceId]. */
     val wardSourceId: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**

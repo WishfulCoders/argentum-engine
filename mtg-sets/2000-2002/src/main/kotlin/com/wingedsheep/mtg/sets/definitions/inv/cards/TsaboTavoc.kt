@@ -46,6 +46,9 @@ val TsaboTavoc = card("Tsabo Tavoc") {
 
     metadata {
         rarity = Rarity.RARE
-        collectorNumber = "280"
+        collectorNumber = "281"
+        artist = "Michael Sutfin"
+        flavorText = "\"I might almost pity my enemies—if it wasn't so amusing to watch them die.\""
+        imageUri = "https://cards.scryfall.io/normal/front/c/c/ccbe2539-7a7c-468b-a270-7ca1bdcccb1e.jpg?1783945654"
     }
 }

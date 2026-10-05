@@ -13,6 +13,7 @@ import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
@@ -62,6 +63,43 @@ class TokensTest : StringSpec({
         roundTrips("Create a 5/5 red Dragon creature token with flying.")
         roundTrips("Create a 7/7 green Elemental creature token with trample.")
         roundTrips("Create a 1/1 colorless Sliver creature token.")
+    }
+
+    // Ornithopter-makers and Glimmers — the card types in front of "creature" are one slot, crossing
+    // the count, the tapped entry and the keyword rider.
+    "an artifact or enchantment creature token is a slot over the noun" {
+        fragment("Create a 1/1 colorless Thopter artifact creature token with flying.").script.spellEffect shouldBe
+            Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                creatureTypes = setOf("Thopter"),
+                keywords = setOf(Keyword.FLYING),
+                artifactToken = true,
+            )
+        (fragment("Create a 1/1 white Glimmer enchantment creature token.").script.spellEffect as CreateTokenEffect)
+            .enchantmentToken shouldBe true
+
+        roundTrips("Create a 1/1 colorless Thopter artifact creature token with flying.")
+        roundTrips("Create two 1/1 colorless Servo artifact creature tokens.")
+        roundTrips("Create a tapped 2/2 colorless Robot artifact creature token.")
+        roundTrips("Create a 1/1 white Glimmer enchantment creature token.")
+    }
+
+    // Both kinds at once is printed once in Oracle, in the order opposite to the type line's — no
+    // row spells it, so it refuses to print rather than guess.
+    "an artifact enchantment creature token refuses to print" {
+        val both = CardFragment(
+            script = CardScript(
+                spellEffect = Effects.CreateToken(
+                    power = 1,
+                    toughness = 1,
+                    creatureTypes = setOf("Thopter"),
+                    artifactToken = true,
+                    enchantmentToken = true,
+                ),
+            ),
+        )
+        Grammar.abilityLine.printLine(both) shouldBe null
     }
 
     // The sets have no order; the printer imposes WUBRG and [Keyword]'s own, so a card that built
@@ -122,6 +160,19 @@ class TokensTest : StringSpec({
         // A predefined noun the vocabulary does not carry has no sentence, rather than a wrong one.
         val unknown = CardFragment(script = CardScript(spellEffect = CreatePredefinedTokenEffect("Junk")))
         Grammar.abilityLine.printLine(unknown) shouldBe null
+    }
+
+    // CR 701.16a: investigating creates a Clue, but it is its own model — "whenever you
+    // investigate" watches the action, which a plain "create a Clue token" is not.
+    "investigate is its own model, distinct from creating a Clue" {
+        fragment("Investigate.").script.spellEffect shouldBe Effects.Investigate()
+        fragment("Investigate.").script.spellEffect shouldNotBe Effects.CreateClue()
+        fragment("When ~ enters, investigate twice.").script.triggeredAbilities.single().effect shouldBe
+            Effects.Investigate(2)
+
+        roundTrips("Investigate.")
+        roundTrips("When ~ enters, investigate twice.")
+        roundTrips("Create a Clue token.")
     }
 
     "the token clause is the same clause inside a trigger" {

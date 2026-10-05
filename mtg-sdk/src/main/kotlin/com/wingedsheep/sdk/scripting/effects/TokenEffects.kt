@@ -104,7 +104,15 @@ data class CreateTokenEffect(
      * Tetravus, which converts its +1/+1 counters into Tetravite tokens and reabsorbs *those same*
      * tokens. Off by default (most token-makers don't need provenance).
      */
-    val stampCreator: Boolean = false
+    val stampCreator: Boolean = false,
+    /**
+     * Numeric keyword abilities the token is printed with — "a 3/3 green Phyrexian Beast creature
+     * token with toxic 1" (Goliath Hatchery) is `listOf(KeywordAbility.toxic(1))`. The sibling of
+     * [keywords] for keywords that carry an N, which a bare [Keyword] can't hold; the engine
+     * attaches them exactly as it does a card's printed ones, so the token's toxic reaches combat
+     * damage and "creatures with toxic".
+     */
+    val numericKeywords: List<com.wingedsheep.sdk.scripting.KeywordAbility.Numeric> = emptyList(),
 ) : Effect {
     constructor(
         count: Int,
@@ -141,14 +149,16 @@ data class CreateTokenEffect(
                 append("${c.description} $pt $colorWord $typeWord $cardTypeWord tokens")
             }
         }
-        if (keywords.isNotEmpty()) {
+        val keywordWords = keywords.map { it.name.lowercase() } +
+            numericKeywords.map { "${it.keyword.displayName.lowercase()} ${it.n}" }
+        if (keywordWords.isNotEmpty()) {
             append(" with ")
-            append(keywords.joinToString(", ") { it.name.lowercase() })
+            append(keywordWords.joinToString(", "))
         }
         // Render granted activated abilities as quoted reminder text, e.g.
         // `with "{T}: Target creature you control gets +1/+0 until end of turn."`.
         for (ability in activatedAbilities) {
-            append(if (keywords.isEmpty()) " with " else " and ")
+            append(if (keywordWords.isEmpty()) " with " else " and ")
             append("\"${ability.description}\"")
         }
     }
@@ -218,6 +228,45 @@ data class CreatePredefinedTokenEffect(
         if (tapped) append("tapped ")
         append(tokenType)
         append(if (dynamicCount != null || count != 1) " tokens" else " token")
+    }
+}
+
+/**
+ * Investigate (keyword action, CR 701.16a): "create a Clue token", performed [count] times.
+ *
+ * A separate effect from `CreatePredefinedTokenEffect("Clue")` because investigating is an *event*
+ * the printed text can watch — "whenever you investigate" (Erdwal Illuminator) — while a card that
+ * merely says "create a Clue token" has not investigated. Each repetition is its own investigate,
+ * so "investigate twice" fires a "whenever you investigate" payoff twice; the action still happened
+ * when a replacement changed or removed the Clue it would have created.
+ *
+ * The Clues are created and published under [CREATED_TOKENS] exactly as the predefined-token
+ * effect does, including token-count replacements and token substitutions.
+ *
+ * @property count How many times to investigate, evaluated once at resolution; zero investigates
+ *   not at all
+ * @property controller Who investigates and controls the Clues (null = the effect's controller)
+ */
+@SerialName("Investigate")
+@Serializable
+data class InvestigateEffect(
+    val count: DynamicAmount = DynamicAmount.Fixed(1),
+    val controller: EffectTarget? = null
+) : Effect {
+    override val description: String = buildString {
+        if (controller != null) append("${controller.description} ")
+        append("Investigate")
+        when (count) {
+            DynamicAmount.Fixed(1) -> {}
+            DynamicAmount.Fixed(2) -> append(" twice")
+            is DynamicAmount.Fixed -> append(" ${count.amount} times")
+            else -> append(" X times")
+        }
+    }
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newCount = count.applyTextReplacement(replacer)
+        return if (newCount !== count) copy(count = newCount) else this
     }
 }
 
@@ -333,6 +382,12 @@ data class CreateTokenCopyOfSourceEffect(
             append(". Exile ${if (count == 1) "it" else "them"} at the beginning of the next ${exileAtStep.displayName}")
         }
     }
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newExceptions = exceptions.applyTextReplacement(replacer)
+        return if (newExceptions !== exceptions) copy(exceptions = newExceptions) else this
+    }
+
 }
 
 /**
@@ -534,6 +589,20 @@ data class CreateTokenCopyOfTargetEffect(
      * enchantment leaves the battlefield, exile the token" has to find the one token it made.
      */
     val stampCreator: Boolean = false,
+    /**
+     * The object each token copy enters the battlefield **attached to** — "create a token that's a
+     * copy of that Aura attached to that creature" (Arna Kennerüd, Skycaptain). Null (the default)
+     * creates the tokens unattached, except that an Aura copy's controller then chooses a host as
+     * it enters (CR 303.4f).
+     *
+     * The host is prescribed, so no choice is offered, and legality follows the entering-attached
+     * rules rather than targeting (hexproof and shroud don't apply):
+     *  - an **Aura** copy that can't legally enchant the host — or whose host has left the
+     *    battlefield — isn't created at all (CR 303.4i);
+     *  - an **Equipment** copy that can't legally equip it is created unattached (CR 301.5e);
+     *  - a copy that is neither enters unattached (CR 303.4h).
+     */
+    val attachedTo: EffectTarget? = null,
 ) : Effect {
     /**
      * This effect's copy exceptions (CR 707.9) in the shared [CopyExceptions] vocabulary — the same
@@ -612,12 +681,19 @@ data class CreateTokenCopyOfTargetEffect(
         if (addedKeywords.isNotEmpty()) {
             append(" with ${addedKeywords.joinToString(", ") { it.displayName.lowercase() }}")
         }
+        if (attachedTo != null) append(" attached to ${attachedTo.description}")
         if (exileAtStep != null) {
             val pronoun = if (count == DynamicAmount.Fixed(1)) "that token" else "those tokens"
             append(". At the beginning of the next ${exileAtStep.name.lowercase()} step, exile $pronoun")
             if (exileUnlessSourceIsRingBearer) append(" unless this creature is your Ring-bearer")
         }
     }
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newExceptions = exceptions.applyTextReplacement(replacer)
+        return if (newExceptions !== exceptions) copy(exceptions = newExceptions) else this
+    }
+
 }
 
 /**

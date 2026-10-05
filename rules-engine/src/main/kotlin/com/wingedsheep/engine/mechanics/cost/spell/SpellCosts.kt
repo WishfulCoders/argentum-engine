@@ -33,6 +33,7 @@ object SpellCosts {
         put(CostAtom.ReturnToHand::class, ReturnToHandCostKind)
         put(CostAtom.VariablePermanents::class, VariablePermanentsCostKind)
         put(CostAtom.RevealFromHand::class, RevealFromHandCostKind)
+        put(CostAtom.PayPlayerCounters::class, PlayerCountersCostKind)
         put(CostAtom.RemoveCounters::class, RemoveCountersCostKind)
         put(CostAtom.PayLife::class, PayLifeCostKind)
         put(CostAtom.Mana::class, AbilityOnlyAtomCostKind)
@@ -92,7 +93,7 @@ object SpellCosts {
      * visited even after one fails, so the offer is complete either way.
      */
     fun enumerateAll(env: SpellCostEnumeration, costs: List<AdditionalCost>, offer: SpellCostOffer): Boolean {
-        var payable = true
+        var payable = com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment.canAffordSpell(env.state, env.playerId, costs, env.castCardId)
         for (cost in costs.flatMap { if (it is AdditionalCost.Composite) it.steps else listOf(it) }) {
             if (!enumerate(env, cost, offer)) payable = false
         }
@@ -130,6 +131,21 @@ object SpellCosts {
     // The cost tree: composites and the costs that offer the caster a choice of legs
     // ---------------------------------------------------------------------------------------------
 
+    /** Reject forged branch identities before reduction can fall back to another cost. */
+    fun validateChoiceDeclarations(
+        costs: List<AdditionalCost>,
+        choices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, Int>,
+    ): String? {
+        if (choices.isEmpty()) return null
+        val declared = flattenComposites(costs).filterIsInstance<AdditionalCost.Choice>()
+        for ((slot, index) in choices) {
+            val choice = declared.singleOrNull { it.choiceSlot == slot }
+                ?: return "Unknown or ambiguous additional-cost choice: $slot"
+            if (index !in choice.options.indices) return "Invalid additional-cost branch: $index"
+        }
+        return null
+    }
+
     /** Expand [AdditionalCost.Composite] wrappers so every cost in the list stands on its own. */
     fun flattenComposites(costs: List<AdditionalCost>): List<AdditionalCost> =
         costs.flatMap { if (it is AdditionalCost.Composite) flattenComposites(it.steps) else listOf(it) }
@@ -139,11 +155,12 @@ object SpellCosts {
      * every downstream stage handles a plain cost with no alternatives awareness.
      *
      * Cost-vs-cost ([AdditionalCost.Choice]) reduces to the single option being paid:
-     *  1. the option whose [AdditionalCostPayment] field the client populated — a normal cast, where
+     *  1. the explicitly declared branch for a named choice (validated before reduction); else
+     *  2. the option whose [AdditionalCostPayment] field the client populated — a normal cast, where
      *     each option surfaced as its own legal action so exactly one field is filled; else
-     *  2. the first option payable from the current board — server-initiated free/AI casts arrive with
+     *  3. the first option payable from the current board — server-initiated free/AI casts arrive with
      *     no payment (mirrors `ForageCostResolver`'s engine-direct fallback); else
-     *  3. the first option (nothing payable — downstream validation/selection then rejects the cast).
+     *  4. the first option (nothing payable — downstream validation/selection then rejects the cast).
      *
      * Cost-vs-mana ([AdditionalCost.OrPay]) reduces to its leg cost when the caster populated that
      * cost's payment field, and to *nothing* otherwise: declining the leg means they took the pay
@@ -160,10 +177,12 @@ object SpellCosts {
         playerId: EntityId,
         payment: AdditionalCostPayment?,
         costHandler: CostHandler,
+        choices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, Int> = emptyMap(),
     ): List<AdditionalCost> = flattenComposites(costs).flatMap { cost ->
         when (cost) {
             is AdditionalCost.Choice -> listOf(
-                cost.options.firstOrNull { selectionSupplied(it, payment) }
+                cost.choiceSlot?.let { choices[it] }?.let { cost.options.getOrNull(it) }
+                    ?: cost.options.firstOrNull { selectionSupplied(it, payment) }
                     ?: cost.options.firstOrNull { canPay(state, it, playerId, costHandler) }
                     ?: cost.options.first()
             )

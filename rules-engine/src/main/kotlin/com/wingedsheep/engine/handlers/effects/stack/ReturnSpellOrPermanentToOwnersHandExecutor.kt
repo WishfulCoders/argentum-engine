@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.stack
 
+import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.ZoneChangeEvent
@@ -72,10 +73,12 @@ class ReturnSpellOrPermanentToOwnersHandExecutor(
                 ?: spellComponent?.casterId
                 ?: return EffectResult.error(state, "Cannot determine spell owner")
 
-            var newState = state.removeFromStack(targetId)
+            var newState = com.wingedsheep.engine.mechanics.CastCharacteristics.end(state.removeFromStack(targetId), targetId)
             newState = newState.addToZone(ZoneKey(ownerId, Zone.HAND), targetId)
             newState = newState.updateEntity(targetId) { c ->
-                c.without<SpellOnStackComponent>().without<TargetsComponent>()
+                c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
             }
 
             return EffectResult.success(

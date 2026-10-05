@@ -138,6 +138,14 @@ value class CounterType(val name: String) {
          * gains menace for as long as it has one. Wired through `StateProjector.KEYWORD_COUNTER_MAP`.
          */
         val MENACE = CounterType("MENACE")
+
+        /**
+         * Exalted counter (MH3 — Emissary of Soulfire). Keyword counter (CR 122.1b / 613.1f): the
+         * permanent has exalted for as long as it has one, and **each** exalted counter is a separate
+         * instance of exalted that triggers on its own. Wired through `StateProjector.KEYWORD_COUNTER_MAP`
+         * for the keyword and `TriggerAbilityResolver` for the per-counter triggers.
+         */
+        val EXALTED = CounterType("EXALTED")
         val STASH = CounterType("STASH")
 
         /**
@@ -549,6 +557,15 @@ value class CounterType(val name: String) {
         val SLIME = CounterType("SLIME")
 
         /**
+         * Oil counter (ONE — Phyrexia: All Will Be One, and later Phyrexian sets). A passive
+         * counter with no inherent rule of its own, like [STORAGE] and [SLIME]: every card that cares
+         * places, spends or reads it itself — "enters with N oil counters", "{T}, Remove an oil counter
+         * from this creature: …", "for each permanent you control with an oil counter on it" (a
+         * battlefield count over `GameObjectFilter.Permanent.withCounter(OIL)`). Proliferate adds oil like any other kind.
+         */
+        val OIL = CounterType("OIL")
+
+        /**
          * Javelin counter (FEM — Icatian Javelineers). A plain resource counter: the creature enters
          * with one and removing it is part of the cost of its ping. The counter does nothing of its
          * own — the card spends it.
@@ -622,6 +639,23 @@ value class CounterType(val name: String) {
          */
         val TRAINING = CounterType("TRAINING")
 
+        /** Mire counter: a passive marker used by Cyclopean Tomb; no inherent rule. */
+        val MIRE = CounterType("MIRE")
+
+        /**
+         * Collection counter (MH3 — Charitable Levy). A passive accumulate-then-threshold counter
+         * with no inherent rule, like [JUDGMENT]: the card's own cast trigger adds one and its
+         * threshold gate reads the tally back to sacrifice the enchantment.
+         */
+        val COLLECTION = CounterType("COLLECTION")
+
+        /**
+         * Reprieve counter (J22 — Magnanimous Magistrate). A spendable budget with no inherent rule:
+         * the creature enters with five, and its dies trigger removes as many as the dead creature's
+         * mana value to return it.
+         */
+        val REPRIEVE = CounterType("REPRIEVE")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -665,6 +699,7 @@ value class CounterType(val name: String) {
             REACH,
             HASTE,
             MENACE,
+            EXALTED,
             STASH,
             CROAK,
             BLIGHT,
@@ -723,6 +758,7 @@ value class CounterType(val name: String) {
             STORAGE,
             HUNGER,
             SLIME,
+            OIL,
             JAVELIN,
             CREDIT,
             CUBE,
@@ -734,6 +770,9 @@ value class CounterType(val name: String) {
             DEVOTION,
             THEFT,
             TRAINING,
+            MIRE,
+            COLLECTION,
+            REPRIEVE,
         )
 
         /**

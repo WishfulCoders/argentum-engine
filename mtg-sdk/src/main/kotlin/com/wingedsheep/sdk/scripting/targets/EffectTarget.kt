@@ -279,6 +279,21 @@ sealed interface EffectTarget {
     }
 
     /**
+     * TARGETING SOURCE: "that spell or ability" in a becomes-the-target trigger — the object on the
+     * stack that did the targeting, not the permanent it targeted (that one is [TriggeringEntity]).
+     * Only meaningful inside a [com.wingedsheep.sdk.scripting.EventPattern.BecomesTargetEvent]
+     * trigger; the object sibling of [com.wingedsheep.sdk.scripting.references.Player.ControllerOfTargetingSource].
+     *
+     * Mirror-Shield Hoplite: "…becomes the target of a backup ability, copy that ability" is
+     * `CopyTargetTriggeredAbility(TargetingSource)`.
+     */
+    @SerialName("TargetingSource")
+    @Serializable
+    data object TargetingSource : SingleEntity {
+        override val description: String = "that ability"
+    }
+
+    /**
      * CONTROLLER OF TRIGGERING ENTITY: Refers to the controller/owner of the
      * entity that caused the trigger to fire.
      * Used for effects like Tephraderm: "deals that much damage to that spell's controller"
@@ -349,6 +364,25 @@ sealed interface EffectTarget {
     @Serializable
     data class DiscardedAsCost(val index: Int = 0) : SingleEntity {
         override val description: String = "the discarded card"
+    }
+
+    /**
+     * REVEALED AS COST: a card revealed from hand to pay this spell's additional reveal cost
+     * (`Costs.additional.RevealFromHand(...)`, alone or as the leg of `RevealFromHandOrPay`), by
+     * index — "the revealed card". The reveal counterpart of [DiscardedAsCost]. Revealing moves
+     * nothing (CR 701.20b), so the card is usually still in hand at resolution; a value read of it
+     * ("the revealed card's power") uses the characteristics captured as the cost was paid, which is
+     * also its last-known information if the card has left your hand since.
+     *
+     * **Resolution-only** (no projection meaning). Used by Titan's Presence: "Exile target creature if
+     * its power is less than or equal to the revealed card's power."
+     *
+     * @property index Which revealed card to reference (defaults to the first/only one).
+     */
+    @SerialName("RevealedAsCost")
+    @Serializable
+    data class RevealedAsCost(val index: Int = 0) : SingleEntity {
+        override val description: String = "the revealed card"
     }
 
     /**

@@ -28,6 +28,7 @@ import { LoginModal } from '@/components/auth/LoginModal'
 import { DeckMigrationPrompt } from '@/components/auth/DeckMigrationPrompt'
 import { AccountBenefitsCallout } from '@/components/auth/AccountBenefitsCallout'
 import { LearnCallout } from '@/components/learn/LearnCallout'
+import { WhatsNew } from '@/components/whatsNew/WhatsNew'
 import { FullscreenButton } from './FullscreenButton'
 import { PlayWizard } from './PlayWizard'
 import { SetupRail } from './SetupRail'
@@ -42,6 +43,9 @@ const DISCORD_INVITE_URL = 'https://discord.com/invite/dy6eSRPWzu'
 
 /** Public source repository for the engine and web client. */
 const GITHUB_REPOSITORY_URL = 'https://github.com/wingedsheep/argentum-engine'
+
+/** The maker's portfolio site — a byline in the credits, not a community link. */
+const MAKER_PORTFOLIO_URL = 'https://wingedsheep.com'
 
 /**
  * The contributing guide is a static page under `web-client/public/`, not an SPA route — it must be
@@ -311,6 +315,7 @@ export function HomeScreen({
           >
             ? Help
           </button>
+          <WhatsNew />
         </div>
         <AuthWidget />
       </div>
@@ -537,6 +542,9 @@ export function HomeScreen({
             <GuideIcon />
             Help build it
           </a>
+        </span>
+        <span>
+          Made by <a href={MAKER_PORTFOLIO_URL} target="_blank" rel="noopener noreferrer" className={styles.attributionLink}>wingedsheep</a>
         </span>
         <span>
           Card images via <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer" className={styles.attributionLink}>Scryfall</a>

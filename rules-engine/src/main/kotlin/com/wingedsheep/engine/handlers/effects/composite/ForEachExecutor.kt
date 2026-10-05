@@ -15,6 +15,8 @@ import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
@@ -50,7 +52,9 @@ import com.wingedsheep.engine.core.Outcome
  */
 class ForEachExecutor(
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
-    private val predicateEvaluator: PredicateEvaluator
+    private val predicateEvaluator: PredicateEvaluator,
+    /** For the group look-back freeze in [execute]; the continuation resumer needs none. */
+    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry? = null
 ) : EffectExecutor<ForEachEffect> {
 
     override val effectType: KClass<ForEachEffect> = ForEachEffect::class
@@ -77,7 +81,28 @@ class ForEachExecutor(
             }
         }
 
-        return processItems(currentState, effect, items, context)
+        // A group loop is one simultaneous event: freeze each member's look-back grants
+        // before the first iteration moves anything, for its leaves-the-battlefield look-back
+        // (CR 603.10a). Carried on the outer context, so it survives a mid-loop pause.
+        val loopContext = if (space is IterationSpace.Group && cardRegistry != null) {
+            val frozen = com.wingedsheep.engine.event.LookBackGrants.frozen(
+                state, items.mapNotNull { (it as? ForEachItem.OfEntity)?.entityId },
+                cardRegistry, predicateEvaluator.conditions
+            )
+            if (frozen.isEmpty()) context else context.copy(lookBackGrants = context.lookBackGrants + frozen)
+        } else context
+
+        val move = effect.body as? com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
+        // An atomic move over a group or all chosen targets is one instruction. A
+        // per-target composite still executes its instructions in sequence and must
+        // finalize each move before the next instruction reads the graveyard.
+        val simultaneousMove = move?.destination == Zone.GRAVEYARD && when (space) {
+            is IterationSpace.Group -> move.target == EffectTarget.IterationEntity
+            IterationSpace.Targets -> move.target == EffectTarget.ContextTarget(0)
+            else -> false
+        }
+        return processItems(currentState, effect, items,
+            if (simultaneousMove) loopContext.copy(deferGraveyardOrdering = true) else loopContext)
     }
 
     /**
@@ -243,6 +268,7 @@ class ForEachExecutor(
 
     private fun resolvePlayers(player: Player, state: GameState, context: EffectContext): List<EntityId> {
         return when (player) {
+            Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
             Player.Each -> state.activePlayers
             Player.ActivePlayerFirst -> state.apnapOrder
             Player.You -> listOf(context.controllerId)

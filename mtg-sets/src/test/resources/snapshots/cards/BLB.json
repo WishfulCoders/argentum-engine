@@ -13,18 +13,18 @@
                         "type": "Composite",
                         "effects": [
                             {
-                                "type": "MarkExileOnDeath",
+                                "type": "DealDamage",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                },
                                 "target": {
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
                             },
                             {
-                                "type": "DealDamage",
-                                "amount": {
-                                    "type": "Fixed",
-                                    "amount": 4
-                                },
+                                "type": "MarkExileOnDeath",
                                 "target": {
                                     "type": "BoundVariable",
                                     "name": "t0"
@@ -1792,7 +1792,7 @@
                 "effect": {
                     "type": "AddMana",
                     "color": "RED",
-                    "expiry": "UNTIL_END_OF_TURN"
+                    "expiry": "KEPT_UNTIL_END_OF_TURN"
                 }
             }
         ]
@@ -2437,33 +2437,40 @@
                     "type": "Gated",
                     "gate": "Gate.MayDecide",
                     "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "FromZone",
-                                    "zone": "Hand"
-                                },
-                                "storeAs": "discardedHand"
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.DoAction",
+                            "action": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromZone",
+                                            "zone": "Hand"
+                                        },
+                                        "storeAs": "discardedHand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "discardedHand",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        },
+                                        "moveType": "Discard"
+                                    }
+                                ]
                             },
-                            {
-                                "type": "MoveCollection",
-                                "from": "discardedHand",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Graveyard"
-                                },
-                                "moveType": "Discard"
-                            },
-                            {
-                                "type": "DrawCards",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 2
-                                }
+                            "successCriterion": "SuccessCriterion.Always"
+                        },
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 2
                             }
-                        ]
+                        }
                     }
                 }
             }
@@ -4360,7 +4367,7 @@
                                 "type": "BoundVariable",
                                 "name": "t0"
                             },
-                            "exileAfterResolve": true
+                            "insteadOfGraveyard": "EXILE"
                         }
                     ]
                 },

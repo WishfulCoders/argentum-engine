@@ -76,8 +76,9 @@ class ManaAbilityResolutionPipeline(
         state: GameState,
         sourceCard: CardComponent?,
         tapperId: EntityId,
+        sourceIsLand: Boolean = sourceCard?.typeLine?.isLand == true,
     ): Dampening {
-        if (sourceCard?.typeLine?.isLand != true) return Dampening(state, false)
+        if (!sourceIsLand) return Dampening(state, false)
         if (!hasDampLandManaProduction(state)) return Dampening(state, false)
 
         val oldPool = stateBeforeEffect.getEntity(tapperId)?.get<ManaPoolComponent>() ?: ManaPoolComponent()
@@ -87,7 +88,8 @@ class ManaAbilityResolutionPipeline(
             (newPool.black - oldPool.black) +
             (newPool.red - oldPool.red) +
             (newPool.green - oldPool.green) +
-            (newPool.colorless - oldPool.colorless)
+            (newPool.colorless - oldPool.colorless) +
+            (newPool.restrictedMana.size - oldPool.restrictedMana.size)
         if (totalManaProduced < 2) return Dampening(state, false)
 
         // Replace with 1 colorless mana: revert to old pool + 1 colorless.
@@ -95,17 +97,7 @@ class ManaAbilityResolutionPipeline(
         // activation are preserved — Damping Sphere only replaces what the land just
         // produced, not what was already in the pool. The replacement colorless carries no
         // provenance (it comes from the replacement effect, not the land).
-        val dampenedPool = ManaPoolComponent(
-            white = oldPool.white,
-            blue = oldPool.blue,
-            black = oldPool.black,
-            red = oldPool.red,
-            green = oldPool.green,
-            colorless = oldPool.colorless + 1,
-            restrictedMana = oldPool.restrictedMana,
-            manaBySubtype = oldPool.manaBySubtype,
-            manaBySource = oldPool.manaBySource
-        )
+        val dampenedPool = oldPool.copy(colorless = oldPool.colorless + 1)
         return Dampening(state.updateEntity(tapperId) { it.with(dampenedPool) }, true)
     }
 

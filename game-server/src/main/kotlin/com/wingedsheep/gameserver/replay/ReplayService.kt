@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -261,13 +262,45 @@ class ReplayService(
         )
     }
 
-    /** The full unmasked [GameState] at [frame] for [gameId] (0 = initial), or null. */
-    fun reconstructStateAt(gameId: String, frame: Int): GameState? =
-        find(gameId)?.let { reconstructor.reconstructStateAt(it, frame) }
+    /**
+     * The viewer body for a replay *file* someone uploaded — re-simulated, never stored.
+     *
+     * Always reported as not reproducible: "share frame as scenario" fetches a frame's state from
+     * the store by game id, and an uploaded replay isn't there (or, if its id happens to match a
+     * stored game, the stored one isn't necessarily the file that was uploaded).
+     */
+    fun viewerPayloadForUpload(replay: CompactReplay): ReplayViewerPayload? =
+        viewerPayload(StoredReplay(replay = replay, status = ReplayStatus.FINISHED))
+            ?.copy(stateReproducible = false)
 
-    /** Finished games this player took part in, newest first. */
-    fun recentForPlayer(playerId: String, limit: Int = 50): List<ReplaySummary> =
-        store.findRecentForPlayer(playerId, limit)
+    /**
+     * The full unmasked [GameState] at [frame] for [gameId] (0 = initial), or null.
+     *
+     * Finished games only: an in-progress recording is in the store too (see [saveInProgress]), and
+     * its unmasked state is the opponent's hand and library order — exactly what a player in that
+     * game must not be able to fetch by its id.
+     */
+    fun reconstructStateAt(gameId: String, frame: Int): GameState? =
+        store.find(gameId)
+            ?.takeIf { it.status == ReplayStatus.FINISHED }
+            ?.let { reconstructor.reconstructStateAt(it.replay, frame) }
+
+    /**
+     * Finished games for whoever holds this connection, newest first: the games played under its
+     * current player id, plus — when it is signed in — every game the account played under earlier
+     * player ids (other devices, older sessions, before a server restart).
+     */
+    fun recentFor(playerId: String, userId: UUID?, limit: Int = 50): List<ReplaySummary> {
+        val bySeat = store.findRecentForPlayer(playerId, limit)
+        val byAccount = userId?.let { store.findRecentForUser(it, limit) }.orEmpty()
+        return (bySeat + byAccount)
+            .distinctBy { it.gameId }
+            .sortedByDescending { runCatching { Instant.parse(it.endedAt) }.getOrDefault(Instant.EPOCH) }
+            .take(limit)
+    }
+
+    /** Whether the signed-in account [userId] played in [gameId]. */
+    fun isAccountParticipant(userId: UUID, gameId: String): Boolean = store.isUserParticipant(userId, gameId)
 
     /** Summary for a single game id (tournament game lists resolve ids one at a time). */
     fun summary(gameId: String): ReplaySummary? = store.find(gameId)?.replay?.let {

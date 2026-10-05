@@ -1,6 +1,6 @@
 ---
 name: review-changes
-description: Review pending changes (a branch, PR, or working tree) for the Argentum Engine. Optimizes for an elegant, reusable SDK — flags one-off effects/abilities that should compose existing primitives — and checks correctness, projection use, tests, and architectural fit. Use when the user says "review this PR", "review this branch", "review my changes", or asks for a code review of pending work.
+description: Review pending changes (a branch, PR, or working tree) for the Argentum Engine. A coordinator triages the diff by area and fans out parallel reviewer subagents — SDK (fit, reuse, elegance), Engine (correctness, performance, clean code), Server (client protocol, hidden information), Client (UX, consistency, dumb terminal), Cards & tests — then weighs their findings into one selective review ending in Approve or Request changes. Use when the user says "review this PR", "review this branch", "review my changes", or asks for a code review of pending work.
 argument-hint: [<PR# | branch | path>]
 ---
 
@@ -9,8 +9,12 @@ argument-hint: [<PR# | branch | path>]
 Primary lens: **SDK elegance**. The SDK must stay small and reusable so new cards compose
 existing primitives instead of growing a card-specific type per Magic card.
 
-The user's request or explicit skill arguments may contain a PR number/URL, a branch name, or nothing (review the working tree's
-diff vs `main`).
+You are the **coordinator**. You establish the diff, decide which area reviewers the change
+needs, brief them, run the tests, and then weigh everything into one review. The reviewers
+read and judge; you decide what the author actually sees.
+
+The user's request or explicit skill arguments may contain a PR number/URL, a branch name,
+or nothing (review the working tree's diff vs `main`).
 
 ## 1. Establish the diff (with `main` merged in)
 
@@ -52,8 +56,9 @@ Steps:
    source paths. Branch → `git diff main...<branch>` (three-dot). Empty → `git diff
    main...HEAD` plus `git status`.
 
-Read every changed file in full, not just the hunk. For large diffs, spawn `Explore` for
-unfamiliar areas.
+Read the stat, the PR body, and enough of the diff to understand the change yourself — you
+write the overview, and you can't triage what you haven't understood. The reviewers read
+every file in their area in full.
 
 **Worktree lifecycle (only when a worktree was created).** Leave it in place across
 review rounds. Only remove it
@@ -63,11 +68,99 @@ path in the final review output so the user can hand-off, re-enter, or push fixu
 it. When the review ran in place, the final output just notes that the branch already
 has `origin/main` merged in (and any merge commit that produced).
 
-## 2. SDK elegance — the central question
+## 2. Triage — which reviewers does this change need?
 
-The bar being reviewed against is
-[`docs/sdk-design-principles.md`](../../../docs/sdk-design-principles.md) — the same one
-`add-card` and `add-feature` write to. For every new SDK type the diff introduces
+Map every changed path to an area:
+
+| Area | Paths | Reviewer brief |
+|------|-------|----------------|
+| **SDK** | `mtg-sdk/`, `mtg-sdk-tooling/`, `docs/card-sdk-language-reference.md` | §3.1 |
+| **Engine** | `rules-engine/` (except `engine/view/`), `ai/`, `gym*/` | §3.2 |
+| **Server** | `game-server/`, `rules-engine/.../engine/view/` (`ClientStateTransformer`, `ClientEvent`) | §3.3 |
+| **Client** | `web-client/` | §3.4 |
+| **Cards & tests** | `mtg-sets/**/definitions/`, `mtg-sets/**/tests/`, `backlog/` | §3.5 |
+
+Everything else (`oracle-assay/`, `mtgish-tooling/`, `justfile`, docs, skills) goes to
+whichever reviewer it serves, or you review it yourself if it's small.
+
+Then decide the fan-out:
+
+- **One reviewer per touched area**, spawned together in a single message so they run in
+  parallel (`Agent`, `subagent_type: general-purpose`). A new SDK primitive always pulls
+  in the SDK reviewer even when only one line of `mtg-sdk/` changed — that line is the
+  most consequential in the PR.
+- **Split a large area into sub-areas** when one reviewer can't read it all in full —
+  roughly more than ~1500 changed lines or ~25 files in one area. Split along seams that
+  stand alone: engine → combat / layers & projection / triggers & continuations / costs &
+  mana; client → per feature directory; cards → per set or per colour. Each sub-reviewer
+  gets the same brief narrowed to its files, plus the list of the other sub-areas so it
+  knows what's someone else's job.
+- **Skip the fan-out for a trivial diff** — one area, a few dozen lines, no new SDK
+  vocabulary. Review it yourself against the same brief; spawning costs more than it
+  saves.
+- **Cross-area wiring is yours.** A new `GameEvent` needs a `ClientEvent` branch and maybe a
+  client animation; a new decision needs an engine executor, a server DTO and a client
+  prompt. Reviewers see one side each — you check the chain is complete end to end.
+
+### Shared prep before spawning
+
+- **Rules text.** If the diff or PR body cites any CR number, download the Comprehensive
+  Rules once (grab the `.txt` link from <https://magic.wizards.com/en/rules>, `curl -o`
+  it into the scratchpad) and pass the local path to every reviewer so they can `grep`
+  it instead of each fetching it.
+- **Tests.** Start the test run yourself now, in the background, via the **`verify`**
+  skill's `just` recipes — never raw `./gradlew`. Reviewers must **not** run builds or
+  tests: parallel Gradle runs thrash the box. Run the broader module suite if a
+  registry/executor/evaluator signature changed. Confirm green yourself; don't trust the
+  PR description. The one exception: a caller that ran the `verify` gate itself on this
+  exact head commit (the `set-loop` gate step) may tell you so — then don't re-run it;
+  report that gate and its result instead.
+
+### When you can't spawn the reviewers yourself
+
+A subagent usually can't launch subagents of its own. If the `Agent` tool isn't available
+to you, the review still happens per area:
+
+- **Driven by an orchestrator (split mode).** The caller asks for one phase at a time and
+  dispatches the area reviewers itself. Everything goes through a scratch directory the
+  caller names (`<review-dir>`, gitignored — e.g. `<worktree>/.claude/loop-runs/review-pr-<N>/`):
+  - **TRIAGE** — do §1 and §2 as written, but instead of spawning, write one brief per
+    reviewer to `<review-dir>/<area>.brief.md` (areas and sub-areas named as in §2, e.g.
+    `engine-combat`). Each brief is the full prompt from §3: workspace, base, owned files,
+    PR summary, CR text path, the area section copied in, the output contract, and the
+    instruction to write findings to `<review-dir>/<area>.findings.md`. Also write
+    `<review-dir>/summary.md`: your "What the change does" paragraph, the cross-area wiring
+    you need to check, and the test result. Return the list of area names.
+  - **AREA** — a reviewer reads its brief file and follows it. It returns only its
+    counts; the findings stay in the file.
+  - **WEIGH** — read `summary.md` and every `*.findings.md`, do the cross-area wiring check,
+    then §4 as written.
+- **No orchestrator (sequential mode)** — e.g. a Codex session. Run §3 yourself one area
+  at a time: finish an area's brief, write its findings down, then start the next, so each
+  area gets a full read rather than a skim of everything at once. Then §4.
+
+Either way, the "Reviewed by" line says how it ran (e.g. "SDK, Engine, Cards & tests —
+split mode").
+
+## 3. Reviewer briefs
+
+Every reviewer prompt contains: the workspace path, the base (`origin/main`), the exact
+file list it owns, a two-line summary of what the PR does (so it judges intent, not just
+lines), the CR text path if any, the relevant brief below, and the **output contract**:
+
+> Read every file you own in full, not just the hunks, and read the neighbouring code you
+> compare against (the existing primitive, the sibling component). Do not edit files, run
+> builds, or run tests. Return a list of findings, each with: severity (Blocking /
+> Important / Minor), `file:line`, what is wrong, the concrete failure or cost it causes,
+> the fix (for SDK shape issues, the rewritten card/DSL), and your confidence (confirmed
+> by reading the code vs. plausible). Omit style nitpicks that don't need fixing. Also
+> return one line on what in your area is genuinely good and worth keeping. If your area
+> is clean, say so — an empty list is a valid answer.
+
+### 3.1 SDK — does it fit, and is it the most elegant shape?
+
+The bar is [`docs/sdk-design-principles.md`](../../../docs/sdk-design-principles.md) — the
+same one `add-card` and `add-feature` write to. For every new SDK type the diff introduces
 (`Effect`, `StaticAbility`, `Trigger`, `Condition`, `TargetRequirement`,
 `EntityNumericProperty`, `DynamicAmount` variant, `Modification`, `ReplacementEffect`, …),
 ask:
@@ -85,34 +178,25 @@ ask:
    (`bonusPerType=1`, `maxBonus=10`, hardcoded subtype) → the next similar card forces
    another type. Prefer a small generic primitive + DSL recipe in a `*Patterns` object /
    `Conditions` / `Filters`.
-4. **Name matches semantics?** `CreatureTypeCount` that counts all subtypes is a name
-   lie — rename and document the gap.
+4. **Atomic, modular, extendible?** Does the type do one thing (choosing split from
+   acting), or bundle a pipeline that should be composed from atoms
+   (`docs/architecture-principles.md` §1.5)? Would the *next* card of this family need a
+   new field, or does it slot in?
+5. **Name matches semantics?** `CreatureTypeCount` that counts all subtypes is a name
+   lie — rename and document the gap. One spelling per concept: flag a second way to
+   say something the SDK already says.
+6. **Surface hygiene.** Cards reach it through facades (`Effects.*`, `Patterns.*`), not
+   raw constructors (`FacadeBoundaryTest`); `docs/card-sdk-language-reference.md` is
+   updated in the same change; the SDK holds data only — no execution logic.
 
 When you find one, **show the rewrite**. A concrete card-using-existing-primitives is
-more useful than abstract objection.
+more useful than abstract objection. References: `docs/architecture-principles.md` §1.5
+(atomic pipelines), §1.2 (AST for dynamic values), §1.3 (composable filtering), §1.6 (DSL
+as abstraction).
 
-Reference: `docs/architecture-principles.md` §1.5 (atomic pipelines), §1.2 (AST for
-dynamic values), §1.3 (composable filtering), §1.6 (DSL as abstraction).
+### 3.2 Engine — correct, clean, fast, and the home of all game logic
 
-## 2b. Printing placement for new / reprinted cards
-
-For every card whose `CardDefinition` or `Printing(...)` row is added or moved in the
-diff, run `just check-card-printing "<Card Name>"`. The script lists all Scryfall
-printings and exits non-zero unless:
-
-- the canonical `card("Name") { ... }` lives in the card's **earliest real-expansion
-  printing** (per Scryfall, skipping `promo` / `token` / `art_series`), and
-- every other scaffolded printing has a `Printing(...)` row in its set's `cards/` package.
-
-If the earliest real set isn't scaffolded under `mtg-sets/.../definitions/<setcode>/`,
-the script reports it as drift. The expectation in that case is to scaffold the earliest
-set (a minimal `MtgSet` object under `definitions/` — `MtgSetCatalog` discovers it on the
-classpath, there is no registration list or service file) and host the canonical there.
-Flag it as **Blocking** if the diff put the canonical in a later set without scaffolding
-the original; the only acceptable miss is when the author documents in the PR body why
-scaffolding the earlier set is out of scope.
-
-## 3. Correctness — recurring bug classes in this engine
+**Correctness — recurring bug classes in this engine:**
 
 - **Projected vs base state** (`docs/architecture-principles.md` §2.3). Battlefield reads
   of type/subtype/color/keywords/P/T/controller MUST go through projection
@@ -124,9 +208,10 @@ scaffolding the earlier set is out of scope.
 - **Events, not silent mutations.** Every state change emits a `GameEvent`. Flag bypasses.
 - **Trigger detection paths.** Battlefield → `detectTriggers`; phase/step →
   `detectPhaseStepTriggers` (called by the settle boundary, NOT `matchesTrigger`);
-  leaves-the-battlefield → `detectLeavesBattlefieldTriggers`. Only `Settler` calls detection.
-  Flag any handler, resumer or executor that detects or places triggers from its own events: it
-  should emit the events and let the boundary queue them (`GameState.pendingTriggers`).
+  leaves-the-battlefield → `detectLeavesBattlefieldTriggers`. Only `Settler` calls
+  detection. Flag any handler, resumer or executor that detects or places triggers from
+  its own events: it should emit the events and let the boundary queue them
+  (`GameState.pendingTriggers`).
 - **Last-known information.** Dies/leaves triggers must read `triggerLastKnownPower`,
   `lastKnownCardDefinitionId`, `lastKnownCounters` from `ZoneChangeEvent` (tokens
   disappear in the same SBA pass).
@@ -135,102 +220,176 @@ scaffolding the earlier set is out of scope.
 - **Modal spells.** Check `modeTargetsOrdered` is built from flat `targets`, and
   no-target modes inherit outer targets.
 - **Mana / costs.** New `ManaSource` shapes must reserve mana for self-activation costs.
-- **Anti-corruption layer.** New `GameEvent` → branch in `ClientEvent.kt` exhaustive
-  `when`. New client-visible state → `ClientStateTransformer`.
-- **Dumb-terminal client.** No game logic in `web-client`; server sends legal actions.
+- **Dispatch fallthrough.** A catch-all `else ->` in a `when` over a sealed type, or a fast
+  path that skips a check the slow path makes, silently mishandles the next variant.
+  Prefer exhaustive `when`s; flag fail-open defaults.
+- **Immutability.** No in-place mutation of components; new state is returned.
+
+**Game logic lives here, and only here.** No card-specific code in the engine (it
+interprets SDK data); no rules decisions in the server or client. Flag logic that leaked
+out of the engine, and card-name checks that leaked into it.
+
+**Performance.** Flag work that scales badly on hot paths: recomputing projection inside a
+loop over permanents, O(n²) scans of the battlefield per event, re-running trigger
+detection or legality checks per candidate, allocating large collections per priority
+pass. Legal-action enumeration and projection run constantly — cost there matters; cost in
+a once-per-game setup path doesn't.
+
+**Clean code.** Readable control flow, one responsibility per executor, reuse of the
+existing services (`PredicateEvaluator`, cost payment, zone moves) rather than a parallel
+reimplementation, names that say what the code does.
 
 Consult the relevant doc when the change touches an area:
-`continuous-effect-dependency-system.md`, `engine-server-interface.md`,
-`data-contracts.md`, `card-sdk-language-reference.md`, `api-guide.md`.
+`continuous-effect-dependency-system.md`, `architecture-principles.md`, `player-input.md`.
 
-## 4. MTG rules accuracy — verify every cited rule
+### 3.3 Server — right protocol, nothing leaked
 
-Whenever the diff (code, comments, commit message, or PR body) cites a CR rule number,
-**verify it online** before accepting it:
+- **Anti-corruption layer.** A new `GameEvent` needs a branch in `ClientEvent.kt`'s
+  exhaustive `when`; new client-visible state goes through `ClientStateTransformer`.
+  DTO field names are stable JSON (pin them if a Kotlin rename would change the wire
+  name); `docs/data-contracts.md` / `engine-server-interface.md` match.
+- **Hidden information.** Nothing reaches a client that its player shouldn't see:
+  opponents' hands, library order, face-down identities (morph, manifest, disguise),
+  hidden choices (secret creature-type / name choices), cards looked at privately, another
+  player's pending decision contents. Check the masking path for *every* player seat,
+  spectators and replays included. Visibility rules are an engine concern too — if the
+  engine emits the secret in an event payload, masking downstream is fragile; say which
+  layer should own it.
+- **Server is authoritative.** Legal actions come from the server; the server validates
+  every client-supplied `GameAction` rather than trusting it.
+- **Orchestration.** Session / lobby / tournament code: reconnect paths, concurrency on
+  shared game state, silent `return false` failures, errors surfaced to the client
+  instead of swallowed.
 
-```
-WebFetch https://magic.wizards.com/en/rules   # official WotC rules page; grab the .txt link, then `curl` it down and grep locally (too large to fetch into context)
-WebFetch https://api.scryfall.com/cards/named?exact=<card>&set=<code>   # Oracle text
-```
+### 3.4 Client — good UX, consistent, dumb
 
-CR numbers drift between editions and are easy to misremember (613.7 vs 613.8, 704.5 vs
-704.6, 608.2b vs 608.2c). If the cited number doesn't match the rule's text, fix it in
-the review (and request the author fix it in code/commit). When in doubt, describe the
-rule by name rather than guessing a number.
+- **UX.** Is the flow intuitive for a player who doesn't know the implementation? Is the
+  prompt clear about what's being chosen and why? Does it prefer selecting on the
+  battlefield over a modal list where that's natural? Are battlefield positions stable
+  (nothing jumps around)? Does it work in multiplayer / 2HG layouts and at narrow widths?
+- **Consistent with the rest of the frontend.** Compare with sibling components under
+  `web-client/src/components/` (decisions, targeting, game, shared): same patterns,
+  styling approach, store usage, naming. Flag a new component that duplicates one that
+  already exists (a second card preview, a second choice modal) — reuse is the bar.
+- **Dumb terminal.** No game logic in `web-client`: no computing legal actions, targets,
+  costs or rules outcomes; the server sends them. Display-only derivation is fine.
+- **Clean code.** Easy to follow components, state in the right place (Zustand store vs
+  local), no dead props, types matching the server DTOs. See
+  `docs/web-client-architecture.md`.
 
-For card text, cross-check Scryfall Oracle — the PR may be implementing pre-errata
-wording. Spell out the rules path you expect for corner cases (Changeling, copyable
-values, layer interactions, "as ~ enters", protection / hexproof / ward).
+### 3.5 Cards & tests
 
-## 5. Tests — every cited rule must be exercised
+**Printing placement.** For every card whose `CardDefinition` or `Printing(...)` row is
+added or moved, the coordinator runs `just check-card-printing "<Card Name>"` (list the
+cards for them; it's a script, not a Gradle build). It exits non-zero unless the canonical
+`card("Name") { ... }` lives in the card's **earliest real-expansion printing** (per
+Scryfall, skipping `promo` / `token` / `art_series`) and every other scaffolded printing
+has a `Printing(...)` row in its set's `cards/` package. If the earliest real set isn't
+scaffolded under `mtg-sets/.../definitions/<setcode>/`, the expectation is to scaffold it
+(a minimal `MtgSet` object under `definitions/` — `MtgSetCatalog` discovers it on the
+classpath, there is no registration list) and host the canonical there. **Blocking** if
+the diff put the canonical in a later set without scaffolding the original, unless the PR
+body documents why that's out of scope.
+
+**Oracle fidelity.** Cross-check each card against Scryfall Oracle
+(`https://api.scryfall.com/cards/named?exact=<card>` — fetch with Python `urllib` if
+`WebFetch` is blocked); the PR may implement pre-errata wording. Spell out the rules path
+for corner cases (Changeling, copyable values, layer interactions, "as ~ enters",
+protection / hexproof / ward).
+
+**Tests — every cited rule must be exercised.**
 
 - **Coverage of cited rules.** Every rule the implementation references in code or
-  comments must have a test that exercises it. If the change cites "CR 702.19c trample
-  through dead blockers", there must be a test where the attacker has trample and a
-  blocker dies; otherwise the citation is decorative. Flag rule-citations without a
-  paired test case.
+  comments must have a test that exercises it. If the change cites "trample through dead
+  blockers", there must be a test where the attacker has trample and a blocker dies;
+  otherwise the citation is decorative.
 - **Interesting axes.** Typical case + the rule-corner that drove the change (Changeling
   for type-counting; regeneration for destroy-vs-exile; last-known-info for dies
-  triggers; first-strike + trample interaction; etc.).
-- **Module placement.** Card and mechanic behavior → `rules-engine` `scenarios/` (the
-  engine is the source of truth). SDK round-trips → `mtg-sdk`. A `game-server` test is
-  correct only for a genuine game-server concern — state masking, DTO transformation,
-  session/tournament orchestration. **Flag any `game-server` scenario test written to
-  prove engine behavior.** JSON round-trip fixtures are NOT required per card.
-- **`ScenarioTestBase` set scope.** Only registered sets are loaded; cards from other
-  sets must be defined inline via `CardDefinition.creature(...)` and registered via
+  triggers; first-strike + trample interaction; etc.). A test that would pass without the
+  change doesn't test it.
+- **One card, one test file.** `<CardName>ScenarioTest.kt` per card; flag batched test
+  files (mechanic-level engine tests are the exception).
+- **Module placement.** Card and mechanic behavior → scenario tests (the engine is the
+  source of truth). SDK round-trips → `mtg-sdk`. A `game-server` test is correct only for a
+  genuine game-server concern — state masking, DTO transformation, session/tournament
+  orchestration. **Flag any `game-server` scenario test written to prove engine
+  behavior.** JSON round-trip fixtures are NOT required per card.
+- **`ScenarioTestBase` set scope.** Only registered sets are loaded; cards from other sets
+  must be defined inline via `CardDefinition.creature(...)` and registered via
   `cardRegistry.register(card)` in `init { }`.
-- **Run the tests yourself** — via the **`verify`** skill's `just` recipes, never raw
-  `./gradlew` (parallel agents thrash the box otherwise). Confirm green; don't trust the
-  PR description. Run the broader module suite if a registry/executor/evaluator signature
-  changed.
 
-## 6. Style & scope
+### Every reviewer, whatever the area
 
-- Comments only when *why* is non-obvious (project AGENTS.md). Flag restated-code
-  comments and "added for X" notes.
-- No backwards-compat hacks (unused fields, `// removed` markers).
+- **MTG rule numbers.** Verify every CR number cited in code, comments, commit messages or
+  the PR body against the downloaded rules text. Numbers are easy to swap (613.7 vs 613.8,
+  704.5 vs 704.6, 608.2b vs 608.2c); a mismatch is an Important finding with the correct
+  number. If it can't be verified, recommend describing the rule by name.
+- **Style & scope.** Comments only when *why* is non-obvious — flag restated-code comments
+  and "added for X" notes. No backwards-compat hacks (unused fields, `// removed`
+  markers). Code reads like its surroundings.
 
-## 7. Output
+## 4. Weigh and report
+
+When the reviewers and the test run are back:
+
+1. **Verify before you forward.** Re-read the cited code for every Blocking and Important
+   finding. Drop what doesn't hold up; downgrade what's real but overstated. A reviewer's
+   "plausible" becomes a finding only once you've confirmed it.
+2. **Merge and dedupe.** The same root cause seen from two areas (engine leaks a secret in
+   an event; server doesn't mask it) is **one** finding, placed at the layer that should
+   fix it. Add your own cross-area wiring findings (§2).
+3. **Rank and cut.** Order by what matters most for merging: wrong behaviour and broken
+   rules, then hidden-information leaks, then SDK shape that will cost every future card,
+   then missing tests, then performance, then clarity. **Be selective** — drop anything so
+   minor it doesn't really need fixing. Five findings that matter beat fifteen that dilute
+   them. Failing tests are always a finding, with the failure output.
+
+### Output
 
 Lead with the overview. The author needs to see that you understood the change before
 they'll trust a single finding, and a reviewer who can't summarize the diff hasn't read
 it.
 
-1. **Overview of the change** — the *idea* of the PR, written from the diff itself,
-   *before* any comment or judgement. Two to five sentences of prose: what problem it
-   solves or which cards / mechanic it enables, the one-line shape of the approach, and
-   what the tests establish. Pitch it at the level of "what would you tell a colleague
-   who asked what this PR is about" — the reader wants the concept, not an inventory.
+**1. What the change does** — the *idea* of the PR, written from the diff itself, before
+any judgement. Two to five sentences of prose: what problem it solves or which cards /
+mechanic it enables, the one-line shape of the approach, and what the tests establish.
+Pitch it at "what would you tell a colleague who asked what this PR is about".
 
-   This is a summary, **not** a file-by-file walkthrough. Do not list changed files, line
-   counts, class or method names, or per-file summaries; do not narrate the diff hunk by
-   hunk. Name a module or a type only when the idea is unintelligible without it (e.g.
-   "a new keyword executor in `rules-engine`"), and at most once or twice. Specific
-   `file:line` detail belongs in the findings, where it is actionable.
+This is a summary, **not** a file-by-file walkthrough. Do not list changed files, line
+counts, class or method names, or per-file summaries. Name a module or a type only when the
+idea is unintelligible without it, at most once or twice. Describe, don't evaluate — no
+praise, no findings, no "but". If the PR body claims something the diff doesn't do, note
+the discrepancy here as a plain fact. Add one line naming which reviewers ran (e.g. "Reviewed
+by: SDK, Engine (combat, triggers), Cards & tests") and the test result.
 
-   Describe, don't evaluate — no praise, no findings, no "but"; those start at step 2.
-   If the PR body claims something the diff doesn't do, note the discrepancy here as a
-   plain fact.
-2. **Verdict** (1–2 sentences) — is the behavior right? Is the SDK shape right?
-3. **What's good** — genuine positives worth keeping if the author rewrites: clean tests,
-   right plumbing, good naming, well-chosen primitives. Skip filler; if there's nothing
-   real to praise, say so briefly. Do this *before* the issues so the author knows what
-   not to throw away.
-4. **Issues, by severity:**
-   - **Blocking** — wrong behavior, broken rules, missing wiring (new event without
-     `ClientEvent.kt` branch), tests that don't exercise the change, base-vs-projected
-     state bugs. Must be fixed before merge. Numbered B#
-   - **Important** — over-specialized SDK types (show the rewrite), CR-number mismatches,
-     missing rule-corner test, projection fallback gaps, naming that lies about
-     semantics. Should be fixed before merge. Numbered I#
-   - **Minor** — comment hygiene, descriptions, drive-by formatting, dead code, doc
-     inconsistencies. Author's discretion. Numbered M#
+**2. Findings, most important first** — one numbered list, not grouped by area. Each
+finding is tagged with its severity and area, e.g. **1. [Blocking · Engine]**, then one
+short paragraph with `file:line`, what goes wrong (the concrete scenario), and the concrete
+fix — for SDK shape issues, the rewritten card or DSL.
 
-   Each issue: one short paragraph with `file:line` and the concrete fix.
-5. **Recommendation** — concrete next action ("drop type X, define card via Y, add a
-   test for Z"). If the diff is fine as-is, say so.
+- **Blocking** — wrong behavior, broken rules, hidden information exposed, missing wiring
+  (new event without `ClientEvent.kt` branch), tests that don't exercise the change,
+  base-vs-projected state bugs, failing tests.
+- **Important** — over-specialized SDK types, CR-number mismatches, missing rule-corner
+  test, game logic in the wrong layer, UX that will confuse players, a real performance
+  cost on a hot path, naming that lies about semantics.
+- **Minor** — only if it's worth the author's time to fix: a misleading comment, a doc out
+  of sync, dead code. Real nitpicks are left out entirely.
 
-This skill writes a review into the conversation. It does not push, post via `gh`, run
-`/ultrareview`, auto-fix, or touch other agents' work. The worktree from step 1 stays
-in place after the review so the author (or a follow-up session) can iterate on it.
+If there are no findings, say so in one line.
+
+**3. Verdict** — **Approve** or **Request changes**, with one or two sentences: the
+concrete next action ("drop type X, define the card via Y, add a test for Z"), and — when
+requesting changes — what's worth keeping through the rewrite (clean tests, right
+plumbing, well-chosen primitives) so the author doesn't throw it away. Any Blocking or
+Important finding means Request changes; Minor-only means Approve.
+
+Close with the workspace note from §1 (worktree path, or "reviewed in place with
+`origin/main` merged in").
+
+This skill writes a review into the conversation. It does not push, run `/ultrareview`,
+auto-fix, or touch other agents' work. It posts via `gh` only when the caller asks for it
+(the `set-loop` review step does): then the whole review — overview, findings, verdict — goes
+up as one PR comment with `gh pr comment <N> --body-file <file>`, headed with the verdict so
+a later fixer can find it. The worktree from step 1 stays in
+place after the review so the author (or a follow-up session) can iterate on it.

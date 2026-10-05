@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.core
 
+import com.wingedsheep.engine.mechanics.targeting.SourceKind
 import com.wingedsheep.engine.registry.PrintingRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.components.identity.*
@@ -80,6 +81,7 @@ object CardEntityFactory {
                 printingSetCode = printing?.setCode ?: cardDef.setCode,
                 hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
                 hasActivatedAbility = cardDef.hasActivatedAbility,
+                hasCycling = cardDef.hasCycling,
                 // Original-printing set (canonical, not the pinned printing) — "originally printed in X".
                 originalSetCode = cardDef.setCode,
                 hasAdventure = cardDef.isAdventure,
@@ -151,8 +153,10 @@ object CardEntityFactory {
             result = result.with(SelfZoneRedirectComponent(selfRedirects))
         }
 
-        // "Hexproof from [quality]" (CR 702.11b). Only the scopes the rules engine enforces are
-        // carried: colors (`HEXPROOF_FROM_<COLOR>`) and card types (`HEXPROOF_FROM_CARDTYPE_<TYPE>`).
+        // "Hexproof from [quality]" (CR 702.11d). Only the scopes the rules engine enforces are
+        // carried: colors (`HEXPROOF_FROM_<COLOR>`), non-colors (`HEXPROOF_FROM_NON_<COLOR>`),
+        // card types (`HEXPROOF_FROM_CARDTYPE_<TYPE>`) and source kinds
+        // (`HEXPROOF_FROM_SOURCEKIND_<KIND>`, see [SourceKindProtection]).
         // Other [ProtectionScope]s format oracle text but have no targeting wiring yet, so they are
         // dropped rather than projected as a keyword nothing consults.
         val hexproofScopes = cardDef.keywordAbilities
@@ -168,14 +172,37 @@ object CardEntityFactory {
         val hexproofCardTypes = hexproofScopes.filterIsInstance<ProtectionScope.CardType>()
             .map { it.cardType.uppercase() }
             .toSet()
-        if (hexproofColors.isNotEmpty() || hexproofCardTypes.isNotEmpty()) {
-            result = result.with(HexproofFromComponent(hexproofColors, hexproofCardTypes))
+        val hexproofNonColors = hexproofScopes.filterIsInstance<ProtectionScope.NonColor>()
+            .map { it.color }
+            .toSet()
+        val hexproofSourceKinds = hexproofScopes.mapNotNull { SourceKind.of(it) }.toSet()
+        if (hexproofColors.isNotEmpty() || hexproofCardTypes.isNotEmpty() ||
+            hexproofNonColors.isNotEmpty() || hexproofSourceKinds.isNotEmpty()
+        ) {
+            result = result.with(
+                HexproofFromComponent(hexproofColors, hexproofCardTypes, hexproofNonColors, hexproofSourceKinds)
+            )
         }
+
+        return applyNumericKeywords(result, cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Numeric>())
+    }
+
+    /**
+     * Attach the components printed numeric keywords live on. Split out of
+     * [applyDefinitionDecorations] for the inline token path, whose numeric keywords come from
+     * `CreateTokenEffect.numericKeywords` rather than a [CardDefinition] ("a 3/3 Beast token with
+     * toxic 1").
+     */
+    fun applyNumericKeywords(
+        container: ComponentContainer,
+        numericKeywords: List<KeywordAbility.Numeric>
+    ): ComponentContainer {
+        if (numericKeywords.isEmpty()) return container
+        var result = container
 
         // Toxic N (702.164). Multiple instances stack per Rule 702.164b — sum across
         // any printed Toxic abilities so the projector can emit a single TOXIC_<n>.
-        val toxicAmount = cardDef.keywordAbilities
-            .filterIsInstance<KeywordAbility.Numeric>()
+        val toxicAmount = numericKeywords
             .filter { it.keyword == Keyword.TOXIC }
             .sumOf { it.n }
         if (toxicAmount > 0) {
@@ -184,8 +211,7 @@ object CardEntityFactory {
 
         // Every other numeric keyword's printed N (bushido N), summed per keyword the same way,
         // for EntityNumericProperty.KeywordValue — see [NumericKeywordValuesComponent].
-        val numericValues = cardDef.keywordAbilities
-            .filterIsInstance<KeywordAbility.Numeric>()
+        val numericValues = numericKeywords
             .filter { it.keyword != Keyword.TOXIC }
             .groupBy({ it.keyword }, { it.n })
             .mapValues { (_, ns) -> ns.sum() }
@@ -225,9 +251,17 @@ object CardEntityFactory {
         val protectionCardTypes = protections.mapNotNull {
             (it.scope as? ProtectionScope.CardType)?.cardType?.uppercase()
         }.toSet()
+        // "Protection from spells and from permanents that were cast this turn" (Emrakul, the World
+        // Anew) — source-kind qualities, enforced through [SourceKindProtection].
+        val protectionSourceKinds = protections.mapNotNull { SourceKind.of(it.scope) }.toSet()
+        val protectionMulticolored = protections.any { it.scope == ProtectionScope.Multicolored }
         if (protectionColors.isEmpty() && protectionSubtypes.isEmpty() &&
-            protectionSupertypes.isEmpty() && protectionCardTypes.isEmpty()
+            protectionSupertypes.isEmpty() && protectionCardTypes.isEmpty() && protectionSourceKinds.isEmpty() &&
+            !protectionMulticolored
         ) return null
-        return ProtectionComponent(protectionColors, protectionSubtypes, protectionSupertypes, protectionCardTypes)
+        return ProtectionComponent(
+            protectionColors, protectionSubtypes, protectionSupertypes, protectionCardTypes, protectionSourceKinds,
+            protectionMulticolored
+        )
     }
 }

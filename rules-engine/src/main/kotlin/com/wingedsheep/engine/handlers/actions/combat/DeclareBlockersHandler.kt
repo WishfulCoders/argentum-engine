@@ -30,6 +30,9 @@ class DeclareBlockersHandler(
         if (state.step != Step.DECLARE_BLOCKERS) {
             return "You can only declare blockers during the declare blockers step"
         }
+        if (state.getEntity(action.playerId)?.has<BlockersDeclaredThisCombatComponent>() == true) {
+            return "Blockers have already been declared"
+        }
         // Additional validation is done by CombatManager
         return null
     }
@@ -37,7 +40,10 @@ class DeclareBlockersHandler(
     override fun execute(state: GameState, action: DeclareBlockers): ExecutionResult {
         // Block triggers ("whenever this creature blocks") are the settle boundary's job, including
         // those that wait out a block tax's payment question.
-        val result = combatManager.declareBlockers(state, action.playerId, action.blockers)
+        val result = if (com.wingedsheep.engine.mechanics.combat.RandomizedBlockerPiles.isActive(state)) {
+            if (action.blockers.isNotEmpty()) return ExecutionResult.error(state, "Choose piles instead of specific blockers")
+            combatManager.beginBlockerPiles(state, action.playerId)
+        } else combatManager.declareBlockers(state, action.playerId, action.blockers)
         if (result.error != null || result.pendingDecision != null) return result
         return ExecutionResult.success(handToNextUndeclaredDefender(result.newState), result.events)
     }

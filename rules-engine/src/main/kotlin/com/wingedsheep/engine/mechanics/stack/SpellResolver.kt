@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.stack
 
+import com.wingedsheep.engine.state.components.identity.TextChanges
+import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.TargetingSourceType
@@ -8,11 +10,11 @@ import com.wingedsheep.engine.mechanics.FlashbackGrants
 import com.wingedsheep.engine.mechanics.HarmonizeGrants
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
+import com.wingedsheep.engine.state.beginResolutionControl
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.identity.TextChanges
 import com.wingedsheep.engine.state.components.identity.CopyOfComponent
 import com.wingedsheep.engine.state.components.stack.*
 import com.wingedsheep.engine.state.nameVisibleToAll
@@ -73,6 +75,11 @@ internal class SpellResolver(
                 targetEntryStamps = targetsComponent.targetEntryStamps
             )
             if (validTargets.isEmpty()) {
+                if (container.has<com.wingedsheep.engine.mechanics.BestowedComponent>()) {
+                    val restored = com.wingedsheep.engine.mechanics.BestowCasts.end(state, spellId)
+                        .updateEntity(spellId) { it.without<TargetsComponent>() }
+                    return resolveSpell(restored, spellId, restored.getEntity(spellId)!!)
+                }
                 // All targets invalid - spell fizzles
                 return fizzleSpell(state, spellId, cardComponent, spellComponent)
             }
@@ -83,8 +90,9 @@ internal class SpellResolver(
             alignedResolvedTargets = resolvedTargets
         }
 
-        var newState = state
-        val events = mutableListOf<GameEvent>()
+        val started = state.beginResolutionControl(spellId)
+        var newState = started.state
+        val events = started.events.toMutableList()
 
         // Check if permanent or non-permanent.
         // Adventure / split face cast (CR 715 / 709) — when the spell was cast as a face, route
@@ -167,9 +175,11 @@ internal class SpellResolver(
         val cardDef = cardComponent?.let { cardRegistry.getCard(it.name) }
         // Flashback (printed or granted — Archmage's Newt) or Harmonize (printed or granted —
         // Songcrafter Mage): a graveyard cast exiles on resolution instead of returning to the
-        // graveyard.
+        // graveyard. A spell cast *with* flashback is exiled even if a conditional flashback's
+        // condition has since lapsed (Viral Spawning), so the recorded alternative cost counts too.
         val flashbackExile = spellComponent.castFromZone == Zone.GRAVEYARD &&
-            (FlashbackGrants.effectiveFlashback(
+            (spellComponent.alternativeCost == AlternativeCostType.FLASHBACK ||
+                FlashbackGrants.effectiveFlashback(
                 state, spellId, cardDef, spellComponent.casterId, cardRegistry, predicateEvaluator
             ) != null ||
                 HarmonizeGrants.effectiveHarmonize(state, spellId, cardDef) != null)
@@ -191,11 +201,14 @@ internal class SpellResolver(
         val destZoneKey = ZoneKey(ownerId, destZone)
 
         var newState = state.updateEntity(spellId) { c ->
-            c.without<SpellOnStackComponent>().without<TargetsComponent>()
+            c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
         }
         newState = newState.addToZone(destZoneKey, spellId)
         // CR 712.8a — a fizzled card cast transformed is front face up again once off the stack.
         newState = restoreDfcFrontFace(newState, cardRegistry, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
         val destinationObject = newState.objectRef(spellId)
         // A card-intrinsic redirect into the library shuffles the card in (Progenitus).
         if (destZone == Zone.LIBRARY && fizzleRedirect.shuffleIntoLibrary) {

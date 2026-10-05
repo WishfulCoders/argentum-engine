@@ -6,12 +6,16 @@ import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.DecisionContext
 import com.wingedsheep.engine.core.DecisionPhase
 import com.wingedsheep.engine.core.EffectResult
+import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ProliferateContinuation
+import com.wingedsheep.engine.core.ProliferatedEvent
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.DamageUtils
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.KeywordActionReplacements
+import com.wingedsheep.engine.handlers.effects.ReplaceableKeywordAction
 import com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -30,11 +34,15 @@ import kotlin.reflect.KClass
  *   at resolution:
  *   1. Build the eligible set: every permanent on the battlefield and every player that has at
  *      least one counter of any kind on it.
- *   2. If empty, the effect is a no-op.
+ *   2. If empty, no counters move — but the player still proliferated (choosing zero), so a
+ *      [ProliferatedEvent] is emitted all the same.
  *   3. Otherwise pause with a [SelectCardsDecision] (min=0, max=eligibleEntities.size,
  *      `useTargetingUI=true`) so the controller picks directly on the board.
  *   4. The continuation handler ([ProliferateContinuation]) reads the chosen entities and calls
- *      [addOneOfEachKind].
+ *      [addOneOfEachKind], then emits the [ProliferatedEvent] that "whenever you proliferate"
+ *      triggers watch — also when the controller chose nothing (the ONE rulings).
+ *   A [com.wingedsheep.sdk.scripting.RepeatKeywordAction] ("proliferate twice instead",
+ *   Tekuthal) turns this into several proliferates in a row — see [proliferate].
  *
  * - **Targeted (`effect.target != null`).** The recipient was chosen on announcement
  *   (CR 601.2c) and its legality already re-checked on resolution (CR 608.2b), so there is no
@@ -79,40 +87,73 @@ class ProliferateExecutor(
             return EffectResult.success(newState, events)
         }
 
-        val eligible = findEntitiesWithCounters(state)
-
-        if (eligible.isEmpty()) {
-            return EffectResult.success(state, emptyList())
-        }
-
         val sourceName = context.sourceId
             ?.let { state.getEntity(it)?.get<CardComponent>()?.name }
             ?: "Proliferate"
 
-        val decision = { decisionId: String -> SelectCardsDecision(
-            id = decisionId,
-            playerId = context.controllerId,
-            prompt = "Proliferate — choose any number of permanents and/or players that have a counter",
-            context = DecisionContext(
-                sourceId = context.sourceId,
-                sourceName = sourceName,
-                phase = DecisionPhase.RESOLUTION
-            ),
-            options = eligible,
-            minSelections = 0,
-            maxSelections = eligible.size,
-            useTargetingUI = true
-        ) }
-
-        val continuation = ProliferateContinuation(
-            controllerId = context.controllerId,
-            eligibleEntities = eligible
+        // "If you would proliferate, proliferate twice instead" (CR 614.1a): the replacement
+        // decides how many proliferates this one becomes before the first choice is offered.
+        val times = KeywordActionReplacements.repetitions(
+            state, context.controllerId, ReplaceableKeywordAction.PROLIFERATE
         )
-
-        return EffectResult.from(state.suspendForDecision(decision, continuation, eventType = "PROLIFERATE"))
+        return EffectResult.from(
+            proliferate(state, context.controllerId, context.sourceId, sourceName, times, emptyList())
+        )
     }
 
     companion object {
+        /**
+         * Run [times] untargeted proliferates for [controllerId], one after another. Each one
+         * gathers its own eligible set — after the previous one's counters have landed — and each
+         * emits its own [ProliferatedEvent]. A proliferate with nothing eligible completes on the
+         * spot; the first one that has a choice to make pauses, carrying the proliferates still
+         * owed on its [ProliferateContinuation] so the resumer can pick the loop back up.
+         * [events] are the events already produced by earlier proliferates in the same loop.
+         */
+        fun proliferate(
+            state: GameState,
+            controllerId: EntityId,
+            sourceId: EntityId?,
+            sourceName: String,
+            times: Int,
+            events: List<GameEvent>
+        ): ExecutionResult {
+            val accumulated = events.toMutableList()
+            repeat(times) { done ->
+                val eligible = findEntitiesWithCounters(state)
+                if (eligible.isEmpty()) {
+                    accumulated.add(ProliferatedEvent(controllerId, sourceName))
+                    return@repeat
+                }
+
+                val decision = { decisionId: String -> SelectCardsDecision(
+                    id = decisionId,
+                    playerId = controllerId,
+                    prompt = "Proliferate — choose any number of permanents and/or players that have a counter",
+                    context = DecisionContext(
+                        sourceId = sourceId,
+                        sourceName = sourceName,
+                        phase = DecisionPhase.RESOLUTION
+                    ),
+                    options = eligible,
+                    minSelections = 0,
+                    maxSelections = eligible.size,
+                    useTargetingUI = true
+                ) }
+
+                val continuation = ProliferateContinuation(
+                    controllerId = controllerId,
+                    eligibleEntities = eligible,
+                    sourceName = sourceName,
+                    sourceId = sourceId,
+                    proliferatesRemaining = times - done - 1
+                )
+
+                return state.suspendForDecision(decision, continuation, accumulated, eventType = "PROLIFERATE")
+            }
+            return ExecutionResult.success(state, accumulated)
+        }
+
         /**
          * All battlefield permanents + all players that currently have at least one
          * counter of any kind.
@@ -181,20 +222,22 @@ class ProliferateExecutor(
                     newState = newState.updateEntity(entityId) { container ->
                         container.with(before.withAdded(counterType, modifiedAmount))
                     }
-                    val (afterMark, firstThisTurn) = DamageUtils.recordCounterPlacement(
+                    val (afterMark, firstThisTurn, firstOfTypeThisTurn) = DamageUtils.recordCounterPlacement(
                         newState,
                         entityId,
                         counterType,
                         placerId = controllerId,
                     )
-                    newState = afterMark
+                    newState = ReplacementEffectUtils.recordCounterPlacementLock(
+                        afterMark, entityId, counterType, modifiedAmount, predicateEvaluator
+                    )
                     events.add(
                         CountersAddedEvent(
                             entityId,
                             counterType,
                             modifiedAmount,
                             entityName,
-                            firstThisTurn,
+                            firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn,
                             placedBy = controllerId
                         )
                     )

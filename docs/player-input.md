@@ -46,3 +46,22 @@ rejection check before decoding.
 Without that reader the engine rejects the previous representation outright rather than guessing,
 so a deployment that must resume already-saved paused games needs it. There is no runtime feature
 flag. See [architecture principles](architecture-principles.md#24-reentrant-continuations).
+
+### Optional pile membership
+
+`SplitPilesDecision` normally assigns every card to exactly one pile. `allowUnassigned` permits
+omitting cards, and `maxPileMemberships` declares each card's maximum number of distinct piles
+(default one). Duplicate cards within one pile and unknown cards are always rejected. `useTargetingUI`
+requests a battlefield selection banner rather than the hidden-card pile overlay. These fields are
+server-authored constraints; they do not ask the client to determine blocking legality.
+
+Randomized blocker declarations suspend the turn-based declaration in this question. The continuation
+captures the current attacker list, advances RNG only after a valid answer, and preserves the resulting
+assignment across any restriction-choice question. Completing it marks the defender's declaration and
+hands input directly to the next undeclared defender before any priority window.
+
+For a constrained split, `pileOptions` limits the cards eligible for each pile and
+`requiredAssignments` fixes the total number of memberships. `suggestedPiles` supplies one
+server-validated plan for automated responders. After randomized assignment, these fields let the
+player choose a legal subset on the battlefield without rerolling or enumerating every combination.
+The continuation also checks the resulting combat restrictions before committing any block.

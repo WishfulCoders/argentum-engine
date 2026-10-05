@@ -73,8 +73,8 @@ class LegalActionEnricher(
                 // isn't on the printed script, so the lookup can miss and the equip fact reads
                 // false — the client then under-reports spendable mana rather than over-reporting
                 // it, and the server's own payment check (which always has the ability) decides.
-                val ability = cardRegistry.getCard(card)
-                    ?.script?.activatedAbilities?.find { it.id == gameAction.abilityId }
+                val ability = com.wingedsheep.engine.state.components.identity.ownActivatedAbilities(card, cardRegistry.getCard(card), classLevel = null)
+                    .find { it.id == gameAction.abilityId }
                 buildAbilityPaymentContext(card, state.projectedState, gameAction.sourceId, ability)
             }
             else -> null
@@ -283,6 +283,7 @@ class LegalActionEnricher(
         exileMinTotalWeight = exileMinTotalWeight,
         exileCardWeights = exileCardWeights,
         exileWeightUnit = exileWeightUnit,
+        exileCardTypes = exileCardTypes,
         exileWeightPerTarget = exileWeightPerTarget,
         validBeholdTargets = validBeholdTargets,
         beholdCount = beholdCount,

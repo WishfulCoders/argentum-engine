@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
@@ -55,6 +56,19 @@ class CountersTest : StringSpec({
         roundTrips("Put three +1/+1 counters on target Sliver creature.")
     }
 
+    // Abzan Ascendancy, Cathars' Crusade: one iteration over the group, not a target.
+    "a counter on each member of a group iterates the group" {
+        fragment("Put a +1/+1 counter on each creature you control.").script shouldBe CardScript(
+            spellEffect = Effects.ForEachInGroup(
+                GroupFilter(GameObjectFilter.Creature.youControl()),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
+            ),
+        )
+        roundTrips("Put a +1/+1 counter on each creature you control.")
+        roundTrips("Put two +1/+1 counters on each creature you control.")
+        roundTrips("Put a -1/-1 counter on each creature.")
+    }
+
     // The commonest effect shape in the whole hand-written corpus: 363 of the 951 AddCounters a
     // golden carries are this one.
     "a counter on the source names the source and not a target" {
@@ -87,8 +101,9 @@ class CountersTest : StringSpec({
     }
 
     // Gnarlid Colony and the other kicker creatures. The condition is the clause that makes the card
-    // worth playing, and a rule that printed the value without it would be byte-perfect and wrong.
-    "an entry replacement carrying a condition refuses to print rather than dropping it" {
+    // worth playing, and a rule that printed the value without it would be byte-perfect and wrong:
+    // the kicker entry band prints it, so the line must lead with the condition.
+    "an entry replacement carrying a condition prints the condition rather than dropping it" {
         val kicked = CardFragment(
             script = CardScript(
                 replacementEffects = listOf(
@@ -96,7 +111,7 @@ class CountersTest : StringSpec({
                 )
             )
         )
-        Grammar.abilityLine.printLine(kicked) shouldBe null
+        Grammar.abilityLine.printLine(kicked) shouldBe "If ~ was kicked, it enters with two +1/+1 counters on it."
     }
 
     // Hardened Scales' shape: the same type with selfOnly false says something about *other*

@@ -52,6 +52,7 @@ data class SecretBidContinuation(
     val lowestBidderEffect: Effect?,
     val tiedBidderEffect: Effect?,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -193,6 +194,22 @@ data class RemoveAnyNumberOfCountersContinuation(
 ) : AnswerContinuation
 
 /**
+ * Resume after the controller picks which kind of counter on [recipientId] to add [count] more of,
+ * for `AddCountersOfChosenKindEffect` (Ichormoon Gauntlet). `OptionChosenResponse.optionIndex`
+ * indexes [counterKinds], the kinds shown in the decision. Placement goes through the standard
+ * `AddCountersEffect` path.
+ */
+@Serializable
+data class AddCountersOfChosenKindContinuation(
+    val recipientId: EntityId,
+    val controllerId: EntityId,
+    val counterKinds: List<CounterType>,
+    val count: Int,
+    val sourceId: EntityId?,
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+) : AnswerContinuation
+
+/**
  * Resume after the controller picks how many counters (0..max) to put on a target, for
  * `AddCountersUpToEffect` ("Put up to N [counterType] counters on target" — Esper Terra's lore
  * chapters). The chosen count is placed through the standard `AddCountersEffect` path so
@@ -254,7 +271,7 @@ data class PayCountersContinuation(
  * [sourceId] permanent onto a [destinationId] permanent. The executor for
  * `MoveChosenCountersToTargetEffect` issues one decision per counter kind on the source;
  * on resume, the chosen amount is removed from the source and added to the destination, and
- * the next kind (if any) is prompted. After the last kind, if [drawCardOnMove] is set and at
+ * the walk carries on in `MoveChosenCountersFlow` (budget and floor decremented). After the last kind, if [drawCardOnMove] is set and at
  * least one counter was moved overall, the controller draws a card. (Goldberry — ability B.)
  *
  * @property sourceId The permanent counters are moved from
@@ -267,6 +284,9 @@ data class PayCountersContinuation(
  * @property destinationName Display name of the destination for follow-up prompts
  * @property drawCardOnMove Whether to draw a card at the end if any counter was moved
  * @property anyMovedSoFar Whether any counter has been moved across prior prompts
+ * @property currentMinAmount Floor for the active decision (the share later kinds can't cover)
+ * @property remainingBudget Counters still movable in total after the active kind, or null for no cap
+ * @property remainingFloor Counters that must still be moved in total, including the active kind
  */
 @Serializable
 data class MoveChosenCountersToTargetContinuation(
@@ -280,6 +300,9 @@ data class MoveChosenCountersToTargetContinuation(
     val destinationName: String,
     val drawCardOnMove: Boolean,
     val anyMovedSoFar: Boolean = false,
+    val currentMinAmount: Int = 0,
+    val remainingBudget: Int? = null,
+    val remainingFloor: Int = 0,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 
@@ -292,11 +315,18 @@ data class MoveChosenCountersToTargetContinuation(
  *                            when the decision was offered. Used to discard stale
  *                            selections and to defend against the response naming
  *                            an entity that had no counters at decision time.
+ * @property sourceName Display name carried onto the [ProliferatedEvent] emitted on resume
+ * @property sourceId The proliferating source, for the next decision's context
+ * @property proliferatesRemaining Proliferates still owed after this one — non-zero only under a
+ *   "proliferate twice instead" replacement (Tekuthal, Inquiry Dominus)
  */
 @Serializable
 data class ProliferateContinuation(
     val controllerId: EntityId,
-    val eligibleEntities: List<EntityId>
+    val eligibleEntities: List<EntityId>,
+    val sourceName: String = "Proliferate",
+    val sourceId: EntityId? = null,
+    val proliferatesRemaining: Int = 0
 ) : AnswerContinuation
 
 /**
@@ -430,6 +460,7 @@ data class StormCopyTargetContinuation(
     /** Keyword enum names (e.g., "WITHER") to grant to each copy while it's on the stack. */
     val keywordsForCopy: Set<String> = emptySet(),
     val removeLegendary: Boolean = false,
+    val tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 

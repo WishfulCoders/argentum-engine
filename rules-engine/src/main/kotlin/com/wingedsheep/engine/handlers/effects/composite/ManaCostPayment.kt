@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEvent
@@ -40,8 +41,10 @@ fun payManaCostFromPool(
         manaPoolComponent.black,
         manaPoolComponent.red,
         manaPoolComponent.green,
-        manaPoolComponent.colorless
-    )
+        manaPoolComponent.colorless,
+        snowMana = manaPoolComponent.snowMana,
+        snowColorless = manaPoolComponent.snowColorless
+    ).withSpendingColors(state, player)
 
     val partialResult = manaPool.payPartial(cost)
     val remainingCost = partialResult.remainingCost
@@ -61,11 +64,7 @@ fun payManaCostFromPool(
         }
 
         for ((_, production) in solution.manaProduced) {
-            currentPool = if (production.color != null) {
-                currentPool.add(production.color)
-            } else {
-                currentPool.addColorless(production.colorless)
-            }
+            currentPool = currentPool.addProduction(production, coloredAmount = 1)
         }
     }
 
@@ -80,7 +79,9 @@ fun payManaCostFromPool(
                 black = newPool.black,
                 red = newPool.red,
                 green = newPool.green,
-                colorless = newPool.colorless
+                colorless = newPool.colorless,
+                snowMana = newPool.snowMana,
+                snowColorless = newPool.snowColorless
             )
         )
     }
@@ -119,8 +120,10 @@ fun canAutoPayManaCost(
         manaPoolComponent.black,
         manaPoolComponent.red,
         manaPoolComponent.green,
-        manaPoolComponent.colorless
-    )
+        manaPoolComponent.colorless,
+        snowMana = manaPoolComponent.snowMana,
+        snowColorless = manaPoolComponent.snowColorless
+    ).withSpendingColors(state, player)
 
     val remainingCost = manaPool.payPartial(cost).remainingCost
     if (remainingCost.isEmpty()) return true

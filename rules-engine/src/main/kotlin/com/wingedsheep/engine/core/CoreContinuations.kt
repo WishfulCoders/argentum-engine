@@ -70,7 +70,11 @@ data class TriggeredAbilityContinuation(
     /** The ability's intervening-"if" (CR 603.4), preserved across target selection so the stack
      *  object built on resume can re-check it as it resolves. See
      *  [com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent.interveningIf]. */
-    val interveningIf: com.wingedsheep.sdk.scripting.conditions.Condition? = null
+    val interveningIf: com.wingedsheep.sdk.scripting.conditions.Condition? = null,
+    /** The ability is a backup ability — see
+     *  [com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent.isBackup]. */
+    val isBackup: Boolean = false,
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null
 ) : AnswerContinuation
 
 /**
@@ -112,7 +116,9 @@ data class TriggerDamageDistributionContinuation(
     val totalDamage: Int,
     /** The ability's intervening-"if" (CR 603.4), preserved across the distribution decision so the
      *  stack object built on resume can re-check it as it resolves. */
-    val interveningIf: com.wingedsheep.sdk.scripting.conditions.Condition? = null
+    val interveningIf: com.wingedsheep.sdk.scripting.conditions.Condition? = null,
+    val isBackup: Boolean = false,
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null
 ) : AnswerContinuation
 
 /**

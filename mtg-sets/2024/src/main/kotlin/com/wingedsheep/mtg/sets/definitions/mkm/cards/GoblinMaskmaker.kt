@@ -29,7 +29,7 @@ val GoblinMaskmaker = card("Goblin Maskmaker") {
 
     triggeredAbility {
         trigger = Triggers.self.attacks()
-        effect = Effects.ReduceSpellCostsThisTurn(
+        effect = Effects.ReduceSpellCosts(
             spellFilter = GameObjectFilter.Any.faceDown(),
             amount = DynamicAmounts.fixed(1),
         )

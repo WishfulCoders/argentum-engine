@@ -10,6 +10,7 @@ import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.forcedPlayFor
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 
@@ -32,11 +33,14 @@ class LegalActionEnumerator(
 
     private val enumerators: List<ActionEnumerator> = listOf(
         PassPriorityEnumerator(),
+        PlayerActionEnumerator(),
         PlayLandEnumerator(),
         MorphCastEnumerator(),
         CastSpellEnumerator(predicateEvaluator = predicateEvaluator),
         SneakCastEnumerator(),
         EmergeCastEnumerator(),
+        AnnouncedCharacteristicsCastEnumerator(CharacteristicsAnnouncement.BESTOW),
+        AnnouncedCharacteristicsCastEnumerator(CharacteristicsAnnouncement.PROTOTYPE),
         WebSlingingCastEnumerator(),
         CyclingEnumerator(),
         PlotEnumerator(),
@@ -73,6 +77,9 @@ class LegalActionEnumerator(
         mode: EnumerationMode = EnumerationMode.FULL,
         includeManaAbilities: Boolean = true,
     ): List<LegalAction> {
+        if (state.continuationStack.any { it is com.wingedsheep.engine.core.FinishForcedPlayContinuation } &&
+            state.pendingDecision != null && (state.pendingDecision !is com.wingedsheep.engine.core.PlayCardDecision ||
+                state.pendingDecision?.playerId != playerId)) return emptyList()
         val context = EnumerationContext(
             state = state,
             playerId = playerId,
@@ -85,14 +92,21 @@ class LegalActionEnumerator(
             mode = mode
         )
 
-        // Combat declaration steps are exclusive — only combat actions, no spells/abilities/pass
-        if (combatEnumerator.isCombatDeclarationStep(context)) {
+        val forced = state.forcedPlayFor(playerId)
+        // A resolving instruction can play its card during a combat declaration step.
+        if (forced == null && combatEnumerator.isCombatDeclarationStep(context)) {
             return combatEnumerator.enumerate(context)
         }
 
         // Normal priority: enumerate all action categories
         val offers = enumerators.flatMap {
             if (!includeManaAbilities && it is ManaAbilityEnumerator) emptyList() else it.enumerate(context)
+        }.filter { offer ->
+            forced == null || when (val action = offer.action) {
+                is com.wingedsheep.engine.core.CastSpell -> action.cardId == forced.card.entityId
+                is com.wingedsheep.engine.core.PlayLand -> action.cardId == forced.card.entityId
+                else -> false
+            }
         }
         // Split second (CR 702.61): while a spell with it is on the stack, withhold every spell and
         // non-mana activated ability — the same verdict ActionProcessor.validate reaches.
@@ -116,19 +130,14 @@ class LegalActionEnumerator(
         state: GameState,
         playerId: EntityId,
         mode: EnumerationMode = EnumerationMode.FULL
-    ): List<LegalAction> = ManaAbilityEnumerator(predicateEvaluator = predicateEvaluator).enumerate(
-        EnumerationContext(
-            state = state,
-            playerId = playerId,
-            cardRegistry = cardRegistry,
-            manaSolver = manaSolver,
-            costCalculator = costCalculator,
-            predicateEvaluator = predicateEvaluator,
-            conditionEvaluator = conditionEvaluator,
-            turnManager = turnManager,
-            mode = mode
+    ): List<LegalAction> {
+        val context = EnumerationContext(
+            state, playerId, cardRegistry, manaSolver, costCalculator,
+            predicateEvaluator, conditionEvaluator, turnManager, mode,
         )
-    )
+        return ManaAbilityEnumerator(predicateEvaluator = predicateEvaluator).enumerate(context) +
+            PlayerActionEnumerator(manaOnly = true).enumerate(context)
+    }
 
     companion object {
         /**

@@ -1158,6 +1158,49 @@
     ]
 }
 
+// Eternity Snare
+{
+    "name": "Eternity Snare",
+    "manaCost": "{5}{U}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nWhen this Aura enters, draw a card.\nEnchanted creature doesn't untap during its controller's untap step.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Eternity Snare:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantKeyword",
+                "keyword": "DOESNT_UNTAP"
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "61",
+        "artist": "Drew Tucker",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/e/de753839-cf75-48d0-98c3-5765779678c0.jpg"
+    }
+}
+
 // Feebleness
 {
     "name": "Feebleness",
@@ -1849,6 +1892,126 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Ib Halfheart, Goblin Tactician
+{
+    "name": "Ib Halfheart, Goblin Tactician",
+    "manaCost": "{3}{R}",
+    "typeLine": "Legendary Creature — Goblin Advisor",
+    "oracleText": "Whenever another Goblin you control becomes blocked, sacrifice it. If you do, it deals 4 damage to each creature blocking it.\nSacrifice two Mountains: Create two 1/1 red Goblin creature tokens.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ib Halfheart, Goblin Tactician:1",
+                "trigger": {
+                    "type": "BecomesBlockedEvent",
+                    "filter": "creature Goblin ctrl:you"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsCreature"
+                                    ],
+                                    "statePredicates": [
+                                        {
+                                            "type": "IsBlockingEntity",
+                                            "reference": "TriggeringEntity"
+                                        }
+                                    ]
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.DoAction",
+                                "action": {
+                                    "type": "SacrificeTarget",
+                                    "target": "TriggeringEntity"
+                                },
+                                "successCriterion": "SuccessCriterion.PermanentsSacrificed"
+                            },
+                            "then": {
+                                "type": "ForEach",
+                                "space": {
+                                    "type": "IterationSpace.Collection",
+                                    "collection": "gathered0"
+                                },
+                                "body": {
+                                    "type": "DealDamage",
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 4
+                                    },
+                                    "target": "IterationEntity",
+                                    "damageSource": "TriggeringEntity"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever another Goblin you control becomes blocked, sacrifice it. If you do, it deals 4 damage to each creature blocking it."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Ib Halfheart, Goblin Tactician:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomSacrifice",
+                        "filter": "land Mountain",
+                        "count": 2
+                    }
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "RED"
+                    ],
+                    "creatureTypes": [
+                        "Goblin"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/e/2/e265ca24-96c0-4654-a8f3-bbffe288970a.jpg?1742506636"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "163",
+        "rarity": "RARE",
+        "artist": "Wayne Reynolds",
+        "flavorText": "\"Everybody but me—CHARGE!\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/8/38134389-b471-4f58-a9ae-26bf9dc1557a.jpg?1783943220",
+        "rulings": [
+            {
+                "date": "2006-09-25",
+                "text": "If you don't actually sacrifice the Goblin (because it was removed from the battlefield before the ability resolved, for example), no damage is dealt."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
@@ -4090,6 +4253,65 @@
     "colorIdentityOverride": [
         "GREEN"
     ]
+}
+
+// Urza's Factory
+{
+    "name": "Urza's Factory",
+    "manaCost": "",
+    "typeLine": "Land — Urza's",
+    "oracleText": "{T}: Add {C}.\n{7}, {T}: Create a 2/2 colorless Assembly-Worker artifact creature token.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Urza's Factory:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Urza's Factory:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{7}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Assembly-Worker"
+                    ],
+                    "artifactToken": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "280",
+        "rarity": "UNCOMMON",
+        "artist": "Mark Tedin",
+        "flavorText": "\"Though their ideals are leagues apart, Urza's and Mishra's creations have a surprising harmony with one another.\"\n—Tocasia, journal entry",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/2/b22d97f3-08cf-4c19-bbe2-5a36096187cd.jpg"
+    },
+    "colorIdentityOverride": []
 }
 
 // Venser's Sliver

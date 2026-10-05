@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * steps and phases end.
  *
  * Not modelled: the "don't lose this mana" clause. Pools empty as each step and phase ends, and
- * `AddDynamicMana` has no `ManaExpiry` yet (`AddMana` takes `UNTIL_END_OF_TURN`), so mana left
+ * `AddDynamicMana` has no `ManaExpiry` yet (`AddMana` takes `KEPT_UNTIL_END_OF_TURN`), so mana left
  * over after the attack trigger is lost when the declare-attackers step ends.
  * The mana amount equals the number of attacking creatures you control at the time
  * the triggered ability resolves.

@@ -3717,10 +3717,11 @@
                         "type": "TargetObject",
                         "filter": {
                             "baseFilter": "creature Giant ctrl:you"
-                        },
-                        "id": "a Giant creature you control"
+                        }
                     },
-                    "storeAs": "target0"
+                    "storeAs": "target0",
+                    "nonTargeting": true,
+                    "prompt": "Choose a Giant you control — it deals damage equal to its power to the targeted creature"
                 },
                 {
                     "type": "DealDamage",
@@ -4355,7 +4356,7 @@
                     },
                     "id": "t0"
                 },
-                "triggerRestriction": "IsNotYourTurn",
+                "triggerRestriction": "IsOpponentsTurn",
                 "descriptionOverride": "Whenever you cast a spell during an opponent's turn, you may have target creature get -1/-1 until end of turn."
             }
         ]
@@ -5280,7 +5281,7 @@
                         }
                     }
                 },
-                "triggerRestriction": "IsNotYourTurn",
+                "triggerRestriction": "IsOpponentsTurn",
                 "descriptionOverride": "Whenever you cast a spell during an opponent's turn, you may have each opponent lose 1 life."
             }
         ]
@@ -7032,7 +7033,7 @@
                     },
                     "id": "t0"
                 },
-                "triggerRestriction": "IsNotYourTurn",
+                "triggerRestriction": "IsOpponentsTurn",
                 "descriptionOverride": "Whenever you cast a spell during an opponent's turn, you may return target creature you control to its owner's hand."
             }
         ]
@@ -16542,7 +16543,7 @@
                     {
                         "type": "TargetObject",
                         "filter": {
-                            "baseFilter": "creature Merfolk ctrl:you"
+                            "baseFilter": "permanent Merfolk ctrl:you"
                         },
                         "id": "t0"
                     }

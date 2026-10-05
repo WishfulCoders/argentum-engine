@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.cost
 
+import com.wingedsheep.engine.mechanics.mana.withSpendingColors
+import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.CardsDiscardedEvent
 import com.wingedsheep.engine.core.CardsRevealedEvent
@@ -182,6 +184,8 @@ class CostPaymentService(private val services: EngineServices) {
                 // takes the counter, on the battlefield rather than in an overlay.
                 is CostAtom.PutCountersOnPermanent ->
                     selectionPrompt(state, payerId, resolved, sourceId, sourceName, ctx, candidates, 1, useTargetingUI = true)
+                is CostAtom.PayPlayerCounters ->
+                    yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "${atom.description}?", atom.description)
                 is CostAtom.RemoveCounters -> {
                     val count = when (val c = atom.count) {
                         is com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed -> c.amount
@@ -328,7 +332,8 @@ class CostPaymentService(private val services: EngineServices) {
         onDeclined = ctx.onDeclined,
         targets = ctx.targets,
         namedTargets = ctx.namedTargets,
-        storedCollections = ctx.storedCollections
+        storedCollections = ctx.storedCollections,
+        effectContext = ctx.effectContext,
     )
 
     // ---------------------------------------------------------------------------------------------
@@ -390,7 +395,13 @@ class CostPaymentService(private val services: EngineServices) {
             // cost is paid through CostHandler.payAtom, which owns the counter-placement path.
             is CostAtom.PutCountersOnSelf -> CostPaymentExecution(state, emptyList(), success = false)
             is CostAtom.PutCountersOnPermanent ->
-                putCountersOnSelected(state, selected.keys.toList(), atom.counterType, atom.count)
+                putCountersOnSelected(state, payerId, selected.keys.toList(), atom.counterType, atom.count)
+            is CostAtom.PayPlayerCounters -> {
+                val amount = (atom.amount as? DynamicAmount.Fixed)?.amount
+                val result = amount?.let { PlayerCounterPayment.pay(state, payerId, atom.counterType, it) }
+                if (result == null) CostPaymentExecution(state, emptyList(), false)
+                else CostPaymentExecution(result.first, result.second, true)
+            }
             is CostAtom.RemoveCounters -> performRemoveCounters(state, payerId, atom, sourceId, selected)
             // Likewise activated-ability-only — see the prompt branch above.
             is CostAtom.RevealNotedCreatureType -> CostPaymentExecution(state, emptyList(), success = false)
@@ -480,12 +491,12 @@ class CostPaymentService(private val services: EngineServices) {
             val removals = selected.map { (entityId, count) ->
                 DistributedCounterRemoval(entityId, counterType.printed, count)
             }
-            return applyDistributedCounterRemovals(newState, payerId, atom, removals, predicateEvaluator = predicateEvaluator)
+            return applyDistributedCounterRemovals(newState, payerId, atom, removals, sourceId, predicateEvaluator = predicateEvaluator)
         } else {
             // Auto-resolve: remove from permanents with the most counters first
             val projected = newState.projectedState
             val candidates = projected.getBattlefieldControlledBy(payerId).filter {
-                predicateEvaluator.matches(newState, projected, it, atom.filter, PredicateContext(controllerId = payerId))
+                predicateEvaluator.matches(newState, projected, it, atom.filter, PredicateContext(controllerId = payerId, sourceId = sourceId))
             }.sortedByDescending { entityId ->
                 val counters = newState.getEntity(entityId)
                     ?.get<CountersComponent>()
@@ -520,8 +531,10 @@ class CostPaymentService(private val services: EngineServices) {
         val poolComponent = playerEntity.get<ManaPoolComponent>() ?: ManaPoolComponent()
         val pool = ManaPool(
             poolComponent.white, poolComponent.blue, poolComponent.black,
-            poolComponent.red, poolComponent.green, poolComponent.colorless
-        )
+            poolComponent.red, poolComponent.green, poolComponent.colorless,
+            snowMana = poolComponent.snowMana,
+            snowColorless = poolComponent.snowColorless
+        ).withSpendingColors(state, payerId)
 
         // Spend floating mana first, then tap sources for the remainder.
         val partial = pool.payPartial(manaCost)
@@ -537,8 +550,7 @@ class CostPaymentService(private val services: EngineServices) {
             current = afterTaps
             events.addAll(tapEvents)
             for ((_, production) in solution.manaProduced) {
-                combined = if (production.color != null) combined.add(production.color, production.amount)
-                else combined.addColorless(production.colorless)
+                combined = combined.addProduction(production)
             }
             // Bonus mana from AdditionalManaOnTap / AdditionalManaOnSourceTap (e.g. Badgermole
             // Cub's "Whenever you tap a creature for mana, add an additional {G}") and mana auras
@@ -554,7 +566,7 @@ class CostPaymentService(private val services: EngineServices) {
 
         val newPool = combined.pay(manaCost) ?: return CostPaymentExecution(state, emptyList(), false)
         current = current.updateEntity(payerId) {
-            it.with(ManaPoolComponent(newPool.white, newPool.blue, newPool.black, newPool.red, newPool.green, newPool.colorless))
+            it.with(ManaPoolComponent(newPool.white, newPool.blue, newPool.black, newPool.red, newPool.green, newPool.colorless, snowMana = newPool.snowMana, snowColorless = newPool.snowColorless))
         }
 
         val sourceName = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: "the source"
@@ -697,6 +709,7 @@ class CostPaymentService(private val services: EngineServices) {
      */
     private fun putCountersOnSelected(
         state: GameState,
+        payerId: EntityId,
         selected: List<EntityId>,
         counterType: CounterType,
         count: Int
@@ -712,12 +725,18 @@ class CostPaymentService(private val services: EngineServices) {
             newState = newState.updateEntity(permanentId) { c ->
                 c.with((c.get<CountersComponent>() ?: CountersComponent()).withAdded(counterType, count))
             }
+            val (marked, firstThisTurn, firstOfTypeThisTurn) = com.wingedsheep.engine.handlers.effects.DamageUtils
+                .recordCounterPlacement(newState, permanentId, counterType, placerId = payerId)
+            newState = marked
             events.add(
                 com.wingedsheep.engine.core.CountersAddedEvent(
                     permanentId,
                     counterType,
                     count,
-                    container.get<CardComponent>()?.name ?: "Permanent"
+                    container.get<CardComponent>()?.name ?: "Permanent",
+                    firstThisTurn,
+                    firstOfTypeThisTurn = firstOfTypeThisTurn,
+                    placedBy = payerId
                 )
             )
         }
@@ -776,7 +795,7 @@ class CostPaymentService(private val services: EngineServices) {
                     is CostAtom.Mana -> manaSolver.canPay(state, payerId, atom.cost)
                     // CR 119.4 — a player may pay life only if their life total is at least the amount; paying
                     // life that would reduce them to 0 or less is legal (they then lose as a state-based action).
-                    is CostAtom.PayLife -> life(state, payerId) >= atom.amount
+                    is CostAtom.PayLife -> state.canPayLife(payerId, atom.amount) // CR 119.8 too
                     is CostAtom.Discard -> domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator).size >= atom.count
                     // CR 118.3 — an empty hand discards nothing, and a cost of nothing is payable.
                     is CostAtom.DiscardHand -> true
@@ -818,6 +837,10 @@ class CostPaymentService(private val services: EngineServices) {
                     is CostAtom.RevealNotedCreatureType -> false
                     // Activated-ability cost only (it reads the source's own attachment).
                     is CostAtom.Unattach -> false
+                    is CostAtom.PayPlayerCounters ->
+                        (atom.amount as? DynamicAmount.Fixed)?.let {
+                            PlayerCounterPayment.available(state, payerId, atom.counterType) >= it.amount
+                        } ?: false
                     is CostAtom.RemoveCounters -> {
                         val needed = when (val c = atom.count) {
                             is com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed -> c.amount
@@ -895,18 +918,20 @@ class CostPaymentService(private val services: EngineServices) {
                 is CostAtom.ReturnToHand ->
                     if (atom.youControl) controlledMatching(state, payerId, atom.filter, sourceId, predicateEvaluator = predicateEvaluator)
                     else anyMatching(state, payerId, atom.filter, sourceId, predicateEvaluator = predicateEvaluator)
-                is CostAtom.TapPermanents ->
+                is CostAtom.TapPermanents -> SharedCreatureTypeTapCost.eligible(
+                    state, atom,
                     controlledUntapped(state, payerId, atom.filter, if (atom.excludeSelf) sourceId else null, predicateEvaluator = predicateEvaluator)
-                // "Remove a counter from among permanents you control" never says "another", so the
-                // source is in the pool. Self-removal picks nothing at all.
+                )
+                // The source is in the pool unless the filter says "other" (`notSourceItself()`,
+                // Tekuthal), which the source id lets the evaluator see. Self-removal picks nothing.
                 is CostAtom.RemoveCounters ->
-                    if (atom.self) null else controlledMatching(state, payerId, atom.filter, predicateEvaluator = predicateEvaluator)
+                    if (atom.self) null else controlledMatching(state, payerId, atom.filter, sourceId = sourceId, predicateEvaluator = predicateEvaluator)
                 // ExileFromGraveyardForTotal does pick objects, but only ever as an activated-ability
                 // cost — CostHandler owns its selection, and [canAfford] already reports it
                 // unaffordable as a PayCost, so it has no domain on this path.
                 is CostAtom.PutCountersOnPermanent ->
                     controlledMatching(state, payerId, atom.filter, predicateEvaluator = predicateEvaluator)
-                is CostAtom.Mana, is CostAtom.PayLife, is CostAtom.Mill,
+                is CostAtom.PayPlayerCounters, is CostAtom.Mana, is CostAtom.PayLife, is CostAtom.Mill,
                 is CostAtom.ExileTopOfLibrary,
                 is CostAtom.PutCountersOnSelf, is CostAtom.VariablePermanents, is CostAtom.SacrificeAll,
                 is CostAtom.RevealNotedCreatureType, is CostAtom.Unattach,
@@ -929,9 +954,6 @@ class CostPaymentService(private val services: EngineServices) {
             val manaCost = state.getEntity(sourceId)?.get<CardComponent>()?.manaCost ?: return cost
             return PayCost.Atom(CostAtom.Mana(manaCost))
         }
-
-        private fun life(state: GameState, playerId: EntityId): Int =
-            state.lifeTotal(playerId) // CR 810.9a — team's shared total in Two-Headed Giant
 
         fun cardsInHand(state: GameState, playerId: EntityId, filter: GameObjectFilter, predicateEvaluator: PredicateEvaluator): List<EntityId> {
             val context = PredicateContext(controllerId = playerId)
@@ -965,10 +987,11 @@ class CostPaymentService(private val services: EngineServices) {
             playerId: EntityId,
             filter: GameObjectFilter,
             excludeSelfId: EntityId? = null,
+            sourceId: EntityId? = null,
             predicateEvaluator: PredicateEvaluator
         ): List<EntityId> =
             BattlefieldFilterUtils.findMatchingOnBattlefield(
-                state, filter.youControl(), PredicateContext(controllerId = playerId), excludeSelfId = excludeSelfId,
+                state, filter.youControl(), PredicateContext(controllerId = playerId, sourceId = sourceId), excludeSelfId = excludeSelfId,
                 predicateEvaluator = predicateEvaluator
             )
 
@@ -1021,11 +1044,12 @@ class CostPaymentService(private val services: EngineServices) {
             playerId: EntityId,
             atom: CostAtom.RemoveCounters,
             removals: List<DistributedCounterRemoval>,
+            sourceId: EntityId?,
             predicateEvaluator: PredicateEvaluator
         ): CostPaymentExecution {
             if (removals.isEmpty()) return CostPaymentExecution(state, emptyList(), success = true)
             val projected = state.projectedState
-            val ctx = PredicateContext(controllerId = playerId)
+            val ctx = PredicateContext(controllerId = playerId, sourceId = sourceId)
             val atomCounterType = atom.counterType
             var newState = state
             val events = mutableListOf<GameEvent>()

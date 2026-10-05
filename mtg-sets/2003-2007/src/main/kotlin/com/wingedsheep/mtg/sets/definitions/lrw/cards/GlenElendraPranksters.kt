@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * to its owner's hand.
  *
  * The blue half of the [DreamspoilerWitches] cycle: the same `triggerRestriction`
- * ([Conditions.IsNotYourTurn]) over a different payoff, here rebuying your own enters-the-
+ * ([Conditions.IsOpponentsTurn]) over a different payoff, here rebuying your own enters-the-
  * battlefield creatures at instant speed.
  *
  * The bounce targets a creature *you* control, and it goes to its **owner's** hand — a creature you
@@ -38,7 +38,7 @@ val GlenElendraPranksters = card("Glen Elendra Pranksters") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.May(Effects.ReturnToHand(creature))
         description = "Whenever you cast a spell during an opponent's turn, you may return target " +

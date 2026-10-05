@@ -8,6 +8,7 @@ import com.wingedsheep.engine.handlers.PipelineState
 import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.handlers.effects.library.ChooseCreatureTypePipelineExecutor
 import com.wingedsheep.engine.state.ComponentContainer
+import com.wingedsheep.engine.state.beginResolutionControl
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.*
@@ -80,12 +81,13 @@ internal class AbilityResolver(
                 state, targetsComponent.targets, sourceColors, sourceSubtypes,
                 abilityComponent.controllerId, targetsComponent.targetRequirements,
                 sourceId = abilityComponent.sourceId,
-                targetingSourceType = TargetingSourceType.ABILITY,
+                targetingSourceType = TargetingSourceType.TRIGGERED_ABILITY,
                 xValue = abilityComponent.xValue,
                 triggeringEntityId = abilityComponent.triggerContext?.triggeringEntityId,
                 triggeringPlayerId = abilityComponent.triggerContext?.triggeringPlayerId,
                 targetEntryStamps = targetsComponent.targetEntryStamps,
                 storedCollections = abilityComponent.carriedPipeline?.storedCollections ?: emptyMap(),
+                resolution = context,
             )
             if (validTargets.isEmpty()) {
                 // Fizzle - remove ability entity
@@ -106,8 +108,9 @@ internal class AbilityResolver(
         }
 
         // Execute the effect
-        return executeThenLeaveStack(
-            state, abilityId, abilityComponent.effect, context,
+        val started = state.beginResolutionControl(abilityId)
+        val result = executeThenLeaveStack(
+            started.state, abilityId, abilityComponent.effect, context,
             resolvedEvents = listOf(
                 AbilityResolvedEvent(
                     abilityComponent.sourceId,
@@ -115,6 +118,7 @@ internal class AbilityResolver(
                 )
             ) + sagaChapterResolvedEvents(abilityComponent)
         )
+        return result.copy(events = started.events + result.events)
     }
 
     /**
@@ -148,8 +152,11 @@ internal class AbilityResolver(
                 abilityComponent.controllerId, targetsComponent.targetRequirements,
                 sourceId = abilityComponent.sourceId,
                 xValue = abilityComponent.xValue,
-                targetingSourceType = TargetingSourceType.ABILITY,
-                targetEntryStamps = targetsComponent.targetEntryStamps
+                targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY,
+                targetEntryStamps = targetsComponent.targetEntryStamps,
+                sourceBattlefieldTimestamp = abilityComponent.sourceBattlefieldTimestamp,
+                objectReferences = abilityComponent.objectReferences,
+                lastKnownSourceSnapshot = abilityComponent.lastKnownSourceSnapshot,
             )
             if (validTargets.isEmpty()) {
                 return abilityFizzled(
@@ -168,8 +175,9 @@ internal class AbilityResolver(
         val context = activatedAbilityContext(
             state, abilityId, abilityComponent, activatedReqs, activatedTargets, alignedActivatedTargets
         )
-        return executeThenLeaveStack(
-            state, abilityId, abilityComponent.effect, context,
+        val started = state.beginResolutionControl(abilityId)
+        val result = executeThenLeaveStack(
+            started.state, abilityId, abilityComponent.effect, context,
             resolvedEvents = listOf(
                 AbilityResolvedEvent(
                     abilityComponent.sourceId,
@@ -177,6 +185,7 @@ internal class AbilityResolver(
                 )
             )
         )
+        return result.copy(events = started.events + result.events)
     }
 
     private fun activatedAbilityContext(

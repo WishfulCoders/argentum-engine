@@ -92,6 +92,9 @@ export function applyStateDelta(
     winnerId: delta.winnerId !== undefined ? delta.winnerId : current.winnerId,
     // Carried forward: a null delta value means unchanged (the game never reverts to neither, CR 731.1).
     dayNight: delta.dayNight ?? current.dayNight ?? null,
+    // Fixed for the whole game, so only the full state carries it.
+    attackMode: current.attackMode ?? null,
+    voidActive: delta.voidActive ?? current.voidActive ?? false,
     combat,
     gameLog,
     youAreHijacking: delta.youAreHijacking ?? null,
@@ -99,7 +102,7 @@ export function applyStateDelta(
     hotseat: delta.hotseat ?? false,
     // Carried forward: the server omits these from a delta when unchanged, and rebuilding the
     // state object without them would silently blank the yields panel / deck tracker.
-    activeYields: current.activeYields ?? [],
+    activeYields: delta.activeYields ?? current.activeYields ?? [],
     deck: delta.deck ?? current.deck ?? [],
   }
 }

@@ -3036,9 +3036,9 @@
         }
     ],
     "metadata": {
-        "collectorNumber": "7",
+        "collectorNumber": "11",
         "rarity": "UNCOMMON",
-        "artist": "Daren Bader",
+        "artist": "Ron Spencer",
         "flavorText": "It hunts the hunters of the skies.",
         "imageUri": "https://cards.scryfall.io/normal/front/5/8/58017ff1-74d2-4be2-976a-8dff53e16150.jpg?1562529448"
     },
@@ -3228,9 +3228,9 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "86",
+        "collectorNumber": "91",
         "rarity": "UNCOMMON",
-        "artist": "Wayne England",
+        "artist": "Justin Sweet",
         "flavorText": "A barbarian's heart knows a fire no amount of blood can quench.",
         "imageUri": "https://cards.scryfall.io/normal/front/d/6/d6ed7866-9eef-49c3-9b9e-4247b6e71a6c.jpg?1562535239"
     },
@@ -3655,7 +3655,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "DEPLETION",
-                    "count": 2147483647,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2147483647
+                    },
                     "target": "Self"
                 }
             }
@@ -4553,9 +4556,9 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "121",
+        "collectorNumber": "124",
         "rarity": "UNCOMMON",
-        "artist": "Arnie Swekel",
+        "artist": "Carl Critchlow",
         "flavorText": "The Mirari's influence turned even the gentlest creatures into savage behemoths.",
         "imageUri": "https://cards.scryfall.io/normal/front/5/2/52a1758c-849a-4de3-b674-857c3c9bf399.jpg?1562529070"
     },
@@ -4797,8 +4800,8 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "40",
-        "artist": "Wayne England",
+        "collectorNumber": "39",
+        "artist": "Richard Sardinha",
         "flavorText": "Aven scouts admired the kites' ability to identify and|track their prey. Commanders admired their ability to|knock that prey out of the sky.",
         "imageUri": "https://cards.scryfall.io/normal/front/a/6/a6bc8655-ae27-40be-8d61-e80a5924e955.jpg?1562533105"
     },
@@ -6011,9 +6014,9 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "45",
+        "collectorNumber": "48",
         "rarity": "UNCOMMON",
-        "artist": "Glen Angus",
+        "artist": "Thomas M. Baxa",
         "flavorText": "Rootwater showed him wonders that air dwellers could scarcely comprehend.",
         "imageUri": "https://cards.scryfall.io/normal/front/7/5/7515187f-4821-400d-b78f-cec173df6b84.jpg?1562530669"
     },
@@ -6169,7 +6172,7 @@
         }
     },
     "metadata": {
-        "collectorNumber": "47",
+        "collectorNumber": "49",
         "artist": "Eric Peterson",
         "flavorText": "\"Limitless power is glorious until you gain limitless understanding.\"\n—Ixidor",
         "imageUri": "https://cards.scryfall.io/normal/front/6/5/65b03b40-671f-4973-8d75-c3fa878ef603.jpg?1562529750"
@@ -7537,9 +7540,9 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "77",
+        "collectorNumber": "78",
         "rarity": "UNCOMMON",
-        "artist": "Thomas M. Baxa",
+        "artist": "Greg Hildebrandt",
         "flavorText": "It wields the banners of eighteen conquered armies.",
         "imageUri": "https://cards.scryfall.io/normal/front/e/6/e6b3bcfe-be82-458b-ba59-ecb84436d747.jpg?1562536237"
     },
@@ -7790,8 +7793,8 @@
         }
     ],
     "metadata": {
-        "collectorNumber": "139",
-        "artist": "Carl Critchlow",
+        "collectorNumber": "132",
+        "artist": "Mark Tedin",
         "flavorText": "The elite among the Wirewood elves are not the most agile—they're the most massive.",
         "imageUri": "https://cards.scryfall.io/normal/front/e/8/e8676b1f-e37c-4ae1-9dbe-d000369fa422.jpg?1562536268"
     },

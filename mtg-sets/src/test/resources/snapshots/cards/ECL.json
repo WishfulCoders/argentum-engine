@@ -1669,7 +1669,7 @@
                 "id": "Boggart Cursecrafter:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
-                    "filter": "creature Goblin ctrl:you",
+                    "filter": "permanent Goblin ctrl:you",
                     "from": "Battlefield",
                     "to": "Graveyard"
                 },
@@ -2701,7 +2701,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "MINUS_ONE_MINUS_ONE",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "triggerRestriction": {
@@ -4286,7 +4289,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "MINUS_ONE_MINUS_ONE",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "interveningIf": {
@@ -6421,7 +6427,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "MINUS_ONE_MINUS_ONE",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "triggerRestriction": {
@@ -6766,18 +6775,18 @@
             "type": "Composite",
             "effects": [
                 {
-                    "type": "MarkExileOnDeath",
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 5
+                    },
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
                     }
                 },
                 {
-                    "type": "DealDamage",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 5
-                    },
+                    "type": "MarkExileOnDeath",
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
@@ -7225,46 +7234,52 @@
                     "type": "Gated",
                     "gate": "Gate.MayDecide",
                     "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "FromZone",
-                                    "zone": "Hand"
-                                },
-                                "storeAs": "hand"
-                            },
-                            {
-                                "type": "SelectFromCollection",
-                                "from": "hand",
-                                "selection": {
-                                    "type": "ChooseExactly",
-                                    "count": {
-                                        "type": "Fixed",
-                                        "amount": 1
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.DoAction",
+                            "action": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromZone",
+                                            "zone": "Hand"
+                                        },
+                                        "storeAs": "hand"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "hand",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "discarded",
+                                        "prompt": "Choose 1 card to discard"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "discarded",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        },
+                                        "moveType": "Discard"
                                     }
-                                },
-                                "storeSelected": "discarded",
-                                "prompt": "Choose 1 card to discard"
-                            },
-                            {
-                                "type": "MoveCollection",
-                                "from": "discarded",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Graveyard"
-                                },
-                                "moveType": "Discard"
-                            },
-                            {
-                                "type": "DrawCards",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                }
+                                ]
                             }
-                        ]
+                        },
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
                     },
                     "descriptionOverride": "You may discard a card. If you do, draw a card."
                 }
@@ -7287,46 +7302,52 @@
                     "type": "Gated",
                     "gate": "Gate.MayDecide",
                     "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "FromZone",
-                                    "zone": "Hand"
-                                },
-                                "storeAs": "hand"
-                            },
-                            {
-                                "type": "SelectFromCollection",
-                                "from": "hand",
-                                "selection": {
-                                    "type": "ChooseExactly",
-                                    "count": {
-                                        "type": "Fixed",
-                                        "amount": 1
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.DoAction",
+                            "action": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromZone",
+                                            "zone": "Hand"
+                                        },
+                                        "storeAs": "hand"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "hand",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "discarded",
+                                        "prompt": "Choose 1 card to discard"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "discarded",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        },
+                                        "moveType": "Discard"
                                     }
-                                },
-                                "storeSelected": "discarded",
-                                "prompt": "Choose 1 card to discard"
-                            },
-                            {
-                                "type": "MoveCollection",
-                                "from": "discarded",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Graveyard"
-                                },
-                                "moveType": "Discard"
-                            },
-                            {
-                                "type": "DrawCards",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                }
+                                ]
                             }
-                        ]
+                        },
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
                     },
                     "descriptionOverride": "You may discard a card. If you do, draw a card."
                 }
@@ -9763,7 +9784,10 @@
                         {
                             "type": "RemoveCounters",
                             "counterType": "MINUS_ONE_MINUS_ONE",
-                            "count": 1,
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
                             "target": "Self"
                         }
                     ]
@@ -12379,7 +12403,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "MINUS_ONE_MINUS_ONE",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "triggerRestriction": {
@@ -12899,7 +12926,7 @@
                     },
                     "id": "t0"
                 },
-                "triggerRestriction": "IsNotYourTurn"
+                "triggerRestriction": "IsOpponentsTurn"
             }
         ]
     },
@@ -14267,7 +14294,10 @@
                 "effect": {
                     "type": "RemoveCounters",
                     "counterType": "MINUS_ONE_MINUS_ONE",
-                    "count": 1,
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
                     "target": "Self"
                 },
                 "triggerRestriction": {
@@ -16025,7 +16055,10 @@
                     "action": {
                         "type": "RemoveCounters",
                         "counterType": "MINUS_ONE_MINUS_ONE",
-                        "count": 1,
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
                         "target": "Self"
                     },
                     "reflexiveEffect": {
@@ -18404,7 +18437,7 @@
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
-                        "baseFilter": "creature Merfolk ctrl:you",
+                        "baseFilter": "permanent Merfolk ctrl:you",
                         "excludeSelf": true
                     },
                     "id": "t0"
@@ -19327,7 +19360,7 @@
                     "type": "Surveil",
                     "count": 2
                 },
-                "triggerRestriction": "IsNotYourTurn"
+                "triggerRestriction": "IsOpponentsTurn"
             }
         ]
     },
@@ -19602,7 +19635,7 @@
                         }
                     }
                 },
-                "triggerRestriction": "IsNotYourTurn"
+                "triggerRestriction": "IsOpponentsTurn"
             }
         ]
     },

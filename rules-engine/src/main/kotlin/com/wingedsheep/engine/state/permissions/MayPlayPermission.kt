@@ -28,6 +28,9 @@ import kotlinx.serialization.Serializable
  * @param condition Optional gate re-evaluated on every query. When present, the permission is
  *   only honored while the condition holds.
  * @param withAnyManaType If true, mana of any type can be spent to cast (Taster of Wares).
+ * @param colorlessAsAnyColor If true, colorless mana may be spent as though it were mana of any
+ *   color to cast (Abstruse Appropriation) — read into
+ *   [com.wingedsheep.engine.mechanics.mana.SpellPaymentContext.colorlessAsAnyColor].
  * @param landEntersTapped If true, a land card played via this permission enters the battlefield
  *   tapped. Used by Lightstall Inquisitor-style exile-from-hand effects whose "lands played
  *   this way enter tapped" clause must be enforced on top of the played card's intrinsic ETB
@@ -48,6 +51,7 @@ data class MayPlayPermission(
     val sourceId: EntityId? = null,
     val condition: Condition? = null,
     val withAnyManaType: Boolean = false,
+    val colorlessAsAnyColor: Boolean = false,
     /**
      * If true, cards played via this permission may be cast at instant speed — "as though they
      * had flash" (CR 702.8) — even if they are sorceries, creatures, or other non-instant cards.
@@ -179,6 +183,15 @@ data class MayPlayPermission(
      * Ignored for a card with no back face, so it is safe on a permission covering a mixed pile.
      */
     val castTransformed: Boolean = false,
+    /**
+     * When true, playing any one card in [cardIds] through this permission revokes it for the
+     * whole group — "you may cast an instant or sorcery spell from among those cards" (Chandra,
+     * Hope's Beacon). Mirrors [com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
+     * .singleUse]. Consumed by [consumeSingleUseMayPlayFor] at the cast site (`SpellCaster`) and the
+     * land-play site (`PlayLandHandler`), regardless of [permanent]; a card leaving exile any other
+     * way only drops that card, as for an ordinary grant.
+     */
+    val singleUse: Boolean = false,
     val timestamp: Long
 ) {
     init {

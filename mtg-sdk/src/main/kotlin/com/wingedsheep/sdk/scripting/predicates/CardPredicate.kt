@@ -13,6 +13,8 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
+import com.wingedsheep.sdk.scripting.values.CardNumericProperty
 
 /**
  * Predicates for matching card properties (static characteristics).
@@ -191,6 +193,13 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
         override val description: String = "nonlegendary"
     }
 
+    /** Snow supertype (CR 205.4g) — "snow land", "snow permanent", "snow spell". */
+    @SerialName("IsSnow")
+    @Serializable
+    data object IsSnow : CardPredicate {
+        override val description: String = "snow"
+    }
+
     // =============================================================================
     // Color Predicates
     // =============================================================================
@@ -250,6 +259,17 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     @Serializable
     data object IsMonocolored : CardPredicate {
         override val description: String = "monocolored"
+    }
+
+    /**
+     * Exactly [count] colors (CR 105.2). "a spell that's exactly two colors" (Guildpact Paragon);
+     * wrap in [Not] for "that isn't exactly two colors" (Invasion of Ravnica). `count = 1` is
+     * [IsMonocolored] — prefer that spelling there.
+     */
+    @SerialName("HasExactlyColors")
+    @Serializable
+    data class HasExactlyColors(val count: Int) : CardPredicate {
+        override val description: String = "exactly $count colors"
     }
 
     // =============================================================================
@@ -596,6 +616,24 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     }
 
     /**
+     * Power at most a [DynamicAmount] resolved when the predicate is checked — the power sibling of
+     * [ManaValueAtMostDynamic] and the open-ended counterpart of the fixed [PowerAtMost] ("power X or
+     * less, where X is the number of lands you control" — Invasion of Lorwyn). On a target filter
+     * the cap is read when targets are chosen and again on resolution (CR 608.2b). An object with
+     * no power (a noncreature spell) never matches, whatever the amount resolves to.
+     */
+    @SerialName("PowerAtMostDynamic")
+    @Serializable
+    data class PowerAtMostDynamic(val amount: DynamicAmount) : CardPredicate {
+        override val description: String = "with power ${amount.description} or less"
+
+        override fun applyTextReplacement(replacer: TextReplacer): CardPredicate {
+            val newAmount = amount.applyTextReplacement(replacer)
+            return if (newAmount === amount) this else copy(amount = newAmount)
+        }
+    }
+
+    /**
      * Toughness *exactly* equal to a [DynamicAmount] resolved when the predicate is checked — the
      * dynamic counterpart of [ToughnessEquals]. An object with no toughness never matches.
      */
@@ -858,6 +896,21 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     data class PowerAtMostEntity(val reference: EffectTarget.SingleEntity) : CardPredicate {
         override val description: String = "with power less than or equal to ${reference.description}"
         override fun applyTextReplacement(replacer: TextReplacer): CardPredicate = this
+    }
+
+    /** Compares this object's numeric property with a late-bound amount (including another entity's property). */
+    @SerialName("CompareNumericProperty")
+    @Serializable
+    data class CompareNumericProperty(
+        val property: CardNumericProperty,
+        val operator: ComparisonOperator,
+        val amount: DynamicAmount,
+    ) : CardPredicate {
+        override val description: String = "with ${property.description} ${operator.phrase} ${amount.description}"
+        override fun applyTextReplacement(replacer: TextReplacer): CardPredicate {
+            val replaced = amount.applyTextReplacement(replacer)
+            return if (replaced !== amount) copy(amount = replaced) else this
+        }
     }
 
     /**
@@ -1268,6 +1321,35 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     @Serializable
     data object HasActivatedAbility : CardPredicate {
         override val description: String = "with an activated ability"
+    }
+
+    /**
+     * Matches a card with a cycling ability — plain cycling or any typecycling variant
+     * (typecycling is a variant of cycling, CR 702.29e). Backed by the precomputed
+     * `CardComponent.hasCycling` flag stamped from the card's printed keyword abilities. Used by
+     * Rooting Moloch: "exile target card with a cycling ability from your graveyard."
+     */
+    @SerialName("HasCycling")
+    @Serializable
+    data object HasCycling : CardPredicate {
+        override val description: String = "with a cycling ability"
+    }
+
+    /**
+     * Matches a land one of whose mana abilities could produce colorless mana ({C}) — Wastes, an
+     * Eldrazi Temple, a land granted "{T}: Add {C}". Like [com.wingedsheep.sdk.scripting.values.ManaColorSet.LandsCouldProduce]
+     * it reads the abilities' effects, not their costs or whether the land is tapped (Reflecting
+     * Pool / Fellwar Stone rulings), and a land that has lost all abilities produces nothing. A
+     * nonland never matches.
+     *
+     * The colorless half of "add one mana of any **type** that a land you control could produce"
+     * (Naga Vitalist): the colors come from `ManaColorSet.LandsCouldProduce`, and `{C}` is a
+     * second mana ability gated on `Exists(Land.youControl().couldProduceColorlessMana())`.
+     */
+    @SerialName("CouldProduceColorlessMana")
+    @Serializable
+    data object CouldProduceColorlessMana : CardPredicate {
+        override val description: String = "that could produce colorless mana"
     }
 
     /**

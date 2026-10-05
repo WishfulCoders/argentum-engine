@@ -32,6 +32,13 @@ sealed interface StatePredicate {
     @Serializable
     sealed interface History : StatePredicate
 
+    /** A battlefield permanent currently has a mana ability, whether or not it can be activated. */
+    @SerialName("HasManaAbility")
+    @Serializable
+    data object HasManaAbility : Entity {
+        override val description: String = "with a mana ability"
+    }
+
     // =============================================================================
     // Tap State (Entity)
     // =============================================================================
@@ -178,6 +185,15 @@ sealed interface StatePredicate {
      * the permanent was attacking, never whom. Fails closed when there's no controller context to
      * scope "you" against.
      */
+    /** Attacking the player, planeswalker, or battle defended by the reference's controller/team. */
+    @SerialName("IsAttackingDefenderOf")
+    @Serializable
+    data class IsAttackingDefenderOf(
+        val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity
+    ) : Entity {
+        override val description: String = "attacking the defender of ${reference.description}"
+    }
+
     @SerialName("IsAttackingYouOrYourPlaneswalkers")
     @Serializable
     data object IsAttackingYouOrYourPlaneswalkers : Entity {
@@ -279,6 +295,26 @@ sealed interface StatePredicate {
     }
 
     /**
+     * Blocking the creature [reference] names, read live from combat state (CR 509) — "each
+     * creature blocking **it**", where "it" is a role the ability names rather than its source or a
+     * loop variable: Ib Halfheart, Goblin Tactician's "whenever another Goblin you control becomes
+     * blocked, sacrifice it. If you do, it deals 4 damage to each creature blocking it" reads
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity].
+     *
+     * Live, not remembered: once the referenced creature leaves combat its blockers stop matching.
+     * To hold the group across a removal in the same resolution ("sacrifice it. If you do, … each
+     * creature blocking it"), gather it into a collection *before* the removal. A reference that
+     * resolves to nothing matches nothing; inert in group/projection and trigger-gating contexts.
+     */
+    @SerialName("IsBlockingEntity")
+    @Serializable
+    data class IsBlockingEntity(
+        val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity
+    ) : Entity {
+        override val description: String = "blocking ${reference.description}"
+    }
+
+    /**
      * A token that was *created by the effect's source permanent* — its provenance creator id (the
      * `CreatedByComponent` stamped when a `CreateTokenEffect` with `stampCreator = true` made it)
      * equals the source entity supplied in the evaluation context. Source-relative; yields false
@@ -325,6 +361,17 @@ sealed interface StatePredicate {
     @Serializable
     data object EnteredThisTurn : Entity {
         override val description: String = "entered the battlefield this turn"
+    }
+
+    /**
+     * One of its activated abilities was activated this turn — loyalty, mana, crew or any other
+     * (Cut Short's "planeswalker that was activated this turn"). Stays true after the ability
+     * leaves the stack or the permanent loses the ability.
+     */
+    @SerialName("ActivatedThisTurn")
+    @Serializable
+    data object ActivatedThisTurn : Entity {
+        override val description: String = "was activated this turn"
     }
 
     // =============================================================================
@@ -538,9 +585,16 @@ sealed interface StatePredicate {
         override val description: String = "dealt damage by this creature this turn"
     }
 
+    /** Controlled by its current controller without interruption since this turn began, regardless of haste. */
+    @SerialName("ControlledSinceTurnBegan")
+    @Serializable
+    data object ControlledSinceTurnBegan : History {
+        override val description: String = "controlled continuously since the beginning of the turn"
+    }
+
     /**
      * Was declared as an attacker at least once during the current turn (set during the
-     * declare-attackers step, CR 508.1). Backed by the controller's
+     * declare-attackers step, CR 508.1). Backed by every player's
      * [com.wingedsheep.engine.state.components.combat.PlayerAttackersThisTurnComponent] (which
      * the engine already maintains for raid / "attacked this turn" tribal triggers), so it
      * does not need a separate per-entity marker. Survives leaving combat / blockers being
@@ -807,11 +861,22 @@ sealed interface StatePredicate {
     // Counters (Entity)
     // =============================================================================
 
-    /** Has a counter of the specified type */
+    /**
+     * Has at least [minCount] counters of the specified type. The default `1` is "with a [kind]
+     * counter on it"; a larger [minCount] is the threshold form, "creatures you control with three
+     * or more +1/+1 counters on them" (Runadi, Behemoth Caller) — the filter-level twin of
+     * `Conditions.SourceCounterCountAtLeast`.
+     */
     @SerialName("HasCounter")
     @Serializable
-    data class HasCounter(val counterType: CounterType) : Entity {
-        override val description: String = "with a ${counterType.printed} counter"
+    data class HasCounter(val counterType: CounterType, val minCount: Int = 1) : Entity {
+        init {
+            require(minCount >= 1) { "HasCounter.minCount must be at least 1, was $minCount" }
+        }
+
+        override val description: String =
+            if (minCount == 1) "with a ${counterType.printed} counter"
+            else "with $minCount or more ${counterType.printed} counters"
     }
 
     /** Has any counter of any type */
@@ -1130,6 +1195,26 @@ sealed interface StatePredicate {
     }
 
     // =============================================================================
+    // Monstrous (Entity)
+    // =============================================================================
+
+    /**
+     * Permanent that currently has the monstrous designation (CR 701.37b, Theros). Set by
+     * `Effects.BecomeMonstrous` as the last step of `Effects.Monstrosity(n)`.
+     *
+     * Component-backed (the engine's `MonstrousComponent`) for the same reason as [IsRenowned]:
+     * sticky until the permanent leaves the battlefield, neither an ability nor a copiable value.
+     *
+     * Read by monstrosity's own "if this permanent isn't monstrous" (negated) and by the payoffs
+     * "as long as this creature is monstrous" (Sinuous Vermin, Domesticated Hydra, Chillerpillar).
+     */
+    @SerialName("IsMonstrous")
+    @Serializable
+    data object IsMonstrous : Entity {
+        override val description: String = "monstrous"
+    }
+
+    // =============================================================================
     // Saddle (Entity)
     // =============================================================================
 
@@ -1225,6 +1310,19 @@ sealed interface StatePredicate {
     @Serializable
     data class WasCastFromZone(val zone: com.wingedsheep.sdk.core.Zone) : Entity {
         override val description: String = "cast from ${zone.displayName}"
+    }
+
+    /**
+     * A spell or ability on the stack with exactly one chosen target — the "with a single target"
+     * qualifier (Hydroelectric Specimen's "target instant or sorcery spell with a single target").
+     * Counts the targets that were *chosen*, not the ones still legal: per the Hydroelectric
+     * Specimen ruling, a spell with several targets doesn't qualify even after all but one of them
+     * have become illegal. An object with no targets never matches.
+     */
+    @SerialName("HasSingleTarget")
+    @Serializable
+    data object HasSingleTarget : Entity {
+        override val description: String = "with a single target"
     }
 
     /**

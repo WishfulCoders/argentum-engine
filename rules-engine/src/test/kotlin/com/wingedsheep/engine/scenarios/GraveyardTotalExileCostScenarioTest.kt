@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -16,11 +17,12 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.costs.CardMeasure
 import io.kotest.assertions.withClue
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
  * `CostAtom.ExileFromGraveyardForTotal` — "exile any number of `<filter>` cards from your graveyard
- * whose summed `<measure>` is N or more" — as a primitive, independent of the one card that prints it.
+ * whose totalled `<measure>` is N or more" — as a primitive, independent of the one card that prints it.
  *
  * It is the unnamed, **filtered** generalization of collect evidence (CR 701.59a, the same shape
  * hard-wired to "any card" and "total mana value"), and both route through the one shared
@@ -90,6 +92,19 @@ class GraveyardTotalExileCostScenarioTest : ScenarioTestBase() {
         typeLine = "Artifact"
     }
 
+    /** An artifact creature: two card types on one card. */
+    private val golem = card("Test Type Golem") {
+        manaCost = "{3}"
+        typeLine = "Artifact Creature — Golem"
+        power = 2
+        toughness = 2
+    }
+
+    /** A land: a third card type, and no mana cost at all. */
+    private val waste = card("Test Type Waste") {
+        typeLine = "Land"
+    }
+
     // --- The two costs under test --------------------------------------------------------------
 
     /** The bare atom: black-pip measure, **no** filter, so every graveyard card is selectable. */
@@ -111,6 +126,26 @@ class GraveyardTotalExileCostScenarioTest : ScenarioTestBase() {
         typeLine = "Artifact"
         activatedAbility {
             cost = Costs.ExileFromGraveyardForColoredSymbols(4, Color.BLACK)
+            effect = Effects.GainLife(3)
+        }
+    }
+
+    /** The union measure: "with three or more card types among them". */
+    private val typeVault = card("Test Type Vault") {
+        manaCost = "{2}"
+        typeLine = "Artifact"
+        activatedAbility {
+            cost = Costs.ExileFromGraveyardForTotal(minTotal = 3, measure = CardMeasure.DistinctCardTypes)
+            effect = Effects.GainLife(3)
+        }
+    }
+
+    /** The union measure as a *spell's* mandatory additional cost, cast from hand. */
+    private val typeRite = card("Test Type Rite") {
+        manaCost = "{0}"
+        typeLine = "Sorcery"
+        additionalCost(Costs.additional.ExileOtherCardsWithCardTypes(3))
+        spell {
             effect = Effects.GainLife(3)
         }
     }
@@ -162,7 +197,7 @@ class GraveyardTotalExileCostScenarioTest : ScenarioTestBase() {
     }
 
     init {
-        listOf(trio, duo, hybrid, phyrexian, ember, rock, vault, blackVault)
+        listOf(trio, duo, hybrid, phyrexian, ember, rock, vault, blackVault, golem, waste, typeVault, typeRite)
             .forEach { cardRegistry.register(it) }
 
         // -----------------------------------------------------------------------------------
@@ -326,6 +361,82 @@ class GraveyardTotalExileCostScenarioTest : ScenarioTestBase() {
             )
             withClue("the two black pips in the pool are all that count; the rest are invisible") {
                 game.actionFor("Test Black Vault") shouldBe null
+            }
+        }
+
+        // -----------------------------------------------------------------------------------
+        // The union measure: card types *among* the chosen cards, not summed per card
+        // -----------------------------------------------------------------------------------
+
+        test("card types are a union — artifact creatures and creatures never show a third type") {
+            val game = setUp(
+                "Test Type Vault",
+                listOf("Test Type Golem", "Test Pip Rock", "Test Pip Trio", "Test Pip Duo", "Test Type Golem"),
+            )
+            withClue("five cards, two per golem, but only artifact and creature among them") {
+                game.actionFor("Test Type Vault") shouldBe null
+            }
+        }
+
+        test("the union payload ships each card's types, and a selection is priced by their union") {
+            val game = setUp(
+                "Test Type Vault",
+                listOf("Test Type Golem", "Test Pip Rock", "Test Pip Trio", "Test Type Waste"),
+            )
+            val info = game.actionFor("Test Type Vault")!!.additionalCostInfo!!
+            info.exileMinTotalWeight shouldBe 3
+            info.exileWeightUnit shouldBe "card types"
+            info.exileCardTypes[game.graveyardCard("Test Type Golem")] shouldBe listOf("ARTIFACT", "CREATURE")
+            info.exileCardTypes[game.graveyardCard("Test Type Waste")] shouldBe listOf("LAND")
+
+            val twoTypesInThreeCards = listOf(
+                game.graveyardCard("Test Type Golem"),
+                game.graveyardCard("Test Pip Rock"),
+                game.graveyardCard("Test Pip Trio"),
+            )
+            withClue("three cards whose weights would sum to 4 still show only two types") {
+                (game.activate("Test Type Vault", twoTypesInThreeCards).error ?: "")
+                    .startsWith("Those cards don't pay this cost") shouldBe true
+                game.exileIds().isEmpty() shouldBe true
+            }
+        }
+
+        test("as a spell's additional cost, the cast carries the union picker and checks the selection") {
+            var builder = scenario()
+                .withPlayers("You", "Them")
+                .withCardInHand(1, "Test Type Rite")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+            listOf("Test Type Golem", "Test Pip Trio", "Test Type Waste").forEach { builder = builder.withCardInGraveyard(1, it) }
+            val game = builder.build()
+            val rite = game.findCardsInHand(1, "Test Type Rite").first()
+            val cast = game.getLegalActions(1).first { (it.action as? CastSpell)?.cardId == rite }
+            val info = cast.additionalCostInfo!!
+            info.costType shouldBe "ExileForTotal"
+            info.exileMinTotalWeight shouldBe 3
+            info.exileCardTypes[game.graveyardCard("Test Type Waste")] shouldBe listOf("LAND")
+
+            fun castWith(exiled: List<EntityId>) = game.execute(
+                CastSpell(game.player1Id, rite, additionalCostPayment = AdditionalCostPayment(exiledCards = exiled))
+            )
+            withClue("an artifact creature and a creature show two types, short of three") {
+                castWith(listOf(game.graveyardCard("Test Type Golem"), game.graveyardCard("Test Pip Trio")))
+                    .error.shouldNotBeNull()
+                game.exileIds().isEmpty() shouldBe true
+            }
+            castWith(listOf(game.graveyardCard("Test Type Golem"), game.graveyardCard("Test Type Waste")))
+                .error shouldBe null
+            game.exileNames().toSet() shouldBe setOf("Test Type Golem", "Test Type Waste")
+        }
+
+        test("the engine's own pick covers the types with the fewest cards") {
+            val game = setUp(
+                "Test Type Vault",
+                listOf("Test Pip Rock", "Test Pip Trio", "Test Type Golem", "Test Type Waste"),
+            )
+            game.activate("Test Type Vault").error shouldBe null
+            withClue("the artifact creature shows two types at once, the land the third") {
+                game.exileNames().toSet() shouldBe setOf("Test Type Golem", "Test Type Waste")
             }
         }
     }

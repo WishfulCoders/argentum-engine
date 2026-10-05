@@ -65,7 +65,11 @@ data class ActiveFloatingEffect(
      * [Duration.EndOfYourNextTurn] (see its KDoc for the rationale); `null` for every other
      * duration, which has its own expiry hook.
      */
-    val expiresAfterTurn: Int? = null
+    val expiresAfterTurn: Int? = null,
+    /** Objects referred to by this effect, captured before later zone changes. Used for source choices. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val referencedObjects: List<com.wingedsheep.engine.state.ObjectRef> = emptyList()
 )
 
 /**
@@ -129,6 +133,18 @@ data class FloatingEffectData(
  */
 @Serializable
 sealed interface SerializableModification {
+    /** Rule-changing declaration policy; does not alter any permanent characteristic. */
+    @Serializable
+    data object RandomizedBlockerPiles : SerializableModification
+
+    /** A rules restriction, retaining battlefield visits rather than stable card identities. */
+    @Serializable
+    data class CantBeBlockedExceptByCollection(
+        val blockers: Set<com.wingedsheep.engine.state.ObjectRef>,
+        val alternativeFilter: GameObjectFilter
+    ) : SerializableModification
+
+
     /**
      * Build an [EffectContext] from this modification's stored data (targets, X value,
      * named targets, source id), or `null` if this modification type carries no such data.
@@ -505,7 +521,10 @@ sealed interface SerializableModification {
          * unanswered instance is treated as **declined**, so a damage path that hasn't run the
          * choice pre-pass never redirects on the controller's behalf.
          */
-        val optional: Boolean = false
+        val optional: Boolean = false,
+        val chosenSource: com.wingedsheep.engine.handlers.effects.combat.ChosenDamageSource? = null,
+        val protectedRef: com.wingedsheep.engine.state.ObjectRef? = null,
+        val redirectToRef: com.wingedsheep.engine.state.ObjectRef? = null
     ) : SerializableModification
 
     /**
@@ -657,6 +676,17 @@ sealed interface SerializableModification {
     @Serializable
     data object RemoveAllAbilities : SerializableModification
 
+    /** A chosen-source shield leaving a fixed remainder of its next qualifying damage instance. */
+    @Serializable
+    data class PreventNextDamageLeavingAmount(
+        val damageSourceId: EntityId,
+        val sourceName: String,
+        val amountToLeave: Int,
+        val eligibleSource: GameObjectFilter,
+        val combatOnly: Boolean,
+        val permanentSpell: Boolean = false
+    ) : SerializableModification
+
     /**
      * Single-instance prevention shield tied to a source: the next time [damageSourceId]
      * would deal damage to an affected entity this turn, prevent that damage. An empty affected
@@ -678,7 +708,14 @@ sealed interface SerializableModification {
          * full — but the shield is still consumed and its linked reaction still fires with the
          * captured amount (Eye for an Eye). Defaults to true (ordinary deflection).
          */
-        val preventDamage: Boolean = true
+        val preventDamage: Boolean = true,
+        /** Only combat damage from the source matches; noncombat damage passes and leaves the shield up. */
+        val combatOnly: Boolean = false,
+        /**
+         * Only damage to a player matches (Ria Ivor: "combat damage to one or more players"); damage
+         * to a permanent passes and leaves the shield up.
+         */
+        val playersOnly: Boolean = false
     ) : SerializableModification
 
     /**
@@ -718,15 +755,17 @@ sealed interface SerializableModification {
     ) : SerializableModification
 
     /**
-     * Turn-duration noncombat-damage amplification (CR 616): every source the effect's controller
-     * controls deals [bonus] additional noncombat damage to any permanent or player this turn.
-     * Combat damage is unaffected; there is no opponent restriction. Read directly during damage
-     * resolution by `DamageUtils.applyStaticDamageAmplification` (not a layer modification). The
-     * effect's [ActiveFloatingEffect.controllerId] identifies whose sources benefit. Installed by
-     * Taii Wakeen, Perfect Shot's "{X}, {T}" ability with [bonus] = the X paid.
+     * Turn-duration damage amplification (CR 616): every damage instance matching [appliesTo] is
+     * increased by [bonus] this turn. [appliesTo]'s source / recipient filters are "you"-relative to
+     * [ActiveFloatingEffect.controllerId]. Read directly during damage resolution by
+     * `DamageUtils.applyStaticDamageAmplification` (not a layer modification). Installed by
+     * `AmplifyDamageThisTurnEffect` — Taii Wakeen, Perfect Shot; Rankle and Torbran.
      */
     @Serializable
-    data class AmplifyNoncombatDamage(val bonus: Int) : SerializableModification
+    data class AmplifyDamage(
+        val bonus: Int,
+        val appliesTo: EventPattern.DamageEvent,
+    ) : SerializableModification
 
     /**
      * Duration-bounded damage-doubling scoped to a single player (CR 616): all damage — any source,
@@ -770,6 +809,8 @@ fun GameState.imageOverrideFor(entityId: EntityId): String? =
  * Convert SerializableModification to Modification for the projector.
  */
 fun SerializableModification.toModification(): Modification = when (this) {
+    SerializableModification.RandomizedBlockerPiles -> Modification.NoOp
+    is SerializableModification.CantBeBlockedExceptByCollection -> Modification.NoOp
     is SerializableModification.SetPowerToughness -> Modification.SetPowerToughness(power, toughness)
     is SerializableModification.SetPowerToughnessDynamic -> Modification.SetPowerToughnessDynamic(power, toughness)
     is SerializableModification.SetPower -> Modification.SetPower(power)
@@ -859,8 +900,9 @@ fun SerializableModification.toModification(): Modification = when (this) {
     is SerializableModification.PreventAllDamageFromSource -> Modification.NoOp
     // PreventNextDamageInstanceFromSource is checked during damage resolution directly (no layer mod)
     is SerializableModification.PreventNextDamageInstanceFromSource -> Modification.NoOp
-    // AmplifyNoncombatDamage doesn't map to a layer modification - it's read during damage resolution directly
-    is SerializableModification.AmplifyNoncombatDamage -> Modification.NoOp
+    is SerializableModification.PreventNextDamageLeavingAmount -> Modification.NoOp
+    // AmplifyDamage doesn't map to a layer modification - it's read during damage resolution directly
+    is SerializableModification.AmplifyDamage -> Modification.NoOp
     // DoubleDamageToPlayer doesn't map to a layer modification - it's read during damage resolution directly
     is SerializableModification.DoubleDamageToPlayer -> Modification.NoOp
     // OverrideImage is display-only - it changes no characteristic, read directly by ClientStateTransformer

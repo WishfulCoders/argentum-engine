@@ -93,6 +93,7 @@ function smallArt(name: string, imageUri: string | null): string {
 interface HoverState {
   name: string
   imageUri: string | null
+  isLandscape: boolean
   pos: { x: number; y: number }
 }
 
@@ -756,7 +757,14 @@ function SetDetailOverlay({ code, onClose }: { code: string; onClose: () => void
           </div>
         </div>
       </div>
-      {hover && <HoverCardPreview name={hover.name} imageUri={hover.imageUri} pos={hover.pos} />}
+      {hover && (
+        <HoverCardPreview
+          name={hover.name}
+          imageUri={hover.imageUri}
+          pos={hover.pos}
+          imageRotateDeg={hover.isLandscape ? 90 : 0}
+        />
+      )}
     </div>
   )
 }
@@ -834,8 +842,8 @@ const CardTile = memo(function CardTile({
       className={className}
       data-assay-ready={ready || undefined}
       title={tooltip}
-      onMouseEnter={(e) => onHover({ name: card.name, imageUri: card.imageUri, pos: { x: e.clientX, y: e.clientY } })}
-      onMouseMove={(e) => onHover({ name: card.name, imageUri: card.imageUri, pos: { x: e.clientX, y: e.clientY } })}
+      onMouseEnter={(e) => onHover({ name: card.name, imageUri: card.imageUri, isLandscape: card.isLandscape === true, pos: { x: e.clientX, y: e.clientY } })}
+      onMouseMove={(e) => onHover({ name: card.name, imageUri: card.imageUri, isLandscape: card.isLandscape === true, pos: { x: e.clientX, y: e.clientY } })}
       onMouseLeave={() => onHover(null)}
     >
       <img

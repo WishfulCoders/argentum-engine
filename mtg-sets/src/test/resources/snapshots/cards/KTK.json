@@ -139,7 +139,7 @@
                     "from": "Battlefield",
                     "to": "Graveyard"
                 },
-                "binding": "OTHER",
+                "binding": "ANY",
                 "effect": {
                     "type": "CreateToken",
                     "power": 1,
@@ -1786,7 +1786,8 @@
                 "effect": {
                     "type": "MoveToZone",
                     "target": "Self",
-                    "destination": "Battlefield"
+                    "destination": "Battlefield",
+                    "fromZone": "Graveyard"
                 },
                 "restrictions": [
                     {
@@ -7583,7 +7584,7 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "81",
+        "collectorNumber": "79",
         "rarity": "UNCOMMON",
         "artist": "Lucas Graciano",
         "flavorText": "The blades of the Mer-Ek are as poisonous as their intentions.",
@@ -11841,7 +11842,15 @@
             {
                 "type": "TargetObject",
                 "filter": {
-                    "baseFilter": "creature ctrl:opponent"
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature"
+                        ],
+                        "controllerPredicate": {
+                            "type": "ControllerNot",
+                            "predicate": "ControlledByYou"
+                        }
+                    }
                 },
                 "id": "t1"
             }
@@ -12477,7 +12486,8 @@
                         "type": "BoundVariable",
                         "name": "t0"
                     },
-                    "destination": "Battlefield"
+                    "destination": "Battlefield",
+                    "fromZone": "Graveyard"
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
@@ -13672,7 +13682,7 @@
                     "type": "GainLife",
                     "amount": {
                         "type": "AggregateBattlefield",
-                        "player": "You",
+                        "player": "Each",
                         "filter": "creature attacking"
                     }
                 }

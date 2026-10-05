@@ -1,0 +1,133 @@
+package com.wingedsheep.engine.handlers.effects.stack
+
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.model.CardDefinition
+import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.ReduceSpellCostsEffect
+import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+
+/**
+ * [ReduceSpellCostsEffect]'s `duration`: an end-of-turn discount ends at the turn boundary, an
+ * "until your next turn" discount keeps applying through the opponents' turns (instants cast
+ * there) and ends once its controller's next turn begins.
+ */
+class ReduceSpellCostsDurationTest : FunSpec({
+
+    fun instant(name: String, cost: String, script: CardScript) =
+        CardDefinition.instant(name = name, manaCost = ManaCost.parse(cost), oracleText = name, script = script)
+
+    val untilNextTurn = instant(
+        "Discount Until Next Turn", "{W}",
+        CardScript.spell(
+            Effects.ReduceSpellCosts(GameObjectFilter.InstantOrSorcery, DynamicAmount.Fixed(1), Duration.UntilYourNextTurn)
+        )
+    )
+    val thisTurn = instant(
+        "Discount This Turn", "{W}",
+        CardScript.spell(Effects.ReduceSpellCosts(GameObjectFilter.InstantOrSorcery, DynamicAmount.Fixed(1)))
+    )
+    val genericInstant = instant("One And White", "{1}{W}", CardScript.spell(Effects.GainLife(1)))
+    val coloredInstant = instant("Double White", "{W}{W}", CardScript.spell(Effects.GainLife(1)))
+
+    fun newDriver(): GameTestDriver {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(untilNextTurn, thisTurn, genericInstant, coloredInstant))
+        driver.initMirrorMatch(deck = Deck.of("Plains" to 40), skipMulligans = true, startingPlayer = 0)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver
+    }
+
+    /** Casts [name] with exactly one white mana; returns whether the cast was legal. */
+    fun castWithOneWhite(driver: GameTestDriver, player: EntityId, name: String): Boolean {
+        val card = driver.putCardInHand(player, name)
+        driver.giveMana(player, Color.WHITE, 1)
+        val result = driver.castSpell(player, card)
+        if (result.error == null) driver.bothPass()
+        return result.error == null
+    }
+
+    /** Advances into the opponent's upkeep and hands [me] priority there. */
+    fun toOpponentUpkeepWithPriority(driver: GameTestDriver, me: EntityId) {
+        driver.passPriorityUntil(Step.UPKEEP)
+        driver.activePlayer shouldNotBe me
+        driver.passPriority(driver.activePlayer!!)
+        driver.priorityPlayer shouldBe me
+    }
+
+    test("an until-your-next-turn discount applies on the opponent's turn and ends on your next turn") {
+        val driver = newDriver()
+        val me = driver.player1
+        castWithOneWhite(driver, me, "Discount Until Next Turn") shouldBe true
+
+        withClue("same turn: {1}{W} costs {W}") {
+            castWithOneWhite(driver, me, "One And White") shouldBe true
+        }
+        withClue("only generic mana is reduced (CR 601.2f)") {
+            castWithOneWhite(driver, me, "Double White") shouldBe false
+        }
+
+        toOpponentUpkeepWithPriority(driver, me)
+        withClue("the discount survives the turn boundary into the opponent's turn") {
+            driver.state.spellCostReductions.size shouldBe 1
+            castWithOneWhite(driver, me, "One And White") shouldBe true
+        }
+
+        driver.passPriorityUntil(Step.END)
+        driver.passPriorityUntil(Step.UPKEEP)
+        driver.activePlayer shouldBe me
+        withClue("gone once your next turn begins") {
+            driver.state.spellCostReductions shouldBe emptyList()
+            castWithOneWhite(driver, me, "One And White") shouldBe false
+        }
+    }
+
+    test("an opponent's untap step does not end your until-your-next-turn discount") {
+        val driver = newDriver()
+        val me = driver.player1
+        castWithOneWhite(driver, me, "Discount Until Next Turn") shouldBe true
+        driver.passPriorityUntil(Step.UPKEEP)
+        driver.activePlayer shouldNotBe me
+        driver.state.spellCostReductions.single().controllerId shouldBe me
+    }
+
+    test("an end-of-turn discount ends at the turn boundary") {
+        val driver = newDriver()
+        val me = driver.player1
+        castWithOneWhite(driver, me, "Discount This Turn") shouldBe true
+        castWithOneWhite(driver, me, "One And White") shouldBe true
+
+        toOpponentUpkeepWithPriority(driver, me)
+        driver.state.spellCostReductions shouldBe emptyList()
+        castWithOneWhite(driver, me, "One And White") shouldBe false
+    }
+
+    test("the discount only applies to its controller's spells") {
+        val driver = newDriver()
+        val me = driver.player1
+        castWithOneWhite(driver, me, "Discount Until Next Turn") shouldBe true
+        toOpponentUpkeepWithPriority(driver, me)
+        driver.passPriority(me)
+        val opponent = driver.activePlayer!!
+        castWithOneWhite(driver, opponent, "One And White") shouldBe false
+    }
+
+    test("durations other than end of turn and until your next turn are rejected") {
+        shouldThrow<IllegalArgumentException> {
+            ReduceSpellCostsEffect(GameObjectFilter.InstantOrSorcery, DynamicAmount.Fixed(1), Duration.Permanent)
+        }
+    }
+})

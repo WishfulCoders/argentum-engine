@@ -7,6 +7,7 @@ import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.mechanics.layers.StaticAbilityHandler
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.endResolutionControl
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.*
 import com.wingedsheep.engine.view.EventPresentationFactory
@@ -53,13 +54,14 @@ class StackResolver(
     private val entersWithChoicePrompt = EntersWithChoicePrompt(cardRegistry)
     private val permanentEntry = PermanentEntry(cardRegistry, staticAbilityHandler, conditionEvaluator = predicateEvaluator.conditions)
     private val nonPermanentSpellResolver = NonPermanentSpellResolver(zones, cardRegistry, effects, predicateEvaluator, spliceTargetValidator)
+    private val permanentSpellResolver = PermanentSpellResolver(
+        cardRegistry, effects, predicateEvaluator, permanentEntry, entersWithChoicePrompt
+    )
     private val spellResolver = SpellResolver(
         cardRegistry = cardRegistry,
         predicateEvaluator = predicateEvaluator,
         targetValidator = targetValidator,
-        permanentSpellResolver = PermanentSpellResolver(
-            cardRegistry, effects, predicateEvaluator, permanentEntry, entersWithChoicePrompt
-        ),
+        permanentSpellResolver = permanentSpellResolver,
         nonPermanentSpellResolver = nonPermanentSpellResolver
     )
     private val abilityResolver = AbilityResolver(effects, targetValidator, conditionEvaluator = predicateEvaluator.conditions)
@@ -85,6 +87,7 @@ class StackResolver(
         additionalCostBlightAmount: Int = 0,
         additionalCostPayXLifeAmount: Int? = null,
         declaredCostSlot: ChoiceSlot? = null,
+        additionalCostChoices: Map<ChoiceSlot, Int> = emptyMap(),
         wasBlightPaid: Boolean = false,
         wasWaterbendPaid: Boolean = false,
         additionalEntryCounters: com.wingedsheep.engine.state.components.stack.AdditionalEntryCounters? = null,
@@ -94,6 +97,7 @@ class StackResolver(
         wasEvoked: Boolean = false,
         wasImpending: Boolean = false,
         wasCleaved: Boolean = false,
+        wasOverloaded: Boolean = false,
         wasSneaked: Boolean = false,
         sneakAttackDefenderId: EntityId? = null,
         wasWebSlung: Boolean = false,
@@ -109,6 +113,7 @@ class StackResolver(
         beheldCards: List<EntityId> = emptyList(),
         convokedCreatures: Map<EntityId, Long> = emptyMap(),
         discardedAsCostCards: List<EntityId> = emptyList(),
+        revealedAsCostSnapshots: List<EntitySnapshot> = emptyList(),
         exiledAsCostCards: List<EntityId> = emptyList(),
         exiledAsCostSnapshots: List<EntitySnapshot> = emptyList(),
         chosenEntitySnapshots: List<EntitySnapshot> = emptyList(),
@@ -119,6 +124,7 @@ class StackResolver(
         manaSpentGreen: Int = 0,
         manaSpentColorless: Int = 0,
         manaSpentOnXByColor: Map<Color, Int> = emptyMap(),
+        phyrexianLifePips: Int = 0,
         faceIndex: Int? = null,
         spentManaProvenance: com.wingedsheep.engine.mechanics.mana.SpentManaProvenance =
             com.wingedsheep.engine.mechanics.mana.SpentManaProvenance(),
@@ -144,6 +150,7 @@ class StackResolver(
             additionalCostBlightAmount = additionalCostBlightAmount,
             additionalCostPayXLifeAmount = additionalCostPayXLifeAmount,
             declaredCostSlot = declaredCostSlot,
+            additionalCostChoices = additionalCostChoices,
             wasBlightPaid = wasBlightPaid,
             wasWaterbendPaid = wasWaterbendPaid,
             additionalEntryCounters = additionalEntryCounters,
@@ -153,6 +160,7 @@ class StackResolver(
             wasEvoked = wasEvoked,
             wasImpending = wasImpending,
             wasCleaved = wasCleaved,
+            wasOverloaded = wasOverloaded,
             wasSneaked = wasSneaked,
             sneakAttackDefenderId = sneakAttackDefenderId,
             wasWebSlung = wasWebSlung,
@@ -167,6 +175,7 @@ class StackResolver(
             beheldCards = beheldCards,
             convokedCreatures = convokedCreatures,
             discardedAsCostCards = discardedAsCostCards,
+            revealedAsCostSnapshots = revealedAsCostSnapshots,
             exiledAsCostCards = exiledAsCostCards,
             exiledAsCostSnapshots = exiledAsCostSnapshots,
             chosenEntitySnapshots = chosenEntitySnapshots,
@@ -177,6 +186,7 @@ class StackResolver(
             manaSpentGreen = manaSpentGreen,
             manaSpentColorless = manaSpentColorless,
             manaSpentOnXByColor = manaSpentOnXByColor,
+            phyrexianLifePips = phyrexianLifePips,
             faceIndex = faceIndex,
             spentManaProvenance = spentManaProvenance,
             castTimeFlags = castTimeFlags,
@@ -245,22 +255,26 @@ class StackResolver(
             ?: return ExecutionResult.error(state, "Stack item not found: $topId")
 
         // Pop from stack
-        val (_, poppedState) = state.popFromStack()
+        val ref = state.objectRef(topId) ?: return ExecutionResult.error(state, "Missing stack object identity")
+        val (_, popped) = state.popFromStack()
 
         // Determine what type of item this is
-        return when {
+        val result = when {
             container.has<SpellOnStackComponent>() ->
-                spellResolver.resolveSpell(poppedState, topId, container)
+                spellResolver.resolveSpell(popped, topId, container)
 
             container.has<TriggeredAbilityOnStackComponent>() ->
-                abilityResolver.resolveTriggeredAbility(poppedState, topId, container)
+                abilityResolver.resolveTriggeredAbility(popped, topId, container)
 
             container.has<ActivatedAbilityOnStackComponent>() ->
-                abilityResolver.resolveActivatedAbility(poppedState, topId, container)
+                abilityResolver.resolveActivatedAbility(popped, topId, container)
 
             else ->
                 ExecutionResult.error(state, "Unknown stack item type")
         }
+        if (result.outcome is Outcome.Paused) return result
+        val ended = result.state.endResolutionControl(ref)
+        return result.copy(state = ended.state, events = result.events + ended.events)
     }
 
     /** Finish only the captured resolving spell, never a later visit of the same card. */
@@ -279,6 +293,14 @@ class StackResolver(
         cardDef: com.wingedsheep.sdk.model.CardDefinition?
     ): Pair<GameState, List<GameEvent>> =
         permanentEntry.enterPermanentOnBattlefield(state, spellId, spellComponent, cardComponent, cardDef)
+
+    /**
+     * Finish resolving a permanent spell whose "enters as a copy" choice has been applied: the
+     * copied identity's own as-enters choices and entry replacements run before it enters. See
+     * [PermanentSpellResolver.resolveAfterEntryCopy].
+     */
+    internal fun resolvePermanentSpellAfterEntryCopy(state: GameState, spellId: EntityId): ExecutionResult =
+        permanentSpellResolver.resolveAfterEntryCopy(state, spellId)
 
     /**
      * Apply the resolving permanent's "enters with …" replacement effects (CR 614.1c). See

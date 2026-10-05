@@ -31,6 +31,15 @@ import com.wingedsheep.sdk.scripting.values.TurnTracker
  * ```
  */
 object DynamicAmounts {
+    /** Graveyard order is oldest first; newly arrived cards are above older cards. */
+    fun cardsAboveInGraveyard(entity: EffectTarget.SingleEntity = EffectTarget.Self,
+                             filter: GameObjectFilter = GameObjectFilter.Any): DynamicAmount =
+        DynamicAmount.GraveyardRelativeCount(entity, above = true, filter)
+
+    fun cardsBelowInGraveyard(entity: EffectTarget.SingleEntity = EffectTarget.Self,
+                             filter: GameObjectFilter = GameObjectFilter.Any): DynamicAmount =
+        DynamicAmount.GraveyardRelativeCount(entity, above = false, filter)
+
 
     // =========================================================================
     // Constants, X, and the number of cards in a zone
@@ -134,6 +143,9 @@ object DynamicAmounts {
     /** The amount of mana produced by a [subtype] source (a Cave) spent to cast this. */
     fun manaSpentFromSubtype(subtype: Subtype): DynamicAmount = DynamicAmount.ManaSpentFromSubtype(subtype)
 
+    /** The amount of mana from snow sources ("{S}") spent to cast this (CR 107.4h). */
+    fun snowManaSpent(): DynamicAmount = DynamicAmount.SnowManaSpent
+
     /** The amount of unspent mana in [player]'s pool. */
     fun unspentMana(player: Player): DynamicAmount = DynamicAmount.UnspentMana(player)
 
@@ -165,6 +177,10 @@ object DynamicAmounts {
         DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_RECIPIENT_TOUGHNESS)
 
     /** The life gained by the triggering event. */
+    /** The current (possibly modified) life gain being replaced. */
+    fun replacementLifeGainAmount(): DynamicAmount =
+        DynamicAmount.VariableReference(com.wingedsheep.sdk.scripting.ReplaceLifeGainWith.AMOUNT)
+
     fun triggerLifeGained(): DynamicAmount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_GAINED)
 
     /** The life lost by the triggering event. */
@@ -279,6 +295,9 @@ object DynamicAmounts {
         fun totalCounters(counterType: CounterType): DynamicAmount =
             DynamicAmount.AggregateBattlefield(player, filter, Aggregation.SUM, excludeSelf = excludeSelf, counterType = counterType)
 
+        /** The total number of counters of every kind on the matched permanents (Hydra Trainer). */
+        fun totalCounters(): DynamicAmount = aggregate(Aggregation.SUM, CardNumericProperty.COUNTERS)
+
         /**
          * The number of distinct values of [property] (power / toughness / mana value) among the
          * matched permanents — e.g. `distinctValues(POWER)` for "the number of different powers
@@ -294,6 +313,13 @@ object DynamicAmounts {
          * (Emil, Vastlands Roamer). Two permanents sharing a name count once.
          */
         fun distinctNames(): DynamicAmount = aggregate(Aggregation.DISTINCT_NAMES)
+
+        /**
+         * The size of the largest group of matched permanents sharing one name — e.g.
+         * `largestSameNameGroup()` over `GameObjectFilter.Artifact` for "eight or more artifacts
+         * with the same name as one another" (Mechanized Production).
+         */
+        fun largestSameNameGroup(): DynamicAmount = aggregate(Aggregation.LARGEST_SAME_NAME_GROUP)
     }
 
     // =========================================================================
@@ -698,6 +724,14 @@ object DynamicAmounts {
     fun creaturesDiedThisTurn(player: Player = Player.You): DynamicAmount =
         DynamicAmount.TurnTracking(player, TurnTracker.CREATURES_DIED)
 
+    /**
+     * The number of +1/+1 counters [player] has put on creatures under their control this turn,
+     * entering-with counters included — "for each +1/+1 counter you've put on creatures under your
+     * control this turn" (Iridescent Hornbeetle).
+     */
+    fun plusOneCountersPutOnYourCreaturesThisTurn(player: Player = Player.You): DynamicAmount =
+        DynamicAmount.TurnTracking(player, TurnTracker.PLUS_ONE_COUNTERS_PUT_ON_YOUR_CREATURES)
+
     /** The number of cards [player] has drawn this turn. */
     fun cardsDrawnThisTurn(player: Player = Player.You): DynamicAmount =
         DynamicAmount.TurnTracking(player, TurnTracker.CARDS_DRAWN)
@@ -790,6 +824,16 @@ object DynamicAmounts {
         excludeTriggeringEntity: Boolean = false
     ): DynamicAmount =
         DynamicAmount.SubtypeEnteredUnderControlThisTurn(player, setOf(subtype), excludeTriggeringEntity)
+
+    /**
+     * "The number of [cardType]s that entered the battlefield under [player]'s control this turn"
+     * (Malcator, Purity Overseer — "three or more artifacts entered … this turn", as a `Compare`).
+     * Counts entries even after the permanent has left or stopped having the type.
+     */
+    fun cardTypeEnteredUnderControlThisTurn(
+        cardType: com.wingedsheep.sdk.core.CardType,
+        player: Player = Player.You
+    ): DynamicAmount = DynamicAmount.CardTypeEnteredUnderControlThisTurn(player, cardType)
 
     /**
      * "The number of As and/or Bs that entered the battlefield under [player]'s control this turn"
@@ -895,6 +939,14 @@ object DynamicAmounts {
         DynamicAmount.PlayerCounterCount(counterType, player)
 
     /**
+     * Times [player] has cycled a card this game (typecycling included), narrowed to cards named
+     * [cardName] when set — "if you've cycled a card named Yidaro, Wandering Monster four or more
+     * times this game".
+     */
+    fun cardsCycledThisGame(cardName: String? = null, player: Player = Player.You): DynamicAmount =
+        DynamicAmount.CardsCycledThisGame(player, cardName)
+
+    /**
      * A player's current energy counter total (CR 107.14) — "where X is the number of energy
      * counters you have" (Longtusk Cub, Electrostatic Pummeler).
      */
@@ -974,6 +1026,10 @@ object DynamicAmounts {
 
     fun sacrificedPower(index: Int = 0): DynamicAmount =
         DynamicAmount.EntityProperty(EffectTarget.SacrificedAsCost(index), EntityNumericProperty.Power)
+
+    /** Mana value of the indexed permanent sacrificed to pay a spell or ability cost. */
+    fun sacrificedManaValue(index: Int = 0): DynamicAmount =
+        DynamicAmount.EntityProperty(EffectTarget.SacrificedAsCost(index), EntityNumericProperty.ManaValue)
 
     fun sacrificedToughness(index: Int = 0): DynamicAmount =
         DynamicAmount.EntityProperty(EffectTarget.SacrificedAsCost(index), EntityNumericProperty.Toughness)

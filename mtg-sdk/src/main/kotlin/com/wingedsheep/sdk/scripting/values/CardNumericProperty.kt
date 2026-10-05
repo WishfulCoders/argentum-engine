@@ -10,7 +10,12 @@ import kotlinx.serialization.Serializable
 enum class CardNumericProperty(val description: String) {
     MANA_VALUE("mana value"),
     POWER("power"),
-    TOUGHNESS("toughness")
+    TOUGHNESS("toughness"),
+    /**
+     * Counters of every kind on the permanent — "the number of counters on permanents you control"
+     * (Hydra Trainer). A single kind is [DynamicAmount.AggregateBattlefield.counterType] instead.
+     */
+    COUNTERS("counters")
 }
 
 /**
@@ -78,5 +83,14 @@ enum class Aggregation {
      * you control" (Selvala, Eager Trailblazer). Requires `property` to be set; two creatures with
      * the same power count once.
      */
-    DISTINCT_VALUES
+    DISTINCT_VALUES,
+    /**
+     * The size of the largest group of matched entities that share one name — "<N> or more
+     * artifacts with the same name as one another" (Mechanized Production). Group the matched
+     * entities by name and take the biggest group; zero when nothing matches. Names come from
+     * the projection where a name-changing effect set one, falling back to the card's own name,
+     * so a token copy shares the name of what it copied. A face-down permanent has no name and
+     * so shares one with nothing (CR 201.2a, 708.2a).
+     */
+    LARGEST_SAME_NAME_GROUP
 }

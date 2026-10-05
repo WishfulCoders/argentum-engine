@@ -1,3 +1,4 @@
+import { PlayerActionBar } from './overlay/PlayerActionBar'
 import { useMemo, useCallback, useRef, useEffect } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { useInteraction } from '@/hooks/useInteraction'
@@ -24,6 +25,7 @@ import { CoinFlipAnimations } from '../animations/CoinFlipAnimations'
 import { TargetReselectedAnimations } from '../animations/TargetReselectedAnimations'
 import { useResponsive } from '@/hooks/useResponsive'
 import { ManaSymbol } from '../ui/ManaSymbols'
+import { computeCoverage } from '../decisions/manaCoverage'
 
 // Import extracted components
 import { Battlefield, CardRow, CommandZone, OpponentBoardArea, BoardNamePlate, CollapsedBoardTab, COLLAPSED_TAB_WIDTH, CELL_PLATE_BAND, useCellHandMetrics, StackDisplay, ZonePile, ResponsiveContext } from './board'
@@ -52,6 +54,7 @@ interface GameBoardProps {
  * This is the main orchestrator component that composes all game UI elements.
  */
 export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardProps) {
+  const blockerDeclarationDescription = useGameStore((s) => s.legalActions.find((a) => a.actionType === 'DeclareBlockers')?.description)
   const playerGameState = useGameStore((state) => state.gameState)
   const spectatingState = useGameStore((state) => state.spectatingState)
   const sessionId = useGameStore((state) => state.sessionId)
@@ -92,9 +95,6 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
   // A multi-phase cast/activation in progress (convoke, waterbend, harmonize, targeting, …). While
   // one is mid-flight the player must finish or cancel it, not pass priority / move to combat.
   const pipelineState = useGameStore((state) => state.pipelineState)
-  // Lobby settings — only for phrasing the attack-restriction banner ("attack left/right").
-  // The actual legality always comes from the server's validAttackTargets.
-  const lobbyState = useGameStore((state) => state.lobbyState)
   const cancelManaSelection = useGameStore((state) => state.cancelManaSelection)
   const { executeAction } = useInteraction()
 
@@ -503,17 +503,18 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
     return { gap, allyWidth, ownWidth: pairWidth - allyWidth, shiftRight: cornerReserve / 2 }
   }, [allySeat, spectatorMode, isEliminatedSpectator, responsive])
 
-  // Team-split bottom half: the viewer's whole team in turn order with the anchor seat *last* —
-  // i.e. bottom-right, directly under the right-hand life orb and the zone piles that are
-  // already right-aligned, so "your stuff" occupies one corner of the table instead of being
-  // split across it. When playing, the anchor is your interactive board; when spectating it's
-  // just the bottom-anchored seat. Teammate cells reuse the overview cell + per-board collapse.
+  // Team-split bottom half: the viewer's whole team in seat order, so each player sits in their
+  // real spot on the table (first seat left, second seat right) instead of everyone being pinned
+  // bottom-right — teammates see the same arrangement. When playing, the anchor is your
+  // interactive board; when spectating it's just the bottom-anchored seat. Teammate cells reuse
+  // the overview cell + per-board collapse.
   const bottomRowOrdered = useMemo(() => {
     if (!twoRowActive || !gameState) return []
-    return gameState.players
-      .filter((p) => bottomRowIds.includes(p.playerId))
-      .sort((a, b) => (a.playerId === anchorId ? 1 : b.playerId === anchorId ? -1 : 0))
-  }, [twoRowActive, gameState, bottomRowIds, anchorId])
+    const row = gameState.players.filter((p) => bottomRowIds.includes(p.playerId))
+    if (isTeamGame) return row
+    // Free-for-all: the anchor stays bottom-right, under the right-hand orb and zone piles.
+    return row.sort((a, b) => (a.playerId === anchorId ? 1 : b.playerId === anchorId ? -1 : 0))
+  }, [twoRowActive, gameState, bottomRowIds, isTeamGame, anchorId])
   // The bottom half becomes a multi-board strip only when it holds more than the anchor (team
   // games; 4+ player free-for-alls). A lone anchor keeps the classic single bottom board — but
   // only when it really is the anchor: the single-board paths below draw the anchor's board, so
@@ -591,7 +592,8 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
       const inner = match.slice(1, -1)
       if (inner.endsWith('/P')) {
         if (!manaSelectionState.phyrexianLifePipIndices.includes(pipIndex)) {
-          coloredReqs.push(inner.split('/')[0]!)
+          // Paid with mana, {R/P} is {R} and hybrid Phyrexian {R/G/P} is the hybrid {R/G}.
+          coloredReqs.push(inner.slice(0, -2))
         }
         continue
       }
@@ -613,90 +615,33 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
     }
     const total = coloredReqs.length + genericCount
 
-    // Build source list: each source has the set of colors it can pay
-    // A source that produces {W, B, G} can satisfy W, B, or G colored reqs, or 1 generic
-    // Multi-mana sources (e.g., Gilded Lotus producing 3) contribute multiple entries
-    const sources: { colors: readonly string[] }[] = []
-    for (const id of manaSelectionState.selectedSources) {
-      const colors = manaSelectionState.sourceColors[id] ?? []
-      const manaAmount = manaSelectionState.sourceManaAmounts?.[id] ?? 1
-      for (let i = 0; i < manaAmount; i++) {
-        sources.push({ colors: colors.length > 0 ? colors : ['C'] })
-      }
+    const floatingPool = viewingPlayer?.manaPool
+    const pool = floatingPool ? { ...floatingPool } : null
+    // Credit only restricted units the server judged eligible for this action.
+    const poolFields = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green', C: 'colorless' } as const
+    for (const entry of manaSelectionState.actionInfo.eligibleRestrictedMana ?? []) {
+      const field = poolFields[(entry.color ?? 'C') as keyof typeof poolFields]
+      if (pool && field) pool[field]++
     }
-
-    // Most-constrained-first: assign sources with fewest color options first
-    // This prevents flexible sources from "wasting" on requirements that
-    // less flexible sources could have covered
-    const sortedSources = [...sources].sort((a, b) => a.colors.length - b.colors.length)
-
-    // Track remaining colored requirements as a mutable count map
-    const remainingColorReqs: Record<string, number> = {}
-    for (const c of coloredReqs) {
-      remainingColorReqs[c] = (remainingColorReqs[c] ?? 0) + 1
-    }
-    let remainingGeneric = genericCount
+    const sources = manaSelectionState.selectedSources.map((entityId) => ({
+      entityId,
+      producesColors: manaSelectionState.sourceColors[entityId] ?? [],
+      manaAmount: manaSelectionState.sourceManaAmounts?.[entityId] ?? 1,
+    }))
+    const coverage = computeCoverage(
+      [...coloredReqs, ...Array<string>(genericCount).fill('1')],
+      pool,
+      manaSelectionState.selectedSources,
+      sources,
+      0,
+      viewingPlayer?.manaPaymentColors,
+    )
     const colorSatisfied: Record<string, number> = {}
     let satisfied = 0
-
-    // Floating mana already in the pool counts toward the cost — the engine pays
-    // from the pool before tapping sources (CastPaymentProcessor.autoPay), so the
-    // confirmation panel needs to credit it too. Without this, a player who taps
-    // a Plains pre-cast sees "0/1" white owed even though their pool already has it.
-    const floatingPool = viewingPlayer?.manaPool
-    if (floatingPool) {
-      const poolByPip: Record<string, number> = {
-        W: floatingPool.white,
-        U: floatingPool.blue,
-        B: floatingPool.black,
-        R: floatingPool.red,
-        G: floatingPool.green,
-        C: floatingPool.colorless,
-      }
-      // Restricted ("spend this mana only to …") mana counts too, but only the units the server
-      // judged eligible for this action — Ashling, Rimebound's MV4+ mana on an MV4+ spell.
-      for (const entry of manaSelectionState.actionInfo.eligibleRestrictedMana ?? []) {
-        const pip = entry.color ?? 'C'
-        if (pip in poolByPip) poolByPip[pip]!++
-      }
-      // Spend exact-color pool first against colored pips
-      for (const pip of Object.keys(poolByPip)) {
-        while ((poolByPip[pip] ?? 0) > 0 && (remainingColorReqs[pip] ?? 0) > 0) {
-          remainingColorReqs[pip]!--
-          colorSatisfied[pip] = (colorSatisfied[pip] ?? 0) + 1
-          poolByPip[pip]!--
-          satisfied++
-        }
-      }
-      // Anything left in the pool covers generic
-      for (const pip of Object.keys(poolByPip)) {
-        while ((poolByPip[pip] ?? 0) > 0 && remainingGeneric > 0) {
-          remainingGeneric--
-          colorSatisfied['1'] = (colorSatisfied['1'] ?? 0) + 1
-          poolByPip[pip]!--
-          satisfied++
-        }
-      }
-    }
-
-    for (const source of sortedSources) {
-      // Try to assign to a colored requirement this source can pay
-      let assigned = false
-      for (const color of source.colors) {
-        if ((remainingColorReqs[color] ?? 0) > 0) {
-          remainingColorReqs[color]!--
-          colorSatisfied[color] = (colorSatisfied[color] ?? 0) + 1
-          satisfied++
-          assigned = true
-          break
-        }
-      }
-      // If no colored requirement matched, assign to generic
-      if (!assigned && remainingGeneric > 0) {
-        remainingGeneric--
-        colorSatisfied['1'] = (colorSatisfied['1'] ?? 0) + 1
-        satisfied++
-      }
+    for (const pip of coverage) {
+      if (!pip.floating && !pip.pending) continue
+      colorSatisfied[pip.symbol] = (colorSatisfied[pip.symbol] ?? 0) + 1
+      satisfied++
     }
 
     // Build per-color requirement counts for display
@@ -714,7 +659,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
     })
 
     return { satisfied, total, entries, colorSatisfied }
-  }, [manaSelectionState, viewingPlayer?.manaPool])
+  }, [manaSelectionState, viewingPlayer?.manaPool, viewingPlayer?.manaPaymentColors])
 
   // Ctrl+Z (Cmd+Z): the undo button — the engine's undo when it applies, else a take-back.
   useEffect(() => {
@@ -790,6 +735,12 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
    */
   const wrapInTeamHandRow = (ownHand: React.ReactNode): React.ReactNode => {
     if (!teamHandRow || !allySeat) return ownHand
+    // Seat order decides which side each hand sits on, matching the bottom row of boards.
+    const players = gameState.players
+    const allyFirst =
+      players.findIndex((p) => p.playerId === allySeat.playerId) <
+      players.findIndex((p) => p.playerId === playerId)
+    const allyFan = <AllyHandFan player={allySeat} width={teamHandRow.allyWidth} interactive={allyIsDriven} />
     return (
       <div
         style={{
@@ -803,8 +754,9 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
           gap: teamHandRow.gap,
         }}
       >
-        <AllyHandFan player={allySeat} width={teamHandRow.allyWidth} interactive={allyIsDriven} />
+        {allyFirst && allyFan}
         {ownHand}
+        {!allyFirst && allyFan}
       </div>
     )
   }
@@ -817,6 +769,11 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
       // During a hijack of the opponent's turn, treat it as "my turn" so the active-player
       // controls (combat declaration, sorcery-speed plays) light up for the driving client.
       (youAreHijacking != null && gameState.activePlayerId === youAreHijacking))
+  // CR 800.4j: a player who leaves the game during their own turn leaves it running with no active
+  // player. It stays their turn — the seat after them only inherits its priority windows. A shared
+  // team turn (CR 805.4) is still carried by a surviving teammate, so it never runs orphaned.
+  const activeSeat = gameState.players.find((p) => p.playerId === gameState.activePlayerId)
+  const activeSeatLeft = isMulti && !sharedTurnTeamGame && activeSeat?.hasLost === true
   // Multiplayer: how far off your next turn is, in living seats — "You're next" / "You in 2". The
   // rail lists the table in turn order, but counting chips is the player's job today. Two-Headed
   // Giant takes one shared turn per team (CR 805.4), where a per-seat count would mislead, so none
@@ -875,9 +832,9 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
     const attackable = enemies.filter((o) => combatState.validAttackTargets.includes(o.playerId))
     const restricted = enemies.filter((o) => !combatState.validAttackTargets.includes(o.playerId))
     if (attackable.length === 0 || restricted.length === 0) return null
-    const lobbyMode =
-      lobbyState?.settings.gameMode === 'FREE_FOR_ALL' ? lobbyState.settings.attackMode : undefined
-    const direction = lobbyMode === 'LEFT' ? 'left' : lobbyMode === 'RIGHT' ? 'right' : null
+    // Off the game state, not the lobby: a quick game, a reconnect or a replay has no lobby.
+    const direction =
+      gameState.attackMode === 'LEFT' ? 'left' : gameState.attackMode === 'RIGHT' ? 'right' : null
     return { attackable, direction }
   })()
   const defenderPopupVisible =
@@ -974,6 +931,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
           affected player even when the rest of the UI is disabled by hijack. An
           eliminated spectator has nothing to concede — they get a Leave button. */}
       {!spectatorMode && !isEliminatedSpectator && <ConcedeButton />}
+      {!spectatorMode && !isEliminatedSpectator && <PlayerActionBar />}
       {isEliminatedSpectator && (
         <>
           <button
@@ -1325,7 +1283,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
             : (() => {
                 const otherId = youAreHijacking ?? youAreHijackedBy
                 const otherName = gameState.players.find((p) => p.playerId === otherId)?.name ?? 'opponent'
-                return isHijacking ? `Controlling ${otherName}'s turn` : `${otherName} controls your turn`
+                return isHijacking ? `You control ${otherName}'s choices` : `${otherName} controls your choices`
               })()
           return (
             <div
@@ -1408,11 +1366,13 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
           hasPriority={hasPriority}
           priorityMode={priorityMode}
           // Name the active seat in a pod: "Opponent's Turn" says nothing at a four-seat table.
-          // While responding the strip keeps saying so — the name is on the rail's turn ring.
-          activePlayerName={spectatorMode || (isMulti && !isMyTurn && priorityMode !== 'responding')
-            ? gameState.players.find(p => p.playerId === gameState.activePlayerId)?.name
+          // While responding the strip keeps saying so — the name is on the rail's turn ring —
+          // except in a departed player's turn, which has no ring and no one to respond to.
+          activePlayerName={spectatorMode || (isMulti && !isMyTurn && (priorityMode !== 'responding' || activeSeatLeft))
+            ? activeSeat?.name
             : undefined
           }
+          activePlayerLeft={activeSeatLeft}
           turnQueueHint={turnQueueHint}
           activeSide={
             spectatorMode
@@ -1883,7 +1843,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
             userSelect: 'none',
           }}
         >
-          <span aria-hidden>⚔</span>
+          <span aria-hidden>⚔️</span>
           <span>
             {attackRestriction.direction ? `Attack ${attackRestriction.direction} — you can only attack ` : 'You can only attack '}
             {attackRestriction.attackable.map((o, i) => {
@@ -2053,7 +2013,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
                   ...styles.combatPassButton,
                 }}
               >
-                No Blocks
+                {blockerDeclarationDescription === 'Choose blocker piles' ? blockerDeclarationDescription : 'No Blocks'}
               </button>
             </>
           ) : (

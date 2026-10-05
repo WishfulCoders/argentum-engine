@@ -4304,7 +4304,7 @@
                     },
                     "id": "t0"
                 },
-                "triggerRestriction": "IsNotYourTurn"
+                "triggerRestriction": "IsOpponentsTurn"
             }
         ]
     },
@@ -5196,7 +5196,10 @@
                     }
                 ]
             },
-            "maxValue": 10,
+            "maxValue": {
+                "type": "Fixed",
+                "amount": 10
+            },
             "prompt": "Choose a number between 0 and 10"
         }
     },
@@ -9075,7 +9078,10 @@
                             {
                                 "type": "RemoveCounters",
                                 "counterType": "PLUS_ONE_PLUS_ONE",
-                                "count": 1,
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                },
                                 "target": "Self"
                             },
                             {
@@ -14357,7 +14363,7 @@
                 "id": "Rowan, Scion of War:1",
                 "cost": "CostTap",
                 "effect": {
-                    "type": "ReduceSpellCostsThisTurn",
+                    "type": "ReduceSpellCosts",
                     "spellFilter": {
                         "cardPredicates": [
                             {
@@ -21164,7 +21170,7 @@
                 "id": "Will, Scion of Peace:1",
                 "cost": "CostTap",
                 "effect": {
-                    "type": "ReduceSpellCostsThisTurn",
+                    "type": "ReduceSpellCosts",
                     "spellFilter": {
                         "cardPredicates": [
                             {

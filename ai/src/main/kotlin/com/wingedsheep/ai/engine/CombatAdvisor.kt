@@ -112,7 +112,12 @@ class CombatAdvisor(
             },
         )
         val opponentId = seed.defenderId ?: return DeclareAttackers(playerId, emptyMap())
-        if (seed.lethal) return DeclareAttackers(playerId, seed.attackers)
+        if (seed.lethal) {
+            return DeclareAttackers(
+                playerId,
+                AttackRequirementRepair.repair(state, cardRegistry, playerId, seed.attackers, validAttackers, mandatory.toSet()),
+            )
+        }
 
         val seedMap = seed.attackers.toMutableMap()
 
@@ -133,10 +138,15 @@ class CombatAdvisor(
 
         // Local search may have added attackers back on top of an already-trimmed seed, so the tax
         // is re-priced against the plan we are about to submit. See [CombatTaxBudget].
+        // The tax trim can drop the creature an attack requirement needs, so repair last.
         return DeclareAttackers(
             playerId,
-            CombatTaxBudget.affordableAttack(
-                state, projected, playerId, cardRegistry, seedMap, mandatory.toSet()
+            AttackRequirementRepair.repair(
+                state, cardRegistry, playerId,
+                CombatTaxBudget.affordableAttack(
+                    state, projected, playerId, cardRegistry, seedMap, mandatory.toSet()
+                ),
+                validAttackers, mandatory.toSet(),
             ),
         )
     }
@@ -185,7 +195,7 @@ class CombatAdvisor(
         val mandatoryBlockerIds = mutableSetOf<EntityId>()
         for ((blockerId, mustBlockAttackers) in mandatory) {
             if (mustBlockAttackers.isNotEmpty()) {
-                mandatoryMap[blockerId] = listOf(mustBlockAttackers.first())
+                mandatoryMap[blockerId] = mustBlockAttackers.take(legalAction.blockerMaxBlockCounts?.get(blockerId) ?: 1)
                 mandatoryBlockerIds.add(blockerId)
             }
         }

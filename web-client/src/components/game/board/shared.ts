@@ -314,11 +314,12 @@ export function attachmentStackLayout(input: {
 export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): boolean {
   // Count distinct casting method types
   const hasNormalCast = cardLegalActions.some(
-    (a) => a.action.type === 'CastSpell' && a.actionType !== 'CastFaceDown' && a.actionType !== 'CastWithKicker' && a.actionType !== 'CastWithFlashback' && a.actionType !== 'CastWithWarp' && a.actionType !== 'CastWithDash' && a.actionType !== 'CastWithDisturb'
+    (a) => a.action.type === 'CastSpell' && a.actionType !== 'CastFaceDown' && a.actionType !== 'CastWithKicker' && a.actionType !== 'CastWithFlashback' && a.actionType !== 'CastWithEscape' && a.actionType !== 'CastWithWarp' && a.actionType !== 'CastWithDash' && a.actionType !== 'CastWithDisturb'
   )
   const hasMorphCast = cardLegalActions.some((a) => a.actionType === 'CastFaceDown')
   const hasKickerCast = cardLegalActions.some((a) => a.actionType === 'CastWithKicker')
   const hasFlashbackCast = cardLegalActions.some((a) => a.actionType === 'CastWithFlashback')
+  const hasEscapeCast = cardLegalActions.some((a) => a.actionType === 'CastWithEscape')
   const hasWarpCast = cardLegalActions.some((a) => a.actionType === 'CastWithWarp')
   const hasDashCast = cardLegalActions.some((a) => a.actionType === 'CastWithDash')
   // Disturb (CR 702.146) casts the card's back face from the graveyard, so it is a distinct
@@ -336,6 +337,7 @@ export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): 
   if (hasMorphCast) options++
   if (hasKickerCast) options++
   if (hasFlashbackCast) options++
+  if (hasEscapeCast) options++
   if (hasWarpCast) options++
   if (hasDashCast) options++
   if (hasDisturbCast) options++
@@ -808,6 +810,8 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   // battle's own defense badge over the printed shield, not in this marker-badge allowlist.
   CounterType.STORAGE,
   CounterType.HUNGER,
+  // Phyrexia: All Will Be One's oil — spent, counted and proliferated by the cards that care.
+  CounterType.OIL,
   CounterType.DOOM,
   CounterType.FIRE,
   CounterType.CONQUEROR,
@@ -844,6 +848,7 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.THEFT,
   // Sensei Golden-Tail's training marker records which creatures it trained.
   CounterType.TRAINING,
+  CounterType.MIRE,
   CounterType.PLUS_ONE_PLUS_TWO,
   CounterType.PLUS_TWO_PLUS_TWO,
   CounterType.MINUS_TWO_MINUS_TWO,

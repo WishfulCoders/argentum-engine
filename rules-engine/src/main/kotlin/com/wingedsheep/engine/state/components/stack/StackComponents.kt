@@ -21,6 +21,10 @@ import com.wingedsheep.sdk.dsl.sneak
  */
 @Serializable
 data class SpellOnStackComponent(
+    /**
+     * The spell's controller: the player who cast it, the player who put a copy on the stack, or —
+     * after a "gain control of target spell" effect (Invert Polarity) — the player who took it.
+     */
     val casterId: EntityId,
     val xValue: Int? = null,  // For X spells
     /**
@@ -29,6 +33,8 @@ data class SpellOnStackComponent(
      * declared. Carried onto the resolving permanent's cast-choices bag by `StackResolver`.
      */
     val declaredCostSlot: ChoiceSlot? = null,
+    /** Explicit branches of named additional-cost choices; retained independently of payment. */
+    val additionalCostChoices: Map<ChoiceSlot, Int> = emptyMap(),
     val wasBlightPaid: Boolean = false,  // For BlightOrPay additional cost — true if blight path was taken
     val wasWaterbendPaid: Boolean = false,  // For optional spell waterbend additional cost (Avatar) — true if "you may waterbend {N}" was paid; readable via WaterbendWasPaid
     /**
@@ -98,6 +104,7 @@ data class SpellOnStackComponent(
     val wasDashed: Boolean = false,  // For dash (CR 702.109) - permanent gains haste, returns to hand at next end step
     val wasEvoked: Boolean = false,  // For evoke - permanent is sacrificed on ETB
     val wasImpending: Boolean = false,  // For impending - permanent enters with time counters and isn't a creature until they're gone
+    val wasOverloaded: Boolean = false,  // For overload (CR 702.96) - spell has no targets and resolves with its "each" variant
     val wasCleaved: Boolean = false,  // For cleave (CR 702.148) - spell resolves with its brackets-removed effect/target variant
     /** For sneak (CR 702.190) - permanent spell enters tapped and attacking; the flag is readable via SneakCostWasPaid. */
     val wasSneaked: Boolean = false,
@@ -134,6 +141,14 @@ data class SpellOnStackComponent(
      * card wasn't a land card". Empty when the spell carried no discard cost.
      */
     val discardedAsCostCards: List<EntityId> = emptyList(),
+    /**
+     * Cards revealed from hand to pay this spell's additional reveal cost
+     * (`Costs.additional.RevealFromHand(...)`), each captured with its in-hand characteristics as
+     * the cost was paid. Read at resolution via
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.RevealedAsCost] — Titan's Presence's
+     * "the revealed card's power". Empty when the spell carried no reveal cost.
+     */
+    val revealedAsCostSnapshots: List<EntitySnapshot> = emptyList(),
     /**
      * Entity ids of the cards exiled to pay this spell's additional exile cost
      * (`Costs.additional.ExileCards(...)`), recorded at payment time (CR 601.2h). The spell
@@ -175,11 +190,27 @@ data class SpellOnStackComponent(
      */
     val manaSpentBySubtype: Map<com.wingedsheep.sdk.core.Subtype, Int> = emptyMap(),
     /**
+     * Producing-source card type → count of mana from sources of that type spent to cast this
+     * spell (Inga and Esika's "three or more mana from creatures"). Read via [ManaSpentReader].
+     */
+    val manaSpentByCardType: Map<com.wingedsheep.sdk.core.CardType, Int> = emptyMap(),
+    /**
+     * Mana from snow sources spent to cast this spell — the "{S} spent" of CR 107.4h. Read via
+     * [ManaSpentReader] by `DynamicAmount.SnowManaSpent` (Berg Strider's "if {S} was spent").
+     */
+    val manaSpentSnow: Int = 0,
+    /**
      * Per-color mana spent on the `{X}` portion of this spell, for a color-restricted X
      * (e.g. Soul Burn's "spend only black and/or red mana on X"). Read at resolution via
      * `DynamicAmount.ManaSpentOnX`. Empty when X was unrestricted or the spell has no X.
      */
     val manaSpentOnXByColor: Map<Color, Int> = emptyMap(),
+    /**
+     * Phyrexian mana symbols in this spell's cost the caster paid with life (CR 107.4f). Read at
+     * resolution by compleated (CR 702.150a): the planeswalker enters with two fewer loyalty
+     * counters per symbol. Zero for a spell that wasn't cast (a copy).
+     */
+    val phyrexianLifePips: Int = 0,
     /**
      * For split-layout cards (CR 709), the index of the face that was cast into
      * [com.wingedsheep.sdk.model.CardDefinition.cardFaces]. Threaded from
@@ -287,6 +318,18 @@ data class TriggeredAbilityOnStackComponent(
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment =
         com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     /**
+     * The source's characteristics as it last existed on the battlefield, stamped by
+     * [com.wingedsheep.engine.handlers.effects.ZoneTransitionService] at its first departure while
+     * this ability is on the stack — the triggered twin of
+     * [ActivatedAbilityOnStackComponent.lastKnownSourceSnapshot]. Value reads of
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.Self] and target revalidation use it once
+     * the source has gone, which is what keeps them right for a token source swept by CR 704.5d or
+     * a source that has blinked back as a new object: Mentor's "target attacking creature with
+     * lesser power" compares against the mentor creature's last-known power. Null while the source
+     * remains the same battlefield object.
+     */
+    val lastKnownSourceSnapshot: EntitySnapshot? = null,
+    /**
      * The ability's intervening-"if" clause (CR 603.4), carried onto the stack object because the
      * ability itself is no longer reachable by the time this resolves — the trigger has been
      * detected, the source may have left the battlefield, and the granting static may be gone.
@@ -297,7 +340,18 @@ data class TriggeredAbilityOnStackComponent(
      * [com.wingedsheep.sdk.scripting.TriggeredAbility.triggerRestriction], which CR 603.2 checks
      * only when the trigger would fire.
      */
-    val interveningIf: com.wingedsheep.sdk.scripting.conditions.Condition? = null
+    val interveningIf: com.wingedsheep.sdk.scripting.conditions.Condition? = null,
+    /**
+     * This object is a backup ability (CR 702.165) — [com.wingedsheep.sdk.scripting.TriggeredAbility.isBackup],
+     * carried onto the stack because a "becomes the target of a backup ability" trigger reads the
+     * targeting object, and an ability on the stack has no card data to say what it is. A copy
+     * keeps it ([com.wingedsheep.engine.handlers.effects.stack.CopyTargetTriggeredAbilityExecutor.cloneAbility]).
+     */
+    val isBackup: Boolean = false,
+    /** Original state trigger's lifecycle identity (CR 603.8); null on copies and event triggers. */
+    val stateTriggerAbilityId: AbilityId? = null,
+    /** Concrete rules text captured when the trigger fired, independent of later source changes. */
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null
 ) : Component {
     val hasTargets: Boolean = false  // Will be updated based on effect
 }
@@ -343,11 +397,11 @@ data class ActivatedAbilityOnStackComponent(
      */
     val lastKnownSourceCounters: Map<CounterType, Int> = emptyMap(),
     /**
-     * Frozen projected P/T of the source captured before a self-exile / self-sacrifice cost moved
-     * it off the battlefield (CR 113.7a). Mirrors [lastKnownSourceCounters]; read at resolution via
-     * [com.wingedsheep.engine.handlers.EffectContext.lastKnownSourceSnapshot] so an
-     * `EntityProperty(Self, Power)` read (Ghitu Fire-Eater / Blazing Bomb's Blow Up) sees the
-     * pre-sacrifice power. Null when the cost did not sacrifice/exile the source.
+     * Frozen source characteristics captured before a self-exile/self-sacrifice cost, or at its
+     * first battlefield departure while this ability is on the stack. Value reads and target
+     * revalidation use this snapshot once the original source object has departed; a later blink
+     * must not substitute the returned object's characteristics. Null while the source remains
+     * the same battlefield object.
      */
     val lastKnownSourceSnapshot: EntitySnapshot? = null,
     /**
@@ -445,7 +499,10 @@ data class AbilityOnStackComponent(
 data class TargetsComponent(
     val targets: List<ChosenTarget>,
     val targetRequirements: List<TargetRequirement> = emptyList(),
-    val targetEntryStamps: Map<EntityId, Long> = emptyMap()
+    val targetEntryStamps: Map<EntityId, Long> = emptyMap(),
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val targetObjectRefs: Map<EntityId, com.wingedsheep.engine.state.ObjectRef> = emptyMap()
 ) : Component {
 
     companion object {
@@ -475,7 +532,16 @@ data class TargetsComponent(
             targetRequirements = targetRequirements,
             targetEntryStamps = targets.filterIsInstance<ChosenTarget.Permanent>()
                 .filter { it.entityId in state.getBattlefield() }
-                .associate { it.entityId to entryStamp(state, it.entityId) }
+                .associate { it.entityId to entryStamp(state, it.entityId) },
+            targetObjectRefs = targets.mapNotNull { target ->
+                val id = when (target) {
+                    is ChosenTarget.Permanent -> target.entityId
+                    is ChosenTarget.Spell -> target.spellEntityId
+                    is ChosenTarget.Card -> target.cardId
+                    is ChosenTarget.Player -> null
+                }
+                id?.let { state.objectRef(it) }?.let { it.entityId to it }
+            }.toMap()
         )
 
         /**

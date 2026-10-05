@@ -3,6 +3,7 @@ package com.wingedsheep.engine.core
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.state.nameVisibleToAll
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.HasBecomeTappedComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
@@ -145,7 +146,12 @@ fun tapForMana(
             ?: state.getEntity(sourceId)?.get<ControllerComponent>()?.playerId,
     )
     if (tapEvent == null) return state to emptyList()
-    return tapped to listOfNotNull(
+    // Tapping for mana activates the source's mana ability, so auto-pay marks it "activated this
+    // turn" exactly as the manual activation pipeline does.
+    val stamped = tapped.updateEntity(sourceId) { c ->
+        c.with((c.get<AbilityActivatedThisTurnComponent>() ?: AbilityActivatedThisTurnComponent()).withAnyActivated())
+    }
+    return stamped to listOfNotNull(
         tapEvent,
         landTappedForManaEvent(state, sourceId, tapperId, paymentProjection ?: state.projectedState),
     )

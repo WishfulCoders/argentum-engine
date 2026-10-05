@@ -89,7 +89,7 @@ class CreateTokenCopyOfSourceExecutor(
         // Copy the source's CardComponent, re-homing the token to the controller. `isDoubleFaced`
         // is cleared, not inherited: a token is not a card (CR 111.1), so it never answers a
         // "double-faced card" question — see CreateTokenCopyOfTargetExecutor.
-        val tokenCard = CopyExceptionApplier.apply(sourceCard, exceptions)
+        val tokenCard = CopyExceptionApplier.apply(sourceCard, exceptions, context.resolvingTriggeredAbility)
             .copy(ownerId = controllerId, isDoubleFaced = false)
 
         val cappedCount = com.wingedsheep.engine.core.GameLimits.cappedTokenCount(count, "source-copy tokens", newState)
@@ -119,6 +119,8 @@ class CreateTokenCopyOfSourceExecutor(
             }
 
             var container = ComponentContainer.of(*components.toTypedArray())
+            // Toxic N / bushido N ride components, not the CardComponent — carry them over too.
+            container = CopyExceptionApplier.withNumericKeywords(container, sourceContainer, exceptions)
 
             // Add static abilities from the card definition (uses cardDefinitionId lookup)
             if (staticAbilityHandler != null) {

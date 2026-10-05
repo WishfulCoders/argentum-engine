@@ -27,6 +27,7 @@ import { SplitPilesUI } from './SplitPilesUI'
 import { ManaSourceSelectionUI } from './ManaSourceSelectionUI'
 import { isLoneTargetRequirement, partitionTargetsByZone } from '@/utils/targeting.ts'
 import styles from './DecisionUI.module.css'
+import { PlayCardDecisionUI } from './PlayCardDecisionUI'
 
 /**
  * Check if a ChooseTargetsDecision is a single player-only requirement asking for one target.
@@ -93,6 +94,7 @@ function DecisionRouter() {
   }, [pendingDecision?.id])
 
   if (!pendingDecision) return null
+  if (pendingDecision.type === 'PlayCardDecision') return <PlayCardDecisionUI />
 
   // A prompt raised once per object names its subject on the minimized button too, so a player
   // who stepped out to read the board knows which creature they are coming back to answer for.
@@ -122,8 +124,8 @@ function DecisionRouter() {
 
   // Handle OrderObjectsDecision (e.g., damage assignment order for blockers)
   if (pendingDecision.type === 'OrderObjectsDecision') {
-    // Combat phase ordering uses dedicated blocker ordering UI
-    if (pendingDecision.context.phase === 'COMBAT') {
+    // The server supplies labels for other ordered zones, including graveyards.
+    if (pendingDecision.context.phase === 'COMBAT' || pendingDecision.orderingTitle) {
       return <OrderBlockersUI key={pendingDecision.id} decision={pendingDecision} responsive={responsive} />
     }
     // Other ordering decisions could use a generic ordering UI (not yet implemented)
@@ -322,6 +324,7 @@ function DecisionRouter() {
 
   // Handle SplitPilesDecision (e.g., Surveil - put cards on top of library or into graveyard)
   if (pendingDecision.type === 'SplitPilesDecision') {
+    if (pendingDecision.useTargetingUI) return <SplitPilesUI key={pendingDecision.id} decision={pendingDecision} responsive={responsive} />
     return (
       <div className={styles.overlay}>
         <SplitPilesUI key={pendingDecision.id} decision={pendingDecision} responsive={responsive} />

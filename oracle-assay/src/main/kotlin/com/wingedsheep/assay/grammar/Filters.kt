@@ -103,6 +103,10 @@ object Filters {
         // The two card types that are never permanents. They appear in the same slot as the rest —
         // "target **sorcery** card in your graveyard", "search your library for an **instant**
         // card" — which is why they are rows here rather than a vocabulary of their own.
+        // The pair is one `CardPredicate.Or`, the "artifact or enchantment" shape; it comes before its
+        // one-type prefix. No plural: Oracle's plural is "instant and sorcery cards", which the card
+        // positions spell from the singular, and a bare "instants and sorceries" is not a group noun.
+        TypeNoun("instant or sorcery", null, GameObjectFilter.InstantOrSorcery),
         TypeNoun("instant", "instants", GameObjectFilter.Instant),
         TypeNoun("sorcery", "sorceries", GameObjectFilter.Sorcery),
         TypeNoun("nonbasic land", "nonbasic lands", GameObjectFilter.NonbasicLand),
@@ -118,6 +122,11 @@ object Filters {
         TypeNoun("creature or land", "creatures and lands", GameObjectFilter.CreatureOrLand),
         TypeNoun("artifact or enchantment", null, GameObjectFilter.ArtifactOrEnchantment),
         TypeNoun("artifact or land", null, GameObjectFilter.ArtifactOrLand),
+        // Oracle prints this pair in both orders — "target artifact or creature", "another creature
+        // or artifact you control" — and the cards follow the print: the `or` fold for the first,
+        // the published `CreatureOrArtifact` for the second. Two rows, so each order prints itself.
+        TypeNoun("artifact or creature", null, GameObjectFilter.Artifact or GameObjectFilter.Creature),
+        TypeNoun("creature or artifact", null, GameObjectFilter.CreatureOrArtifact),
         TypeNoun("attacking creature", "attacking creatures", GameObjectFilter.Creature.attacking()),
         // A `StatePredicate.Or` of the two, which is one printed phrase and one value — the same
         // shape as the "artifact or enchantment" row above, and enumerated for the same reason.
@@ -432,10 +441,31 @@ object Filters {
             build { it.value<GameObjectFilter>("type").withCounter(it.value("kind")) }
             match { filter ->
                 filter.stripTopState<StatePredicate.HasCounter>()
+                    // A threshold ("three or more +1/+1 counters") is a different sentence; this
+                    // template only renders the at-least-one test.
+                    ?.takeIf { (predicate, _) -> predicate.minCount == 1 }
                     ?.let { (predicate, rest) -> bind("type" to rest, "kind" to predicate.counterType) }
             }
         }
     }
+
+    /**
+     * "creature that was dealt damage this turn", "creature an opponent controls that was dealt
+     * damage this turn" — the damage-history quality, landing on `StatePredicate.WasDealtDamageThisTurn`
+     * the way Crushing Pain and Stingblade Assassin write it.
+     *
+     * Singular only: Oracle never prints the plural ("creatures that were dealt damage this turn")
+     * on a card, so there is no form to agree with and no reading to offer.
+     */
+    private fun wasDealtDamage(inner: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
+        phrase("{type} that was dealt damage this turn", name = name) {
+            slot("type", inner)
+            build { it.value<GameObjectFilter>("type").wasDealtDamageThisTurn() }
+            match { filter ->
+                filter.stripTopState<StatePredicate.WasDealtDamageThisTurn>()
+                    ?.let { (_, rest) -> bind("type" to rest) }
+            }
+        }
 
     /** "white creature" — one colour, as an adjective in front of the type noun. */
     private fun colour(inner: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
@@ -510,6 +540,26 @@ object Filters {
             }
         }
 
+    /**
+     * "a permanent you control of the chosen type" — Rimefire Torque, Etchings of the Chosen's
+     * sacrifice, Chronicle of Victory's spell: a member must have the creature type its source chose
+     * as it entered, which is `CardPredicate.HasChosenSubtype`.
+     *
+     * **Singular only, and that is the whole point of the restriction.** A plural lord ("Creatures
+     * you control of the chosen type get +1/+1.") prints the same words over a different field —
+     * `GroupFilter.chosenSubtypeKey`, which is what every hand-written lord writes — and the lord
+     * rows in [Statics] own it. Offering this layer in plural position too would give that one
+     * sentence two models, which is ambiguity by construction rather than a second spelling.
+     */
+    private fun ofChosenType(inner: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
+        phrase("{type} of the chosen type", name = name) {
+            slot("type", inner)
+            build { it.value<GameObjectFilter>("type").withChosenSubtype() }
+            match { filter ->
+                filter.stripTop<CardPredicate.HasChosenSubtype>()?.let { (_, rest) -> bind("type" to rest) }
+            }
+        }
+
     /** "creatures with power 2 or greater". */
     private fun withPowerAtLeast(inner: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
         phrase("{type} with power {n} or greater", name = name) {
@@ -530,6 +580,30 @@ object Filters {
             build { it.value<GameObjectFilter>("type").powerAtMost(it.int("n")) }
             match { filter ->
                 filter.stripTop<CardPredicate.PowerAtMost>()
+                    ?.let { (predicate, rest) -> bind("type" to rest, "n" to predicate.max) }
+            }
+        }
+
+    /** "creatures with toughness 4 or greater" — the toughness sibling of [withPowerAtLeast]. */
+    private fun withToughnessAtLeast(inner: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
+        phrase("{type} with toughness {n} or greater", name = name) {
+            slot("type", inner)
+            slot("n", Primitives.cardinal)
+            build { it.value<GameObjectFilter>("type").toughnessAtLeast(it.int("n")) }
+            match { filter ->
+                filter.stripTop<CardPredicate.ToughnessAtLeast>()
+                    ?.let { (predicate, rest) -> bind("type" to rest, "n" to predicate.min) }
+            }
+        }
+
+    /** "creatures with toughness 2 or less" — the toughness sibling of [withPowerAtMost]. */
+    private fun withToughnessAtMost(inner: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
+        phrase("{type} with toughness {n} or less", name = name) {
+            slot("type", inner)
+            slot("n", Primitives.cardinal)
+            build { it.value<GameObjectFilter>("type").toughnessAtMost(it.int("n")) }
+            match { filter ->
+                filter.stripTop<CardPredicate.ToughnessAtMost>()
                     ?.let { (predicate, rest) -> bind("type" to rest, "n" to predicate.max) }
             }
         }
@@ -681,17 +755,42 @@ object Filters {
             withCounter(inner, plural, "a permanent with a counter$label"),
             withPowerAtLeast(inner, "a permanent with power at least$label"),
             withPowerAtMost(inner, "a permanent with power at most$label"),
+            withToughnessAtLeast(inner, "a permanent with toughness at least$label"),
+            withToughnessAtMost(inner, "a permanent with toughness at most$label"),
             ManaValues.layer(inner, label),
-        )
+        ) + if (plural) {
+            emptyList()
+        } else {
+            listOf(
+                ofChosenType(inner, "a permanent of the chosen type$label"),
+                wasDealtDamage(inner, "a permanent dealt damage this turn$label"),
+            )
+        }
 
-        fun byController(inner: Phrase<GameObjectFilter>, label: String) = listOf(
-            controlledBy(inner, "you control", ControllerPredicate.ControlledByYou, "a permanent you control$label"),
-            controlledBy(
+        // The opponent clause agrees in number with its noun: "creature an opponent controls" but
+        // "creatures **your opponents control**" — 351 plural prints corpus-wide against 26 of
+        // "creatures an opponent controls". Both denote `ControlledByOpponent`, so in the plural the
+        // majority form is the one that prints and the minority one still reads, as a VARIANT.
+        fun opponentClause(inner: Phrase<GameObjectFilter>, label: String): Phrase<GameObjectFilter> {
+            val singular = controlledBy(
                 inner,
                 "an opponent controls",
                 ControllerPredicate.ControlledByOpponent,
                 "a permanent an opponent controls$label",
-            ),
+            )
+            if (!plural) return singular
+            val opponents = controlledBy(
+                inner,
+                "your opponents control",
+                ControllerPredicate.ControlledByOpponent,
+                "permanents your opponents control$label",
+            )
+            return oneOf("permanents an opponent controls$label", listOf(opponents, alternate(singular)))
+        }
+
+        fun byController(inner: Phrase<GameObjectFilter>, label: String) = listOf(
+            controlledBy(inner, "you control", ControllerPredicate.ControlledByYou, "a permanent you control$label"),
+            opponentClause(inner, label),
             // "you don't control" is a **third** value here, not a spelling of the second. The two
             // coincide in a duel and separate in multiplayer, where a teammate's creature is one you
             // don't control and not one an opponent controls — so the SDK spells it
@@ -724,7 +823,98 @@ object Filters {
             oneOf("a permanent with a quality$suffix (unowned)", qualities(head, "$suffix (unowned)")),
             "$suffix (controller last)",
         ).map { alternate(it) }
-        return oneOf("a permanent$suffix", listOf(canonical) + reversed)
+        // The three-member list — "artifact, enchantment, or creature with flying" — exists only as
+        // the singular target noun; see [threeTypeList].
+        val listed = if (plural || spellPosition) {
+            emptyList()
+        } else {
+            val last = oneOf("the last member of a type list$suffix", listOf(head) + qualities(head, "$suffix (listed)"))
+            listOf(threeTypeList(last, "a permanent of one of three types$suffix"))
+        }
+        return oneOf("a permanent$suffix", listOf(canonical) + reversed + listed)
+    }
+
+    /** The one-predicate card types a type list opens with — "**artifact**, **enchantment**, or …". */
+    private val LISTED_TYPES: List<Pair<String, GameObjectFilter>> = listOf(
+        "artifact" to GameObjectFilter.Artifact,
+        "creature" to GameObjectFilter.Creature,
+        "enchantment" to GameObjectFilter.Enchantment,
+        "land" to GameObjectFilter.Land,
+        "planeswalker" to GameObjectFilter.Planeswalker,
+    )
+
+    private val listedType: Phrase<GameObjectFilter> =
+        oneOf("a card type in a list", LISTED_TYPES.map { (word, filter) -> constant(word, filter) })
+
+    /**
+     * "artifact, enchantment, or land", "artifact, enchantment, or creature with flying" — three
+     * types, any of which qualifies, the last of which may carry a quality clause that binds to it
+     * alone.
+     *
+     * **Two shapes, and the cards decide which.** When all three members are bare types the value is
+     * one flat `CardPredicate.Or` of three — the shape the SDK publishes as
+     * `GameObjectFilter.ArtifactEnchantmentOrLand` and `ArtifactCreatureOrEnchantment`, and the one
+     * Creeping Mold and Get Lost write. When the last member is qualified, the value is the
+     * `GameObjectFilter.or` fold, `(Artifact or Enchantment) or Creature.withKeyword(FLYING)` — what
+     * Broken Wings, Spider Food, Exorcise and the rest write, nested because `or` is binary. The
+     * qualification is what tells them apart, so each model has exactly one printed form; the fold
+     * of three bare types and the flat form of a qualified one have none and decline to print.
+     *
+     * Only the singular, uncontrolled noun: the plural swaps the conjunction ("artifacts,
+     * creatures, **and** enchantments"), and a controller clause after the list would leave English
+     * ambiguous about whether it binds to the last member or to all three.
+     */
+    private fun threeTypeList(last: Phrase<GameObjectFilter>, name: String): Phrase<GameObjectFilter> =
+        phrase("{first}, {second}, or {third}", name = name) {
+            slot("first", listedType)
+            slot("second", listedType)
+            slot("third", last)
+            build { listOf3(it.value("first"), it.value("second"), it.value("third")) }
+            match { filter ->
+                val (first, second, third) = unlist3(filter) ?: return@match null
+                if (listOf3(first, second, third) != filter) return@match null
+                bind("first" to first, "second" to second, "third" to third)
+            }
+        }
+
+    private fun GameObjectFilter.isBareType(): Boolean =
+        cardPredicates.size == 1 && statePredicates.isEmpty() && controllerPredicate == null && anyOf.isEmpty()
+
+    private fun listOf3(first: GameObjectFilter, second: GameObjectFilter, third: GameObjectFilter): GameObjectFilter =
+        if (third.isBareType()) {
+            GameObjectFilter(
+                cardPredicates = listOf(
+                    CardPredicate.Or(first.cardPredicates + second.cardPredicates + third.cardPredicates),
+                ),
+            )
+        } else {
+            first or second or third
+        }
+
+    /** [listOf3] read backwards; the caller rebuilds and compares, so this only has to propose. */
+    private fun unlist3(filter: GameObjectFilter): Triple<GameObjectFilter, GameObjectFilter, GameObjectFilter>? {
+        fun single(p: CardPredicate) = GameObjectFilter(cardPredicates = listOf(p))
+        fun pair(f: GameObjectFilter): Pair<GameObjectFilter, GameObjectFilter>? {
+            val or = f.cardPredicates.singleOrNull() as? CardPredicate.Or ?: return null
+            if (or.predicates.size != 2 || !f.isBareType()) return null
+            return single(or.predicates[0]) to single(or.predicates[1])
+        }
+        if (filter.anyOf.size == 2 && filter.cardPredicates.isEmpty()) {
+            val (first, second) = pair(filter.anyOf[0]) ?: return null
+            return Triple(first, second, filter.anyOf[1])
+        }
+        val or = filter.cardPredicates.singleOrNull() as? CardPredicate.Or ?: return null
+        val members = or.predicates
+        if (members.size == 3) return Triple(single(members[0]), single(members[1]), single(members[2]))
+        if (members.size != 2) return null
+        val (first, second) = pair(single(members[0])) ?: return null
+        val rest = members[1].let { if (it is CardPredicate.And) it.predicates else listOf(it) }
+        val third = GameObjectFilter(
+            cardPredicates = rest,
+            statePredicates = filter.statePredicates,
+            controllerPredicate = filter.controllerPredicate,
+        )
+        return Triple(first, second, third)
     }
 
     /** A whole noun phrase in the singular — "creature", "nonblack attacking creature". */

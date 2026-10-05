@@ -46,6 +46,32 @@ data class AddDynamicCountersEffect(
 }
 
 /**
+ * Place [amount] counters without this instruction raising their total above [totalLimit].
+ * The limit applies after placement replacements and does not remove existing counters or
+ * restrict other instructions. Compose with ChooseNumberThen for an optional placement.
+ */
+@SerialName("AddCountersWithLimit")
+@Serializable
+data class AddCountersWithLimitEffect(
+    val counterType: CounterType,
+    val amount: DynamicAmount,
+    val totalLimit: DynamicAmount,
+    val target: EffectTarget
+) : Effect {
+    override val description: String =
+        "Put ${amount.description} ${counterType.printed} counters on ${target.description}, " +
+            "without raising their total above ${totalLimit.description}"
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newAmount = amount.applyTextReplacement(replacer)
+        val newLimit = totalLimit.applyTextReplacement(replacer)
+        return if (newAmount != amount || newLimit != totalLimit)
+            copy(amount = newAmount, totalLimit = newLimit) else this
+    }
+
+}
+
+/**
  * Put a player-chosen number (0 up to [max]) of a single kind of counter on a target.
  * "Put up to three lore counters on it." (Esper Terra) — "Put up to two +1/+1 counters on
  * target creature."
@@ -70,6 +96,33 @@ data class AddCountersUpToEffect(
 ) : Effect {
     override val description: String =
         "Put up to ${max.description} ${counterType.printed} counter${if (max is DynamicAmount.Fixed && max.amount == 1) "" else "s"} on ${target.description}"
+}
+
+/**
+ * "Choose a kind of counter on [target]. Put [count] additional counter(s) of that kind on it."
+ * (Ichormoon Gauntlet.) The single-kind, player-chosen sibling of the targeted
+ * `Proliferate(target)` — which adds one of *every* kind — and of [AddCountersEffect], whose kind
+ * is fixed by the card instead of read off the recipient.
+ *
+ * At resolution the executor reads the kinds currently on the target: none is a no-op, exactly one
+ * is placed without a prompt, and two or more ask the effect's controller to pick one through a
+ * `ChooseOptionDecision`. The counters are placed through the standard [AddCountersEffect] path, so
+ * counter-placement replacements (Hardened Scales) and counter-placed triggers apply. A recipient
+ * that can't have counters put on it gets none. Works on a permanent or a player target.
+ *
+ * @property target The permanent (or player) whose counters are read and added to.
+ * @property count How many counters of the chosen kind to add.
+ */
+@SerialName("AddCountersOfChosenKind")
+@Serializable
+data class AddCountersOfChosenKindEffect(
+    val target: EffectTarget = EffectTarget.ContextTarget(0),
+    val count: Int = 1
+) : Effect {
+    override val description: String =
+        "Choose a kind of counter on ${target.description}. Put " +
+            (if (count == 1) "an additional counter" else "$count additional counters") +
+            " of that kind on it"
 }
 
 /**
@@ -122,16 +175,25 @@ data class DoubleCountersEffect(
 /**
  * Remove counters effect.
  * "Remove X -1/-1 counters from target creature"
+ *
+ * [count] is a [DynamicAmount], like [RemoveAnyNumberOfCountersEffect]'s bounds and
+ * [AddDynamicCountersEffect.amount]: "remove that many reprieve counters from this creature"
+ * (Magnanimous Magistrate) is evaluated at resolution. On its own the effect removes as many as
+ * the permanent carries, up to [count]; as the cost of a `MayPay` gate it is all-or-nothing — the
+ * "yes" is only offered when the full amount is there.
  */
 @SerialName("RemoveCounters")
 @Serializable
 data class RemoveCountersEffect(
     val counterType: CounterType,
-    val count: Int,
+    val count: DynamicAmount,
     val target: EffectTarget
 ) : Effect {
-    override val description: String =
-        "Remove $count ${counterType.printed} counter${if (count != 1) "s" else ""} from ${target.description}"
+    override val description: String = when (count) {
+        is DynamicAmount.Fixed ->
+            "Remove ${count.amount} ${counterType.printed} counter${if (count.amount != 1) "s" else ""} from ${target.description}"
+        else -> "Remove ${count.description} ${counterType.printed} counters from ${target.description}"
+    }
 }
 
 /**
@@ -236,37 +298,19 @@ data class PayCountersEffect(
 }
 
 /**
- * Pay an exact, fixed number of player-scoped counters — the all-or-nothing counterpart to
- * [PayCountersEffect]'s "pay any amount". CR 107.14 energy example: "Whenever you attack, you
- * may pay {E}{E}{E}. When you do, [...]" (Guide of Souls) — there's no amount to choose, only
- * whether to pay the named total, and per the 2024-06-07 ruling you can't pay a partial amount
- * to get a partial effect.
- *
- * Designed as the `action` half of a [ReflexiveTriggerEffect] ("When you do" — CR 603.12 — a
- * fresh triggered ability with its own targets, distinct from a same-ability "If you do"
- * continuation): the outer yes/no is the payment decision itself, so this effect performs no
- * decision of its own — it deducts [amount] atomically and fails outright (no partial removal)
- * if the paying player has fewer than [amount]. `ReflexiveTriggerEffectExecutor.isActionFeasible`
- * checks affordability *before* offering the "may pay" prompt, so in practice this effect only
- * ever runs when the payment is guaranteed to succeed; the failure path is defense in depth.
- *
- * Composes as:
- * `ReflexiveTriggerEffect(action = Effects.PayFixedCounters(CounterType.ENERGY, 3), reflexiveEffect
- * = ..., reflexiveTargetRequirements = [...])`.
- *
- * @property counterType Which player-scoped counter kind to pay (e.g. [CounterType.ENERGY]).
- * @property amount The exact number of counters paid — not a cap, not a choice.
- * @property player Whose counters are paid. Defaults to the effect's controller.
+ * Pay an exact number of player counters, evaluated from the resolving effect's context.
+ * This action has no decision: compose with MayPay for "if you do" or ReflexiveTrigger for
+ * "when you do". Payment is all-or-nothing; a nonpositive computed amount costs zero.
  */
-@SerialName("PayFixedCounters")
+@SerialName("PayExactCounters")
 @Serializable
-data class PayFixedCountersEffect(
+data class PayExactCountersEffect(
     val counterType: CounterType,
-    val amount: Int,
+    val amount: DynamicAmount,
     val player: Player = Player.You
 ) : Effect {
     override val description: String =
-        "${player.possessive} pay $amount ${counterType.printed} counter${if (amount != 1) "s" else ""}"
+        "Pay ${amount.description} ${counterType.printed} counters"
 }
 
 /**
@@ -400,19 +444,41 @@ data class MoveCountersEachKindMissingEffect(
  * the source and added to the destination (honoring counter-placement replacement effects).
  * If [drawCardOnMove] is set and at least one counter was moved, the controller draws a card.
  *
+ * [maxTotal] caps the total moved across all kinds and [minTotal] floors it, with the same
+ * arithmetic as [RemoveAnyNumberOfCountersEffect]: each prompt's minimum is the share of the floor
+ * the later kinds can't cover, and a prompt whose bounds coincide is applied without asking.
+ * "Move a counter from target permanent you control onto a second target permanent" (Nesting
+ * Grounds) is `minTotal = maxTotal = 1` — the player picks which *kind* moves, not whether one
+ * does. The floor is clamped to what the source actually carries.
+ *
  * @property source The permanent counters are moved *from*
  * @property destination The permanent counters are moved *onto*
  * @property drawCardOnMove When true, the controller draws a card if any counter was moved
+ * @property maxTotal Most counters moved in total across all kinds, or null for no cap
+ * @property minTotal Fewest counters that must be moved in total (0 = the move is optional)
  */
 @SerialName("MoveChosenCountersToTarget")
 @Serializable
 data class MoveChosenCountersToTargetEffect(
     val source: EffectTarget,
     val destination: EffectTarget,
-    val drawCardOnMove: Boolean = false
+    val drawCardOnMove: Boolean = false,
+    val maxTotal: Int? = null,
+    val minTotal: Int = 0
 ) : Effect {
+    init {
+        require(minTotal >= 0) { "minTotal must be non-negative" }
+        require(maxTotal == null || maxTotal >= minTotal) { "maxTotal must be at least minTotal" }
+    }
+
     override val description: String = buildString {
-        append("Move one or more counters from ${source.description} onto ${destination.description}")
+        val what = when {
+            minTotal == 1 && maxTotal == 1 -> "a counter"
+            minTotal > 0 && minTotal == maxTotal -> "$minTotal counters"
+            maxTotal != null -> "up to $maxTotal counters"
+            else -> "one or more counters"
+        }
+        append("Move $what from ${source.description} onto ${destination.description}")
         if (drawCardOnMove) append(". If you do, draw a card")
     }
 }

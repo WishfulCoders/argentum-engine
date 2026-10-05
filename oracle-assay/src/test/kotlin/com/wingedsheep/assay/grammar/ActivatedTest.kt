@@ -12,6 +12,8 @@ import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Costs as SdkCosts
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -74,6 +76,20 @@ class ActivatedTest : StringSpec({
 
         fragment("{2}, {T}: Add {R}.").script.activatedAbilities.single().cost shouldBe
             SdkCosts.Composite(SdkCosts.Mana("{2}"), AbilityCost.Tap)
+    }
+
+    // Nantuko Elder: a string of different symbols is one effect per run, chained in printed order.
+    "a string of different mana symbols reads as the runs chained with then" {
+        listOf(
+            "{T}: Add {C}{G}.",
+            "{T}, Sacrifice ~: Add {W}{B}.",
+            "{T}: Add {G}{G}{W}.",
+        ).forEach { roundTrips(it) }
+
+        fragment("{T}: Add {C}{G}.").script.activatedAbilities.single().effect shouldBe
+            (Effects.AddColorlessMana(1) then Effects.AddMana(Color.GREEN, 1))
+        fragment("{T}: Add {G}{G}{W}.").script.activatedAbilities.single().effect shouldBe
+            (Effects.AddMana(Color.GREEN, 2) then Effects.AddMana(Color.WHITE, 1))
     }
 
     // The whole reason the effect clause is a Steps slot: every step rule reaches this sentence
@@ -146,17 +162,40 @@ class ActivatedTest : StringSpec({
         Grammar.abilityLine.printLine(relabelled) shouldBe null
     }
 
-    // A run of *different* symbols is a composite effect the SDK spells another way; reading the
-    // first symbol and dropping the rest would round-trip and mean something else.
-    "a mixed run of symbols declines rather than reading the first one" {
-        Grammar.abilityLine.parseLine("{T}: Add {W}{U}.").shouldBeInstanceOf<ParseOutcome.Declined>()
-    }
-
     // The differential's answer for these is `ManaColorSet.Specific`, which the grammar deliberately
     // never emits — registering both would be one text with two models.
     "the choice form is several abilities and never a colour set" {
         fragment("{T}: Add {B} or {G}.").script.activatedAbilities.map { it.effect } shouldBe
             listOf(Effects.AddMana(Color.BLACK), Effects.AddMana(Color.GREEN))
+    }
+
+    // Shivan Reef's golden: each colour is its own ability, and each carries the damage rider.
+    "a painland's rider follows every ability the choice denotes" {
+        val rider = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
+        fragment("{T}: Add {U} or {R}. ~ deals 1 damage to you.").script.activatedAbilities.map { it.effect } shouldBe
+            listOf(Effects.AddMana(Color.BLUE) then rider, Effects.AddMana(Color.RED) then rider)
+        fragment("{T}: Add {U} or {R}. ~ deals 1 damage to you.").script.activatedAbilities
+            .all { it.isManaAbility && it.timing == TimingRule.ManaAbility } shouldBe true
+        roundTrips("{T}: Add {U} or {R}. ~ deals 1 damage to you.")
+        roundTrips("{T}: Add {W}, {U}, or {B}. ~ deals 1 damage to you.")
+    }
+
+    // One printed "target" would become one target slot per ability, and two abilities with different
+    // riders were never printed as one line.
+    "a choice rider that targets declines, and unequal riders refuse to print" {
+        Grammar.abilityLine.parseLine("{T}: Add {U} or {R}. ~ deals 1 damage to any target.")
+            .shouldBeInstanceOf<ParseOutcome.Declined>()
+        val painland = fragment("{T}: Add {U} or {R}. ~ deals 1 damage to you.")
+        val (blue, red) = painland.script.activatedAbilities
+        val unequal = painland.copy(
+            script = painland.script.copy(
+                activatedAbilities = listOf(
+                    blue,
+                    red.copy(effect = Effects.AddMana(Color.RED) then Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))),
+                )
+            )
+        )
+        Grammar.abilityLine.printLine(unequal) shouldBe null
     }
 
     // Dark Ritual: producing mana is a spell effect in its own right, which is why the rule lives in

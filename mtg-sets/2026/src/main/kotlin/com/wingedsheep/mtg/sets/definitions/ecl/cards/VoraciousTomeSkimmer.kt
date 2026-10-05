@@ -29,7 +29,7 @@ val VoraciousTomeSkimmer = card("Voracious Tome-Skimmer") {
 
     triggeredAbility {
         trigger = Triggers.you.casts()
-        triggerRestriction = Conditions.IsNotYourTurn
+        triggerRestriction = Conditions.IsOpponentsTurn
         effect = Effects.MayPay(Effects.PayLife(1), Effects.DrawCards(1))
     }
 

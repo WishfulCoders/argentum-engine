@@ -42,8 +42,8 @@ val CustodyBattle = card("Custody Battle") {
 
     metadata {
         rarity = Rarity.UNCOMMON
-        collectorNumber = "189"
-        artist = "Christopher Rush"
+        collectorNumber = "197"
+        artist = "Greg Hildebrandt & Tim Hildebrandt"
         flavorText = "Everyone wanted it. No one wanted to keep it."
         imageUri = "https://cards.scryfall.io/normal/front/b/7/b72257f5-0cf9-45ca-8dc7-a1a93bd7dd1e.jpg?1562938173"
     }

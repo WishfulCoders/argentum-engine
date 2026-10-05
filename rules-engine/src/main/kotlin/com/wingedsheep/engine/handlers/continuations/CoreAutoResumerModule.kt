@@ -3,6 +3,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.state.endResolutionControl
 
 /**
  * Core auto-resumers that process continuations without player input:
@@ -20,6 +21,9 @@ class CoreAutoResumerModule(
 ) : AutoResumerModule {
 
     override fun autoResumers(): List<AutoResumer<*>> = listOf(
+        autoResumer(EndResolutionControlContinuation::class) { state, continuation, events, checkForMore ->
+            mergeAndContinue(state.endResolutionControl(continuation.resolvingObject, wasResolving = true), events, checkForMore)
+        },
         autoResumer(FinishResolvingSpellContinuation::class) { state, continuation, events, checkForMore ->
             val result = services.stackResolver.finishResolvingSpell(state, continuation)
             mergeAndContinue(result, events, checkForMore)
@@ -27,8 +31,12 @@ class CoreAutoResumerModule(
         autoResumer(AdvanceStepContinuation::class) { state, _, events, checkForMore ->
             mergeAndContinue(services.turnManager.advanceStep(state), events, checkForMore)
         },
+        autoResumer(FinishTurnStartContinuation::class) { state, continuation, events, checkForMore ->
+            mergeAndContinue(services.turnManager.finishTurnStart(state, continuation.activePlayerId, continuation.followUps), events, checkForMore)
+        },
         autoResumer(FinishUntapStepContinuation::class) { state, continuation, events, checkForMore ->
-            mergeAndContinue(services.turnManager.finishUntapStep(state, continuation.activePlayerId), events, checkForMore)
+            mergeAndContinue(services.turnManager.finishUntapStep(state, continuation.activePlayerId,
+                continuation.skippedUntapStep, continuation.pendingSkipsToConsume), events, checkForMore)
         },
         autoResumer(PendingTriggersContinuation::class) { state, continuation, events, checkForMore ->
             val result = services.triggerProcessor.processTriggers(state, continuation.remainingTriggers)
@@ -175,11 +183,13 @@ class CoreAutoResumerModule(
 
         autoResumer(ModalPreChosenContinuation::class, canResume = { it.remainingEntries.isNotEmpty() }) { state, continuation, events, checkForMore ->
             val ctx = com.wingedsheep.engine.handlers.effects.composite.PreTargetedEffectContext(
+                resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
                 controllerId = continuation.controllerId,
                 sourceId = continuation.sourceId,
                 sourceName = continuation.sourceName,
                 xValue = continuation.xValue,
                 triggeringEntityId = continuation.triggeringEntityId,
+                triggerContext = continuation.triggerContext,
                 pipeline = continuation.pipeline,
                 objectReferences = continuation.objectReferences
             )
@@ -234,6 +244,7 @@ class CoreAutoResumerModule(
                 outerTargets = continuation.outerTargets,
                 outerNamedTargets = continuation.outerNamedTargets,
                 pipeline = continuation.pipeline,
+                resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
                 objectReferences = continuation.objectReferences,
                 accumulatedEvents = events,
                 checkForMore = checkForMore

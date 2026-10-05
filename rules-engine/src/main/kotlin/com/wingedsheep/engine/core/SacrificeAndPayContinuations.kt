@@ -110,6 +110,8 @@ data class PayOrSufferContinuation(
      */
     val requiredCounters: Int = 1,
     val self: Boolean = false,
+    /** [com.wingedsheep.sdk.scripting.costs.CostAtom.TapPermanents.sharedCreatureType], for [PayOrSufferCostType.TAP]. */
+    val sharedCreatureType: Boolean = false,
     /**
      * Trigger context from the original PayOrSufferEffect execution, preserved so the
      * suffer effect can still resolve [com.wingedsheep.sdk.scripting.references.Player.TriggeringPlayer]
@@ -141,6 +143,7 @@ data class PayOrSufferContinuation(
      */
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -200,6 +203,7 @@ data class PayOrSufferChoiceContinuation(
     /** Mirror of [PayOrSufferContinuation.storedCollections] for the multi-option path. */
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**
@@ -245,6 +249,7 @@ data class AnyPlayerMayPayContinuation(
     val triggeringEntityId: EntityId? = null,
     val triggeringPlayerId: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
 ) : AnswerContinuation
 
 /**

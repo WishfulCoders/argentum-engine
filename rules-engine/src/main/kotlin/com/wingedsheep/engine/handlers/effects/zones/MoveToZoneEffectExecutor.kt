@@ -59,6 +59,7 @@ class MoveToZoneEffectExecutor(
         effect: MoveToZoneEffect,
         context: EffectContext
     ): EffectResult {
+        var context = context
         val targetId = context.resolveTarget(effect.target, state)
             ?: return if (effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.Self ||
                 effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.IterationEntity ||
@@ -69,7 +70,10 @@ class MoveToZoneEffectExecutor(
 
         // byDestruction delegates to destroyPermanent (handles indestructible)
         if (effect.byDestruction) {
-            return destroyPermanent(zones, state, targetId)
+            return destroyPermanent(
+                zones, state, targetId,
+                lookBackGrants = context.lookBackGrants[targetId]
+            )
         }
 
         val container = state.getEntity(targetId)
@@ -98,29 +102,54 @@ class MoveToZoneEffectExecutor(
             ownerId
         }
 
-        // CR 303.4g — an Aura entering the battlefield by any means other than resolving as an
-        // Aura spell (here: reanimation / return from graveyard, exile, etc.) has its controller
-        // choose what it enchants as it enters. Without that choice the Aura would enter
-        // unattached and immediately die to a state-based action (CR 704.5n). Cast Auras attach
-        // during stack resolution and never reach this executor, and the explicit
-        // "attached to ..." effect has its own executor, so a generic move-to-battlefield of an
-        // Aura is always the choose-as-it-enters case.
-        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null && cardComponent.typeLine.isAura) {
-            return attachAuraOnEnter(state, targetId, cardComponent, controllerId, context)
-        }
-
-        // "Lands can't enter the battlefield" (Worms of the Earth). The land simply doesn't enter:
-        // the move is a no-op and the card stays where it was. Only this path needs the check —
-        // *playing* a land is stopped earlier by PlayersCantPlayLands, and a land can't be cast.
+        // "<Cards> can't enter the battlefield" (Worms of the Earth, Soulless Jailer). The card simply
+        // doesn't enter and stays where it was. The transition service enforces this for every move;
+        // asking here too keeps a locked card from prompting for an Aura host or an entry choice.
         if (effect.destination == Zone.BATTLEFIELD &&
-            cardComponent.typeLine.isLand &&
-            LandEntryLocks.landsCantEnter(state, cardRegistry, predicateEvaluator = zones.predicateEvaluator)
+            EntryLocks.cantEnter(state, targetId, currentZone.zoneType, cardRegistry, zones.predicateEvaluator)
         ) {
             return EffectResult.success(state)
         }
 
+        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+            com.wingedsheep.engine.handlers.effects.copy.EffectCopyEntry.prepare(
+                state, effect, context, mapOf(targetId to controllerId), cardRegistry, zones.predicateEvaluator
+            )?.let { return it }
+        }
+
+        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+            val prepared = com.wingedsheep.engine.handlers.effects.copy.CopyAuraEntry.prepare(
+                state, effect, context, mapOf(targetId to controllerId), cardRegistry, targetFinder, zones.predicateEvaluator)
+            prepared.pause?.let { return it }
+            context = prepared.context
+            if (targetId in context.entryAuraHosts && context.entryAuraHosts[targetId] == null) {
+                return EffectResult.success(state)
+            }
+        }
+
+        // CR 303.4f — an Aura entering the battlefield by any means other than resolving as an
+        // Aura spell (here: reanimation / return from graveyard, exile, etc.) has its controller
+        // choose what it enchants as it enters. Without that choice the Aura would enter
+        // unattached and immediately die to a state-based action (CR 704.5m). Cast Auras attach
+        // during stack resolution and never reach this executor, and the explicit
+        // "attached to ..." effect has its own executor, so a generic move-to-battlefield of an
+        // Aura is always the choose-as-it-enters case.
+        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null && cardComponent.typeLine.isAura && context.entryCopies[targetId]?.copiedCard == null) {
+            return attachAuraOnEnter(state, targetId, cardComponent, controllerId, context)
+        }
+
+        // "As this enters, choose …" (CR 614.12a) — asked before the move, of the copied card when
+        // the entrant enters as a copy; the transition stamps the answers on arrival.
+        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+            com.wingedsheep.engine.handlers.effects.EffectEntryChoices.prepare(
+                state, effect, context, mapOf(targetId to controllerId), cardRegistry
+            )?.let { return it }
+        }
+
         // Build ZoneEntryOptions based on placement and effect properties
         val entryOptions = buildEntryOptions(effect, cardComponent, controllerId, context.controllerId)
+            .copy(lookBackGrants = context.lookBackGrants[targetId], entryCopy = context.entryCopies[targetId], auraHostId = context.entryAuraHosts[targetId],
+                entryChoices = context.entryChoices[targetId]?.values.orEmpty())
 
         val transitionResult = zones.moveToZone(
             state, targetId, effect.destination, entryOptions, currentZone
@@ -138,7 +167,7 @@ class MoveToZoneEffectExecutor(
         if (actualDestZone == Zone.BATTLEFIELD && effect.faceDown == null) {
             val (counterState, counterEvents) = EntersWithReplacements.applyOnEntry(
                 resultState, targetId, controllerId, cardRegistry,
-                predicateEvaluator = zones.predicateEvaluator
+                predicateEvaluator = zones.predicateEvaluator, preEntryZone = currentZone
             )
             resultState = counterState
             extraEvents.addAll(counterEvents)
