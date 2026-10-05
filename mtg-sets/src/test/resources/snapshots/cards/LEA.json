@@ -4007,6 +4007,89 @@
     ]
 }
 
+// Mana Vault
+{
+    "name": "Mana Vault",
+    "manaCost": "{1}",
+    "typeLine": "Artifact",
+    "oracleText": "This artifact doesn't untap during your untap step.\nAt the beginning of your upkeep, you may pay {4}. If you do, untap this artifact.\nAt the beginning of your draw step, if this artifact is tapped, it deals 1 damage to you.\n{T}: Add {C}{C}{C}.",
+    "flags": [
+        "DOESNT_UNTAP"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mana Vault:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "PayManaCost",
+                            "cost": "{4}"
+                        }
+                    },
+                    "then": {
+                        "type": "TapUntap",
+                        "target": "Self",
+                        "tap": false
+                    }
+                },
+                "descriptionOverride": "At the beginning of your upkeep, you may pay {4}. If you do, untap this artifact."
+            },
+            {
+                "id": "Mana Vault:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "DRAW"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "Controller"
+                },
+                "interveningIf": {
+                    "type": "EntityMatches",
+                    "entity": "Self",
+                    "filter": "tapped"
+                },
+                "descriptionOverride": "At the beginning of your draw step, if this artifact is tapped, it deals 1 damage to you."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Mana Vault:3",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "259",
+        "rarity": "RARE",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/9/19499cb7-eccb-4e69-af32-6002d447a160.jpg?1783948664"
+    },
+    "colorIdentityOverride": []
+}
+
 // Merfolk of the Pearl Trident
 {
     "name": "Merfolk of the Pearl Trident",
