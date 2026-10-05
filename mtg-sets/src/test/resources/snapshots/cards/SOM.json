@@ -1635,9 +1635,9 @@
     "oracleText": "Galvanic Blast deals 2 damage to any target.\nMetalcraft — Galvanic Blast deals 4 damage instead if you control three or more artifacts.",
     "script": {
         "spellEffect": {
-            "type": "DealDamage",
-            "amount": {
-                "type": "Conditional",
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
                 "condition": {
                     "type": "Compare",
                     "left": {
@@ -1650,19 +1650,29 @@
                         "type": "Fixed",
                         "amount": 3
                     }
-                },
-                "ifTrue": {
+                }
+            },
+            "then": {
+                "type": "DealDamage",
+                "amount": {
                     "type": "Fixed",
                     "amount": 4
                 },
-                "ifFalse": {
-                    "type": "Fixed",
-                    "amount": 2
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
                 }
             },
-            "target": {
-                "type": "BoundVariable",
-                "name": "t0"
+            "otherwise": {
+                "type": "DealDamage",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                }
             }
         },
         "targetRequirements": [

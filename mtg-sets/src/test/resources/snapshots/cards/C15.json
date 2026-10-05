@@ -69,6 +69,97 @@
     ]
 }
 
+// Fiery Confluence
+{
+    "name": "Fiery Confluence",
+    "manaCost": "{2}{R}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose three. You may choose the same mode more than once.\n• Fiery Confluence deals 1 damage to each creature.\n• Fiery Confluence deals 2 damage to each opponent.\n• Destroy target artifact.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "ForEach",
+                        "space": {
+                            "type": "IterationSpace.Group",
+                            "filter": {
+                                "baseFilter": "creature"
+                            }
+                        },
+                        "body": {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": "IterationEntity"
+                        }
+                    },
+                    "description": "Fiery Confluence deals 1 damage to each creature"
+                },
+                {
+                    "effect": {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 2
+                        },
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "EachOpponent"
+                        }
+                    },
+                    "description": "Fiery Confluence deals 2 damage to each opponent"
+                },
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "artifact"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "description": "Destroy target artifact"
+                }
+            ],
+            "chooseCount": 3,
+            "allowRepeat": true
+        }
+    },
+    "metadata": {
+        "collectorNumber": "26",
+        "rarity": "RARE",
+        "artist": "Kieran Yanner",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/b/7b61c9bc-16e8-417f-99e7-8bd83d4666c5.jpg?1783938111",
+        "rulings": [
+            {
+                "date": "2015-11-04",
+                "text": "If the first or second modes are chosen multiple times, each of those modes represents a separate damage-dealing event."
+            },
+            {
+                "date": "2015-11-04",
+                "text": "If a mode requires a target, you can select that mode only if there's a legal target available. Each time you select that mode, you can choose a different target, or you can choose the same target."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Gigantoplasm
 {
     "name": "Gigantoplasm",

@@ -2762,6 +2762,115 @@
     ]
 }
 
+// Magda, Brazen Outlaw
+{
+    "name": "Magda, Brazen Outlaw",
+    "manaCost": "{1}{R}",
+    "typeLine": "Legendary Creature — Dwarf Berserker",
+    "oracleText": "Other Dwarves you control get +1/+0.\nWhenever a Dwarf you control becomes tapped, create a Treasure token.\nSacrifice five Treasures: Search your library for an artifact or Dragon card, put that card onto the battlefield, then shuffle.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Magda, Brazen Outlaw:1",
+                "trigger": {
+                    "type": "TapEvent",
+                    "filter": "creature Dwarf ctrl:you"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Treasure"
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Magda, Brazen Outlaw:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomSacrifice",
+                        "filter": "artifact Treasure",
+                        "count": 5
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library",
+                                "filter": "artifact|Dragon"
+                            },
+                            "storeAs": "searchable",
+                            "search": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "found"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
+                    ]
+                },
+                "descriptionOverride": "Sacrifice five Treasures: Search your library for an artifact or Dragon card, put that card onto the battlefield, then shuffle."
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 1,
+                "toughnessBonus": 0,
+                "filter": {
+                    "baseFilter": "creature Dwarf ctrl:you",
+                    "excludeSelf": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "142",
+        "rarity": "RARE",
+        "artist": "Slawomir Maniak",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/7/079e6263-e54c-4899-a336-5315909b9322.jpg?1783928229",
+        "rulings": [
+            {
+                "date": "2021-02-05",
+                "text": "Magda's triggered ability doesn't allow you to tap any Dwarves. You have to find some other way to tap them. Attacking is still a great way to go."
+            },
+            {
+                "date": "2021-02-05",
+                "text": "For the triggered ability to trigger, a Dwarf you control has to actually change from untapped to tapped. If an effect attempts to tap a Dwarf you control while it is already tapped, the ability won't trigger."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Maja, Bretagard Protector
 {
     "name": "Maja, Bretagard Protector",
