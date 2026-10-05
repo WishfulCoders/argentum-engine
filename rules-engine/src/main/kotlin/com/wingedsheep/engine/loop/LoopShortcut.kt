@@ -3,7 +3,6 @@ package com.wingedsheep.engine.loop
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.core.GameLimits
-import com.wingedsheep.engine.core.Outcome
 import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.PendingDecision
 import com.wingedsheep.engine.core.SubmitDecision
@@ -64,7 +63,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * ([Role.Successor]). Decision answers that name something other than an entity (the order of
  * triggers, an option id) are mapped by position in the new decision, see [rewriteResponse].
  */
-class LoopShortcut(private val processor: ActionProcessor) {
+class LoopShortcut(private val executor: LoopExecutor) {
+
+    /** Replays each action straight through [processor] — the game server's way of playing. */
+    constructor(processor: ActionProcessor) : this(LoopExecutor.of(processor))
 
     /**
      * Find a loop the acting player has just completed, or null. [history] is this turn's actions in
@@ -182,10 +184,10 @@ class LoopShortcut(private val processor: ActionProcessor) {
                 if (s.pendingDecision != null) return Iteration.Failed("an unexpected decision is pending")
                 rewrite(recorded, idMap) ?: return Iteration.Failed("could not map the action")
             }
-            val result = processor.process(s, action).result
-            val outcome = result.outcome
-            if (outcome is Outcome.Rejected) return Iteration.Failed(outcome.reason.message)
-            s = result.state
+            s = when (val result = executor.execute(s, action)) {
+                is LoopExecution.Rejected -> return Iteration.Failed(result.reason)
+                is LoopExecution.Accepted -> result.state
+            }
             done += action
             if (s.gameOver) return Iteration.Done(s, done)
         }
@@ -311,7 +313,7 @@ class LoopShortcut(private val processor: ActionProcessor) {
 
     private fun atRest(state: GameState, playerId: EntityId): Boolean =
         !state.gameOver && state.priorityPlayerId == playerId && state.stack.isEmpty() &&
-            state.pendingDecision == null && state.continuationStack.isEmpty() && state.pendingTriggers.isEmpty()
+            state.pendingDecision == null && state.continuationStack.isEmpty()
 
     private fun samePoint(a: GameState, b: GameState): Boolean =
         a.turnNumber == b.turnNumber && a.phase == b.phase && a.step == b.step && a.activePlayerId == b.activePlayerId
@@ -413,6 +415,29 @@ class LoopShortcut(private val processor: ActionProcessor) {
             return (cur as? JsonPrimitive)?.takeIf { it.isString }?.content
         }
     }
+}
+
+/**
+ * How [LoopShortcut] plays one recorded action. The game server applies actions one at a time
+ * ([of] an [ActionProcessor]); the gym's step also passes priority and answers forced decisions
+ * until the game is quiet, so its history holds the agent's actions only and it replays them the
+ * same way. Either way the history and the replay must use the same executor.
+ */
+fun interface LoopExecutor {
+    fun execute(state: GameState, action: GameAction): LoopExecution
+
+    companion object {
+        fun of(processor: ActionProcessor) = LoopExecutor { state, action ->
+            val result = processor.process(state, action).result
+            result.error?.let { LoopExecution.Rejected(it) } ?: LoopExecution.Accepted(result.state)
+        }
+    }
+}
+
+/** What a [LoopExecutor] made of one action. */
+sealed interface LoopExecution {
+    data class Accepted(val state: GameState) : LoopExecution
+    data class Rejected(val reason: String) : LoopExecution
 }
 
 /** One action of the history [LoopShortcut.detect] reads, with the state it was taken in. */
