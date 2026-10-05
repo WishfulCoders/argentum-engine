@@ -11,5 +11,5 @@ package com.wingedsheep.gym.contract
  * what matters.
  */
 object SchemaHash {
-    const val CURRENT: String = "argentum-gym-contract@v1.13-behold-options"
+    const val CURRENT: String = "argentum-gym-contract@v1.14-loop-shortcut"
 }

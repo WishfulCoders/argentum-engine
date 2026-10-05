@@ -56,6 +56,13 @@ data class EnvConfig(
 
     /** When to cut an episode short. See [EnvLimits]. */
     val limits: EnvLimits = EnvLimits(),
+
+    /**
+     * Offer the learner loop shortcuts (MTR 4.4): after it plays a loop by hand, its legal actions
+     * gain `RepeatLoop` entries that repeat it N more times as one action. Off by default, so an env
+     * created without it behaves — and costs — exactly as before.
+     */
+    val loopShortcuts: Boolean = false,
 ) {
     init {
         require(players.size >= 2) { "Need at least 2 players" }

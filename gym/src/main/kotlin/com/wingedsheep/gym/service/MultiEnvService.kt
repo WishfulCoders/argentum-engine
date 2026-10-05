@@ -58,6 +58,7 @@ class MultiEnvService(
         val gymEnv = GameGymEnv(
             GameEnvironment.create(cardRegistry), config.perspectivePlayerIndex, config.revealAll,
             limits = config.limits, agents = config.players.map { it.agent },
+            loopShortcuts = config.loopShortcuts,
         )
         // Reset through the gym env, not the raw environment: it is what seeds the episode counters
         // and plays the pilot seats forward, so the opening observation is already the learner's.
@@ -87,7 +88,7 @@ class MultiEnvService(
     fun reset(envId: EnvId, config: EnvConfig): ObservationResult =
         requireGameEnv(envId).reset(
             config.toGameConfig(), config.limits, config.players.map { it.agent },
-            config.perspectivePlayerIndex, config.revealAll,
+            config.perspectivePlayerIndex, config.revealAll, config.loopShortcuts,
         )
 
     /** Drop envs from the registry. Idempotent. */

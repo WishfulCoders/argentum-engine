@@ -68,6 +68,15 @@ data class EnvStatus(
      * (mtg-draft-ai `docs/51` §4). A trainer maps it to the policy playing that seat.
      */
     val actingSeat: Int? = null,
+
+    /**
+     * Loop shortcuts the learner took since the last reset (env option `loopShortcuts`), the
+     * iterations they repeated, and how many stopped before the count asked for. Each counts as one
+     * step in [stepCount], so these say how much play a step stood for.
+     */
+    val loopRepeats: Int = 0,
+    val loopIterations: Int = 0,
+    val loopStoppedEarly: Int = 0,
 ) {
     /** True once the episode is over for either reason. A caller should reset or dispose it. */
     val done: Boolean get() = terminated || truncated

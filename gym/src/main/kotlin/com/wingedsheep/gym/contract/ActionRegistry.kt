@@ -21,13 +21,25 @@ import com.wingedsheep.engine.legalactions.LegalAction
  */
 class ActionRegistry private constructor(
     private val legalActionsById: Map<Int, LegalAction>,
-    private val decisionResponsesById: Map<Int, DecisionResponse>
+    private val decisionResponsesById: Map<Int, DecisionResponse>,
+    private val loopIterationsById: Map<Int, Int> = emptyMap(),
 ) {
     /** Resolves [actionId] to its engine-level representation. */
     fun resolve(actionId: Int): ResolvedAction {
         legalActionsById[actionId]?.let { return ResolvedAction.Legal(it) }
         decisionResponsesById[actionId]?.let { return ResolvedAction.Decision(it) }
+        loopIterationsById[actionId]?.let { return ResolvedAction.RepeatLoop(it) }
         return ResolvedAction.Unknown
+    }
+
+    /** The first ID after every entry this registry holds. */
+    val nextId: Int
+        get() = (legalActionsById.keys + decisionResponsesById.keys + loopIterationsById.keys).maxOrNull()?.plus(1) ?: 0
+
+    /** This registry plus loop-shortcut entries ([ResolvedAction.RepeatLoop]), keyed by their IDs. */
+    fun withLoops(iterationsById: Map<Int, Int>): ActionRegistry {
+        require(iterationsById.keys.none { resolve(it) != ResolvedAction.Unknown }) { "Loop IDs collide with the registry" }
+        return ActionRegistry(legalActionsById, decisionResponsesById, loopIterationsById + iterationsById)
     }
 
     /** All legal-action entries in ID order. Empty when mid-decision. */
@@ -38,7 +50,7 @@ class ActionRegistry private constructor(
     val decisionResponses: List<Pair<Int, DecisionResponse>>
         get() = decisionResponsesById.entries.sortedBy { it.key }.map { it.key to it.value }
 
-    val size: Int get() = legalActionsById.size + decisionResponsesById.size
+    val size: Int get() = legalActionsById.size + decisionResponsesById.size + loopIterationsById.size
 
     companion object {
         val EMPTY = ActionRegistry(emptyMap(), emptyMap())
@@ -76,6 +88,12 @@ sealed interface ResolvedAction {
 
     /** The ID maps to a folded [DecisionResponse] — submit via SubmitDecision. */
     data class Decision(val response: DecisionResponse) : ResolvedAction
+
+    /**
+     * The ID repeats the loop the agent just played [iterations] more times — see
+     * `com.wingedsheep.engine.loop.LoopShortcut` and the env option `loopShortcuts`.
+     */
+    data class RepeatLoop(val iterations: Int) : ResolvedAction
 
     /** The ID is not present in the current registry. */
     data object Unknown : ResolvedAction

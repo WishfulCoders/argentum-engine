@@ -369,7 +369,22 @@ data class LegalActionView(
     /** Whole-declaration restrictions that cannot be represented by pairwise assignments alone. */
     val blockDeclarationConstraints: BlockDeclarationConstraintsView? = null,
     /** True when this entry was generated from [PendingDecisionView], not a GameAction. */
-    val isDecisionOption: Boolean = false
+    val isDecisionOption: Boolean = false,
+    /**
+     * For `kind == "RepeatLoop"` (env option `loopShortcuts`): how many more times this entry
+     * repeats the loop the agent just played by hand — the MTR 4.4 shortcut, one action for what
+     * would be [loopActionsPerIteration] × this many. Null for every other kind.
+     */
+    val loopIterations: Int? = null,
+    /** True when [loopIterations] is exactly what brings every opponent to 0 life or 10 poison. */
+    val loopWins: Boolean = false,
+    /** Actions one repetition takes (the agent's, and its answered decisions). */
+    val loopActionsPerIteration: Int? = null,
+    /**
+     * What one repetition changes, per player and quantity: `"self.life"`, `"opponent.tokens"`,
+     * … to the signed change. The same quantities as the description's text, for a featurizer.
+     */
+    val loopDelta: Map<String, Int> = emptyMap(),
 )
 
 @Serializable

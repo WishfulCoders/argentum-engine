@@ -22,6 +22,14 @@ import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.SubmitDecision
 import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.engine.loop.LoopCandidate
+import com.wingedsheep.engine.loop.LoopExecution
+import com.wingedsheep.engine.loop.LoopExecutor
+import com.wingedsheep.engine.loop.LoopShortcut
+import com.wingedsheep.engine.loop.LoopStep
+import com.wingedsheep.engine.loop.LoopStop
+import com.wingedsheep.gym.contract.LegalActionView
+import com.wingedsheep.gym.contract.TrainingObservation
 import com.wingedsheep.gym.contract.ActionParameterizer
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.ActionRegistry
@@ -57,7 +65,33 @@ class GameGymEnv(
      * original behaviour: every decision leaves the env.
      */
     private var agents: List<AgentSpec> = emptyList(),
+    /** See [com.wingedsheep.gym.service.EnvConfig.loopShortcuts]. */
+    private var loopShortcuts: Boolean = false,
 ) : GymEnv {
+
+    /**
+     * This turn's transitions, each with the state it was taken in — what [LoopShortcut.detect]
+     * reads. Recorded only with [loopShortcuts] on. One entry per [GameEnvironment.step], which
+     * already passes priority and answers forced decisions until the game is quiet, so the loop is
+     * replayed through the same step ([loopExecutor]) rather than one engine action at a time.
+     */
+    private var loopHistory: List<LoopStep> = emptyList()
+
+    /** The loop the current observation offers, if any, and the state it was found in. */
+    private var offeredLoop: LoopCandidate? = null
+
+    /** Replays one recorded transition the way [GameEnvironment.step] made it, on a throwaway fork. */
+    private val loopExecutor = LoopExecutor { state, action ->
+        val replay = environment.fork()
+        replay.restore(state, environment.playerIds, environment.stepCount)
+        try {
+            replay.step(action)
+            replay.lastRejection?.let { LoopExecution.Rejected(it) } ?: LoopExecution.Accepted(replay.state)
+        } catch (e: RuntimeException) {
+            LoopExecution.Rejected(e.message ?: e::class.simpleName ?: "step failed")
+        }
+    }
+    private val loopShortcut = LoopShortcut(loopExecutor)
 
     @Volatile
     private var registry: ActionRegistry = ActionRegistry.EMPTY
@@ -134,14 +168,18 @@ class GameGymEnv(
     override fun fork(): GymEnv =
         GameGymEnv(
             environment.fork(), perspectivePlayerIndex, defaultRevealAll, observationBuilder, limits,
-            agents,
+            agents, loopShortcuts,
         ).also {
+            it.loopHistory = loopHistory
             it.truncation = truncation
             it.lastActive = lastActive
             it.lastProgress = lastProgress
             it.autoAdvanced = autoAdvanced
             it.delegatedDecisions = delegatedDecisions
             it.playedOut = playedOut
+            it.loopRepeats = loopRepeats
+            it.loopIterations = loopIterations
+            it.loopStoppedEarly = loopStoppedEarly
             it.build(defaultRevealAll)
         }
 
@@ -156,6 +194,9 @@ class GameGymEnv(
         delegatedDecisions = delegatedDecisions,
         playedOut = playedOut,
         actingSeat = observedSeat(),
+        loopRepeats = loopRepeats,
+        loopIterations = loopIterations,
+        loopStoppedEarly = loopStoppedEarly,
         // A truncated episode pays nothing: its outcome was never decided.
         reward = if (isTerminal) {
             environment.terminalRewards().map { (playerId, value) -> PlayerReward(playerId, value) }
@@ -179,7 +220,10 @@ class GameGymEnv(
         agents: List<AgentSpec> = this.agents,
         perspectivePlayerIndex: Int = this.perspectivePlayerIndex,
         revealAll: Boolean = this.defaultRevealAll,
+        loopShortcuts: Boolean = this.loopShortcuts,
     ): ObservationResult {
+        this.loopShortcuts = loopShortcuts
+        loopHistory = emptyList()
         this.limits = limits
         this.agents = agents
         // Resetting into a config whose perspective the env then ignored would observe the game
@@ -194,6 +238,9 @@ class GameGymEnv(
         autoAdvanced = 0
         delegatedDecisions = 0
         playedOut = 0
+        loopRepeats = 0
+        loopIterations = 0
+        loopStoppedEarly = 0
         advanceToLearner()
         return build(defaultRevealAll)
     }
@@ -252,7 +299,7 @@ class GameGymEnv(
             if (decision != null) {
                 if (isLearner(decision.playerId)) delegatedDecisions++
                 val response = aiFor(decision.playerId).respondToDecision(environment.state, decision)
-                environment.step(SubmitDecision(decision.playerId, response))
+                stepEnv(SubmitDecision(decision.playerId, response))
                 autoAdvanced++
                 checkLimits()
                 continue
@@ -267,7 +314,7 @@ class GameGymEnv(
                 taken++
                 playedOut++
             }
-            environment.step(aiFor(priority).chooseAction(environment.state))
+            stepEnv(aiFor(priority).chooseAction(environment.state))
             autoAdvanced++
             checkLimits()
         }
@@ -427,7 +474,7 @@ class GameGymEnv(
     private fun submitAsAi(action: GameAction): Boolean {
         val float = policySimulator.floatSacrificeMana(environment.state, action)
         for (step in float?.activations.orEmpty() + action) {
-            environment.step(step)
+            stepEnv(step)
             if (environment.lastRejection != null) return false
             checkLimits()
             if (isTerminal || truncation != null) return true
@@ -486,7 +533,7 @@ class GameGymEnv(
         check(response.decisionId == pending.id) {
             "Decision ID mismatch: response=${response.decisionId}, pending=${pending.id}"
         }
-        environment.step(SubmitDecision(pending.playerId, response))
+        stepEnv(SubmitDecision(pending.playerId, response))
         return build(defaultRevealAll)
     }
 
@@ -519,6 +566,8 @@ class GameGymEnv(
             GameRng.seeded(seed),
         )
         environment.restore(sampled, environment.playerIds, environment.stepCount)
+        // The recorded states hold the old hidden world; a loop is found again by playing it.
+        loopHistory = emptyList()
         players.clear()
         return build(defaultRevealAll)
     }
@@ -529,6 +578,7 @@ class GameGymEnv(
     fun restore(codec: SnapshotCodec, handle: SnapshotHandle): ObservationResult {
         val snap = codec.load(handle)
         environment.restore(snap.state, snap.playerIds, snap.stepCount)
+        loopHistory = emptyList()
         return build(defaultRevealAll)
     }
 
@@ -568,7 +618,95 @@ class GameGymEnv(
             environment.state, perspective, learnerActions, revealAll
         )
         registry = result.registry
+        return withLoopOffer(result, perspective)
+    }
+
+    // --- loop shortcuts (MTR 4.4) --------------------------------------------
+
+    /** Every transition goes through here, so the loop history sees exactly what the env did. */
+    private fun stepEnv(action: GameAction): StepResult {
+        if (!loopShortcuts) return environment.step(action)
+        val before = environment.state
+        val result = environment.step(action)
+        if (environment.lastRejection == null) {
+            val after = environment.state
+            loopHistory = if (after.turnNumber != before.turnNumber) {
+                emptyList()
+            } else {
+                (loopHistory + LoopStep(before, action)).takeLast(MAX_LOOP_HISTORY)
+            }
+        }
         return result
+    }
+
+    /**
+     * Offer the loop the learner just played, as `RepeatLoop` entries after the ordinary actions:
+     * once, as many times as it takes to win (when the loop takes life or gives poison), and as many
+     * as the engine allows. Only on the learner's own priority with nothing pending — the point
+     * [LoopShortcut.detect] needs anyway.
+     */
+    private fun withLoopOffer(result: ObservationResult, perspective: EntityId): ObservationResult {
+        offeredLoop = null
+        if (!loopShortcuts || isTerminal) return result
+        val actor = environment.agentToAct ?: return result
+        if (actor != perspective || !isLearner(actor) || environment.state.pendingDecision != null) return result
+        val loop = loopShortcut.detect(loopHistory, environment.state, actor) ?: return result
+        val observation = result.observation as? TrainingObservation ?: return result
+        offeredLoop = loop
+
+        val counts = linkedMapOf<Int, Boolean>()
+        counts[1] = loop.iterationsToWin == 1
+        loop.iterationsToWin?.takeIf { it <= loop.maxIterations }?.let { counts[it] = true }
+        counts.putIfAbsent(loop.maxIterations, false)
+        val delta = loop.delta.perPlayer.flatMap { (id, change) ->
+            val who = if (id == actor) "self" else "opponent"
+            change.changes().map { (what, n) -> "$who.${what.replace(' ', '_')}" to n }
+        }.toMap()
+        val text = delta.entries.joinToString(", ") { (k, v) -> "$k ${if (v > 0) "+$v" else "$v"}" }
+        val first = loop.playerActions.first()
+        val source = when (first) {
+            is ActivateAbility -> first.sourceId
+            is CastSpell -> first.cardId
+            is PlayLand -> first.cardId
+            else -> null
+        }
+        var id = result.registry.nextId
+        val ids = linkedMapOf<Int, Int>()
+        val views = counts.map { (n, wins) ->
+            ids[id] = n
+            LegalActionView(
+                actionId = id++,
+                kind = "RepeatLoop",
+                description = "Repeat loop ×$n (${first::class.simpleName}; each: $text)",
+                affordable = true,
+                sourceEntityId = source,
+                loopIterations = n,
+                loopWins = wins,
+                loopActionsPerIteration = loop.steps.size,
+                loopDelta = delta,
+            )
+        }
+        registry = result.registry.withLoops(ids)
+        return ObservationResult(observation.copy(legalActions = observation.legalActions + views), registry)
+    }
+
+    /**
+     * Repeat [offeredLoop] [iterations] more times through [loopExecutor] and install the result.
+     * Counts as one action against [EnvLimits]: a stated loop is the opposite of an episode that
+     * stopped making progress, and its length would otherwise trip the stuck detector.
+     */
+    private fun repeatLoop(iterations: Int, actionId: Int) {
+        val loop = offeredLoop ?: throw IllegalArgumentException("Action $actionId: no loop is on offer")
+        val run = loopShortcut.run(loop, environment.state, iterations)
+        if (run.iterations == 0) {
+            throw IllegalArgumentException("Action $actionId: the loop could not be repeated (${run.reason ?: run.stop})")
+        }
+        environment.restore(run.state, environment.playerIds, environment.stepCount + 1)
+        loopHistory = emptyList()
+        offeredLoop = null
+        loopRepeats++
+        loopIterations += run.iterations
+        if (run.stop != LoopStop.COMPLETED && run.stop != LoopStop.GAME_OVER) loopStoppedEarly++
     }
 
     private fun executeResolved(resolved: ResolvedAction, actionId: Int, params: ActionParams) {
@@ -588,7 +726,7 @@ class GameGymEnv(
                         "Action $actionId failed policy engine preflight"
                     }
                 }
-                environment.step(action)
+                stepEnv(action)
                 failOnRejection(actionId)
             }
             is ResolvedAction.Decision -> {
@@ -597,8 +735,12 @@ class GameGymEnv(
                 }
                 val pending = environment.state.pendingDecision
                     ?: throw IllegalStateException("Registry has a decision response but env is not paused")
-                environment.step(SubmitDecision(pending.playerId, resolved.response))
+                stepEnv(SubmitDecision(pending.playerId, resolved.response))
                 failOnRejection(actionId)
+            }
+            is ResolvedAction.RepeatLoop -> {
+                require(params.isEmpty) { "Action ID $actionId repeats a loop and takes no step params" }
+                repeatLoop(resolved.iterations, actionId)
             }
             ResolvedAction.Unknown ->
                 throw IllegalArgumentException("Action ID $actionId is not valid for the current step")
@@ -616,7 +758,15 @@ class GameGymEnv(
         }
     }
 
+    /** Loop shortcuts taken this episode, the iterations they ran, and how many stopped early. */
+    private var loopRepeats: Int = 0
+    private var loopIterations: Int = 0
+    private var loopStoppedEarly: Int = 0
+
     private companion object {
+        /** Transitions of the current turn kept for loop detection. */
+        const val MAX_LOOP_HISTORY = 256
+
         val FEATURES: List<String> = RawBoardFeatures.names.toList()
         val featureJson = Json { encodeDefaults = true }
     }
