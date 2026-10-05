@@ -641,6 +641,130 @@
     }
 }
 
+// Bomat Courier
+{
+    "name": "Bomat Courier",
+    "manaCost": "{1}",
+    "typeLine": "Artifact Creature — Construct",
+    "oracleText": "Haste\nWhenever this creature attacks, exile the top card of your library face down. (You can't look at it.)\n{R}, Discard your hand, Sacrifice this creature: Put all cards exiled with this creature into their owners' hands.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Bomat Courier:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Exile"
+                            },
+                            "linkToSource": true,
+                            "faceDown": "HIDDEN"
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever this creature attacks, exile the top card of your library face down."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Bomat Courier:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{R}"
+                            }
+                        },
+                        "CostDiscardHand",
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "OwnersOfLinkedExile"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": "FromLinkedExile",
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "FilterCollection",
+                                "from": "gathered0",
+                                "filter": "own:you",
+                                "storeMatching": "matching1"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "matching1",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Hand"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "descriptionOverride": "{R}, Discard your hand, Sacrifice this creature: Put all cards exiled with this creature into their owners' hands."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "199",
+        "rarity": "RARE",
+        "artist": "Craig J Spearing",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/2/425bff89-ad15-4d22-bce9-a4a07dbafd87.jpg?1783937162",
+        "rulings": [
+            {
+                "date": "2016-09-20",
+                "text": "Each Bomat Courier you control has its own cache of cards. Bomat Courier's last ability only puts those cards into your hand, not those of any other Bomat Courier."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "If Bomat Courier leaves the battlefield before you activate its last ability, any cards exiled by its triggered ability remain exiled face down for the rest of the game. If you somehow return the same Bomat Courier card to the battlefield, it will be a different object with no connection to those face-down cards."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "You can pay the cost of \"discard your hand\" even if your hand contains zero cards."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Botanical Sanctum
 {
     "name": "Botanical Sanctum",
