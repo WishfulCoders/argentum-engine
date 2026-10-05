@@ -1,0 +1,234 @@
+// Barrowgoyf
+{
+    "name": "Barrowgoyf",
+    "manaCost": "{2}{B}",
+    "typeLine": "Creature — Lhurgoyf",
+    "oracleText": "Deathtouch, lifelink\nBarrowgoyf's power is equal to the number of card types among cards in all graveyards and its toughness is equal to that number plus 1.\nWhenever this creature deals combat damage to a player, you may mill that many cards. If you do, you may put a creature card from among them into your hand.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateZone",
+                "player": "Each",
+                "zone": "Graveyard",
+                "aggregation": "DISTINCT_TYPES"
+            }
+        },
+        "toughness": {
+            "type": "DynamicWithOffset",
+            "source": {
+                "type": "AggregateZone",
+                "player": "Each",
+                "zone": "Graveyard",
+                "aggregation": "DISTINCT_TYPES"
+            },
+            "offset": 1
+        }
+    },
+    "keywords": [
+        "DEATHTOUCH",
+        "LIFELINK"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Barrowgoyf:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    }
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "TopOfLibrary",
+                                    "count": {
+                                        "type": "ContextProperty",
+                                        "key": "TRIGGER_DAMAGE_AMOUNT"
+                                    },
+                                    "isMill": true
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "gathered0",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "storeMovedAs": "milled"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "milled",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "filter": "creature",
+                                "storeSelected": "selected2",
+                                "prompt": "You may put a creature card from among the milled cards into your hand",
+                                "selectedLabel": "Put in hand",
+                                "remainderLabel": "Leave in graveyard",
+                                "showAllCards": true
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "selected2",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Hand"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "descriptionOverride": "Whenever this creature deals combat damage to a player, you may mill that many cards. If you do, you may put a creature card from among them into your hand."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "102",
+        "rarity": "RARE",
+        "artist": "Igor Kieryluk",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/e/cea3b218-0e6e-443a-84f7-380f1021e8e1.jpg?1783911410",
+        "rulings": [
+            {
+                "date": "2024-06-07",
+                "text": "The ability that defines Barrowgoyf's power and toughness works in all zones, not just the battlefield."
+            },
+            {
+                "date": "2024-06-07",
+                "text": "The ability that defines Barrowgoyf's power and toughness counts card types, not cards. If the only card in all graveyards is a single artifact creature card, Barrowgoyf will be a 2/3. If the cards in all graveyards are ten artifact cards and ten creature cards, Barrowgoyf will still be a 2/3."
+            },
+            {
+                "date": "2024-06-07",
+                "text": "Card types that can appear on cards in a graveyard are artifact, battle, creature, enchantment, instant, kindred, land, planeswalker, and sorcery. Legendary, basic, and snow are supertypes, not card types; Lhurgoyf, Forest, and Siege are subtypes, not card types."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
+// Pyrogoyf
+{
+    "name": "Pyrogoyf",
+    "manaCost": "{3}{R}",
+    "typeLine": "Creature — Lhurgoyf",
+    "oracleText": "Pyrogoyf's power is equal to the number of card types among cards in all graveyards and its toughness is equal to that number plus 1.\nWhenever this creature or another Lhurgoyf creature you control enters, that creature deals damage equal to its power to any target.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateZone",
+                "player": "Each",
+                "zone": "Graveyard",
+                "aggregation": "DISTINCT_TYPES"
+            }
+        },
+        "toughness": {
+            "type": "DynamicWithOffset",
+            "source": {
+                "type": "AggregateZone",
+                "player": "Each",
+                "zone": "Graveyard",
+                "aggregation": "DISTINCT_TYPES"
+            },
+            "offset": 1
+        }
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Pyrogoyf:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "EntityProperty",
+                        "entity": "TriggeringEntity",
+                        "numericProperty": "Power"
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "damageSource": "TriggeringEntity"
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "id": "t0"
+                },
+                "descriptionOverride": "Whenever this creature or another Lhurgoyf creature you control enters, that creature deals damage equal to its power to any target."
+            },
+            {
+                "id": "Pyrogoyf:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature Lhurgoyf ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "EntityProperty",
+                        "entity": "TriggeringEntity",
+                        "numericProperty": "Power"
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t1"
+                    },
+                    "damageSource": "TriggeringEntity"
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "id": "t1"
+                },
+                "descriptionOverride": "Whenever this creature or another Lhurgoyf creature you control enters, that creature deals damage equal to its power to any target."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "59",
+        "rarity": "RARE",
+        "artist": "Xabi Gaztelua",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/6/f60be310-4461-4b84-95f0-b2095108bd79.jpg?1783911420",
+        "rulings": [
+            {
+                "date": "2024-06-07",
+                "text": "The ability that defines Pyrogoyf's power and toughness works in all zones, not just the battlefield."
+            },
+            {
+                "date": "2024-06-07",
+                "text": "The ability that defines Pyrogoyf's power and toughness counts card types, not cards. If the only card in all graveyards is a single artifact creature card, Pyrogoyf will be a 2/3. If the cards in all graveyards are ten artifact cards and ten creature cards, Pyrogoyf will still be a 2/3."
+            },
+            {
+                "date": "2024-06-07",
+                "text": "If Pyrogoyf or the relevant Lhurgoyf creature leaves the battlefield while Pyrogoyf's last ability is on the stack, use its power as it last existed on the battlefield to determine how much damage is dealt."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}

@@ -923,6 +923,189 @@
     ]
 }
 
+// Fable of the Mirror-Breaker
+{
+    "name": "Fable of the Mirror-Breaker",
+    "manaCost": "{2}{R}",
+    "typeLine": "Enchantment — Saga",
+    "oracleText": "(As this Saga enters and after your draw step, add a lore counter.)\nI — Create a 2/2 red Goblin Shaman creature token with \"Whenever this token attacks, create a Treasure token.\"\nII — You may discard up to two cards. If you do, draw that many cards.\nIII — Exile this Saga, then return it to the battlefield transformed under your control.",
+    "script": {
+        "sagaChapters": [
+            {
+                "chapter": 1,
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [
+                        "RED"
+                    ],
+                    "creatureTypes": [
+                        "Goblin",
+                        "Shaman"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/0/d/0d9461c3-f545-4efb-926e-759961db0495.jpg?1783923713",
+                    "triggeredAbilities": [
+                        {
+                            "id": "Fable of the Mirror-Breaker:1",
+                            "trigger": "AttackEvent",
+                            "effect": {
+                                "type": "CreatePredefinedToken",
+                                "tokenType": "Treasure",
+                                "imageUri": "https://cards.scryfall.io/normal/front/6/9/6911181d-573b-41eb-96a4-799c96e008fc.jpg?1783923711"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "chapter": 2,
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand"
+                            },
+                            "storeAs": "discarded_candidates"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "discarded_candidates",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            },
+                            "storeSelected": "discarded",
+                            "prompt": "Discard up to 2 cards"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "discarded",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            },
+                            "moveType": "Discard"
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "VariableReference",
+                                "variableName": "discarded_count"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "chapter": 3,
+                "effect": "ExileAndReturnTransformed"
+            }
+        ]
+    },
+    "backFace": {
+        "name": "Reflection of Kiki-Jiki",
+        "manaCost": "",
+        "typeLine": "Enchantment Creature — Goblin Shaman",
+        "oracleText": "{1}, {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste. Sacrifice it at the beginning of the next end step.",
+        "creatureStats": {
+            "power": 2,
+            "toughness": 2
+        },
+        "script": {
+            "activatedAbilities": [
+                {
+                    "id": "Reflection of Kiki-Jiki:1",
+                    "cost": {
+                        "type": "CostComposite",
+                        "costs": [
+                            {
+                                "type": "CostAtomWrapper",
+                                "atom": {
+                                    "type": "AtomMana",
+                                    "cost": "{1}"
+                                }
+                            },
+                            "CostTap"
+                        ]
+                    },
+                    "effect": {
+                        "type": "CreateTokenCopyOfTarget",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "addedKeywords": [
+                            "HASTE"
+                        ],
+                        "sacrificeAtStep": "END"
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": {
+                                    "cardPredicates": [
+                                        "IsCreature",
+                                        "IsNonlegendary"
+                                    ],
+                                    "controllerPredicate": "ControlledByYou"
+                                },
+                                "excludeSelf": true
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "descriptionOverride": "{1}, {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste. Sacrifice it at the beginning of the next end step."
+                }
+            ]
+        },
+        "metadata": {
+            "collectorNumber": "141",
+            "rarity": "RARE",
+            "artist": "Joseph Meehan",
+            "flavorText": "Blessed by Keiga, the Tide Star, Kiki-Jiki would one day master the art of duplication.",
+            "imageUri": "https://cards.scryfall.io/normal/back/2/4/24c0d87b-0049-4beb-b9cb-6f813b7aa7dc.jpg?1783923875"
+        },
+        "colorIdentityOverride": [
+            "RED"
+        ],
+        "colorIndicator": [
+            "RED"
+        ],
+        "hasNoManaCost": true
+    },
+    "metadata": {
+        "collectorNumber": "141",
+        "rarity": "RARE",
+        "artist": "Joseph Meehan",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/4/24c0d87b-0049-4beb-b9cb-6f813b7aa7dc.jpg?1783923875",
+        "rulings": [
+            {
+                "date": "2022-02-18",
+                "text": "The token created by Reflection of Kiki-Jiki copies exactly what was printed on the original creature (except that the copy also has haste) and nothing else (unless it's copying a creature that's a token or that's copying something else). It doesn't copy whether the creature is tapped or untapped, whether it has any counters on it or Auras and/or Equipment attached to it, or any non-copy effects that changed its power, toughness, types, color, and so on. Most notably, if the target creature isn't normally a creature, the copy won't be a creature."
+            },
+            {
+                "date": "2022-02-18",
+                "text": "If Reflection of Kiki-Jiki's ability creates multiple tokens due to a replacement effect (such as the one Doubling Season creates), you'll sacrifice each of them."
+            },
+            {
+                "date": "2022-02-18",
+                "text": "The mana value of a transforming double-faced card is the mana value of its front face, no matter which face is up."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Fang of Shigeki
 {
     "name": "Fang of Shigeki",

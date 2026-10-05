@@ -44,6 +44,103 @@
     ]
 }
 
+// Bonecrusher Giant
+{
+    "name": "Bonecrusher Giant",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Giant",
+    "oracleText": "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Bonecrusher Giant:1",
+                "trigger": {
+                    "type": "BecomesTargetEvent",
+                    "spellsOnly": true
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "ControllerOfTargetingSource"
+                    }
+                },
+                "descriptionOverride": "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "115",
+        "rarity": "RARE",
+        "artist": "Victor Adame Minguez",
+        "flavorText": "Not every tale ends in glory.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/9/09fd2d9c-1793-4beb-a3fb-7a869f660cd4.jpg?1783932628",
+        "rulings": [
+            {
+                "date": "2019-10-04",
+                "text": "Bonecrusher Giant's ability resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If a spell targets Bonecrusher Giant more than once, its ability triggers only once."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "Stomp only stops damage from being prevented by effects that specifically use the word \"prevent.\""
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If the chosen target is an illegal target by the time Stomp tries to resolve, the spell won't resolve. Damage can be prevented as usual."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ],
+    "layout": "ADVENTURE",
+    "cardFaces": [
+        {
+            "name": "Stomp",
+            "manaCost": "{1}{R}",
+            "typeLine": "Instant — Adventure",
+            "oracleText": "Damage can't be prevented this turn. Stomp deals 2 damage to any target. (Then exile this card. You may cast the creature later from exile.)",
+            "script": {
+                "spellEffect": {
+                    "type": "Composite",
+                    "effects": [
+                        "DamageCantBePreventedThisTurn",
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ]
+            }
+        }
+    ]
+}
+
 // Castle Ardenvale
 {
     "name": "Castle Ardenvale",

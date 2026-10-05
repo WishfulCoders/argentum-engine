@@ -2663,6 +2663,145 @@
     ]
 }
 
+// Seasoned Pyromancer
+{
+    "name": "Seasoned Pyromancer",
+    "manaCost": "{1}{R}{R}",
+    "typeLine": "Creature — Human Shaman",
+    "oracleText": "When this creature enters, discard two cards, then draw two cards. For each nonland card discarded this way, create a 1/1 red Elemental creature token.\n{3}{R}{R}, Exile this card from your graveyard: Create two 1/1 red Elemental creature tokens.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Seasoned Pyromancer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Choose two cards to discard"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            },
+                            "moveType": "Discard"
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
+                        },
+                        {
+                            "type": "FilterCollection",
+                            "from": "selected1",
+                            "filter": "nonland",
+                            "storeMatching": "matching4"
+                        },
+                        {
+                            "type": "CreateToken",
+                            "count": {
+                                "type": "VariableReference",
+                                "variableName": "matching4_count"
+                            },
+                            "power": 1,
+                            "toughness": 1,
+                            "colors": [
+                                "RED"
+                            ],
+                            "creatureTypes": [
+                                "Elemental"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/e/5/e5b57672-c346-42f5-ac3e-82466a13b957.jpg?1783933226"
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature enters, discard two cards, then draw two cards. For each nonland card discarded this way, create a 1/1 red Elemental creature token."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Seasoned Pyromancer:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{3}{R}{R}"
+                            }
+                        },
+                        "CostExileSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "RED"
+                    ],
+                    "creatureTypes": [
+                        "Elemental"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/e/5/e5b57672-c346-42f5-ac3e-82466a13b957.jpg?1783933226"
+                },
+                "activateFromZone": "Graveyard",
+                "descriptionOverride": "{3}{R}{R}, Exile this card from your graveyard: Create two 1/1 red Elemental creature tokens."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "145",
+        "rarity": "MYTHIC",
+        "artist": "Cynthia Sheppard",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/e/2e139ad1-1079-49e9-babd-6399c44ad333.jpg?1783933105",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "If you have fewer than two cards in hand as Seasoned Pyromancer's first ability resolves, you'll discard your hand, then draw two cards regardless of how many you discarded."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Segovian Angel
 {
     "name": "Segovian Angel",

@@ -1921,6 +1921,58 @@
     }
 }
 
+// Manamorphose
+{
+    "name": "Manamorphose",
+    "manaCost": "{1}{R/G}",
+    "typeLine": "Instant",
+    "oracleText": "Add two mana in any combination of colors.\nDraw a card.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "AddDynamicMana",
+                    "amountSource": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "allowedColors": [
+                        "WHITE",
+                        "BLUE",
+                        "BLACK",
+                        "RED",
+                        "GREEN"
+                    ]
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "211",
+        "artist": "Jeff Miracola",
+        "flavorText": "For a moment, objects of pure mana glimmered in the wonderstruck boggart's hands. In the next moment, they were in his mouth, as he chewed contentedly.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/0/50283122-b8c4-4fb3-8eba-6252b72222f4.jpg?1783942721",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "You choose which color or colors of mana to add before you draw a card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
+
 // Mass Calcify
 {
     "name": "Mass Calcify",
