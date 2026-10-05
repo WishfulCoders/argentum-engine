@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 141 / 312
+**Implemented:** 142 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -44,7 +44,7 @@
 - [x] Big Score
 - [ ] Binding the Old Gods
 - [ ] Birds of Paradise
-- [ ] Blade Splicer
+- [x] Blade Splicer
 - [x] Blasphemous Act
 - [x] Bloodroot Apothecary
 - [ ] Body of Knowledge

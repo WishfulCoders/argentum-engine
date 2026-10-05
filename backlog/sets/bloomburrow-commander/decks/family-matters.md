@@ -14,7 +14,7 @@
 - [ ] 1 Agate Instigator
 - [ ] 1 Angel of the Ruins
 - [ ] 1 Arthur, Marigold Knight
-- [ ] 1 Blade Splicer
+- [x] 1 Blade Splicer
 - [ ] 1 Boss's Chauffeur
 - [ ] 1 Circuit Mender
 - [ ] 1 Cloudblazer
