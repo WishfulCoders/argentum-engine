@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 142 / 312
+**Implemented:** 143 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -164,7 +164,7 @@
 - [ ] Liliana of the Dark Realms
 - [x] Llanowar Loamspeaker
 - [x] Llanowar Wastes
-- [ ] Loran of the Third Path
+- [x] Loran of the Third Path
 - [x] Lotus Cobra
 - [ ] Loyal Warhound
 - [ ] Luminous Broodmoth
