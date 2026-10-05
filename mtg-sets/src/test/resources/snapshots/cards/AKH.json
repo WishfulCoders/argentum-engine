@@ -1612,6 +1612,81 @@
     ]
 }
 
+// Glorybringer
+{
+    "name": "Glorybringer",
+    "manaCost": "{3}{R}{R}",
+    "typeLine": "Creature — Dragon",
+    "oracleText": "Flying, haste\nYou may exert this creature as it attacks. When you do, it deals 4 damage to target non-Dragon creature an opponent controls. (An exerted creature won't untap during your next untap step.)",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 4
+    },
+    "keywords": [
+        "FLYING",
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Glorybringer:1",
+                "trigger": "ExertedAsItAttacksEvent",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 4
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsCreature",
+                                {
+                                    "type": "NotSubtype",
+                                    "subtype": "Dragon"
+                                }
+                            ],
+                            "controllerPredicate": "ControlledByOpponent"
+                        }
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "When you exert Glorybringer, it deals 4 damage to target non-Dragon creature an opponent controls."
+            }
+        ],
+        "staticAbilities": [
+            "ExertAsItAttacks"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "134",
+        "rarity": "RARE",
+        "artist": "Sam Burley",
+        "flavorText": "What the initiates face in the final trial is completely at Hazoret's discretion.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/2/3277ad99-5682-4baa-b106-de15721876a6.jpg?1783936489",
+        "rulings": [
+            {
+                "date": "2017-04-18",
+                "text": "If a creature has a targeted triggered ability that triggers when you exert it, you can exert it even if there isn't a legal target for that triggered ability."
+            },
+            {
+                "date": "2017-04-18",
+                "text": "You exert a creature as you declare it as an attacking creature. You can't do so later in combat, and creatures put onto the battlefield attacking can't be exerted."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Graceful Cat
 {
     "name": "Graceful Cat",
