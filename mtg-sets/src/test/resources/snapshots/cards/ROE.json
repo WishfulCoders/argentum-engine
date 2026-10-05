@@ -1997,6 +1997,67 @@
     ]
 }
 
+// Oust
+{
+    "name": "Oust",
+    "manaCost": "{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Put target creature into its owner's library second from the top. Its controller gains 3 life.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "target": "TargetController"
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Library",
+                    "positionFromTop": 1
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "40",
+        "rarity": "UNCOMMON",
+        "artist": "Mike Bierek",
+        "flavorText": "\"'Invincible' is just a word.\"\n—Gideon Jura",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/7/07313dd3-d0dc-40ca-98a3-fa4d39e5bcae.jpg?1783942004",
+        "rulings": [
+            {
+                "date": "2010-06-15",
+                "text": "Note that the creature's controller, not its owner, is the one who gains life."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "If the targeted creature is an illegal target by the time Oust resolves, the spell doesn't resolve. No one gains life."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Pathrazer of Ulamog
 {
     "name": "Pathrazer of Ulamog",

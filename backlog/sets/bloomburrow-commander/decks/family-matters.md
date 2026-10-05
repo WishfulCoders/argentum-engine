@@ -39,7 +39,7 @@
 - [ ] 1 Selfless Spirit
 - [ ] 1 Shield Broker
 - [x] 1 Siege-Gang Commander
-- [ ] 1 Skyclave Apparition
+- [x] 1 Skyclave Apparition
 - [ ] 1 Solemn Simulacrum
 - [ ] 1 Spirited Companion
 - [ ] 1 Sun Titan

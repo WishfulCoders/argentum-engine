@@ -1674,6 +1674,110 @@
     ]
 }
 
+// Elite Spellbinder
+{
+    "name": "Elite Spellbinder",
+    "manaCost": "{2}{W}",
+    "typeLine": "Creature — Human Cleric",
+    "oracleText": "Flying\nWhen this creature enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 1
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Elite Spellbinder:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "LookAtTargetHand",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand",
+                                        "player": {
+                                            "type": "BoundVariable",
+                                            "name": "t0"
+                                        }
+                                    },
+                                    "storeAs": "gathered0"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "gathered0",
+                                    "selection": {
+                                        "type": "ChooseUpTo",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "filter": "nonland",
+                                    "storeSelected": "selected1",
+                                    "prompt": "You may exile a nonland card from target opponent's hand",
+                                    "showAllCards": true,
+                                    "alwaysPrompt": true
+                                },
+                                {
+                                    "type": "ConditionalOnCollection",
+                                    "collection": "selected1",
+                                    "ifNotEmpty": {
+                                        "type": "ExileAndGrantOwnerPlayPermission",
+                                        "target": {
+                                            "type": "PipelineTarget",
+                                            "collectionName": "selected1"
+                                        },
+                                        "opponentCostIncrease": 2
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetOpponent",
+                    "id": "t0"
+                },
+                "descriptionOverride": "When this creature enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "17",
+        "rarity": "RARE",
+        "artist": "Ryan Pancoast",
+        "flavorText": "Paulo Vitor Damo da Rosa, World Champion XXVI",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/d/9d3a7998-ccac-45ad-a4e9-3a2cb057f63b.jpg?1783927390",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "Playing the exiled card follows all normal timing restrictions."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Enthusiastic Study
 {
     "name": "Enthusiastic Study",

@@ -87,6 +87,86 @@
     ]
 }
 
+// Portable Hole
+{
+    "name": "Portable Hole",
+    "manaCost": "{W}",
+    "typeLine": "Artifact",
+    "oracleText": "When this artifact enters, exile target nonland permanent an opponent controls with mana value 2 or less until this artifact leaves the battlefield.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Portable Hole:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "ExileUntilLeaves",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "nonland permanent mv<=2 ctrl:opponent"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "When this artifact enters, exile target nonland permanent an opponent controls with mana value 2 or less until this artifact leaves the battlefield."
+            },
+            {
+                "id": "Portable Hole:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "linked_return"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "linked_return",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            },
+                            "underOwnersControl": true
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "33",
+        "rarity": "UNCOMMON",
+        "artist": "John Stanko",
+        "flavorText": "\"They fall for it every time.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/0/80fca8c0-ae3e-439e-b202-228b9f360e9a.jpg?1783926525",
+        "rulings": [
+            {
+                "date": "2021-07-23",
+                "text": "If Portable Hole leaves the battlefield before its ability resolves, the target permanent won't be exiled."
+            },
+            {
+                "date": "2021-07-23",
+                "text": "If a token is exiled this way, it will cease to exist and won't return to the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Priest of Ancient Lore
 {
     "name": "Priest of Ancient Lore",

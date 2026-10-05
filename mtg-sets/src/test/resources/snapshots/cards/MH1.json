@@ -611,6 +611,63 @@
     ]
 }
 
+// Ephemerate
+{
+    "name": "Ephemerate",
+    "manaCost": "{W}",
+    "typeLine": "Instant",
+    "oracleText": "Exile target creature you control, then return it to the battlefield under its owner's control.\nRebound (If you cast this spell from your hand, exile it as it resolves. At the beginning of your next upkeep, you may cast this card from exile without paying its mana cost.)",
+    "keywords": [
+        "REBOUND"
+    ],
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Battlefield"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "7",
+        "artist": "Bastien L. Deharme",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/d/2da5f3f8-5eef-498f-ba2c-2f3fbc3745aa.jpg?1783933164",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "If a token is exiled this way, it will cease to exist and won't return to the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Faerie Seer
 {
     "name": "Faerie Seer",
@@ -935,6 +992,54 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Giver of Runes
+{
+    "name": "Giver of Runes",
+    "manaCost": "{W}",
+    "typeLine": "Creature — Kor Cleric",
+    "oracleText": "{T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Giver of Runes:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "GrantProtectionFromColorlessOrChosenColor",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you",
+                            "excludeSelf": true
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "13",
+        "rarity": "RARE",
+        "artist": "Seb McKinnon",
+        "flavorText": "She provides marks of protection to those she chooses as family.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/e/4e117771-5a8b-4812-b487-32ba34b7f724.jpg?1783933162"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
