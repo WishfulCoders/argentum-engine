@@ -75,6 +75,153 @@
     ]
 }
 
+// Figure of Destiny
+{
+    "name": "Figure of Destiny",
+    "manaCost": "{R/W}",
+    "typeLine": "Creature — Kithkin",
+    "oracleText": "{R/W}: This creature becomes a Kithkin Spirit with base power and toughness 2/2.\n{R/W}{R/W}{R/W}: If this creature is a Spirit, it becomes a Kithkin Spirit Warrior with base power and toughness 4/4.\n{R/W}{R/W}{R/W}{R/W}{R/W}{R/W}: If this creature is a Warrior, it becomes a Kithkin Spirit Warrior Avatar with base power and toughness 8/8, flying, and first strike.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Figure of Destiny:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{R/W}"
+                    }
+                },
+                "effect": {
+                    "type": "BecomeCreature",
+                    "power": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughness": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "creatureTypes": [
+                        "Kithkin",
+                        "Spirit"
+                    ],
+                    "duration": "Permanent"
+                }
+            },
+            {
+                "id": "Figure of Destiny:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{R/W}{R/W}{R/W}"
+                    }
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": "Self",
+                            "filter": "Spirit"
+                        }
+                    },
+                    "then": {
+                        "type": "BecomeCreature",
+                        "power": {
+                            "type": "Fixed",
+                            "amount": 4
+                        },
+                        "toughness": {
+                            "type": "Fixed",
+                            "amount": 4
+                        },
+                        "creatureTypes": [
+                            "Kithkin",
+                            "Spirit",
+                            "Warrior"
+                        ],
+                        "duration": "Permanent"
+                    }
+                }
+            },
+            {
+                "id": "Figure of Destiny:3",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{R/W}{R/W}{R/W}{R/W}{R/W}{R/W}"
+                    }
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": "Self",
+                            "filter": "Warrior"
+                        }
+                    },
+                    "then": {
+                        "type": "BecomeCreature",
+                        "power": {
+                            "type": "Fixed",
+                            "amount": 8
+                        },
+                        "toughness": {
+                            "type": "Fixed",
+                            "amount": 8
+                        },
+                        "keywords": [
+                            "FLYING",
+                            "FIRST_STRIKE"
+                        ],
+                        "creatureTypes": [
+                            "Kithkin",
+                            "Spirit",
+                            "Warrior",
+                            "Avatar"
+                        ],
+                        "duration": "Permanent"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "139",
+        "rarity": "RARE",
+        "artist": "Scott M. Fischer",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/d/0da69523-cece-425a-b08a-fb27fac29374.jpg?1783942664",
+        "rulings": [
+            {
+                "date": "2008-08-01",
+                "text": "None of these abilities has a duration. If one of them resolves, it will remain in effect until the game ends, Figure of Destiny leaves the battlefield, or some subsequent effect changes its characteristics, whichever comes first."
+            },
+            {
+                "date": "2008-08-01",
+                "text": "Figure of Destiny's abilities overwrite its power, toughness, and creature types. Typically, those abilities are activated in the order they appear on the card. However, if Figure of Destiny is an 8/8 Kithkin Spirit Warrior Avatar with flying and first strike, and you activate its first ability, it will become a 2/2 Kithkin Spirit that still has flying and first strike."
+            },
+            {
+                "date": "2008-08-01",
+                "text": "You can activate Figure of Destiny's second and third abilities regardless of what creature types it is. Each of those abilities checks Figure of Destiny's creature types when that ability resolves. If Figure of Destiny isn't the appropriate creature type at that time, the ability does nothing."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "RED"
+    ]
+}
+
 // Scarecrone
 {
     "name": "Scarecrone",
