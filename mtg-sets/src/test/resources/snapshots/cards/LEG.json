@@ -2115,6 +2115,64 @@
     ]
 }
 
+// Karakas
+{
+    "name": "Karakas",
+    "manaCost": "",
+    "typeLine": "Legendary Land",
+    "oracleText": "{T}: Add {W}.\n{T}: Return target legendary creature to its owner's hand.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Karakas:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "WHITE"
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Karakas:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Hand"
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": {
+                                "cardPredicates": [
+                                    "IsCreature",
+                                    "IsLegendary"
+                                ]
+                            }
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "303",
+        "rarity": "UNCOMMON",
+        "artist": "Nicola Leonard",
+        "flavorText": "\"To make a prairie it takes a clover and one bee,/ One clover, and a bee,/ And revery.\" —Emily Dickinson",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/1/31d2422a-bb7d-4cdd-9aac-e5a936a4be3b.jpg?1783948023"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Kasimir the Lone Wolf
 {
     "name": "Kasimir the Lone Wolf",

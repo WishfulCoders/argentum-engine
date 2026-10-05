@@ -1,24 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.conflux.cards
 
-import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Path to Exile
@@ -27,49 +20,43 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Exile target creature. Its controller may search their library for a basic land card, put that
  * card onto the battlefield tapped, then shuffle.
  *
- * Price of Freedom's "its controller may search" pipeline after an exile: the exiled creature's
- * last controller decides, and declining skips the shuffle too (ruling).
+ * The exiled creature's controller (last-known, CR 608.2h) — not Path's caster — makes the
+ * optional search, so the [Effects.May] is delegated to [EffectTarget.TargetController] and the
+ * whole search pipeline is scoped to [Player.ControllerOf]. Declining skips the shuffle too
+ * (2026-01-27 ruling). Same shape as Erode.
  */
 val PathToExile = card("Path to Exile") {
     manaCost = "{W}"
     colorIdentity = "W"
     typeLine = "Instant"
-    oracleText = "Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle."
+    oracleText = "Exile target creature. Its controller may search their library for a basic land card, " +
+        "put that card onto the battlefield tapped, then shuffle."
 
     spell {
-        target = TargetObject(filter = TargetFilter.Creature)
-        effect = Effects.Exile(EffectTarget.ContextTarget(0))
-            .then(
-                Effects.May(Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.FromZone(
-                                    zone = Zone.LIBRARY,
-                                    player = Player.ControllerOf("target"),
-                                    filter = GameObjectFilter.BasicLand,
-                                ),
-                                storeAs = "searchable",
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "searchable",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.ControllerOfTarget,
-                                storeSelected = "found",
-                            ),
-                            MoveCollectionEffect(
-                                from = "found",
-                                destination = CardDestination.ToZone(
-                                    zone = Zone.BATTLEFIELD,
-                                    player = Player.ControllerOf("target"),
-                                    placement = ZonePlacement.Tapped,
-                                ),
-                            ),
-                            ShuffleLibraryEffect(target = EffectTarget.TargetController),
-                        ),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Exile(creature) then Effects.May(
+            effect = Effects.Pipeline {
+                val searchable = gather(
+                    CardSource.FromZone(
+                        zone = Zone.LIBRARY,
+                        player = Player.ControllerOf("target"),
+                        filter = GameObjectFilter.BasicLand,
                     ),
-                    decisionMaker = EffectTarget.TargetController,
-                ),
-            )
+                    search = true
+                )
+                val found = chooseUpTo(1, from = searchable, chooser = Chooser.ControllerOfTarget)
+                move(
+                    found,
+                    CardDestination.ToZone(
+                        zone = Zone.BATTLEFIELD,
+                        player = Player.ControllerOf("target"),
+                        placement = ZonePlacement.Tapped,
+                    )
+                )
+                run(Effects.ShuffleLibrary(target = EffectTarget.TargetController))
+            },
+            decisionMaker = EffectTarget.TargetController,
+        )
     }
 
     metadata {

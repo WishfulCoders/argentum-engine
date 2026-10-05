@@ -21,7 +21,7 @@
 - [ ] 1 Jolrael, Mwonvuli Recluse
 - [ ] 1 Kalonian Hydra
 - [ ] 1 Kwain, Itinerant Meddler
-- [ ] 1 Loran of the Third Path
+- [x] 1 Loran of the Third Path
 - [ ] 1 Managorger Hydra
 - [ ] 1 Mangara, the Diplomat
 - [ ] 1 Mr. Foxglove

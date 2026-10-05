@@ -14,7 +14,7 @@
 - [ ] 1 Agate Instigator
 - [ ] 1 Angel of the Ruins
 - [ ] 1 Arthur, Marigold Knight
-- [ ] 1 Blade Splicer
+- [x] 1 Blade Splicer
 - [ ] 1 Boss's Chauffeur
 - [ ] 1 Circuit Mender
 - [ ] 1 Cloudblazer
@@ -53,7 +53,7 @@
 ## Instants (5)
 
 - [ ] 1 Aetherize
-- [ ] 1 Path to Exile
+- [x] 1 Path to Exile
 - [ ] 1 Pull from Tomorrow
 - [ ] 1 Rapid Hybridization
 - [x] 1 Rowdy Research

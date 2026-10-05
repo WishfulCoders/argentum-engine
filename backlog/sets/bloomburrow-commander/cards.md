@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 142 / 312
+**Implemented:** 145 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -44,7 +44,7 @@
 - [x] Big Score
 - [ ] Binding the Old Gods
 - [ ] Birds of Paradise
-- [ ] Blade Splicer
+- [x] Blade Splicer
 - [x] Blasphemous Act
 - [x] Bloodroot Apothecary
 - [ ] Body of Knowledge
@@ -164,7 +164,7 @@
 - [ ] Liliana of the Dark Realms
 - [x] Llanowar Loamspeaker
 - [x] Llanowar Wastes
-- [ ] Loran of the Third Path
+- [x] Loran of the Third Path
 - [x] Lotus Cobra
 - [ ] Loyal Warhound
 - [ ] Luminous Broodmoth
@@ -198,7 +198,7 @@
 - [ ] Overflowing Basin
 - [x] Path of Ancestry
 - [x] Path of Discovery
-- [ ] Path to Exile
+- [x] Path to Exile
 - [ ] Perch Protection
 - [ ] Perplexing Test
 - [x] Plaguecrafter
