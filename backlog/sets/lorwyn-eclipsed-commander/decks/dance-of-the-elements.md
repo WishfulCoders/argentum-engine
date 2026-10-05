@@ -50,7 +50,7 @@
 
 - [ ] 1 Crib Swap
 - [ ] 1 Kindred Summons
-- [ ] 1 Path to Exile
+- [x] 1 Path to Exile
 - [ ] 1 Reality Shift
 - [ ] 1 Return of the Wildspeaker
 

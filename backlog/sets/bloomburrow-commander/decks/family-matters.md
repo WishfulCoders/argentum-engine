@@ -53,7 +53,7 @@
 ## Instants (5)
 
 - [ ] 1 Aetherize
-- [ ] 1 Path to Exile
+- [x] 1 Path to Exile
 - [ ] 1 Pull from Tomorrow
 - [ ] 1 Rapid Hybridization
 - [x] 1 Rowdy Research

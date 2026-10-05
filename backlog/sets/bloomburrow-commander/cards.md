@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 140 / 312
+**Implemented:** 141 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -198,7 +198,7 @@
 - [ ] Overflowing Basin
 - [x] Path of Ancestry
 - [x] Path of Discovery
-- [ ] Path to Exile
+- [x] Path to Exile
 - [ ] Perch Protection
 - [ ] Perplexing Test
 - [x] Plaguecrafter
