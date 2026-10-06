@@ -1,0 +1,308 @@
+// Comet, Stellar Pup
+{
+    "name": "Comet, Stellar Pup",
+    "manaCost": "{2}{R}{W}",
+    "typeLine": "Legendary Planeswalker — Comet",
+    "oracleText": "0: Roll a six-sided die.\n1 or 2 — [+2], then create two 1/1 green Squirrel creature tokens. They gain haste until end of turn.\n3 — [−1], then return a card with mana value 2 or less from your graveyard to your hand.\n4 or 5 — Comet deals damage equal to the number of loyalty counters on him to a creature or player, then [−2].\n6 — [+1], and you may activate Comet's loyalty ability two more times this turn.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Comet, Stellar Pup:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 0
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RollDie",
+                            "sides": 6
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "All",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "GTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "LTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 2
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "AddCounters",
+                                        "counterType": "LOYALTY",
+                                        "count": 2,
+                                        "target": "Self"
+                                    },
+                                    {
+                                        "type": "CreateToken",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 2
+                                        },
+                                        "power": 1,
+                                        "toughness": 1,
+                                        "colors": [
+                                            "GREEN"
+                                        ],
+                                        "creatureTypes": [
+                                            "Squirrel"
+                                        ],
+                                        "imageUri": "https://cards.scryfall.io/normal/front/0/b/0b4170e0-c899-481a-8076-cae9f3effc37.jpg?1783920622"
+                                    },
+                                    {
+                                        "type": "ForEach",
+                                        "space": {
+                                            "type": "IterationSpace.Collection",
+                                            "collection": "createdTokens"
+                                        },
+                                        "body": {
+                                            "type": "GrantKeyword",
+                                            "keyword": "HASTE",
+                                            "target": "IterationEntity"
+                                        }
+                                    }
+                                ]
+                            },
+                            "descriptionOverride": "1—2 | Put 2 loyalty counters on this creature. Create 2 1/1 green Squirrel creature tokens. For each permanent in createdTokens, that permanent gains haste until end of turn"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "VariableReference",
+                                        "variableName": "dieRoll"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "RemoveCounters",
+                                        "counterType": "LOYALTY",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        },
+                                        "target": "Self"
+                                    },
+                                    {
+                                        "type": "Composite",
+                                        "effects": [
+                                            {
+                                                "type": "GatherCards",
+                                                "source": {
+                                                    "type": "FromZone",
+                                                    "zone": "Graveyard",
+                                                    "filter": "mv<=2"
+                                                },
+                                                "storeAs": "gathered0"
+                                            },
+                                            {
+                                                "type": "SelectFromCollection",
+                                                "from": "gathered0",
+                                                "selection": {
+                                                    "type": "ChooseExactly",
+                                                    "count": {
+                                                        "type": "Fixed",
+                                                        "amount": 1
+                                                    }
+                                                },
+                                                "storeSelected": "selected1",
+                                                "prompt": "Return a card with mana value 2 or less from your graveyard to your hand"
+                                            },
+                                            {
+                                                "type": "MoveCollection",
+                                                "from": "selected1",
+                                                "destination": {
+                                                    "type": "ToZone",
+                                                    "zone": "Hand"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "descriptionOverride": "3 | Remove 1 loyalty counter from this creature. Look at with mana value 2 or less cards in your a graveyard. Choose exactly 1 of those cards. Put those cards into a hand"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "All",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "GTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 4
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "LTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 5
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "SelectTarget",
+                                        "requirement": "TargetCreatureOrPlayer",
+                                        "storeAs": "target0",
+                                        "nonTargeting": true,
+                                        "prompt": "Choose a creature or player for Comet to deal damage to"
+                                    },
+                                    {
+                                        "type": "DealDamage",
+                                        "amount": {
+                                            "type": "EntityProperty",
+                                            "entity": "Self",
+                                            "numericProperty": {
+                                                "type": "CounterCount",
+                                                "counterType": "LOYALTY"
+                                            }
+                                        },
+                                        "target": {
+                                            "type": "PipelineTarget",
+                                            "collectionName": "target0"
+                                        }
+                                    },
+                                    {
+                                        "type": "RemoveCounters",
+                                        "counterType": "LOYALTY",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 2
+                                        },
+                                        "target": "Self"
+                                    }
+                                ]
+                            },
+                            "descriptionOverride": "4—5 | Choose a creature or player for Comet to deal damage to. Deal this creature's the number of loyalty counters damage to the chosen target. Remove 2 loyalty counters from this creature"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "VariableReference",
+                                        "variableName": "dieRoll"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 6
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "AddCounters",
+                                        "counterType": "LOYALTY",
+                                        "count": 1,
+                                        "target": "Self"
+                                    },
+                                    "AllowAdditionalLoyaltyActivationsThisTurn"
+                                ]
+                            },
+                            "descriptionOverride": "6 | Put 1 loyalty counter on this creature. you may activate loyalty abilities of this creature two more times this turn"
+                        }
+                    ]
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "166",
+        "rarity": "MYTHIC",
+        "artist": "Jeff Miracola",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/7/a76fa8d4-923d-4afc-ba47-ba10fc0fe46e.jpg?1789040645",
+        "rulings": [
+            {
+                "date": "2022-10-07",
+                "text": "Each + loyalty symbol in Comet's abilities means to put the indicated number of loyalty counters on him. Each – loyalty symbol in Comet's abilities means to remove the indicated number of loyalty counters from him. The only difference is Comet uses these symbols in the effects of his abilities rather than the costs."
+            },
+            {
+                "date": "2022-10-07",
+                "text": "None of Comet's abilities require a target. All choices for cards, creatures, or players are made as the abilities resolve."
+            },
+            {
+                "date": "2022-10-07",
+                "text": "If you roll a 3 but there aren't any cards with mana value 2 or less in your graveyard, you'll just remove one loyalty counter from Comet."
+            },
+            {
+                "date": "2022-10-07",
+                "text": "If you roll a 4 or 5 while Comet has one loyalty counter on him, Comet will deal 1 damage to a creature or player and then that loyalty counter will be removed."
+            },
+            {
+                "date": "2022-10-07",
+                "text": "In some unusual cases, Comet may gain loyalty abilities other than the one he normally has. In those cases, the effect of rolling a 6 applies only to his normal ability."
+            }
+        ]
+    },
+    "startingLoyalty": 5,
+    "colorIdentityOverride": [
+        "RED",
+        "WHITE"
+    ]
+}
