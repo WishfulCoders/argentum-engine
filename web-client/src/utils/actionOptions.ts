@@ -257,8 +257,12 @@ export function keywordAlternativeCostFor(cardInfo: ClientCard): KeywordAlternat
       cost: cardInfo.evoke,
       alternativeCostType: 'EVOKE',
       // The sacrifice is the whole point of the cheaper price, and it is the half a player who
-      // dragged the card out to hard-cast it needs to see before clicking.
-      hint: 'evoke — sacrificed as it enters, keeping only its ETB',
+      // dragged the card out to hard-cast it needs to see before clicking. A non-mana evoke cost
+      // ("exile a white card from your hand") is named too, since the mana cost alone reads {0}.
+      hint: [
+        'evoke — sacrificed as it enters, keeping only its ETB',
+        cardInfo.evokeAdditionalCost?.replace(/^./, (c) => c.toLowerCase()),
+      ].filter(Boolean).join(' — '),
     }
   }
   return null

@@ -298,6 +298,32 @@ describe('buildActionOptions — keyword alternative costs (evoke, impending)', 
     expect(options.every((o) => o.isAvailable && o.action !== null)).toBe(true)
   })
 
+  it('names a non-mana evoke cost in the hint, since its mana cost alone reads {0}', () => {
+    // Solitude: "Evoke—Exile a white card from your hand." (CR 702.74a). The pitch is the price.
+    const solitude = card('{3}{W}{W}', {
+      name: 'Solitude',
+      evoke: '{0}',
+      evokeAdditionalCost: 'Exile a white card from your hand',
+    } as Partial<ClientCard>)
+    const options = buildActionOptions(solitude, [
+      action({
+        action: { type: 'CastSpell', alternativeCostType: 'EVOKE' },
+        actionType: 'CastWithAlternativeCost',
+        description: 'Evoke Solitude (exile a white card from your hand)',
+        manaCostString: '{0}',
+      }),
+    ])
+    expect(options.map((o) => o.key)).toEqual(['cast', 'evoke'])
+    expect(options[1]).toMatchObject({ label: 'Evoke Solitude', isAvailable: true })
+    expect(options[1]!.hint).toContain('sacrificed')
+    expect(options[1]!.hint).toContain('exile a white card from your hand')
+  })
+
+  it('keeps the mana-only evoke hint unchanged', () => {
+    const options = buildActionOptions(mulldrifter, [action({ manaCostString: '{4}{U}' })])
+    expect(options[1]!.hint).toBe('evoke — sacrificed as it enters, keeping only its ETB')
+  })
+
   it('still pairs impending with the printed cost, keeping its time-counter glyph', () => {
     const overlord = card('{5}{W}{W}', {
       name: 'Overlord of the Mistmoors',

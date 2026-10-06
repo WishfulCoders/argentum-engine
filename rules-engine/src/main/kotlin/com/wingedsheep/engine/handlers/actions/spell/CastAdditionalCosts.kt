@@ -66,6 +66,12 @@ class CastAdditionalCosts(
             }
             val selfAltCost = cardDef.script.selfAlternativeCost
             if (selfAltCost != null && action.altAllows(AlternativeCostType.SELF_ALTERNATIVE)) addAll(selfAltCost.additionalCosts)
+            // Evoke's non-mana part (CR 702.74a — "Evoke—Exile a white card from your hand."). The
+            // mana part was priced as the alternative base; this is the rest of the same cost.
+            if (action.altAllows(AlternativeCostType.EVOKE)) {
+                cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Evoke>().firstOrNull()
+                    ?.additionalCosts?.let { addAll(it) }
+            }
             // A battlefield-granted alternative cost's non-mana half (Conspiracy Unraveler's
             // "collect evidence 10"). The mana half was already substituted for the spell's mana
             // cost; this is the rest of the same cost, so it is paid by the ordinary additional-cost

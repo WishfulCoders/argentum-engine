@@ -725,6 +725,14 @@ data class ClientCard(
      */
     val evoke: String? = null,
 
+    /**
+     * The non-mana part of the evoke cost (CR 702.74a), e.g. "Exile a white card from your hand"
+     * for Solitude, whose evoke cost is that and nothing else ([evoke] is then "{0}"). Null for a
+     * mana-only evoke cost and for cards without evoke. Lets the menu say what an unaffordable
+     * evoke would have cost, since the enumerated action (which carries the picker) is absent then.
+     */
+    val evokeAdditionalCost: String? = null,
+
     /** Bestow price, including any nonmana payment, shown alongside the ordinary creature cast. */
     val bestow: ClientBestow? = null
 )

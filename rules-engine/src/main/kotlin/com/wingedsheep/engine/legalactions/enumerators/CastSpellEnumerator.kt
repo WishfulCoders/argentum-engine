@@ -438,7 +438,13 @@ class CastSpellEnumerator(
             val evokeAbility = cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Evoke>().firstOrNull()
             val canAffordEvoke = if (evokeAbility != null) {
                 val evokeMana = context.costCalculator.calculateEffectiveCostWithAlternativeBase(state, cardDef, evokeAbility.cost, playerId)
-                context.manaSolver.canPay(state, playerId, evokeMana, precomputedSources = cachedSources)
+                context.manaSolver.canPay(state, playerId, evokeMana, precomputedSources = cachedSources) &&
+                    // The non-mana part of the evoke cost ("Exile a white card from your hand") must
+                    // be payable too (CR 118.3) — a card being cast is on the stack by then
+                    // (CR 601.2a), so it never counts as its own pitch fodder.
+                    evokeAbility.additionalCosts.all { cost ->
+                        canPayAdditionalCostForAlternative(context, state, playerId, cardId, cost)
+                    }
             } else false
 
             // Check impending cost (alternative cost from Impending keyword)
@@ -718,9 +724,24 @@ class CastSpellEnumerator(
                 SelfAltCostResult(
                     manaCostString = evokeMana.toString(),
                     autoTapPreview = evokePreview,
-                    additionalCostInfo = null
+                    additionalCostInfo = evokeAbility.additionalCosts.firstNotNullOfOrNull { cost ->
+                        additionalCostInfoForAlternative(context, state, playerId, cardId, cost)
+                    }
                 )
             } else null
+            // What the evoke button reads: the mana part, or — for a non-mana evoke cost such as
+            // "Exile a white card from your hand" — the cost itself, the way the granted-cost label
+            // does, rather than a meaningless "{0}".
+            val evokeCostLabel = evokeAbility
+                ?.takeIf { it.additionalCosts.isNotEmpty() }
+                ?.let { ability ->
+                    val nonMana = ability.additionalCosts.joinToString(", ") {
+                        it.description.replaceFirstChar { c -> c.lowercaseChar() }
+                    }
+                    if (ability.cost.cmc == 0 && !ability.cost.hasX) nonMana
+                    else "${evokeCostResult?.manaCostString}, $nonMana"
+                }
+                ?: evokeCostResult?.manaCostString
 
             // Compute impending cost info
             val impendingCostResult = if (canAffordImpending && impendingAbility != null) {
@@ -1072,9 +1093,10 @@ class CastSpellEnumerator(
                         if (evokeCostResult != null) {
                             result.add(LegalAction(
                                 actionType = "CastWithAlternativeCost",
-                                description = "Evoke ${cardComponent.name} (${evokeCostResult.manaCostString})",
+                                description = "Evoke ${cardComponent.name} ($evokeCostLabel)",
                                 action = CastSpell(playerId, cardId, targets = listOf(autoSelectedTarget), useAlternativeCost = true, alternativeCostType = AlternativeCostType.EVOKE),
                                 manaCostString = evokeCostResult.manaCostString,
+                                additionalCostInfo = evokeCostResult.additionalCostInfo,
                                 autoTapPreview = evokeCostResult.autoTapPreview
                             ))
                         }
@@ -1202,7 +1224,7 @@ class CastSpellEnumerator(
                         if (evokeCostResult != null) {
                             result.add(LegalAction(
                                 actionType = "CastWithAlternativeCost",
-                                description = "Evoke ${cardComponent.name} (${evokeCostResult.manaCostString})",
+                                description = "Evoke ${cardComponent.name} ($evokeCostLabel)",
                                 action = CastSpell(playerId, cardId, useAlternativeCost = true, alternativeCostType = AlternativeCostType.EVOKE),
                                 validTargets = firstReqInfo.validTargets,
                                 requiresTargets = true,
@@ -1215,6 +1237,7 @@ class CastSpellEnumerator(
                                 xConstrainsTargetPower = firstReqInfo.xConstrainsPower,
                                 xConstrainsTargetCount = firstReqInfo.xConstrainsCount,
                                 manaCostString = evokeCostResult.manaCostString,
+                                additionalCostInfo = evokeCostResult.additionalCostInfo,
                                 autoTapPreview = evokeCostResult.autoTapPreview
                             ))
                         }
@@ -1345,9 +1368,10 @@ class CastSpellEnumerator(
                 if (evokeCostResult != null) {
                     result.add(LegalAction(
                         actionType = "CastWithAlternativeCost",
-                        description = "Evoke ${cardComponent.name} (${evokeCostResult.manaCostString})",
+                        description = "Evoke ${cardComponent.name} ($evokeCostLabel)",
                         action = CastSpell(playerId, cardId, useAlternativeCost = true, alternativeCostType = AlternativeCostType.EVOKE),
                         manaCostString = evokeCostResult.manaCostString,
+                        additionalCostInfo = evokeCostResult.additionalCostInfo,
                         autoTapPreview = evokeCostResult.autoTapPreview
                     ))
                 }
