@@ -871,6 +871,120 @@
     "colorIdentityOverride": []
 }
 
+// Emrakul, the Aeons Torn
+{
+    "name": "Emrakul, the Aeons Torn",
+    "manaCost": "{15}",
+    "typeLine": "Legendary Creature — Eldrazi",
+    "oracleText": "This spell can't be countered.\nWhen you cast this spell, take an extra turn after this one.\nFlying, protection from spells that are one or more colors, annihilator 6\nWhen Emrakul is put into a graveyard from anywhere, its owner shuffles their graveyard into their library.",
+    "creatureStats": {
+        "power": 15,
+        "toughness": 15
+    },
+    "keywords": [
+        "FLYING",
+        "ANNIHILATOR"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Protection",
+            "scope": "ProtectionScope.ColoredSpells"
+        },
+        {
+            "type": "Numeric",
+            "keyword": "ANNIHILATOR",
+            "n": 6
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Emrakul, the Aeons Torn:1",
+                "trigger": "CastThisSpellEvent",
+                "effect": "TakeExtraTurn",
+                "descriptionOverride": "When you cast this spell, take an extra turn after this one."
+            },
+            {
+                "id": "Emrakul, the Aeons Torn:2",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "ForceSacrifice",
+                    "filter": "permanent",
+                    "count": 6,
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "DefendingPlayer"
+                    }
+                },
+                "descriptionOverride": "Annihilator 6"
+            },
+            {
+                "id": "Emrakul, the Aeons Torn:3",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Graveyard"
+                            },
+                            "storeAs": "graveyardCards"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "graveyardCards",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "placement": "Shuffled"
+                            }
+                        }
+                    ]
+                },
+                "activeZones": [
+                    "Graveyard"
+                ],
+                "descriptionOverride": "When Emrakul is put into a graveyard from anywhere, its owner shuffles their graveyard into their library."
+            }
+        ],
+        "cantBeCountered": true
+    },
+    "metadata": {
+        "collectorNumber": "4",
+        "rarity": "MYTHIC",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/7/67600383-bbb8-411c-b8e6-2296650bc747.jpg?1783942013",
+        "rulings": [
+            {
+                "date": "2018-12-07",
+                "text": "Emrakul's second ability triggers as you cast it, and that ability resolves before the spell itself. It resolves even if that spell is somehow removed from the stack."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "Emrakul can be targeted by spells that try to counter it (such as Ionize). Those spells will resolve, but the part of their effect that would counter Emrakul won't do anything. Any other effects those spells have will work as normal."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "\"Colored spells\" is not synonymous with \"colored cards.\" For example, even though creatures are spells when they're cast, they're not spells when they're on the battlefield and can block Emrakul; and triggered abilities of permanents entering the battlefield (such as that of Banishing Light) can target it."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "Emrakul can't be the target of colored Aura spells, but colored Auras can be put onto the battlefield enchanting it."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "Annihilator abilities trigger and resolve during the declare attackers step. The defending player chooses and sacrifices the required number of permanents before they declare blockers. Any creatures sacrificed this way won't be able to block."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Enatu Golem
 {
     "name": "Enatu Golem",
