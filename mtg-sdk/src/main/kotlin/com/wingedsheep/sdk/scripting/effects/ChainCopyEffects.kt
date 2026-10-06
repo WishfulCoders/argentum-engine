@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.effects
 
+import com.wingedsheep.sdk.scripting.costs.CostAtom
 import com.wingedsheep.sdk.scripting.costs.PayCost
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
@@ -31,7 +32,11 @@ enum class CopyRecipient {
  * @property action The primary effect to execute (any generic Effect)
  * @property target The target of the primary action
  * @property copyRecipient Who gets offered the copy
- * @property copyCost Cost required to create the copy (null = free)
+ * @property copyCost Cost the recipient pays, mid-resolution, before they may copy (null = free).
+ *   The engine collects a sacrifice ("sacrifice a land", Chain of Vapor), a discard ("discard a
+ *   card", Chain of Plasma) or a mana payment ("pay {R}{R}", Chain Lightning — paid through the
+ *   resolution-time mana window, CR 605.3a). Any other cost is treated as unpayable, so the copy is
+ *   never offered rather than offered for free.
  * @property copyTargetRequirement Target requirement for the copy's new target
  */
 @SerialName("ChainCopy")
@@ -53,7 +58,7 @@ data class ChainCopyEffect(
         }
         append(" may ")
         if (copyCost != null) {
-            append("${copyCost.description}. If the player does, they may ")
+            append("${costPhrase(copyCost)}. If the player does, they may ")
         }
         append("copy this spell and may choose a new target for that copy")
     }
@@ -68,5 +73,15 @@ data class ChainCopyEffect(
                 copyTargetRequirement = newCopyTargetReq,
                 copyCost = newCopyCost
             ) else this
+    }
+
+    companion object {
+        /**
+         * The imperative phrase for a chain copy's cost — "pay {R}{R}" for mana, whose bare
+         * description is just the symbols, and the cost's own description ("discard a card",
+         * "sacrifice a land") otherwise.
+         */
+        fun costPhrase(cost: PayCost): String =
+            if ((cost as? PayCost.Atom)?.atom is CostAtom.Mana) "pay ${cost.description}" else cost.description
     }
 }

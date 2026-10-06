@@ -78,3 +78,29 @@ data class ChainCopyTargetContinuation(
     val candidateTargets: List<EntityId>,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
+
+/**
+ * Resume after the copy recipient picks mana sources for a mana copy cost ("may pay {R}{R}. If the
+ * player does, they may copy this spell" — Chain Lightning).
+ *
+ * The recipient already said yes to the copy offer; this is the mana-payment window a rule or effect
+ * opens mid-resolution (CR 605.3a), so they may tap sources from [availableSources] or activate any
+ * mana ability of their own before confirming. Paying moves on to the copy's target selection;
+ * declining (or a submission that can't produce the mana) ends the chain — "if the player does" is
+ * not satisfied, so no copy is made.
+ *
+ * @property effect The unified chain copy effect
+ * @property copyControllerId The player paying for, and then controlling, the copy
+ * @property sourceId The source entity of the original spell/ability
+ * @property manaCost The mana cost being paid
+ * @property availableSources The source menu the window opened with (submissions are validated against it)
+ */
+@Serializable
+data class ChainCopyManaPaymentContinuation(
+    val effect: ChainCopyEffect,
+    val copyControllerId: EntityId,
+    val sourceId: EntityId?,
+    val manaCost: com.wingedsheep.sdk.core.ManaCost,
+    val availableSources: List<ManaSourceOption>,
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+) : AnswerContinuation

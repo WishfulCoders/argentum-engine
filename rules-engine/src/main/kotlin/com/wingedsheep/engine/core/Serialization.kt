@@ -442,6 +442,7 @@ val engineSerializersModule = SerializersModule {
         subclass(ChooseOpponentDeciderContinuation::class)
         subclass(ChainCopyDecisionContinuation::class)
         subclass(ChainCopyCostContinuation::class)
+        subclass(ChainCopyManaPaymentContinuation::class)
         subclass(ChainCopyTargetContinuation::class)
         subclass(CastSpellAdditionalCostContinuation::class)
         subclass(CastCostChoiceContinuation::class)

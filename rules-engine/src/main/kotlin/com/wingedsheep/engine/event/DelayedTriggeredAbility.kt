@@ -99,7 +99,13 @@ data class DelayedTriggeredAbility(
      * to exist — is dropped when the trigger fires ([carriedPipelineFor]).
      */
     val carriedCollections: Map<String, List<com.wingedsheep.engine.handlers.CapturedObjectBinding>> = emptyMap(),
-    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment()
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    /**
+     * Further steps that fire this step-based trigger — it fires at whichever of [fireAtStep] or
+     * these begins first ("at the beginning of your next main phase", CR 505.1 / 603.7: Mana Drain).
+     * Baked from [com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect.alsoAtSteps].
+     */
+    val alsoFireAtSteps: List<Step> = emptyList()
 )
 
 /**
@@ -115,3 +121,7 @@ fun DelayedTriggeredAbility.carriedPipelineFor(state: com.wingedsheep.engine.sta
         }
     )
 }
+
+/** Whether this step-based delayed trigger fires at the beginning of [step]. */
+fun DelayedTriggeredAbility.firesAtStep(step: Step): Boolean =
+    trigger == null && (fireAtStep == step || step in alsoFireAtSteps)

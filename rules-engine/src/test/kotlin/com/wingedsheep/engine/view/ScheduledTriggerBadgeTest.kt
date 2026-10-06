@@ -72,6 +72,14 @@ class ScheduledTriggerBadgeTest : FunSpec({
         ) shouldBe "At the beginning of each combat this turn: Draw a card."
     }
 
+    test("a trigger for either main phase reads as the next main phase") {
+        val driver = createDriver()
+        val nextMain = driver.scheduled(Step.PRECOMBAT_MAIN)
+            .copy(alsoFireAtSteps = listOf(Step.POSTCOMBAT_MAIN), fireOnPlayerId = driver.player1)
+        driver.badgeText(nextMain, driver.player2) shouldBe
+            "At the beginning of Player 1's next main phase: Draw a card."
+    }
+
     test("a one-shot trigger that expires this turn says so, and is gone after cleanup without firing") {
         val driver = createDriver()
         val viewer = driver.player2

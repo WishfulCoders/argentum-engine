@@ -4274,11 +4274,27 @@ object Effects {
         targetRequirement: TargetRequirement? = null,
         additionalTargetRequirements: List<TargetRequirement> = emptyList(),
         fireOnPlayer: EffectTarget? = null,
-        carryCollections: List<String> = emptyList()
+        carryCollections: List<String> = emptyList(),
+        alsoAtSteps: List<com.wingedsheep.sdk.core.Step> = emptyList()
     ): Effect = com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect(
         step, effect, trigger, watchedTarget, watchedRecipient, expiry, fireOnce, repeatAtEachMatchingStep,
-        timing, targetRequirement, additionalTargetRequirements, fireOnPlayer, carryCollections
+        timing, targetRequirement, additionalTargetRequirements, fireOnPlayer, carryCollections, alsoAtSteps
     )
+
+    /**
+     * "At the beginning of your next main phase, [effect]" — a one-shot delayed trigger (CR 603.7)
+     * that fires at whichever of your main phases begins first (CR 505.1: a turn has two). Cast on
+     * an opponent's turn or in your beginning phase, that's your next precombat main phase; cast in
+     * your precombat main phase or combat, it's the same turn's postcombat main phase (Mana Drain).
+     */
+    fun AtBeginningOfYourNextMainPhase(effect: Effect): Effect =
+        com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect(
+            step = com.wingedsheep.sdk.core.Step.PRECOMBAT_MAIN,
+            alsoAtSteps = listOf(com.wingedsheep.sdk.core.Step.POSTCOMBAT_MAIN),
+            fireOnPlayer = EffectTarget.PlayerRef(com.wingedsheep.sdk.scripting.references.Player.You),
+            timing = com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming.CURRENT_TURN_OR_LATER,
+            effect = effect
+        )
 
     /**
      * [CreateDelayedTrigger] whose effect declares its own targets, chosen when the delayed

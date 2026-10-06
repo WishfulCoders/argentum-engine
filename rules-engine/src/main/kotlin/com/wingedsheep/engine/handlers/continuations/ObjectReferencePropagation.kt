@@ -52,6 +52,7 @@ internal fun AnswerContinuation.objectReferences(): ObjectReferenceEnvironment? 
     is StaticDrawReplacementContinuation -> objectReferences
     is ChainCopyDecisionContinuation -> objectReferences
     is ChainCopyCostContinuation -> objectReferences
+    is ChainCopyManaPaymentContinuation -> objectReferences
     is ChainCopyTargetContinuation -> objectReferences
     is SacrificeContinuation -> objectReferences
     is ChooseOnePerCategoryContinuation -> objectReferences
@@ -171,6 +172,7 @@ internal fun AnswerContinuation.withObjectReferences(refs: ObjectReferenceEnviro
     is StaticDrawReplacementContinuation -> copy(objectReferences = refs)
     is ChainCopyDecisionContinuation -> copy(objectReferences = refs)
     is ChainCopyCostContinuation -> copy(objectReferences = refs)
+    is ChainCopyManaPaymentContinuation -> copy(objectReferences = refs)
     is ChainCopyTargetContinuation -> copy(objectReferences = refs)
     is SacrificeContinuation -> copy(objectReferences = refs)
     is ChooseOnePerCategoryContinuation -> copy(objectReferences = refs)

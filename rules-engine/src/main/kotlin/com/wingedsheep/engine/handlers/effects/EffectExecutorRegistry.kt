@@ -98,7 +98,7 @@ class EffectExecutorRegistry(
             )
         )
         registerModule(PlayerExecutors(::recurse, zones, decisionHandler, cardRegistry, costPaymentService))
-        registerModule(ChainExecutors(::recurse, targetFinder = targetFinder, predicateEvaluator = predicateEvaluator))
+        registerModule(ChainExecutors(::recurse, targetFinder = targetFinder, predicateEvaluator = predicateEvaluator, cardRegistry = cardRegistry))
     }
 
     /**

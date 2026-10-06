@@ -809,10 +809,17 @@ internal class PlayerActiveEffectsProjector(
      * beginning of Bob's next upkeep", "At the beginning of each combat this turn".
      */
     private fun scheduleText(state: GameState, scheduled: DelayedTriggeredAbility, step: Step): String {
-        val stepName = when (step) {
+        fun nameOf(s: Step) = when (s) {
             Step.UPKEEP -> "upkeep"
             Step.BEGIN_COMBAT -> "combat"
-            else -> step.displayName.lowercase()
+            else -> s.displayName.lowercase()
+        }
+        // "Whichever comes first" over several steps — the two main phases read as "main phase".
+        val steps = listOf(step) + scheduled.alsoFireAtSteps
+        val stepName = when {
+            steps.size == 1 -> nameOf(step)
+            steps.toSet() == setOf(Step.PRECOMBAT_MAIN, Step.POSTCOMBAT_MAIN) -> "main phase"
+            else -> steps.joinToString(" or ") { nameOf(it) }
         }
         // Both seats read this badge, so the player is named rather than called "your".
         val onTurnOf = scheduled.fireOnPlayerId?.let { player ->
