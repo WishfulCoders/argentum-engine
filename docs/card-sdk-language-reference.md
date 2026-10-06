@@ -1105,6 +1105,14 @@ preview — in the turn-face-up handler.)
   cost it reports unaffordable, because affordability there has to be known before any context
   exists. Same idea as `PayCost.OwnManaCost`, which is likewise resolved at payment time.
   (CR 119.4). "...unless you pay 3 life."
+- `Costs.pay.ManaCostOf(entity, genericReduction = 0)` — pay the mana cost of **another** object,
+  reduced by `genericReduction` generic mana (**Flash**: "…sacrifice it unless you pay its mana cost
+  reduced by {2}", `entity` = the pipeline's put-onto-the-battlefield creature). Lowered inside
+  `PayOrSufferExecutor` to a concrete mana atom: the object's printed cost with {X} as 0 (CR 107.3h;
+  a spell on the stack keeps its announced X), the reduction off the generic component only
+  (CR 118.7a — {1}{R} becomes {R}), {0} for a cost-less or vanished object. PayOrSuffer-only, like
+  `PayDynamicLife`; the PayOrSuffer mana continuation carries the pipeline's collections, so the
+  suffer effect may name the same object (`Effects.SacrificeTarget(entered.asTarget)`).
 - `Costs.pay.Discard(filter = Any, count = 1, random = false)` — discard cards matching `filter`.
   Random variant prompts a yes/no and the engine picks the discards (Pillaging Horde).
 - `Costs.pay.DiscardHand` — discard your **entire** hand. Nothing is selected (every card goes), so

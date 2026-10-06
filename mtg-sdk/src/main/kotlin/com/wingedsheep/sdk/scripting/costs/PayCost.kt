@@ -13,10 +13,10 @@ import kotlinx.serialization.Serializable
  * - Any future mechanic that requires a payable cost
  *
  * Most payable things — mana, life, sacrifice, discard, exile, tap, return, reveal — are shared with the
- * other cost contexts and live in the [CostAtom] vocabulary; [Atom] carries one of them. The two members
- * left on this wrapper are the ones genuinely specific to *this* context: [OwnManaCost] (resolved against
- * the source permanent's own printed cost at payment time) and [Choice] (a player picks one of several
- * payable costs to satisfy).
+ * other cost contexts and live in the [CostAtom] vocabulary; [Atom] carries one of them. The members
+ * left on this wrapper are the ones genuinely specific to *this* context: [OwnManaCost] and [ManaCostOf]
+ * (resolved against an object's printed cost at payment time), [DynamicLife], and [Choice] (a player
+ * picks one of several payable costs to satisfy).
  */
 @Serializable
 sealed interface PayCost : TextReplaceable<PayCost> {
@@ -76,6 +76,41 @@ sealed interface PayCost : TextReplaceable<PayCost> {
     @Serializable
     data object OwnManaCost : PayCost {
         override val description: String = "its mana cost"
+    }
+
+    /**
+     * Pay the mana cost of **another** object — [entity] — reduced by [genericReduction] generic
+     * mana: Flash's "sacrifice it unless you pay its mana cost reduced by {2}", where "it" is the
+     * creature card the spell just put onto the battlefield (a pipeline target), not the source.
+     *
+     * The symbolic sibling of [OwnManaCost] with the object named instead of implied, and lowered
+     * the same way — at payment time, by `PayOrSufferExecutor`, into a concrete mana atom:
+     *  - [entity]'s printed mana cost is read from its card, with any {X} counted as 0
+     *    (CR 107.3h — the object is not a spell on the stack, so X is 0) unless it *is* a spell on
+     *    the stack, whose X is the value announced for it;
+     *  - the reduction comes off the generic component only (CR 118.7a): {1}{R} reduced by {2} is
+     *    {R}, and colored, colorless and hybrid symbols are untouched (Flash ruling 2018-03-16);
+     *  - an object with no mana cost (a token, a land) costs {0}.
+     *
+     * Like [DynamicLife] this is a **PayOrSuffer-only** cost: the object it names exists only in
+     * the resolving effect's context, so as a spell or ability cost it reports unaffordable.
+     *
+     * @property entity The object whose mana cost is paid — typically
+     *   `EffectTarget.PipelineTarget(collection, 0)`.
+     * @property genericReduction Generic mana taken off that cost (non-negative).
+     */
+    @SerialName("ManaCostOf")
+    @Serializable
+    data class ManaCostOf(
+        val entity: com.wingedsheep.sdk.scripting.targets.EffectTarget,
+        val genericReduction: Int = 0
+    ) : PayCost {
+        init {
+            require(genericReduction >= 0) { "genericReduction must be non-negative, was $genericReduction" }
+        }
+
+        override val description: String =
+            if (genericReduction > 0) "pay its mana cost reduced by {$genericReduction}" else "pay its mana cost"
     }
 
     /**
