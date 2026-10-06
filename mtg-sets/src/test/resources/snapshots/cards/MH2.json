@@ -957,6 +957,131 @@
     ]
 }
 
+// Dauthi Voidwalker
+{
+    "name": "Dauthi Voidwalker",
+    "manaCost": "{B}{B}",
+    "typeLine": "Creature — Dauthi Rogue",
+    "oracleText": "Shadow (This creature can block or be blocked by only creatures with shadow.)\nIf a card would be put into an opponent's graveyard from anywhere, instead exile it with a void counter on it.\n{T}, Sacrifice this creature: Choose an exiled card an opponent owns with a void counter on it. You may play it this turn without paying its mana cost.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "SHADOW"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Dauthi Voidwalker:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        "CostTap",
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Exile",
+                                "player": "EachOpponent",
+                                "filter": {
+                                    "statePredicates": [
+                                        {
+                                            "type": "HasCounter",
+                                            "counterType": "VOID"
+                                        }
+                                    ]
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Choose an exiled card with a void counter to play this turn for free"
+                        },
+                        {
+                            "type": "GrantMayPlayFromExile",
+                            "from": "selected1"
+                        },
+                        {
+                            "type": "GrantPlayWithoutPayingCost",
+                            "from": "selected1"
+                        }
+                    ]
+                },
+                "descriptionOverride": "{T}, Sacrifice this creature: Choose an exiled card an opponent owns with a void counter on it. You may play it this turn without paying its mana cost."
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "RedirectZoneChangeWithEffect",
+                "newDestination": "Exile",
+                "additionalEffect": {
+                    "type": "AddCounters",
+                    "counterType": "VOID",
+                    "count": 1,
+                    "target": "TriggeringEntity"
+                },
+                "appliesTo": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "nontoken own:opponent",
+                    "to": "Graveyard"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "81",
+        "rarity": "RARE",
+        "artist": "Sidharth Chaturvedi",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/c/dce5db87-4a78-4b8d-b5c2-918ccd1ba4e3.jpg?1783926864",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If your opponent discards a card while you control Dauthi Voidwalker, abilities that function when that card is discarded still work, even though that card never reaches that player's graveyard. In addition, spells or abilities that check the characteristics of the discarded card can find that card in exile."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "While Dauthi Voidwalker is on the battlefield, nontoken creatures your opponents control won't die. They'll be exiled instead. Abilities that would trigger when those creatures die won't trigger."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Tokens still die while Dauthi Voidwalker is on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If a card has {X} in its mana cost, you must choose 0 as the value of X when casting it without paying its mana cost."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Playing a card with Dauthi Voidwalker's last ability is still subject to normal timing restrictions."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you cast a card this way, you may not cast it for any other alternative costs it has, but you may pay for additional costs, such as kicker costs. If the spell requires an additional cost, you must pay that cost."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Dragon's Rage Channeler
 {
     "name": "Dragon's Rage Channeler",
@@ -1072,6 +1197,72 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Dress Down
+{
+    "name": "Dress Down",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "Flash\nWhen this enchantment enters, draw a card.\nCreatures lose all abilities.\nAt the beginning of the end step, sacrifice this enchantment.",
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Dress Down:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            },
+            {
+                "id": "Dress Down:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END",
+                    "player": "Each"
+                },
+                "binding": "ANY",
+                "effect": "SacrificeSelf"
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "LoseAllAbilities",
+                "filter": {
+                    "baseFilter": "creature"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "39",
+        "rarity": "RARE",
+        "artist": "Iain McCaig",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/4/04f9f061-67b8-4427-9fcb-b3ccfee8fc5d.jpg?1783926882",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If an effect grants a creature an ability after Dress Down has entered the battlefield, it won't lose that ability. For example, if a land becomes a creature while Dress Down is on the battlefield, it will still gain any abilities given to it by the effect that animated it. It will, however, lose any abilities it already had."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If an effect causes Dress Down to become a creature, it will lose its own abilities along with all other creatures. This includes the triggered ability that causes it to be sacrificed at the beginning of the end step."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -1276,6 +1467,106 @@
         "artist": "Yeong-Hao Han",
         "flavorText": "They often perch on street lamps, causing the poles to buckle under their weight.",
         "imageUri": "https://cards.scryfall.io/normal/front/1/a/1af03fc3-5eb6-404e-96d9-e291a1e11ec3.jpg?1783926831"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Endurance
+{
+    "name": "Endurance",
+    "manaCost": "{1}{G}{G}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Flash\nReach\nWhen this creature enters, up to one target player puts all the cards from their graveyard on the bottom of their library in a random order.\nEvoke—Exile a green card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "keywords": [
+        "FLASH",
+        "REACH",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "green"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Endurance:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Graveyard",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "placement": "Bottom"
+                            },
+                            "order": "Random"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetPlayer",
+                    "optional": true,
+                    "id": "t0"
+                },
+                "descriptionOverride": "up to one target player puts all the cards from their graveyard on the bottom of their library in a random order."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "157",
+        "rarity": "MYTHIC",
+        "artist": "Anastasia Ovchinnikova",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/b/eb0e0404-4846-4891-acfa-bd0951ecf9c6.jpg?1783926831",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as an evoke cost), add any cost increases, then apply any cost reductions. The mana value of the spell is determined by only its mana cost, no matter what the total cost to cast that spell was."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "GREEN"
@@ -1634,6 +1925,89 @@
     ]
 }
 
+// Fury
+{
+    "name": "Fury",
+    "manaCost": "{3}{R}{R}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Double strike\nWhen this creature enters, it deals 4 damage divided as you choose among any number of target creatures and/or planeswalkers.\nEvoke—Exile a red card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "DOUBLE_STRIKE",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "red"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Fury:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DividedDamage",
+                    "totalDamage": 4,
+                    "minTargets": 0,
+                    "maxTargets": 4
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "count": 4,
+                    "minCount": 0,
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature|planeswalker"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "it deals 4 damage divided as you choose among any number of target creatures and/or planeswalkers."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "126",
+        "rarity": "MYTHIC",
+        "artist": "Raoul Vitale",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/d/bd281158-8180-40b9-a5b7-03cfc712d81a.jpg?1783926844",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If some of the targets are illegal as the triggered ability tries to resolve, the original division of damage still applies, but the damage that would have been dealt to the illegal targets isn't dealt at all."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "You divide the damage as you put the triggered ability on the stack, not as it resolves. Each target must be assigned at least 1 damage. You can't choose more than four targets and deal 0 damage to some of them."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Gargadon
 {
     "name": "Gargadon",
@@ -1710,6 +2084,126 @@
     "colorIdentityOverride": [
         "BLACK",
         "WHITE"
+    ]
+}
+
+// Grief
+{
+    "name": "Grief",
+    "manaCost": "{2}{B}{B}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Menace\nWhen this creature enters, target opponent reveals their hand. You choose a nonland card from it. That player discards that card.\nEvoke—Exile a black card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "MENACE",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "black"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Grief:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RevealHand",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "storeAs": "gathered1"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered1",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "nonland",
+                            "storeSelected": "selected2",
+                            "prompt": "Choose a nonland card to discard",
+                            "showAllCards": true,
+                            "alwaysPrompt": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected2",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "moveType": "Discard"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetOpponent",
+                    "id": "t0"
+                },
+                "descriptionOverride": "target opponent reveals their hand. You choose a nonland card from it. That player discards that card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "87",
+        "rarity": "MYTHIC",
+        "artist": "Nicholas Gregory",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/6/e6befbc4-1320-4f26-bd9f-b1814fedda10.jpg?1783926861",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as an evoke cost), add any cost increases, then apply any cost reductions. The mana value of the spell is determined by only its mana cost, no matter what the total cost to cast that spell was."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -3622,6 +4116,104 @@
     "hasNoManaCost": true
 }
 
+// Solitude
+{
+    "name": "Solitude",
+    "manaCost": "{3}{W}{W}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Flash\nLifelink\nWhen this creature enters, exile up to one other target creature. That creature's controller gains life equal to its power.\nEvoke—Exile a white card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH",
+        "LIFELINK",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "white"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Solitude:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "EntityProperty",
+                                "entity": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "numericProperty": "Power"
+                            },
+                            "target": "TargetController"
+                        },
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Exile"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature",
+                        "excludeSelf": true
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "exile up to one other target creature. That creature's controller gains life equal to its power."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "rarity": "MYTHIC",
+        "artist": "Evan Shipard",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/7/47a6234f-309f-4e03-9263-66da48b57153.jpg?1783926885",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as an evoke cost), add any cost increases, then apply any cost reductions. The mana value of the spell is determined by only its mana cost, no matter what the total cost to cast that spell was."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Soul of Migration
 {
     "name": "Soul of Migration",
@@ -3868,6 +4460,94 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Subtlety
+{
+    "name": "Subtlety",
+    "manaCost": "{2}{U}{U}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Flash\nFlying\nWhen this creature enters, choose up to one target creature spell or planeswalker spell. Its owner puts it on their choice of the top or bottom of their library.\nEvoke—Exile a blue card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLASH",
+        "FLYING",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "blue"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Subtlety:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "PutOnLibraryPositionOfChoice",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature|planeswalker",
+                        "zone": "Stack"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "choose up to one target creature spell or planeswalker spell. Its owner puts it on their choice of the top or bottom of their library."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "67",
+        "rarity": "MYTHIC",
+        "artist": "Anastasia Ovchinnikova",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/0/701256d5-1389-48b7-9581-d6037209bd06.jpg?1783926869",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Subtlety's triggered ability targets a spell on the stack. It can't target creatures or planeswalkers on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "A spell that's put into its owner's library doesn't resolve, but it isn't countered. This will work on spells that say they can't be countered."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "The owner of the spell is the one who chooses whether it goes on the top or bottom of their library. All players will know this information."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 

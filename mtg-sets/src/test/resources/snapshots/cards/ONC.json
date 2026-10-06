@@ -110,3 +110,97 @@
         "WHITE"
     ]
 }
+
+// Staff of the Storyteller
+{
+    "name": "Staff of the Storyteller",
+    "manaCost": "{1}{W}",
+    "typeLine": "Artifact",
+    "oracleText": "When this artifact enters, create a 1/1 white Spirit creature token with flying.\nWhenever you create one or more creature tokens, put a story counter on this artifact.\n{W}, {T}, Remove a story counter from this artifact: Draw a card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Staff of the Storyteller:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Spirit"
+                    ],
+                    "keywords": [
+                        "FLYING"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/a/1/a171254d-7616-42c4-bd78-b2787fb973aa.jpg?1783918176"
+                },
+                "descriptionOverride": "When this artifact enters, create a 1/1 white Spirit creature token with flying."
+            },
+            {
+                "id": "Staff of the Storyteller:2",
+                "trigger": {
+                    "type": "TokenCreationEvent",
+                    "tokenFilter": "creature",
+                    "batch": true
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "STORY",
+                    "count": 1,
+                    "target": "Self"
+                },
+                "descriptionOverride": "Whenever you create one or more creature tokens, put a story counter on this artifact."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Staff of the Storyteller:3",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{W}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomRemoveCounters",
+                                "counterType": "STORY",
+                                "self": true
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "descriptionOverride": "{W}, {T}, Remove a story counter from this artifact: Draw a card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "10",
+        "rarity": "RARE",
+        "artist": "Dan Murayama Scott",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/b/ab1d1461-1625-4163-aacd-a939f4871fad.jpg?1783918162"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}

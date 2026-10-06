@@ -1615,6 +1615,97 @@
     "colorIdentityOverride": []
 }
 
+// Haywire Mite
+{
+    "name": "Haywire Mite",
+    "manaCost": "{1}",
+    "typeLine": "Artifact Creature — Insect",
+    "oracleText": "When this creature dies, you gain 2 life.\n{G}, Sacrifice this creature: Exile target noncreature artifact or noncreature enchantment.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Haywire Mite:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Haywire Mite:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{G}"
+                            }
+                        },
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "Or",
+                                        "predicates": [
+                                            "IsArtifact",
+                                            "IsEnchantment"
+                                        ]
+                                    },
+                                    {
+                                        "type": "Not",
+                                        "predicate": "IsCreature"
+                                    }
+                                ]
+                            }
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{G}, Sacrifice this creature: Exile target noncreature artifact or noncreature enchantment."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "199",
+        "rarity": "UNCOMMON",
+        "artist": "Izzy",
+        "flavorText": "\"They're easy enough to squish, but they're a pain to wash out of a workbench.\"\n—Tergel, goblin explosioneer",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/4/847a175e-ead1-4596-baf3-5f7f57859e0b.jpg?1783920034"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Lay Down Arms
 {
     "name": "Lay Down Arms",
@@ -2133,6 +2224,82 @@
     ]
 }
 
+// Portal to Phyrexia
+{
+    "name": "Portal to Phyrexia",
+    "manaCost": "{9}",
+    "typeLine": "Artifact",
+    "oracleText": "When this artifact enters, each opponent sacrifices three creatures of their choice.\nAt the beginning of your upkeep, put target creature card from a graveyard onto the battlefield under your control. It's a Phyrexian in addition to its other types.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Portal to Phyrexia:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "ForceSacrifice",
+                    "filter": "creature",
+                    "count": 3,
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                }
+            },
+            {
+                "id": "Portal to Phyrexia:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Battlefield",
+                            "controllerOverride": "Controller",
+                            "fromZone": "Graveyard"
+                        },
+                        {
+                            "type": "AddSubtype",
+                            "subtype": "Phyrexian",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "duration": "Permanent"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature",
+                        "zone": "Graveyard"
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "240",
+        "rarity": "MYTHIC",
+        "artist": "Svetlin Velinov",
+        "flavorText": "After five thousand years, the nightmare returned.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/f/5f608efc-0dbc-4cc3-aadd-ed473bfc29ab.jpg?1783920015"
+    },
+    "colorIdentityOverride": []
+}
+
 // Recommission
 {
     "name": "Recommission",
@@ -2536,6 +2703,96 @@
     "colorIdentityOverride": [
         "BLUE"
     ]
+}
+
+// The Mightstone and Weakstone
+{
+    "name": "The Mightstone and Weakstone",
+    "manaCost": "{5}",
+    "typeLine": "Legendary Artifact — Powerstone",
+    "oracleText": "When The Mightstone and Weakstone enters, choose one —\n• Draw two cards.\n• Target creature gets -5/-5 until end of turn.\n{T}: Add {C}{C}. This mana can't be spent to cast nonartifact spells.\n(Melds with Urza, Lord Protector.)",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "The Mightstone and Weakstone:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "DrawCards",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            },
+                            "description": "Draw two cards"
+                        },
+                        {
+                            "effect": {
+                                "type": "ModifyStats",
+                                "powerModifier": {
+                                    "type": "Fixed",
+                                    "amount": -5
+                                },
+                                "toughnessModifier": {
+                                    "type": "Fixed",
+                                    "amount": -5
+                                },
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": "creature"
+                                    },
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "Target creature gets -5/-5 until end of turn"
+                        }
+                    ]
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "The Mightstone and Weakstone:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "restriction": {
+                        "type": "CannotCastSpellsOtherThan",
+                        "cardTypes": [
+                            "ARTIFACT"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "{T}: Add {C}{C}. This mana can't be spent to cast nonartifact spells."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "238",
+        "rarity": "RARE",
+        "artist": "Ryan Pancoast",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/2/02aea379-b444-46a3-82f4-3038f698d4f4.jpg?1783920017"
+    },
+    "colorIdentityOverride": []
 }
 
 // Third Path Iconoclast
