@@ -174,8 +174,28 @@ sealed interface PendingGameEvent {
             context: EffectContext?
         ): Boolean {
             val drawEvent = pattern as? EventPattern.DrawEvent ?: return false
-            if (drawEvent.exceptFirstInDrawStep && drawnCardsSoFar.isEmpty()) return false
+            if (drawEvent.exceptFirstInDrawStep && isFirstDrawOfOwnDrawStep(state)) return false
             return matchesPlayerFilter(drawEvent.player, playerId, sourceControllerId, state)
+        }
+
+        /**
+         * "Except the first one they draw in each of their draw steps" (Hullbreacher, Bard, King of
+         * Dale; Orcish Bowmasters' trigger twin in `TriggerMatcher.drawTriggerFiringCount`). True iff
+         * it is the drawing player's own draw step (CR 504) and they haven't yet drawn a card in it:
+         * their cards-drawn-this-turn count still equals the snapshot taken as the step began
+         * ([GameState.drawStepStartDrawCountByPlayer]).
+         *
+         * That is normally the turn-based draw of CR 504.1, but not necessarily — if that draw was
+         * skipped or *replaced* (a replaced draw never happened, CR 614.6), the next card actually
+         * drawn in the step is the first one. Draws in any other step, in another player's draw
+         * step, and the second and later draws of the step are never exempt, whichever instruction
+         * they come from (an opponent's Brainstorm in their upkeep is three non-exempt draws).
+         */
+        private fun isFirstDrawOfOwnDrawStep(state: GameState): Boolean {
+            if (state.step != com.wingedsheep.sdk.core.Step.DRAW || !state.isActiveTurnFor(playerId)) return false
+            val drawn = state.getEntity(playerId)
+                ?.get<com.wingedsheep.engine.state.components.player.CardsDrawnThisTurnComponent>()?.count ?: 0
+            return drawn == (state.drawStepStartDrawCountByPlayer[playerId] ?: 0)
         }
 
         /**

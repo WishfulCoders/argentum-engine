@@ -275,8 +275,10 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      *
      * When [exceptFirstInDrawStep] is set, the first card the drawing player draws in
      * each of their own draw steps (CR 504.1's turn-based draw, normally) does **not**
-     * fire the trigger — every other draw they make does. This is the Orcish Bowmasters
-     * clause "except the first card they draw in each of their draw steps".
+     * match — every other draw they make does, whichever instruction it comes from. This is
+     * the Orcish Bowmasters trigger clause "except the first card they draw in each of their
+     * draw steps", and the same clause on a draw replacement (Hullbreacher, Bard, King of
+     * Dale). A draw that was replaced never happened, so it doesn't use up the exemption.
      */
     @SerialName("DrawEvent")
     @Serializable
