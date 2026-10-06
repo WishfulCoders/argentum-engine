@@ -2450,6 +2450,96 @@
     ]
 }
 
+// The Mightstone and Weakstone
+{
+    "name": "The Mightstone and Weakstone",
+    "manaCost": "{5}",
+    "typeLine": "Legendary Artifact — Powerstone",
+    "oracleText": "When The Mightstone and Weakstone enters, choose one —\n• Draw two cards.\n• Target creature gets -5/-5 until end of turn.\n{T}: Add {C}{C}. This mana can't be spent to cast nonartifact spells.\n(Melds with Urza, Lord Protector.)",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "The Mightstone and Weakstone:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "DrawCards",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            },
+                            "description": "Draw two cards"
+                        },
+                        {
+                            "effect": {
+                                "type": "ModifyStats",
+                                "powerModifier": {
+                                    "type": "Fixed",
+                                    "amount": -5
+                                },
+                                "toughnessModifier": {
+                                    "type": "Fixed",
+                                    "amount": -5
+                                },
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": "creature"
+                                    },
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "Target creature gets -5/-5 until end of turn"
+                        }
+                    ]
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "The Mightstone and Weakstone:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "restriction": {
+                        "type": "CannotCastSpellsOtherThan",
+                        "cardTypes": [
+                            "ARTIFACT"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "{T}: Add {C}{C}. This mana can't be spent to cast nonartifact spells."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "238",
+        "rarity": "RARE",
+        "artist": "Ryan Pancoast",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/2/02aea379-b444-46a3-82f4-3038f698d4f4.jpg?1783920017"
+    },
+    "colorIdentityOverride": []
+}
+
 // Third Path Savant
 {
     "name": "Third Path Savant",
