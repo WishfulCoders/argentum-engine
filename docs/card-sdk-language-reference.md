@@ -1708,6 +1708,10 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
 - `PutSecondFromTopOrBottomOfLibrary(target)` — second-from-top or bottom.
 - `ShuffleIntoLibrary(target, fromZone?)` — shuffle target into owner's library. `fromZone` skips the move if the card has left that zone by resolution ("shuffle this card into your library from your graveyard" — Kogla and Yidaro).
 - `PutIntoLibraryNthFromTop(target, positionFromTop)` — place N from the top.
+- `PutIntoLibraryBeneathTop(target, cardsAbove: DynamicAmount)` — "put it into its owner's library just
+  beneath the top X cards of that library" (Unexpectedly Absent, `DynamicAmounts.xValue()`). Lowers to
+  `MoveToZoneEffect.positionFromTopAmount`, evaluated on resolution: 0 (or less) is the top, more than the
+  library holds is the bottom.
 - `PutOntoBattlefield(target, tapped?)` — put target on the battlefield.
 - `PutOntoBattlefieldUnderYourControl(target)` — under controller's control.
 - `PutOntoBattlefieldFromGraveyard(target, underYourControl = false, tapped = false)` — the *guarded* return:

@@ -1471,6 +1471,14 @@ object Effects {
         MoveToZoneEffect(target, Zone.LIBRARY, positionFromTop = positionFromTop)
 
     /**
+     * "Put [target] into its owner's library just beneath the top [cardsAbove] cards of that
+     * library" (Unexpectedly Absent, with `DynamicAmount.XValue`). [cardsAbove] is evaluated on
+     * resolution: 0 puts it on top, more than the library holds puts it on the bottom.
+     */
+    fun PutIntoLibraryBeneathTop(target: EffectTarget, cardsAbove: DynamicAmount): Effect =
+        MoveToZoneEffect(target, Zone.LIBRARY, positionFromTopAmount = cardsAbove)
+
+    /**
      * Grant "may play from exile" permission to all cards in a named collection.
      * Does NOT waive mana cost — pair with [GrantPlayWithoutPayingCost] for free play.
      *

@@ -365,6 +365,16 @@ data class MoveToZoneEffect(
      */
     val positionFromTop: Int? = null,
     /**
+     * The library position computed at resolution — "put it into its owner's library just beneath
+     * the top X cards of that library" (Unexpectedly Absent): the card goes in *beneath* that many
+     * cards, so 0 is the top. Evaluated when the effect resolves (the spell's X, a count, …); a
+     * negative amount is 0, and a position past the bottom puts the card on the bottom (the
+     * Unexpectedly Absent rulings: fewer than X cards → bottom; X = 0 → top). The [Int] sibling
+     * [positionFromTop] is for printed positions; set at most one of the two. Only meaningful when
+     * [destination] is LIBRARY, where it takes precedence over [placement].
+     */
+    val positionFromTopAmount: DynamicAmount? = null,
+    /**
      * When non-null, one counter of this type is put on the card after it lands in its destination
      * zone — "exile it with a stash counter on it" (Tinybones, Bauble Burglar), "with a dream
      * counter on it" (Goliath Daydreamer). The single-target counterpart of
@@ -385,6 +395,8 @@ data class MoveToZoneEffect(
             byDestruction -> append("Destroy ${target.description}")
             destination == Zone.HAND -> append("Return ${target.description} to its owner's hand")
             destination == Zone.EXILE -> append("Exile ${target.description}")
+            destination == Zone.LIBRARY && positionFromTopAmount != null ->
+                append("Put ${target.description} into its owner's library just beneath the top ${positionFromTopAmount.description} cards")
             destination == Zone.LIBRARY && positionFromTop != null -> {
                 val ordinal = when (positionFromTop) {
                     0 -> "top"
