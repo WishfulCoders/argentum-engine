@@ -1372,6 +1372,107 @@
     ]
 }
 
+// Life // Death
+{
+    "name": "Life // Death",
+    "manaCost": "",
+    "typeLine": "Sorcery",
+    "oracleText": "All lands you control become 1/1 creatures until end of turn. They're still lands.\n//\nReturn target creature card from your graveyard to the battlefield. You lose life equal to its mana value.",
+    "metadata": {
+        "collectorNumber": "130",
+        "rarity": "UNCOMMON",
+        "artist": "Anthony S. Waters & Edward P. Beard, Jr.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/a/7ab75cdb-93a1-4f78-b404-37566295c321.jpg?1783945328",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "A noncreature permanent that becomes a creature can attack, and its {T} abilities can be activated, only if its controller has continuously controlled that permanent since the beginning of their most recent turn. It doesn't matter how long the permanent has been a creature. Notably, if you turn a land into a creature on the turn it entered the battlefield, you won't be able to tap it for mana."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN"
+    ],
+    "layout": "SPLIT",
+    "cardFaces": [
+        {
+            "name": "Life",
+            "manaCost": "{G}",
+            "typeLine": "Sorcery",
+            "oracleText": "All lands you control become 1/1 creatures until end of turn. They're still lands.",
+            "script": {
+                "spellEffect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Group",
+                        "filter": {
+                            "baseFilter": "land ctrl:you"
+                        }
+                    },
+                    "body": {
+                        "type": "BecomeCreature",
+                        "target": "IterationEntity",
+                        "power": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "toughness": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "Death",
+            "manaCost": "{1}{B}",
+            "typeLine": "Sorcery",
+            "oracleText": "Return target creature card from your graveyard to the battlefield. You lose life equal to its mana value.",
+            "script": {
+                "spellEffect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Battlefield",
+                            "fromZone": "Graveyard"
+                        },
+                        {
+                            "type": "LoseLife",
+                            "amount": {
+                                "type": "EntityProperty",
+                                "entity": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "numericProperty": "ManaValue"
+                            },
+                            "target": "Controller"
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature own:you",
+                            "zone": "Graveyard"
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        }
+    ],
+    "hasNoManaCost": true
+}
+
 // Lightning Angel
 {
     "name": "Lightning Angel",
