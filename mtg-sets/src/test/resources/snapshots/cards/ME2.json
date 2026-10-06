@@ -1,0 +1,62 @@
+// Mana Crypt
+{
+    "name": "Mana Crypt",
+    "manaCost": "{0}",
+    "typeLine": "Artifact",
+    "oracleText": "At the beginning of your upkeep, flip a coin. If you lose the flip, this artifact deals 3 damage to you.\n{T}: Add {C}{C}.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mana Crypt:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "FlipCoin",
+                    "lostEffect": {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        },
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "You"
+                        }
+                    }
+                },
+                "descriptionOverride": "At the beginning of your upkeep, flip a coin. If you lose the flip, this artifact deals 3 damage to you."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Mana Crypt:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "214",
+        "rarity": "RARE",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/8/28ececd4-2a6d-49dd-bc52-4fdb1e0b1dba.jpg?1783942593",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "No player may choose to take actions between determining the result of the flip and damage being dealt if you lost the flip."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
