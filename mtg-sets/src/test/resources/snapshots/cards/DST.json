@@ -1752,6 +1752,212 @@
     "colorIdentityOverride": []
 }
 
+// Sundering Titan
+{
+    "name": "Sundering Titan",
+    "manaCost": "{8}",
+    "typeLine": "Artifact Creature — Golem",
+    "oracleText": "When this creature enters or leaves the battlefield, choose a land of each basic land type, then destroy those lands.",
+    "creatureStats": {
+        "power": 7,
+        "toughness": 10
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Sundering Titan:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "ChooseOnePerCategory",
+                            "from": "gathered0",
+                            "categories": [
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Plains"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Island"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Swamp"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Mountain"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Forest"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "storeAs": "kept1",
+                            "chooser": "Controller",
+                            "purpose": "destroy"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "kept1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            },
+                            "moveType": "Destroy"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "Sundering Titan:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "ChooseOnePerCategory",
+                            "from": "gathered0",
+                            "categories": [
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Plains"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Island"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Swamp"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Mountain"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "cardPredicates": [
+                                        "IsLand",
+                                        {
+                                            "type": "HasSubtype",
+                                            "subtype": "Forest"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "storeAs": "kept1",
+                            "chooser": "Controller",
+                            "purpose": "destroy"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "kept1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            },
+                            "moveType": "Destroy"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "146",
+        "rarity": "RARE",
+        "artist": "Jim Murray",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/e/3e4bd552-e629-41a4-868f-d656187317b7.jpg?1783944418",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "Sundering Titan's ability isn't targeted. When it resolves, Sundering Titan's controller must choose one land for each basic land type (Plains, Island, Swamp, Mountain, and Forest), and then they are destroyed simultaneously."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "Players can't take actions in between the time you choose the lands and the time you destroy them. Notably, they can't activate mana abilities of those lands."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "If one of the basic land types isn't present, it isn't chosen. If the only land of a certain type is one you control, you must choose it."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "If a land has more than one basic land type, it can be chosen more than once."
+            }
+        ]
+    }
+}
+
 // Tangle Golem
 {
     "name": "Tangle Golem",
