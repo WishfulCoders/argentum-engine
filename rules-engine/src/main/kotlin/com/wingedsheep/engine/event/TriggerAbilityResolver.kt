@@ -130,6 +130,10 @@ class TriggerAbilityResolver(
         // projected keywords, so granted vanishing works and "loses all abilities" strips it.
         val vanishingAbilities = getVanishingTriggeredAbilities(entityId, state)
 
+        // Fading N (CR 702.32) — the upkeep "remove a fade counter; if you can't, sacrifice it"
+        // ability is intrinsic to the keyword. Same projected-keyword derivation as vanishing.
+        val fadingAbilities = getFadingTriggeredAbilities(entityId, state)
+
         // Fabricate N (CR 702.123) — the enters-the-battlefield choice is intrinsic to the keyword,
         // printed on no card as a separate line. Same derivation shape as vanishing.
         val fabricateAbilities = getFabricateTriggeredAbilities(entityId, cardDefinitionId, state)
@@ -160,6 +164,7 @@ class TriggerAbilityResolver(
             addAll(paradigmAbilities)
             addAll(siegeAbilities)
             addAll(vanishingAbilities)
+            addAll(fadingAbilities)
             addAll(fabricateAbilities)
             addAll(renownAbilities)
             addAll(bushidoAbilities)
@@ -299,6 +304,10 @@ class TriggerAbilityResolver(
         // projected keywords, so granted vanishing works and "loses all abilities" strips it.
         val vanishingAbilities = getVanishingTriggeredAbilities(entityId, state)
 
+        // Fading N (CR 702.32) — the upkeep "remove a fade counter; if you can't, sacrifice it"
+        // ability is intrinsic to the keyword. Same projected-keyword derivation as vanishing.
+        val fadingAbilities = getFadingTriggeredAbilities(entityId, state)
+
         // Fabricate N (CR 702.123) — the enters-the-battlefield choice is intrinsic to the keyword,
         // printed on no card as a separate line. Same derivation shape as vanishing.
         val fabricateAbilities = getFabricateTriggeredAbilities(entityId, cardDefinitionId, state)
@@ -329,6 +338,7 @@ class TriggerAbilityResolver(
             addAll(paradigmAbilities)
             addAll(siegeAbilities)
             addAll(vanishingAbilities)
+            addAll(fadingAbilities)
             addAll(fabricateAbilities)
             addAll(renownAbilities)
             addAll(bushidoAbilities)
@@ -715,6 +725,20 @@ class TriggerAbilityResolver(
                 com.wingedsheep.sdk.scripting.Vanishing.upkeepCountdown,
                 com.wingedsheep.sdk.scripting.Vanishing.lastCounterSacrifice,
             )
+        } else {
+            emptyList()
+        }
+
+    /**
+     * Fading N (CR 702.32) as its keyword-derived upkeep ability: "remove a fade counter from this
+     * permanent. If you can't, sacrifice the permanent." One ability, not vanishing's two — see
+     * [com.wingedsheep.sdk.scripting.Fading]. Keyed on the *projected* keyword for the same reasons
+     * as [getVanishingTriggeredAbilities]: granted fading fades, and "loses all abilities" stops it.
+     * The "enters with N fade counters" half is synthesized at entry in `EntersWithReplacements`.
+     */
+    private fun getFadingTriggeredAbilities(entityId: EntityId, state: GameState): List<TriggeredAbility> =
+        if (state.projectedState.hasKeyword(entityId, com.wingedsheep.sdk.core.Keyword.FADING)) {
+            listOf(com.wingedsheep.sdk.scripting.Fading.upkeepCountdown)
         } else {
             emptyList()
         }

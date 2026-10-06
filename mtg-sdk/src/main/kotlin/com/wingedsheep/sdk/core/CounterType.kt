@@ -662,6 +662,16 @@ value class CounterType(val name: String) {
          */
         val BOUNTY = CounterType("BOUNTY")
 
+        /**
+         * Fade counter (CR 702.32 — Fading; Nemesis's Parallax Wave and friends). The fading
+         * permanent enters with N of them and spends one at each of its controller's upkeeps; when
+         * it has none left to spend it is sacrificed. Distinct from [TIME], which vanishing and
+         * suspend count — a Vampire Hexmage strips both, but only a time counter feeds vanishing's
+         * "when the last is removed" trigger. Many fading cards also spend fade counters as an
+         * activation cost ("Remove a fade counter from this enchantment: …").
+         */
+        val FADE = CounterType("FADE")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -780,6 +790,7 @@ value class CounterType(val name: String) {
             COLLECTION,
             REPRIEVE,
             BOUNTY,
+            FADE,
         )
 
         /**

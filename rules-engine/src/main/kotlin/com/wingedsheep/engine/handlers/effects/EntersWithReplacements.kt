@@ -24,6 +24,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.EntersWithKeywords
+import com.wingedsheep.sdk.scripting.Fading
 import com.wingedsheep.sdk.scripting.Vanishing
 
 /**
@@ -172,7 +173,10 @@ object EntersWithReplacements {
         // authored one. Same `printed + listOfNotNull(synthetic)` shape as granted Riot's
         // enters-with choice in StackResolver.
         val vanishingEntry = Vanishing.printedCount(cardDef)?.let { Vanishing.entersWithCounters(it) }
-        val replacementEffects = cardDef.script.replacementEffects + listOfNotNull(vanishingEntry)
+        // Fading N (CR 702.32a) — "this permanent enters with N fade counters on it", synthesized
+        // the same way.
+        val fadingEntry = Fading.printedCount(cardDef)?.let { Fading.entersWithCounters(it) }
+        val replacementEffects = cardDef.script.replacementEffects + listOfNotNull(vanishingEntry, fadingEntry)
 
         for (effect in replacementEffects) {
             // A replacement effect that functions only from another zone (Dearly Departed's
