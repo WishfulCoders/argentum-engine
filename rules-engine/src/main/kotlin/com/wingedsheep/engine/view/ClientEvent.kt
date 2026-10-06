@@ -615,6 +615,30 @@ sealed interface ClientEvent {
         }
     ) : ClientEvent
 
+    /** A die was rolled (CR 706). [result] is after modifiers; [naturalResult] is the face rolled. */
+    @Serializable
+    @SerialName("dieRolled")
+    data class DieRolled(
+        val playerId: EntityId,
+        val sides: Int,
+        val naturalResult: Int,
+        val result: Int,
+        val sourceId: EntityId,
+        val sourceName: String,
+        val isYours: Boolean? = null,
+        override val description: String = buildString {
+            append(
+                when (isYours) {
+                    true -> "You rolled"
+                    false -> "Opponent rolled"
+                    null -> "Rolled"
+                }
+            )
+            append(" a d$sides ($sourceName) — $naturalResult")
+            if (result != naturalResult) append(", result $result")
+        }
+    ) : ClientEvent
+
     @Serializable
     @SerialName("turnedFaceUp")
     data class TurnedFaceUp(
@@ -1318,6 +1342,16 @@ object ClientEventTransformer {
                 sourceName = event.sourceName,
                 isYours = event.playerId == viewingPlayerId,
                 ignored = event.ignored
+            )
+
+            is DieRolledEvent -> ClientEvent.DieRolled(
+                playerId = event.playerId,
+                sides = event.sides,
+                naturalResult = event.naturalResult,
+                result = event.result,
+                sourceId = event.sourceId,
+                sourceName = event.sourceName,
+                isYours = event.playerId == viewingPlayerId
             )
 
             is TurnFaceUpEvent -> ClientEvent.TurnedFaceUp(

@@ -40,6 +40,7 @@ export type ClientEvent =
   | TurnedFaceUpEvent
   | TransformedEvent
   | CoinFlippedEvent
+  | DieRolledEvent
   | TurnChangedEvent
   | GameRestartedEvent
   | ControlChangedEvent
@@ -363,6 +364,23 @@ export interface CoinFlippedEvent {
    * flip. The coin really was flipped, so it is still shown, but its result decided nothing.
    */
   readonly ignored?: boolean
+  readonly description: string
+}
+
+// ============================================================================
+// Die Roll Events
+// ============================================================================
+
+/** A die was rolled (CR 706). `result` is after modifiers; `naturalResult` is the face rolled. */
+export interface DieRolledEvent {
+  readonly type: 'dieRolled'
+  readonly playerId: EntityId
+  readonly sides: number
+  readonly naturalResult: number
+  readonly result: number
+  readonly sourceId: EntityId
+  readonly sourceName: string
+  readonly isYours?: boolean
   readonly description: string
 }
 

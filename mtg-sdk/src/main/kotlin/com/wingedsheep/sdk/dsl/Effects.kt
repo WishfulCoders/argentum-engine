@@ -4363,6 +4363,19 @@ object Effects {
     fun FlipCoin(wonEffect: Effect? = null, lostEffect: Effect? = null): Effect =
         com.wingedsheep.sdk.scripting.effects.FlipCoinEffect(wonEffect, lostEffect)
 
+    /**
+     * Roll one [sides]-sided die (CR 706) and store the result — natural roll plus any printed
+     * [modifier] — under [storeResultAs] for later steps to read via
+     * `DynamicAmounts.storedNumber(storeResultAs)`. For a printed results table use
+     * [MechanicPatterns.rollDie] (`Patterns.Mechanic.rollDie`), which composes this with one
+     * conditional row per range.
+     */
+    fun RollDie(
+        sides: Int,
+        storeResultAs: String = com.wingedsheep.sdk.scripting.effects.DIE_ROLL_RESULT,
+        modifier: DynamicAmount? = null
+    ): Effect = com.wingedsheep.sdk.scripting.effects.RollDieEffect(sides, storeResultAs, modifier)
+
     /** Flip two coins: [bothHeadsEffect], [bothTailsEffect], or [mixedEffect] (Two-Headed Giant). */
     fun FlipTwoCoins(
         bothHeadsEffect: Effect? = null,

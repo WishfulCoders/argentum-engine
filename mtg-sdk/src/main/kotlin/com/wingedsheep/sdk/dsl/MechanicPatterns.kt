@@ -18,6 +18,11 @@ import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.ChooseOpponentForSourceEffect
 import com.wingedsheep.sdk.scripting.effects.CLASH_WON
 import com.wingedsheep.sdk.scripting.effects.ClashEffect
+import com.wingedsheep.sdk.scripting.effects.DIE_ROLL_RESULT
+import com.wingedsheep.sdk.scripting.effects.RollDieEffect
+import com.wingedsheep.sdk.scripting.conditions.AllConditions
+import com.wingedsheep.sdk.scripting.conditions.Compare
+import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.CollectionFilter
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
@@ -662,4 +667,86 @@ object MechanicPatterns {
         ),
         descriptionOverride = "Recruit"
     )
+    // =========================================================================
+    // Die-roll results table (AFR d20 cards, CR 706.3)
+    // =========================================================================
+
+    /**
+     * "Roll a d[sides]." followed by a printed results table (CR 706.3): each row is a range of
+     * results and the effect that happens if the result was in it.
+     *
+     * ```kotlin
+     * // Djinni Windseer — "When this creature enters, roll a d20.
+     * //                    1—9 | Scry 1.  10—19 | Scry 2.  20 | Scry 3."
+     * Patterns.Mechanic.rollDie(20,
+     *     1..9 to Effects.Scry(1),
+     *     10..19 to Effects.Scry(2),
+     *     20..20 to Effects.Scry(3),
+     * )
+     * ```
+     *
+     * Composition, not a new node: a [RollDieEffect] stores the result, then one
+     * [Gate.WhenCondition] row per range compares that stored number — CR 706.3a's own reading of
+     * a row ("If the result was in this range, [effect]"). Because the rows are disjoint, at most
+     * one fires, and a result outside every row (a [modifier] pushed it to 0, say) does nothing.
+     * A row that pauses for a decision (scry, a choice) resumes through the ordinary composite
+     * continuation, and the later rows still see the stored result, so they correctly stay off.
+     *
+     * Range spelling: `a..b` is "a—b", `n..n` is a single result, `n..Int.MAX_VALUE` is the
+     * open-ended "n+" row of CR 706.3a, and `Int.MIN_VALUE..n` is "n or less" (The Deck of Many
+     * Things' "if the result is 0 or less"). "Roll again" (CR 706.3c) is this same pattern nested
+     * inside a row.
+     *
+     * @param sides Faces on the die.
+     * @param results The table's rows, in printed order. Ranges must be non-empty and disjoint.
+     * @param storeResultAs Pipeline key the result is stored under, readable by any row's effect and
+     *   by later steps (`DynamicAmounts.storedNumber(storeResultAs)`).
+     * @param modifier A modifier printed in the rolling instruction (CR 706.2), added to the natural
+     *   result before the table is consulted.
+     */
+    fun rollDie(
+        sides: Int,
+        vararg results: Pair<IntRange, Effect>,
+        storeResultAs: String = DIE_ROLL_RESULT,
+        modifier: DynamicAmount? = null,
+    ): CompositeEffect {
+        val rows = results.toList()
+        rows.forEach { (range, _) ->
+            require(!range.isEmpty()) { "rollDie: empty result range $range" }
+        }
+        rows.forEachIndexed { i, (a, _) ->
+            rows.drop(i + 1).forEach { (b, _) ->
+                require(a.last < b.first || b.last < a.first) {
+                    "rollDie: result ranges $a and $b overlap — a results table's rows are disjoint"
+                }
+            }
+        }
+        val result = DynamicAmount.VariableReference(storeResultAs)
+        fun compare(op: ComparisonOperator, n: Int) = Compare(result, op, DynamicAmount.Fixed(n))
+        return CompositeEffect(
+            listOf<Effect>(RollDieEffect(sides, storeResultAs, modifier)) + rows.map { (range, effect) ->
+                val condition = when {
+                    range.first == range.last -> compare(ComparisonOperator.EQ, range.first)
+                    range.last == Int.MAX_VALUE -> compare(ComparisonOperator.GTE, range.first)
+                    range.first == Int.MIN_VALUE -> compare(ComparisonOperator.LTE, range.last)
+                    else -> AllConditions(
+                        listOf(compare(ComparisonOperator.GTE, range.first), compare(ComparisonOperator.LTE, range.last))
+                    )
+                }
+                GatedEffect(
+                    gate = Gate.WhenCondition(condition),
+                    then = effect,
+                    descriptionOverride = "${dieResultLabel(range)} | ${effect.description}"
+                )
+            }
+        )
+    }
+
+    /** The printed label of a results-table row: "20", "1—9", "20+", "0 or less". */
+    private fun dieResultLabel(range: IntRange): String = when {
+        range.first == range.last -> "${range.first}"
+        range.last == Int.MAX_VALUE -> "${range.first}+"
+        range.first == Int.MIN_VALUE -> "${range.last} or less"
+        else -> "${range.first}\u2014${range.last}"
+    }
 }
