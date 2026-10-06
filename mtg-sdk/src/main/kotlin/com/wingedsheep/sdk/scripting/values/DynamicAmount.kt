@@ -675,6 +675,21 @@ sealed interface DynamicAmount : TextReplaceable<DynamicAmount> {
      * Monster four or more times this game" counts every physical copy, not just this object.
      * `null` counts every card cycled. A multi-player [player] scope sums across those players.
      */
+    /**
+     * How many spells [player] has cast this game (CR 601.2i — a spell is cast once its casting is
+     * complete), for game-lifetime "first spell" clauses: Once Upon a Time's "if this spell is the
+     * first spell you've cast this game, you may cast it without paying its mana cost" is
+     * `Compare(SpellsCastThisGame(), EQ, 0)` — evaluated while the spell is being proposed, before
+     * its own cast is recorded, so the spell being cast never counts itself. Copies that are *put*
+     * on the stack (storm, replicate) were never cast and don't count; a copy a player *casts*
+     * does. Never reset — the scope is the whole game. A multi-player [player] scope sums.
+     */
+    @SerialName("SpellsCastThisGame")
+    @Serializable
+    data class SpellsCastThisGame(val player: Player = Player.You) : DynamicAmount {
+        override val description: String = "the number of spells ${player.description} cast this game"
+    }
+
     @SerialName("CardsCycledThisGame")
     @Serializable
     data class CardsCycledThisGame(val player: Player = Player.You, val cardName: String? = null) : DynamicAmount {

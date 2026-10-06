@@ -20,6 +20,7 @@ import com.wingedsheep.engine.state.components.identity.AfterResolveDestinationC
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.player.CardsDiscardedThisTurnComponent
 import com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent
+import com.wingedsheep.engine.state.components.player.SpellsCastThisGameComponent
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
@@ -137,7 +138,11 @@ internal class CastRecords(
             spellsCastThisTurn = stormCount + 1,
             playerSpellsCastThisTurn = state.playerSpellsCastThisTurn + (action.playerId to playerCount + 1),
             spellWarpedThisTurn = state.spellWarpedThisTurn || wasWarped
-        )
+        ).updateEntity(action.playerId) { c ->
+            // The game-long count (Once Upon a Time's "first spell you've cast this game").
+            val castThisGame = c.get<SpellsCastThisGameComponent>()?.count ?: 0
+            c.with(SpellsCastThisGameComponent(castThisGame + 1))
+        }
 
         val record = CastSpellRecord(
             // A transformed cast is on the stack back face up, so "a Spirit spell was cast" and

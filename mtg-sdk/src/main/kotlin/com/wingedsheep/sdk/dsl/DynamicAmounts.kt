@@ -950,6 +950,12 @@ object DynamicAmounts {
         DynamicAmount.PlayerCounterCount(counterType, player)
 
     /**
+     * Spells [player] has cast this game — "if this spell is the first spell you've cast this game"
+     * (Once Upon a Time) is `CompareAmounts(spellsCastThisGame(), EQ, 0)`.
+     */
+    fun spellsCastThisGame(player: Player = Player.You): DynamicAmount = DynamicAmount.SpellsCastThisGame(player)
+
+    /**
      * Times [player] has cycled a card this game (typecycling included), narrowed to cards named
      * [cardName] when set — "if you've cycled a card named Yidaro, Wandering Monster four or more
      * times this game".

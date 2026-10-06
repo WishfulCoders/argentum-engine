@@ -716,6 +716,7 @@ val engineSerializersModule = SerializersModule {
         subclass(CardsLeftGraveyardThisTurnComponent::class)
         subclass(PermanentsPutIntoHandFromBattlefieldThisTurnComponent::class)
         subclass(CardsCycledThisGameComponent::class)
+        subclass(com.wingedsheep.engine.state.components.player.SpellsCastThisGameComponent::class)
         subclass(CardsPutIntoExileThisTurnComponent::class)
         subclass(CreaturesDiedThisTurnComponent::class)
         subclass(ArtifactsDiedThisTurnComponent::class)

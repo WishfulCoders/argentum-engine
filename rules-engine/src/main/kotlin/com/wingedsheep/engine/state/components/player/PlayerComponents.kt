@@ -1469,6 +1469,16 @@ data class LifeLostAmountThisTurnComponent(val amount: Int = 0) : Component
 data class CardsLeftGraveyardThisTurnComponent(val count: Int = 0) : Component
 
 /**
+ * How many spells this player has cast this game. Never cleared — the scope is the whole game.
+ * Bumped by `CastRecords.recordSpellCast` as each cast completes (CR 601.2i), the same moment the
+ * turn's cast history is appended. Backs
+ * [com.wingedsheep.sdk.scripting.values.DynamicAmount.SpellsCastThisGame] — Once Upon a Time's
+ * "if this spell is the first spell you've cast this game".
+ */
+@Serializable
+data class SpellsCastThisGameComponent(val count: Int = 0) : Component
+
+/**
  * Counts the cards this player has cycled this game, keyed on the cycled card's name. Never
  * cleared — the scope is the whole game. Bumped by the cycling and typecycling handlers when the
  * card is discarded to pay the cost (CR 702.29f: typecycling is cycling).

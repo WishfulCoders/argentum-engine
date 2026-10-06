@@ -13555,6 +13555,14 @@ both spellings, and the ability its bare-noun line grants says "Regenerate this 
   narrows to cards with that exact name — every physical copy counts, not just the source object. Yidaro,
   Wandering Monster: `Conditions.CompareAmounts(DynamicAmounts.cardsCycledThisGame("Yidaro, Wandering
   Monster"), GTE, Fixed(4))`. Backed by the never-cleared per-player `CardsCycledThisGameComponent`.
+- `SpellsCastThisGame(player = Player.You)` (facade `DynamicAmounts.spellsCastThisGame(player)`) — how
+  many spells `player` has cast **this game** (CR 601.2i: counted as each cast completes, alongside the
+  turn's cast history; copies merely put on the stack never count). Evaluated while a spell is being
+  proposed, it doesn't yet include that spell, so Once Upon a Time's "if this spell is the first spell
+  you've cast this game, you may cast it without paying its mana cost" is
+  `SelfAlternativeCost(ManaCost.parse("{0}"), condition = Conditions.CompareAmounts(
+  DynamicAmounts.spellsCastThisGame(), ComparisonOperator.EQ, 0))`. Backed by the never-cleared
+  per-player `SpellsCastThisGameComponent`.
 - `CraftedMaterialsTotalPower` — total printed power of the cards exiled to craft the source
   permanent (CR 702.167c). Reads the source's `CraftedFromExiledComponent`. Used for the
   `*`-power CDA on Mastercraft Raptor (Saheeli's Lattice back face). Evaluates to 0 when the
