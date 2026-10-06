@@ -190,6 +190,91 @@
     ]
 }
 
+// Fractured Identity
+{
+    "name": "Fractured Identity",
+    "manaCost": "{3}{W}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Exile target nonland permanent. Each player other than its controller creates a token that's a copy of it.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": {
+                            "type": "EachOtherThan",
+                            "excluded": {
+                                "type": "ControllerOf",
+                                "targetDescription": "target"
+                            }
+                        }
+                    },
+                    "body": {
+                        "type": "CreateTokenCopyOfTarget",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "nonland permanent"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "37",
+        "rarity": "RARE",
+        "artist": "Yongjae Choi",
+        "flavorText": "Self-reflection is not without its perils.",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/2/b2f73f5d-1aad-48c2-9e74-5f7bdd87900f.jpg?1783935938",
+        "rulings": [
+            {
+                "date": "2017-08-25",
+                "text": "The tokens copy exactly what was printed on the permanent and nothing else (unless that permanent was copying something else or was a token; see below). They don't copy whether that permanent was tapped or untapped, whether it had any counters on it or Auras and/or Equipment attached to it, or any non-copy effects that changed its power, toughness, types, color, and so on."
+            },
+            {
+                "date": "2017-08-25",
+                "text": "If the copied permanent had {X} in its mana cost, X is 0."
+            },
+            {
+                "date": "2017-08-25",
+                "text": "If the copied permanent was copying something else, the tokens enter the battlefield as whatever that permanent was copying."
+            },
+            {
+                "date": "2017-08-25",
+                "text": "If the copied permanent is a token, the tokens created by Fractured Identity copy the original characteristics of that token as stated by the effect that put it onto the battlefield."
+            },
+            {
+                "date": "2017-08-25",
+                "text": "Any enters-the-battlefield abilities of the copied permanent will trigger when the tokens enter the battlefield. Any \"As [this permanent] enters the battlefield\" or \"[This permanent] enters the battlefield with\" abilities of the copied permanent will also work."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLUE"
+    ]
+}
+
 // Heirloom Blade
 {
     "name": "Heirloom Blade",

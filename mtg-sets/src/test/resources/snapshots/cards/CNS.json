@@ -1,0 +1,173 @@
+// Dack Fayden
+{
+    "name": "Dack Fayden",
+    "manaCost": "{1}{U}{R}",
+    "typeLine": "Legendary Planeswalker — Dack",
+    "oracleText": "+1: Target player draws two cards, then discards two cards.\n−2: Gain control of target artifact.\n−6: You get an emblem with \"Whenever you cast a spell that targets one or more permanents, gain control of those permanents.\"",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Dack Fayden:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 2
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand",
+                                        "player": {
+                                            "type": "BoundVariable",
+                                            "name": "t0"
+                                        }
+                                    },
+                                    "storeAs": "hand"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "hand",
+                                    "selection": {
+                                        "type": "ChooseExactly",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 2
+                                        }
+                                    },
+                                    "chooser": "TargetPlayer",
+                                    "storeSelected": "discarded",
+                                    "prompt": "Choose 2 cards to discard"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "discarded",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Graveyard",
+                                        "player": {
+                                            "type": "BoundVariable",
+                                            "name": "t0"
+                                        }
+                                    },
+                                    "moveType": "Discard"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetPlayer",
+                        "id": "t0"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Dack Fayden:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "GainControl",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t1"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "artifact"
+                        },
+                        "id": "t1"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Dack Fayden:4",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -6
+                },
+                "effect": {
+                    "type": "CreateGlobalTriggeredAbility",
+                    "ability": {
+                        "id": "Dack Fayden:3",
+                        "trigger": {
+                            "type": "SpellCastEvent",
+                            "requires": [
+                                {
+                                    "type": "SpellTargetsMatching",
+                                    "filter": "permanent"
+                                }
+                            ]
+                        },
+                        "binding": "ANY",
+                        "effect": {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Collection",
+                                "collection": "trigger.captured"
+                            },
+                            "body": {
+                                "type": "GainControl",
+                                "target": "IterationEntity"
+                            }
+                        }
+                    },
+                    "descriptionOverride": "Whenever you cast a spell that targets one or more permanents, gain control of those permanents."
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "42",
+        "rarity": "MYTHIC",
+        "artist": "Eric Deschamps",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/f/3fcb7810-1054-4001-855c-6e17939b3d3f.jpg?1783939372",
+        "rulings": [
+            {
+                "date": "2016-06-08",
+                "text": "The targeted player draws two cards and discards two cards all while Dack's first ability is resolving. Nothing can happen between the two, and no player may choose to take actions."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "The ability of Dack's emblem will resolve before the spell that caused it to trigger."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "The effect of Dack's second ability and the effect of the emblem's ability last indefinitely. You won't lose control of the permanents if Dack leaves the battlefield."
+            }
+        ]
+    },
+    "startingLoyalty": 3,
+    "colorIdentityOverride": [
+        "BLUE",
+        "RED"
+    ]
+}

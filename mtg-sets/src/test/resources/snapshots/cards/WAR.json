@@ -3300,6 +3300,109 @@
     ]
 }
 
+// Narset, Parter of Veils
+{
+    "name": "Narset, Parter of Veils",
+    "manaCost": "{1}{U}{U}",
+    "typeLine": "Legendary Planeswalker — Narset",
+    "oracleText": "Each opponent can't draw more than one card each turn.\n−2: Look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Narset, Parter of Veils:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                }
+                            },
+                            "storeAs": "looked"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "looked",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "noncreature nonland",
+                            "storeSelected": "kept",
+                            "storeRemainder": "rest",
+                            "prompt": "You may reveal a noncreature, nonland card and put it into your hand",
+                            "showAllCards": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "kept",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            },
+                            "revealed": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "rest",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "placement": "Bottom"
+                            },
+                            "order": "Random"
+                        }
+                    ]
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ],
+        "staticAbilities": [
+            "RestrictDrawsPerTurn"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "61",
+        "rarity": "UNCOMMON",
+        "artist": "Magali Villeneuve",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/c/8c39f9b4-02b9-4d44-b8d6-4fd02ebbb0c5.jpg?1783933458",
+        "rulings": [
+            {
+                "date": "2019-05-03",
+                "text": "Your opponents can each draw a maximum of one card each on each player's turn. Subsequent card draws during that turn are ignored."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If an opponent hasn't drawn any cards in a turn and a spell or ability instructs that player to draw multiple cards, that player will just draw one card. However, if the draws are optional, the player can't choose to draw, even if they could draw one card this way."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "Narset will \"see\" cards drawn by opponents earlier in the turn she entered the battlefield, although Narset can't affect cards drawn before she entered the battlefield. For example, if an opponent draws two cards, then Narset enters the battlefield, that opponent can't draw more cards that turn, but the two drawn cards are unaffected."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "Replacement effects (such as that of Underrealm Lich or the first ability of Jace, Wielder of Mysteries) can't be used to replace draws that Narset disallows. However, if an opponent's first draw is replaced (by Underrealm Lich's ability, for example), that draw didn't happen and Narset won't stop the next draw (which may also be replaced by Underrealm Lich's ability)."
+            }
+        ]
+    },
+    "startingLoyalty": 5,
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Nissa, Who Shakes the World
 {
     "name": "Nissa, Who Shakes the World",
@@ -4624,6 +4727,246 @@
         "imageUri": "https://cards.scryfall.io/normal/front/c/e/ce338cf3-46dc-4c87-8df5-af27097c7dd4.jpg"
     },
     "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Tamiyo, Collector of Tales
+{
+    "name": "Tamiyo, Collector of Tales",
+    "manaCost": "{2}{G}{U}",
+    "typeLine": "Legendary Planeswalker — Tamiyo",
+    "oracleText": "Spells and abilities your opponents control can't cause you to discard cards or sacrifice permanents.\n+1: Choose a nonland card name, then reveal the top four cards of your library. Put all cards with the chosen name from among them into your hand and the rest into your graveyard.\n−3: Return target card from your graveyard to your hand.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Tamiyo, Collector of Tales:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "ChooseOption",
+                            "optionType": "CARD_NAME",
+                            "storeAs": "cardName0",
+                            "prompt": "Choose a nonland card name",
+                            "cardNamePool": "NONLAND"
+                        },
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                }
+                            },
+                            "storeAs": "gathered1",
+                            "revealed": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered1",
+                            "selection": "SelectAll",
+                            "filter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "NameEqualsChosen",
+                                        "variableName": "cardName0"
+                                    }
+                                ]
+                            },
+                            "storeSelected": "selected2",
+                            "storeRemainder": "remainder2"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected2",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "remainder2",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            }
+                        }
+                    ]
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Tamiyo, Collector of Tales:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -3
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Hand"
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "own:you",
+                            "zone": "Graveyard"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ],
+        "staticAbilities": [
+            "OpponentsCantMakeYouDiscard",
+            "OpponentsCantMakeYouSacrifice"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "220",
+        "rarity": "RARE",
+        "artist": "Chase Stone",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/6/76776b24-a2e1-4590-88e7-8a421baf2fc4.jpg?1783933384",
+        "rulings": [
+            {
+                "date": "2019-05-03",
+                "text": "As a spell or ability an opponent controls resolves, if it would force you to sacrifice a permanent or discard a card, you just don't. That part of the effect does nothing. If that spell or ability gives you the option to sacrifice a permanent or to discard a card, you can't take that option."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If a spell or ability an opponent controls states that something happens unless you sacrifice a permanent (as Mogis, God of Slaughter does) or discard a card (as Painful Quandary does), you can't choose to sacrifice or discard. On the other hand, if a spell or ability an opponent controls instructs you to sacrifice a permanent unless you perform an action (as Killing Wave does) or discard a card unless you perform an action, you can choose whether or not to perform the action. If you don't perform the action, nothing happens, since the spell or ability can't cause you to sacrifice any permanents or discard cards."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "Tamiyo's ability affects sacrifices, but not any other ways permanents can leave the battlefield. It won't stop a creature from dying due to lethal damage or having 0 toughness, and it won't stop a permanent from being put into its owner's graveyard due to the \"legend rule.\" None of these are sacrifices; they're the result of game rules."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If a spell or ability your opponent controls reduces your maximum hand size, Tamiyo's first ability won't stop you from discarding cards when the game rules cause you to discard during your cleanup step."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If Tamiyo has 3 loyalty, you can't activate her last ability to return her to your hand. She won't be in your graveyard while you're choosing targets for the ability."
+            }
+        ]
+    },
+    "startingLoyalty": 5,
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE"
+    ]
+}
+
+// Teferi, Time Raveler
+{
+    "name": "Teferi, Time Raveler",
+    "manaCost": "{1}{W}{U}",
+    "typeLine": "Legendary Planeswalker — Teferi",
+    "oracleText": "Each opponent can cast spells only any time they could cast a sorcery.\n+1: Until your next turn, you may cast sorcery spells as though they had flash.\n−3: Return up to one target artifact, creature, or enchantment to its owner's hand. Draw a card.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Teferi, Time Raveler:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "GrantFlashToSpells",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsSorcery"
+                        ]
+                    },
+                    "duration": "UntilYourNextTurn"
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Teferi, Time Raveler:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -3
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Hand"
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "optional": true,
+                        "filter": {
+                            "baseFilter": "artifact|creature|enchantment"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "PlayersCantCastSpells",
+                "condition": {
+                    "type": "Not",
+                    "condition": "PlayerCouldCastSorcery"
+                },
+                "conditionFromCaster": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "221",
+        "rarity": "RARE",
+        "artist": "Chris Rallis",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/c/5cb76266-ae50-4bbc-8f96-d98f309b02d3.jpg?1783933384",
+        "rulings": [
+            {
+                "date": "2024-01-12",
+                "text": "If an effect allows opponents to cast a spell as though it had flash (for example, if your opponent also controls a Teferi, Time Raveler and activates his +1 loyalty ability), the restriction of Teferi's first ability takes precedence over that permission."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "You may activate Teferi's last ability without choosing any target. You'll just draw a card. However, if you do choose a target and the target permanent is an illegal target by the time Teferi's last ability tries to resolve, the ability doesn't resolve. You don't draw a card."
+            }
+        ]
+    },
+    "startingLoyalty": 4,
+    "colorIdentityOverride": [
+        "WHITE",
         "BLUE"
     ]
 }

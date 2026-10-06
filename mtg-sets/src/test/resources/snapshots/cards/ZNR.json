@@ -1425,6 +1425,169 @@
     ]
 }
 
+// Omnath, Locus of Creation
+{
+    "name": "Omnath, Locus of Creation",
+    "manaCost": "{R}{G}{W}{U}",
+    "typeLine": "Legendary Creature — Elemental",
+    "oracleText": "When Omnath enters, draw a card.\nLandfall — Whenever a land you control enters, you gain 4 life if this is the first time this ability has resolved this turn. If it's the second time, add {R}{G}{W}{U}. If it's the third time, Omnath deals 4 damage to each opponent and each planeswalker you don't control.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Omnath, Locus of Creation:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            },
+            {
+                "id": "Omnath, Locus of Creation:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "land ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        "IncrementAbilityResolutionCount",
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "SourceAbilityResolvedNTimesThisTurn",
+                                    "count": 1
+                                }
+                            },
+                            "then": {
+                                "type": "GainLife",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                }
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "SourceAbilityResolvedNTimesThisTurn",
+                                    "count": 2
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "AddMana",
+                                        "color": "RED"
+                                    },
+                                    {
+                                        "type": "AddMana",
+                                        "color": "GREEN"
+                                    },
+                                    {
+                                        "type": "AddMana",
+                                        "color": "WHITE"
+                                    },
+                                    {
+                                        "type": "AddMana",
+                                        "color": "BLUE"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "SourceAbilityResolvedNTimesThisTurn",
+                                    "count": 3
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "DealDamage",
+                                        "amount": {
+                                            "type": "Fixed",
+                                            "amount": 4
+                                        },
+                                        "target": {
+                                            "type": "PlayerRef",
+                                            "player": "EachOpponent"
+                                        }
+                                    },
+                                    {
+                                        "type": "ForEach",
+                                        "space": {
+                                            "type": "IterationSpace.Group",
+                                            "filter": {
+                                                "baseFilter": "planeswalker ctrl:opponent"
+                                            }
+                                        },
+                                        "body": {
+                                            "type": "DealDamage",
+                                            "amount": {
+                                                "type": "Fixed",
+                                                "amount": 4
+                                            },
+                                            "target": "IterationEntity"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Landfall — Whenever a land you control enters, you gain 4 life if this is the first time this ability has resolved this turn. If it's the second time, add {R}{G}{W}{U}. If it's the third time, Omnath deals 4 damage to each opponent and each planeswalker you don't control."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "232",
+        "rarity": "MYTHIC",
+        "artist": "Chris Rahn",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/e/4e4fb50c-a81f-44d3-93c5-fa9a0b37f617.jpg?1783929320",
+        "rulings": [
+            {
+                "date": "2020-09-25",
+                "text": "Omnath's landfall ability has no effect each time beyond the third it resolves in a turn."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "Omnath's landfall ability always uses the stack and players may respond to it. It isn't a mana ability because the event that causes it to trigger isn't a mana ability, even if it's the second time the ability has resolved in a turn."
+            },
+            {
+                "date": "2024-11-08",
+                "text": "A landfall ability doesn't trigger if a permanent already on the battlefield becomes a land."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLUE",
+        "RED",
+        "GREEN"
+    ]
+}
+
 // Prowling Felidar
 {
     "name": "Prowling Felidar",
@@ -1619,6 +1782,116 @@
     ]
 }
 
+// Skyclave Apparition
+{
+    "name": "Skyclave Apparition",
+    "manaCost": "{1}{W}{W}",
+    "typeLine": "Creature — Kor Spirit",
+    "oracleText": "When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less.\nWhen this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Skyclave Apparition:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile",
+                    "linkToSource": true
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "nonland permanent nontoken mv<=4 ctrl:opponent"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less."
+            },
+            {
+                "id": "Skyclave Apparition:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "CreateToken",
+                            "count": {
+                                "type": "VariableReference",
+                                "variableName": "gathered0_count"
+                            },
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [
+                                "BLUE"
+                            ],
+                            "creatureTypes": [
+                                "Illusion"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/2/3/2300635e-7771-4676-a5a5-29a9d8f49f1a.jpg?1783929499",
+                            "controller": {
+                                "type": "ControllerOfPipelineTarget",
+                                "collectionName": "gathered0"
+                            },
+                            "dynamicPower": {
+                                "type": "StoredCardManaValue",
+                                "collectionName": "gathered0"
+                            },
+                            "dynamicToughness": {
+                                "type": "StoredCardManaValue",
+                                "collectionName": "gathered0"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "39",
+        "rarity": "RARE",
+        "artist": "Donato Giancola",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/8/b83cfbaa-7890-4f6f-878b-4edb45677371.jpg?1783929406",
+        "rulings": [
+            {
+                "date": "2020-09-25",
+                "text": "If there's no exiled card when Skyclave Apparition leaves the battlefield (most likely because its first ability hasn't resolved yet), no player creates a token."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "If a creature on the battlefield has {X} in its mana cost, X is considered to be 0."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "If Skyclave Apparition leaves the battlefield before its first ability resolves, the ability still exiles the target permanent."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Spitfire Lagac
 {
     "name": "Spitfire Lagac",
@@ -1767,5 +2040,108 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Thieving Skydiver
+{
+    "name": "Thieving Skydiver",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Merfolk Rogue",
+    "oracleText": "Kicker {X}. X can't be 0. (You may pay an additional {X} as you cast this spell.)\nFlying\nWhen this creature enters, if it was kicked, gain control of target artifact with mana value X or less. If that artifact is an Equipment, attach it to this creature.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{X}"
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Thieving Skydiver:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GainControl",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "EntityMatches",
+                                    "entity": {
+                                        "type": "BoundVariable",
+                                        "name": "t0"
+                                    },
+                                    "filter": "artifact Equipment"
+                                }
+                            },
+                            "then": {
+                                "type": "AttachTargetEquipmentToCreature",
+                                "equipmentTarget": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "creatureTarget": "Self"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsArtifact",
+                                "ManaValueAtMostX"
+                            ]
+                        }
+                    },
+                    "id": "t0"
+                },
+                "interveningIf": "WasKicked"
+            }
+        ],
+        "minimumXValue": 1
+    },
+    "metadata": {
+        "collectorNumber": "85",
+        "rarity": "RARE",
+        "artist": "Kieran Yanner",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/f/ff84ea71-e477-44f7-a3f8-77fef708efeb.jpg?1783929385",
+        "rulings": [
+            {
+                "date": "2020-09-25",
+                "text": "Thieving Skydiver's ability can target an artifact you already control. You'll attach it to Thieving Skydiver if it's an Equipment."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "The control-change effect of Thieving Skydiver lasts indefinitely. It doesn't wear off during the cleanup step, and it doesn't expire if Thieving Skydiver leaves the battlefield. In a multiplayer game, it does expire if you leave the game."
+            },
+            {
+                "date": "2020-09-25",
+                "text": "If the Equipment can't be attached to Thieving Skydiver, most likely because Thieving Skydiver has left the battlefield before its triggered ability resolves, the Equipment remains attached to whatever it's currently attached to or remains unattached if attached to nothing."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }

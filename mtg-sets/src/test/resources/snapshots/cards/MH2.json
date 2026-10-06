@@ -909,6 +909,106 @@
     ]
 }
 
+// Damn
+{
+    "name": "Damn",
+    "manaCost": "{B}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Destroy target creature. A creature destroyed this way can't be regenerated.\nOverload {2}{W}{W} (You may cast this spell for its overload cost. If you do, change \"target\" in its text to \"each.\")",
+    "keywords": [
+        "OVERLOAD"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Overload",
+            "cost": "{2}{W}{W}"
+        }
+    ],
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "CantBeRegenerated",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ],
+        "overloadSpellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "BattlefieldMatching",
+                        "filter": "creature"
+                    },
+                    "storeAs": "destroyAll_gathered"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "destroyAll_gathered",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Destroy",
+                    "noRegenerate": true
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "80",
+        "rarity": "RARE",
+        "artist": "Lucas Graciano",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/f/efeae088-9ac5-4d2f-a15c-d8675a471ac5.jpg?1783926863",
+        "rulings": [
+            {
+                "date": "2024-01-12",
+                "text": "If you don't pay the overload cost of a spell with overload, that spell will have a single target. If you pay the overload cost, the spell won't have any targets."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "Because a spell with overload doesn't target when its overload cost is paid, it may affect permanents with hexproof or with protection from the appropriate color."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as an overload cost), add any cost increases, then apply any cost reductions. The mana value of the spell remains unchanged, no matter what the total cost to cast it was."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "If you are instructed to cast a spell with overload \"without paying its mana cost,\" you can't choose to pay its overload cost instead."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLACK"
+    ]
+}
+
 // Darkmoss Bridge
 {
     "name": "Darkmoss Bridge",
@@ -1573,6 +1673,83 @@
     ]
 }
 
+// Esper Sentinel
+{
+    "name": "Esper Sentinel",
+    "manaCost": "{W}",
+    "typeLine": "Artifact Creature — Human Soldier",
+    "oracleText": "Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Esper Sentinel:1",
+                "trigger": {
+                    "type": "NthSpellCastEvent",
+                    "nthSpell": 1,
+                    "player": "EachOpponent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "PayOrSuffer",
+                    "cost": {
+                        "type": "PayDynamicMana",
+                        "amount": {
+                            "type": "EntityProperty",
+                            "entity": "Self",
+                            "numericProperty": "Power"
+                        }
+                    },
+                    "suffer": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "player": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    },
+                    "consequenceDescription": "let Esper Sentinel's controller draw a card"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "12",
+        "rarity": "RARE",
+        "artist": "Eric Deschamps",
+        "flavorText": "The more Esper changes, the more he refuses to.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/3/f3537373-ef54-4578-9d05-6216420ee349.jpg?1783926893",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If a noncreature spell was already cast by an opponent the turn Esper Sentinel enters the battlefield, that opponent already cast their first noncreature spell this turn, and Esper Sentinel's ability won't trigger for that opponent that turn."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "This ability checks Esper Sentinel's power when it resolves, not when the ability goes on the stack. If Esper Sentinel is no longer on the battlefield when it resolves, use the power it had the last time it was on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If Esper Sentinel's has negative power when this ability resolves, then {X} is {0}. The opponent may still choose not to pay the cost if they want you to draw a card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Ethersworn Sphinx
 {
     "name": "Ethersworn Sphinx",
@@ -2204,6 +2381,212 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Grist, the Hunger Tide
+{
+    "name": "Grist, the Hunger Tide",
+    "manaCost": "{1}{B}{G}",
+    "typeLine": "Legendary Planeswalker — Grist",
+    "oracleText": "As long as Grist isn't on the battlefield, it's a 1/1 Insect creature in addition to its other types.\n+1: Create a 1/1 black and green Insect creature token, then mill a card. If an Insect card was milled this way, put a loyalty counter on Grist and repeat this process.\n−2: You may sacrifice a creature. When you do, destroy target creature or planeswalker.\n−5: Each opponent loses life equal to the number of creature cards in your graveyard.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Grist, the Hunger Tide:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "RepeatWhile",
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "CreateToken",
+                                "power": 1,
+                                "toughness": 1,
+                                "colors": [
+                                    "BLACK",
+                                    "GREEN"
+                                ],
+                                "creatureTypes": [
+                                    "Insect"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/0/3/03ce1033-ce07-40ef-9315-beb759af9465.jpg?1783926587"
+                            },
+                            {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "TopOfLibrary",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            },
+                                            "isMill": true
+                                        },
+                                        "storeAs": "gristMilled"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "gristMilled",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "Gated",
+                                "gate": {
+                                    "type": "Gate.WhenCondition",
+                                    "condition": {
+                                        "type": "All",
+                                        "conditions": [
+                                            {
+                                                "type": "CollectionContainsMatch",
+                                                "collection": "gristMilled",
+                                                "filter": "Insect"
+                                            },
+                                            {
+                                                "type": "EntityMatches",
+                                                "entity": "Self",
+                                                "filter": {
+                                                    "cardPredicates": [
+                                                        "IsPermanent"
+                                                    ],
+                                                    "statePredicates": [
+                                                        "IsSource",
+                                                        {
+                                                            "type": "InZone",
+                                                            "zone": "Battlefield"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                "then": {
+                                    "type": "AddCounters",
+                                    "counterType": "LOYALTY",
+                                    "count": 1,
+                                    "target": "Self"
+                                }
+                            }
+                        ]
+                    },
+                    "repeatCondition": {
+                        "type": "WhileCondition",
+                        "condition": {
+                            "type": "CollectionContainsMatch",
+                            "collection": "gristMilled",
+                            "filter": "Insect"
+                        }
+                    }
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Grist, the Hunger Tide:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "ReflexiveTrigger",
+                    "action": {
+                        "type": "Sacrifice",
+                        "filter": "creature"
+                    },
+                    "reflexiveEffect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "reflexiveTargetRequirements": [
+                        {
+                            "type": "TargetCreatureOrPlaneswalker",
+                            "id": "t0"
+                        }
+                    ],
+                    "descriptionOverride": "You may sacrifice a creature. When you do, destroy target creature or planeswalker."
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Grist, the Hunger Tide:3",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -5
+                },
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "AggregateZone",
+                        "player": "You",
+                        "zone": "Graveyard",
+                        "filter": "creature"
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "CreatureOutsideBattlefield",
+                "power": 1,
+                "toughness": 1,
+                "subtypes": [
+                    "Insect"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "202",
+        "rarity": "MYTHIC",
+        "artist": "Yongjae Choi",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/9/69af2825-18c2-4463-b6ba-42eaa070ccc1.jpg?1783926814",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Anywhere but on the battlefield, Grist is a Legendary Planeswalker Creature — Grist Insect. Once it enters the battlefield, it is no longer a creature and is just a planeswalker. Anything that could search for or affect a creature or planeswalker card in zones other than the battlefield could affect Grist. For example, you could put it onto the battlefield with Chord of Calling, it could be countered by Essence Scatter (but not by Negate), and opponents couldn't make you discard it with Duress."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If Grist is no longer on the battlefield as its first loyalty ability resolves, you will still create a 1/1 black and green Insect creature token and mill a card. If an Insect card is milled this way, you won't be able to put a loyalty counter on Grist, but you will still repeat the process."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Grist's second loyalty ability doesn't require a target. If you choose to sacrifice a creature as it resolves, the reflexive triggered ability triggers and you'll choose a target creature or planeswalker to destroy. This will happen even if Grist isn't on the battlefield when the loyalty ability resolves."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Count the number of creature cards in your graveyard as the third loyalty ability resolves to determine how much life each opponent loses. If Grist is in your graveyard at this time, it'll be a creature card and will contribute to the count."
+            }
+        ]
+    },
+    "startingLoyalty": 3,
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN"
     ]
 }
 
@@ -5263,6 +5646,179 @@
     "colorIdentityOverride": [
         "RED"
     ]
+}
+
+// Urza's Saga
+{
+    "name": "Urza's Saga",
+    "manaCost": "",
+    "typeLine": "Enchantment Land — Urza's Saga",
+    "oracleText": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — This Saga gains \"{T}: Add {C}.\"\nII — This Saga gains \"{2}, {T}: Create a 0/0 colorless Construct artifact creature token with 'This token gets +1/+1 for each artifact you control.'\"\nIII — Search your library for an artifact card with mana cost {0} or {1}, put it onto the battlefield, then shuffle.",
+    "script": {
+        "sagaChapters": [
+            {
+                "chapter": 1,
+                "effect": {
+                    "type": "GrantActivatedAbility",
+                    "ability": {
+                        "id": "Urza's Saga:1",
+                        "cost": "CostTap",
+                        "effect": {
+                            "type": "AddColorlessMana",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        "timing": "ManaAbility",
+                        "isManaAbility": true
+                    },
+                    "target": "Self",
+                    "duration": "Permanent"
+                }
+            },
+            {
+                "chapter": 2,
+                "effect": {
+                    "type": "GrantActivatedAbility",
+                    "ability": {
+                        "id": "Urza's Saga:2",
+                        "cost": {
+                            "type": "CostComposite",
+                            "costs": [
+                                {
+                                    "type": "CostAtomWrapper",
+                                    "atom": {
+                                        "type": "AtomMana",
+                                        "cost": "{2}"
+                                    }
+                                },
+                                "CostTap"
+                            ]
+                        },
+                        "effect": {
+                            "type": "CreateToken",
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [],
+                            "creatureTypes": [
+                                "Construct"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/a/7/a7caaf39-8f16-4f1d-bee6-a45674306319.jpg?1783926587",
+                            "artifactToken": true,
+                            "staticAbilities": [
+                                {
+                                    "type": "GrantDynamicStats",
+                                    "filter": {
+                                        "baseFilter": "permanent",
+                                        "scope": "Self"
+                                    },
+                                    "powerBonus": {
+                                        "type": "AggregateBattlefield",
+                                        "player": "You",
+                                        "filter": "artifact"
+                                    },
+                                    "toughnessBonus": {
+                                        "type": "AggregateBattlefield",
+                                        "player": "You",
+                                        "filter": "artifact"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "target": "Self",
+                    "duration": "Permanent"
+                }
+            },
+            {
+                "chapter": 3,
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsArtifact",
+                                        {
+                                            "type": "Or",
+                                            "predicates": [
+                                                {
+                                                    "type": "ManaCostIs",
+                                                    "manaCost": "{0}"
+                                                },
+                                                {
+                                                    "type": "ManaCostIs",
+                                                    "manaCost": "{1}"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            },
+                            "storeAs": "searchable",
+                            "search": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "found"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "259",
+        "rarity": "RARE",
+        "artist": "Titus Lunter",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/1/c1e0f201-42cb-46a1-901a-65bb4fc18f6c.jpg?1783926791",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Urza's Saga is a land, so it can only be played as a land. It cannot be cast as a spell."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Urza's Saga gains an ability from its first and second chapters. It keeps those abilities for as long as it's on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "While resolving the chapter III ability, you can find only a card with actual mana cost {0} or {1}, not mana value 0 or 1. For example, you couldn't find a card with mana cost {U} or one with mana cost {X}."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Even though Urza's Saga is a land, it is also still a Saga, and it will be sacrificed after its last chapter ability resolves."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Although Urza's Saga has the Urza's land type, it doesn't interact with Urza's Tower, Urza's Mine, or Urza's Power Plant."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Vedalken Infiltrator

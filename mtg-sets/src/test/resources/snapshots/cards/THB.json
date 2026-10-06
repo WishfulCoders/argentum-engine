@@ -1694,6 +1694,220 @@
     ]
 }
 
+// Kroxa, Titan of Death's Hunger
+{
+    "name": "Kroxa, Titan of Death's Hunger",
+    "manaCost": "{B}{R}",
+    "typeLine": "Legendary Creature — Elder Giant",
+    "oracleText": "When Kroxa enters, sacrifice it unless it escaped.\nWhenever Kroxa enters or attacks, each opponent discards a card, then each opponent who didn't discard a nonland card this way loses 3 life.\nEscape—{B}{B}{R}{R}, Exile five other cards from your graveyard. (You may cast this card from your graveyard for its escape cost.)",
+    "creatureStats": {
+        "power": 6,
+        "toughness": 6
+    },
+    "keywords": [
+        "ESCAPE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Escape",
+            "cost": "{B}{B}{R}{R}",
+            "additionalCost": {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomExileFrom",
+                    "zone": "Graveyard",
+                    "count": 5,
+                    "excludeSelf": true
+                }
+            }
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Kroxa, Titan of Death's Hunger:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Not",
+                            "condition": "Escaped"
+                        }
+                    },
+                    "then": "SacrificeSelf"
+                },
+                "descriptionOverride": "When Kroxa enters, sacrifice it unless it escaped."
+            },
+            {
+                "id": "Kroxa, Titan of Death's Hunger:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "EachOpponent"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand"
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered0",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "selected1",
+                                "prompt": "Choose a card to discard"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "selected1",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Discard"
+                            },
+                            {
+                                "type": "ConditionalOnCollection",
+                                "collection": "selected1",
+                                "ifNotEmpty": {
+                                    "type": "Composite",
+                                    "effects": []
+                                },
+                                "ifEmpty": {
+                                    "type": "LoseLife",
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    },
+                                    "target": {
+                                        "type": "PlayerRef",
+                                        "player": "You"
+                                    }
+                                },
+                                "filter": "nonland"
+                            }
+                        ]
+                    }
+                },
+                "descriptionOverride": "Whenever Kroxa enters, each opponent discards a card, then each opponent who didn't discard a nonland card this way loses 3 life."
+            },
+            {
+                "id": "Kroxa, Titan of Death's Hunger:3",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "EachOpponent"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand"
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered0",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "selected1",
+                                "prompt": "Choose a card to discard"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "selected1",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Discard"
+                            },
+                            {
+                                "type": "ConditionalOnCollection",
+                                "collection": "selected1",
+                                "ifNotEmpty": {
+                                    "type": "Composite",
+                                    "effects": []
+                                },
+                                "ifEmpty": {
+                                    "type": "LoseLife",
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    },
+                                    "target": {
+                                        "type": "PlayerRef",
+                                        "player": "You"
+                                    }
+                                },
+                                "filter": "nonland"
+                            }
+                        ]
+                    }
+                },
+                "descriptionOverride": "Whenever Kroxa attacks, each opponent discards a card, then each opponent who didn't discard a nonland card this way loses 3 life."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "221",
+        "rarity": "MYTHIC",
+        "artist": "Vincent Proce",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/e/cee0459b-9aac-4d2f-abe4-4d5fedde7eb8.jpg?1783931520",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "Kroxa's second ability triggers when it enters the battlefield, even if it didn't escape."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "An opponent loses 3 life if they discard a land card or if they can't discard a card at all."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "Kroxa's first ability causes you to sacrifice it if you didn't cast it, or if it was cast using any permission other than an escape ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "RED"
+    ]
+}
+
 // Lampad of Death's Vigil
 {
     "name": "Lampad of Death's Vigil",
@@ -1996,7 +2210,8 @@
                     "type": "Exists",
                     "player": "You",
                     "zone": "Battlefield",
-                    "filter": "creature pow>=4"
+                    "filter": "creature pow>=4",
+                    "excludeSelf": true
                 }
             }
         ]
@@ -3205,6 +3420,128 @@
     ]
 }
 
+// Shadowspear
+{
+    "name": "Shadowspear",
+    "manaCost": "{1}",
+    "typeLine": "Legendary Artifact — Equipment",
+    "oracleText": "Equipped creature gets +1/+1 and has trample and lifelink.\n{1}: Permanents your opponents control lose hexproof and indestructible until end of turn.\nEquip {2}",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Shadowspear:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Group",
+                                "filter": {
+                                    "baseFilter": "permanent ctrl:opponent"
+                                }
+                            },
+                            "body": {
+                                "type": "RemoveKeyword",
+                                "keyword": "HEXPROOF",
+                                "target": "IterationEntity"
+                            }
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Group",
+                                "filter": {
+                                    "baseFilter": "permanent ctrl:opponent"
+                                }
+                            },
+                            "body": {
+                                "type": "RemoveKeyword",
+                                "keyword": "INDESTRUCTIBLE",
+                                "target": "IterationEntity"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Permanents your opponents control lose hexproof and indestructible until end of turn."
+            },
+            {
+                "id": "Shadowspear:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "AttachEquipment",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "creature you control"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "creature you control"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isEquipAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 1,
+                "toughnessBonus": 1
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "TRAMPLE"
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "LIFELINK"
+            }
+        ]
+    },
+    "equipCost": "{2}",
+    "metadata": {
+        "collectorNumber": "236",
+        "rarity": "RARE",
+        "artist": "Yeong-Hao Han",
+        "flavorText": "A weapon of darkness for a warrior of light.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/3/939c6e19-4b27-4023-bb9c-ae440f91e21c.jpg?1783931515",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "Because damage remains marked on a creature until the damage is removed as the turn ends, damage previously dealt to a creature with indestructible may cause it to be destroyed if Shadowspear's second ability resolves during that turn."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If a permanent enters the battlefield under an opponent's control with hexproof or indestructible after Shadowspear's second ability resolves, it won't lose that ability unless you activate Shadowspear's second ability again. The same is true if an opponent's permanent gains indestructible or hexproof after Shadowspear's second ability resolves."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "You can activate Shadowspear's second ability whether or not it's equipped to a creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Soul-Guide Lantern
 {
     "name": "Soul-Guide Lantern",
@@ -4096,6 +4433,267 @@
     ]
 }
 
+// Underworld Breach
+{
+    "name": "Underworld Breach",
+    "manaCost": "{1}{R}",
+    "typeLine": "Enchantment",
+    "oracleText": "Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana cost plus exile three other cards from your graveyard. (You may cast cards from your graveyard for their escape cost.)\nAt the beginning of the end step, sacrifice this enchantment.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Underworld Breach:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END",
+                    "player": "Each"
+                },
+                "binding": "ANY",
+                "effect": "SacrificeSelf",
+                "descriptionOverride": "At the beginning of the end step, sacrifice this enchantment."
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GraveyardCardsHaveEscape",
+                "filter": "nonland",
+                "additionalCost": {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Graveyard",
+                        "count": 3,
+                        "excludeSelf": true
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "161",
+        "rarity": "RARE",
+        "artist": "Lie Setiawan",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/e/0e51d796-7279-4c06-87f0-37adbdaa41df.jpg?1783931543",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "If a card has multiple abilities giving you permission to cast it, such as two escape abilities or an escape ability and a flashback ability, you choose which one to apply. The others have no effect."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If a card has no mana cost, its escape cost is an unpayable cost, so you can't cast it for that cost."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "After an escaped spell resolves, it returns to its owner's graveyard if it's not a permanent spell. If it is a permanent spell, it enters the battlefield and will return to its owner's graveyard if it dies later."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Uro, Titan of Nature's Wrath
+{
+    "name": "Uro, Titan of Nature's Wrath",
+    "manaCost": "{1}{G}{U}",
+    "typeLine": "Legendary Creature — Elder Giant",
+    "oracleText": "When Uro enters, sacrifice it unless it escaped.\nWhenever Uro enters or attacks, you gain 3 life and draw a card, then you may put a land card from your hand onto the battlefield.\nEscape—{G}{G}{U}{U}, Exile five other cards from your graveyard. (You may cast this card from your graveyard for its escape cost.)",
+    "creatureStats": {
+        "power": 6,
+        "toughness": 6
+    },
+    "keywords": [
+        "ESCAPE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Escape",
+            "cost": "{G}{G}{U}{U}",
+            "additionalCost": {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomExileFrom",
+                    "zone": "Graveyard",
+                    "count": 5,
+                    "excludeSelf": true
+                }
+            }
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Uro, Titan of Nature's Wrath:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Not",
+                            "condition": "Escaped"
+                        }
+                    },
+                    "then": "SacrificeSelf"
+                },
+                "descriptionOverride": "When Uro enters, sacrifice it unless it escaped."
+            },
+            {
+                "id": "Uro, Titan of Nature's Wrath:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 3
+                            }
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand",
+                                        "filter": "land"
+                                    },
+                                    "storeAs": "put_candidates"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "put_candidates",
+                                    "selection": {
+                                        "type": "ChooseUpTo",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "putting"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "putting",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Battlefield"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever Uro enters, you gain 3 life and draw a card, then you may put a land card from your hand onto the battlefield."
+            },
+            {
+                "id": "Uro, Titan of Nature's Wrath:3",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 3
+                            }
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand",
+                                        "filter": "land"
+                                    },
+                                    "storeAs": "put_candidates"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "put_candidates",
+                                    "selection": {
+                                        "type": "ChooseUpTo",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "putting"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "putting",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Battlefield"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever Uro attacks, you gain 3 life and draw a card, then you may put a land card from your hand onto the battlefield."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "229",
+        "rarity": "MYTHIC",
+        "artist": "Vincent Proce",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/0/a0b6a71e-56cb-4d25-8f2b-7a4f1b60900d.jpg?1783931516",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "Uro's first ability causes you to sacrifice it if you didn't cast it, or if it was cast using any permission other than an escape ability."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "Uro's second ability triggers when it enters the battlefield, even if it didn't escape."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "Uro's effect doesn't count as playing a land. It can put a land card onto the battlefield even if it's not your turn or if you've already played your land for the turn."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If a card has multiple abilities giving you permission to cast it, such as two escape abilities or an escape ability and a flashback ability, you choose which one to apply. The others have no effect."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE"
+    ]
+}
+
 // Venomous Hierophant
 {
     "name": "Venomous Hierophant",
@@ -4282,6 +4880,101 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Woe Strider
+{
+    "name": "Woe Strider",
+    "manaCost": "{2}{B}",
+    "typeLine": "Creature — Horror",
+    "oracleText": "When this creature enters, create a 0/1 white Goat creature token.\nSacrifice another creature: Scry 1.\nEscape—{3}{B}{B}, Exile four other cards from your graveyard. (You may cast this card from your graveyard for its escape cost.)\nThis creature escapes with two +1/+1 counters on it.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "ESCAPE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Escape",
+            "cost": "{3}{B}{B}",
+            "additionalCost": {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomExileFrom",
+                    "zone": "Graveyard",
+                    "count": 4,
+                    "excludeSelf": true
+                }
+            }
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Woe Strider:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 0,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Goat"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/3/6/36cd5f96-5683-4959-b973-37f3c2fcf9bf.jpg?1783931456"
+                },
+                "descriptionOverride": "When this creature enters, create a 0/1 white Goat creature token."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Woe Strider:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomSacrifice",
+                        "filter": "creature",
+                        "excludeSelf": true
+                    }
+                },
+                "effect": {
+                    "type": "Scry",
+                    "count": 1
+                },
+                "descriptionOverride": "Sacrifice another creature: Scry 1."
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithCounters",
+                "count": 2,
+                "selfOnly": true,
+                "condition": "Escaped"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "123",
+        "rarity": "RARE",
+        "artist": "John Thacker",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/4/3457b558-b35b-49fd-b499-b1ec755f86ce.jpg?1783931556",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "After an escaped spell resolves, it returns to its owner's graveyard if it's not a permanent spell. If it is a permanent spell, it enters the battlefield and will return to its owner's graveyard if it dies later. Perhaps it will escape again—good underworld security is so hard to come by these days."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
