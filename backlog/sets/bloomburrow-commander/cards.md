@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 140 / 312
+**Implemented:** 141 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -186,7 +186,7 @@
 - [ ] Murmuration
 - [x] Mystic Monastery
 - [ ] Nadier's Nightblade
-- [ ] Narset, Parter of Veils
+- [x] Narset, Parter of Veils
 - [ ] Necroblossom Snarl
 - [ ] Nested Shambler
 - [ ] Nissa, Who Shakes the World
