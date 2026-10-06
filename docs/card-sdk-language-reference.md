@@ -9726,7 +9726,10 @@ staticAbility {
   true` evaluates `condition` from the *casting player's* seat instead, for timing relative to each
   restricted player: Dosan the Falling Leaf = `PlayersCantCastSpells(Player.Each, condition =
   IsNotYourTurn, conditionFromCaster = true)` ("Players can cast spells only during their own turns"
-  — correct in multiplayer, where a controller-relative pair of statics is not). **where**
+  — correct in multiplayer, where a controller-relative pair of statics is not); Teferi, Time
+  Raveler = `PlayersCantCastSpells(Player.EachOpponent, condition = Not(CouldCastSorcery()),
+  conditionFromCaster = true)` ("Each opponent can cast spells only any time they could cast a
+  sorcery" — beats any flash permission, and stops casts made during a resolution). **where**
   (`fromZones`, the zones the card is cast *from*, read before it moves to the stack; `null` = any):
   Soulless Jailer = `PlayersCantCastSpells(Player.Each, GameObjectFilter.Noncreature, fromZones =
   setOf(Zone.GRAVEYARD, Zone.EXILE))`.
@@ -12811,6 +12814,11 @@ that works in both resolution and static-ability (projection) contexts.
   spell, if it's not their turn" is `Not(IsPlayersTurn(Player.TriggeringPlayer))` (the intervening-if
   carries the casting player as `Player.TriggeringPlayer`).
 - `IsInPhase(phase)` — currently in `BEGINNING | MAIN | COMBAT | …`.
+- `Conditions.CouldCastSorcery(player = Player.You)` (`PlayerCouldCastSorcery`) — CR 307.1 sorcery
+  timing for `player`: a main phase of their own turn (team-aware) with the stack empty, where an
+  object that is still **resolving** counts as on the stack (CR 608.2), so a spell cast during a
+  resolution (cascade, discover) is never at sorcery timing. Board-derived; usable under projection.
+  Teferi, Time Raveler's lock is `Not(CouldCastSorcery())` with `conditionFromCaster = true`.
 - `Conditions.IsInStep(vararg steps, yoursOnly = true)` — match the current step; by default also require the controller’s turn (team-aware). Usable in replacement restrictions as well as conditional static abilities.
 - `IsInStep(steps, yoursOnly = true)` — current step is one of `steps` (e.g. `Step.END`). Board-derived
   (reads `state.step` + active player), so it evaluates identically at resolution and under projection,

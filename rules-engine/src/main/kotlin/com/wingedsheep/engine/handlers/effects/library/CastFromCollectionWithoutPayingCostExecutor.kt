@@ -171,7 +171,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
         castFaceDown: Boolean = false,
     ): EffectResult {
         val stateForCast = state.copy(priorityPlayerId = casterId)
-        val castResult = castSpellHandlerProvider().execute(
+        val castResult = castSpellHandlerProvider().executeEffectCast(
             stateForCast,
             CastSpell(casterId, cardId, targets, faceIndex = faceIndex, castFaceDown = castFaceDown),
         )
@@ -410,7 +410,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
             castSpellHandler: CastSpellHandler,
         ): com.wingedsheep.engine.core.ExecutionResult {
             val stateForCast = state.copy(priorityPlayerId = casterId)
-            return castSpellHandler.execute(stateForCast, CastSpell(casterId, cardId, targets))
+            return castSpellHandler.executeEffectCast(stateForCast, CastSpell(casterId, cardId, targets))
         }
     }
 }

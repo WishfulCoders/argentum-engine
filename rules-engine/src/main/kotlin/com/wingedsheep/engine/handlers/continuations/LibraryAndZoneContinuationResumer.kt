@@ -999,7 +999,7 @@ class LibraryAndZoneContinuationResumer(
         // priority window, so we override the priorityPlayerId for this single call.
         val stateForCast = stateWithGrant.copy(priorityPlayerId = continuation.playerId)
         val castAction = CastSpell(continuation.playerId, continuation.cascadeCardId)
-        val castResult = castSpellHandler.execute(stateForCast, castAction)
+        val castResult = castSpellHandler.executeEffectCast(stateForCast, castAction)
 
         if (castResult.error != null) {
             // Cast couldn't initiate (no legal targets, etc.) — revoke the unused free-cast
@@ -1155,7 +1155,7 @@ class LibraryAndZoneContinuationResumer(
         }
 
         val stateReady = stateForCast.copy(priorityPlayerId = continuation.playerId)
-        val castResult = castSpellHandler.execute(stateReady, CastSpell(continuation.playerId, discovered))
+        val castResult = castSpellHandler.executeEffectCast(stateReady, CastSpell(continuation.playerId, discovered))
 
         if (castResult.error != null) {
             // The cast couldn't initiate — pop the pre-pushed follow-up, revoke the unused
@@ -1239,7 +1239,7 @@ class LibraryAndZoneContinuationResumer(
             .flatMap { (_, ids) -> ids.map { entityIdToChosenTarget(state, it) } }
 
         val stateForCast = state.copy(priorityPlayerId = continuation.casterId)
-        val castResult = castSpellHandler.execute(
+        val castResult = castSpellHandler.executeEffectCast(
             stateForCast,
             CastSpell(
                 continuation.casterId, continuation.cardId, chosenTargets, faceIndex = continuation.faceIndex,

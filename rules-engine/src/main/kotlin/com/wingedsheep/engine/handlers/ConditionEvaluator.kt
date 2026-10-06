@@ -340,6 +340,7 @@ class ConditionEvaluator(
             is PlayerCommittedCrimeThisTurn,
             is PlayerControlsMostPermanents,
             is PlayerDrewCardsThisTurn,
+            is com.wingedsheep.sdk.scripting.conditions.PlayerCouldCastSorcery,
             is PlayerHasCitysBlessing,
             is PlayerHasEnduringStory,
             is PlayerHasMostLife,
@@ -447,6 +448,18 @@ class ConditionEvaluator(
             is AnyPlayerDealtCombatDamageThisTurnAtLeast -> state.turnOrder.any { playerId ->
                 (state.getEntity(playerId)?.get<CombatDamageReceivedThisTurnComponent>()?.amount ?: 0) >= condition.amount
             }
+
+            // CR 307.1 sorcery timing: a main phase of the player's own turn (team-aware, CR 805.5a)
+            // with the stack empty — and a resolving object is still on the stack (CR 608.2), which
+            // the engine marks with an EndResolutionControlContinuation frame for the whole of every
+            // spell's and ability's resolution. Board-derived, so projection reads it the same way.
+            is com.wingedsheep.sdk.scripting.conditions.PlayerCouldCastSorcery ->
+                resolvePlayer(state, condition.player, ctx)?.let { player ->
+                    state.step.allowsSorcerySpeed &&
+                        state.isActiveTurnFor(player) &&
+                        state.stack.isEmpty() &&
+                        state.continuationStack.none { it is com.wingedsheep.engine.core.EndResolutionControlContinuation }
+                } ?: false
 
             // Board-derived (current step + active player), so it works identically at resolution
             // and under projection — used as a ConditionalStaticAbility gate (Zurgo's end step).
