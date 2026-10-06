@@ -62,6 +62,9 @@ class PlayLandHandler(
     private val legality: LegalityKernel
 ) : ActionHandler<PlayLand> {
     private val predicateEvaluator = conditionEvaluator.predicates
+    private val zoneResolver = com.wingedsheep.engine.handlers.actions.spell.CastZoneResolver(
+        cardRegistry, conditionEvaluator, legality
+    )
     override val actionType: KClass<PlayLand> = PlayLand::class
 
     override fun validate(state: GameState, action: PlayLand): String? =
@@ -214,6 +217,20 @@ class PlayLandHandler(
         // so strip the marker here (CR 305.1: a land is always played face up). No-op when absent.
         newState = newState.updateEntity(action.cardId) { c -> c.without<FaceDownComponent>() }
 
+        // A "play lands from your graveyard" grant of the MayCastFromGraveyard family (Serra
+        // Paragon's once-each-turn "play a land or cast a permanent spell", Yawgmoth's Will's turn-
+        // long grant) authorizes this play only when nothing that costs no allowance does: a
+        // per-card may-play permission, a Crucible-style MayPlayLandsFromGraveyard, or Muldrotha's
+        // land use (which is recorded below as before). Read against the pre-play [state], while
+        // the card is still in the graveyard the grant's filter is matched in.
+        val graveyardLandGrant = if (fromZone == Zone.GRAVEYARD &&
+            state.activeMayPlayFor(action.cardId, action.playerId, conditionEvaluator, cardRegistry).none { !it.nonLandOnly } &&
+            !hasLandGraveyardPlayPermission(state, action.playerId) &&
+            findGraveyardPlayPermissionSource(state, action.playerId, CardType.LAND.name) == null
+        ) {
+            zoneResolver.graveyardLandPlayGrant(state, action.playerId, action.cardId)
+        } else null
+
         // Record Muldrotha graveyard land permission usage
         if (fromZone == Zone.GRAVEYARD) {
             newState = recordGraveyardPlayPermissionUsage(newState, action.playerId, CardType.LAND.name)
@@ -268,6 +285,29 @@ class PlayLandHandler(
         newState = com.wingedsheep.engine.handlers.effects.BattlefieldEntry
             .place(newState, action.playerId, action.cardId)
         val enteredObject = newState.objectRef(action.cardId)
+
+        graveyardLandGrant?.let { (grantSourceId, grant) ->
+            // The land play spends a once-per-turn grant's single allowance — the same marker a
+            // cast through it stamps, which is what makes Serra Paragon's land and spell share one
+            // use (cleared at cleanup).
+            if (grant.oncePerTurn) {
+                newState = newState.updateEntity(grantSourceId) { c ->
+                    c.with(com.wingedsheep.engine.state.components.battlefield.MayCastFromGraveyardUsedThisTurnComponent)
+                }
+            }
+            // "If you do, it gains '…'": the effect that allowed the play finds the land it became
+            // (CR 400.7i) and the land keeps the ability while it stays on the battlefield.
+            grant.gainsAbility?.let { ability ->
+                newState = newState.copy(
+                    grantedTriggeredAbilities = newState.grantedTriggeredAbilities +
+                        com.wingedsheep.engine.event.GrantedTriggeredAbility(
+                            entityId = action.cardId,
+                            ability = ability,
+                            duration = com.wingedsheep.sdk.scripting.Duration.Permanent,
+                        )
+                )
+            }
+        }
 
         // Lands bypass ZoneTransitionService, which is where every other zone-change path
         // stamps EnteredThisTurnComponent (cleared again at the controller's next untap step,
@@ -776,6 +816,8 @@ class PlayLandHandler(
                 .any { !it.nonLandOnly }) return true
         if (hasLandGraveyardPlayPermission(state, playerId)) return true
         if (findGraveyardPlayPermissionSource(state, playerId, CardType.LAND.name) != null) return true
+        // A MayCastFromGraveyard grant with `playLands` (Serra Paragon, Yawgmoth's Will).
+        if (zoneResolver.graveyardLandPlayGrant(state, playerId, cardId) != null) return true
         // Mayhem (CR 702.187c): a Mayhem land discarded this turn may be played from the graveyard.
         val discardedThisTurn = state.getEntity(playerId)
             ?.get<com.wingedsheep.engine.state.components.player.CardsDiscardedThisTurnComponent>()

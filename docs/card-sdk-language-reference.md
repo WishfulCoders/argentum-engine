@@ -9966,7 +9966,7 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   (basic-land-type) and granted mana abilities alike and stops when the land loses its abilities. The manual
   activation sees it as a `PayLife` cost atom (unpayable below `amount` life, CR 119.4); auto-pay prices the source
   as a pain source (preferring untaxed sources) and charges the life when it taps it.
-- `MayCastFromGraveyard(filter, lifeCost = 0, duringYourTurnOnly = false, entersWithCounter = null, addedSubtypeOnEntry = null, oncePerTurn = false, exileInsteadOfGraveyard = false, fromAnyGraveyard = false, additionalCost = null)`
+- `MayCastFromGraveyard(filter, lifeCost = 0, duringYourTurnOnly = false, entersWithCounter = null, addedSubtypeOnEntry = null, oncePerTurn = false, exileInsteadOfGraveyard = false, fromAnyGraveyard = false, additionalCost = null, playLands = false, gainsAbility = null)`
   — cast spells matching `filter` from your graveyard following normal timing, optionally paying
   `lifeCost` life. Free for Yawgmoth's Agenda (`MayCastFromGraveyard(Nonland)`); `lifeCost = 1,
   duringYourTurnOnly = true` for Festival of Embers. **`oncePerTurn`** limits the grant to one cast
@@ -9985,9 +9985,25 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   ability resolves (CR 611.2c) and a card that reaches the graveyard later that turn is not covered; the
   card gathers its graveyard and hands each card its own `GrantStaticAbility(MayCastFromGraveyard(...),
   EffectTarget.Self, Duration.EndOfTurn)`. Both read sites treat a graveyard-card anchor this way.
-  Pair with `MayPlayLandsFromGraveyard` for "play
-  lands and cast spells from your graveyard". Lands are *played*, not cast, so they need the lands
-  permission separately. This grants permission over *other* cards in your graveyard from a
+  **`playLands = true`** widens the verb to "play" (CR 305.1): a *land* card matching `filter` may
+  also be played from your own graveyard under the grant — as the land-play special action, land drop
+  and all — and a land is never offered as a cast (CR 305.9; `CastFromZoneEnumerator` and
+  `CastZoneResolver.applicableMayCastFromGraveyardGrants` skip lands). The land half is read by
+  `CastZoneResolver.graveyardLandPlayGrant`, which `PlayLandEnumerator` and `PlayLandHandler` both ask,
+  through the same grant enumeration as the cast half (printed, emblem and `GrantStaticAbility`
+  anchorings alike). With `oncePerTurn` the land play and the cast share the grant's **one**
+  allowance (the land play stamps the same `MayCastFromGraveyardUsedThisTurnComponent`): Serra
+  Paragon = `MayCastFromGraveyard(Permanent.manaValueAtMost(3), duringYourTurnOnly = true,
+  oncePerTurn = true, playLands = true, gainsAbility = …)` — a land's mana value is 0, so one filter
+  reads "a land or a permanent spell with mana value 3 or less". A land play uses this grant only when
+  no allowance-free permission (a per-card may-play, Crucible-style `MayPlayLandsFromGraveyard`, an
+  unspent Muldrotha land use) already authorizes it; among grants, an unlimited one is preferred.
+  `MayPlayLandsFromGraveyard` remains the plain Crucible of Worlds static.
+  **`gainsAbility`** is the "If you do, it gains '…'" rider: the spell cast (CR 400.7h) or land played
+  (CR 400.7i) under the grant is handed that `TriggeredAbility` as a `GrantedTriggeredAbility` with
+  `Duration.Permanent`; a permanent spell keeps it as it resolves (CR 400.7b) and a countered spell
+  drops it with the stack object. Part of the rider identity (`GraveyardCastRiderSelection.gainsAbility`)
+  like the entry riders. This grants permission over *other* cards in your graveyard from a
   battlefield permanent — for a card that grants permission to cast *itself* from a zone, use
   `MayCastSelfFromZones`. **Cast-this-way entry rider:** `entersWithCounter` (a `CounterType`) and
   `addedSubtypeOnEntry` (a subtype string) apply only to a permanent cast from the graveyard *under

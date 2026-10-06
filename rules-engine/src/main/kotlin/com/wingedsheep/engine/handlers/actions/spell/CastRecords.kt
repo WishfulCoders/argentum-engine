@@ -213,18 +213,34 @@ internal class CastRecords(
     ): GameState {
         var newState = state
         val grant = authorization.graveyardCastRiderGrant
+        val grantHasEntryCounterOrSubtype = grant != null &&
+            (grant.entersWithCounter != null || grant.addedSubtypeOnEntry != null)
         val riderCounter: CounterType? = when {
-            grant?.hasEntryRider == true -> grant.entersWithCounter
+            grantHasEntryCounterOrSubtype -> grant!!.entersWithCounter
             isForageCast -> CounterType.FINALITY
             authorization.linkedExileGranter?.ability?.entersWithCounter != null ->
                 authorization.linkedExileGranter.ability.entersWithCounter
             else -> null
         }
-        val riderSubtype: String? = grant?.takeIf { it.hasEntryRider }?.addedSubtypeOnEntry
+        val riderSubtype: String? = grant?.addedSubtypeOnEntry
         if (riderCounter != null || riderSubtype != null) {
             newState = newState.updateEntity(action.cardId) { c ->
                 c.with(GraveyardCastRiderComponent(entersWithCounter = riderCounter, addedSubtype = riderSubtype))
             }
+        }
+        // "If you do, it gains '…'" (Serra Paragon): the effect that allowed the cast finds the
+        // spell the card became (CR 400.7h) and grants it the ability, which carries over to the
+        // permanent the spell becomes (CR 400.7b) — `popFromStack` keeps object grants on a
+        // resolving permanent spell, and a countered or fizzled spell drops them with the object.
+        grant?.gainsAbility?.let { ability ->
+            newState = newState.copy(
+                grantedTriggeredAbilities = newState.grantedTriggeredAbilities +
+                    com.wingedsheep.engine.event.GrantedTriggeredAbility(
+                        entityId = action.cardId,
+                        ability = ability,
+                        duration = com.wingedsheep.sdk.scripting.Duration.Permanent,
+                    )
+            )
         }
         if (grant?.exileInsteadOfGraveyard == true && cardComponent.typeLine.let { it.isInstant || it.isSorcery }) {
             newState = newState.updateEntity(action.cardId) { c ->

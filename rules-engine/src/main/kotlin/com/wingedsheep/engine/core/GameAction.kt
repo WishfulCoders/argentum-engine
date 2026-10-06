@@ -254,8 +254,22 @@ data class GraveyardCastRiderSelection(
      * Part of the identity so a player holding both a free grant and a retrace grant picks which
      * one they cast through — and thus whether they discard — rather than the handler choosing.
      */
-    val additionalCost: AdditionalCost? = null
-)
+    val additionalCost: AdditionalCost? = null,
+    /**
+     * The "If you do, it gains '…'" rider (Serra Paragon). Part of the identity for the same reason
+     * as the entry riders: a permission that hands the permanent a death trigger is a different
+     * permission from a plain free grant applying to the same card.
+     */
+    val gainsAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null
+) {
+    companion object {
+        /** The selection naming [grant]'s riders — what the enumerator stamps for that permission. */
+        fun of(grant: com.wingedsheep.sdk.scripting.MayCastFromGraveyard) = GraveyardCastRiderSelection(
+            grant.entersWithCounter, grant.addedSubtypeOnEntry, grant.exileInsteadOfGraveyard,
+            grant.additionalCost, grant.gainsAbility
+        )
+    }
+}
 
 /**
  * Which alternative casting cost a [CastSpell] with `useAlternativeCost = true` is using. Lets the
