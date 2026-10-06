@@ -926,6 +926,16 @@ cast action advertises the first selection cost as `additionalCostInfo` and the 
   sacrificed permanent is snapshotted, so "for each Spirit sacrificed this way" is
   `DynamicAmounts.permanentsSacrificedThisWay()`. For "… this spell costs {2} less for each" use
   `SacrificeCreaturesForCostReduction` instead.
+- `Costs.additional.ExileCardsForCostReduction(filter, costReductionPerCard, fromZone = CostZone.HAND)` —
+  "as an additional cost to cast this spell, you may exile any number of white cards from your hand. This
+  spell costs {2} less to cast for each card exiled this way" (the Neon Dynasty march cycle — March of
+  Otherworldly Light). The exile sibling of `SacrificeCreaturesForCostReduction`: always payable (exiling
+  none is legal), offered as a `costType = "ExileFromHand"` picker with `exileMinCount = 0`, and the client
+  returns the picks in `additionalCostPayment.exiledCards`. The reduction is part of the total cost
+  (CR 601.2f, `CastCostTotaller`): it takes generic mana off first and, on an X spell, then pays down the
+  announced X (X is locked in as generic mana, CR 107.3a) — but never coloured mana, and exiling more than
+  it can use is legal. The legal-action `maxAffordableX` counts the possible exiles. The spell's X (its
+  effect, a `manaValueAtMostX()` target cap, its mana value on the stack) stays the announced value.
 - `Costs.additional.TapForTotalPower(totalPower, filter = GameObjectFilter.Creature)` — "tap any number of
   creatures you control with total power N or more" (Teamwork N, CR 702.194a). A
   `CostAtom.VariablePermanents` with `action = TAP`, `xMeasure = TOTAL_POWER`, `minMeasure = N` and

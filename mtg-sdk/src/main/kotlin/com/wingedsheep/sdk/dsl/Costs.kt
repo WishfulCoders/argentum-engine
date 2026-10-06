@@ -791,6 +791,17 @@ object Costs {
             costReductionPerCreature: Int = 2
         ): AdditionalCost = AdditionalCost.SacrificeCreaturesForCostReduction(filter, costReductionPerCreature)
 
+        /**
+         * "You may exile any number of [filter] cards from your [fromZone]. This spell costs
+         * {[costReductionPerCard]} less to cast for each card exiled this way." (the march cycle —
+         * March of Otherworldly Light). See [AdditionalCost.ExileCardsForCostReduction].
+         */
+        fun ExileCardsForCostReduction(
+            filter: GameObjectFilter,
+            costReductionPerCard: Int,
+            fromZone: CostZone = CostZone.HAND
+        ): AdditionalCost = AdditionalCost.ExileCardsForCostReduction(filter, costReductionPerCard, fromZone)
+
         /** Forage (exile three cards from your graveyard or sacrifice a Food). */
         val Forage: AdditionalCost = AdditionalCost.Forage
 

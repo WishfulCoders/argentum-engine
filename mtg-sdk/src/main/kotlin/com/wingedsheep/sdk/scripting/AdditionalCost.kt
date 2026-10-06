@@ -126,6 +126,43 @@ sealed interface AdditionalCost : TextReplaceable<AdditionalCost> {
     }
 
     /**
+     * "As an additional cost to cast this spell, you may exile any number of [filter] cards from your
+     * [fromZone]. This spell costs {[costReductionPerCard]} less to cast for each card exiled this
+     * way." — the Neon Dynasty *march* cycle (March of Otherworldly Light: white cards from hand,
+     * {2} each).
+     *
+     * The exile sibling of [SacrificeCreaturesForCostReduction]: an optional additional cost
+     * (CR 601.2b, 601.2h) whose size the caster chooses, folded into the total cost as a reduction
+     * (CR 601.2f). The reduction comes off the *generic* mana of the total cost — which includes
+     * the announced value of X, so on an X spell it can pay X down — but never off coloured mana:
+     * the printed coloured symbols always remain (the march rulings: "you can't reduce the mana it
+     * costs to less than {W}"). Exiling more cards than the reduction can use is legal. The spell
+     * itself is never one of the cards exiled. The value of X, and so the spell's mana value on
+     * the stack, is whatever was announced, however much the exiles paid.
+     *
+     * @property filter Which cards may be exiled ("white cards")
+     * @property costReductionPerCard Generic mana taken off the total cost per card exiled
+     * @property fromZone Zone the cards are exiled from (the march cycle: your hand)
+     */
+    @SerialName("ExileCardsForCostReduction")
+    @Serializable
+    data class ExileCardsForCostReduction(
+        val filter: GameObjectFilter,
+        val costReductionPerCard: Int,
+        val fromZone: CostZone = CostZone.HAND
+    ) : AdditionalCost {
+        override val description: String =
+            "As an additional cost to cast this spell, you may exile any number of ${filter.description} cards " +
+                "from your ${fromZone.description}. This spell costs {$costReductionPerCard} less to cast for each " +
+                "card exiled this way."
+
+        override fun applyTextReplacement(replacer: TextReplacer): AdditionalCost {
+            val newFilter = filter.applyTextReplacement(replacer)
+            return if (newFilter !== filter) copy(filter = newFilter) else this
+        }
+    }
+
+    /**
      * Forage: exile three cards from your graveyard or sacrifice a Food.
      * Used by Bloomburrow cards as an additional cost.
      */
