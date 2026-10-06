@@ -847,6 +847,8 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   // Sensei Golden-Tail's training marker records which creatures it trained.
   CounterType.TRAINING,
   CounterType.MIRE,
+  // Intrepid Adversary's valor tally sizes its anthem.
+  CounterType.VALOR,
   CounterType.PLUS_ONE_PLUS_TWO,
   CounterType.PLUS_TWO_PLUS_TWO,
   CounterType.MINUS_TWO_MINUS_TWO,
