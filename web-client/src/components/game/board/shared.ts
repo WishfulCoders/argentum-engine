@@ -317,7 +317,9 @@ export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): 
   const hasMorphCast = cardLegalActions.some((a) => a.actionType === 'CastFaceDown')
   const hasKickerCast = cardLegalActions.some((a) => a.actionType === 'CastWithKicker')
   const hasFlashbackCast = cardLegalActions.some((a) => a.actionType === 'CastWithFlashback')
-  const hasEscapeCast = cardLegalActions.some((a) => a.actionType === 'CastWithEscape')
+  // Counted rather than flagged: a card can have a printed escape *and* one granted by Underworld
+  // Breach, and the player chooses which to apply (CR 601.2b) — two escape offers are two options.
+  const escapeCastCount = cardLegalActions.filter((a) => a.actionType === 'CastWithEscape').length
   const hasWarpCast = cardLegalActions.some((a) => a.actionType === 'CastWithWarp')
   const hasDashCast = cardLegalActions.some((a) => a.actionType === 'CastWithDash')
   // Disturb (CR 702.146) casts the card's back face from the graveyard, so it is a distinct
@@ -335,7 +337,7 @@ export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): 
   if (hasMorphCast) options++
   if (hasKickerCast) options++
   if (hasFlashbackCast) options++
-  if (hasEscapeCast) options++
+  options += escapeCastCount
   if (hasWarpCast) options++
   if (hasDashCast) options++
   if (hasDisturbCast) options++

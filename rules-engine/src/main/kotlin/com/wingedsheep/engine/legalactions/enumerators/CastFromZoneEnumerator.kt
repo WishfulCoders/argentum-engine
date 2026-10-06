@@ -1514,6 +1514,11 @@ class CastFromZoneEnumerator(
      * cards any time, everything else at sorcery speed) and, like Mayhem, does NOT exile the spell
      * on resolution. The exile pool never includes the card being cast (`SpellCostEnumeration`
      * excludes it), so a graveyard holding the card and four others can't pay "exile five other".
+     *
+     * The escape may be printed or granted by a battlefield static (Underworld Breach — "the escape
+     * cost is equal to the card's mana cost plus …", so an {X} in the mana cost is announced as
+     * usual, CR 107.3a). A card with more than one escape ability gets one offer per ability, each
+     * stamped with its `escapeChoice`, because the caster chooses which to apply (CR 601.2b).
      */
     private fun enumerateEscape(
         context: EnumerationContext,
@@ -1526,75 +1531,118 @@ class CastFromZoneEnumerator(
             val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: continue
             if (cardComponent.typeLine.isLand) continue
             val cardDef = context.cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
-            val escape = EscapeCasts.printedEscape(cardDef) ?: continue
+            val escapes = EscapeCasts.escapeOptions(
+                state, cardId, cardDef, playerId, context.cardRegistry, context.predicateEvaluator
+            )
+            if (escapes.isEmpty()) continue
 
             val isInstant = cardComponent.typeLine.isInstant
             val hasFlash = cardDef.keywords.contains(com.wingedsheep.sdk.core.Keyword.FLASH) ||
                 context.castPermissionUtils.hasGrantedFlash(state, cardId)
             if (!isInstant && !hasFlash && !context.canPlaySorcerySpeed) continue
 
-            val action = CastSpell(playerId, cardId, useAlternativeCost = true, alternativeCostType = AlternativeCostType.ESCAPE)
-            fun offer(
-                affordable: Boolean,
-                costString: String,
-                costInfo: com.wingedsheep.engine.legalactions.AdditionalCostData? = null,
-            ) = LegalAction(
-                actionType = "CastWithEscape",
-                description = "Cast ${cardComponent.name} (Escape)",
-                action = action,
-                affordable = affordable,
-                manaCostString = costString,
-                additionalCostInfo = costInfo,
-                sourceZone = "GRAVEYARD"
-            )
+            val cantCast = context.cantCastSpell(cardId)
+            if (!cantCast && !context.legality.castRestrictionsMet(state, playerId, cardDef.script.castRestrictions)) continue
 
-            if (context.cantCastSpell(cardId)) {
-                result.add(offer(affordable = false, costString = escape.cost.toString()))
-                continue
+            escapes.forEachIndexed { index, escape ->
+                enumerateEscapeOption(context, result, cardId, cardComponent, cardDef, escape,
+                    escapeChoice = index.takeIf { escapes.size > 1 }, cantCast = cantCast)
             }
-            if (!context.legality.castRestrictionsMet(state, playerId, cardDef.script.castRestrictions)) continue
-
-            val effectiveCost = context.costCalculator.calculateEffectiveCostWithAlternativeBase(
-                state, cardDef, escape.cost, playerId
-            )
-            val costString = effectiveCost.toString()
-            val canAfford = context.manaSolver.canPay(state, playerId, effectiveCost, precomputedSources = context.availableManaSources)
-            val (escapeCostInfo, canPayAdditionalCost) = presentOwedCosts(
-                context, cardId, cardDef.script.additionalCosts + listOfNotNull(escape.additionalCost)
-            )
-            if (!canAfford || !canPayAdditionalCost) {
-                result.add(offer(affordable = false, costString = costString, costInfo = escapeCostInfo))
-                continue
-            }
-
-            val autoTapPreview = if (context.skipAutoTapPreview) null else {
-                context.manaSolver.solve(state, playerId, effectiveCost, precomputedSources = context.availableManaSources)
-                    ?.sources?.map { it.entityId }
-            }
-            val targetReqs = buildList {
-                addAll(cardDef.script.targetRequirements)
-                cardDef.script.castAuraTarget?.let { add(it) }
-            }
-            if (targetReqs.isEmpty()) {
-                result.add(offer(affordable = true, costString = costString, costInfo = escapeCostInfo).copy(autoTapPreview = autoTapPreview))
-                continue
-            }
-            val targetInfos = context.targetUtils.buildTargetInfos(state, playerId, targetReqs, targetingSourceType = TargetingSourceType.SPELL)
-            if (!context.targetUtils.allRequirementsSatisfied(targetInfos)) continue
-            val firstReq = targetReqs.first()
-            val firstInfo = targetInfos.first()
-            result.add(
-                offer(affordable = true, costString = costString, costInfo = escapeCostInfo).copy(
-                    validTargets = firstInfo.validTargets,
-                    requiresTargets = true,
-                    targetCount = firstInfo.maxTargets,
-                    minTargets = firstReq.effectiveMinCount,
-                    targetDescription = firstReq.description,
-                    targetRequirements = targetInfos.surfacedRequirements(),
-                    autoTapPreview = autoTapPreview,
-                )
-            )
         }
+    }
+
+    /** One escape offer for [cardId] cast with [escape] — see [enumerateEscape]. */
+    private fun enumerateEscapeOption(
+        context: EnumerationContext,
+        result: MutableList<LegalAction>,
+        cardId: EntityId,
+        cardComponent: CardComponent,
+        cardDef: com.wingedsheep.sdk.model.CardDefinition,
+        escape: com.wingedsheep.sdk.scripting.KeywordAbility.Escape,
+        escapeChoice: Int?,
+        cantCast: Boolean,
+    ) {
+        val state = context.state
+        val playerId = context.playerId
+        val action = CastSpell(
+            playerId, cardId, useAlternativeCost = true,
+            alternativeCostType = AlternativeCostType.ESCAPE, escapeChoice = escapeChoice
+        )
+        // With two escape abilities on one card, name which one each offer applies.
+        val description = if (escapeChoice == null) "Cast ${cardComponent.name} (Escape)"
+            else "Cast ${cardComponent.name} (${escape.description})"
+        fun offer(
+            affordable: Boolean,
+            costString: String,
+            costInfo: com.wingedsheep.engine.legalactions.AdditionalCostData? = null,
+        ) = LegalAction(
+            actionType = "CastWithEscape",
+            description = description,
+            action = action,
+            affordable = affordable,
+            manaCostString = costString,
+            additionalCostInfo = costInfo,
+            sourceZone = "GRAVEYARD"
+        )
+
+        if (cantCast) {
+            result.add(offer(affordable = false, costString = escape.cost.toString()))
+            return
+        }
+
+        val effectiveCost = context.costCalculator.calculateEffectiveCostWithAlternativeBase(
+            state, cardDef, escape.cost, playerId
+        )
+        val costString = effectiveCost.toString()
+        val canAfford = context.manaSolver.canPay(state, playerId, effectiveCost, precomputedSources = context.availableManaSources)
+        val (escapeCostInfo, canPayAdditionalCost) = presentOwedCosts(
+            context, cardId, cardDef.script.additionalCosts + listOfNotNull(escape.additionalCost)
+        )
+        if (!canAfford || !canPayAdditionalCost) {
+            result.add(offer(affordable = false, costString = costString, costInfo = escapeCostInfo))
+            return
+        }
+
+        // An escape cost equal to the card's mana cost keeps its {X} (CR 107.3a).
+        val hasXCost = effectiveCost.hasX
+        val maxAffordableX: Int? = if (hasXCost) {
+            val availableSources = context.manaSolver.getAvailableManaCount(
+                state, playerId, precomputedSources = context.availableManaSources,
+            )
+            ((availableSources - effectiveCost.cmc) / effectiveCost.xCount.coerceAtLeast(1)).coerceAtLeast(0)
+        } else null
+        val autoTapPreview = if (context.skipAutoTapPreview) null else {
+            context.manaSolver.solve(state, playerId, effectiveCost, precomputedSources = context.availableManaSources)
+                ?.sources?.map { it.entityId }
+        }
+        val affordableOffer = offer(affordable = true, costString = costString, costInfo = escapeCostInfo)
+            .copy(autoTapPreview = autoTapPreview, hasXCost = hasXCost, maxAffordableX = maxAffordableX)
+        val targetReqs = buildList {
+            addAll(cardDef.script.targetRequirements)
+            cardDef.script.castAuraTarget?.let { add(it) }
+        }
+        if (targetReqs.isEmpty()) {
+            result.add(affordableOffer)
+            return
+        }
+        val targetInfos = context.targetUtils.buildTargetInfos(state, playerId, targetReqs, targetingSourceType = TargetingSourceType.SPELL)
+        if (!context.targetUtils.allRequirementsSatisfied(targetInfos)) return
+        val firstReq = targetReqs.first()
+        val firstInfo = targetInfos.first()
+        result.add(
+            affordableOffer.copy(
+                validTargets = firstInfo.validTargets,
+                requiresTargets = true,
+                targetCount = firstInfo.maxTargets,
+                minTargets = firstReq.effectiveMinCount,
+                targetDescription = firstReq.description,
+                targetRequirements = targetInfos.surfacedRequirements(),
+                xConstrainsTargetManaValue = firstInfo.xConstrainsManaValue,
+                xConstrainsTargetManaValueExactly = firstInfo.xConstrainsManaValueExactly,
+                xConstrainsTargetPower = firstInfo.xConstrainsPower,
+                xConstrainsTargetCount = firstInfo.xConstrainsCount,
+            )
+        )
     }
 
     // =========================================================================

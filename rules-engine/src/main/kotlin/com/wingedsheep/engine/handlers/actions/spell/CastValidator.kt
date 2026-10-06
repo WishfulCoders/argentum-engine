@@ -265,7 +265,7 @@ internal class CastValidator(
             // Escape (CR 702.138a) — cast from graveyard for its escape cost.
             CastSourceRoute.ESCAPE to {
                 action.useAlternativeCost && action.altAllows(AlternativeCostType.ESCAPE) &&
-                    zoneResolver.hasEscapePermission(state, playerId, cardId)
+                    zoneResolver.hasEscapePermission(state, playerId, cardId, action.escapeChoice)
             },
             CastSourceRoute.GRAVEYARD_PERMISSION to {
                 zoneResolver.hasMayCastFromGraveyardPermission(state, playerId, cardId, cardComponent)

@@ -5,7 +5,6 @@ import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.EscalateCosts
 import com.wingedsheep.engine.mechanics.WarpGrants
-import com.wingedsheep.engine.mechanics.EscapeCasts
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -85,11 +84,10 @@ class CastAdditionalCosts(
                     ?.additionalCost
                     ?.let { add(it) }
             }
-            // Escape's non-mana half (CR 702.138a — "Exile five other cards from your graveyard").
-            if (action.altAllows(AlternativeCostType.ESCAPE) &&
-                zoneResolver.hasEscapePermission(state, action.playerId, action.cardId)
-            ) {
-                EscapeCasts.printedEscape(cardDef)
+            // Escape's non-mana half (CR 702.138a — "Exile five other cards from your graveyard"),
+            // from whichever escape ability the cast applies (printed, or Underworld Breach's grant).
+            if (action.altAllows(AlternativeCostType.ESCAPE)) {
+                zoneResolver.escapeFor(state, action.playerId, action.cardId, action.escapeChoice)
                     ?.additionalCost
                     ?.let { add(it) }
             }

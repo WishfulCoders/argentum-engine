@@ -10032,6 +10032,18 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   wraps the ability in a `ConditionalStaticAbility`, and `FlashbackGrants` matches the bare type
   without unwrapping it — so the grant never applies rather than applying conditionally. Teach
   that read site to unwrap first; `FlashTypeGrants.activeGrant` is the worked example.
+- `GraveyardCardsHaveEscape(filter, cost = null, additionalCost = null)` — the Escape (CR 702.138)
+  analogue of `GraveyardCardsHaveFlashback`: a whole-graveyard group grant of an escape ability to every card in
+  the controller's graveyard matching `filter`. `cost = null` means "the escape cost is equal to the card's mana
+  cost" (an `{X}` in it is announced as usual, CR 107.3a; a card with **no** mana cost gets an unpayable escape
+  cost and is not offered, CR 118.6); `additionalCost` is the escape cost's non-mana half. A granted escape behaves
+  exactly like a printed one — normal timing, not exiled on resolution, the permanent "escaped" (CR 702.138b) so
+  `Conditions.Escaped` reads it. When a card also has a printed escape the caster chooses which to apply (CR 601.2b;
+  Underworld Breach ruling): `EscapeCasts.escapeOptions` lists printed first then grants (duplicates collapsed),
+  the enumerator offers each with its `CastSpell.escapeChoice`. Used by *Underworld Breach*:
+  `GraveyardCardsHaveEscape(GameObjectFilter.Nonland, additionalCost = Costs.additional.ExileOtherCards(3))`.
+  **Gating this with a condition is silently inert today**, as for its siblings: `EscapeCasts` matches the bare
+  type without unwrapping a `ConditionalStaticAbility`.
 - `GraveyardCardsHaveMayhem(filter, cost = null, duringYourTurnOnly = false)` — the Mayhem (CR 702.187)
   analogue of `GraveyardCardsHaveFlashback`: a whole-graveyard group grant of the Mayhem keyword to
   every graveyard card matching `filter`. `cost = null` means "mayhem cost equal to that card's mana
@@ -11867,9 +11879,11 @@ composite abilities).
   Grants **no timing permission** (sorcery speed unless the card is an instant or has flash) and, like Mayhem and
   unlike Flashback, the card is **not exiled on resolution** — an escaped permanent stays; an instant/sorcery goes
   back to the graveyard and can escape again. Engine: `CastFromZoneEnumerator.enumerateEscape` surfaces a
-  `CastWithEscape` (`AlternativeCostType.ESCAPE`); `CastZoneResolver.hasEscapePermission`, `CastCostTotaller` and
-  `CastAdditionalCosts` all read the keyword through `EscapeCasts.printedEscape` (printed only — the seam for a
-  future grant such as Underworld Breach). A resolving escaped permanent is stamped `ChoiceSlot.ESCAPED`
+  `CastWithEscape` (`AlternativeCostType.ESCAPE`); `CastZoneResolver.escapeFor`, `CastCostTotaller` and
+  `CastAdditionalCosts` all read the ability through `EscapeCasts.escapeOptions` — the printed keyword plus any
+  whole-graveyard grant (`GraveyardCardsHaveEscape`, *Underworld Breach*). A card with more than one escape ability
+  gets one offer per ability and `CastSpell.escapeChoice` names the one applied (CR 601.2b — the caster chooses).
+  A resolving escaped permanent is stamped `ChoiceSlot.ESCAPED`
   (CR 702.138b), read by `Conditions.Escaped`: "sacrifice it unless it escaped" is
   `Effects.If(Conditions.Not(Conditions.Escaped), SacrificeSelfEffect)` (*Phlage, Titan of Fire's Fury*), and
   "escapes with a +1/+1 counter" (CR 702.138c) is `EntersWithCounters(count = 1, selfOnly = true, condition =
