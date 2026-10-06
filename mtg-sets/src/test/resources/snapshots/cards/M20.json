@@ -1003,6 +1003,92 @@
     ]
 }
 
+// Field of the Dead
+{
+    "name": "Field of the Dead",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "This land enters tapped.\n{T}: Add {C}.\nWhenever this land or another land you control enters, if you control seven or more lands with different names, create a 2/2 black Zombie creature token.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Field of the Dead:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "land ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [
+                        "BLACK"
+                    ],
+                    "creatureTypes": [
+                        "Zombie"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/1/8/18f0436e-9328-4266-9cf8-80b557a0c17c.jpg?1783932856"
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land",
+                        "aggregation": "DISTINCT_NAMES"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 7
+                    }
+                },
+                "descriptionOverride": "Whenever this land or another land you control enters, if you control seven or more lands with different names, create a 2/2 black Zombie creature token."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Field of the Dead:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "247",
+        "rarity": "RARE",
+        "artist": "Kev Walker",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/7/470ca3f4-29aa-4c4c-8ff2-8cdd70c69943.jpg?1783932937",
+        "rulings": [
+            {
+                "date": "2019-07-12",
+                "text": "Field of the Dead's last ability counts itself and the land entering the battlefield in addition to whichever other lands you control."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "If you control multiple lands with the same name, only one of those lands will count toward the seven or more required to create a Zombie. For example, if you control four lands named Plains, two named Island, and one named Field of the Dead, you control three lands with different names."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "If multiple lands enter the battlefield simultaneously, possibly including Field of the Dead itself, all of those lands are counted."
+            }
+        ]
+    }
+}
+
 // Glint-Horn Buccaneer
 {
     "name": "Glint-Horn Buccaneer",

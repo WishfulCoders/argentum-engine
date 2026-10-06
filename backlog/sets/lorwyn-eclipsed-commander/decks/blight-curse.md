@@ -22,7 +22,7 @@
 - [ ] 1 Grave Titan
 - [ ] 1 Grim Poppet
 - [ ] 1 Hapatra, Vizier of Poisons
-- [ ] 1 Ignoble Hierarch
+- [x] 1 Ignoble Hierarch
 - [ ] 1 Kulrath Knight
 - [ ] 1 Massacre Girl, Known Killer
 - [ ] 1 Midnight Banshee

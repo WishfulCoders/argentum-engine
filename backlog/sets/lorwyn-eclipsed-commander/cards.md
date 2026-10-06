@@ -2,7 +2,7 @@
 
 **Set Size:** 153 cards
 **Release Date:** January 23, 2026
-**Implemented:** 10 / 153
+**Implemented:** 11 / 153
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 4     | 0    |
@@ -85,7 +85,7 @@
 - [ ] Hoofprints of the Stag
 - [ ] Horde of Notions
 - [ ] Ifnir Deadlands
-- [ ] Ignoble Hierarch
+- [x] Ignoble Hierarch
 - [ ] Impulsivity
 - [ ] Incandescent Soulstoke
 - [ ] Incremental Blight

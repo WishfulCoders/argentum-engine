@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 148 / 312
+**Implemented:** 150 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -189,7 +189,7 @@
 - [ ] Narset, Parter of Veils
 - [ ] Necroblossom Snarl
 - [ ] Nested Shambler
-- [ ] Nissa, Who Shakes the World
+- [x] Nissa, Who Shakes the World
 - [ ] Octomancer
 - [ ] Ogre Slumlord
 - [ ] Oran-Rief, the Vastwood
@@ -282,7 +282,7 @@
 - [x] Talisman of Impulse
 - [x] Talisman of Resilience
 - [x] Tamiyo, Field Researcher
-- [ ] Tear Asunder
+- [x] Tear Asunder
 - [ ] Teferi, Time Raveler
 - [x] Temple of Abandon
 - [x] Temple of Enlightenment

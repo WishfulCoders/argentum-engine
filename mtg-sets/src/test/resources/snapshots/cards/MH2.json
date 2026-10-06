@@ -1877,6 +1877,73 @@
     ]
 }
 
+// Ignoble Hierarch
+{
+    "name": "Ignoble Hierarch",
+    "manaCost": "{G}",
+    "typeLine": "Creature — Goblin Shaman",
+    "oracleText": "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n{T}: Add {B}, {R}, or {G}.",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 1
+    },
+    "keywords": [
+        "EXALTED"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Ignoble Hierarch:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "BLACK"
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Ignoble Hierarch:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "RED"
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Ignoble Hierarch:3",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "GREEN"
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "166",
+        "rarity": "RARE",
+        "artist": "Mark Zug",
+        "flavorText": "He protects the fetid bog from light, life, and the hideous sound of laughter.",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/b/aba51852-af8f-49d8-8fb6-22d52a1742b8.jpg?1783926830",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "A creature attacks alone if it's the only creature declared as an attacker during the declare attackers step (including creatures controlled by your teammates, if applicable). For example, exalted won't trigger if you attack with multiple creatures and all but one of them are removed from combat."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "RED",
+        "GREEN"
+    ]
+}
+
 // Jade Avenger
 {
     "name": "Jade Avenger",
@@ -4145,6 +4212,134 @@
     ]
 }
 
+// Territorial Kavu
+{
+    "name": "Territorial Kavu",
+    "manaCost": "{R}{G}",
+    "typeLine": "Creature — Kavu",
+    "oracleText": "Domain — Territorial Kavu's power and toughness are each equal to the number of basic land types among lands you control.\nWhenever this creature attacks, choose one —\n• Discard a card. If you do, draw a card.\n• Exile up to one target card from a graveyard.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": "land",
+                "aggregation": "DISTINCT_BASIC_LAND_SUBTYPES"
+            }
+        },
+        "toughness": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": "land",
+                "aggregation": "DISTINCT_BASIC_LAND_SUBTYPES"
+            }
+        }
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Territorial Kavu:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromZone",
+                                            "zone": "Hand"
+                                        },
+                                        "storeAs": "hand"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "hand",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "discarded",
+                                        "prompt": "Choose a card to discard"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "discarded",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        },
+                                        "moveType": "Discard"
+                                    },
+                                    {
+                                        "type": "DrawCards",
+                                        "count": {
+                                            "type": "VariableReference",
+                                            "variableName": "discarded_count"
+                                        }
+                                    }
+                                ]
+                            },
+                            "description": "Discard a card. If you do, draw a card."
+                        },
+                        {
+                            "effect": {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "destination": "Exile"
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "optional": true,
+                                    "filter": {
+                                        "baseFilter": {},
+                                        "zone": "Graveyard"
+                                    },
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "Exile up to one target card from a graveyard"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "216",
+        "rarity": "RARE",
+        "artist": "E. M. Gist",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/6/2605df98-0b02-4aab-bc36-01e93c693743.jpg?1783926808",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Domain abilities count the number of basic land types among lands you control, not how many lands you control or how many of any type."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "The basic land types are Plains, Island, Swamp, Mountain, and Forest. Land types other than basic land types (such as Desert) don't contribute to domain abilities."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
+
 // The Underworld Cookbook
 {
     "name": "The Underworld Cookbook",
@@ -4675,4 +4870,44 @@
     "colorIdentityOverride": [
         "BLACK"
     ]
+}
+
+// Yavimaya, Cradle of Growth
+{
+    "name": "Yavimaya, Cradle of Growth",
+    "manaCost": "",
+    "typeLine": "Legendary Land",
+    "oracleText": "Each land is a Forest in addition to its other land types.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantSubtype",
+                "subtype": "Forest",
+                "filter": {
+                    "baseFilter": "land"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "261",
+        "rarity": "RARE",
+        "artist": "Sarah Finnigan",
+        "flavorText": "\"Multani's heart is a seed, and all of Yavimaya is its flower. There is as much life here as in the rest of Dominaria together.\"\n—Karn",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/e/4e4b6e22-93b2-4896-bba5-0ceaa5d8ea3c.jpg?1783926791",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Yavimaya, Cradle of Growth isn't a Forest while it's not on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Land cards not on the battlefield aren't Forests while Yavimaya is on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Yavimaya's ability causes each land on the battlefield to have the land type Forest. Any land that's a Forest has the ability \"{T}: Add {G}.\" Nothing else changes about those lands, including their names, other subtypes, and whether they're legendary, basic, or snow."
+            }
+        ]
+    }
 }

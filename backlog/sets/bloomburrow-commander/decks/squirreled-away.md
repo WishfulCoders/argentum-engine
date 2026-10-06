@@ -52,7 +52,7 @@
 - [ ] 1 Putrefy
 - [ ] 1 Saw in Half
 - [ ] 1 Second Harvest
-- [ ] 1 Tear Asunder
+- [x] 1 Tear Asunder
 - [ ] 1 Windgrace's Judgment
 
 ## Sorceries (7)
