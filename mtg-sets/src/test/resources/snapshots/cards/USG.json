@@ -4293,6 +4293,91 @@
     ]
 }
 
+// Show and Tell
+{
+    "name": "Show and Tell",
+    "manaCost": "{2}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Each player may put an artifact, creature, enchantment, or land card from their hand onto the battlefield.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "ActivePlayerFirst"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand",
+                                    "filter": "artifact|creature|enchantment|land"
+                                },
+                                "storeAs": "gathered1"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered1",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "selected2",
+                                "prompt": "You may put an artifact, creature, enchantment, or land card from your hand onto the battlefield"
+                            }
+                        ]
+                    },
+                    "collectCollections": {
+                        "selected2": "collected3"
+                    }
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "collected3",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
+                    },
+                    "underOwnersControl": true
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "96",
+        "rarity": "RARE",
+        "artist": "Jeff Laubenstein",
+        "flavorText": "At the academy, \"show and tell\" too often becomes \"run and hide.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/b/4b851c17-55ed-4671-b471-dc7b34944432.jpg?1783946356",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "The current player chooses first, then each other player chooses in turn order. A player does not have to reveal the chosen card, so long as it is clear which card was chosen. After all choices are made, the cards are put onto the battlefield simultaneously."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If the cards being put onto the battlefield also require choices, those choices are made after all players choose their card. The active player makes choices for their card (if any), then the other players (if any) in turn order."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "Players choose cards during resolution, not announcement."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Sicken
 {
     "name": "Sicken",
