@@ -2818,6 +2818,175 @@
     ]
 }
 
+// Outland Liberator
+{
+    "name": "Outland Liberator",
+    "manaCost": "{1}{G}",
+    "typeLine": "Creature — Human Werewolf",
+    "oracleText": "{1}, Sacrifice this creature: Destroy target artifact or enchantment.\nDaybound (If a player casts no spells during their own turn, it becomes night next turn.)",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "DAYBOUND"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Outland Liberator:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "artifact|enchantment"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{1}, Sacrifice this creature: Destroy target artifact or enchantment."
+            }
+        ]
+    },
+    "backFace": {
+        "name": "Frenzied Trapbreaker",
+        "manaCost": "",
+        "typeLine": "Creature — Werewolf",
+        "oracleText": "{1}, Sacrifice this creature: Destroy target artifact or enchantment.\nWhenever this creature attacks, destroy target artifact or enchantment defending player controls.\nNightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)",
+        "creatureStats": {
+            "power": 3,
+            "toughness": 3
+        },
+        "keywords": [
+            "NIGHTBOUND"
+        ],
+        "script": {
+            "triggeredAbilities": [
+                {
+                    "id": "Frenzied Trapbreaker:2",
+                    "trigger": "AttackEvent",
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t1"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "targetRequirement": {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "Or",
+                                        "predicates": [
+                                            "IsArtifact",
+                                            "IsEnchantment"
+                                        ]
+                                    }
+                                ],
+                                "controllerPredicate": {
+                                    "type": "ControlledByReferencedPlayer",
+                                    "target": {
+                                        "type": "PlayerRef",
+                                        "player": "DefendingPlayer"
+                                    }
+                                }
+                            }
+                        },
+                        "id": "t1"
+                    },
+                    "descriptionOverride": "Whenever this creature attacks, destroy target artifact or enchantment defending player controls."
+                }
+            ],
+            "activatedAbilities": [
+                {
+                    "id": "Frenzied Trapbreaker:1",
+                    "cost": {
+                        "type": "CostComposite",
+                        "costs": [
+                            {
+                                "type": "CostAtomWrapper",
+                                "atom": {
+                                    "type": "AtomMana",
+                                    "cost": "{1}"
+                                }
+                            },
+                            "CostSacrificeSelf"
+                        ]
+                    },
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "artifact|enchantment"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "descriptionOverride": "{1}, Sacrifice this creature: Destroy target artifact or enchantment."
+                }
+            ]
+        },
+        "metadata": {
+            "collectorNumber": "190",
+            "rarity": "UNCOMMON",
+            "artist": "Randy Vargas",
+            "imageUri": "https://cards.scryfall.io/normal/back/6/0/60e53d61-fcc3-4def-8206-052b46f62deb.jpg?1783925581"
+        },
+        "colorIdentityOverride": [
+            "GREEN"
+        ],
+        "colorIndicator": [
+            "GREEN"
+        ],
+        "hasNoManaCost": true
+    },
+    "metadata": {
+        "collectorNumber": "190",
+        "rarity": "UNCOMMON",
+        "artist": "Randy Vargas",
+        "flavorText": "\"Just hold still. I'll help you.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/0/60e53d61-fcc3-4def-8206-052b46f62deb.jpg?1783925581"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Overgrown Farmland
 {
     "name": "Overgrown Farmland",

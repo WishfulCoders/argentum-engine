@@ -2023,6 +2023,35 @@
     "colorIdentityOverride": []
 }
 
+// Exploration
+{
+    "name": "Exploration",
+    "manaCost": "{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "You may play an additional land on each of your turns.",
+    "script": {
+        "staticAbilities": [
+            "GrantAdditionalLandDrop"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "250",
+        "rarity": "RARE",
+        "artist": "Brian Snõddy",
+        "flavorText": "The first explorers found Argoth a storehouse of natural wealth—towering forests grown over rich veins of ore.",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/f/2f09e451-0246-45a2-8bfd-07d3c65ddfe6.jpg?1783946316",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "Exploration's ability is cumulative with other effects that allow you to play additional lands, including ones created by other Explorations you control."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Expunge
 {
     "name": "Expunge",

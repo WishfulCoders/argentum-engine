@@ -694,6 +694,94 @@
     ]
 }
 
+// Survival of the Fittest
+{
+    "name": "Survival of the Fittest",
+    "manaCost": "{1}{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "{G}, Discard a creature card: Search your library for a creature card, reveal that card, put it into your hand, then shuffle.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Survival of the Fittest:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{G}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomDiscard",
+                                "filter": "creature"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library",
+                                "filter": "creature"
+                            },
+                            "storeAs": "searchable",
+                            "search": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "found"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            },
+                            "revealed": true
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
+                    ]
+                },
+                "descriptionOverride": "{G}, Discard a creature card: Search your library for a creature card, reveal it, put it into your hand, then shuffle."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "129",
+        "rarity": "RARE",
+        "artist": "Pete Venters",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/0/c060c178-3c0e-493f-b6f0-ead5b1d6f191.jpg?1783946500",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "Because the \"search\" requires you to find a card with certain characteristics, you don't have to find the card if you don't want to."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Treasure Hunter
 {
     "name": "Treasure Hunter",

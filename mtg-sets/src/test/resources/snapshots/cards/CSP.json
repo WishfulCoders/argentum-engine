@@ -1,3 +1,112 @@
+// Dark Depths
+{
+    "name": "Dark Depths",
+    "manaCost": "",
+    "typeLine": "Legendary Snow Land",
+    "oracleText": "Dark Depths enters with ten ice counters on it.\n{3}: Remove an ice counter from Dark Depths.\nWhen Dark Depths has no ice counters on it, sacrifice it. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible.",
+    "script": {
+        "stateTriggeredAbilities": [
+            {
+                "id": "Dark Depths:2",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": "Self",
+                        "numericProperty": {
+                            "type": "CounterCount",
+                            "counterType": "ICE"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 0
+                    }
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.DoAction",
+                        "action": "SacrificeSelf",
+                        "successCriterion": "SuccessCriterion.PermanentsSacrificed"
+                    },
+                    "then": {
+                        "type": "CreateToken",
+                        "power": 20,
+                        "toughness": 20,
+                        "colors": [
+                            "BLACK"
+                        ],
+                        "creatureTypes": [
+                            "Avatar"
+                        ],
+                        "keywords": [
+                            "FLYING",
+                            "INDESTRUCTIBLE"
+                        ],
+                        "name": "Marit Lage",
+                        "imageUri": "https://cards.scryfall.io/normal/front/8/f/8f5c3863-c876-48a8-9bc8-be20cd61074c.jpg?1783943286",
+                        "legendary": true
+                    }
+                },
+                "descriptionOverride": "When Dark Depths has no ice counters on it, sacrifice it. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Dark Depths:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{3}"
+                    }
+                },
+                "effect": {
+                    "type": "RemoveCounters",
+                    "counterType": "ICE",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "Self"
+                },
+                "descriptionOverride": "{3}: Remove an ice counter from Dark Depths."
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithCounters",
+                "counterType": "ICE",
+                "count": 10,
+                "selfOnly": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "145",
+        "rarity": "RARE",
+        "artist": "Stephan Martiniere",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/2/92409c3a-fb1a-4205-9fe1-0f5affc7b21d.jpg?1783943318",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "The last ability of Dark Depths is a state trigger. It won't trigger again while the ability is on the stack, but if the ability is countered and Dark Depths is still on the battlefield with no ice counters on it, it will trigger again immediately."
+            },
+            {
+                "date": "2022-12-08",
+                "text": "If Dark Depths leaves the battlefield before its triggered ability resolves, you won't be able to sacrifice it, so you won't create Marit Lage."
+            },
+            {
+                "date": "2022-12-08",
+                "text": "Dark Depths doesn't have a mana ability. It doesn't tap for colorless mana."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Deathmark
 {
     "name": "Deathmark",
