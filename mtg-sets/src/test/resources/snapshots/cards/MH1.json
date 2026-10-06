@@ -795,6 +795,101 @@
     ]
 }
 
+// Fallen Shinobi
+{
+    "name": "Fallen Shinobi",
+    "manaCost": "{3}{U}{B}",
+    "typeLine": "Creature — Zombie Ninja",
+    "oracleText": "Ninjutsu {2}{U}{B} ({2}{U}{B}, Return an unblocked attacker you control to hand: Put this card onto the battlefield from your hand tapped and attacking.)\nWhenever this creature deals combat damage to a player, that player exiles the top two cards of their library. Until end of turn, you may play those cards without paying their mana costs.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 4
+    },
+    "keywords": [
+        "NINJUTSU"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Ninjutsu",
+            "cost": "{2}{U}{B}"
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Fallen Shinobi:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                },
+                                "player": "TriggeringPlayer"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Exile",
+                                "player": "TriggeringPlayer"
+                            }
+                        },
+                        {
+                            "type": "GrantMayPlayFromExile",
+                            "from": "gathered0"
+                        },
+                        {
+                            "type": "GrantPlayWithoutPayingCost",
+                            "from": "gathered0"
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever this creature deals combat damage to a player, that player exiles the top two cards of their library. Until end of turn, you may play those cards without paying their mana costs."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "199",
+        "rarity": "RARE",
+        "artist": "Tomasz Jedruszek",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/0/900c9dfd-ece1-4b09-a801-0fa05e1994b9.jpg?1783933085",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "Fallen Shinobi's triggered ability doesn't change when you can play the exiled cards. For example, if a sorcery card is exiled, you can cast it only during your main phase when the stack is empty. If a land card is exiled, you can play it only during your main phase and only if you have an available land play remaining."
+            },
+            {
+                "date": "2019-06-14",
+                "text": "Casting an exiled card causes it to leave exile. You can't cast it multiple times."
+            },
+            {
+                "date": "2019-06-14",
+                "text": "Any cards you don't cast will remain in exile."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE",
+        "BLACK"
+    ]
+}
+
 // Farmstead Gleaner
 {
     "name": "Farmstead Gleaner",
@@ -3360,6 +3455,182 @@
     "colorIdentityOverride": [
         "RED",
         "WHITE"
+    ]
+}
+
+// Talisman of Creativity
+{
+    "name": "Talisman of Creativity",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "{T}: Add {C}.\n{T}: Add {U} or {R}. This artifact deals 1 damage to you.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Talisman of Creativity:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Talisman of Creativity:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddMana",
+                            "color": "BLUE"
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            }
+                        }
+                    ]
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Talisman of Creativity:3",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddMana",
+                            "color": "RED"
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            }
+                        }
+                    ]
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "231",
+        "rarity": "UNCOMMON",
+        "artist": "Lindsey Look",
+        "flavorText": "\"Good ideas don't take time. They take a lot of bad ideas first.\"\n—Ral Zarek",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/d/4d9dbadd-c1b6-44fe-92ac-6f69d7178342.jpg?1783933072"
+    },
+    "colorIdentityOverride": [
+        "BLUE",
+        "RED"
+    ]
+}
+
+// Talisman of Hierarchy
+{
+    "name": "Talisman of Hierarchy",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "{T}: Add {C}.\n{T}: Add {W} or {B}. This artifact deals 1 damage to you.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Talisman of Hierarchy:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Talisman of Hierarchy:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddMana",
+                            "color": "WHITE"
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            }
+                        }
+                    ]
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Talisman of Hierarchy:3",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddMana",
+                            "color": "BLACK"
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            }
+                        }
+                    ]
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "233",
+        "rarity": "UNCOMMON",
+        "artist": "Lindsey Look",
+        "flavorText": "\"You'll never get to the top if you don't know who's already there.\"\n—Kaya",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/2/826f99c7-f534-4183-8f0d-efe1609808ac.jpg?1783933070"
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLACK"
     ]
 }
 

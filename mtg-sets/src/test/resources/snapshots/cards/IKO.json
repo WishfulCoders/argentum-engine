@@ -1744,6 +1744,67 @@
     ]
 }
 
+// Lurrus of the Dream-Den
+{
+    "name": "Lurrus of the Dream-Den",
+    "manaCost": "{1}{W/B}{W/B}",
+    "typeLine": "Legendary Creature — Cat Nightmare",
+    "oracleText": "Companion — Each permanent card in your starting deck has mana value 2 or less. (If this card is your chosen companion, you may put it into your hand from outside the game for {3} as a sorcery.)\nLifelink\nOnce during each of your turns, you may cast a permanent spell with mana value 2 or less from your graveyard.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "LIFELINK"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "MayCastFromGraveyard",
+                "filter": "permanent mv<=2",
+                "duringYourTurnOnly": true,
+                "oncePerTurn": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "226",
+        "rarity": "RARE",
+        "artist": "Slawomir Maniak",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5ad36fb2-c44e-4085-ba0d-54277841ad3a.jpg?1783931010",
+        "rulings": [
+            {
+                "date": "2020-04-17",
+                "text": "You must follow the normal timing permissions and restrictions of the spell you cast from your graveyard."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "You must pay the costs to cast that spell. If it has an alternative cost, such as a mutate cost, you may cast it for that cost instead."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "If you cast a spell from your graveyard using another permission, Lurrus's effect doesn't apply. You can cast another permanent spell from your graveyard."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "If you cast one permanent spell from your graveyard and then have a new Lurrus come under your control in the same turn, you may cast another permanent spell from your graveyard that turn."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "Lurrus doesn't let you play lands from your graveyard."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "The companion's other abilities apply only if the creature is on the battlefield. They have no effect while the companion is outside the game."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLACK"
+    ]
+}
+
 // Maned Serval
 {
     "name": "Maned Serval",

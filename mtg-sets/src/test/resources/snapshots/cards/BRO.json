@@ -2538,6 +2538,56 @@
     ]
 }
 
+// Third Path Iconoclast
+{
+    "name": "Third Path Iconoclast",
+    "manaCost": "{U}{R}",
+    "typeLine": "Creature — Human Monk",
+    "oracleText": "Whenever you cast a noncreature spell, create a 1/1 colorless Soldier artifact creature token.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Third Path Iconoclast:1",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Soldier"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/3/7/37da5b54-ec55-46e3-9f0b-565cbbe1ac7a.jpg?1783919907",
+                    "artifactToken": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "223",
+        "rarity": "UNCOMMON",
+        "artist": "Manuel Castañón",
+        "flavorText": "\"When all you have is a hammer, everything looks like a nail. I merely propose expanding our toolbox.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/1/f1a21287-e244-4960-84fb-c4f6e5c346d9.jpg?1783920025"
+    },
+    "colorIdentityOverride": [
+        "BLUE",
+        "RED"
+    ]
+}
+
 // Third Path Savant
 {
     "name": "Third Path Savant",
