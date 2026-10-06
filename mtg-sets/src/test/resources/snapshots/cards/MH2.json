@@ -2345,6 +2345,52 @@
     ]
 }
 
+// Persist
+{
+    "name": "Persist",
+    "manaCost": "{1}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Return target nonlegendary creature card from your graveyard to the battlefield with a -1/-1 counter on it.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Battlefield",
+            "fromZone": "Graveyard",
+            "addCounterType": "MINUS_ONE_MINUS_ONE"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            "IsNonlegendary"
+                        ],
+                        "controllerPredicate": "OwnedByYou"
+                    },
+                    "zone": "Graveyard"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "96",
+        "rarity": "RARE",
+        "artist": "Milivoj Ćeran",
+        "flavorText": "In the tight-knit doun of Mistmeadow, death is less important than duty.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/0/90f390c3-af1c-424f-9721-e26e9321e5a3.jpg?1783926857"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Ragavan, Nimble Pilferer
 {
     "name": "Ragavan, Nimble Pilferer",
