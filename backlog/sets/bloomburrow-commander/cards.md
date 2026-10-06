@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 145 / 312
+**Implemented:** 146 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -321,7 +321,7 @@
 - [x] Wildsear, Scouring Maw
 - [ ] Windgrace's Judgment
 - [ ] Wizard Class
-- [ ] Woe Strider
+- [x] Woe Strider
 - [ ] Wolfwillow Haven
 - [x] Wooded Ridgeline
 - [x] Woodland Cemetery

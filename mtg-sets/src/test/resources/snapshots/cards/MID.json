@@ -2256,6 +2256,73 @@
     ]
 }
 
+// Jadar, Ghoulcaller of Nephalia
+{
+    "name": "Jadar, Ghoulcaller of Nephalia",
+    "manaCost": "{1}{B}",
+    "typeLine": "Legendary Creature — Human Wizard",
+    "oracleText": "At the beginning of your end step, if you control no creatures with decayed, create a 2/2 black Zombie creature token with decayed. (It can't block. When it attacks, sacrifice it at end of combat.)",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Jadar, Ghoulcaller of Nephalia:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [
+                        "BLACK"
+                    ],
+                    "creatureTypes": [
+                        "Zombie"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/6/a/6adb8607-1066-451d-a719-74ad32358278.jpg?1783925226",
+                    "initialCounters": {
+                        "DECAYED": 1
+                    }
+                },
+                "interveningIf": {
+                    "type": "Exists",
+                    "player": "You",
+                    "zone": "Battlefield",
+                    "filter": "creature kw:decayed",
+                    "negate": true
+                },
+                "descriptionOverride": "At the beginning of your end step, if you control no creatures with decayed, create a 2/2 black Zombie creature token with decayed."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "108",
+        "rarity": "RARE",
+        "artist": "Yongjae Choi",
+        "flavorText": "\"Rise, my pretty thing. Why rot in the river when you can serve at my bidding?\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/f/ff971ba7-68b8-482a-9cb1-741f6893550c.jpg?1783925615",
+        "rulings": [
+            {
+                "date": "2021-09-24",
+                "text": "Decayed does not grant haste. Creatures with decayed that enter the battlefield during your turn may not attack until your next turn."
+            },
+            {
+                "date": "2021-09-24",
+                "text": "Once a creature with decayed attacks, it will be sacrificed at end of combat, even if it no longer has decayed at that time."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Join the Dance
 {
     "name": "Join the Dance",

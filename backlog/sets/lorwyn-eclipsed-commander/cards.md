@@ -2,7 +2,7 @@
 
 **Set Size:** 153 cards
 **Release Date:** January 23, 2026
-**Implemented:** 8 / 153
+**Implemented:** 9 / 153
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 4     | 0    |
@@ -116,7 +116,7 @@
 - [ ] Painful Truths
 - [x] Path of Ancestry
 - [x] Path to Exile
-- [ ] Persist
+- [x] Persist
 - [ ] Primal Beyond
 - [ ] Puca's Covenant
 - [ ] Puppeteer Clique
