@@ -1,3 +1,110 @@
+// Nissa, Resurgent Animist
+{
+    "name": "Nissa, Resurgent Animist",
+    "manaCost": "{2}{G}",
+    "typeLine": "Legendary Creature — Elf Scout",
+    "oracleText": "Landfall — Whenever a land you control enters, add one mana of any color. Then if this is the second time this ability has resolved this turn, reveal cards from the top of your library until you reveal an Elf or Elemental card. Put that card into your hand and the rest on the bottom of your library in a random order.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Nissa, Resurgent Animist:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "land ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        "AddManaOfChoice",
+                        "IncrementAbilityResolutionCount",
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "SourceAbilityResolvedNTimesThisTurn",
+                                    "count": 2
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherUntilMatch",
+                                        "filter": "Elf|Elemental",
+                                        "storeMatch": "ignored",
+                                        "storeRevealed": "revealed"
+                                    },
+                                    {
+                                        "type": "RevealCollection",
+                                        "from": "revealed"
+                                    },
+                                    {
+                                        "type": "FilterCollection",
+                                        "from": "revealed",
+                                        "filter": "Elf|Elemental",
+                                        "storeMatching": "matchedToHand",
+                                        "storeNonMatching": "rest"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "matchedToHand",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "rest",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Library",
+                                            "placement": "Bottom"
+                                        },
+                                        "order": "Random"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Landfall — Whenever a land you control enters, add one mana of any color. Then if this is the second time this ability has resolved this turn, reveal cards from the top of your library until you reveal an Elf or Elemental card. Put that card into your hand and the rest on the bottom of your library in a random order."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "22",
+        "rarity": "MYTHIC",
+        "artist": "Tuan Duong Chu",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/4/248c76d3-b5cb-4582-be17-7cd1d0cb0f58.jpg?1783916520",
+        "rulings": [
+            {
+                "date": "2023-05-12",
+                "text": "Nissa's landfall ability isn't a mana ability, even though it causes you to add mana. It uses the stack and can be responded to."
+            },
+            {
+                "date": "2023-05-12",
+                "text": "Each time the landfall ability resolves in a turn after the second time, you'll just add mana."
+            },
+            {
+                "date": "2023-05-12",
+                "text": "If you reveal your entire library and don't reveal an Elf or Elemental card, you'll put all revealed cards back in a random order. This uses the same physical action as shuffling, although it isn't technically a \"shuffle.\""
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Tranquil Frillback
 {
     "name": "Tranquil Frillback",
