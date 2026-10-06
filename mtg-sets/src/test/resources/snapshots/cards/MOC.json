@@ -1,0 +1,81 @@
+// Death-Greeter's Champion
+{
+    "name": "Death-Greeter's Champion",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Human Warrior",
+    "oracleText": "Dash {3}{R} (You may cast this spell for its dash cost. If you do, it gains haste, and it's returned from the battlefield to its owner's hand at the beginning of the next end step.)\nBackup 1 (When this creature enters, put a +1/+1 counter on target creature. If that's another creature, it gains the following ability until end of turn.)\nDouble strike",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "keywords": [
+        "DOUBLE_STRIKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Dash",
+            "cost": "{3}{R}"
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Death-Greeter's Champion:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddCounters",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
+                            "count": 1,
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Not",
+                                    "condition": "TargetIsSource"
+                                }
+                            },
+                            "then": {
+                                "type": "GrantKeyword",
+                                "keyword": "DOUBLE_STRIKE",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature"
+                    },
+                    "id": "t0"
+                },
+                "isBackup": true,
+                "descriptionOverride": "Backup 1 (When this creature enters, put a +1/+1 counter on target creature. If that's another creature, it gains the following ability until end of turn.)"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "30",
+        "rarity": "RARE",
+        "artist": "Jason Rainville",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7cb2b582-1c45-4bb2-8aef-59a71a5a9e94.jpg?1783917284"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
