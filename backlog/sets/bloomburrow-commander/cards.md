@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 141 / 312
+**Implemented:** 142 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -189,7 +189,7 @@
 - [ ] Narset, Parter of Veils
 - [ ] Necroblossom Snarl
 - [ ] Nested Shambler
-- [ ] Nissa, Who Shakes the World
+- [x] Nissa, Who Shakes the World
 - [ ] Octomancer
 - [ ] Ogre Slumlord
 - [ ] Oran-Rief, the Vastwood
