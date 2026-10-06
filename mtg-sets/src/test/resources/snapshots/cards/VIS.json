@@ -687,6 +687,118 @@
     ]
 }
 
+// Necromancy
+{
+    "name": "Necromancy",
+    "manaCost": "{2}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been cast, the controller of the permanent it becomes sacrifices it at the beginning of the next cleanup step.\nWhen this enchantment enters, if it's on the battlefield, it becomes an Aura with \"enchant creature put onto the battlefield with Necromancy.\" Put target creature card from a graveyard onto the battlefield under your control and attach this enchantment to it. When this enchantment leaves the battlefield, that creature's controller sacrifices it.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Necromancy:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddSubtype",
+                            "subtype": "Aura",
+                            "target": "Self",
+                            "duration": "Permanent"
+                        },
+                        {
+                            "type": "GatherCards",
+                            "source": "ChosenTargets",
+                            "storeAs": "gathered1"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        },
+                        {
+                            "type": "EnchantPutOntoBattlefield",
+                            "from": "gathered1"
+                        },
+                        {
+                            "type": "CreateDelayedTrigger",
+                            "effect": {
+                                "type": "SacrificeTarget",
+                                "target": {
+                                    "type": "PipelineTarget",
+                                    "collectionName": "gathered1"
+                                },
+                                "sacrificedByItsController": true
+                            },
+                            "trigger": {
+                                "event": {
+                                    "type": "ZoneChangeEvent",
+                                    "from": "Battlefield"
+                                }
+                            },
+                            "watchedTarget": "Self",
+                            "expiry": "DelayedTriggerExpiry.Never",
+                            "fireOnce": true,
+                            "carryCollections": [
+                                "gathered1"
+                            ]
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature",
+                        "zone": "Graveyard"
+                    },
+                    "id": "t0"
+                },
+                "interveningIf": {
+                    "type": "SourceInZone",
+                    "zones": [
+                        "Battlefield"
+                    ]
+                }
+            }
+        ],
+        "flashWithCleanupSacrifice": true
+    },
+    "metadata": {
+        "collectorNumber": "64",
+        "rarity": "UNCOMMON",
+        "artist": "Pete Venters",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/1/311a6257-dd77-4bb6-81cb-c8e7862350f3.jpg?1783946992",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "The sacrifice occurs only if you cast it using its own ability. If you cast it using some other effect (for example, if another effect allowed you to cast it as though it had flash), then it won't be sacrificed."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "If the creature card put onto the battlefield has protection from black (or anything that prevents this from legally being attached), this won't be able to attach to it. Then this will go to the graveyard as a state-based action, causing the creature to be sacrificed."
+            },
+            {
+                "date": "2005-08-01",
+                "text": "Necromancy enters as an enchantment and then becomes an Enchant Creature Aura as a triggered ability upon entering. It follows all the rules for Auras from then on."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "The bringing of the creature onto the battlefield and then putting Necromancy on it is all done as part of the resolution."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Nekrataal
 {
     "name": "Nekrataal",

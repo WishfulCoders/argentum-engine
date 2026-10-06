@@ -2191,7 +2191,7 @@ class PredicateEvaluator(
                 val attachments = container.get<AttachmentsComponent>()
                 if (attachments == null || attachments.attachedIds.isEmpty()) return false
                 attachments.attachedIds.any { attachId ->
-                    state.getEntity(attachId)?.get<CardComponent>()?.typeLine?.isAura == true
+                    com.wingedsheep.engine.state.components.battlefield.isAuraAttachment(state.getEntity(attachId))
                 }
             }
 
@@ -2205,7 +2205,7 @@ class PredicateEvaluator(
                 val you = context?.controllerId ?: return false
                 attachments.attachedIds.any { attachId ->
                     val aura = state.getEntity(attachId) ?: return@any false
-                    if (aura.get<CardComponent>()?.typeLine?.isAura != true) return@any false
+                    if (!com.wingedsheep.engine.state.components.battlefield.isAuraAttachment(aura)) return@any false
                     val auraController = aura.get<ControllerComponent>()?.playerId ?: return@any false
                     predicate.auraController.evaluateWith { leaf ->
                         when (leaf) {

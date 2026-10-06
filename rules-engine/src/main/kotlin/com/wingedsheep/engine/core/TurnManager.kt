@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.core
 
 import com.wingedsheep.engine.handlers.effects.copy.copyExpiryEvents
+import com.wingedsheep.engine.event.firesAtStepBeginning
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.engine.handlers.ObjectReferenceEnvironment
 import com.wingedsheep.engine.state.components.identity.TextChanges
@@ -455,9 +456,15 @@ class TurnManager(
             }
         }
 
-        // Check if we're wrapping to next turn
+        // The cleanup step only ever gives priority when something triggered in it (CR 514.3a — see
+        // [finishCleanupStep]). Once the stack is empty and all players pass in succession,
+        // another cleanup step begins, and the turn ends only from a cleanup step in which no one
+        // received priority.
         if (currentStep == Step.CLEANUP) {
-            return endTurn(state)
+            return beginCleanupStep(
+                state.copy(priorityPlayerId = null, priorityPassedBy = emptySet()),
+                listOf(StepChangedEvent(Step.CLEANUP))
+            )
         }
 
         // Leaving an inserted additional upkeep step (Obeka, Splitter of Seconds). Per CR 500.10
@@ -893,23 +900,57 @@ class TurnManager(
                 newState = newState.withPriority(activePlayer)
             }
 
-            Step.CLEANUP -> {
-                val cleanupResult = cleanupPhaseManager.performCleanupStep(newState)
-                if (cleanupResult.error != null) return cleanupResult
-                if (cleanupResult.outcome is Outcome.Paused) {
-                    return parkRestOfTurn(cleanupResult, newState, AdvanceStepContinuation, events + cleanupResult.events)
-                }
-                newState = cleanupResult.newState
-                events.addAll(cleanupResult.events)
-
-                if (newState.priorityPlayerId == null && newState.pendingDecision == null) {
-                    val endTurnResult = endTurn(newState)
-                    return endTurnResult.copy(events = events + endTurnResult.events)
-                }
-            }
+            Step.CLEANUP -> return beginCleanupStep(newState, events)
         }
 
         return ExecutionResult.success(newState, events)
+    }
+
+    /**
+     * Run the turn-based actions of a cleanup step that has just begun — the hand-size discard
+     * (CR 514.1), then damage removal (CR 514.2) — and finish it with [finishCleanupStep]. A discard
+     * the player must choose pauses the step; [FinishCleanupStepContinuation] is parked beneath that
+     * choice so the step finishes the same way once it is answered.
+     */
+    private fun beginCleanupStep(state: GameState, priorEvents: List<GameEvent>): ExecutionResult {
+        val cleanupResult = cleanupPhaseManager.performCleanupStep(state)
+        if (cleanupResult.error != null) return cleanupResult
+        if (cleanupResult.outcome is Outcome.Paused) {
+            return parkRestOfTurn(cleanupResult, state, FinishCleanupStepContinuation, priorEvents + cleanupResult.events)
+        }
+        val finished = finishCleanupStep(cleanupResult.newState)
+        return finished.copy(events = priorEvents + cleanupResult.events + finished.events)
+    }
+
+    /**
+     * The end of a cleanup step's turn-based actions (CR 514.3 / 514.3a). Normally no player
+     * receives priority and the turn ends. But if a triggered ability is waiting to be put onto the
+     * stack — including one that triggers "at the beginning of the next cleanup step" (Necromancy's
+     * instant-speed sacrifice, Waylay) — the active player gets priority instead: the settle that
+     * follows puts the waiting abilities on the stack, players may cast spells and activate
+     * abilities, and once the stack is empty and all players pass another cleanup step begins
+     * ([advanceStepFromEndedStep]).
+     *
+     * "Waiting" covers the abilities already queued ([GameState.pendingTriggers] — those detected as
+     * a paused cleanup step began) and the step-based delayed triggers that fire as this cleanup
+     * step begins ([firesAtStepBeginning]), which the settle detects from the step's
+     * [StepChangedEvent]. A delayed trigger that repeats at every matching step is left out: it would
+     * fire again in every new cleanup step and the turn could never end.
+     *
+     * Not modelled: CR 514.3a's state-based-action half (an SBA that would be performed here is
+     * performed at the next settle, after the turn has ended), and abilities that trigger on the
+     * cleanup step's own turn-based actions (a hand-size discard trigger) — those are detected only
+     * after the turn has ended and go on the stack in the next turn, as before.
+     */
+    fun finishCleanupStep(state: GameState): ExecutionResult {
+        val activePlayer = state.activePlayerId
+            ?: return ExecutionResult.error(state, "No active player")
+        val triggersWaiting = state.pendingTriggers.isNotEmpty() ||
+            state.delayedTriggers.any { !it.repeatAtEachMatchingStep && it.firesAtStepBeginning(state, Step.CLEANUP) }
+        if (triggersWaiting) {
+            return ExecutionResult.success(state.copy(priorityPassedBy = emptySet()).withPriority(activePlayer))
+        }
+        return endTurn(state.copy(priorityPlayerId = null))
     }
 
     /**
@@ -1232,11 +1273,13 @@ class TurnManager(
      *
      * Abilities that trigger during this process go on the stack at the next settle, which is after
      * the next turn has begun. CR 724.1f would put them on the stack in an extra cleanup step
-     * instead, and the engine doesn't model that.
+     * instead, and the engine doesn't model that — except for a delayed ability that triggers "at
+     * the beginning of the next cleanup step", which the cleanup step below stops for like any
+     * natural one (CR 514.3a, [finishCleanupStep]).
      *
      * The cleanup and the turn end reuse the machinery of a natural cleanup step. If the active
-     * player is over their maximum hand size, this returns paused for the discard, with an
-     * [AdvanceStepContinuation] beneath it that ends the turn once the discard resolves.
+     * player is over their maximum hand size, this returns paused for the discard, with a
+     * [FinishCleanupStepContinuation] beneath it that finishes the step once the discard resolves.
      */
     fun performEndTheTurn(state: GameState): ExecutionResult {
         val activePlayer = state.activePlayerId
@@ -1306,24 +1349,9 @@ class TurnManager(
         events.add(PhaseChangedEvent(Phase.ENDING))
         events.add(StepChangedEvent(Step.CLEANUP))
 
-        val cleanupResult = cleanupPhaseManager.performCleanupStep(newState)
-        if (cleanupResult.outcome is Outcome.Paused) {
-            // Over max hand size: pause for the discard. The HandSizeDiscardContinuation finishes the
-            // cleanup turn-based actions, then the parked frame advances CLEANUP → next turn.
-            return parkRestOfTurn(cleanupResult, newState, AdvanceStepContinuation, events + cleanupResult.events)
-        }
-        if (cleanupResult.outcome is Outcome.Rejected) return cleanupResult
-        newState = cleanupResult.newState
-        events.addAll(cleanupResult.events)
-
-        val endTurnResult = endTurn(newState)
-        if (endTurnResult.outcome is Outcome.Paused) {
-            return ExecutionResult.propagatePause(
-                endTurnResult.newState,
-                events + endTurnResult.events
-            )
-        }
-        return ExecutionResult.success(endTurnResult.newState, events + endTurnResult.events)
+        // Over max hand size, the cleanup step pauses for the discard; the parked
+        // FinishCleanupStepContinuation finishes it, exactly as on the unpaused path.
+        return beginCleanupStep(newState, events)
     }
 
     /**

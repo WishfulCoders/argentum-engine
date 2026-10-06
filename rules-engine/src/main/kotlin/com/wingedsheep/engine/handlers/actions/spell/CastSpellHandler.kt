@@ -135,6 +135,7 @@ import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComp
 import com.wingedsheep.engine.state.components.stack.captureEntitySnapshots
 import kotlin.reflect.KClass
 import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 
 /**
  * Handler for the CastSpell action.
@@ -198,7 +199,8 @@ class CastSpellHandler(
             return ExecutionResult.error(state, com.wingedsheep.engine.mechanics.SplitSecond.REJECTION)
         }
         val error = castValidator.validate(state, action, duringResolution = true)
-        return if (error != null) ExecutionResult.error(state, error) else execute(state, action)
+        return if (error != null) ExecutionResult.error(state, error)
+        else executeWithLockedManaCost(state, action, null, duringResolution = true)
     }
 
     /** Each cost the caster owes, reduced to the leg they took (see [SpellCosts.reduceAlternatives]). */
@@ -222,8 +224,13 @@ class CastSpellHandler(
      */
     override fun execute(state: GameState, action: CastSpell): ExecutionResult = executeWithLockedManaCost(state, action, null)
 
-    internal fun executeWithLockedManaCost(state: GameState, action: CastSpell, lockedCost: ManaCost?): ExecutionResult {
-        val result = executeAnnounced(state, action, lockedCost)
+    internal fun executeWithLockedManaCost(
+        state: GameState,
+        action: CastSpell,
+        lockedCost: ManaCost?,
+        duringResolution: Boolean = false,
+    ): ExecutionResult {
+        val result = executeAnnounced(state, action, lockedCost, duringResolution)
         // An unfinished cost/target picker still presents a card in its original zone. Rebuild
         // the announcement when resumed; cancellation must not leave Aura characteristics behind.
         return if (action.cardId !in result.state.stack && action.cardId !in result.state.getBattlefield()) {
@@ -258,7 +265,12 @@ class CastSpellHandler(
         )
     }
 
-    private fun executeAnnounced(inputState: GameState, action: CastSpell, lockedCost: ManaCost? = null): ExecutionResult {
+    private fun executeAnnounced(
+        inputState: GameState,
+        action: CastSpell,
+        lockedCost: ManaCost? = null,
+        duringResolution: Boolean = false,
+    ): ExecutionResult {
         val state = com.wingedsheep.engine.mechanics.CastCharacteristics.announce(inputState, action, cardRegistry)
         val cardComponent = state.getEntity(action.cardId)?.get<CardComponent>()
             ?: return ExecutionResult.error(state, "Card not found")
@@ -436,7 +448,7 @@ class CastSpellHandler(
 
         val castResult = putSpellOnStack(
             currentState, state, action, cardDef, transformedFace, ledger, paid, targeting, returned, marks, splicedCardNames,
-            additionalEntryCounters,
+            additionalEntryCounters, duringResolution,
         )
         if (castResult.outcome !is Outcome.Done) {
             return castResult
@@ -623,6 +635,7 @@ class CastSpellHandler(
         marks: AlternativeCostMarks,
         splicedCardNames: List<String>,
         additionalEntryCounters: AdditionalEntryCounters?,
+        duringResolution: Boolean,
     ): ExecutionResult {
         // Derive per-mode target groups from the flat target list when the action arrived with
         // chosenModes but no modeTargetsOrdered (current web-client cast-time UI for choose-1 modal
@@ -648,7 +661,11 @@ class CastSpellHandler(
             } else null
 
         val manaSpentEvent = paid.manaSpentEvent
-        return stackResolver.castSpell(
+        // "If you cast it any time a sorcery couldn't have been cast" (Necromancy) — asked of the
+        // state before the spell moved to the stack. A spell cast while something else resolves is
+        // cast under that effect's permission, never its own.
+        val owesCleanupSacrifice = !duringResolution && castValidator.castOwesCleanupSacrifice(originState, action)
+        val cast = stackResolver.castSpell(
             state,
             action.cardId,
             action.playerId,
@@ -717,6 +734,11 @@ class CastSpellHandler(
             alternativeCost = action.alternativeCostType?.takeIf { action.useAlternativeCost },
             castOriginState = originState
         )
+        if (!owesCleanupSacrifice || cast.outcome is Outcome.Rejected) return cast
+        return cast.copy(state = cast.state.updateEntity(action.cardId) { container ->
+            val spell = container.get<SpellOnStackComponent>() ?: return@updateEntity container
+            container.with(spell.copy(sacrificeAtNextCleanup = true))
+        })
     }
 
     /**

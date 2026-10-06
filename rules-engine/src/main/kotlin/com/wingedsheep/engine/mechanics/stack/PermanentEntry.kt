@@ -179,6 +179,7 @@ internal class PermanentEntry(
         addCastFaceDoorUnlockedEvents(newState, spellId, cardComponent, controllerId, counterEvents)
         newState = scheduleWarpExile(newState, spellId, spellComponent, cardComponent, controllerId)
         newState = scheduleDashReturn(newState, spellId, spellComponent, cardComponent, controllerId)
+        newState = scheduleCleanupSacrifice(newState, spellId, spellComponent, cardComponent, controllerId)
         newState = enterPreparedIfKeyworded(newState, spellId, spellComponent, cardDef, controllerId)
         newState = grantEntryKeywords(newState, spellId, spellComponent, controllerId)
 
@@ -985,6 +986,42 @@ internal class PermanentEntry(
             newState = allocatedState.addDelayedTrigger(delayedTrigger)
         }
         return newState
+    }
+
+    /**
+     * "If you cast it any time a sorcery couldn't have been cast, the controller of the permanent it
+     * becomes sacrifices it at the beginning of the next cleanup step" (Necromancy, Armor of Thorns
+     * — `flashWithCleanupSacrifice`). The spell was stamped [SpellOnStackComponent.sacrificeAtNextCleanup]
+     * as it was cast; the delayed triggered ability (CR 603.7a — set up by the static ability that let
+     * it be cast) is armed here for the permanent the spell became. It fires as the next cleanup step
+     * begins and is put on the stack in that step (CR 514.3a). It follows this permanent only:
+     * `Self` is resolved through the captured object identity, so a permanent that left the
+     * battlefield — even one that came back — is a new object it leaves alone (CR 603.7c / 400.7).
+     * Whoever controls the permanent then sacrifices it.
+     */
+    private fun scheduleCleanupSacrifice(
+        state: GameState,
+        spellId: EntityId,
+        spellComponent: SpellOnStackComponent,
+        cardComponent: CardComponent?,
+        controllerId: EntityId
+    ): GameState {
+        if (!spellComponent.sacrificeAtNextCleanup) return state
+        val (triggerId, allocatedState) = state.newRoutingId()
+        val delayedTrigger = DelayedTriggeredAbility(
+            id = triggerId,
+            effect = com.wingedsheep.sdk.scripting.effects.SacrificeTargetEffect(
+                target = EffectTarget.Self,
+                sacrificedByItsController = true
+            ),
+            fireAtStep = Step.CLEANUP,
+            sourceId = spellId,
+            objectReferences = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(captured = true,
+                origin = allocatedState.objectRef(spellId), source = allocatedState.objectRef(spellId)),
+            sourceName = cardComponent?.name ?: "Unknown",
+            controllerId = controllerId
+        )
+        return allocatedState.addDelayedTrigger(delayedTrigger)
     }
 
     private fun enterPreparedIfKeyworded(

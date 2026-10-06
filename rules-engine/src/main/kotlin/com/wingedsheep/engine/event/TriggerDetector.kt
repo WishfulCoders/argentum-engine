@@ -595,15 +595,7 @@ class TriggerDetector(
      * Returns the pending triggers and the IDs of consumed delayed triggers.
      */
     fun detectDelayedTriggers(state: GameState, step: Step): Pair<List<PendingTrigger>, Set<String>> {
-        val matching = state.delayedTriggers.filter { delayed ->
-            delayed.trigger == null &&
-                delayed.fireAtStep == step &&
-                // "your next end step" is the team's in a shared team turn (CR 805.4) — the
-                // non-representative head is never `activePlayerId`, so equality would strand
-                // every one of their step-keyed delayed triggers.
-                (delayed.fireOnPlayerId == null || state.isActiveTurnFor(delayed.fireOnPlayerId)) &&
-                (delayed.notBeforeTurn == null || state.turnNumber >= delayed.notBeforeTurn)
-        }
+        val matching = state.delayedTriggers.filter { delayed -> delayed.firesAtStepBeginning(state, step) }
         if (matching.isEmpty()) return emptyList<PendingTrigger>() to emptySet()
 
         val triggers = matching.map { delayed ->

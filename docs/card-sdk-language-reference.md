@@ -182,6 +182,12 @@ section; do not let SDK additions land without a corresponding doc update.
   over the same condition when the rider also changes the effect ("…and the damage can't be prevented").
 - `cantBeCopied: Boolean` — spell can't be copied (CR 707.10); copy effects that name it create no copy (Display of Power).
 - `conditionalFlash: Condition?` — gains flash while condition holds.
+- `flashWithCleanupSacrifice: Boolean` — the Mirage-block "You may cast this spell as though it had flash. If you
+  cast it any time a sorcery couldn't have been cast, the controller of the permanent it becomes sacrifices it at the
+  beginning of the next cleanup step." (Necromancy, Armor of Thorns, Parapet, Spider Climb). The permission is always on;
+  the sacrifice is owed only when *this* permission was what let it be cast (no printed flash, flash grant or other
+  "as though it had flash" permission applied, and not cast mid-resolution) — the engine stamps that on the spell and
+  arms a delayed cleanup-step sacrifice for the permanent it becomes (CR 603.7a, 514.3a).
 - `layout: CardLayout` — physical layout shape (see §2).
 - `meldResult: Boolean` — this card is the permanent a **meld pair** combines into (CR 701.42) — Chittering Host,
   Brisela, Voice of Nightmares, Hanweir, the Writhing Township, Ragnarok, Divine Deliverance. Set it on the *result*,
@@ -870,6 +876,8 @@ counts a hybrid Phyrexian pip paid with life like any other Phyrexian pip.
 - `dash` — cast from hand for the dash cost (CR 702.109); gains haste, returned to owner's hand at
   the beginning of the next end step (not exiled — unlike warp, dash has no later recast).
 - `conditionalFlash` — flash while condition holds.
+- `flashWithCleanupSacrifice = true` — "you may cast this spell as though it had flash; if you cast it any time a
+  sorcery couldn't have been cast, … sacrifices it at the beginning of the next cleanup step" (Necromancy).
 - `cantBeCountered` — spell is uncounterable.
 - `cantBeCounteredIf = condition` — uncounterable only while `condition` holds for the spell on the stack (Banefire).
 - `cantBeCopied` — spell can't be copied (CR 707.10).
@@ -8191,7 +8199,10 @@ Dominant back faces that "stay" instead self-exile on their final chapter, dodgi
   the `DelayedTriggeredAbility` and seeded into the pipeline its `effect` resolves in, under the same
   names, so the effect can `MoveCollection(from = "<name>")` or `PipelineTarget("<name>")` them; an
   object that has since changed zones (a new object) or ceased to exist is dropped when it fires
-  (Flickerform). Two orthogonal axes control *whose / which* turn fires the trigger:
+  (Flickerform). `step = Step.CLEANUP` is "at the beginning of the next cleanup step" (Waylay, Thawing
+  Glaciers): the turn structure stops in that cleanup step to put it on the stack, gives the active player
+  priority, and runs another cleanup step once the stack is empty and everyone passes (CR 514.3a). Two orthogonal
+  axes control *whose / which* turn fires the trigger:
   - `fireOnPlayer: EffectTarget?` — the single "whose turn" gate. Resolved to a concrete player
     at scheduling time; only matches when that player is active. Defaults to `null` (no player
     gate — fires on the next matching step of *any* turn). Two common shapes:

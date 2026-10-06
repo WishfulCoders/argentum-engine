@@ -115,3 +115,16 @@ fun DelayedTriggeredAbility.carriedPipelineFor(state: com.wingedsheep.engine.sta
         }
     )
 }
+
+/**
+ * Whether this step-based delayed trigger fires as [step] begins in [state]: it names that step, its
+ * "whose turn" gate admits the active turn ("your next end step" is the team's in a shared team turn,
+ * CR 805.4 — the non-representative head is never `activePlayerId`), and its turn floor has passed.
+ * Event-based delayed triggers ([DelayedTriggeredAbility.trigger] set) never fire on a step. The one
+ * predicate both [TriggerDetector.detectDelayedTriggers] and the cleanup step's CR 514.3a check read.
+ */
+fun DelayedTriggeredAbility.firesAtStepBeginning(state: com.wingedsheep.engine.state.GameState, step: Step): Boolean =
+    trigger == null &&
+        fireAtStep == step &&
+        (fireOnPlayerId == null || state.isActiveTurnFor(fireOnPlayerId)) &&
+        (notBeforeTurn == null || state.turnNumber >= notBeforeTurn)

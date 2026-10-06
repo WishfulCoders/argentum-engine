@@ -20,7 +20,7 @@ fun isModified(state: GameState, entityId: EntityId, controllerOf: (EntityId) ->
         val card = state.getEntity(attachId)?.get<CardComponent>()
         when {
             card?.typeLine?.isEquipment == true -> true
-            card?.typeLine?.isAura == true -> {
+            com.wingedsheep.engine.state.components.battlefield.isAuraAttachment(state.getEntity(attachId)) -> {
                 val hostController = controllerOf(entityId)
                 hostController != null && controllerOf(attachId) == hostController
             }

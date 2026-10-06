@@ -106,7 +106,12 @@ class UnattachedAurasCheck(
                 continue
             }
 
-            val isAura = cardComponent.typeLine.isAura
+            // Read off the projection like [remainsAttachment]: a permanent can *become* an Aura
+            // (CR 613.1d — Necromancy "becomes an Aura with 'enchant creature put onto the
+            // battlefield with Necromancy'") and is then judged by the Aura rules, unattached or
+            // illegally attached alike (CR 303.4c / 704.5m). A printed Aura that stopped being one
+            // was already handled as a non-attachment above.
+            val isAura = projected.hasType(entityId, "ENCHANTMENT") && projected.hasSubtype(entityId, "Aura")
             val isEquipment = cardComponent.typeLine.isEquipment
 
             if (!isAura && !isEquipment) continue
