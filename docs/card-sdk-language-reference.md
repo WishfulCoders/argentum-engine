@@ -6566,6 +6566,7 @@ For `enter()` and `die()`, a filter with no controller predicate means "you cont
 `choosesTargets()`, `putsSpellOrAbilityOnStack()`, `activatesAbility(of?, targeting?, loyalty,
 minLoyaltyRemoved, exhaust, includeManaAbilities, excludeManaAbilities, withoutTapInCost)`,
 `attackTriggersAbility()`, `attacks(with?, minAttackers?)` (you declare attackers), `isAttacked(…)`,
+`isAttackedUnblocked()` (`you` only),
 `isDealtDamage(by?, damageType?)`, `isDealtCombatDamage()`, `getsCounters(type?)` (`you` only — counters
 put on the player by anyone: "whenever you get one or more {E}", `CountersPlacedEvent.recipient`),
 `draws(exceptFirstInDrawStep?)`,
@@ -6976,6 +6977,14 @@ The shapes in this family, with their engine notes.
   `AttachmentTriggerDetector`, because "isn't blocked" is a *negative* over the whole block map,
   which the per-entity attachment path never sees.
   (An ANY-binding filtered variant still isn't wired in `TriggerMatcher`.)
+- `Triggers.you.isAttackedUnblocked()` — "whenever one or more creatures an opponent controls attack you
+  and aren't blocked" (Coveted Jewel), `CreaturesAttackYouUnblockedEvent`. Checked against the
+  defender's own `BlockersDeclaredEvent` (its `blockingPlayerId`; the whole defending team's under
+  Two-Headed Giant): fires when at least one creature attacking *you* — not a planeswalker you control
+  — had no blocker declared for it (CR 509.1h/509.3g), however many others were blocked. It is a
+  batch per **attacking player** (CR 603.2c), fanned out in `TriggerDetector`: once for each opponent
+  with an unblocked creature attacking you, and that opponent is `Player.TriggeringPlayer` ("that
+  player draws three cards and gains control of this artifact").
 
 **`AttackPredicate`** — extensible "facts about an attack declaration."
 Adding a new attack-time mechanic is one new sealed-case + one matcher branch

@@ -1619,6 +1619,25 @@ class TriggerDetector(
                             )
                         }
                     }
+                    // "Whenever one or more creatures an opponent controls attack you and aren't
+                    // blocked" (Coveted Jewel): one batch per attacking player (CR 603.2c), and that
+                    // player is the trigger's "that player" — so in a Two-Headed Giant attack by
+                    // both opponents it triggers once for each (ruling 2018-07-13).
+                    else if (ability.trigger is EventPattern.CreaturesAttackYouUnblockedEvent &&
+                        event is com.wingedsheep.engine.core.BlockersDeclaredEvent) {
+                        for (attackingPlayer in matcher.unblockedAttackingPlayers(event, controllerId, state)) {
+                            triggers.add(
+                                PendingTrigger(
+                                    ability = ability,
+                                    sourceId = entityId,
+                                    sourceName = cardComponent.name,
+                                    controllerId = controllerId,
+                                    triggerContext = TriggerContext.fromEvent(event)
+                                        .copy(triggeringPlayerId = attackingPlayer)
+                                )
+                            )
+                        }
+                    }
                     // For "whenever [a player] draws a card" (DrawEvent), drawing N cards via a
                     // single effect creates N separate trigger firings — one per card drawn
                     // (CR 121.2 + 603.2). The engine emits a single aggregate CardsDrawnEvent, so

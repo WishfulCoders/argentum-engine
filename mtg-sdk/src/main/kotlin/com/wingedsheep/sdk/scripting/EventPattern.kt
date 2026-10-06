@@ -1147,6 +1147,32 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
     }
 
     /**
+     * "Whenever one or more creatures an opponent controls attack you and aren't blocked" (Coveted
+     * Jewel) — the defender-side batch form of [BecomesUnblockedEvent].
+     *
+     * Checked once blockers are declared (CR 509.1h, 509.3g): it fires when at least one creature
+     * attacking the trigger's controller — the *player*, not a planeswalker they control or a
+     * battle they protect (Coveted Jewel ruling 2018-07-13) — had no creature declared as a blocker
+     * for it. Other attackers being blocked doesn't matter. Like CR 509.3g, a creature put onto the
+     * battlefield attacking counts, and one whose blockers were all removed from combat does not.
+     *
+     * It is a batch trigger (CR 603.2c) **per attacking player**: the creatures each opponent
+     * controls are one batch, so in a game where several opponents attack at once (a team in
+     * Two-Headed Giant) it triggers once for each of them, and the attacking player is the
+     * trigger's triggering player — `Player.TriggeringPlayer` is "that player" (ruling: "it triggers
+     * for each of them").
+     *
+     * Only the defending player's own block declaration is read, so the trigger fires once per
+     * combat even when several defending players declare blockers.
+     */
+    @SerialName("CreaturesAttackYouUnblockedEvent")
+    @Serializable
+    data object CreaturesAttackYouUnblockedEvent : EventPattern {
+        override val description: String =
+            "one or more creatures an opponent controls attack you and aren't blocked"
+    }
+
+    /**
      * When this creature blocks or becomes blocked by a creature matching [partnerFilter].
      * Binding SELF = "when this creature blocks or becomes blocked by [filter]".
      *

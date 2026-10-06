@@ -1100,13 +1100,19 @@ data class AttackersDeclaredEvent(
 
 /**
  * Blockers were declared.
+ *
+ * [blockingPlayerId] is the defending player whose declaration this is (CR 509.1). In a game with
+ * several defending players each declaration is its own event, so a trigger that reads one
+ * player's attackers as "not blocked" (CR 509.3g) — Coveted Jewel's "attack you and aren't
+ * blocked" — keys off its own controller's declaration. Null only for an event built without one.
  */
 @Serializable
 @SerialName("BlockersDeclaredEvent")
 data class BlockersDeclaredEvent(
     override val blockers: Map<EntityId, List<EntityId>>,  // blocker -> blocked attackers
     override val blockerNames: Map<EntityId, String> = emptyMap(),
-    override val attackerNames: Map<EntityId, String> = emptyMap()
+    override val attackerNames: Map<EntityId, String> = emptyMap(),
+    val blockingPlayerId: EntityId? = null
 ) : GameEvent, BlockingRelationshipsEvent {
     override val newBlockers: Set<EntityId> get() = blockers.keys
     @kotlinx.serialization.Transient

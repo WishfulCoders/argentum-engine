@@ -875,6 +875,16 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
     }
 
     /**
+     * "Whenever one or more creatures an opponent controls attack you and aren't blocked"
+     * ([CreaturesAttackYouUnblockedEvent], Coveted Jewel) — [Triggers.you] only. Once per attacking
+     * player, after blockers are declared; that player is `Player.TriggeringPlayer`.
+     */
+    fun isAttackedUnblocked(): TriggerSpec {
+        only("isAttackedUnblocked", Player.You)
+        return spec(CreaturesAttackYouUnblockedEvent)
+    }
+
+    /**
      * "is dealt damage [by a [by] source]" — [Triggers.you] only: any source, creature, burn spell
      * or artifact (Sun Droplet); the damage source is the triggering entity and the amount is
      * `TRIGGER_DAMAGE_AMOUNT`.
