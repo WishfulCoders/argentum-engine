@@ -532,6 +532,7 @@ val engineSerializersModule = SerializersModule {
         subclass(EmblemSourceComponent::class)
         subclass(EmblemActivatedAbilityComponent::class)
         subclass(EmblemStaticAbilityComponent::class)
+        subclass(com.wingedsheep.engine.state.components.identity.EmblemLinkedSourceComponent::class)
         subclass(CommanderComponent::class)
         subclass(RingBearerComponent::class)
         subclass(TheRingComponent::class)
