@@ -1644,6 +1644,75 @@
     ]
 }
 
+// March of Otherworldly Light
+{
+    "name": "March of Otherworldly Light",
+    "manaCost": "{X}{W}",
+    "typeLine": "Instant",
+    "oracleText": "As an additional cost to cast this spell, you may exile any number of white cards from your hand. This spell costs {2} less to cast for each card exiled this way.\nExile target artifact, creature, or enchantment with mana value X or less.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Exile"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            {
+                                "type": "Or",
+                                "predicates": [
+                                    "IsArtifact",
+                                    "IsCreature",
+                                    "IsEnchantment"
+                                ]
+                            },
+                            "ManaValueAtMostX"
+                        ]
+                    }
+                },
+                "id": "t0"
+            }
+        ],
+        "additionalCosts": [
+            {
+                "type": "ExileCardsForCostReduction",
+                "filter": "white",
+                "costReductionPerCard": 2
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "28",
+        "rarity": "RARE",
+        "artist": "Nils Hamm",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/5/553fb946-2706-475b-89f9-e4355ec9ea2b.jpg?1783923916",
+        "rulings": [
+            {
+                "date": "2022-02-18",
+                "text": "You may exile more cards than necessary for March of Otherworldly Light's first ability, but you can't reduce the mana it costs to less than {W} this way."
+            },
+            {
+                "date": "2022-02-18",
+                "text": "For example, say you wanted to choose a target with mana value 6. You need X to be at least 6. You could choose to cast March of Otherworldly Light by paying {6}{W}. You could also exile white cards from your hand to reduce that cost by {2} for each one. If you had a reason to, you could even choose a greater value for X."
+            },
+            {
+                "date": "2022-02-18",
+                "text": "The mana value of March of Otherworldly Light while it's on the stack is the value chosen for X plus 1, no matter how much mana you actually paid to cast it."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Moonfolk Puzzlemaker
 {
     "name": "Moonfolk Puzzlemaker",
