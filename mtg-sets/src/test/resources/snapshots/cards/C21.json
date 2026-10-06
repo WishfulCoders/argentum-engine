@@ -301,3 +301,86 @@
         ]
     }
 }
+
+// Triplicate Titan
+{
+    "name": "Triplicate Titan",
+    "manaCost": "{9}",
+    "typeLine": "Artifact Creature — Golem",
+    "oracleText": "Flying, vigilance, trample\nWhen this creature dies, create a 3/3 colorless Golem artifact creature token with flying, a 3/3 colorless Golem artifact creature token with vigilance, and a 3/3 colorless Golem artifact creature token with trample.",
+    "creatureStats": {
+        "power": 9,
+        "toughness": 9
+    },
+    "keywords": [
+        "FLYING",
+        "VIGILANCE",
+        "TRAMPLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Triplicate Titan:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "CreateToken",
+                            "power": 3,
+                            "toughness": 3,
+                            "colors": [],
+                            "creatureTypes": [
+                                "Golem"
+                            ],
+                            "keywords": [
+                                "FLYING"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/c/6/c6a3a35a-ebd8-47e5-a5ed-c736b8bed968.jpg?1783927196",
+                            "artifactToken": true
+                        },
+                        {
+                            "type": "CreateToken",
+                            "power": 3,
+                            "toughness": 3,
+                            "colors": [],
+                            "creatureTypes": [
+                                "Golem"
+                            ],
+                            "keywords": [
+                                "VIGILANCE"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/f/2/f27efb56-7fd4-4d0e-b641-a152b3ef8953.jpg?1783927195",
+                            "artifactToken": true
+                        },
+                        {
+                            "type": "CreateToken",
+                            "power": 3,
+                            "toughness": 3,
+                            "colors": [],
+                            "creatureTypes": [
+                                "Golem"
+                            ],
+                            "keywords": [
+                                "TRAMPLE"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/4/0/40c50c6d-5116-4acb-89d3-f27efb20d336.jpg?1783927195",
+                            "artifactToken": true
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "79",
+        "rarity": "RARE",
+        "artist": "Andrew Mar",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/6/568dd5a6-86f4-4039-87d7-812120c8ab94.jpg?1783927584"
+    },
+    "colorIdentityOverride": []
+}

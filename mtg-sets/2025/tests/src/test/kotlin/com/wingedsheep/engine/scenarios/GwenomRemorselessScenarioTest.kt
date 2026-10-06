@@ -91,6 +91,27 @@ class GwenomRemorselessScenarioTest : FunSpec({
         (driver.findPermanent(you, "Top Beast") != null) shouldBe true  // resolved onto the battlefield
     }
 
+    // "Play cards" includes lands: the enumerator offered the land play under the granted
+    // permission, and the PlayLand handler must accept it rather than reject "not in your hand".
+    test("after Gwenom attacks, a land on top of the library can be played as the land drop") {
+        val (driver, you, opponent) = newGame()
+        val gwenom = driver.putCreatureOnBattlefield(you, "Gwenom, Remorseless")
+        driver.removeSummoningSickness(gwenom)
+        val swamp = driver.putCardOnTopOfLibrary(you, "Swamp")
+
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.declareAttackers(you, listOf(gwenom), opponent)
+        resolveStack(driver)
+        driver.declareNoBlockers(opponent)
+        driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
+        resolveStack(driver)
+
+        val lifeBefore = driver.getLifeTotal(you)
+        driver.playLand(you, swamp).error shouldBe null
+        driver.state.getBattlefield(you).contains(swamp) shouldBe true
+        driver.getLifeTotal(you) shouldBe lifeBefore // a land play pays no life
+    }
+
     // Regression: the attack also grants LookAtTopOfLibrary, so the controller must actually SEE the
     // top card in their client view — otherwise it is castable but invisible, so there is nothing to
     // play. The granted static lives in `grantedStaticAbilities` (not the card's printed statics), a

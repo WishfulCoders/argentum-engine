@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 146 / 312
+**Implemented:** 148 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -132,7 +132,7 @@
 - [ ] Hanged Executioner
 - [x] Harmonize
 - [ ] Haunted Mire
-- [ ] Haywire Mite
+- [x] Haywire Mite
 - [ ] Hazel of the Rootbloom
 - [ ] Hazel's Brewmaster
 - [x] Hedron Archive
@@ -280,7 +280,7 @@
 - [x] Swords to Plowshares
 - [ ] Tainted Wood
 - [x] Talisman of Impulse
-- [ ] Talisman of Resilience
+- [x] Talisman of Resilience
 - [x] Tamiyo, Field Researcher
 - [ ] Tear Asunder
 - [ ] Teferi, Time Raveler

@@ -590,6 +590,37 @@
     ]
 }
 
+// Crucible of Worlds
+{
+    "name": "Crucible of Worlds",
+    "manaCost": "{3}",
+    "typeLine": "Artifact",
+    "oracleText": "You may play lands from your graveyard.",
+    "script": {
+        "staticAbilities": [
+            "MayPlayLandsFromGraveyard"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "114",
+        "rarity": "RARE",
+        "artist": "Ron Spencer",
+        "flavorText": "Amidst the darkest ashes grow the strongest seeds.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/1/312a6058-de08-487d-95bd-b3c56807fdd6.jpg?1783944383",
+        "rulings": [
+            {
+                "date": "2018-07-13",
+                "text": "Crucible of Worlds doesn't change the times when you can play those land cards. You can still play only one land per turn, and only during your main phase when you have priority and the stack is empty."
+            },
+            {
+                "date": "2018-07-13",
+                "text": "Crucible of Worlds doesn't allow you to activate abilities (such as cycling) of land cards in your graveyard."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Desecration Elemental
 {
     "name": "Desecration Elemental",
@@ -1548,6 +1579,56 @@
     "colorIdentityOverride": [
         "BLACK"
     ]
+}
+
+// Pentad Prism
+{
+    "name": "Pentad Prism",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "Sunburst (This artifact enters with a charge counter on it for each color of mana spent to cast it.)\nRemove a charge counter from this artifact: Add one mana of any color.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Pentad Prism:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomRemoveCounters",
+                        "counterType": "CHARGE",
+                        "self": true
+                    }
+                },
+                "effect": "AddManaOfChoice",
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "Remove a charge counter from this artifact: Add one mana of any color."
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithDynamicCounters",
+                "counterType": "CHARGE",
+                "count": "DistinctColorsManaSpent"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "143",
+        "artist": "David Martin",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/7/672b9b16-daef-44e6-9a3a-cfd9f3c78bc7.jpg?1783944376",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "Sunburst checks what mana was actually spent to cast the spell. If an effect allows you to spend mana \"as though it were mana\" of any color or type, that allows you to spend mana you couldn't otherwise spend, but it doesn't change what mana you spent to cast the spell."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "Once Pentad Prism has run out of charge counters, it remains on the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Plasma Elemental

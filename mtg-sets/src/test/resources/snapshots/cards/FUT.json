@@ -36,6 +36,100 @@
     ]
 }
 
+// Coalition Relic
+{
+    "name": "Coalition Relic",
+    "manaCost": "{3}",
+    "typeLine": "Artifact",
+    "oracleText": "{T}: Add one mana of any color.\n{T}: Put a charge counter on this artifact.\nAt the beginning of your first main phase, remove all charge counters from this artifact. Add one mana of any color for each charge counter removed this way.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Coalition Relic:3",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "PRECOMBAT_MAIN"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "StoreNumber",
+                            "name": "number0",
+                            "amount": {
+                                "type": "EntityProperty",
+                                "entity": "Self",
+                                "numericProperty": {
+                                    "type": "CounterCount",
+                                    "counterType": "CHARGE"
+                                }
+                            }
+                        },
+                        {
+                            "type": "RemoveAllCountersOfType",
+                            "counterType": "CHARGE",
+                            "target": "Self"
+                        },
+                        {
+                            "type": "AddDynamicMana",
+                            "amountSource": {
+                                "type": "VariableReference",
+                                "variableName": "number0"
+                            },
+                            "allowedColors": [
+                                "WHITE",
+                                "BLUE",
+                                "BLACK",
+                                "RED",
+                                "GREEN"
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Coalition Relic:1",
+                "cost": "CostTap",
+                "effect": "AddManaOfChoice",
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "{T}: Add one mana of any color."
+            },
+            {
+                "id": "Coalition Relic:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "CHARGE",
+                    "count": 1,
+                    "target": "Self"
+                },
+                "descriptionOverride": "{T}: Put a charge counter on this artifact."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "161",
+        "rarity": "RARE",
+        "artist": "Donato Giancola",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/a/7a7c98b0-d64d-4d0a-b284-1187a8e7095e.jpg?1783943092",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "If you remove multiple charge counters from Coalition Relic at once, you may add a different color of mana for each one."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "Only the first main phase each turn is considered a precombat main phase, even if additional main phases or combat phases are created."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Dryad Arbor
 {
     "name": "Dryad Arbor",

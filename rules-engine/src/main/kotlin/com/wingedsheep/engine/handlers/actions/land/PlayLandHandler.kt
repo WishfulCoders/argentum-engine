@@ -41,6 +41,8 @@ import com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent
 import com.wingedsheep.sdk.scripting.MayPlayPermanentsFromGraveyard
 import com.wingedsheep.engine.legalactions.utils.LandDropUtils
 import com.wingedsheep.sdk.scripting.PlayFromTopOfLibrary
+import com.wingedsheep.sdk.scripting.PlayFromTopWithAlternativeCost
+import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.sdk.scripting.PlayLandsAndCastFilteredFromTopOfLibrary
 import com.wingedsheep.engine.handlers.actions.spell.allowsLand
 import kotlin.reflect.KClass
@@ -736,9 +738,35 @@ class PlayLandHandler(
                 if (unwrapped is PlayLandsAndCastFilteredFromTopOfLibrary && unwrapped.allowsLand(landCard)) {
                     return true
                 }
+                // Bolas's Citadel: "you may play lands and cast spells from the top of your library".
+                // The alternative cost only touches spells; a land is played with the land drop.
+                if (unwrapped is PlayFromTopWithAlternativeCost &&
+                    alternativeCostPermissionCovers(state, playerId, cardId, unwrapped)
+                ) {
+                    return true
+                }
             }
         }
-        return false
+        // Gwenom, Remorseless grants the same permission until end of turn. CastPermissionUtils
+        // already offers the land play under it, so the handler must accept what was offered.
+        return state.grantedStaticAbilities.any { grant ->
+            val ability = grant.ability as? PlayFromTopWithAlternativeCost ?: return@any false
+            state.getEntity(grant.entityId)?.get<ControllerComponent>()?.playerId == playerId &&
+                alternativeCostPermissionCovers(state, playerId, cardId, ability)
+        }
+    }
+
+    /** A [PlayFromTopWithAlternativeCost] with no filter covers every card, lands included. */
+    private fun alternativeCostPermissionCovers(
+        state: GameState,
+        playerId: EntityId,
+        cardId: EntityId,
+        permission: PlayFromTopWithAlternativeCost
+    ): Boolean {
+        val filter = permission.filter ?: return true
+        return predicateEvaluator.matches(
+            state, state.projectedState, cardId, filter, PredicateContext(controllerId = playerId)
+        )
     }
 
     /**
