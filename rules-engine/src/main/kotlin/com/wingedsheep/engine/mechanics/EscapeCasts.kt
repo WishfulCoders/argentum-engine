@@ -99,7 +99,7 @@ object EscapeCasts {
         // Controlled view, so the grant follows whoever controls the granter (CR 109.5).
         for (granterId in state.controlledBattlefield(controllerId)) {
             val def = state.getEntity(granterId)?.get<CardComponent>()
-                ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
+                ?.let { cardRegistry.getCard(it) } ?: continue
             for (ability in def.script.staticAbilities) {
                 if (ability !is GraveyardCardsHaveEscape) continue
                 // CR 118.6: "equal to the card's mana cost" on a card with no mana cost is unpayable.

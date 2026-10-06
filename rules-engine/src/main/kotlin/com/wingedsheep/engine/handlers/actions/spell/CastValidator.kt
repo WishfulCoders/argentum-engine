@@ -479,7 +479,7 @@ internal class CastValidator(
         val state = com.wingedsheep.engine.mechanics.CastCharacteristics.announce(inputState, action, cardRegistry)
         val cardComponent = state.getEntity(action.cardId)?.get<CardComponent>() ?: return false
         val cardDef = com.wingedsheep.engine.mechanics.CastCharacteristics.definitionForCast(
-            cardRegistry.getCard(cardComponent.cardDefinitionId), action
+            cardRegistry.getCard(cardComponent), action
         ) ?: return false
         if (!cardDef.script.flashWithCleanupSacrifice) return false
         val source = castSource(state, action, cardComponent) ?: return false
