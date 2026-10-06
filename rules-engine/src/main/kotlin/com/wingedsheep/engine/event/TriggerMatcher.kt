@@ -1100,6 +1100,11 @@ class TriggerMatcher(
         // "while you're activating a craft ability" (Market Gnome, CR 702.167) — fire only when
         // this exile was a chosen craft material, not on any other exile.
         if (trigger.requireCraftMaterial && !event.craftMaterial) return false
+        // "…and it wasn't cast": an entry from the stack is a resolving permanent spell, which was
+        // cast unless it is a (token) copy of a spell.
+        if (trigger.notCast && event.fromZone == com.wingedsheep.sdk.core.Zone.STACK &&
+            state.getEntity(event.entityId)?.has<com.wingedsheep.engine.state.components.identity.TokenComponent>() != true
+        ) return false
 
         // Check binding
         when (binding) {

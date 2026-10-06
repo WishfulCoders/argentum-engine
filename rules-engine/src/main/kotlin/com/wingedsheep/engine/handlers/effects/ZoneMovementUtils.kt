@@ -73,6 +73,17 @@ import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.predicates.evaluateWith
 
 /**
+ * How an object would enter the battlefield, for the replacements that look at the permanent "as it
+ * would exist on the battlefield" (CR 614.12): who would control it, whether it enters face down (a
+ * nameless 2/2 creature, CR 708.2), and the registry its own static abilities are read from.
+ */
+data class EntryProspect(
+    val controllerId: EntityId,
+    val faceDown: Boolean = false,
+    val cardRegistry: CardRegistry? = null,
+)
+
+/**
  * Result of a zone change redirect check.
  *
  * @param destinationZone The (possibly redirected) destination zone
@@ -782,9 +793,33 @@ object ZoneMovementUtils {
         fromZone: Zone?,
         toZone: Zone,
         battlefieldSourceState: GameState = state,
-        predicateEvaluator: PredicateEvaluator
+        predicateEvaluator: PredicateEvaluator,
+        entering: EntryProspect? = null
     ): ZoneChangeRedirectResult {
         val container = state.getEntity(entityId) ?: return ZoneChangeRedirectResult(toZone)
+        // A battlefield entry is matched against the permanent as it would exist there (CR 614.12),
+        // computed at most once per check and only when some entry replacement asks.
+        val entryProspect: GameState? by lazy(LazyThreadSafetyMode.NONE) {
+            if (toZone != Zone.BATTLEFIELD) null
+            else prospectiveEntryState(state, entityId, container, entering)
+        }
+        fun entryMatches(
+            event: com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent,
+            sourceControllerId: EntityId,
+            sourceId: EntityId?,
+            fallback: () -> Boolean
+        ): Boolean {
+            if (toZone != Zone.BATTLEFIELD) return fallback()
+            // "…and it wasn't cast": a permanent spell resolving from the stack was cast, unless it
+            // is a copy of a spell, which is a token.
+            if (event.notCast && fromZone == Zone.STACK && !container.has<TokenComponent>()) return false
+            val prospect = entryProspect ?: return fallback()
+            if (event.filter == GameObjectFilter.Any) return true
+            return predicateEvaluator.matches(
+                prospect, prospect.projectedState, entityId, event.filter,
+                PredicateContext(controllerId = sourceControllerId, sourceId = sourceId)
+            )
+        }
 
         // Card-intrinsic "would be put into [zone] from anywhere → redirect instead" self-replacement
         // (Darksteel Colossus, Progenitus). It says "from anywhere", so it functions from every
@@ -876,8 +911,11 @@ object ZoneMovementUtils {
                         // Check source zone matches (if specified)
                         if (event.from != null && event.from != fromZone) continue
 
-                        // Check filter against the entity being moved
-                        if (!matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId, battlefieldSourceState, permanentId)) continue
+                        // Check filter against the entity being moved — for a battlefield entry, as
+                        // the permanent it would be there (CR 614.12).
+                        if (!entryMatches(event, sourceControllerId, permanentId) {
+                                matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId, battlefieldSourceState, permanentId)
+                            }) continue
 
                         // Honour any cause qualifier (e.g. "only when discarded by an opponent's
                         // spell or ability") the same way the self-replacement path above does.
@@ -898,7 +936,9 @@ object ZoneMovementUtils {
 
                         if (event.to != null && event.to != toZone) continue
                         if (event.from != null && event.from != fromZone) continue
-                        if (!effect.selfOnly && !matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId, battlefieldSourceState, permanentId)) continue
+                        if (!effect.selfOnly && !entryMatches(event, sourceControllerId, permanentId) {
+                                matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId, battlefieldSourceState, permanentId)
+                            }) continue
 
                         // Match found — redirect AND return additional effect. When the replacement
                         // links its exiled cards to the source (The Darkness Crystal), carry the
@@ -930,13 +970,56 @@ object ZoneMovementUtils {
 
             if (event.to != null && event.to != toZone) continue
             if (event.from != null && event.from != fromZone) continue
-            if (!matchesZoneChangeFilter(state, entityId, container, event.filter, grant.controllerId)) continue
+            if (!entryMatches(event, grant.controllerId, null) {
+                    matchesZoneChangeFilter(state, entityId, container, event.filter, grant.controllerId)
+                }) continue
             if (!causeSatisfied(state, entityId, container, effect.requiredCause)) continue
 
             return ZoneChangeRedirectResult(effect.newDestination)
         }
 
         return ZoneChangeRedirectResult(toZone)
+    }
+
+    /**
+     * A throwaway state in which [entityId] already sits on the battlefield the way it is about to
+     * enter — under [entering]'s controller (its owner by default), face down if it enters face
+     * down, carrying its own static abilities — so projection answers "what would this permanent
+     * be?" (CR 614.12: "check the characteristics of the permanent as it would exist on the
+     * battlefield, taking into account … continuous effects from the permanent's own static
+     * abilities that would apply to it once it's on the battlefield, and continuous effects that
+     * already exist and would apply to the permanent"). March of the Machines makes an entering
+     * artifact a creature here; a Theros god short on devotion is not one; a manifested card is a
+     * 2/2 creature. Never committed: the real entry still runs through the mover, which emits the
+     * events. Returns null when the object has no card characteristics to project.
+     */
+    private fun prospectiveEntryState(
+        state: GameState,
+        entityId: EntityId,
+        container: ComponentContainer,
+        entering: EntryProspect?
+    ): GameState? {
+        val card = container.get<CardComponent>() ?: return null
+        val controllerId = entering?.controllerId ?: card.ownerId ?: return null
+        // Detach it from wherever it is now (graveyard, library, hand, exile, stack) first: an
+        // object is in exactly one zone, and the throwaway state must hold it only on the battlefield.
+        var placed = state
+        state.logicalZone(entityId)?.let { origin ->
+            if (entityId in placed.getZone(origin)) placed = placed.removeFromZone(origin, entityId)
+        }
+        if (entityId in placed.stack) placed = placed.removeFromStack(entityId)
+        placed = placed.addToZone(ZoneKey(controllerId, Zone.BATTLEFIELD), entityId)
+        placed = placed.updateEntity(entityId) { c ->
+            var u = c.with(ControllerComponent(controllerId))
+            if (entering?.faceDown == true) {
+                u = u.with(com.wingedsheep.engine.state.components.identity.FaceDownComponent)
+            } else if (entering?.cardRegistry != null) {
+                u = com.wingedsheep.engine.mechanics.layers.StaticAbilityHandler(entering.cardRegistry)
+                    .addContinuousEffectComponent(u)
+            }
+            u
+        }
+        return placed
     }
 
     /**

@@ -349,7 +349,12 @@ class ZoneTransitionService(
 
         // 3. Check zone change redirect (unless skipped)
         val redirectResult = if (!options.skipZoneChangeRedirect) {
-            ZoneMovementUtils.checkZoneChangeRedirect(state, entityId, fromZone, destinationZone, predicateEvaluator = predicateEvaluator)
+            ZoneMovementUtils.checkZoneChangeRedirect(
+                state, entityId, fromZone, destinationZone, predicateEvaluator = predicateEvaluator,
+                entering = if (destinationZone == Zone.BATTLEFIELD) {
+                    EntryProspect(options.controllerId ?: ownerId, options.faceDown, cardRegistry)
+                } else null
+            )
         } else {
             ZoneChangeRedirectResult(destinationZone)
         }

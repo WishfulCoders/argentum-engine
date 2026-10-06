@@ -208,6 +208,21 @@ class PlayLandHandler(
         } else {
             ZoneKey(action.playerId, fromZone)
         }
+        // Playing a land puts it onto the battlefield (CR 305.1), so a replacement effect that
+        // modifies a battlefield entry applies to the play too (CR 614.1a): Containment Priest's
+        // "if a nontoken creature would enter and it wasn't cast, exile it instead" exiles a played
+        // Dryad Arbor. Asked of the land as it would exist on the battlefield (CR 614.12). The play
+        // itself still happened — the land drop is used and the land counts as played (CR 305.2a)
+        // — only its destination is replaced (CR 614.6).
+        val entryRedirect = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils.checkZoneChangeRedirect(
+            state, action.cardId, fromZone, Zone.BATTLEFIELD,
+            predicateEvaluator = predicateEvaluator,
+            entering = com.wingedsheep.engine.handlers.effects.EntryProspect(action.playerId, cardRegistry = cardRegistry)
+        )
+        if (entryRedirect.destinationZone != Zone.BATTLEFIELD) {
+            return executeRedirectedPlay(state, action, fromZone, sourceZoneKey, entryRedirect.destinationZone)
+        }
+
         newState = newState.removeFromZone(sourceZoneKey, action.cardId)
 
         // A land played from a face-down exile enters face up as the real land, never as a face-down
@@ -719,6 +734,56 @@ class PlayLandHandler(
         val events = listOf(zoneChangeEvent) + entersWithEvents + listOfNotNull(riderPlayEvent, landPlayedEvent)
         newState = newState.tick()
         return ExecutionResult.success(newState, events)
+    }
+
+    /**
+     * A land play whose battlefield entry a replacement effect sent to [destination] instead (CR
+     * 614.6). The special action was still taken: the land drop is used, the play is recorded among
+     * the turn's land plays with its origin zone, a single-use or once-per-turn permission it went
+     * through is spent, and "whenever you play a land" sees it. The card moves through the normal
+     * zone-transition pipeline (its redirect already decided), so the ZoneChangeEvent names where it
+     * really went and no enters-the-battlefield ability triggers.
+     */
+    private fun executeRedirectedPlay(
+        state: GameState,
+        action: PlayLand,
+        fromZone: Zone,
+        sourceZoneKey: ZoneKey,
+        destination: Zone,
+    ): ExecutionResult {
+        val graveyardLandGrant = if (fromZone == Zone.GRAVEYARD &&
+            state.activeMayPlayFor(action.cardId, action.playerId, conditionEvaluator, cardRegistry).none { !it.nonLandOnly } &&
+            !hasLandGraveyardPlayPermission(state, action.playerId) &&
+            findGraveyardPlayPermissionSource(state, action.playerId, CardType.LAND.name) == null
+        ) zoneResolver.graveyardLandPlayGrant(state, action.playerId, action.cardId) else null
+
+        val moved = com.wingedsheep.engine.handlers.effects.ZoneTransitionService(cardRegistry, predicateEvaluator)
+            .moveToZone(
+                state, action.cardId, destination,
+                com.wingedsheep.engine.handlers.effects.ZoneEntryOptions(skipZoneChangeRedirect = true),
+                fromZoneKey = sourceZoneKey
+            )
+        var newState = moved.state
+        if (fromZone == Zone.EXILE || fromZone == Zone.GRAVEYARD) {
+            newState = newState.consumeSingleUseMayPlayFor(action.cardId, action.playerId)
+        }
+        if (fromZone == Zone.GRAVEYARD) {
+            newState = recordGraveyardPlayPermissionUsage(newState, action.playerId, CardType.LAND.name)
+            graveyardLandGrant?.takeIf { it.second.oncePerTurn }?.let { (sourceId, _) ->
+                newState = newState.updateEntity(sourceId) { c ->
+                    c.with(com.wingedsheep.engine.state.components.battlefield.MayCastFromGraveyardUsedThisTurnComponent)
+                }
+            }
+        }
+        newState = newState.removeMayPlayPermissionsForCard(action.cardId)
+        newState = newState.updateEntity(action.playerId) { c ->
+            val landDrops = c.get<LandDropsComponent>() ?: LandDropsComponent()
+            val prior = c.get<com.wingedsheep.engine.state.components.player.LandsPlayedThisTurnComponent>()
+                ?: com.wingedsheep.engine.state.components.player.LandsPlayedThisTurnComponent()
+            c.with(landDrops.use()).with(prior.copy(fromZones = prior.fromZones + fromZone))
+        }
+        val events = moved.events + com.wingedsheep.engine.core.LandPlayedEvent(action.cardId, action.playerId, fromZone)
+        return ExecutionResult.success(newState.tick(), events)
     }
 
     private fun isOnTopOfLibraryWithPermission(

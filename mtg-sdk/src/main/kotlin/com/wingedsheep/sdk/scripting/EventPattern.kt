@@ -153,7 +153,16 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
          * triggering event's craft-material flag, which the Craft cost payment stamps onto the
          * exile of each chosen material (and only those — an unrelated exile leaves it `false`).
          */
-        val requireCraftMaterial: Boolean = false
+        val requireCraftMaterial: Boolean = false,
+        /**
+         * When true, a battlefield entry matches only if the object **wasn't cast** — Containment
+         * Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead." A
+         * permanent spell resolving onto the battlefield (CR 608.3) was cast (CR 601.2i), unless
+         * it is a copy of a spell, which is a token (CR 707.10f, 111.1); every other entry — put
+         * onto the battlefield by an effect, played as a land (CR 305.1), a token — wasn't. Only
+         * meaningful for `to = BATTLEFIELD` patterns.
+         */
+        val notCast: Boolean = false
     ) : EventPattern {
         override val description: String = buildString {
             append(describeObjectForEvent(filter))
@@ -183,6 +192,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
                 append(" would leave ${from.displayName}")
             }
             if (requireCraftMaterial) append(" while you're activating a craft ability")
+            if (notCast) append(" and it wasn't cast")
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): EventPattern {

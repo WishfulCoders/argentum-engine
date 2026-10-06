@@ -15142,7 +15142,18 @@ The priority groups are (CR 616.1a–f):
 - `RedirectZoneChange(newDestination, appliesTo, linkToSource = false, selfOnly = false, shuffleIntoLibrary = false, reveal = false, requiredCause = ZoneChangeCause.Any)`
   — redirect a zone change to a different destination (Rest in Peace / Leyline of the Void: graveyard →
   exile). `appliesTo` is an `EventPattern.ZoneChangeEvent(filter, from?, to?)`; the `filter`'s
-  `controllerPredicate` scopes it (e.g. `OwnedByOpponent` for Leyline). When `linkToSource = true` and
+  `controllerPredicate` scopes it (e.g. `OwnedByOpponent` for Leyline). **Battlefield entries** (`to = Zone.BATTLEFIELD`) are
+  matched against the permanent *as it would exist on the battlefield* (CR 614.12 —
+  `ZoneMovementUtils.checkZoneChangeRedirect` projects a throwaway state with the object placed under
+  its entering controller, face down if it enters face down, carrying its own statics), so March of the
+  Machines makes an entering artifact a creature, a manifested card is a 2/2 creature and a creature
+  card with "isn't a creature" is not. `ZoneChangeEvent(notCast = true)` restricts an entry to objects
+  that **weren't cast** — a resolving permanent spell was, unless it is a (token) copy of one; an
+  effect's put-onto-the-battlefield, a land play and a token weren't. Containment Priest =
+  `RedirectZoneChange(Zone.EXILE, ZoneChangeEvent(Creature.nontoken(), to = BATTLEFIELD, notCast =
+  true))`. A land play (`PlayLandHandler`) consults battlefield-entry redirects too (CR 305.1): a
+  redirected play still uses the land drop and counts as played (CR 305.2a), only its destination is
+  replaced (CR 614.6). `notCast` is honoured by `TriggerMatcher` as well. When `linkToSource = true` and
   `newDestination = Zone.EXILE`, each redirected card is added to the source permanent's
   `LinkedExileComponent`, so the source can later reference — and grant playing of — the cards it exiled.
   Valgavoth, Terror Eater pairs it with `GrantMayCastFromLinkedExile`: "If a card you didn't control
