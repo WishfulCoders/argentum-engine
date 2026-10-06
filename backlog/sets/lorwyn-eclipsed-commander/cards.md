@@ -2,7 +2,7 @@
 
 **Set Size:** 153 cards
 **Release Date:** January 23, 2026
-**Implemented:** 7 / 153
+**Implemented:** 8 / 153
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 4     | 0    |
@@ -64,7 +64,7 @@
 - [ ] Ferrafor, Young Yew
 - [ ] Fertile Ground
 - [ ] Festering Thicket
-- [ ] Fire Covenant
+- [x] Fire Covenant
 - [ ] Flamekin Village
 - [ ] Flourishing Defenses
 - [ ] Foundation Breaker
