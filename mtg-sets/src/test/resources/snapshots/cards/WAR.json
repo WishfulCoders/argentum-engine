@@ -3528,6 +3528,126 @@
     ]
 }
 
+// Saheeli, Sublime Artificer
+{
+    "name": "Saheeli, Sublime Artificer",
+    "manaCost": "{1}{U/R}{U/R}",
+    "typeLine": "Legendary Planeswalker — Saheeli",
+    "oracleText": "Whenever you cast a noncreature spell, create a 1/1 colorless Servo artifact creature token.\n−2: Target artifact you control becomes a copy of another target artifact or creature you control until end of turn, except it's an artifact in addition to its other types.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Saheeli, Sublime Artificer:1",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [],
+                    "creatureTypes": [
+                        "Servo"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/7/6/761507d5-d36a-4123-a074-95d7f6ffb4c5.jpg?1783933348",
+                    "artifactToken": true
+                },
+                "descriptionOverride": "Whenever you cast a noncreature spell, create a 1/1 colorless Servo artifact creature token."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Saheeli, Sublime Artificer:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "EachPermanentBecomesCopyOfTarget",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t1"
+                    },
+                    "duration": "EndOfTurn",
+                    "affected": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "exceptions": {
+                        "addedCardTypes": [
+                            "ARTIFACT"
+                        ]
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "artifact ctrl:you"
+                        },
+                        "id": "t0"
+                    },
+                    {
+                        "type": "TargetOther",
+                        "baseRequirement": {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "artifact|creature ctrl:you"
+                            }
+                        },
+                        "id": "t1"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "234",
+        "rarity": "UNCOMMON",
+        "artist": "Wesley Burt",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5a10b543-d5d4-42a8-9ee8-dada59a2ad7e.jpg?1783933375",
+        "rulings": [
+            {
+                "date": "2019-05-03",
+                "text": "Saheeli's first ability resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "Saheeli's loyalty ability causes the target artifact to copy the printed values of the target permanent, plus any copy effects that have been applied to it. It won't copy counters on that permanent or effects that have changed its power, toughness, types, color, or so on. Notably, it won't copy effects that made the target permanent become a creature."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "The target artifact is an artifact in addition to whatever types the second target has, and this exception is copiable. If something else copies the artifact later in the turn, that copy also will be an artifact."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If the target artifact copies a permanent that's copying something else, it will become whatever the target is copying."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If the target artifact becomes a creature the same turn it enters the battlefield, you can't attack with it or use any of its {T} abilities unless it has haste."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If the target artifact isn't an Equipment and becomes a copy of an Equipment, it'll become unattached when it becomes a non-Equipment artifact again."
+            }
+        ]
+    },
+    "startingLoyalty": 5,
+    "colorIdentityOverride": [
+        "BLUE",
+        "RED"
+    ]
+}
+
 // Samut's Sprint
 {
     "name": "Samut's Sprint",
