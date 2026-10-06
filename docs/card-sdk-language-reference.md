@@ -3007,6 +3007,11 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   "Sacrifice a creature.": the **ability's controller** sacrifices and no player is named. Distinct
   from `Effects.Sacrifice`, which is the edict and names the player who must sacrifice — writing the
   bare form as `Sacrifice(filter, 1, EffectTarget.Controller)` says the same thing the long way round.
+  The filter is read in the ability's own context (by the sacrifice and by `Gate.MayPay`'s
+  affordability check alike), so source-relative predicates work in it: "you may sacrifice another
+  creature or an artifact" (**Gut, True Soul Zealot**) is
+  `SacrificeOwn(Creature.notSourceItself() or Artifact)` — "another" binds the creature branch only,
+  so an artifact source may sacrifice itself (its ruling), which `excludeSource = true` can't say.
 - `Effects.SacrificeAnyNumber(filter, excludeSource = false)`
   (= `SacrificeEffect(filter, any = true, excludeSource)`) — the *resolving*
   player chooses 0+ of their own permanents matching `filter` to sacrifice. Distinct from

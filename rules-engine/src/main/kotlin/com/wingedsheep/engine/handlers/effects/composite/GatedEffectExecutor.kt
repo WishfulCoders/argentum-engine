@@ -697,8 +697,11 @@ class GatedEffectExecutor(
             // Without this the gate fails open and offers an impossible "yes": Pippin's Bravery with
             // no Food still lets you choose "Sacrifice a Food" and wrongly take the +4/+4 branch.
             is com.wingedsheep.sdk.scripting.effects.SacrificeEffect -> cost.any || run {
+                // Read in the ability's context (source-relative predicates — "another creature or
+                // an artifact"), as the sacrifice itself will be; the payer is the sacrificer.
                 val fodder = BattlefieldFilterUtils.findMatchingOnBattlefield(
-                    state, cost.filter.youControl(), PredicateContext(controllerId = playerId),
+                    state, cost.filter.youControl(),
+                    PredicateContext.fromEffectContext(context).copy(controllerId = playerId),
                     predicateEvaluator = predicateEvaluator
                 ).filterNot { cost.excludeSource && it == context.sourceId }
                 fodder.size >= cost.count
