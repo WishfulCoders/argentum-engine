@@ -957,6 +957,124 @@
     ]
 }
 
+// Dragon's Rage Channeler
+{
+    "name": "Dragon's Rage Channeler",
+    "manaCost": "{R}",
+    "typeLine": "Creature — Human Shaman",
+    "oracleText": "Whenever you cast a noncreature spell, surveil 1. (Look at the top card of your library. You may put that card into your graveyard.)\nDelirium — As long as there are four or more card types among cards in your graveyard, this creature gets +2/+2, has flying, and attacks each combat if able.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Dragon's Rage Channeler:1",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Surveil",
+                    "count": 1
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "ModifyStats",
+                    "powerBonus": 2,
+                    "toughnessBonus": 2,
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateZone",
+                        "player": "You",
+                        "zone": "Graveyard",
+                        "aggregation": "DISTINCT_TYPES"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                }
+            },
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantKeyword",
+                    "keyword": "FLYING",
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateZone",
+                        "player": "You",
+                        "zone": "Graveyard",
+                        "aggregation": "DISTINCT_TYPES"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                }
+            },
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": "MustAttack",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateZone",
+                        "player": "You",
+                        "zone": "Graveyard",
+                        "aggregation": "DISTINCT_TYPES"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "121",
+        "rarity": "UNCOMMON",
+        "artist": "Martina Fačková",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/c/4ced112a-e775-4f97-97b3-74877e9dce12.jpg?1783926848",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Because damage remains marked on a creature until the cleanup step or an effect removes that damage, nonlethal damage dealt to Dragon's Rage Channeler may become lethal if the number of card types found in your graveyard drops below four."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Drey Keeper
 {
     "name": "Drey Keeper",
@@ -1527,6 +1645,43 @@
     ]
 }
 
+// Hard Evidence
+{
+    "name": "Hard Evidence",
+    "manaCost": "{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Create a 0/3 blue Crab creature token.\nInvestigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "CreateToken",
+                    "power": 0,
+                    "toughness": 3,
+                    "colors": [
+                        "BLUE"
+                    ],
+                    "creatureTypes": [
+                        "Crab"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/7/e/7ef7f37a-b7f5-45a1-8f2b-7097089ca2e5.jpg?1783926593"
+                },
+                "Investigate"
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "46",
+        "artist": "Yeong-Hao Han",
+        "flavorText": "The investigator felt a pinch on his ankle. When he looked down, something glittered in the sand.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/0/501599d6-1072-4124-b05d-01f96de153f3.jpg?1783926878"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Healer's Flock
 {
     "name": "Healer's Flock",
@@ -1723,6 +1878,135 @@
     "colorIdentityOverride": [
         "GREEN"
     ]
+}
+
+// Kaldra Compleat
+{
+    "name": "Kaldra Compleat",
+    "manaCost": "{7}",
+    "typeLine": "Legendary Artifact — Equipment",
+    "oracleText": "Living weapon\nIndestructible\nEquipped creature gets +5/+5 and has first strike, trample, indestructible, haste, and \"Whenever this creature deals combat damage to a creature, exile that creature.\"\nEquip {7}",
+    "keywords": [
+        "INDESTRUCTIBLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Kaldra Compleat:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "CreateToken",
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [
+                                "BLACK"
+                            ],
+                            "creatureTypes": [
+                                "Phyrexian",
+                                "Germ"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/b/5/b53e0681-603e-4180-bc86-3dadf214e61a.jpg?1783926593"
+                        },
+                        {
+                            "type": "AttachEquipment",
+                            "target": {
+                                "type": "PipelineTarget",
+                                "collectionName": "createdTokens"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)"
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Kaldra Compleat:3",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{7}"
+                    }
+                },
+                "effect": {
+                    "type": "AttachEquipment",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "creature you control"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "creature you control"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isEquipAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 5,
+                "toughnessBonus": 5
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "FIRST_STRIKE"
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "TRAMPLE"
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "INDESTRUCTIBLE"
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "HASTE"
+            },
+            {
+                "type": "GrantTriggeredAbility",
+                "ability": {
+                    "id": "Kaldra Compleat:2",
+                    "trigger": {
+                        "type": "DealsDamageEvent",
+                        "damageType": "DamageCombat",
+                        "recipient": {
+                            "type": "RecipientObject",
+                            "filter": "creature"
+                        }
+                    },
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": "TriggeringEntity",
+                        "destination": "Exile"
+                    },
+                    "descriptionOverride": "Whenever this creature deals combat damage to a creature, exile that creature."
+                }
+            }
+        ]
+    },
+    "equipCost": "{7}",
+    "metadata": {
+        "collectorNumber": "227",
+        "rarity": "MYTHIC",
+        "artist": "Vincent Proce",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/7/87cc2855-6b14-44dd-a398-7dc2bbae081f.jpg?1783926807"
+    },
+    "colorIdentityOverride": []
 }
 
 // Kitchen Imp
@@ -2049,6 +2333,55 @@
     ]
 }
 
+// Mine Collapse
+{
+    "name": "Mine Collapse",
+    "manaCost": "{3}{R}",
+    "typeLine": "Instant",
+    "oracleText": "If it's your turn, you may sacrifice a Mountain rather than pay this spell's mana cost.\nMine Collapse deals 5 damage to target creature or planeswalker.",
+    "script": {
+        "spellEffect": {
+            "type": "DealDamage",
+            "amount": {
+                "type": "Fixed",
+                "amount": 5
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetCreatureOrPlaneswalker",
+                "id": "t0"
+            }
+        ],
+        "selfAlternativeCost": {
+            "manaCost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomSacrifice",
+                        "filter": "land Mountain"
+                    }
+                }
+            ],
+            "condition": "IsYourTurn"
+        }
+    },
+    "metadata": {
+        "collectorNumber": "135",
+        "artist": "Bud Cook",
+        "flavorText": "\"Good ol' rock,\" muttered Rhirhok as the shaking began. \"Nice ol' rock . . . .\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/6/56e2e8b5-660d-4469-a4fe-2367dfadb709.jpg?1783926842"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Mistvault Bridge
 {
     "name": "Mistvault Bridge",
@@ -2211,6 +2544,114 @@
         "artist": "Svetlin Velinov",
         "flavorText": "\"They're useful creatures, but quite replaceable. I find it best not to get too attached.\"\n—Pontifex, elder researcher",
         "imageUri": "https://cards.scryfall.io/normal/front/5/b/5b9072a5-bd7f-4007-a34a-ebe251c95356.jpg?1783926803"
+    },
+    "colorIdentityOverride": []
+}
+
+// Nettlecyst
+{
+    "name": "Nettlecyst",
+    "manaCost": "{3}",
+    "typeLine": "Artifact — Equipment",
+    "oracleText": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)\nEquipped creature gets +1/+1 for each artifact and/or enchantment you control.\nEquip {2}",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Nettlecyst:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "CreateToken",
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [
+                                "BLACK"
+                            ],
+                            "creatureTypes": [
+                                "Phyrexian",
+                                "Germ"
+                            ],
+                            "imageUri": "https://cards.scryfall.io/normal/front/b/5/b53e0681-603e-4180-bc86-3dadf214e61a.jpg?1783926593"
+                        },
+                        {
+                            "type": "AttachEquipment",
+                            "target": {
+                                "type": "PipelineTarget",
+                                "collectionName": "createdTokens"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)"
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Nettlecyst:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "AttachEquipment",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "creature you control"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "creature you control"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isEquipAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantDynamicStats",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "AttachedTo"
+                },
+                "powerBonus": {
+                    "type": "AggregateBattlefield",
+                    "player": "You",
+                    "filter": "artifact|enchantment"
+                },
+                "toughnessBonus": {
+                    "type": "AggregateBattlefield",
+                    "player": "You",
+                    "filter": "artifact|enchantment"
+                }
+            }
+        ]
+    },
+    "equipCost": "{2}",
+    "metadata": {
+        "collectorNumber": "231",
+        "rarity": "RARE",
+        "artist": "Vincent Proce",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/a/4a0bb5dc-75a6-4bd6-81f8-611197fb0fba.jpg?1783926803",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If a permanent you control is both an artifact and an enchantment, count it only once when determining the bonus from an equipped Nettlecyst."
+            }
+        ]
     },
     "colorIdentityOverride": []
 }
@@ -2388,6 +2829,72 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Prismatic Ending
+{
+    "name": "Prismatic Ending",
+    "manaCost": "{X}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Converge — Exile target nonland permanent if its mana value is less than or equal to the number of colors of mana spent to cast this spell.",
+    "script": {
+        "spellEffect": {
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "numericProperty": "ManaValue"
+                    },
+                    "operator": "LTE",
+                    "right": "DistinctColorsManaSpent"
+                }
+            },
+            "then": {
+                "type": "MoveToZone",
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                },
+                "destination": "Exile"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "nonland permanent"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "25",
+        "rarity": "UNCOMMON",
+        "artist": "John Stanko",
+        "flavorText": "Right before his demise, he experienced a shattering revelation.",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/2/825969b9-3c70-4fca-8cab-696e9ca7cdb2.jpg?1783926888",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "The mana value is not a targeting condition. It is checked only as the spell resolves."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you cast a spell with converge without spending any mana to cast it (perhaps because an effect allowed you to cast it without paying its mana cost), then the number of colors spent to cast it will be zero."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -3739,6 +4246,79 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Unholy Heat
+{
+    "name": "Unholy Heat",
+    "manaCost": "{R}",
+    "typeLine": "Instant",
+    "oracleText": "Unholy Heat deals 2 damage to target creature or planeswalker.\nDelirium — Unholy Heat deals 6 damage instead if there are four or more card types among cards in your graveyard.",
+    "script": {
+        "spellEffect": {
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateZone",
+                        "player": "You",
+                        "zone": "Graveyard",
+                        "aggregation": "DISTINCT_TYPES"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                }
+            },
+            "then": {
+                "type": "DealDamage",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 6
+                },
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                }
+            },
+            "otherwise": {
+                "type": "DealDamage",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                }
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetCreatureOrPlaneswalker",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "145",
+        "artist": "Kari Christensen",
+        "flavorText": "\"The devils use fire. Why shouldn't we?\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/b/2b73d294-6ab1-4051-9b0f-d8e335d37674.jpg?1783926838",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Unholy Heat checks your graveyard as it resolves to determine if it deals 2 or 6 damage. At that time, Unholy Heat isn't in the graveyard yet."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
