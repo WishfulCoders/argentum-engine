@@ -141,6 +141,9 @@ export const counterManaClass: Record<string, string> = {
   QUEST: 'counter-lore',
   GROWTH: 'counter-charge',
   TIME: 'counter-time',
+  // Fading's countdown reads like vanishing's, so it borrows the hourglass.
+  FADE: 'counter-time',
+  VOID: 'counter-void',
   FEATHER: 'counter-charge',
   DECAYED: 'ability-decayed',
   HOPE: 'counter-charge',

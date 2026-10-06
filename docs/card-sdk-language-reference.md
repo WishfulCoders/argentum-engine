@@ -11549,11 +11549,16 @@ composite abilities).
   last-known **+1/+1** count specifically rather than reaching for `Effects.MoveAllLastKnownCounters`
   (Servant of the Scale): that moves every counter kind, so a modular creature killed by -1/-1
   counters would hand its leftover -1/-1 counters to the target too.
-- `Fading(n)` — ETB with N fade counters; removes one each upkeep, sacrifice if can't. **Display-only
-  — nothing in the engine reads `Keyword.FADING`**, and unlike vanishing it cannot simply borrow the
-  time-counter machinery: fading counts a distinct fade counter type this codebase does not have, and
-  its third ability is "if you *can't* remove a counter, sacrifice it" — one turn earlier than
-  vanishing's. Hand-lower it, or add the counter type first.
+- `Fading(n)` — **engine-live** (CR 702.32). Declare it and nothing else:
+  `keywordAbility(KeywordAbility.fading(5))` (Parallax Wave). The engine supplies both abilities from
+  [`Fading`](../mtg-sdk/src/main/kotlin/com/wingedsheep/sdk/scripting/Fading.kt): "enters with N
+  `CounterType.FADE` counters" is synthesized at the entry seam from the printed `n` (through
+  `placeEntryCounters`, like vanishing), and the upkeep "remove a fade counter from this permanent.
+  If you can't, sacrifice it" is granted from the **projected** keyword as **one** ability whose
+  can't-branch is judged on resolution. Unlike vanishing there is no last-counter trigger: the
+  permanent survives the upkeep that removes its last counter and goes at the next one, and
+  stripping its counters off-turn does not sacrifice it on the spot. Fade counters a card spends as
+  a cost are ordinary `Costs.RemoveCounterFromSelf(CounterType.FADE)`.
 - `Vanishing(n)` — **engine-live.** Declare it and nothing else: `keywordAbility(KeywordAbility.vanishing(3))`
   (Deep Forest Hermit). The engine supplies all three CR 702.62 abilities from
   [`Vanishing`](../mtg-sdk/src/main/kotlin/com/wingedsheep/sdk/scripting/Vanishing.kt) — the
@@ -15272,7 +15277,14 @@ The priority groups are (CR 616.1a–f):
   linkToSource = true, appliesTo = ZoneChangeEvent(filter = GameObjectFilter.Creature.nontoken().opponentControls(),
   from = Zone.BATTLEFIELD, to = Zone.GRAVEYARD))` — the linked cards are then retrieved by a
   `Creature.exiledWithSource()` target (see §7 state predicates). Honored across the same graveyard
-  paths as `RedirectZoneChange`.
+  paths as `RedirectZoneChange` — and the rider rides along on every one of them, including a spell
+  that is countered or fizzles on its way off the stack (CR 614.6: the modified event happens in
+  full). Dauthi Voidwalker's "If a card would be put into an opponent's graveyard from anywhere,
+  instead exile it with a void counter on it" is `RedirectZoneChangeWith(newDestination = Zone.EXILE,
+  additionalEffect = Effects.AddCounters(CounterType.VOID, 1, EffectTarget.TriggeringEntity),
+  appliesTo = ZoneChangeEvent(filter = GameObjectFilter.Any.nontoken().ownedByOpponent(), to =
+  Zone.GRAVEYARD))`; `CounterType.VOID` is then a pure exile marker its sacrifice ability gathers by
+  (`CardSource.FromZone(Zone.EXILE, Player.EachOpponent, Any.withCounter(VOID))`).
 - `ReplacementEffect.IfYouDoBranchEffect(...)` — branch on "if you do" replacement.
 - `OnEnterRun(effect)` — generic "as ~ enters the battlefield, run [effect]". The wrapped effect
   executes via the normal effect-executor pipeline at entry time (so `EffectTarget.Self` resolves to

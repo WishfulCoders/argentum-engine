@@ -1635,6 +1635,11 @@ sealed interface KeywordAbility {
             Numeric(Keyword.CREW, n, onceEachTurn)
         fun saddle(n: Int): KeywordAbility = Numeric(Keyword.SADDLE, n)
         fun modular(n: Int): KeywordAbility = Numeric(Keyword.MODULAR, n)
+        /**
+         * Fading N (CR 702.32) — engine-live. Declaring this is the whole implementation;
+         * [Fading] supplies the enters-with-N-fade-counters replacement and the upkeep
+         * "remove a fade counter; if you can't, sacrifice it" trigger. Do not hand-write them.
+         */
         fun fading(n: Int): KeywordAbility = Numeric(Keyword.FADING, n)
         /**
          * Vanishing N (CR 702.62) — engine-live. Declaring this is the whole implementation;

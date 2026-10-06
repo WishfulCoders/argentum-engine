@@ -28,6 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.*
  * by the type line of the face it was cast as.
  */
 internal class SpellResolver(
+    private val zones: com.wingedsheep.engine.handlers.effects.ZoneTransitionService,
     private val cardRegistry: CardRegistry,
     private val predicateEvaluator: PredicateEvaluator,
     private val targetValidator: ResolutionTargetValidator,
@@ -218,6 +219,16 @@ internal class SpellResolver(
             newState = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
                 .linkExiledToSource(newState, spellId, fizzleRedirect.linkSourceId)
         }
+        // The redirect's rider (Dauthi Voidwalker's void counter) applies to a fizzled spell too.
+        val riderEvents = fizzleRedirect.additionalEffect?.let { extra ->
+            val (afterRider, events) = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+                .applyReplacementAdditionalEffect(
+                    zones, newState, extra, fizzleRedirect.effectControllerId, spellId,
+                    sourceId = fizzleRedirect.effectSourceId
+                )
+            newState = afterRider
+            events
+        }.orEmpty()
 
         return ExecutionResult.success(
             newState,
@@ -230,7 +241,7 @@ internal class SpellResolver(
                     destZone,
                     ownerId, oldObject = state.objectRef(spellId), newObject = destinationObject
                 )
-            )
+            ) + riderEvents
         )
     }
 }

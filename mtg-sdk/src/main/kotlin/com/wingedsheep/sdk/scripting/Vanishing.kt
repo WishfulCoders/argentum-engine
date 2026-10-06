@@ -43,9 +43,10 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * makes *granted* vanishing work — a token created "with vanishing 3", or a creature that gains
  * vanishing — and what makes a "loses all abilities" effect strip it.
  *
- * Fading (CR 702.30) is a near neighbour and is deliberately **not** covered here: it counts a
- * distinct fade counter type that this codebase does not have, and its third ability is "if you
- * can't remove a counter, sacrifice it" — a different rule from vanishing's, and one turn earlier.
+ * Fading (CR 702.32) is a near neighbour with its own object, [Fading]: it counts a distinct
+ * fade counter type, and its upkeep ability is "remove a counter; if you *can't*, sacrifice it" —
+ * one fused ability that sacrifices an upkeep *later* than vanishing does, with no last-counter
+ * trigger.
  */
 object Vanishing {
 
