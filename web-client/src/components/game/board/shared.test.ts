@@ -198,6 +198,20 @@ describe('hasMultipleCastingOptions', () => {
     expect(hasMultipleCastingOptions([playLand()])).toBe(false)
   })
 
+  it('counts a printed escape and a granted one (Underworld Breach) as two ways to cast', () => {
+    // Uro under Underworld Breach: the player chooses which escape ability to apply (CR 601.2b).
+    const escape = (choice: number | undefined): LegalActionInfo => ({
+      actionType: 'CastWithEscape',
+      description: 'Cast (Escape)',
+      action: {
+        type: 'CastSpell', playerId: PLAYER, cardId: CARD, useAlternativeCost: true,
+        alternativeCostType: 'ESCAPE', ...(choice !== undefined ? { escapeChoice: choice } : {}),
+      },
+    })
+    expect(hasMultipleCastingOptions([escape(undefined)])).toBe(false)
+    expect(hasMultipleCastingOptions([escape(0), escape(1)])).toBe(true)
+  })
+
   it('opens the menu for multiple casting variants (morph + normal cast)', () => {
     expect(shouldShowCastModal([castSpell(), morph()])).toBe(true)
   })

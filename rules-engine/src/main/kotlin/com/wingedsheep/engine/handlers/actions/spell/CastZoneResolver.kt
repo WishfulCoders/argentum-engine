@@ -394,7 +394,7 @@ class CastZoneResolver(
         if (action.useAlternativeCost) {
             fun announced(type: AlternativeCostType) = action.altAllows(type)
             if (announced(AlternativeCostType.MAYHEM) && hasMayhemPermission(state, playerId, cardId)) return null
-            if (announced(AlternativeCostType.ESCAPE) && hasEscapePermission(state, playerId, cardId)) return null
+            if (announced(AlternativeCostType.ESCAPE) && hasEscapePermission(state, playerId, cardId, action.escapeChoice)) return null
             if (announced(AlternativeCostType.WARP) && hasWarpPermission(state, playerId, cardId)) return null
             if (announced(AlternativeCostType.DISTURB) && disturbCastFace(state, playerId, cardId) != null) return null
             if (announced(AlternativeCostType.SNEAK) && cardComponent.typeLine.isCreature &&
@@ -561,20 +561,32 @@ class CastZoneResolver(
     }
 
     /**
-     * Check if a card in [playerId]'s graveyard has an escape ability (CR 702.138a), allowing it to
-     * be cast from there for its escape cost. Not exiled on resolution.
+     * The escape ability (CR 702.138a) a card in [playerId]'s graveyard would be cast with —
+     * option [escapeChoice] of [EscapeCasts.escapeOptions] (printed, or granted by a battlefield
+     * static such as Underworld Breach) — or null when the card isn't there or has no such escape.
+     * Escape is not exiled on resolution.
      */
+    fun escapeFor(
+        state: GameState,
+        playerId: EntityId,
+        cardId: EntityId,
+        escapeChoice: Int? = null
+    ): com.wingedsheep.sdk.scripting.KeywordAbility.Escape? {
+        if (cardId !in state.getZone(ZoneKey(playerId, Zone.GRAVEYARD))) return null
+        val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return null
+        return EscapeCasts.chosenEscape(
+            state, cardId, cardRegistry.getCard(cardComponent), escapeChoice,
+            playerId, cardRegistry, predicateEvaluator
+        )
+    }
+
+    /** Whether [escapeFor] finds an escape ability for this cast. */
     fun hasEscapePermission(
         state: GameState,
         playerId: EntityId,
-        cardId: EntityId
-    ): Boolean {
-        if (cardId !in state.getZone(ZoneKey(playerId, Zone.GRAVEYARD))) return false
-        val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: return false
-        return EscapeCasts.printedEscape(
-            cardRegistry.getCard(cardComponent)
-        ) != null
-    }
+        cardId: EntityId,
+        escapeChoice: Int? = null
+    ): Boolean = escapeFor(state, playerId, cardId, escapeChoice) != null
 
     /**
      * Get the mayhem cost for a card, or null if it doesn't have mayhem.

@@ -133,6 +133,12 @@ export interface CastSpellAction {
    */
   readonly alternativeCostType?: string
   /**
+   * Which escape ability an "ESCAPE" cast applies, when the card has more than one (a printed escape
+   * and one granted by Underworld Breach). Server-stamped on each escape offer; the client only
+   * echoes it back.
+   */
+  readonly escapeChoice?: number
+  /**
    * Which optional additional cost this cast declares (the server's `ChoiceSlot` name — "KICKED"
    * for kicker/multikicker/offspring, "BARGAINED" for bargain), or absent when none. The server
    * stamps it on the cast variant it offers; the client only echoes it back.

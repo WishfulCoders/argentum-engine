@@ -221,6 +221,16 @@ data class CastSpell(
      */
     val alternativeCostType: AlternativeCostType? = null,
     /**
+     * Which escape ability an [AlternativeCostType.ESCAPE] cast applies, as an index into
+     * `EscapeCasts.escapeOptions` (printed escape first, then battlefield grants such as Underworld
+     * Breach's). A card can have a printed escape *and* a granted one with different costs (Uro
+     * under Underworld Breach: {G}{G}{U}{U} + exile five, or {1}{G}{U} + exile three) and the
+     * caster chooses which to apply (CR 601.2b; Underworld Breach ruling 2020-01-24). `null` means
+     * the first option — the only one in the common case. The enumerator stamps it only when the
+     * card has more than one escape option. Ignored for every other cast.
+     */
+    val escapeChoice: Int? = null,
+    /**
      * How many of [targets] each of the spell's target requirements owns, in requirement order —
      * the boundaries between its instances of the word "target" (CR 601.2c), which a flat list loses
      * when an "up to N" group is only partly filled. `null` lets the engine infer them: groups fill
