@@ -691,6 +691,31 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     }
 
     /**
+     * Matches an object whose printed **mana cost is exactly** [manaCost] — the mana symbols
+     * themselves (CR 202.1), not the mana value they add up to. Urza's Saga's chapter III: "an
+     * artifact card with mana cost {0} or {1}" is `Or(ManaCostIs({0}), ManaCostIs({1}))`.
+     *
+     * **Not the same as [ManaValueEquals].** A `{U}` card and an `{X}` card have mana value 1 and 0
+     * but neither has mana cost `{1}` / `{0}` (Urza's Saga ruling, 2021-06-18). And `{0}` is a mana
+     * cost, while *no mana cost* is not (CR 202.1b): Ornithopter (`{0}`) matches `ManaCostIs({0})`,
+     * Lotus Bloom (no mana cost) does not — the engine's empty [com.wingedsheep.sdk.core.ManaCost]
+     * stands for "no mana cost" and `{0}` parses to a single generic-zero symbol. A face-down object
+     * has no mana cost (CR 708.2) and never matches.
+     *
+     * Symbols are compared as a multiset, so `{1}{U}` and `{U}{1}` are the same cost.
+     */
+    @SerialName("ManaCostIs")
+    @Serializable
+    data class ManaCostIs(val manaCost: com.wingedsheep.sdk.core.ManaCost) : CardPredicate {
+        override val description: String = "with mana cost $manaCost"
+
+        /** True when [candidate] is exactly this mana cost, symbol for symbol in any order. */
+        fun matches(candidate: com.wingedsheep.sdk.core.ManaCost): Boolean =
+            candidate.symbols.size == manaCost.symbols.size &&
+                candidate.symbols.groupingBy { it }.eachCount() == manaCost.symbols.groupingBy { it }.eachCount()
+    }
+
+    /**
      * Matches an object whose printed mana cost contains at least [min] mana symbols of [colors]
      * — "a noncreature spell with one or more blue mana symbols in its mana cost" (Namor the
      * Sub-Mariner) with the default `min = 1`, and the same shape over every colour at a higher

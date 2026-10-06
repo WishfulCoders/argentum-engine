@@ -403,7 +403,7 @@ class PlayLandHandler(
         // tapped and as-enters branches below, since each of those is its own exit and the counters
         // belong to the entry regardless of which branch finishes it. The events are carried into
         // every exit so counter-placement triggers still see them.
-        val entersWithEvents: List<com.wingedsheep.engine.core.GameEvent> = if (cardDef != null) {
+        val entersWithCounterEvents: List<com.wingedsheep.engine.core.GameEvent> = if (cardDef != null) {
             val (afterOwn, ownEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements
                 .applyFromDefinition(newState, action.cardId, cardDef, action.playerId, predicateEvaluator = predicateEvaluator, preEntryZone = sourceZoneKey)
             val (afterGlobal, globalEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements
@@ -411,6 +411,18 @@ class PlayLandHandler(
             newState = afterGlobal
             ownEvents + globalEvents
         } else emptyList()
+
+        // A Saga land (Urza's Saga — "Enchantment Land — Urza's Saga") enters with a lore counter
+        // like every other Saga: CR 714.3a makes that an intrinsic replacement effect of the Saga
+        // itself, so it applies to a land *played* (CR 305.1) exactly as to one cast or put onto
+        // the battlefield. Lands bypass ZoneTransitionService and the stack, the two places every
+        // other Saga picks up its SagaComponent, so the shared hook is called here — before the
+        // tapped / as-enters branches, each of which is its own exit. The CountersAddedEvent rides
+        // with [entersWithEvents] into every exit, which is what fires chapter I (CR 714.2b).
+        val (afterSaga, sagaEvents) = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+            .applySagaEntryIfNeeded(newState, action.cardId)
+        newState = afterSaga
+        val entersWithEvents = entersWithCounterEvents + sagaEvents
 
         // OnEnterRun — generic "as ~ enters, run [effect]" replacement.
         // Runs BEFORE the EntersTapped check so effects like

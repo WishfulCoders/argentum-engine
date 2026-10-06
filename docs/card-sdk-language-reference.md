@@ -5767,6 +5767,13 @@ This is the player-arm prerequisite for the planned composable mixed `TargetUnio
   printed cost. Face-down objects (no mana cost) never match; the cast-record path returns `false`
   (a record stores the resolved mana value, not the printed cost). Used by *Paradox Surveyor*
   ("a card with {X} in its mana cost"). Underlying predicate: `CardPredicate.HasXInManaCost`.
+- `.withManaCost(vararg costs)` — the card's **printed mana cost is exactly** one of `costs`, symbol
+  for symbol (CR 202.1), not its mana value: *Urza's Saga*'s "an artifact card with mana cost {0} or
+  {1}" is `GameObjectFilter.Artifact.withManaCost("{0}", "{1}")` — a `{U}` or `{X}` artifact doesn't
+  match, and neither does a card with **no** mana cost (CR 202.1b; the engine's empty `ManaCost`),
+  which is not a `{0}` card. Symbols compare as a multiset. Face-down objects never match; the
+  cast-record path returns `false`. Underlying predicate: `CardPredicate.ManaCostIs(manaCost)`
+  (several costs fold into `CardPredicate.Or`).
 - `.coloredManaSymbolsAtLeast(vararg colors, min = 1)` — the card's **printed** mana cost contains
   at least `min` mana symbols of `colors`: "a noncreature spell with one or more blue mana symbols
   in its mana cost" (*Namor the Sub-Mariner*, `coloredManaSymbolsAtLeast(Color.BLUE)`), and the
@@ -7925,6 +7932,18 @@ the saga permanent (e.g. "This creature deals damage equal to its power …"). C
 "Sacrifice after N", so the default CR 714.4 sacrifice is correct; no opt-out flag exists. Eikon /
 Dominant back faces that "stay" instead self-exile on their final chapter, dodging 714.4 via its
 "not the source of a chapter ability on the stack" clause.)*
+
+### Saga lands — "Enchantment Land — Urza's Saga"
+
+A Saga can also be a land (Urza's Saga). Author it like any Saga — a type line with `Land` and the
+`Saga` subtype plus `sagaChapter` blocks, `manaCost = ""` — and it can only be played, never cast
+(CR 305.9). Playing it bypasses the stack and the zone-transition pipeline, so `PlayLandHandler`
+calls the same `ZoneMovementUtils.applySagaEntryIfNeeded` hook every other entry uses: the played
+land enters with its lore counter (CR 714.3a's intrinsic replacement), chapter I triggers (CR
+714.2b), lore accrues at precombat main and the land is sacrificed after its final chapter like any
+Saga. "This Saga gains '{T}: Add {C}'" is `Effects.GrantActivatedAbility(ActivatedAbility(…,
+isManaAbility = true, timing = TimingRule.ManaAbility), EffectTarget.Self, Duration.Permanent)`.
+Covered by `SagaLandAndManaCostScenarioTest` and `UrzasSagaScenarioTest`.
 
 ### Saga chapter resolution (CR 714)
 
