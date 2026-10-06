@@ -2333,6 +2333,7 @@ const passiveCounterPalette: Record<string, CounterBadgePalette> = {
   STORAGE: { bg: 'rgba(34, 40, 52, 0.95)', border: 'rgba(150, 170, 200, 0.7)', color: '#c8d6ea', glow: 'rgba(150, 170, 200, 0.55)' },
   FADE: { bg: 'rgba(30, 34, 46, 0.95)', border: 'rgba(170, 180, 220, 0.7)', color: '#d6dcf4', glow: 'rgba(170, 180, 220, 0.55)' },
   VOID: { bg: 'rgba(16, 12, 24, 0.95)', border: 'rgba(130, 100, 180, 0.7)', color: '#c4b0e8', glow: 'rgba(130, 100, 180, 0.55)' },
+  STORY: { bg: 'rgba(44, 36, 22, 0.95)', border: 'rgba(214, 190, 140, 0.7)', color: '#eedcb4', glow: 'rgba(214, 190, 140, 0.55)' },
   OIL: { bg: 'rgba(18, 26, 22, 0.95)', border: 'rgba(120, 190, 150, 0.7)', color: '#b8e6c8', glow: 'rgba(120, 190, 150, 0.55)' },
   HUNGER: { bg: 'rgba(48, 26, 26, 0.95)', border: 'rgba(200, 120, 100, 0.7)', color: '#e8b0a0', glow: 'rgba(200, 120, 100, 0.55)' },
   DOOM: { bg: 'rgba(26, 18, 30, 0.95)', border: 'rgba(150, 100, 170, 0.7)', color: '#c8a0d8', glow: 'rgba(150, 100, 170, 0.55)' },

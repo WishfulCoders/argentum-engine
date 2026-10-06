@@ -861,6 +861,8 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.FADE,
   // Dauthi Voidwalker's marker on exiled cards — which of them its sacrifice ability may pick.
   CounterType.VOID,
+  // Staff of the Storyteller's story tally is spent to draw, so its count is the cards left in it.
+  CounterType.STORY,
 ]
 
 /**

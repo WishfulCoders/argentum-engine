@@ -687,6 +687,13 @@ value class CounterType(val name: String) {
          */
         val VOID = CounterType("VOID")
 
+        /**
+         * Story counter (ONC — Staff of the Storyteller). A passive tally with no inherent rule: the
+         * artifact gains one whenever its controller creates one or more creature tokens and spends
+         * one as part of its draw ability's cost.
+         */
+        val STORY = CounterType("STORY")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -808,6 +815,7 @@ value class CounterType(val name: String) {
             VALOR,
             FADE,
             VOID,
+            STORY,
         )
 
         /**
