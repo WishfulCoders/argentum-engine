@@ -40,7 +40,9 @@ import com.wingedsheep.sdk.scripting.targets.*
  */
 class SpellCounterer(
     private val cardRegistry: CardRegistry,
-    private val predicateEvaluator: PredicateEvaluator
+    private val predicateEvaluator: PredicateEvaluator,
+    /** Runs a zone-change replacement's rider on a countered spell (see [counterSpell]). */
+    private val zones: com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 ) {
     /**
      * Counter whatever stack object [entityId] is, spell or ability.
@@ -117,6 +119,18 @@ class SpellCounterer(
             newState = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
                 .linkExiledToSource(newState, spellId, counterRedirect.linkSourceId)
         }
+        // A `RedirectZoneChangeWith` replacement's rider rides along with the redirect — "instead
+        // exile it with a void counter on it" (Dauthi Voidwalker) marks a countered spell exactly
+        // as it marks a discarded card (CR 614.6: the modified event happens in full).
+        val riderEvents = counterRedirect.additionalEffect?.let { extra ->
+            val (afterRider, events) = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+                .applyReplacementAdditionalEffect(
+                    zones, newState, extra, counterRedirect.effectControllerId, spellId,
+                    sourceId = counterRedirect.effectSourceId
+                )
+            newState = afterRider
+            events
+        }.orEmpty()
 
         // Remove stack components
         newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, spellId)
@@ -138,7 +152,7 @@ class SpellCounterer(
                     destZone,
                     ownerId, oldObject = state.objectRef(spellId), newObject = destinationObject
                 )
-            )
+            ) + riderEvents
         )
     }
 

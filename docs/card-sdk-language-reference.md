@@ -15159,7 +15159,14 @@ The priority groups are (CR 616.1a–f):
   linkToSource = true, appliesTo = ZoneChangeEvent(filter = GameObjectFilter.Creature.nontoken().opponentControls(),
   from = Zone.BATTLEFIELD, to = Zone.GRAVEYARD))` — the linked cards are then retrieved by a
   `Creature.exiledWithSource()` target (see §7 state predicates). Honored across the same graveyard
-  paths as `RedirectZoneChange`.
+  paths as `RedirectZoneChange` — and the rider rides along on every one of them, including a spell
+  that is countered or fizzles on its way off the stack (CR 614.6: the modified event happens in
+  full). Dauthi Voidwalker's "If a card would be put into an opponent's graveyard from anywhere,
+  instead exile it with a void counter on it" is `RedirectZoneChangeWith(newDestination = Zone.EXILE,
+  additionalEffect = Effects.AddCounters(CounterType.VOID, 1, EffectTarget.TriggeringEntity),
+  appliesTo = ZoneChangeEvent(filter = GameObjectFilter.Any.nontoken().ownedByOpponent(), to =
+  Zone.GRAVEYARD))`; `CounterType.VOID` is then a pure exile marker its sacrifice ability gathers by
+  (`CardSource.FromZone(Zone.EXILE, Player.EachOpponent, Any.withCounter(VOID))`).
 - `ReplacementEffect.IfYouDoBranchEffect(...)` — branch on "if you do" replacement.
 - `OnEnterRun(effect)` — generic "as ~ enters the battlefield, run [effect]". The wrapped effect
   executes via the normal effect-executor pipeline at entry time (so `EffectTarget.Self` resolves to

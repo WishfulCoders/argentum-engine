@@ -147,7 +147,7 @@ class CounterTypeTest : DescribeSpec({
             CounterType.TIDE to "tide", CounterType.SKEWER to "skewer", CounterType.ENERGY to "energy",
             CounterType.ICE to "ice", CounterType.PLAN to "plan", CounterType.INVASION to "invasion",
             CounterType.UNLOCK to "unlock", CounterType.JUDGMENT to "judgment",
-            CounterType.FADE to "fade"
+            CounterType.FADE to "fade", CounterType.VOID to "void"
         )
     }
 }

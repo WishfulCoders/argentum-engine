@@ -672,6 +672,14 @@ value class CounterType(val name: String) {
          */
         val FADE = CounterType("FADE")
 
+        /**
+         * Void counter (MH2 — Dauthi Voidwalker). A pure marker on cards in exile, like [CROAK] and
+         * [STASH]: the Voidwalker's replacement exiles an opponent's card "with a void counter on
+         * it", and its sacrifice ability later chooses among exiled cards carrying one, regardless
+         * of which Voidwalker put it there.
+         */
+        val VOID = CounterType("VOID")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -791,6 +799,7 @@ value class CounterType(val name: String) {
             REPRIEVE,
             BOUNTY,
             FADE,
+            VOID,
         )
 
         /**

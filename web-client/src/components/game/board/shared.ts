@@ -853,6 +853,8 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   // Fading's fuel (Parallax Wave): the count is both its remaining lifetime and how many more
   // times it can activate, so a player has to be able to read it off the board.
   CounterType.FADE,
+  // Dauthi Voidwalker's marker on exiled cards — which of them its sacrifice ability may pick.
+  CounterType.VOID,
 ]
 
 /**
