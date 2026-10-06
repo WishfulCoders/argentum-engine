@@ -1175,6 +1175,12 @@ data class PlayersCantCastSpells(
             append("$who can cast $spells only during their own turns")
             return@buildString
         }
+        if (conditionFromCaster && condition is com.wingedsheep.sdk.scripting.conditions.NotCondition &&
+            condition.condition == com.wingedsheep.sdk.scripting.conditions.PlayerCouldCastSorcery(Player.You)
+        ) {
+            append("$who can cast $spells only any time they could cast a sorcery")
+            return@buildString
+        }
         append("$who can't cast $spells")
         when (condition) {
             is IsYourTurn -> append(if (conditionFromCaster) " during their own turns" else " during your turn")

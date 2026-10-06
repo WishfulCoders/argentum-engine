@@ -94,6 +94,13 @@ class DrawCardsExecutor(
         // Pre-loop announcement check (CR 121.2a): static replacement effects like
         // ModifyDrawAmount (e.g., Quantum Riddler's "draw that many cards plus one")
         // fire here against the total draw count before any individual card is drawn.
+        // CR 614.17c: a draw a per-turn cap forbids can't be replaced, so when the player can't
+        // draw any more cards this turn the instruction's announcement isn't offered to
+        // ModifyDrawAmount / announcement-level replacements either — nothing happens.
+        if (count > 0 && primitive.drawAllowance(state, playerId) == 0) {
+            return EffectResult.success(state)
+        }
+
         var adjustedCount = count
         var currentState = state
         val announceResult = if (announce) {

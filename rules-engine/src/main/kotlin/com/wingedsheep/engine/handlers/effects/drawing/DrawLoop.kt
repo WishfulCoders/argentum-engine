@@ -65,6 +65,13 @@ object DrawLoop {
         while (remaining > 0) {
             newState = newState.copy(activeReplacementChain = inheritedChain)
 
+            // 0. A per-turn draw cap (Narset, Parter of Veils) is a "can't" effect, not a
+            //    replacement: a draw it forbids simply doesn't happen (CR 101.2, CR 614.17), and
+            //    because it can't happen no replacement effect may replace it either (CR 614.17c —
+            //    dredge, Hullbreacher). So it is checked before step 1. Nothing a skipped draw does
+            //    changes the count, so every remaining draw of this instruction is forbidden too.
+            if (primitive.drawAllowance(newState, playerId) == 0) break
+
             // 1. Check replacements. This runs *before* the primitive draw and before any
             //    empty-library check, and CR 614.11 requires exactly that ordering: effects
             //    that replace a card draw "are applied even if no cards could be drawn because

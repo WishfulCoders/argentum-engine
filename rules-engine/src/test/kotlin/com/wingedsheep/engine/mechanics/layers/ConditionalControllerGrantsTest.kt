@@ -112,6 +112,12 @@ class ConditionalControllerGrantsTest : FunSpec({
             { it.get<GrantsSacrificeImmunityComponent>()?.condition },
         ),
         GrantCase(
+            "OpponentsCantMakeYouDiscard", com.wingedsheep.sdk.scripting.OpponentsCantMakeYouDiscard,
+            com.wingedsheep.engine.state.components.battlefield.GrantsDiscardImmunityComponent::class.java,
+            { it.get<com.wingedsheep.engine.state.components.battlefield.GrantsDiscardImmunityComponent>() != null },
+            { it.get<com.wingedsheep.engine.state.components.battlefield.GrantsDiscardImmunityComponent>()?.condition },
+        ),
+        GrantCase(
             "GrantCantLoseGame", GrantCantLoseGame,
             GrantsCantLoseGameComponent::class.java,
             { it.get<GrantsCantLoseGameComponent>() != null },
@@ -310,6 +316,7 @@ class ConditionalControllerGrantsTest : FunSpec({
             GrantsControllerShroudComponent::class.java,
             GrantsControllerHexproofComponent::class.java,
             GrantsSacrificeImmunityComponent::class.java,
+            com.wingedsheep.engine.state.components.battlefield.GrantsDiscardImmunityComponent::class.java,
             GrantsCantLoseGameComponent::class.java,
             GrantsOpponentsCantWinGameComponent::class.java,
             GrantsCantLoseGameFromLifeComponent::class.java,

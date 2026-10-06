@@ -1127,6 +1127,19 @@ data class GrantsSacrificeImmunityComponent(
 ) : Component, ControllerGrantMarker
 
 /**
+ * Marks a permanent as granting "spells and abilities your opponents control can't cause you to
+ * discard cards" to its controller (Tamiyo, Collector of Tales).
+ *
+ * Stamped from [com.wingedsheep.sdk.scripting.OpponentsCantMakeYouDiscard] and read by
+ * [com.wingedsheep.engine.mechanics.DiscardImmunity]. See [ControllerGrantMarker] for why
+ * [condition] travels on the marker.
+ */
+@Serializable
+data class GrantsDiscardImmunityComponent(
+    override val condition: Condition? = null
+) : Component, ControllerGrantMarker
+
+/**
  * Marks a permanent as granting "can't lose the game" to its controller.
  * Used for Lich's Mastery: "You can't lose the game."
  * When the permanent leaves the battlefield, the component goes with it — no cleanup needed.

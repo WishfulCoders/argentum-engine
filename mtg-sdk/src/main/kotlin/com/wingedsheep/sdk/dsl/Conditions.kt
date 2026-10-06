@@ -2305,6 +2305,14 @@ object Conditions {
         com.wingedsheep.sdk.scripting.conditions.IsInStep(steps.toList(), yoursOnly)
 
     /**
+     * "[player] could cast a sorcery now" — a main phase of their turn with the stack empty, a
+     * resolving object counting as on the stack (CR 307.1, CR 608.2). Teferi, Time Raveler's lock is
+     * `PlayersCantCastSpells(EachOpponent, condition = Not(CouldCastSorcery()), conditionFromCaster = true)`.
+     */
+    fun CouldCastSorcery(player: Player = Player.You): ConditionInterface =
+        com.wingedsheep.sdk.scripting.conditions.PlayerCouldCastSorcery(player)
+
+    /**
      * If it's your main phase (either precombat or postcombat main, on your turn).
      * Used for cards like Dose of Dawnglow.
      */

@@ -60,6 +60,30 @@ data class IsPlayersTurn(val player: Player) : Condition {
 }
 
 /**
+ * Condition: "[player] could cast a sorcery now" — the sorcery timing of CR 307.1 / CR 117.1a: a
+ * main phase of [player]'s turn, with the stack empty. Teferi, Time Raveler's "Each opponent can
+ * cast spells only any time they could cast a sorcery" is a
+ * [com.wingedsheep.sdk.scripting.PlayersCantCastSpells] gated on `Not(PlayerCouldCastSorcery(You))`
+ * read from the caster's seat (`conditionFromCaster`).
+ *
+ * "The stack is empty" counts an object that is **resolving**: a resolving spell or ability is still
+ * on the stack until it finishes (CR 608.2), so a spell cast *during* a resolution — cascade,
+ * discover, "you may cast that card" — is never cast at sorcery timing, even on the caster's own
+ * main phase with nothing else waiting. Turn ownership is team-aware (CR 805.5a). Priority isn't
+ * part of it: whoever is being asked about casting a spell is the player acting.
+ *
+ * Board-derived (step, active player, stack, resolution frames), so it reads the same at resolution
+ * and under projection.
+ */
+@SerialName("PlayerCouldCastSorcery")
+@Serializable
+data class PlayerCouldCastSorcery(val player: Player = Player.You) : Condition {
+    override val description: String =
+        if (player == Player.You) "if you could cast a sorcery"
+        else "if ${player.description} could cast a sorcery"
+}
+
+/**
  * Condition: "If the current phase matches any of the listed phases"
  * When `yoursOnly = true` (default), also requires that it's the controller's turn —
  * i.e. "your main phase" means it's both your turn AND the main phase.

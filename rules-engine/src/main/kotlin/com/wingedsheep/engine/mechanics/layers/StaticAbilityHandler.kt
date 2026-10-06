@@ -286,6 +286,9 @@ class StaticAbilityHandler(
         allStaticAbilities.controllerGrant<OpponentsCantMakeYouSacrifice>()?.let {
             result = result.with(GrantsSacrificeImmunityComponent(it.condition))
         }
+        allStaticAbilities.controllerGrant<com.wingedsheep.sdk.scripting.OpponentsCantMakeYouDiscard>()?.let {
+            result = result.with(com.wingedsheep.engine.state.components.battlefield.GrantsDiscardImmunityComponent(it.condition))
+        }
         allStaticAbilities.controllerGrant<GrantCantLoseGame>()?.let {
             result = result.with(GrantsCantLoseGameComponent(it.condition))
         }
@@ -1142,6 +1145,8 @@ class StaticAbilityHandler(
             is DamagePersistsThroughCleanup,
             is NoMaximumHandSize,
             is com.wingedsheep.sdk.scripting.SkipDrawStep,
+            // Per-turn draw caps — a "can't" read by DrawLimits at every draw (CR 614.17):
+            is com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn,
             is com.wingedsheep.sdk.scripting.SkipUntapStep,
             is SetMaximumHandSize,
             is PreventManaPoolEmptying,
@@ -1179,6 +1184,7 @@ class StaticAbilityHandler(
             is GrantProtectionToController,
             is GrantShroudToController,
             is com.wingedsheep.sdk.scripting.OpponentsCantMakeYouSacrifice,
+            is com.wingedsheep.sdk.scripting.OpponentsCantMakeYouDiscard,
             is StationUsingToughness,
             is SuppressHexproofForGroup,
             is com.wingedsheep.sdk.scripting.GrantMadnessToOwnedCards,

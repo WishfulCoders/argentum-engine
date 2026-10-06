@@ -384,8 +384,9 @@ class ObjectTriggerSubject internal constructor(
      * [spellsOnly] / [abilitiesOnly] drop the other half. [firstTimeEachTurn] with [byYou] is
      * valiant (the first time *you* target it); alone it is the first time anything targets it
      * (Angelic Cub). [includeSpellTargets] also fires when a matching *spell* on the stack is targeted
-     * (Surrak, Elusive Hunter); [includePlayerTargets] widens to targeted players and needs an
-     * unfiltered subject (Loki, God of Mischief). [ofBackupAbility] is "the target of a backup
+     * (Surrak, Elusive Hunter); [includePlayerTargets] widens to targeted players (Loki, God of
+     * Mischief), and [targetPlayer] narrows which players — `Player.You` for "you or a permanent you
+     * control" (Leovold, Emissary of Trest). [ofBackupAbility] is "the target of a backup
      * ability" (Mirror-Shield Hoplite). [targetsOnlyIt] is "… that targets only it" — every target
      * of the spell or ability is this object (Agrus Kos, Eternal Soldier).
      */
@@ -400,6 +401,7 @@ class ObjectTriggerSubject internal constructor(
         includePlayerTargets: Boolean = false,
         ofBackupAbility: Boolean = false,
         targetsOnlyIt: Boolean = false,
+        targetPlayer: Player = Player.Any,
     ): TriggerSpec = spec(
         BecomesTargetEvent(
             targetFilter = filterOrAny,
@@ -413,6 +415,7 @@ class ObjectTriggerSubject internal constructor(
             sourceFilter = of,
             backupAbilitiesOnly = ofBackupAbility,
             targetsOnlyIt = targetsOnlyIt,
+            targetPlayer = targetPlayer,
         )
     )
 

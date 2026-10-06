@@ -301,8 +301,10 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      *
      * When [exceptFirstInDrawStep] is set, the first card the drawing player draws in
      * each of their own draw steps (CR 504.1's turn-based draw, normally) does **not**
-     * fire the trigger — every other draw they make does. This is the Orcish Bowmasters
-     * clause "except the first card they draw in each of their draw steps".
+     * match — every other draw they make does, whichever instruction it comes from. This is
+     * the Orcish Bowmasters trigger clause "except the first card they draw in each of their
+     * draw steps", and the same clause on a draw replacement (Hullbreacher, Bard, King of
+     * Dale). A draw that was replaced never happened, so it doesn't use up the exemption.
      */
     @SerialName("DrawEvent")
     @Serializable
@@ -1908,10 +1910,14 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * Players are the third target kind and are likewise opt-in, via [includePlayerTargets] — "a
      * player or permanent becomes the target" (Loki, God of Mischief). Without it a targeted player
      * never matches, so the many permanent-only triggers already in the pool stay unaffected by the
-     * engine emitting target events for players. [includePlayerTargets] requires [targetFilter] to
-     * be `Any` and throws otherwise: a player carries no card data for a filter to read, so the pair
-     * would fire on permanents only while [description] still promised the player half. A future "a
-     * player or *creature*" wording needs the object half and the player half kept apart.
+     * engine emitting target events for players. The object half and the player half are kept
+     * apart: [targetFilter] is read only for an object target (a player carries no card data for a
+     * filter to read), and [targetPlayer] is read only for a player target — *which* players count,
+     * relative to the trigger's controller. `Player.Any` (the default) is "a player"; `Player.You` is
+     * "you" — "Whenever **you or a permanent you control** becomes the target of a spell or ability
+     * an opponent controls" (Leovold, Emissary of Trest) is `includePlayerTargets` +
+     * `targetPlayer = You` + `targetFilter = Permanent.youControl()`. [targetPlayer] without
+     * [includePlayerTargets] would never be read, so that pair throws.
      *
      * [byYou] restricts to spells or abilities controlled by the trigger's controller.
      * [firstTimeEachTurn] restricts to the first time each turn. Its window follows the controller
@@ -1961,7 +1967,8 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
         val abilitiesOnly: Boolean = false,
         val sourceFilter: GameObjectFilter? = null,
         val backupAbilitiesOnly: Boolean = false,
-        val targetsOnlyIt: Boolean = false
+        val targetsOnlyIt: Boolean = false,
+        val targetPlayer: Player = Player.Any
     ) : EventPattern {
         init {
             require(!(spellsOnly && (abilitiesOnly || backupAbilitiesOnly))) {
@@ -1970,20 +1977,26 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             require(!(byYou && byOpponent)) {
                 "BecomesTargetEvent cannot be both byYou and byOpponent — nothing would match"
             }
-            require(!includePlayerTargets || targetFilter == GameObjectFilter.Any) {
-                "BecomesTargetEvent.includePlayerTargets only fires for players when targetFilter is Any — " +
-                    "a player has no card data for a filter to read; split the object and player halves first"
+            require(includePlayerTargets || targetPlayer == Player.Any) {
+                "BecomesTargetEvent.targetPlayer narrows the player half, which only exists with includePlayerTargets"
             }
         }
 
         override val description: String = buildString {
             if (includePlayerTargets) {
-                // The player half is only reachable with filter `Any` (see the require above), and
-                // the one printed wording that uses it says "a player or permanent" — deliberately
-                // narrower than the generic `describeObjectForEvent(Any)` phrasing ("a card or
-                // permanent"), which is what the object-only branch below still renders.
-                append("a player or ")
-                if (targetFilter == GameObjectFilter.Any) append("permanent")
+                // "a player or permanent" (Loki) is deliberately narrower than the generic
+                // `describeObjectForEvent(Any)` phrasing ("a card or permanent"), which is what the
+                // object-only branch below still renders.
+                append(
+                    when (targetPlayer) {
+                        Player.Any, Player.Each -> "a player"
+                        Player.You -> "you"
+                        Player.EachOpponent, Player.AnOpponent -> "an opponent"
+                        else -> targetPlayer.description
+                    }
+                )
+                append(" or ")
+                if (targetFilter == GameObjectFilter.Any) append(if (targetPlayer == Player.Any) "permanent" else "a permanent")
                 else append(describeObjectForEvent(targetFilter))
             } else {
                 append(describeObjectForEvent(targetFilter))

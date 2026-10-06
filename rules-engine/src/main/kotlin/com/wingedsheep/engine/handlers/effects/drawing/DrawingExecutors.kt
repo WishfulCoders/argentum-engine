@@ -33,7 +33,9 @@ class DrawingExecutors(
 
     override fun executors(): List<EffectExecutor<*>> = listOf(
         drawCardsExecutor,
-        DrawUpToExecutor(decisionHandler),
+        DrawUpToExecutor(decisionHandler) { state, playerId ->
+            DrawLimits.remainingAllowance(state, cardRegistry, amountEvaluator.predicates.conditions, playerId)
+        },
         eachPlayerReturnsPermanentToHandExecutor,
         EachPlayerDiscardsOrLoseLifeExecutor(effectExecutor),
         ReplaceNextDrawWithExecutor(),

@@ -194,6 +194,25 @@ class CastSpellHandler(
 
     override fun validate(state: GameState, action: CastSpell): String? = castValidator.validate(state, action)
 
+    /**
+     * A cast an effect makes *while it resolves* — cascade (CR 702.85a), discover (CR 701.55a),
+     * "you may cast it without paying its mana cost". Such a cast skips the timing and priority
+     * checks of an ordinary cast (CR 608.2g lets a resolving effect cast a spell), but every "can't
+     * cast" still applies (CR 101.2): split second (CR 702.61a), Silence-style locks, per-turn spell
+     * caps (Rule of Law), and [com.wingedsheep.sdk.scripting.PlayersCantCastSpells] — Teferi, Time
+     * Raveler's sorcery-timing lock among them, since a resolving object is still on the stack
+     * (CR 608.2). A prohibited cast returns an error, which every caller already treats as "the card
+     * wasn't cast" (cascade bottoms it, discover puts it into hand).
+     */
+    fun executeEffectCast(state: GameState, action: CastSpell): ExecutionResult {
+        if (com.wingedsheep.engine.mechanics.SplitSecond.isLocked(state, cardRegistry)) {
+            return ExecutionResult.error(state, com.wingedsheep.engine.mechanics.SplitSecond.REJECTION)
+        }
+        castPermissionUtils.reasonCannotCast(state, action.playerId, action.cardId)
+            ?.let { return ExecutionResult.error(state, it) }
+        return execute(state, action)
+    }
+
     fun executeDuringResolution(state: GameState, action: CastSpell): ExecutionResult {
         if (com.wingedsheep.engine.mechanics.SplitSecond.isLocked(state, cardRegistry)) {
             return ExecutionResult.error(state, com.wingedsheep.engine.mechanics.SplitSecond.REJECTION)

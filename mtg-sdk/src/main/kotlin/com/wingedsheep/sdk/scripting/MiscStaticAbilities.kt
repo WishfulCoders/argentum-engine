@@ -1193,6 +1193,62 @@ data object SkipDrawStep : StaticAbility {
     override val description: String = "Skip your draw step"
 }
 
+/**
+ * A per-turn cap on how many cards a player can draw — "Each opponent can't draw more than one
+ * card each turn." (Narset, Parter of Veils; Leovold, Emissary of Trest; Spirit of the Labyrinth's
+ * "Each player can't draw more than one card each turn.").
+ *
+ * **Who** is [affected], read relative to this permanent's controller: `EachOpponent` (Narset),
+ * `Each` (Spirit of the Labyrinth), `You`. **How many** is [maxPerTurn]; `0` is the blanket "can't
+ * draw cards" form.
+ *
+ * This is a "can't" effect (CR 101.2, CR 614.17), **not** a replacement effect, and that is the whole
+ * reason it is its own type rather than a [PreventDraw] with a restriction:
+ *
+ *  - A draw it forbids simply doesn't happen. Replacement effects that would have replaced that
+ *    draw (dredge, Hullbreacher, Laboratory Maniac) can't be applied to it (CR 614.17c — "If an
+ *    event can't happen … other replacement and/or prevention effects can't modify or replace it";
+ *    the Narset/Leovold rulings). A [PreventDraw] competes with them in the CR 616.1 order instead.
+ *  - The count is the drawing player's cards drawn *this turn*, including draws made before this
+ *    permanent entered (the "Narset will 'see' cards drawn earlier in the turn" ruling) — but it can't
+ *    reach back and undo them (CR 614.17a).
+ *  - A draw that was *replaced* never happened, so it doesn't use up the allowance.
+ *  - Draws are individual (CR 121.2): an instruction to draw several cards draws up to the remaining
+ *    allowance and ignores the rest. An *optional* draw the player couldn't fully perform can't be
+ *    chosen at all (CR 121.3 and the rulings: "if the draws are optional, the player can't choose to
+ *    draw, even if they could draw one card this way"); "draw up to N" offers at most the remaining
+ *    allowance.
+ *  - A forbidden draw is not an attempt to draw from an empty library (CR 121.4 never applies).
+ *
+ * Several applicable instances don't stack; the smallest [maxPerTurn] binding a player applies.
+ *
+ * @property maxPerTurn How many cards an affected player may draw each turn; at least 0.
+ * @property affected Which players are capped, relative to this permanent's controller.
+ */
+@SerialName("RestrictDrawsPerTurn")
+@Serializable
+data class RestrictDrawsPerTurn(
+    val maxPerTurn: Int = 1,
+    val affected: Player = Player.EachOpponent
+) : StaticAbility {
+    init {
+        require(maxPerTurn >= 0) { "RestrictDrawsPerTurn.maxPerTurn must be at least 0, was $maxPerTurn" }
+    }
+
+    override val description: String
+        get() {
+            val who = when (affected) {
+                Player.EachOpponent -> "Each opponent"
+                Player.Each -> "Each player"
+                Player.You -> "You"
+                else -> affected.description.replaceFirstChar { it.uppercase() }
+            }
+            if (maxPerTurn == 0) return "$who can't draw cards"
+            val amount = if (maxPerTurn == 1) "one card" else "$maxPerTurn cards"
+            return "$who can't draw more than $amount each turn"
+        }
+}
+
 /** Standing player-scoped restriction; unlike a next-step marker it is never consumed. */
 @SerialName("SkipUntapStep")
 @Serializable

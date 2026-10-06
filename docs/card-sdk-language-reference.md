@@ -6605,7 +6605,7 @@ requireExcess, batch, requires)`, `dealsCombatDamage(to, …)`, `isDealtDamage(b
 `damagedCreatureDies(dying?)`, `becomesTapped(reason?, firstTimeEachTurn?)`, `becomesUntapped()`, `tappedForMana()` (SELF),
 `turnedFaceUp()`, `transforms(intoBackFace?)`, `phasesIn()`, `becomesTarget(of?, byYou, byOpponent,
 spellsOnly, abilitiesOnly, firstTimeEachTurn, includeSpellTargets, includePlayerTargets, ofBackupAbility,
-targetsOnlyIt)`,
+targetsOnlyIt, targetPlayer)`,
 `getsCounters(type?, by?, firstTimeEachTurn?, batch?, orPlayer?)`, `losesCounters(type?, lastRemoved?,
 byDamagePrevention?)`, `trains()`, `champions()`, `crews()`, `saddles()`, `becomesSaddled()`,
 `becomesRenowned()`, `becomesMonstrous()`, `becomesPlotted()`, `explores(revealed?)`, `connives()`, `becomesAttached(to,
@@ -7627,10 +7627,13 @@ Triggers.you.casts(GameObjectFilter.Noncreature or
   against the spell's card data, so a `Creature` filter matches a creature spell on the stack. Ward
   never sees spell targets because it is generated only from battlefield permanents.
   Set `includePlayerTargets = true` for the "a **player** or permanent becomes the target" wording
-  (Loki, God of Mischief). A player carries no card data for a `filter` to read, so the opt-in
-  **requires** `filter` to stay `GameObjectFilter.Any` and throws at load time otherwise, rather than
-  silently firing on permanents only; the only printed wording today pairs the two anyway. A future
-  "a player or *creature*" needs the object half and the player half kept apart. The
+  (Loki, God of Mischief). The object half and the player half are kept apart: the `filter` is read
+  only for an object target (a player carries no card data), and `targetPlayer` (default
+  `Player.Any`, read relative to the trigger's controller) only for a player target — "Whenever
+  **you or a permanent you control** becomes the target of a spell or ability an opponent controls"
+  (Leovold, Emissary of Trest) is `Triggers.a(GameObjectFilter.Permanent.youControl())
+  .becomesTarget(byOpponent = true, includePlayerTargets = true, targetPlayer = Player.You)`.
+  `targetPlayer` without `includePlayerTargets` throws. The
   **retarget/reselect** effects (`Effects.ChangeTarget`, `Effects.ChangeSpellTarget`,
   `Effects.ReselectTargetRandomly`, "change the triggering object's targets") rewrite a stack
   object's targets without emitting a fresh `BecomesTargetEvent` — for any target kind — so no
@@ -8690,7 +8693,7 @@ staticAbility {
   granted mana ability switches on/off continuously with the host's type.
   The same holds for the **player-level controller grants** — `GrantShroudToController`,
   `GrantHexproofToController`, `GrantProtectionToController`, `OpponentsCantMakeYouSacrifice`,
-  `GrantCantLoseGame`, `GrantOpponentsCantWinGame`, `GrantCantLoseGameFromLife`, `StationUsingToughness`,
+  `OpponentsCantMakeYouDiscard`, `GrantCantLoseGame`, `GrantOpponentsCantWinGame`, `GrantCantLoseGameFromLife`, `StationUsingToughness`,
   `CantBeTargetedByOpponentAbilities`. Those are stamped as marker components once, as the permanent
   enters, rather than projected each pass, so the gate travels on the marker and every reader
   re-evaluates it against current state via `ControllerGrants` (Captain America, Super-Soldier:
@@ -8731,11 +8734,24 @@ staticAbility {
   rather than merely declinable. Stamped as `GrantsSacrificeImmunityComponent` and read by
   `SacrificeImmunity.appliesTo(state, sacrificingPlayerId, effectControllerId)`, which every sacrifice
   site consults: `ForceSacrificeExecutor` (edicts — a protected player is dropped before anyone is
-  prompted), `SacrificeExecutor`, `SacrificeTargetExecutor`, and `WardCounterEffectExecutor`'s
+  prompted), `SacrificeExecutor`, `SacrificeTargetExecutor`, pipeline sacrifices
+  (`MoveCollectionEffect` with `MoveType.Sacrifice` — the protected player's permanents are withheld
+  and leave the collection), `PayOrSufferExecutor` ("unless you sacrifice" is unchoosable, so the
+  consequence happens), a chain spell's sacrifice copy cost, and `WardCounterEffectExecutor`'s
   sacrifice cost. Pass the *overall* effect's controller (`context.effectControllerId ?: controllerId`),
   not the player a per-player iteration is currently bound to, so a `ForEachPlayer` wrapper (Killing
   Wave) still reports the caster. Only sacrifices are covered — lethal damage, 0 toughness, the legend
   rule and destruction are untouched.
+- `OpponentsCantMakeYouDiscard` — "Spells and abilities your opponents control can't cause you to
+  discard cards" (the discard half of Tamiyo, Collector of Tales, which prints both lines as two
+  statics). The discard twin of `OpponentsCantMakeYouSacrifice`, stamped as
+  `GrantsDiscardImmunityComponent` and read by `DiscardImmunity.appliesTo(state, discardingPlayerId,
+  effectControllerId)` at every *effect* discard: pipeline discards (`MoveCollectionEffect` with
+  `MoveType.Discard`, not a discard cost — the protected owner's cards stay in hand and leave the
+  collection, while the rest of the spell happens: Thoughtseize still reveals and costs 2 life),
+  `PayOrSufferExecutor` ("unless you discard" is unchoosable — Painful Quandary's 5 life is lost),
+  a chain spell's discard copy cost, and ward—discard. A player's own discard costs and the cleanup
+  hand-size discard (CR 514.1, a game rule) are never affected.
 - `GrantKeyword(AbilityFlag.SURVIVES_ZERO_LOYALTY.name, filter)` — matching planeswalkers aren't put
   into their owners' graveyards for having 0 loyalty: `PlaneswalkerLoyaltyCheck` skips them (CR 704.5i).
   Only that state-based action — destruction, sacrifice and the legend rule still apply, and one that
@@ -9803,6 +9819,16 @@ staticAbility {
   spells (Phyrexian Censor: `spellFilter = GameObjectFilter.Any.notSubtype(Subtype.PHYREXIAN)` for
   "one non-Phyrexian spell"): only matching spells cast this turn count, matched against the turn's
   cast records, and only a matching spell is blocked — the rest stay castable.
+- `RestrictDrawsPerTurn(maxPerTurn = 1, affected = Player.EachOpponent)` — a per-turn cap on cards
+  drawn (Narset, Parter of Veils / Leovold, Emissary of Trest: "Each opponent can't draw more than one
+  card each turn."; `affected = Player.Each` is Spirit of the Labyrinth; `maxPerTurn = 0` is "can't
+  draw cards"). A "can't" effect (CR 614.17), **not** a replacement: `DrawLimits` is asked before each
+  individual draw is offered to replacement effects, so a forbidden draw just doesn't happen and can't
+  be replaced (CR 614.17c — no dredge, no Hullbreacher Treasure) or fail on an empty library. Counts
+  `CardsDrawnThisTurnComponent`, so draws made before the source entered count and a replaced draw
+  doesn't. An optional draw the player couldn't fully make is not offered (CR 121.3, via the `May`
+  gate when the `then` leads with the draw); "draw up to N" offers at most the remaining allowance.
+  Smallest cap wins. Use it instead of `PreventDraw` for every printed "can't draw" line.
 - `CantCastSpellsSharingColorWithLastCast` — *global* (all players): can't cast a spell that shares a
   color with the spell most recently cast this turn. Backed by `GameState.lastCastSpellColors` (the
   colors of the last spell cast, cleared each turn). Never blocks the first spell of the turn; a
@@ -9823,7 +9849,10 @@ staticAbility {
   true` evaluates `condition` from the *casting player's* seat instead, for timing relative to each
   restricted player: Dosan the Falling Leaf = `PlayersCantCastSpells(Player.Each, condition =
   IsNotYourTurn, conditionFromCaster = true)` ("Players can cast spells only during their own turns"
-  — correct in multiplayer, where a controller-relative pair of statics is not). **where**
+  — correct in multiplayer, where a controller-relative pair of statics is not); Teferi, Time
+  Raveler = `PlayersCantCastSpells(Player.EachOpponent, condition = Not(CouldCastSorcery()),
+  conditionFromCaster = true)` ("Each opponent can cast spells only any time they could cast a
+  sorcery" — beats any flash permission, and stops casts made during a resolution). **where**
   (`fromZones`, the zones the card is cast *from*, read before it moves to the stack; `null` = any):
   Soulless Jailer = `PlayersCantCastSpells(Player.Each, GameObjectFilter.Noncreature, fromZones =
   setOf(Zone.GRAVEYARD, Zone.EXILE))`.
@@ -12936,6 +12965,11 @@ that works in both resolution and static-ability (projection) contexts.
   spell, if it's not their turn" is `Not(IsPlayersTurn(Player.TriggeringPlayer))` (the intervening-if
   carries the casting player as `Player.TriggeringPlayer`).
 - `IsInPhase(phase)` — currently in `BEGINNING | MAIN | COMBAT | …`.
+- `Conditions.CouldCastSorcery(player = Player.You)` (`PlayerCouldCastSorcery`) — CR 307.1 sorcery
+  timing for `player`: a main phase of their own turn (team-aware) with the stack empty, where an
+  object that is still **resolving** counts as on the stack (CR 608.2), so a spell cast during a
+  resolution (cascade, discover) is never at sorcery timing. Board-derived; usable under projection.
+  Teferi, Time Raveler's lock is `Not(CouldCastSorcery())` with `conditionFromCaster = true`.
 - `Conditions.IsInStep(vararg steps, yoursOnly = true)` — match the current step; by default also require the controller’s turn (team-aware). Usable in replacement restrictions as well as conditional static abilities.
 - `IsInStep(steps, yoursOnly = true)` — current step is one of `steps` (e.g. `Step.END`). Board-derived
   (reads `state.step` + active player), so it evaluates identically at resolution and under projection,

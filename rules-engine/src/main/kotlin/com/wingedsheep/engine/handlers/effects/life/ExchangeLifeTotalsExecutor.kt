@@ -73,6 +73,8 @@ class ExchangeLifeTotalsExecutor(
         if (effect.drawEqualToLifeLost) {
             var remaining = myLife - newState.lifeTotal(controllerId)
             while (remaining > 0) {
+                // A per-turn draw cap forbids the rest (CR 614.17, RestrictDrawsPerTurn).
+                if (drawPrimitive.drawAllowance(newState, controllerId) == 0) break
                 val result = drawPrimitive.drawOne(newState, controllerId)
                 newState = result.state
                 events.addAll(result.events)
