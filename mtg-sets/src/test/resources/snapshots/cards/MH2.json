@@ -1332,6 +1332,126 @@
     ]
 }
 
+// Grief
+{
+    "name": "Grief",
+    "manaCost": "{2}{B}{B}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Menace\nWhen this creature enters, target opponent reveals their hand. You choose a nonland card from it. That player discards that card.\nEvoke—Exile a black card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "MENACE",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "black"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Grief:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RevealHand",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "storeAs": "gathered1"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered1",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "nonland",
+                            "storeSelected": "selected2",
+                            "prompt": "Choose a nonland card to discard",
+                            "showAllCards": true,
+                            "alwaysPrompt": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected2",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "moveType": "Discard"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetOpponent",
+                    "id": "t0"
+                },
+                "descriptionOverride": "target opponent reveals their hand. You choose a nonland card from it. That player discards that card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "87",
+        "rarity": "MYTHIC",
+        "artist": "Nicholas Gregory",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/6/e6befbc4-1320-4f26-bd9f-b1814fedda10.jpg?1783926861",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as an evoke cost), add any cost increases, then apply any cost reductions. The mana value of the spell is determined by only its mana cost, no matter what the total cost to cast that spell was."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Healer's Flock
 {
     "name": "Healer's Flock",
