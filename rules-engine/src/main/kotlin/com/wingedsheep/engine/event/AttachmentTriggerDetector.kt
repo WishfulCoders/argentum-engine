@@ -197,6 +197,9 @@ class AttachmentTriggerDetector(
             is EventPattern.DamageReceivedEvent -> {
                 event is DamageDealtEvent && event.targetId == attachedEntityId
             }
+            // Matched per damage edge here; a recipient-less "whenever equipped creature deals
+            // combat damage" (Umezawa's Jitte) is then folded to one trigger per combat damage step
+            // by TriggerDetector.foldSimultaneousDamage (CR 510.2, 603.2c).
             is EventPattern.DealsDamageEvent -> {
                 event is DamageDealtEvent &&
                     event.sourceId == attachedEntityId &&

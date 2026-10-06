@@ -266,8 +266,9 @@ class TriggerDetector(
     ): List<PendingTrigger> {
         val index = buildTriggerIndex(state)
         val triggers = mutableListOf<PendingTrigger>()
-        // Slot in [triggers] of each "is dealt damage" trigger already raised by this batch's
-        // combat damage, keyed by ability instance and recipient — see [foldSimultaneousDamage].
+        // Slot in [triggers] of each "is dealt damage" / recipient-less "deals damage" trigger already
+        // raised by this batch's combat damage, keyed by ability instance and the recipient or
+        // damage source — see [foldSimultaneousDamage].
         val combatDamageSlots = mutableMapOf<List<Any?>, Int>()
 
         for ((eventIndex, event) in events.withIndex()) {
@@ -3117,14 +3118,33 @@ class TriggerDetector(
     }
 
     /**
-     * "Whenever this is dealt damage" triggers once per damage *event* (CR 603.2c), and combat
-     * damage is dealt simultaneously (CR 510.2): two blockers hitting Fungusaur are one event,
-     * one +1/+1 counter, and Boros Reckoner's "that much damage" is the total. The engine emits
-     * one [DamageDealtEvent] per source, so the recipient form ([EventPattern.DamageReceivedEvent]
-     * with no `source` filter) folds a combat event's triggers into the one this batch already
-     * raised for the same ability and recipient, summing the damage. Returns the triggers still
-     * to add. The per-source form ("a source deals damage to this") is untouched — it triggers
-     * once per source by its own wording (Nested Ghoul's ruling).
+     * Folds the per-edge [DamageDealtEvent]s of one combat damage step back into the single
+     * simultaneous event they are (CR 510.2: all combat damage in a step is dealt at once), for the
+     * two trigger wordings whose event is that whole simultaneous damage rather than one edge of it
+     * — an ability triggers only once each time its trigger event occurs (CR 603.2c). The engine
+     * emits one [DamageDealtEvent] per source→recipient edge, so each folded trigger is merged into
+     * the one this batch already raised for the same ability instance, summing the damage into
+     * `TRIGGER_DAMAGE_AMOUNT` (and the excess). Returns the triggers still to add.
+     *
+     * - **Incoming, "whenever this is dealt damage"** ([EventPattern.DamageReceivedEvent] with no
+     *   `source` filter), keyed by recipient: two blockers hitting Fungusaur are one event, one
+     *   +1/+1 counter, and Boros Reckoner's "that much damage" is the total. The per-source form
+     *   ("a source deals damage to this") is untouched — it triggers once per source by its own
+     *   wording (Nested Ghoul's ruling).
+     * - **Outgoing with no recipient, "whenever [this / equipped creature / a creature you
+     *   control] deals (combat) damage"** ([EventPattern.DealsDamageEvent] with [Recipient.Any],
+     *   not the `batch` form), keyed by damage source: a creature that tramples over a blocker or
+     *   splits its damage between two blockers deals combat damage once, so Umezawa's Jitte gets
+     *   two charge counters, not four, and Drinker of Sorrow's controller sacrifices one permanent
+     *   ("no matter how many things it deals damage to", 2004-10-04 ruling). Every binding takes
+     *   the fold — SELF, ATTACHED and the ANY observer ("a creature you control", once per
+     *   creature). A trigger that names a recipient ("deals combat damage to a player / a
+     *   creature") still triggers per recipient, since its effect may refer to "that player" /
+     *   "that creature".
+     *
+     * Only combat damage folds. Noncombat damage dealt to several recipients by one effect is also
+     * one event, but the engine's events carry no marker tying such edges together, and two
+     * separate damage effects in one batch must still trigger separately.
      */
     private fun foldSimultaneousDamage(
         detected: List<PendingTrigger>,
@@ -3135,12 +3155,19 @@ class TriggerDetector(
         if (event !is DamageDealtEvent || !event.isCombatDamage) return detected
         val kept = mutableListOf<PendingTrigger>()
         for (pending in detected) {
-            val trigger = pending.ability.trigger
-            if (trigger !is EventPattern.DamageReceivedEvent || trigger.source != null) {
+            // What identifies the one simultaneous event this trigger belongs to: the recipient
+            // for "is dealt damage", the damage source for a recipient-less "deals damage".
+            val eventKey = when (val trigger = pending.ability.trigger) {
+                is EventPattern.DamageReceivedEvent -> if (trigger.source == null) event.targetId else null
+                is EventPattern.DealsDamageEvent ->
+                    if (trigger.recipient == Recipient.Any && !trigger.batch) event.sourceId else null
+                else -> null
+            }
+            if (eventKey == null) {
                 kept.add(pending)
                 continue
             }
-            val key = listOf(pending.sourceId, pending.ability.id, pending.granterId, event.targetId)
+            val key = listOf(pending.sourceId, pending.ability.id, pending.granterId, eventKey)
             val slot = slots[key]
             if (slot == null) {
                 // The caller appends `kept` to `triggers` in order, so this is its final slot.
