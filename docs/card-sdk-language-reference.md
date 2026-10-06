@@ -6521,7 +6521,7 @@ requireExcess, batch, requires)`, `dealsCombatDamage(to, …)`, `isDealtDamage(b
 `damagedCreatureDies(dying?)`, `becomesTapped(reason?, firstTimeEachTurn?)`, `becomesUntapped()`, `tappedForMana()` (SELF),
 `turnedFaceUp()`, `transforms(intoBackFace?)`, `phasesIn()`, `becomesTarget(of?, byYou, byOpponent,
 spellsOnly, abilitiesOnly, firstTimeEachTurn, includeSpellTargets, includePlayerTargets, ofBackupAbility,
-targetsOnlyIt)`,
+targetsOnlyIt, targetPlayer)`,
 `getsCounters(type?, by?, firstTimeEachTurn?, batch?, orPlayer?)`, `losesCounters(type?, lastRemoved?,
 byDamagePrevention?)`, `trains()`, `champions()`, `crews()`, `saddles()`, `becomesSaddled()`,
 `becomesRenowned()`, `becomesMonstrous()`, `becomesPlotted()`, `explores(revealed?)`, `connives()`, `becomesAttached(to,
@@ -7529,10 +7529,13 @@ Triggers.you.casts(GameObjectFilter.Noncreature or
   against the spell's card data, so a `Creature` filter matches a creature spell on the stack. Ward
   never sees spell targets because it is generated only from battlefield permanents.
   Set `includePlayerTargets = true` for the "a **player** or permanent becomes the target" wording
-  (Loki, God of Mischief). A player carries no card data for a `filter` to read, so the opt-in
-  **requires** `filter` to stay `GameObjectFilter.Any` and throws at load time otherwise, rather than
-  silently firing on permanents only; the only printed wording today pairs the two anyway. A future
-  "a player or *creature*" needs the object half and the player half kept apart. The
+  (Loki, God of Mischief). The object half and the player half are kept apart: the `filter` is read
+  only for an object target (a player carries no card data), and `targetPlayer` (default
+  `Player.Any`, read relative to the trigger's controller) only for a player target — "Whenever
+  **you or a permanent you control** becomes the target of a spell or ability an opponent controls"
+  (Leovold, Emissary of Trest) is `Triggers.a(GameObjectFilter.Permanent.youControl())
+  .becomesTarget(byOpponent = true, includePlayerTargets = true, targetPlayer = Player.You)`.
+  `targetPlayer` without `includePlayerTargets` throws. The
   **retarget/reselect** effects (`Effects.ChangeTarget`, `Effects.ChangeSpellTarget`,
   `Effects.ReselectTargetRandomly`, "change the triggering object's targets") rewrite a stack
   object's targets without emitting a fresh `BecomesTargetEvent` — for any target kind — so no

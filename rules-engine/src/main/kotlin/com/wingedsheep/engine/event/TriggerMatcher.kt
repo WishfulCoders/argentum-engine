@@ -1598,6 +1598,13 @@ class TriggerMatcher(
         // player must not wake them.
         if (event.targetIsPlayer && !trigger.includePlayerTargets) return false
 
+        // The player half is narrowed by `targetPlayer`, read relative to the trigger's controller:
+        // Leovold, Emissary of Trest's "Whenever **you** or a permanent you control becomes the
+        // target …" fires for its controller only. `Player.Any` (Loki) is any player.
+        if (event.targetIsPlayer && !matchesPlayer(state, trigger.targetPlayer, event.targetEntityId, controllerId)) {
+            return false
+        }
+
         // "Becomes the target of a spell" (King of the Oathbreakers) ignores abilities;
         // "becomes the target of an ability" (Loki, God of Mischief) ignores spells. Both read the
         // same `sourceIsSpell` axis stamped by StackResolver.emitBecomesTarget.
@@ -1661,10 +1668,10 @@ class TriggerMatcher(
         // entity has a battlefield projection — an animated land IS "a creature you control"
         // while the effect lasts — and fall back to base card data for stack objects; the
         // controller predicate likewise falls back to the spell's caster (Surrak, Elusive
-        // Hunter). Targeted abilities on the stack carry no card data and never match; players
-        // can't reach here at all, because `includePlayerTargets` requires filter `Any`
-        // (EventPattern.BecomesTargetEvent's init).
-        if (trigger.targetFilter != GameObjectFilter.Any) {
+        // Hunter). Targeted abilities on the stack carry no card data and never match. The filter
+        // is the object half only: a targeted player was already settled by `targetPlayer` above
+        // and has no card data for it to read.
+        if (!event.targetIsPlayer && trigger.targetFilter != GameObjectFilter.Any) {
             val targetContainer = state.getEntity(event.targetEntityId) ?: return false
             if (!targetContainer.has<CardComponent>()) return false
             val predicateContext = PredicateContext(controllerId = controllerId, sourceId = sourceId)
