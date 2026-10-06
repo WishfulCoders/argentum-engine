@@ -908,19 +908,41 @@ sealed interface KeywordAbility {
     // =========================================================================
 
     /**
-     * Evoke with a mana cost.
+     * Evoke [cost] (CR 702.74).
      * "Evoke {R/W}{R/W}" - You may cast this spell for its evoke cost.
      * If you do, it's sacrificed when it enters the battlefield.
      *
-     * Evoke is an alternative cost. When cast for evoke, the creature enters
-     * the battlefield normally (ETB triggers fire), then a separate "sacrifice self"
-     * delayed trigger goes on the stack. Players can respond between ETB and sacrifice.
+     * Evoke is an alternative cost (CR 702.74a, 118.9). When cast for evoke, the creature enters
+     * the battlefield normally (ETB triggers fire), then a separate "sacrifice self" triggered
+     * ability goes on the stack. Players can respond between ETB and sacrifice.
+     *
+     * The evoke cost is [cost] (mana) plus [additionalCosts] (the non-mana part of the same cost).
+     * Most evoke costs are mana only. The Modern Horizons 2 Incarnations print a purely non-mana
+     * one — "Evoke—Exile a white card from your hand." (Solitude) — which is [cost] `{0}` and one
+     * [AdditionalCost.ExileCards] from hand. Both parts are one alternative cost: they are
+     * announced together (CR 601.2b), paid together with the total cost (CR 601.2f–h), and only a
+     * cast that paid them counts as evoked, so the sacrifice trigger and any "if it was evoked"
+     * reading work the same way for both shapes. The card being cast is already on the stack while
+     * its costs are paid (CR 601.2a), so a pitch cost can never exile the card itself.
+     *
+     * Attach a mana-only evoke with `evoke = "{cost}"` on [com.wingedsheep.sdk.dsl.CardBuilder]
+     * and one with a non-mana part with the `evokeWith(...)` DSL helper.
      */
     @SerialName("Evoke")
     @Serializable
-    data class Evoke(val cost: ManaCost) : KeywordAbility {
+    data class Evoke(
+        val cost: ManaCost,
+        val additionalCosts: List<AdditionalCost> = emptyList()
+    ) : KeywordAbility {
         override val keyword: Keyword = Keyword.EVOKE
-        override val description: String = "Evoke $cost"
+        override val description: String = when {
+            additionalCosts.isEmpty() -> "Evoke $cost"
+            // The printed form of a non-mana evoke cost: "Evoke—Exile a white card from your hand."
+            cost.cmc == 0 && !cost.hasX -> "Evoke—" + additionalCosts.joinToString(", ") { it.description }
+            else -> "Evoke—$cost, " + additionalCosts.joinToString(", ") {
+                it.description.replaceFirstChar { c -> c.lowercaseChar() }
+            }
+        }
     }
 
     // =========================================================================

@@ -631,6 +631,12 @@ internal class CardProjector(
                 ?.firstOrNull()
                 ?.cost
                 ?.toString(),
+            evokeAdditionalCost = cardDef?.keywordAbilities
+                ?.filterIsInstance<KeywordAbility.Evoke>()
+                ?.firstOrNull()
+                ?.additionalCosts
+                ?.takeIf { it.isNotEmpty() }
+                ?.joinToString(", ") { it.description },
             bestow = cardDef?.keywordAbilities
                 ?.filterIsInstance<KeywordAbility.Bestow>()
                 ?.firstOrNull()

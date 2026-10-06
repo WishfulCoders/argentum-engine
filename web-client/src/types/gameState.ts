@@ -618,6 +618,12 @@ export interface ClientCard {
    */
   readonly evoke?: string | null
 
+  /**
+   * The non-mana part of the evoke cost (CR 702.74a), e.g. "Exile a white card from your hand" for
+   * Solitude, whose evoke cost is only that (`evoke` is then "{0}"). Null for mana-only evoke.
+   */
+  readonly evokeAdditionalCost?: string | null
+
   /** Printed bestow price; enabled options come exclusively from server legal actions. */
   readonly bestow?: {
     readonly cost: string

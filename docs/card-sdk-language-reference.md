@@ -170,6 +170,7 @@ section; do not let SDK additions land without a corresponding doc update.
 - `dash: String?` — Dash alt-cost (CR 702.109); gains haste and returns to owner's hand at the
   beginning of the next end step.
 - `evoke: String?` — Evoke alt-cost; sacrifices on ETB.
+- `evokeWith(vararg additionalCosts, mana = "{0}")` — Evoke whose cost has a non-mana part (CR 702.74a): "Evoke—Exile a white card from your hand." is `evokeWith(Costs.additional.ExileCards(1, GameObjectFilter.Any.withColor(Color.WHITE), CostZone.HAND))` (the MH2 Incarnations). Still one `KeywordAbility.Evoke(cost, additionalCosts)`, so the evoke cast, the "evoked" mark and the sacrifice trigger are the same as a mana evoke; the non-mana part is paid with the cast's `AdditionalCostPayment` and the enumerated action carries its picker. A card can never pitch itself (it is on the stack, CR 601.2a).
 - `selfAlternativeCost: SelfAlternativeCost?` — generic alternative-cost slot.
 - `castTimeCreatureTypeChoice: CastTimeCreatureTypeSource?` — forces a creature-type choice at cast time. No card uses it
   today: "up to N target creature cards of the creature type of your choice" (Aphetto Dredging) is spelled as

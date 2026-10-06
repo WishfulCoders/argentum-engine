@@ -290,7 +290,10 @@ therefore rides on `ClientCard` (`impending`, `evoke`), and `keywordAlternativeC
 into the pair of buttons `buildActionOptions` always draws, graying out whichever side the server
 didn't enumerate. `shouldShowCastModal` reads the same helper, so drag-to-play opens the menu instead
 of firing the lone affordable cast: a Mulldrifter you can only afford to evoke must not evoke itself —
-and sacrifice itself — because you dragged it out of hand.
+and sacrifice itself — because you dragged it out of hand. An evoke cost with a non-mana part (the
+MH2 Incarnations' "Evoke—Exile a white card from your hand") also sends `evokeAdditionalCost`, which
+the evoke button's hint names, since its mana cost alone reads `{0}`; the exile picker itself comes
+from the enumerated action's `additionalCostInfo` like any other additional cost.
 
 Two rules for `playCostRange`: the **low** end applies each option's reduction floor, the **high** end
 deliberately doesn't (the top of the range is what a cast *asks* for before you spend anything on it);
