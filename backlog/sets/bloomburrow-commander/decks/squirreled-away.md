@@ -18,7 +18,7 @@
 - [ ] 1 Deep Forest Hermit
 - [ ] 1 End-Raze Forerunners
 - [ ] 1 Gilded Goose
-- [ ] 1 Haywire Mite
+- [x] 1 Haywire Mite
 - [ ] 1 Hazel's Brewmaster
 - [ ] 1 Honored Dreyleader
 - [ ] 1 Insatiable Frugivore
