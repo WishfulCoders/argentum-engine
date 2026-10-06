@@ -74,6 +74,23 @@ class MoveCollectionExecutor(
             allCards
         }
 
+        // "Spells and abilities your opponents control can't cause you to discard cards or sacrifice
+        // permanents" (Tamiyo, Collector of Tales; Sigarda, Host of Herons). A "can't" beats the
+        // instruction (CR 101.2): the protected player's cards simply stay where they are, and the
+        // rest of the effect still happens. The withheld cards also leave the collection, so a later
+        // "… discarded/sacrificed this way" reads only what actually moved.
+        val withheld = withheldByImmunity(state, effect, cards, context)
+        if (withheld.isNotEmpty()) {
+            val remaining = allCards - withheld
+            val narrowed = context.copy(
+                pipeline = context.pipeline.copy(
+                    storedCollections = context.pipeline.storedCollections + (effect.from to remaining)
+                )
+            )
+            val result = execute(state, effect, narrowed)
+            return result.copy(updatedCollections = mapOf(effect.from to remaining) + result.updatedCollections)
+        }
+
         if (effect.moveType == MoveType.Discard) context = context.copy(discardCollectionName = effect.from)
         val destination = effect.destination
         if (cards.isEmpty()) {
@@ -1116,6 +1133,34 @@ class MoveCollectionExecutor(
                 else emptyMap(),
             updatedSacrificedPermanents = sacrificedSnapshots,
         )
+    }
+
+    /**
+     * The cards of [cards] an effect discard or sacrifice may not move, because the player who would
+     * discard or sacrifice them is protected from the effect's controller by
+     * [com.wingedsheep.engine.mechanics.DiscardImmunity] / [com.wingedsheep.engine.mechanics.SacrificeImmunity].
+     * A discard *cost* (the player paying for their own spell or ability) is never withheld. The
+     * discarding player is the card's owner (CR 701.9a — a card is discarded from its owner's hand);
+     * the sacrificing player is the permanent's controller (CR 701.21a).
+     */
+    private fun withheldByImmunity(
+        state: GameState,
+        effect: MoveCollectionEffect,
+        cards: List<EntityId>,
+        context: EffectContext
+    ): Set<EntityId> {
+        val effectController = context.effectControllerId ?: context.controllerId
+        return when {
+            effect.moveType == MoveType.Discard && !context.discardIsCost -> cards.filterTo(mutableSetOf()) { cardId ->
+                val owner = state.getEntity(cardId)?.get<OwnerComponent>()?.playerId ?: return@filterTo false
+                com.wingedsheep.engine.mechanics.DiscardImmunity.appliesTo(state, owner, effectController, predicateEvaluator)
+            }
+            effect.moveType == MoveType.Sacrifice -> cards.filterTo(mutableSetOf()) { cardId ->
+                val controller = state.projectedState.getController(cardId) ?: return@filterTo false
+                com.wingedsheep.engine.mechanics.SacrificeImmunity.appliesTo(state, controller, effectController, predicateEvaluator)
+            }
+            else -> emptySet()
+        }
     }
 
     /**

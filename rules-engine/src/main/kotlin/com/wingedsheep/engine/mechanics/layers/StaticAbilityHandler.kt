@@ -286,6 +286,9 @@ class StaticAbilityHandler(
         allStaticAbilities.controllerGrant<OpponentsCantMakeYouSacrifice>()?.let {
             result = result.with(GrantsSacrificeImmunityComponent(it.condition))
         }
+        allStaticAbilities.controllerGrant<com.wingedsheep.sdk.scripting.OpponentsCantMakeYouDiscard>()?.let {
+            result = result.with(com.wingedsheep.engine.state.components.battlefield.GrantsDiscardImmunityComponent(it.condition))
+        }
         allStaticAbilities.controllerGrant<GrantCantLoseGame>()?.let {
             result = result.with(GrantsCantLoseGameComponent(it.condition))
         }
@@ -1180,6 +1183,7 @@ class StaticAbilityHandler(
             is GrantProtectionToController,
             is GrantShroudToController,
             is com.wingedsheep.sdk.scripting.OpponentsCantMakeYouSacrifice,
+            is com.wingedsheep.sdk.scripting.OpponentsCantMakeYouDiscard,
             is StationUsingToughness,
             is SuppressHexproofForGroup,
             is com.wingedsheep.sdk.scripting.GrantMadnessToOwnedCards,

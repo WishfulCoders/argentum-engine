@@ -127,6 +127,18 @@ class ChainCopyExecutor(
         if (!canPayCopyCost(state, recipientPlayerId, effect.copyCost, predicateEvaluator = predicateEvaluator)) {
             return EffectResult.success(state, events)
         }
+        // The chain spell offers the sacrifice/discard; if an opponent controls it and the recipient
+        // is protected from exactly that (Tamiyo, Collector of Tales; Sigarda, Host of Herons), the
+        // option can't be taken (CR 101.2, the Tamiyo ruling).
+        val chainController = context.effectControllerId ?: context.controllerId
+        val forbidden = when ((effect.copyCost as? PayCost.Atom)?.atom) {
+            is CostAtom.Sacrifice -> com.wingedsheep.engine.mechanics.SacrificeImmunity
+                .appliesTo(state, recipientPlayerId, chainController, predicateEvaluator)
+            is CostAtom.Discard -> com.wingedsheep.engine.mechanics.DiscardImmunity
+                .appliesTo(state, recipientPlayerId, chainController, predicateEvaluator)
+            else -> false
+        }
+        if (forbidden) return EffectResult.success(state, events)
 
         // Check if there are valid targets for a potential copy
         val legalTargets = targetFinder.findLegalTargets(

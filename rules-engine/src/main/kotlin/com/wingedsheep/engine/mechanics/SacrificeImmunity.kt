@@ -12,8 +12,10 @@ import com.wingedsheep.sdk.model.EntityId
  *
  * A "can't" beats the instruction (CR 101.2), so a protected player's sacrifice simply doesn't
  * happen and an optional sacrifice offered by such a source can't be chosen. Every sacrifice
- * site — the edict executor, the plain and targeted sacrifice executors, and the ward—sacrifice
- * cost — consults [appliesTo] before moving anything to the graveyard, which is what keeps the
+ * site — the edict executor, the plain and targeted sacrifice executors, pipeline sacrifices
+ * (`MoveCollectionEffect`), "unless you sacrifice" punishers (`PayOrSufferExecutor`), a chain
+ * spell's copy cost and the ward—sacrifice cost — consults [appliesTo] before moving anything to
+ * the graveyard, which is what keeps the
  * grant from leaking into the many other ways a permanent leaves the battlefield (lethal damage,
  * 0 toughness, the legend rule, destruction). None of those are sacrifices.
  *

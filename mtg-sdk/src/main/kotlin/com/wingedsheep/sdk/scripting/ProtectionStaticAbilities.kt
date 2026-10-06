@@ -287,6 +287,29 @@ data object OpponentsCantMakeYouSacrifice : StaticAbility {
 }
 
 /**
+ * Spells and abilities your opponents control can't cause you to discard cards (the discard half
+ * of Tamiyo, Collector of Tales; the sibling of [OpponentsCantMakeYouSacrifice]).
+ *
+ * A player-scoped "can't" (CR 101.2): as an opponent's spell or ability resolves, a discard it
+ * would impose on this permanent's controller simply doesn't happen (CR 701.9a) — the rest of the
+ * spell or ability still does (a Thoughtseize still reveals, still lets its caster choose, still
+ * costs them 2 life) — and an *optional* discard such a source offers can't be chosen, including
+ * an "unless you discard …" clause (Painful Quandary) or a ward—discard cost. The controller's own
+ * spells and abilities are untouched, and so is a discard the game rules impose: the cleanup-step
+ * discard to maximum hand size (CR 514.1) is not caused by a spell or ability, even when an
+ * opponent's effect lowered the maximum (the Tamiyo ruling).
+ *
+ * Stamped as `GrantsDiscardImmunityComponent` by the static-ability handler and read by
+ * `DiscardImmunity`; it is not a Rule 613 continuous effect.
+ */
+@SerialName("OpponentsCantMakeYouDiscard")
+@Serializable
+data object OpponentsCantMakeYouDiscard : StaticAbility {
+    override val description: String =
+        "Spells and abilities your opponents control can't cause you to discard cards"
+}
+
+/**
  * You have protection from [scope] (CR 702.16).
  *
  * Grants player-level protection to the permanent's controller — the continuous, static

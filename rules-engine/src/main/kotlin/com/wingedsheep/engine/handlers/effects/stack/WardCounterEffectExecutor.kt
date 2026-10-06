@@ -239,8 +239,11 @@ class WardCounterEffectExecutor(
             is WardCost.Life -> state.canPayLife(payingPlayerId, cost.amount)
             // Resolved to a fixed Life before it ever reaches here; treat as free defensively.
             is WardCost.DynamicLife -> true
+            // Tamiyo, Collector of Tales: the ward trigger is an ability the warded permanent's
+            // controller controls, so a protected payer can't choose to discard to it (CR 101.2).
             is WardCost.Discard ->
-                eligibleDiscardCount(state, zones, payingPlayerId, cost.filter) >= cost.count
+                !com.wingedsheep.engine.mechanics.DiscardImmunity.appliesTo(state, payingPlayerId, controllerId, predicateEvaluator = zones.predicateEvaluator) &&
+                    eligibleDiscardCount(state, zones, payingPlayerId, cost.filter) >= cost.count
             is WardCost.Sacrifice ->
                 !SacrificeImmunity.appliesTo(state, payingPlayerId, controllerId, predicateEvaluator = zones.predicateEvaluator) &&
                     sacrificeCandidates(state, zones, payingPlayerId, cost.filter).size >= cost.count

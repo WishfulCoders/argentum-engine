@@ -8586,7 +8586,7 @@ staticAbility {
   granted mana ability switches on/off continuously with the host's type.
   The same holds for the **player-level controller grants** — `GrantShroudToController`,
   `GrantHexproofToController`, `GrantProtectionToController`, `OpponentsCantMakeYouSacrifice`,
-  `GrantCantLoseGame`, `GrantOpponentsCantWinGame`, `GrantCantLoseGameFromLife`, `StationUsingToughness`,
+  `OpponentsCantMakeYouDiscard`, `GrantCantLoseGame`, `GrantOpponentsCantWinGame`, `GrantCantLoseGameFromLife`, `StationUsingToughness`,
   `CantBeTargetedByOpponentAbilities`. Those are stamped as marker components once, as the permanent
   enters, rather than projected each pass, so the gate travels on the marker and every reader
   re-evaluates it against current state via `ControllerGrants` (Captain America, Super-Soldier:
@@ -8627,11 +8627,24 @@ staticAbility {
   rather than merely declinable. Stamped as `GrantsSacrificeImmunityComponent` and read by
   `SacrificeImmunity.appliesTo(state, sacrificingPlayerId, effectControllerId)`, which every sacrifice
   site consults: `ForceSacrificeExecutor` (edicts — a protected player is dropped before anyone is
-  prompted), `SacrificeExecutor`, `SacrificeTargetExecutor`, and `WardCounterEffectExecutor`'s
+  prompted), `SacrificeExecutor`, `SacrificeTargetExecutor`, pipeline sacrifices
+  (`MoveCollectionEffect` with `MoveType.Sacrifice` — the protected player's permanents are withheld
+  and leave the collection), `PayOrSufferExecutor` ("unless you sacrifice" is unchoosable, so the
+  consequence happens), a chain spell's sacrifice copy cost, and `WardCounterEffectExecutor`'s
   sacrifice cost. Pass the *overall* effect's controller (`context.effectControllerId ?: controllerId`),
   not the player a per-player iteration is currently bound to, so a `ForEachPlayer` wrapper (Killing
   Wave) still reports the caster. Only sacrifices are covered — lethal damage, 0 toughness, the legend
   rule and destruction are untouched.
+- `OpponentsCantMakeYouDiscard` — "Spells and abilities your opponents control can't cause you to
+  discard cards" (the discard half of Tamiyo, Collector of Tales, which prints both lines as two
+  statics). The discard twin of `OpponentsCantMakeYouSacrifice`, stamped as
+  `GrantsDiscardImmunityComponent` and read by `DiscardImmunity.appliesTo(state, discardingPlayerId,
+  effectControllerId)` at every *effect* discard: pipeline discards (`MoveCollectionEffect` with
+  `MoveType.Discard`, not a discard cost — the protected owner's cards stay in hand and leave the
+  collection, while the rest of the spell happens: Thoughtseize still reveals and costs 2 life),
+  `PayOrSufferExecutor` ("unless you discard" is unchoosable — Painful Quandary's 5 life is lost),
+  a chain spell's discard copy cost, and ward—discard. A player's own discard costs and the cleanup
+  hand-size discard (CR 514.1, a game rule) are never affected.
 - `GrantKeyword(AbilityFlag.SURVIVES_ZERO_LOYALTY.name, filter)` — matching planeswalkers aren't put
   into their owners' graveyards for having 0 loyalty: `PlaneswalkerLoyaltyCheck` skips them (CR 704.5i).
   Only that state-based action — destruction, sacrifice and the legend rule still apply, and one that

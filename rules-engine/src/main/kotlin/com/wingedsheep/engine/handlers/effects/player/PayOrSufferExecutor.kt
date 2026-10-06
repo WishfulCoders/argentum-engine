@@ -98,7 +98,12 @@ class PayOrSufferExecutor(
                     state, effect, context, CostAtom.PayLife(amount), sourceId, sourceCard.name, payingPlayerId
                 )
             }
-            is PayCost.Atom -> when (val atom = cost.atom) {
+            // Tamiyo, Collector of Tales / Sigarda, Host of Herons: an "unless you discard/sacrifice"
+            // option an opponent's spell or ability offers can't be taken (CR 101.2, the Tamiyo
+            // ruling on Mogis and Painful Quandary) — so the consequence happens.
+            is PayCost.Atom -> if (forbiddenByImmunity(state, cost.atom, payingPlayerId, context)) {
+                executeSufferEffect(state, effect.suffer, context)
+            } else when (val atom = cost.atom) {
                 is CostAtom.Discard -> handleDiscardCost(state, effect, context, atom, sourceId, sourceCard.name, payingPlayerId)
                 // Perplex — "counter target spell unless its controller discards their hand".
                 // Nothing is selected, so this is a yes/no like the random-discard variant.
@@ -891,7 +896,9 @@ class PayOrSufferExecutor(
         // Build available options: only include costs the player can actually pay
         val availableOptions = mutableListOf<Pair<Int, String>>()
         for ((index, option) in cost.options.withIndex()) {
-            if (canPayCost(state, payingPlayerId, option, sourceId)) {
+            if (canPayCost(state, payingPlayerId, option, sourceId) &&
+                !(option is PayCost.Atom && forbiddenByImmunity(state, option.atom, payingPlayerId, context))
+            ) {
                 availableOptions.add(index to option.description.replaceFirstChar { it.uppercase() })
             }
         }
@@ -987,6 +994,27 @@ class PayOrSufferExecutor(
     /**
      * Check if a player can pay a specific cost.
      */
+    /**
+     * Whether paying [atom] would have [payingPlayerId] discard or sacrifice at the behest of a
+     * spell or ability an opponent of theirs controls while they're protected from exactly that
+     * ([DiscardImmunity] / [SacrificeImmunity]).
+     */
+    private fun forbiddenByImmunity(
+        state: GameState,
+        atom: CostAtom,
+        payingPlayerId: EntityId,
+        context: EffectContext
+    ): Boolean {
+        val effectController = context.effectControllerId ?: context.controllerId
+        return when (atom) {
+            is CostAtom.Discard, is CostAtom.DiscardHand ->
+                com.wingedsheep.engine.mechanics.DiscardImmunity.appliesTo(state, payingPlayerId, effectController, predicateEvaluator)
+            is CostAtom.Sacrifice, is CostAtom.SacrificeAll ->
+                com.wingedsheep.engine.mechanics.SacrificeImmunity.appliesTo(state, payingPlayerId, effectController, predicateEvaluator)
+            else -> false
+        }
+    }
+
     private fun canPayCost(
         state: GameState,
         playerId: EntityId,
