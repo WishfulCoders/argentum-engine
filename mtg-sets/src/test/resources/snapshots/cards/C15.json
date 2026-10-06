@@ -136,6 +136,94 @@
     ]
 }
 
+// Mystic Confluence
+{
+    "name": "Mystic Confluence",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Choose three. You may choose the same mode more than once.\n• Counter target spell unless its controller pays {3}.\n• Return target creature to its owner's hand.\n• Draw a card.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "Counter",
+                        "condition": {
+                            "type": "CounterCondition.UnlessPaysMana",
+                            "cost": "{3}"
+                        }
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": {},
+                                "zone": "Stack"
+                            },
+                            "id": "t0"
+                        }
+                    ]
+                },
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t1"
+                        },
+                        "destination": "Hand"
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "creature"
+                            },
+                            "id": "t1"
+                        }
+                    ],
+                    "description": "Return target creature to its owner's hand"
+                },
+                {
+                    "effect": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                }
+            ],
+            "chooseCount": 3,
+            "allowRepeat": true
+        }
+    },
+    "metadata": {
+        "collectorNumber": "14",
+        "rarity": "RARE",
+        "artist": "Kieran Yanner",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/1/81bbffc2-6f58-4baa-8f95-168eab106b15.jpg?1783938114",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "No matter which combination of modes you choose, you always follow the instructions in the order they are written."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If the middle mode is chosen more than once, you choose the relative order to return the target creatures."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If you choose the first and/or second modes but all of the targets become illegal before Mystic Confluence resolves, the spell won't resolve. If you also chose the last mode once or twice, you won't draw any cards. If at least one target is still legal, the spell will resolve but will have no effect on any illegal targets."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Oreskos Explorer
 {
     "name": "Oreskos Explorer",
