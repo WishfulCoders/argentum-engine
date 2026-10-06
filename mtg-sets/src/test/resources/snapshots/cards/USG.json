@@ -4528,6 +4528,108 @@
     ]
 }
 
+// Sneak Attack
+{
+    "name": "Sneak Attack",
+    "manaCost": "{3}{R}",
+    "typeLine": "Enchantment",
+    "oracleText": "{R}: You may put a creature card from your hand onto the battlefield. That creature gains haste. Sacrifice the creature at the beginning of the next end step.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Sneak Attack:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{R}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": "creature"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        },
+                        {
+                            "type": "ConditionalOnCollection",
+                            "collection": "selected1",
+                            "ifNotEmpty": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GrantKeyword",
+                                        "keyword": "HASTE",
+                                        "target": {
+                                            "type": "PipelineTarget",
+                                            "collectionName": "selected1"
+                                        },
+                                        "duration": "Permanent"
+                                    },
+                                    {
+                                        "type": "CreateDelayedTrigger",
+                                        "step": "END",
+                                        "effect": {
+                                            "type": "SacrificeTarget",
+                                            "target": {
+                                                "type": "PipelineTarget",
+                                                "collectionName": "selected1"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "{R}: You may put a creature card from your hand onto the battlefield. It gains haste. Sacrifice it at the beginning of the next end step."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "218",
+        "rarity": "RARE",
+        "artist": "Jerry Tiritilli",
+        "flavorText": "\"Nothin' beat surprise—'cept rock.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/0/d07dc95d-82a8-4a58-8ea2-d4513bd7316d.jpg?1783946324",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "You sacrifice the creature only if you still control it. If that creature has left the battlefield, even if it came back, you don't sacrifice it."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Spined Fluke
 {
     "name": "Spined Fluke",
