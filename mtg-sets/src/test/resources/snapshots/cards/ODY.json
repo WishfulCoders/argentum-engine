@@ -6211,6 +6211,47 @@
     ]
 }
 
+// Upheaval
+{
+    "name": "Upheaval",
+    "manaCost": "{4}{U}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Return all permanents to their owners' hands.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "BattlefieldMatching",
+                        "filter": "permanent"
+                    },
+                    "storeAs": "returnAllToHand_gathered"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "returnAllToHand_gathered",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Hand"
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "113",
+        "rarity": "RARE",
+        "artist": "Kev Walker",
+        "flavorText": "The calm comes after the storm.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/e/9e201229-34a6-48c8-a07c-d8aefcf5f8a7.jpg?1783945252"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Volcanic Spray
 {
     "name": "Volcanic Spray",

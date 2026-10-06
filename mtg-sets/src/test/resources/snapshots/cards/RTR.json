@@ -3727,3 +3727,86 @@
         "BLUE"
     ]
 }
+
+// Worldspine Wurm
+{
+    "name": "Worldspine Wurm",
+    "manaCost": "{8}{G}{G}{G}",
+    "typeLine": "Creature — Wurm",
+    "oracleText": "Trample\nWhen this creature dies, create three 5/5 green Wurm creature tokens with trample.\nWhen Worldspine Wurm is put into a graveyard from anywhere, shuffle it into its owner's library.",
+    "creatureStats": {
+        "power": 15,
+        "toughness": 15
+    },
+    "keywords": [
+        "TRAMPLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Worldspine Wurm:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "power": 5,
+                    "toughness": 5,
+                    "colors": [
+                        "GREEN"
+                    ],
+                    "creatureTypes": [
+                        "Wurm"
+                    ],
+                    "keywords": [
+                        "TRAMPLE"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/3/3/33ee3f6c-5df6-4271-b2f9-86b9afffab7b.jpg?1783940381"
+                }
+            },
+            {
+                "id": "Worldspine Wurm:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": "Self",
+                            "destination": "Library",
+                            "fromZone": "Graveyard"
+                        },
+                        "ShuffleLibrary"
+                    ]
+                },
+                "activeZones": [
+                    "Graveyard"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "140",
+        "rarity": "MYTHIC",
+        "artist": "Richard Wright",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/4/543d55cb-3a6b-4620-af25-10ae74ed32c4.jpg?1783940344",
+        "rulings": [
+            {
+                "date": "2012-10-01",
+                "text": "Worldspine Wurm's last ability is a triggered ability, not a replacement ability. Players can respond to this ability, for example, by trying to exile Worldspine Wurm from the graveyard before it's shuffled into a library."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
