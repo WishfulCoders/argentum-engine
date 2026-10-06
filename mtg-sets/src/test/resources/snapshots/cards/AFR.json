@@ -155,6 +155,153 @@
     ]
 }
 
+// Djinni Windseer
+{
+    "name": "Djinni Windseer",
+    "manaCost": "{3}{U}",
+    "typeLine": "Creature — Djinn",
+    "oracleText": "Flying\nWhen this creature enters, roll a d20.\n1—9 | Scry 1.\n10—19 | Scry 2.\n20 | Scry 3.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Djinni Windseer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RollDie",
+                            "sides": 20
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "All",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "GTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "LTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 9
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "Scry",
+                                "count": 1
+                            },
+                            "descriptionOverride": "1—9 | Scry 1"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "All",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "GTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 10
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "LTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 19
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "Scry",
+                                "count": 2
+                            },
+                            "descriptionOverride": "10—19 | Scry 2"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "VariableReference",
+                                        "variableName": "dieRoll"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 20
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "Scry",
+                                "count": 3
+                            },
+                            "descriptionOverride": "20 | Scry 3"
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature enters, roll a d20. 1—9 | Scry 1. 10—19 | Scry 2. 20 | Scry 3."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "55",
+        "artist": "Livia Prima",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/7/67a42698-bf3b-4352-8178-9c98abfc5b09.jpg?1783926516"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Improvised Weaponry
 {
     "name": "Improvised Weaponry",
