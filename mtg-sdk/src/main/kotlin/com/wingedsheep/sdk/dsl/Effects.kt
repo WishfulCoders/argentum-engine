@@ -44,6 +44,7 @@ import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
 import com.wingedsheep.sdk.scripting.effects.BecomePreparedEffect
 import com.wingedsheep.sdk.scripting.effects.UnprepareEffect
 import com.wingedsheep.sdk.scripting.effects.BecomeSaddledEffect
+import com.wingedsheep.sdk.scripting.effects.AllowAdditionalLoyaltyActivationsThisTurnEffect
 import com.wingedsheep.sdk.scripting.effects.AllowLoyaltyActivationsThisTurnEffect
 import com.wingedsheep.sdk.scripting.effects.BecomeMonstrousEffect
 import com.wingedsheep.sdk.scripting.effects.BecomeRenownedEffect
@@ -6651,6 +6652,14 @@ object Effects {
      */
     fun AllowLoyaltyActivationsThisTurn(times: Int = 2, target: EffectTarget = EffectTarget.Self): Effect =
         AllowLoyaltyActivationsThisTurnEffect(target, times)
+
+    /**
+     * "You may activate [target]'s loyalty ability [count] more times this turn" (Comet, Stellar
+     * Pup) — see [com.wingedsheep.sdk.scripting.effects.AllowAdditionalLoyaltyActivationsThisTurnEffect].
+     * Additive: each resolution adds [count], on top of Oath of Teferi or a "twice" grant.
+     */
+    fun AllowAdditionalLoyaltyActivationsThisTurn(count: Int = 2, target: EffectTarget = EffectTarget.Self): Effect =
+        AllowAdditionalLoyaltyActivationsThisTurnEffect(target, count)
 
     /**
      * Target permanent becomes renowned (CR 702.112b) — the designation half of renown. Sticky

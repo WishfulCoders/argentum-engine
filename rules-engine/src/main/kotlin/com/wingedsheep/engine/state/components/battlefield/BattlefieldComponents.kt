@@ -715,7 +715,14 @@ data class AbilityActivatedThisTurnComponent(
      * Not additive — a second grant of "twice" still means twice — and it lives on this
      * turn-scoped tracker, so it lapses at cleanup and when the permanent changes zones.
      */
-    val loyaltyActivationLimit: Int = 1
+    val loyaltyActivationLimit: Int = 1,
+    /**
+     * Extra loyalty activations added on top of the allowance for the turn by additive grants
+     * ("you may activate Comet's loyalty ability two more times this turn"). Unlike
+     * [loyaltyActivationLimit] it is a sum — every grant adds — and it stacks on the
+     * controller-wide maximum too. Same turn-scoped lifetime as the rest of this tracker.
+     */
+    val loyaltyActivationBonus: Int = 0
 ) : Component {
     fun withAnyActivated(): AbilityActivatedThisTurnComponent =
         if (anyActivated) this else copy(anyActivated = true)
@@ -738,12 +745,18 @@ data class AbilityActivatedThisTurnComponent(
     fun withLoyaltyActivationLimitAtLeast(limit: Int): AbilityActivatedThisTurnComponent =
         if (limit <= loyaltyActivationLimit) this else copy(loyaltyActivationLimit = limit)
 
+    /** Add [extra] activations to this permanent's per-turn loyalty allowance (additive). */
+    fun withLoyaltyActivationBonus(extra: Int): AbilityActivatedThisTurnComponent =
+        copy(loyaltyActivationBonus = loyaltyActivationBonus + extra)
+
     /**
      * The effective per-turn loyalty allowance: the larger of the controller-wide maximum
-     * [playerMax] (Oath of Teferi) and this permanent's own [loyaltyActivationLimit]. The two
-     * don't stack — each says "twice rather than only once".
+     * [playerMax] (Oath of Teferi) and this permanent's own [loyaltyActivationLimit] — those two
+     * don't stack, each says "twice rather than only once" — plus the additive
+     * [loyaltyActivationBonus] ("two more times").
      */
-    fun effectiveLoyaltyLimit(playerMax: Int): Int = maxOf(playerMax, loyaltyActivationLimit)
+    fun effectiveLoyaltyLimit(playerMax: Int): Int =
+        maxOf(playerMax, loyaltyActivationLimit) + loyaltyActivationBonus
 
     /** @return true if the loyalty activation limit has been reached for the given player max. */
     fun hasReachedLoyaltyLimit(playerMax: Int): Boolean =

@@ -103,9 +103,8 @@ class RollDieScenarioTest : ScenarioTestBase() {
 
     /**
      * Comet, Stellar Pup's shape, with "a creature or player" narrowed to each opponent. The 6 row's
-     * `AllowLoyaltyActivationsThisTurn(times = 3)` is a *total* (the largest grant, not a sum), which
-     * is exact for one 6 per turn; the real Comet's "two more times" after a *second* 6 in the same
-     * turn would need an additive grant.
+     * `AllowAdditionalLoyaltyActivationsThisTurn()` is additive, so a second 6 the same turn adds two
+     * more again.
      */
     private fun pup(name: String, loyalty: Int) = card(name) {
         manaCost = "{2}{R}{W}"
@@ -127,7 +126,7 @@ class RollDieScenarioTest : ScenarioTestBase() {
                     ),
                 6..6 to (
                     Effects.AddCounters(CounterType.LOYALTY, 1, EffectTarget.Self) then
-                        Effects.AllowLoyaltyActivationsThisTurn(times = 3)
+                        Effects.AllowAdditionalLoyaltyActivationsThisTurn()
                     ),
             )
         }
@@ -283,6 +282,19 @@ class RollDieScenarioTest : ScenarioTestBase() {
                 g.activatePup("Test Pup", 3)
                 g.canActivate("Test Pup") shouldBe true
                 g.activatePup("Test Pup", 3)
+                g.loyalty("Test Pup") shouldBe 4
+                g.canActivate("Test Pup") shouldBe false
+            }
+
+            test("a second 6 the same turn adds two more again") {
+                val g = pupBoard("Test Pup")
+                g.activatePup("Test Pup", 6)
+                g.activatePup("Test Pup", 6)
+                g.loyalty("Test Pup") shouldBe 7
+                repeat(3) {
+                    g.canActivate("Test Pup") shouldBe true
+                    g.activatePup("Test Pup", 3)
+                }
                 g.loyalty("Test Pup") shouldBe 4
                 g.canActivate("Test Pup") shouldBe false
             }

@@ -118,7 +118,7 @@ class TargetFinder(
                     candidates.filter { predicateEvaluator.matches(state, projected, it, requirement.filter, context) }
                 }
             }
-            is TargetCreatureOrPlayer -> findCreatureOrPlayerTargets(state, controllerId, sourceId, targetingSourceType, pipelineContext)
+            is TargetCreatureOrPlayer -> findCreatureOrPlayerTargets(state, controllerId, sourceId, targetingSourceType, pipelineContext, ignoreTargetingRestrictions)
             is TargetPermanentOrPlayer -> findPermanentOrPlayerTargets(state, requirement, controllerId, sourceId, targetingSourceType, pipelineContext)
             is TargetOpponentOrPlaneswalker -> findOpponentOrPlaneswalkerTargets(state, controllerId, sourceId, targetingSourceType)
             is TargetPlayerOrPlaneswalker -> findPlayerOrPlaneswalkerTargets(state, controllerId, sourceId, targetingSourceType)
@@ -401,16 +401,24 @@ class TargetFinder(
         controllerId: EntityId,
         sourceId: EntityId?,
         targetingSourceType: TargetingSourceType = TargetingSourceType.ANY,
-        pipelineContext: PredicateContext? = null
+        pipelineContext: PredicateContext? = null,
+        ignoreTargetingRestrictions: Boolean = false
     ): List<EntityId> {
         val targets = mutableListOf<EntityId>()
 
-        // Add all players (excluding those with shroud or hexproof from opponents)
-        targets.addAll(state.turnOrder.filter { state.hasEntity(it) && !playerHasShroud(state, it) &&
-            !playerHasHexproofAgainst(state, it, controllerId) })
+        // Add all players (excluding those with shroud or hexproof from opponents, unless this is
+        // a non-targeting choice — "a creature or player" chosen on resolution, Comet, Stellar Pup)
+        targets.addAll(state.turnOrder.filter { state.hasEntity(it) && (ignoreTargetingRestrictions ||
+            (!playerHasShroud(state, it) && !playerHasHexproofAgainst(state, it, controllerId))) })
 
         // Add all creatures
-        targets.addAll(findPermanentTargets(state, TargetObject(filter = TargetFilter.Creature), controllerId, sourceId, targetingSourceType = targetingSourceType, pipelineContext = pipelineContext))
+        targets.addAll(
+            findPermanentTargets(
+                state, TargetObject(filter = TargetFilter.Creature), controllerId, sourceId,
+                ignoreTargetingRestrictions = ignoreTargetingRestrictions,
+                targetingSourceType = targetingSourceType, pipelineContext = pipelineContext
+            )
+        )
 
         return targets
     }

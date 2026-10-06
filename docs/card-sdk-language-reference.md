@@ -1252,6 +1252,7 @@ serialized shape; the facade for each is:
 | `AddManaEffect` | `Effects.AddMana` |
 | `AddManaOfChoiceEffect` | `Effects.AddManaOfChoice` |
 | `AddSubtypeEffect` | `Effects.AddSubtype` |
+| `AllowAdditionalLoyaltyActivationsThisTurnEffect` | `Effects.AllowAdditionalLoyaltyActivationsThisTurn` |
 | `AllowLoyaltyActivationsThisTurnEffect` | `Effects.AllowLoyaltyActivationsThisTurn` |
 | `AnyPlayerMayPayEffect` | `Effects.AnyPlayerMayPay(cost, consequence, eligiblePlayers)` / `UnlessAnyPlayerPays(cost, effect, eligiblePlayers)` |
 | `AttachEquipmentEffect` | `Effects.AttachEquipment` |
@@ -3065,6 +3066,13 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   **Kaito, Dancing Shadow**: `Effects.IfYouDo(Pipeline { filter(triggerCaptured, on battlefield) → chooseUpTo(1) →
   move to hand }, then = Effects.AllowLoyaltyActivationsThisTurn())` on a
   `Triggers.oneOrMore(Creature).dealCombatDamageToAPlayer()` trigger.
+- `AllowAdditionalLoyaltyActivationsThisTurnEffect(target = Self, count = 2)` — the *additive* sibling: "you may
+  activate [target]'s loyalty ability two more times this turn". Facade:
+  `Effects.AllowAdditionalLoyaltyActivationsThisTurn(count = 2, target = Self)`. Adds `count` to the permanent's
+  allowance on the same turn-scoped tracker (`loyaltyActivationBonus`), so every resolution adds again and it
+  stacks on top of Oath of Teferi or a "twice" grant (allowance = max(Oath, grant) + bonus). Lapses at cleanup and
+  on a zone change. **Comet, Stellar Pup**'s 6 row: `AddCounters(LOYALTY, 1, Self) then
+  AllowAdditionalLoyaltyActivationsThisTurn()` inside a `Patterns.Mechanic.rollDie(6, …)` table.
 
 - `TapForManaPermanentsYouDontControlEffect(target, permanentFilter, restriction, duration)` — target may
   tap permanents they don't control that match `permanentFilter` for mana, for `duration` (default
