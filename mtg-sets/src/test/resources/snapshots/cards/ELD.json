@@ -44,6 +44,81 @@
     ]
 }
 
+// Brazen Borrower
+{
+    "name": "Brazen Borrower",
+    "manaCost": "{1}{U}{U}",
+    "typeLine": "Creature — Faerie Rogue",
+    "oracleText": "Flash\nFlying\nThis creature can block only creatures with flying.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 1
+    },
+    "keywords": [
+        "FLASH",
+        "FLYING"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "CanOnlyBlockCreaturesWith",
+                "blockerFilter": {
+                    "cardPredicates": [
+                        "IsCreature",
+                        {
+                            "type": "HasKeyword",
+                            "keyword": "FLYING"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "39",
+        "rarity": "MYTHIC",
+        "artist": "Eric Deschamps",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/2/c2089ec9-0665-448f-bfe9-d181de127814.jpg?1783932663",
+        "rulings": [
+            {
+                "date": "2025-06-06",
+                "text": "If a spell is cast as an Adventure, its controller exiles it instead of putting it into its owner's graveyard as it resolves. For as long as it remains exiled, that player may play it using its primary characteristics. If an Adventure spell leaves the stack in any way other than resolving, that card won't be exiled and the spell's controller won't be able to play that card from exile later."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ],
+    "layout": "ADVENTURE",
+    "cardFaces": [
+        {
+            "name": "Petty Theft",
+            "manaCost": "{1}{U}",
+            "typeLine": "Instant — Adventure",
+            "oracleText": "Return target nonland permanent an opponent controls to its owner's hand. (Then exile this card. You may cast the creature later from exile.)",
+            "script": {
+                "spellEffect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Hand"
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "nonland permanent ctrl:opponent"
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        }
+    ]
+}
+
 // Castle Ardenvale
 {
     "name": "Castle Ardenvale",
