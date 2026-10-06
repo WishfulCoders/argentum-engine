@@ -451,6 +451,182 @@
     ]
 }
 
+// Swarming Goblins
+{
+    "name": "Swarming Goblins",
+    "manaCost": "{4}{R}",
+    "typeLine": "Creature — Goblin",
+    "oracleText": "When this creature enters, roll a d20.\n1—9 | Create a 1/1 red Goblin creature token.\n10—19 | Create two of those tokens.\n20 | Create three of those tokens.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Swarming Goblins:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RollDie",
+                            "sides": 20
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "All",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "GTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "LTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 9
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "CreateToken",
+                                "power": 1,
+                                "toughness": 1,
+                                "colors": [
+                                    "RED"
+                                ],
+                                "creatureTypes": [
+                                    "Goblin"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/1/4/1425e965-7eea-419c-a7ec-c8169fa9edbf.jpg?1783926342"
+                            },
+                            "descriptionOverride": "1—9 | Create a 1/1 red Goblin creature token"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "All",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "GTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 10
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "VariableReference",
+                                                "variableName": "dieRoll"
+                                            },
+                                            "operator": "LTE",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 19
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "CreateToken",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                },
+                                "power": 1,
+                                "toughness": 1,
+                                "colors": [
+                                    "RED"
+                                ],
+                                "creatureTypes": [
+                                    "Goblin"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/1/4/1425e965-7eea-419c-a7ec-c8169fa9edbf.jpg?1783926342"
+                            },
+                            "descriptionOverride": "10—19 | Create 2 1/1 red Goblin creature tokens"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "VariableReference",
+                                        "variableName": "dieRoll"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 20
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "CreateToken",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                },
+                                "power": 1,
+                                "toughness": 1,
+                                "colors": [
+                                    "RED"
+                                ],
+                                "creatureTypes": [
+                                    "Goblin"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/1/4/1425e965-7eea-419c-a7ec-c8169fa9edbf.jpg?1783926342"
+                            },
+                            "descriptionOverride": "20 | Create 3 1/1 red Goblin creature tokens"
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature enters, roll a d20. 1—9 | Create a 1/1 red Goblin creature token. 10—19 | Create two of those tokens. 20 | Create three of those tokens."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "162",
+        "artist": "Andrew Mar",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/2/623c1d1b-69a4-4bc4-b388-17a7600fd960.jpg?1783926472"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Vampire Spawn
 {
     "name": "Vampire Spawn",
