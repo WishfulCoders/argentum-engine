@@ -75,7 +75,7 @@
 - [ ] 1 Skullclamp
 - [x] 1 Sol Ring
 - [ ] 1 Sword of the Squeak
-- [ ] 1 Talisman of Resilience
+- [x] 1 Talisman of Resilience
 
 ## Enchantments (7)
 
