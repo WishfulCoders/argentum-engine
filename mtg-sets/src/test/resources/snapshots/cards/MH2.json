@@ -3206,6 +3206,94 @@
     ]
 }
 
+// Subtlety
+{
+    "name": "Subtlety",
+    "manaCost": "{2}{U}{U}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Flash\nFlying\nWhen this creature enters, choose up to one target creature spell or planeswalker spell. Its owner puts it on their choice of the top or bottom of their library.\nEvoke—Exile a blue card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLASH",
+        "FLYING",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "blue"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Subtlety:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "PutOnLibraryPositionOfChoice",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature|planeswalker",
+                        "zone": "Stack"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "choose up to one target creature spell or planeswalker spell. Its owner puts it on their choice of the top or bottom of their library."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "67",
+        "rarity": "MYTHIC",
+        "artist": "Anastasia Ovchinnikova",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/0/701256d5-1389-48b7-9581-d6037209bd06.jpg?1783926869",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Subtlety's triggered ability targets a spell on the stack. It can't target creatures or planeswalkers on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "A spell that's put into its owner's library doesn't resolve, but it isn't countered. This will work on spells that say they can't be countered."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "The owner of the spell is the one who chooses whether it goes on the top or bottom of their library. All players will know this information."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Svyelun of Sea and Sky
 {
     "name": "Svyelun of Sea and Sky",
