@@ -187,6 +187,14 @@ data class LegalAction(
     val requiresDamageDistribution: Boolean = false,
     val totalDamageToDistribute: Int? = null,
     val minDamagePerTarget: Int? = null,
+    /**
+     * True when the divided total is the X the cast announces ("X damage divided as you choose")
+     * and this offer doesn't fix X itself. [totalDamageToDistribute] is then only the unbound-X
+     * placeholder (0); the client divides the X it collected earlier in the cast — the `{X}` it
+     * picked, or the life declared for a "pay X life" additional cost (Fire Covenant) — the same
+     * value the server validates the division against (CR 601.2d).
+     */
+    val damageTotalIsX: Boolean = false,
 
     // Source zone
     val sourceZone: String? = null,

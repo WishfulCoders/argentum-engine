@@ -47,7 +47,7 @@
 
 - [ ] 1 Assassin's Trophy
 - [ ] 1 Cathartic Pyre
-- [ ] 1 Fire Covenant
+- [x] 1 Fire Covenant
 - [ ] 1 Infernal Grasp
 - [ ] 1 Putrefy
 - [ ] 1 Terminate

@@ -160,6 +160,12 @@ data class LegalActionInfo(
     val requiresDamageDistribution: Boolean = false,
     val totalDamageToDistribute: Int? = null,
     val minDamagePerTarget: Int? = null,
+    /**
+     * The divided total is the X announced earlier in the cast — `{X}` or the life paid for a
+     * "pay X life" additional cost — so the client divides that X rather than
+     * [totalDamageToDistribute] (an unbound-X placeholder).
+     */
+    val damageTotalIsX: Boolean = false,
     val autoTapPreview: List<EntityId>? = null,
     val availableManaSources: List<ManaSourceInfo>? = null,
     /**

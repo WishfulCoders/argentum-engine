@@ -656,7 +656,7 @@ class CastSpellHandler(
         // resolution X value. Other spells leave this null and keep xValue purely from {X}.
         val castTimeScript = action.faceIndex?.let { cardDef?.cardFaces?.getOrNull(it)?.script } ?: cardDef?.script
         val payXLifeAmount: Int? =
-            if (castTimeScript?.additionalCosts?.any { it is AdditionalCost.PayXLife } == true) {
+            if (com.wingedsheep.engine.mechanics.cost.spell.AnnouncedX.paysXLife(castTimeScript?.additionalCosts)) {
                 action.additionalCostPayment?.payXLifeAmount ?: 0
             } else null
 

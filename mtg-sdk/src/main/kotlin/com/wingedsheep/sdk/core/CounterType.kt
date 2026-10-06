@@ -662,6 +662,13 @@ value class CounterType(val name: String) {
          */
         val BOUNTY = CounterType("BOUNTY")
 
+        /**
+         * Valor counter (MID — Intrepid Adversary). A passive tally with no inherent rule: the
+         * creature's own anthem reads the count back via `DynamicAmounts.countersOnSelf(VALOR)`
+         * ("creatures you control get +1/+1 for each valor counter on this creature").
+         */
+        val VALOR = CounterType("VALOR")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -780,6 +787,7 @@ value class CounterType(val name: String) {
             COLLECTION,
             REPRIEVE,
             BOUNTY,
+            VALOR,
         )
 
         /**

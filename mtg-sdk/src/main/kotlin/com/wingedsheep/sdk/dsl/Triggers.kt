@@ -992,9 +992,13 @@ class PlayerTriggerSubject internal constructor(private val player: Player) {
     fun tapsLandForMana(land: GameObjectFilter? = null): TriggerSpec =
         spec(LandTappedForMana(player = player, landFilter = land))
 
-    /** "creates a [token] token". */
-    fun createsToken(token: GameObjectFilter? = null): TriggerSpec =
-        spec(TokenCreationEvent(controller = player, tokenFilter = token))
+    /**
+     * "creates a [token] token" — once per token; [batch] is "creates one or more [token] tokens",
+     * once per simultaneous creation (CR 603.2c). Token copies of permanent spells aren't created
+     * (CR 111.13) and never count.
+     */
+    fun createsToken(token: GameObjectFilter? = null, batch: Boolean = false): TriggerSpec =
+        spec(TokenCreationEvent(controller = player, tokenFilter = token, batch = batch))
 
     /** "exploits a creature" — [nontoken] is "exploits a nontoken creature". */
     fun exploits(nontoken: Boolean = false): TriggerSpec =

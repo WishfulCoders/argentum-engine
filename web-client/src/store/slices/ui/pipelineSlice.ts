@@ -8,7 +8,7 @@
  */
 import type { SliceCreator, ActionPipelineState, PhaseResult } from '../types'
 import type { ActivateAbilityAction, CastSpellAction, EntityId, GameAction, LegalActionInfo } from '@/types'
-import { computePhases, mergeResult, enterPhase } from './pipelinePhases'
+import { castAnnouncedX, computePhases, mergeResult, enterPhase } from './pipelinePhases'
 import type { PipelineStoreMethods } from './pipelinePhases'
 import {
   parseManaCost as parseManaCostUtil,
@@ -274,11 +274,17 @@ export const createPipelineSlice: SliceCreator<PipelineSlice> = (set, get) => ({
       nextPhases = [{ type: 'escalateCost' }, ...nextPhases]
     }
 
-    // Dynamic phase injection: damage distribution after targeting with >1 targets
+    // Dynamic phase injection: damage distribution after targeting with >1 targets. An
+    // X-divided total ("X damage divided …") divides the X announced earlier in this cast — the
+    // chosen {X} or the life paid for a "pay X life" cost — not the unbound-X placeholder.
+    const totalToDistribute =
+      actionInfo.damageTotalIsX && mergedAction.type === 'CastSpell'
+        ? castAnnouncedX(mergedAction)
+        : actionInfo.totalDamageToDistribute
     if (
       result.type === 'targeting' &&
       actionInfo.requiresDamageDistribution &&
-      actionInfo.totalDamageToDistribute &&
+      totalToDistribute &&
       result.selectedTargets.length > 1
     ) {
       // Spells read "Cast <name>", activated abilities "Activate <name>: …" — strip either verb so
@@ -305,7 +311,7 @@ export const createPipelineSlice: SliceCreator<PipelineSlice> = (set, get) => ({
         action: mergedAction as CastSpellAction | ActivateAbilityAction,
         cardName,
         targetIds: [...result.selectedTargets],
-        totalDamage: actionInfo.totalDamageToDistribute,
+        totalDamage: totalToDistribute,
         minPerTarget,
         distribution: initialDistribution,
       })

@@ -950,8 +950,13 @@ cast action advertises the first selection cost as `additionalCostInfo` and the 
   effects through the resolution **X value** — i.e. read it with `DynamicAmount.XValue` and filter with
   `CardPredicate.ManaValueAtMostX` / `manaValueAtMostX()` (Vicious Rivalry: "pay X life; destroy all
   artifacts and creatures with mana value X or less"). A card using this cost must **not** also have an
-  `{X}` in its mana cost — both write the same X slot. The client shows a numeric X picker (no target
-  step); the AI declares X = 0 by default.
+  `{X}` in its mana cost — both write the same X slot. The declared life is the X the spell
+  **announces** (CR 107.3a, 601.2b; engine `AnnouncedX`), so everything X drives at cast time reads it
+  too: an X-driven target cap (`targets(…, unlimited = true, dynamicMaxCount = DynamicAmounts.xValue())`)
+  and an X divided total (`Effects.DividedDamage(total = 0, dynamicTotal = DynamicAmounts.xValue())`,
+  CR 601.2d) — Fire Covenant: "pay X life … deals X damage divided as you choose among any number of
+  target creatures". The client's X picker runs before targeting; a divided-X offer carries
+  `damageTotalIsX` so the division step divides the declared X. The default AI declares X = 0.
 - `Costs.additional.PayLifePerTarget(amountPerTarget)` — "this spell costs N life more to cast for
   each target." Pair with an unbounded `targets(TargetFilter.Creature, unlimited = true)` etc.; the engine
   auto-pays `amountPerTarget × action.targets.size` at cast resolution (Phyrexian Purge).
@@ -5957,6 +5962,17 @@ This is the player-arm prerequisite for the planned composable mixed `TargetUnio
   to = Zone.GRAVEYARD)))` (Frostwielder, Kumano's Pupils, Kumano, Master Yamabushi) and still applies when
   the host dies simultaneously. Inert with no source context (group-static projection, granted
   sourceless replacements).
+- `.wasDealtDamageBySourceYouControlledThisTurn()` — the creature was dealt damage this turn by a source
+  **you controlled** when it dealt that damage (CR 608.2h); backed by
+  `StatePredicate.WasDealtDamageBySourceYouControlledThisTurn`, which reads the damaged creature's own
+  `DamagedBySourcesThisTurnComponent` (each source's damage-time controller, combat and noncombat). Not
+  source-relative — the source may since have died or changed hands, and "you" is the evaluating
+  ability's controller. The record is the object's own: stripped when it leaves the battlefield
+  (CR 400.7) and at cleanup. Honoured by the zone-change redirect path against the replacement's
+  controller, so "if a creature dealt damage this turn by a source you controlled would die, exile it
+  instead" is `replacementEffect(RedirectZoneChange(newDestination = Zone.EXILE, appliesTo =
+  EventPattern.ZoneChangeEvent(filter = GameObjectFilter.Creature.wasDealtDamageBySourceYouControlledThisTurn(),
+  from = Zone.BATTLEFIELD, to = Zone.GRAVEYARD)))` (Etching of Kumano).
 - `.saddled()` — permanent is saddled (CR 702.171b); backed by `StatePredicate.IsSaddled`.
 - `.renowned()` — creature has the **renowned** designation (CR 702.112b); backed by
   `StatePredicate.IsRenowned` and the engine's `RenownedComponent`. Component-backed and sticky
@@ -6597,7 +6613,7 @@ put on the player by anyone: "whenever you get one or more {E}", `CountersPlaced
 `drawsNth(n)`, `revealsFirstDraw(card?)`, `discards(card?, batch?)`, `cycles()`, `playsLand(…)`,
 `permanentTurnedFaceUp(filter)`, `searchesLibrary()`, `shufflesLibrary()`, `gainsLife(firstTimeEachTurn?)`,
 `losesLife()`, `losesGame()`, `sacrifices(filter, batch?)`,
-`sacrificesAnother(filter)`, `taps(filter, batch?)`, `tapsLandForMana(land?)`, `createsToken(token?)`,
+`sacrificesAnother(filter)`, `taps(filter, batch?)`, `tapsLandForMana(land?)`, `createsToken(token?, batch?)`,
 `exploits(nontoken?)`, `commitsCrime()`, `givesAGift()`, `scries()`, `surveils()`, `scriesOrSurveils()`, `proliferates()`,
 `discovers()`, `collectsEvidence()`, `forages()`, `investigates(firstTimeEachTurn?)`, `solvesACase()`, `clashes(andWins?)`,
 `isTemptedByTheRing(bearerChosen?)`, `bends(types)`, `manifestsDread()`, `expends(n)`,
@@ -6907,6 +6923,13 @@ The shapes in this family, with their engine notes.
   ability's controller — `Player.You`, `Player.EachOpponent` (a real opponent test) or `Player.Any` —
   the same vocabulary `LifeLossEvent.player` uses. The replacement side reads it off the player alone,
   since no token entity exists yet.
+- `EventPattern.TokenCreationEvent(…, batch = true)` / `Triggers.you.createsToken(token, batch = true)` —
+  "Whenever you create **one or more** [creature] tokens" (Staff of the Storyteller). **Per batch**: fires at
+  most once per simultaneous creation however many matching tokens it made (CR 603.2c), and not at all
+  when none of them match `tokenFilter`. Each token is held to the same per-token test as above (created,
+  not a token copy of a spell; right controller; filter), read by a dedicated batch pass in
+  `TriggerDetector` (category `TOKENS_CREATED_BATCH`); the matching tokens are the trigger's captured
+  collection. Replacement effects ignore the flag.
 
 ### Combat
 

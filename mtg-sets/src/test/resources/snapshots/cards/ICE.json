@@ -1112,6 +1112,60 @@
     ]
 }
 
+// Fire Covenant
+{
+    "name": "Fire Covenant",
+    "manaCost": "{1}{B}{R}",
+    "typeLine": "Instant",
+    "oracleText": "As an additional cost to cast this spell, pay X life.\nFire Covenant deals X damage divided as you choose among any number of target creatures.",
+    "script": {
+        "spellEffect": {
+            "type": "DividedDamage",
+            "totalDamage": 0,
+            "dynamicTotal": "XValue"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "minCount": 0,
+                "unlimited": true,
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0",
+                "dynamicMaxCount": "XValue"
+            }
+        ],
+        "additionalCosts": [
+            "PayXLife"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "289",
+        "rarity": "UNCOMMON",
+        "artist": "Dan Frazier",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/a/6a0139c2-ad86-4c71-ab6d-4840c37d5d20.jpg?1783947467",
+        "rulings": [
+            {
+                "date": "2007-09-16",
+                "text": "If X is 0, the number of targets must also be 0."
+            },
+            {
+                "date": "2007-09-16",
+                "text": "You must distribute at least 1 damage to each target."
+            },
+            {
+                "date": "2007-09-16",
+                "text": "You divide the damage as you cast the spell. You can't redistribute the damage if any of the target creatures becomes illegal before the spell resolves."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "RED"
+    ]
+}
+
 // Flame Spirit
 {
     "name": "Flame Spirit",

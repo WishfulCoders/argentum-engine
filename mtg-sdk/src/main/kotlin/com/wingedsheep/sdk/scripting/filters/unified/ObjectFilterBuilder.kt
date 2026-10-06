@@ -722,6 +722,15 @@ interface ObjectFilterBuilder<out Self> {
         withStatePredicate(StatePredicate.WasDealtDamageBySourceThisTurn)
 
     /**
+     * Must have been dealt damage this turn by a source the evaluating ability's controller
+     * controlled when that damage was dealt. Not source-relative: the source may since have left
+     * the battlefield or changed hands. Used by "if a creature dealt damage this turn by a source
+     * you controlled would die, exile it instead" (Etching of Kumano).
+     */
+    fun wasDealtDamageBySourceYouControlledThisTurn() =
+        withStatePredicate(StatePredicate.WasDealtDamageBySourceYouControlledThisTurn)
+
+    /**
      * The candidate's controller controls at least one permanent matching [subfilter] — Seasinger's
      * "target creature whose controller controls an Island". The subfilter's "you" is the
      * *candidate's* controller, not the ability's.

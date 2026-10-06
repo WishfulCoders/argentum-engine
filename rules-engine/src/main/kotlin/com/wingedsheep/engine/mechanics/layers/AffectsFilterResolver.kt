@@ -576,6 +576,12 @@ internal class AffectsFilterResolver(
         // Source-relative too: "dealt damage by the source this turn" reads the source's per-turn
         // damaged-creature record. Only meaningful via PredicateEvaluator / the zone-change gate.
         StatePredicate.WasDealtDamageBySourceThisTurn -> false
+        // Not source-relative: the candidate's own record of its sources' damage-time controllers,
+        // read against the projecting static's controller as "you". Fails closed with no controller.
+        StatePredicate.WasDealtDamageBySourceYouControlledThisTurn ->
+            sourceController != null && container
+                .get<com.wingedsheep.engine.state.components.battlefield.DamagedBySourcesThisTurnComponent>()
+                ?.sources?.any { it.sourceControllerId == sourceController } == true
         // Likewise source-relative: "crewed/saddled the source this turn" needs the ability's
         // source permanent, absent in group-static projection. Only meaningful in target/count
         // contexts via PredicateEvaluator / DynamicAmountEvaluator. Never match here.
