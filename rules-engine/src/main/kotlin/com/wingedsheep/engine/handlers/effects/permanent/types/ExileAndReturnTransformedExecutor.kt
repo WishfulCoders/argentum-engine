@@ -51,6 +51,14 @@ class ExileAndReturnTransformedExecutor(
         val container = state.getEntity(targetId)
             ?: return EffectResult.error(state, "Target entity not found")
 
+        // "Exile [this permanent], then return it" names a permanent. If it has left the
+        // battlefield — or left and come back — since the ability was put on the stack, the card
+        // is a new object the instruction can't find (CR 400.7), so nothing is exiled or returned:
+        // a Jace, Vryn's Prodigy bounced in response to its loot ability stays in its owner's hand.
+        if (targetId !in state.getBattlefield() || context.isUnavailableBattlefieldSource(effect.target, state)) {
+            return EffectResult.success(state)
+        }
+
         // Not a double-faced permanent: there is nothing to transform, so the effect does nothing.
         val dfc = container.get<DoubleFacedComponent>()
             ?: return EffectResult.success(state)

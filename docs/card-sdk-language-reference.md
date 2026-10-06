@@ -1764,7 +1764,10 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
   double-faced permanent and re-enters it as a **new object** on the chosen face — unlike `Transform`, which
   flips a permanent in place. Because it is a new object: counters/damage drop, attachments fall off, leaves-
   and enters-the-battlefield triggers fire (not transform triggers), and a Saga face re-enters with one lore
-  counter (CR 714.2b). The exile and return are atomic (no priority/SBAs between). `returnAs`: `TRANSFORMED`
+  counter (CR 714.2b). The exile and return are atomic (no priority/SBAs between). If the permanent has
+  left the battlefield (or left and returned) before the instruction runs, the card is a new object
+  (CR 400.7): nothing is exiled from its new zone and nothing returns, while the rest of the ability
+  still resolves (Jace, Vryn's Prodigy bounced in response still loots). `returnAs`: `TRANSFORMED`
   (the opposite face — front→back), `FRONT` ("return it front face up" — the eikon Saga's final chapter flips
   back to the legend), or `BACK`. The front face's activated ability is sorcery-speed
   (`timing = TimingRule.SorcerySpeed`); Jecht uses it from a "may" combat-damage trigger instead.
