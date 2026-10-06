@@ -99,7 +99,13 @@ data class DelayedTriggeredAbility(
      * to exist — is dropped when the trigger fires ([carriedPipelineFor]).
      */
     val carriedCollections: Map<String, List<com.wingedsheep.engine.handlers.CapturedObjectBinding>> = emptyMap(),
-    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment()
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
+    /**
+     * Further steps that fire this step-based trigger — it fires at whichever of [fireAtStep] or
+     * these begins first ("at the beginning of your next main phase", CR 505.1 / 603.7: Mana Drain).
+     * Baked from [com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect.alsoAtSteps].
+     */
+    val alsoFireAtSteps: List<Step> = emptyList()
 )
 
 /**
@@ -117,14 +123,17 @@ fun DelayedTriggeredAbility.carriedPipelineFor(state: com.wingedsheep.engine.sta
 }
 
 /**
- * Whether this step-based delayed trigger fires as [step] begins in [state]: it names that step, its
- * "whose turn" gate admits the active turn ("your next end step" is the team's in a shared team turn,
- * CR 805.4 — the non-representative head is never `activePlayerId`), and its turn floor has passed.
- * Event-based delayed triggers ([DelayedTriggeredAbility.trigger] set) never fire on a step. The one
- * predicate both [TriggerDetector.detectDelayedTriggers] and the cleanup step's CR 514.3a check read.
+ * Whether this step-based delayed trigger fires as [step] begins in [state]: it names that step (or
+ * lists it among [DelayedTriggeredAbility.alsoFireAtSteps] — a one-shot "whichever comes first"
+ * trigger such as "your next main phase", CR 603.7, matches the first of them to begin and is
+ * consumed there), its "whose turn" gate admits the active turn ("your next end step" is the team's
+ * in a shared team turn, CR 805.4 — the non-representative head is never `activePlayerId`), and its
+ * turn floor has passed. Event-based delayed triggers ([DelayedTriggeredAbility.trigger] set) never
+ * fire on a step. The one predicate both [TriggerDetector.detectDelayedTriggers] and the cleanup
+ * step's CR 514.3a check read.
  */
 fun DelayedTriggeredAbility.firesAtStepBeginning(state: com.wingedsheep.engine.state.GameState, step: Step): Boolean =
     trigger == null &&
-        fireAtStep == step &&
+        (fireAtStep == step || step in alsoFireAtSteps) &&
         (fireOnPlayerId == null || state.isActiveTurnFor(fireOnPlayerId)) &&
         (notBeforeTurn == null || state.turnNumber >= notBeforeTurn)

@@ -11,6 +11,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
+import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -30,7 +31,8 @@ import kotlin.reflect.KClass
 class ChainCopyExecutor(
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
     private val targetFinder: TargetFinder,
-    private val predicateEvaluator: PredicateEvaluator
+    private val predicateEvaluator: PredicateEvaluator,
+    private val manaSolver: ManaSolver
 ) : EffectExecutor<ChainCopyEffect> {
 
     override val effectType: KClass<ChainCopyEffect> = ChainCopyEffect::class
@@ -124,7 +126,7 @@ class ChainCopyExecutor(
         context: EffectContext
     ): EffectResult {
         // Check cost prerequisites
-        if (!canPayCopyCost(state, recipientPlayerId, effect.copyCost, predicateEvaluator = predicateEvaluator)) {
+        if (!canPayCopyCost(state, recipientPlayerId, effect.copyCost, predicateEvaluator = predicateEvaluator, manaSolver = manaSolver)) {
             return EffectResult.success(state, events)
         }
 
@@ -145,13 +147,13 @@ class ChainCopyExecutor(
         val prompt = if (copyCost == null) {
             "Copy $sourceName and choose a new target?"
         } else {
-            "${copyCost.description.replaceFirstChar { it.uppercase() }} to copy $sourceName and choose a new target?"
+            "${copyCostLabel(copyCost)} to copy $sourceName and choose a new target?"
         }
 
         val (yesText, noText) = if (copyCost == null) {
             "Copy" to "Decline"
         } else {
-            copyCost.description.replaceFirstChar { it.uppercase() } to "Decline"
+            copyCostLabel(copyCost) to "Decline"
         }
 
         val decision = { decisionId: String -> YesNoDecision(
@@ -179,9 +181,21 @@ class ChainCopyExecutor(
 
     companion object {
         /**
-         * Check if the recipient can pay the copy cost.
+         * Check if the recipient can pay the copy cost (CR 118.3 — a player can't pay a cost they
+         * lack the resources for, so an unpayable copy is never offered).
+         *
+         * The chain flow collects three costs: a sacrifice, a discard, and mana. Mana is checked with
+         * [ManaSolver.canPay] — the broad "payable at all" question, counting a Treasure or any other
+         * mana ability the player may activate while the payment window is open (CR 605.3a). Every
+         * other cost is reported unpayable: the copy is withheld rather than handed out for free.
          */
-        fun canPayCopyCost(state: GameState, playerId: EntityId, cost: PayCost?, predicateEvaluator: PredicateEvaluator): Boolean {
+        fun canPayCopyCost(
+            state: GameState,
+            playerId: EntityId,
+            cost: PayCost?,
+            predicateEvaluator: PredicateEvaluator,
+            manaSolver: ManaSolver
+        ): Boolean {
             if (cost == null) return true
             return when (val atom = (cost as? PayCost.Atom)?.atom) {
                 is CostAtom.Sacrifice -> {
@@ -192,9 +206,14 @@ class ChainCopyExecutor(
                     val hand = state.getZone(handZone)
                     hand.size >= atom.count
                 }
-                else -> true
+                is CostAtom.Mana -> manaSolver.canPay(state, playerId, atom.cost)
+                else -> false
             }
         }
+
+        /** Button / prompt label for a copy cost: "Pay {R}{R}", "Discard a card", "Sacrifice a land". */
+        fun copyCostLabel(cost: PayCost): String =
+            ChainCopyEffect.costPhrase(cost).replaceFirstChar { it.uppercase() }
 
         fun findMatchingPermanents(
             state: GameState,

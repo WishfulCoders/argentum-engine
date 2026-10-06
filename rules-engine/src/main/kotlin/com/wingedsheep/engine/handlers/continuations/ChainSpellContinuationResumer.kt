@@ -3,6 +3,8 @@ package com.wingedsheep.engine.handlers.continuations
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.chain.ChainCopyExecutor
+import com.wingedsheep.engine.handlers.effects.composite.payManaCostFromPool
+import com.wingedsheep.engine.mechanics.mana.ManaPaymentWindow
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -11,6 +13,7 @@ import com.wingedsheep.engine.state.components.identity.OwnerComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
+import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.costs.CostAtom
@@ -28,6 +31,7 @@ class ChainSpellContinuationResumer(
     override fun resumers(): List<ContinuationResumer<*>> = listOf(
         resumer(ChainCopyDecisionContinuation::class, ::resumeChainCopyDecision),
         resumer(ChainCopyCostContinuation::class, ::resumeChainCopyCost),
+        resumer(ChainCopyManaPaymentContinuation::class, ::resumeChainCopyManaPayment),
         resumer(ChainCopyTargetContinuation::class, ::resumeChainCopyTarget)
     )
 
@@ -101,13 +105,103 @@ class ChainSpellContinuationResumer(
                     useTargetingUI = false
                 )
             }
-            else -> {
-                // Unsupported cost type — skip
-                presentTargetSelection(
-                    state, emptyList(), controllerId, effect, continuation.sourceId, checkForMore
-                )
-            }
+            is CostAtom.Mana -> payManaCopyCost(state, controllerId, atom.cost, effect, continuation.sourceId, checkForMore)
+            // A cost the chain flow can't collect is unpayable (ChainCopyExecutor.canPayCopyCost
+            // never offers it); never hand out the copy without its cost.
+            else -> checkForMore(state, emptyList())
         }
+    }
+
+    // =========================================================================
+    // 3b. Mana cost payment ("may pay {R}{R}" — Chain Lightning)
+    // =========================================================================
+
+    /**
+     * Collect a mana copy cost mid-resolution. The recipient — not the spell's controller — pays,
+     * while the chain spell is still resolving: CR 605.3a lets them activate mana abilities whenever
+     * an effect asks for a mana payment, so this opens the same [ManaPaymentWindow] ward and
+     * "counter unless you pay" use. Floating mana that already covers the cost is spent directly.
+     */
+    private fun payManaCopyCost(
+        state: GameState,
+        controllerId: EntityId,
+        manaCost: ManaCost,
+        effect: ChainCopyEffect,
+        sourceId: EntityId?,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        if (!services.manaSolver.canPay(state, controllerId, manaCost)) {
+            return checkForMore(state, emptyList())
+        }
+        if (ManaPaymentWindow.floatingManaCovers(state, controllerId, manaCost)) {
+            return spendCopyManaAndPresentTargets(state, emptyList(), controllerId, manaCost, effect, sourceId, checkForMore)
+        }
+        val sourceName = spellNameOf(state, sourceId)
+        return state.suspendForDecision(
+            question = { decisionId -> ManaPaymentWindow.buildDecision(
+                state = state,
+                playerId = controllerId,
+                cost = manaCost,
+                decisionId = decisionId,
+                prompt = "Pay $manaCost to copy $sourceName",
+                context = DecisionContext(
+                    sourceId = sourceId,
+                    sourceName = sourceName,
+                    phase = DecisionPhase.RESOLUTION
+                ),
+                canDecline = true,
+                manaSolver = services.manaSolver
+            ) },
+            answer = { decision -> ChainCopyManaPaymentContinuation(
+                effect = effect,
+                copyControllerId = controllerId,
+                sourceId = sourceId,
+                manaCost = manaCost,
+                availableSources = decision.availableSources
+            ) },
+        )
+    }
+
+    fun resumeChainCopyManaPayment(
+        state: GameState,
+        continuation: ChainCopyManaPaymentContinuation,
+        response: DecisionResponse,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        if (response !is ManaSourcesSelectedResponse) {
+            return ExecutionResult.error(state, "Expected mana sources selected response for chain copy cost")
+        }
+        val floated = ManaPaymentWindow.floatSelectedMana(
+            services.zones, state, continuation.copyControllerId, continuation.manaCost,
+            response, continuation.availableSources, services
+        )
+        // Declined, or the submission couldn't produce the mana: the player didn't pay, so no copy.
+        if (!floated.paid) return checkForMore(floated.state, floated.events)
+        return spendCopyManaAndPresentTargets(
+            floated.state, floated.events, continuation.copyControllerId, continuation.manaCost,
+            continuation.effect, continuation.sourceId, checkForMore
+        )
+    }
+
+    /** Spend [manaCost] out of the payer's pool (floating mana first), then ask for the copy's target. */
+    private fun spendCopyManaAndPresentTargets(
+        state: GameState,
+        priorEvents: List<GameEvent>,
+        controllerId: EntityId,
+        manaCost: ManaCost,
+        effect: ChainCopyEffect,
+        sourceId: EntityId?,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        val paid = payManaCostFromPool(
+            state, controllerId, manaCost, services.cardRegistry,
+            predicateEvaluator = services.predicateEvaluator
+        )
+        // Defensive: a pool that can't cover the cost after the window means nothing was paid.
+        if (paid.error != null) return checkForMore(state, priorEvents)
+        return presentTargetSelection(
+            paid.state, priorEvents + paid.events, controllerId, effect, sourceId, checkForMore
+        )
     }
 
     // =========================================================================
@@ -247,7 +341,7 @@ class ChainSpellContinuationResumer(
         checkForMore: CheckForMore
     ): ExecutionResult {
         // Check cost prerequisites
-        if (!ChainCopyExecutor.canPayCopyCost(state, recipientPlayerId, effect.copyCost, predicateEvaluator = services.predicateEvaluator)) {
+        if (!ChainCopyExecutor.canPayCopyCost(state, recipientPlayerId, effect.copyCost, predicateEvaluator = services.predicateEvaluator, manaSolver = services.manaSolver)) {
             return checkForMore(state, events)
         }
 
@@ -264,13 +358,13 @@ class ChainSpellContinuationResumer(
         val prompt = if (copyCost == null) {
             "Copy ${spellNameOf(state, sourceId)} and choose a new target?"
         } else {
-            "${copyCost.description.replaceFirstChar { it.uppercase() }} to copy ${spellNameOf(state, sourceId)}?"
+            "${ChainCopyExecutor.copyCostLabel(copyCost)} to copy ${spellNameOf(state, sourceId)}?"
         }
 
         val (yesText, noText) = if (copyCost == null) {
             "Copy" to "Decline"
         } else {
-            copyCost.description.replaceFirstChar { it.uppercase() } to "Decline"
+            ChainCopyExecutor.copyCostLabel(copyCost) to "Decline"
         }
 
         val question = { decisionId: String -> YesNoDecision(

@@ -687,6 +687,14 @@ data class PayOrSufferEffect(
  * Orthogonal to [CreateDelayedTriggerEffect.fireOnPlayer], which gates *whose* turn the
  * trigger may fire on, not *which* turn is the earliest eligible one.
  */
+/**
+ * Display name for the steps a step-based delayed trigger fires at: "main phase" for the two main
+ * phases together, otherwise the steps' names joined by "or".
+ */
+private fun delayedStepsName(steps: List<Step>): String =
+    if (steps.toSet() == setOf(Step.PRECOMBAT_MAIN, Step.POSTCOMBAT_MAIN)) "main phase"
+    else steps.joinToString(" or ") { it.displayName }
+
 @Serializable
 enum class DelayedTriggerTiming {
     /**
@@ -850,10 +858,26 @@ data class CreateDelayedTriggerEffect(
      * entity ids are copied onto the delayed trigger when it is created and seeded back into the
      * pipeline its effect resolves in, under the same names. Empty by default: nothing is carried.
      */
-    val carryCollections: List<String> = emptyList()
+    val carryCollections: List<String> = emptyList(),
+    /**
+     * For step-based delayed triggers: further steps that fire the same trigger, so it fires at the
+     * beginning of whichever of [step] or these comes **first** (and, being a one-shot, only then).
+     * Empty by default — a single step.
+     *
+     * The shape is "at the beginning of your next **main phase**" (Mana Drain): a turn has two main
+     * phases (CR 505.1) and the rule is the next one to begin — CR 603.7 fires a delayed trigger
+     * "the next time" its event occurs. Cast during your precombat main phase or combat, that is the
+     * same turn's postcombat main phase; otherwise it is your next precombat main phase (Mana Drain's
+     * 2020-11-10 ruling). Spell it `step = PRECOMBAT_MAIN, alsoAtSteps = listOf(POSTCOMBAT_MAIN)` —
+     * or the [com.wingedsheep.sdk.dsl.Effects.AtBeginningOfYourNextMainPhase] facade. With
+     * [repeatAtEachMatchingStep] the trigger repeats at every listed step instead.
+     */
+    val alsoAtSteps: List<Step> = emptyList()
 ) : Effect {
     override val description: String = when {
         trigger != null -> "create a delayed trigger that fires on ${trigger.event::class.simpleName}"
+        step != null && alsoAtSteps.isNotEmpty() ->
+            "create a delayed trigger at the beginning of the next ${delayedStepsName(listOf(step) + alsoAtSteps)}"
         step != null -> "create a delayed trigger at the beginning of the next ${step.displayName}"
         else -> "create a delayed trigger"
     }

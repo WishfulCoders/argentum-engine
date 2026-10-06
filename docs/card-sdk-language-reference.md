@@ -3052,7 +3052,12 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   (Onslaught's Chain of X cycle). `offerTo` is a `CopyRecipient` (`TARGET_CONTROLLER`,
   `TARGET_PLAYER`, `AFFECTED_PLAYER` — the target player, or the target permanent's controller);
   `copyTarget` is the copy's target requirement, normally the same requirement the spell declared.
-  Prompts name the spell from its card, so the effect never repeats the card name.
+  Prompts name the spell from its card, so the effect never repeats the card name. `copyCost` may be
+  a sacrifice (`Costs.pay.Sacrifice(…)`, Chain of Vapor), a discard (`Costs.pay.Discard()`, Chain of
+  Plasma) or **mana** (`Costs.pay.Mana("{R}{R}")`, Chain Lightning): the recipient pays mana
+  mid-resolution through the mana-payment window (CR 605.3a — floating mana counts, and they may
+  activate mana abilities or decline), and is offered the copy only if they can pay (CR 118.3). Any
+  other cost is treated as unpayable — the copy is never offered for free.
 
 - `CounterEffect(target, condition?, destination?)` — counter a spell/ability; optionally send elsewhere. `CounterDestination.Exile(grantFreeCast?)`: `grantFreeCast` lets the counter's *controller* recast the exiled card for free (Kheru Spellsnatcher). (For "exile it; its owner may recast it" wording that is **not** a counter — e.g. airbending a spell — use `ExileTargetSpell(fixedAlternativeManaCost = …)` below, which bypasses can't-be-countered.) `CounterDestination.Hand` (facade `Effects.CounterSpellToHand()`) is Remand's "put it into its owner's hand instead of into that player's graveyard" — still a real counter, so an uncounterable spell is untouched and "whenever a spell is countered" triggers still fire; `ReturnSpellToOwnersHand` is the non-counter sibling. `CounterDestination.Library(positions)` (facade `Effects.CounterSpellToLibrary(vararg positions)`) counters into the owner's library: one `LibraryChoicePosition` is a fixed spot (Memory Lapse `Top`, Spell Crumple `Bottom`), several are the *counter's controller's* choice (Hinder `Top, Bottom`) — asked only when the spell would really land there (not if it can't be countered or a counter replacement exiles it); `PutOnTopOrBottomOfLibrary` on a spell is the non-counter sibling (Swat Away).
   - `target = CounterTarget.Spell` / `Ability` / `SpellOrAbility` — `SpellOrAbility` dispatches at resolution by inspecting whether the stack entity has a `SpellOnStackComponent`. Used by Teferi's Response.
@@ -8252,6 +8257,12 @@ Dominant back faces that "stay" instead self-exile on their final chapter, dodgi
     chapter III, Fatal Fissure); the list carries the rest for a trigger that targets more than once
     — Feral Encounter's "target creature you control deals damage equal to its power to up to one
     target creature you don't control", where the *spell* takes no targets at all.
+  - `alsoAtSteps: List<Step>` — further steps that fire the same step-based one-shot: it fires at
+    whichever of `step` or these begins **first**, then is consumed. The shape is "at the beginning
+    of your next **main phase**" (CR 505.1 — a turn has two; CR 603.7 — the *next* one): facade
+    `Effects.AtBeginningOfYourNextMainPhase(effect)` = `step = PRECOMBAT_MAIN, alsoAtSteps =
+    [POSTCOMBAT_MAIN], fireOnPlayer = You`. Created during your precombat main phase or combat, it
+    fires at that turn's postcombat main; otherwise at your next precombat main (Mana Drain).
   - `repeatAtEachMatchingStep = true` keeps a step-based delayed trigger resident after it fires,
     repeating at every matching step until `expiry` removes it. The default is `false`, preserving
     the one-shot "at the beginning of the next ..." shape. Pair with
