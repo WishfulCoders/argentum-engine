@@ -1338,7 +1338,10 @@ class ManaSolver(
             // …and by a resolved effect. Both kinds survive the source losing its own abilities.
             val staticGrantedManaAbilities = getStaticGrantedManaAbilities(entityId, state, manaStatics) +
                 runtimeGrants[entityId].orEmpty()
-            val rawManaAbilities = (allAbilities.filter { it.isManaAbility } + staticGrantedManaAbilities).let { all ->
+            // An "Activate only as an instant" mana ability (CR 602.5e) is never a payment source:
+            // it can't be activated while a cost is being paid (Lion's Eye Diamond ruling).
+            val rawManaAbilities = (allAbilities.filter { it.isManaAbility } + staticGrantedManaAbilities)
+                .filterNot { LegalityKernel.activatableOnlyWithPriority(it) }.let { all ->
                 // A borrowed permanent lends only its {T} mana abilities (CR 106.12).
                 if (entityId in borrowed) all.filter(BorrowedManaAbilities::isTapManaAbility) else all
             }
@@ -2938,7 +2941,8 @@ class ManaSolver(
             if (projected.hasLostAllAbilities(entityId)) continue
 
             for (ability in cardDef.script.activatedAbilities) {
-                if (!ability.isManaAbility) continue
+                // "Activate only as an instant" (CR 602.5e): never available mid-payment.
+                if (!ability.isManaAbility || LegalityKernel.activatableOnlyWithPriority(ability)) continue
                 val tapCost = (ability.cost as? AbilityCost.Atom)?.atom as? CostAtom.TapPermanents ?: continue
 
                 // Find untapped permanents matching the filter that are NOT regular mana sources
@@ -3030,7 +3034,8 @@ class ManaSolver(
                 runtimeGrants[entityId].orEmpty()
 
             for (ability in abilities) {
-                if (!ability.isManaAbility) continue
+                // "Activate only as an instant" (CR 602.5e): never available mid-payment.
+                if (!ability.isManaAbility || LegalityKernel.activatableOnlyWithPriority(ability)) continue
                 val cost = ability.cost
                 if (manaAbilityIsAlreadyCounted(cost)) continue
                 // A mana sub-cost would recurse straight back into canPay, and its net production
@@ -3208,7 +3213,8 @@ class ManaSolver(
             ) continue
 
             for (ability in abilities) {
-                if (!ability.isManaAbility) continue
+                // "Activate only as an instant" (CR 602.5e): never available mid-payment.
+                if (!ability.isManaAbility || LegalityKernel.activatableOnlyWithPriority(ability)) continue
                 val composite = ability.cost as? AbilityCost.Composite ?: continue
                 val hasTap = composite.costs.any { it is AbilityCost.Tap }
                 val hasSacSelf = composite.costs.any { it is AbilityCost.SacrificeSelf }
@@ -3326,7 +3332,8 @@ class ManaSolver(
             ) continue
 
             for (ability in cardDef.script.activatedAbilities) {
-                if (!ability.isManaAbility) continue
+                // "Activate only as an instant" (CR 602.5e): never available mid-payment.
+                if (!ability.isManaAbility || LegalityKernel.activatableOnlyWithPriority(ability)) continue
                 val composite = ability.cost as? AbilityCost.Composite ?: continue
                 val hasTap = composite.costs.any { it is AbilityCost.Tap }
                 val tapPermanentsCost = composite.costs

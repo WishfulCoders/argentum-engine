@@ -10534,6 +10534,15 @@ before `genericCostReduction` and the battlefield statics. Kami of Jealous Thirs
 - `OnlyIfCondition(c)` — condition gate.
 - `OnlyDuringYourTurn` / `DuringPhase(p)` / `DuringStep(s)` / `BeforeStep(s)` — timing gates (compose
   via `All(...)`, e.g. `All(DuringStep(UPKEEP), OnlyDuringYourTurn)` for "only during your upkeep").
+- `OnlyAsInstant` — *"Activate only as an instant"* (CR 602.5e): only while the player holds priority
+  (CR 304.5) and no decision is pending. Meaningful on a **mana ability** only — an ordinary ability
+  needs priority anyway — where it closes the CR 605.3a windows a mana ability could otherwise use:
+  mid-cast cost payment and "a rule or effect asks for a mana payment" (ward, "you may pay …"). The
+  ability stays a mana ability (CR 605.1; it doesn't use the stack), but `ManaSolver` never counts or
+  offers it as a payment source (`LegalityKernel.activatableOnlyWithPriority`), so the player activates
+  it first, with priority, and pays from the floating mana. Lion's Eye Diamond:
+  `activatedAbility { cost = Costs.Composite(Costs.DiscardHand, Costs.SacrificeSelf); effect =
+  Effects.AddAnyColorMana(3); manaAbility = true; restrictions = listOf(ActivationRestriction.OnlyAsInstant) }`.
 
 Every restriction is decided in one place, `LegalityKernel` (`rules-engine/.../legality/`): the
 activation handler's `validate`, every ability enumerator and the auto-tap `ManaSolver` ask it, and
