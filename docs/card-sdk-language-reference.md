@@ -3093,6 +3093,9 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   declined or impossible pick leaves nothing behind on cards still in the collection; and it
   outranks the card-intrinsic exile reasons (flashback, rebound, an Adventure face), being the only
   one of them that can name a zone other than exile. Leave it `null` for the ordinary destination.
+  A stamp put on a card *before* it is cast (a lingering grant) is dropped if the card changes zones
+  any way other than being cast (CR 400.7 — Jace, Telepath Unbound's ruling: a card that went to a
+  hidden zone isn't exiled even if it's put into the graveyard later that turn).
   `GrantMayPlayFromExile` and `GrantFreeCastTargetFromExile` take the same `insteadOfGraveyard`
   parameter and stamp the same component; `MayCastFromGraveyard(exileInsteadOfGraveyard)` stamps it
   with its default `EXILE` — one mechanism, one destination vocabulary.
