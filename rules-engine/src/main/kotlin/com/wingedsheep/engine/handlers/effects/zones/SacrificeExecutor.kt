@@ -59,7 +59,7 @@ class SacrificeExecutor(
         }
 
         // Find all valid permanents on the battlefield that the player controls
-        val validPermanents = findValidPermanents(state, controllerId, effect, sourceId)
+        val validPermanents = findValidPermanents(state, effect, context)
 
         if (effect.any) {
             // "Sacrifice any number of..." - player chooses 0 to all
@@ -87,14 +87,21 @@ class SacrificeExecutor(
         )
     }
 
+    /**
+     * The permanents the resolving player may sacrifice. The filter is read in the ability's own
+     * context, so source-relative predicates work: "sacrifice another creature or an artifact"
+     * (Gut, True Soul Zealot) is `Creature.notSourceItself() or Artifact`, which still offers the
+     * source itself if it is an artifact — something [SacrificeEffect.excludeSource], which drops
+     * the source from every branch, can't say.
+     */
     private fun findValidPermanents(
         state: GameState,
-        controllerId: EntityId,
         effect: SacrificeEffect,
-        sourceId: EntityId? = null
+        context: EffectContext
     ): List<EntityId> {
+        val sourceId = context.sourceId
         val matches = BattlefieldFilterUtils.findMatchingOnBattlefield(
-            state, effect.filter.youControl(), PredicateContext(controllerId = controllerId),
+            state, effect.filter.youControl(), PredicateContext.fromEffectContext(context),
             predicateEvaluator = zones.predicateEvaluator
         )
         return if (effect.excludeSource && sourceId != null) {

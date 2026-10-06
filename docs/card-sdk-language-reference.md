@@ -1823,7 +1823,10 @@ this path, with blocker filters evaluated against projected state.
   double-faced permanent and re-enters it as a **new object** on the chosen face — unlike `Transform`, which
   flips a permanent in place. Because it is a new object: counters/damage drop, attachments fall off, leaves-
   and enters-the-battlefield triggers fire (not transform triggers), and a Saga face re-enters with one lore
-  counter (CR 714.2b). The exile and return are atomic (no priority/SBAs between). `returnAs`: `TRANSFORMED`
+  counter (CR 714.2b). The exile and return are atomic (no priority/SBAs between). If the permanent has
+  left the battlefield (or left and returned) before the instruction runs, the card is a new object
+  (CR 400.7): nothing is exiled from its new zone and nothing returns, while the rest of the ability
+  still resolves (Jace, Vryn's Prodigy bounced in response still loots). `returnAs`: `TRANSFORMED`
   (the opposite face — front→back), `FRONT` ("return it front face up" — the eikon Saga's final chapter flips
   back to the legend), or `BACK`. The front face's activated ability is sorcery-speed
   (`timing = TimingRule.SorcerySpeed`); Jecht uses it from a "may" combat-damage trigger instead.
@@ -3090,6 +3093,11 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   "Sacrifice a creature.": the **ability's controller** sacrifices and no player is named. Distinct
   from `Effects.Sacrifice`, which is the edict and names the player who must sacrifice — writing the
   bare form as `Sacrifice(filter, 1, EffectTarget.Controller)` says the same thing the long way round.
+  The filter is read in the ability's own context (by the sacrifice and by `Gate.MayPay`'s
+  affordability check alike), so source-relative predicates work in it: "you may sacrifice another
+  creature or an artifact" (**Gut, True Soul Zealot**) is
+  `SacrificeOwn(Creature.notSourceItself() or Artifact)` — "another" binds the creature branch only,
+  so an artifact source may sacrifice itself (its ruling), which `excludeSource = true` can't say.
 - `Effects.SacrificeAnyNumber(filter, excludeSource = false)`
   (= `SacrificeEffect(filter, any = true, excludeSource)`) — the *resolving*
   player chooses 0+ of their own permanents matching `filter` to sacrifice. Distinct from
@@ -3185,6 +3193,9 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   declined or impossible pick leaves nothing behind on cards still in the collection; and it
   outranks the card-intrinsic exile reasons (flashback, rebound, an Adventure face), being the only
   one of them that can name a zone other than exile. Leave it `null` for the ordinary destination.
+  A stamp put on a card *before* it is cast (a lingering grant) is dropped if the card changes zones
+  any way other than being cast (CR 400.7 — Jace, Telepath Unbound's ruling: a card that went to a
+  hidden zone isn't exiled even if it's put into the graveyard later that turn).
   `GrantMayPlayFromExile` and `GrantFreeCastTargetFromExile` take the same `insteadOfGraveyard`
   parameter and stamp the same component; `MayCastFromGraveyard(exileInsteadOfGraveyard)` stamps it
   with its default `EXILE` — one mechanism, one destination vocabulary.
@@ -11489,11 +11500,15 @@ composite abilities).
   *hexproof* namespace format the oracle text but have no targeting wiring yet and are deliberately not
   projected.
 - **Source-kind scopes** — qualities that are a *kind of source* rather than a characteristic
-  (CR 702.16a): `ProtectionScope.Spells`, `ProtectionScope.PermanentsCastThisTurn`,
-  `ProtectionScope.ActivatedAbilities`, `ProtectionScope.TriggeredAbilities`. Usable in both
-  `Protection(...)` and `Hexproof(...)`; one ability per quality, as printed (CR 702.16g / 702.11f):
+  (CR 702.16a): `ProtectionScope.Spells`, `ProtectionScope.ColoredSpells`,
+  `ProtectionScope.PermanentsCastThisTurn`, `ProtectionScope.ActivatedAbilities`,
+  `ProtectionScope.TriggeredAbilities`. Usable in both `Protection(...)` and `Hexproof(...)`; one
+  ability per quality, as printed (CR 702.16g / 702.11f):
   - "protection from spells and from permanents that were cast this turn" (Emrakul, the World Anew) —
     `Protection(Spells)` + `Protection(PermanentsCastThisTurn)`;
+  - "protection from spells that are one or more colors" (Emrakul, the Aeons Torn) —
+    `Protection(ColoredSpells)`: a spell whose colors are non-empty (CR 105.2). A colorless spell, and
+    every ability (even one from a colored source), still targets and damages it;
   - "hexproof from activated and triggered abilities" (Volatile Stormdrake) —
     `Hexproof(ActivatedAbilities)` + `Hexproof(TriggeredAbilities)`.
 

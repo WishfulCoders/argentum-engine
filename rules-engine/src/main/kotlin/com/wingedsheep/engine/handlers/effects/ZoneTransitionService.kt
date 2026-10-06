@@ -645,6 +645,22 @@ class ZoneTransitionService(
             }
         }
 
+        // A cast-this-way destination rider ("if that spell would be put into your graveyard, exile
+        // it instead" — Jace, Telepath Unbound; Sins of the Past) is stamped on a card *before* it
+        // is cast, in the zone it may be cast from, and the stack resolver consumes it. Any other
+        // zone change makes the card a new object the granting effect has lost track of
+        // (CR 400.7) — Jace's ruling: a card that went to a hidden zone isn't exiled even if it's
+        // put into the graveyard later that turn — so the stamp is dropped. Moves onto and off the
+        // stack keep it: casting carries it to the stack, and the resolver and counterer read it
+        // as the spell leaves.
+        if (fromZone != Zone.STACK && actualDestZone != Zone.STACK && fromZone != actualDestZone &&
+            newState.getEntity(entityId)?.has<com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent>() == true
+        ) {
+            newState = newState.updateEntity(entityId) {
+                it.without<com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent>()
+            }
+        }
+
         // Text changes follow a permanent spell onto the battlefield, but not other new objects.
         if (fromZone != actualDestZone && !(fromZone == Zone.STACK && actualDestZone == Zone.BATTLEFIELD) &&
             newState.getEntity(entityId)?.has<TextReplacementComponent>() == true

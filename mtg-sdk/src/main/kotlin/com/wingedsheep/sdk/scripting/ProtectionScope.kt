@@ -79,6 +79,18 @@ sealed interface ProtectionScope {
     data object Spells : ProtectionScope
 
     /**
+     * From spells that are one or more colors — the [Spells] quality narrowed to a colored spell
+     * (CR 702.16a; CR 105.2: an object is colored when it has one or more of the five colors, so a
+     * colorless spell never matches). Emrakul, the Aeons Torn: a colored spell can't target it and
+     * damage a colored spell would deal to it is prevented, while a colorless spell — or any
+     * ability, even one from a colored source — still can. The color is read off the spell itself,
+     * not off the card that put an ability on the stack.
+     */
+    @SerialName("ProtectionScope.ColoredSpells")
+    @Serializable
+    data object ColoredSpells : ProtectionScope
+
+    /**
      * From permanents that were cast this turn — a battlefield source that entered this turn by
      * resolving as a cast spell (not a copy, a token, or a permanent put onto the battlefield),
      * and hasn't left since. Emrakul, the World Anew.

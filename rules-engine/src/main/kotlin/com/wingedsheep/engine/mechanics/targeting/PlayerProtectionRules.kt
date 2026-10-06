@@ -95,6 +95,7 @@ object PlayerProtectionRules {
             }
             ProtectionScope.Everything -> true
             ProtectionScope.Spells -> SourceKindProtection.isSpell(state, sourceId)
+            ProtectionScope.ColoredSpells -> SourceKindProtection.isColoredSpell(state, sourceId)
             ProtectionScope.PermanentsCastThisTurn -> SourceKindProtection.isPermanentCastThisTurn(state, sourceId)
             // An ability kind is a property of the targeting spell-or-ability, not of the source
             // object this reading is given; no player-protection grant names one.

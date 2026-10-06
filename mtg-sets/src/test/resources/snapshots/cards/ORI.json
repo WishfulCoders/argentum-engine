@@ -2176,6 +2176,292 @@
     ]
 }
 
+// Jace, Vryn's Prodigy
+{
+    "name": "Jace, Vryn's Prodigy",
+    "manaCost": "{1}{U}",
+    "typeLine": "Legendary Creature — Human Wizard",
+    "oracleText": "{T}: Draw a card, then discard a card. If there are five or more cards in your graveyard, exile Jace, then return him to the battlefield transformed under his owner's control.",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Jace, Vryn's Prodigy:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Hand"
+                                    },
+                                    "storeAs": "hand"
+                                },
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "hand",
+                                    "selection": {
+                                        "type": "ChooseExactly",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "discarded",
+                                    "prompt": "Choose 1 card to discard"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "discarded",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Graveyard"
+                                    },
+                                    "moveType": "Discard"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "Count",
+                                        "player": "You",
+                                        "zone": "Graveyard"
+                                    },
+                                    "operator": "GTE",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 5
+                                    }
+                                }
+                            },
+                            "then": "ExileAndReturnTransformed"
+                        }
+                    ]
+                },
+                "descriptionOverride": "Draw a card, then discard a card. If there are five or more cards in your graveyard, exile Jace, then return him to the battlefield transformed under his owner's control."
+            }
+        ]
+    },
+    "backFace": {
+        "name": "Jace, Telepath Unbound",
+        "manaCost": "",
+        "typeLine": "Legendary Planeswalker — Jace",
+        "oracleText": "+1: Up to one target creature gets -2/-0 until your next turn.\n−3: You may cast target instant or sorcery card from your graveyard this turn. If that spell would be put into your graveyard, exile it instead.\n−9: You get an emblem with \"Whenever you cast a spell, target opponent mills five cards.\"",
+        "script": {
+            "activatedAbilities": [
+                {
+                    "id": "Jace, Telepath Unbound:1",
+                    "cost": {
+                        "type": "CostLoyalty",
+                        "change": 1
+                    },
+                    "effect": {
+                        "type": "ModifyStats",
+                        "powerModifier": {
+                            "type": "Fixed",
+                            "amount": -2
+                        },
+                        "toughnessModifier": {
+                            "type": "Fixed",
+                            "amount": 0
+                        },
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "duration": "UntilYourNextTurn"
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "optional": true,
+                            "filter": {
+                                "baseFilter": "creature"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "timing": "SorcerySpeed",
+                    "isPlaneswalkerAbility": true,
+                    "descriptionOverride": "Up to one target creature gets -2/-0 until your next turn."
+                },
+                {
+                    "id": "Jace, Telepath Unbound:2",
+                    "cost": {
+                        "type": "CostLoyalty",
+                        "change": -3
+                    },
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": "ChosenTargets",
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "GrantMayPlayFromExile",
+                                "from": "gathered0",
+                                "insteadOfGraveyard": "EXILE"
+                            }
+                        ]
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "instant|sorcery own:you",
+                                "zone": "Graveyard"
+                            },
+                            "id": "t1"
+                        }
+                    ],
+                    "timing": "SorcerySpeed",
+                    "isPlaneswalkerAbility": true,
+                    "descriptionOverride": "You may cast target instant or sorcery card from your graveyard this turn. If that spell would be put into your graveyard, exile it instead."
+                },
+                {
+                    "id": "Jace, Telepath Unbound:4",
+                    "cost": {
+                        "type": "CostLoyalty",
+                        "change": -9
+                    },
+                    "effect": {
+                        "type": "CreateGlobalTriggeredAbility",
+                        "ability": {
+                            "id": "Jace, Telepath Unbound:3",
+                            "trigger": "SpellCastEvent",
+                            "binding": "ANY",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "TopOfLibrary",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 5
+                                            },
+                                            "player": {
+                                                "type": "BoundVariable",
+                                                "name": "t2"
+                                            },
+                                            "isMill": true
+                                        },
+                                        "storeAs": "milled"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "milled",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard",
+                                            "player": {
+                                                "type": "BoundVariable",
+                                                "name": "t2"
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            "targetRequirement": {
+                                "type": "TargetOpponent",
+                                "id": "t2"
+                            },
+                            "descriptionOverride": "Whenever you cast a spell, target opponent mills five cards."
+                        },
+                        "descriptionOverride": "Whenever you cast a spell, target opponent mills five cards."
+                    },
+                    "timing": "SorcerySpeed",
+                    "isPlaneswalkerAbility": true,
+                    "descriptionOverride": "You get an emblem with \"Whenever you cast a spell, target opponent mills five cards.\""
+                }
+            ]
+        },
+        "metadata": {
+            "collectorNumber": "60",
+            "rarity": "MYTHIC",
+            "artist": "Jaime Jones",
+            "imageUri": "https://cards.scryfall.io/normal/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353",
+            "rulings": [
+                {
+                    "date": "2015-06-22",
+                    "text": "If you activate the second ability of Jace, Telepath Unbound, you must follow the timing rules for the card's types. For example, if you target a sorcery card, you may cast it during your main phase when the stack is empty. You pay all the spell's costs."
+                },
+                {
+                    "date": "2015-06-22",
+                    "text": "If you don't cast the card that turn, nothing happens. It remains in your graveyard."
+                },
+                {
+                    "date": "2015-06-22",
+                    "text": "The card is exiled only if it's cast from the graveyard and put back into the graveyard (either by resolving or being countered). If, at any time, the card goes to a hidden zone (such as your hand or your library), the effect loses track of the card. It won't be exiled, even if that card is put into your graveyard later that turn."
+                },
+                {
+                    "date": "2015-06-22",
+                    "text": "You can activate one of the planeswalker's loyalty abilities the turn it enters the battlefield. However, you may do so only during one of your main phases when the stack is empty. For example, if the planeswalker enters the battlefield during combat, there will be an opportunity for your opponent to remove it before you can activate one of its abilities."
+                }
+            ]
+        },
+        "startingLoyalty": 5,
+        "colorIdentityOverride": [
+            "BLUE"
+        ],
+        "colorIndicator": [
+            "BLUE"
+        ],
+        "hasNoManaCost": true
+    },
+    "metadata": {
+        "collectorNumber": "60",
+        "rarity": "MYTHIC",
+        "artist": "Jaime Jones",
+        "flavorText": "\"People's thoughts just come to me. Sometimes I don't know if it's them or me thinking.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353",
+        "rulings": [
+            {
+                "date": "2016-04-08",
+                "text": "If you discard a card with madness while resolving the ability of Jace, Vryn's Prodigy, you'll need to already have five other cards in your graveyard to satisfy that ability's condition. You can't choose to put the card directly into your graveyard to satisfy it."
+            },
+            {
+                "date": "2015-06-22",
+                "text": "The activated ability of Jace, Vryn's Prodigy checks to see if there are five or more cards in your graveyard after you discard a card. Putting a fifth card into your graveyard at other times won't cause Jace to be exiled, nor will Jace entering the battlefield while there are five or more cards in your graveyard."
+            },
+            {
+                "date": "2015-06-22",
+                "text": "In some rare cases, a spell or ability may cause one of these five cards to transform while it's a creature (front face up) on the battlefield. If this happens, the resulting planeswalker won't have any loyalty counters on it and will subsequently be put into its owner's graveyard."
+            },
+            {
+                "date": "2015-06-22",
+                "text": "A Magic Origins planeswalker that enters the battlefield because of the ability of its front face will enter with loyalty counters as normal."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Jhessian Thief
 {
     "name": "Jhessian Thief",

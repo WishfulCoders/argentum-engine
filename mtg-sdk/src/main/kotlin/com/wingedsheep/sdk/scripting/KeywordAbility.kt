@@ -120,6 +120,8 @@ sealed interface KeywordAbility {
      * - `Protection(ProtectionScope.EachOpponent)`                  — "Protection from each opponent" (Rule 702.16e)
      * - `Protection(ProtectionScope.Spells)` + `Protection(ProtectionScope.PermanentsCastThisTurn)`
      *   — "Protection from spells and from permanents that were cast this turn" (Emrakul, the World Anew)
+     * - `Protection(ProtectionScope.ColoredSpells)` — "Protection from spells that are one or more
+     *   colors" (Emrakul, the Aeons Torn)
      */
     @SerialName("Protection")
     @Serializable
@@ -140,6 +142,7 @@ sealed interface KeywordAbility {
             is ProtectionScope.Everything -> "Protection from everything"
             is ProtectionScope.EachOpponent -> "Protection from each opponent"
             is ProtectionScope.Spells -> "Protection from spells"
+            is ProtectionScope.ColoredSpells -> "Protection from spells that are one or more colors"
             is ProtectionScope.PermanentsCastThisTurn -> "Protection from permanents that were cast this turn"
             is ProtectionScope.ActivatedAbilities -> "Protection from activated abilities"
             is ProtectionScope.TriggeredAbilities -> "Protection from triggered abilities"
@@ -176,6 +179,7 @@ sealed interface KeywordAbility {
             is ProtectionScope.Everything -> "Hexproof from everything"
             is ProtectionScope.EachOpponent -> "Hexproof from each opponent"
             is ProtectionScope.Spells -> "Hexproof from spells"
+            is ProtectionScope.ColoredSpells -> "Hexproof from spells that are one or more colors"
             is ProtectionScope.PermanentsCastThisTurn -> "Hexproof from permanents that were cast this turn"
             is ProtectionScope.ActivatedAbilities -> "Hexproof from activated abilities"
             is ProtectionScope.TriggeredAbilities -> "Hexproof from triggered abilities"
