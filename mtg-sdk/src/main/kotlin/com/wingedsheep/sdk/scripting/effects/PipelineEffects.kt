@@ -1105,6 +1105,33 @@ data class RevealCollectionEffect(
 }
 
 /**
+ * "Look at [those cards]" — show the cards in the named stored collection privately to
+ * [audience] (CR 701.20e: looking at a card follows the rules for revealing it, except the card
+ * is shown only to the specified player). Does not move or change any card, and no other player
+ * learns which cards were looked at.
+ *
+ * The private counterpart of [RevealCollectionEffect], for a look at cards a gather alone can't
+ * show — a gather only shows *library* cards to its [GatherCardsEffect.lookAudience], never a
+ * hand. Composes after a selection: Urza's Bauble ("look at a card at random in target player's
+ * hand") is `gather(hand) → chooseRandom(1) → look`. An empty collection looks at nothing.
+ *
+ * @property from Name of the stored collection to look at
+ * @property audience Who looks: the controller (default) or the controller's opponents.
+ *   [LookAudience.None] shows the cards to no one.
+ */
+@SerialName("LookAtCollection")
+@Serializable
+data class LookAtCollectionEffect(
+    val from: String,
+    val audience: LookAudience = LookAudience.Controller,
+) : Effect {
+    override val description: String = when (audience) {
+        LookAudience.Opponent -> "An opponent looks at those cards"
+        else -> "Look at those cards"
+    }
+}
+
+/**
  * Select cards from a named collection, splitting into selected and remainder.
  *
  * This is the middle step in a pipeline: it presents a choice to the player

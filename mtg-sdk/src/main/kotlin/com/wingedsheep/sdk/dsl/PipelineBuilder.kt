@@ -38,6 +38,7 @@ import com.wingedsheep.sdk.scripting.effects.PairWithSourceEffect
 import com.wingedsheep.sdk.scripting.effects.RepeatCondition
 import com.wingedsheep.sdk.scripting.effects.RepeatWhileEffect
 import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
+import com.wingedsheep.sdk.scripting.effects.LookAtCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.effects.SelectionMode
@@ -908,6 +909,16 @@ class PipelineBuilder private constructor(private val shared: Shared) {
     ) {
         nextIndex()
         steps += RevealCollectionEffect(from = from.key, revealToSelf = revealToSelf, fromZone = fromZone, toZone = toZone)
+    }
+
+    /**
+     * Look at the cards in [from] privately ([LookAtCollectionEffect], CR 701.20e) — shown to the
+     * controller only (or to [audience]), wherever they are. Urza's Bauble:
+     * `look(chooseRandom(1, from = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))))`.
+     */
+    fun look(from: CollectionSlot, audience: LookAudience = LookAudience.Controller) {
+        nextIndex()
+        steps += LookAtCollectionEffect(from = from.key, audience = audience)
     }
 
     /** A player picks one of two piles; both are re-stored as chosen/other ([ChoosePileEffect]). */

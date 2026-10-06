@@ -47,6 +47,7 @@ class LibraryExecutors(
         GrantFreeCastTargetFromExileExecutor(),
         GatherUntilMatchExecutor(predicateEvaluator = zones.predicateEvaluator),
         RevealCollectionExecutor(),
+        LookAtCollectionExecutor(),
         ExileFromTopRepeatingExecutor(zones),
         ExileLibraryUntilManaValueExecutor(zones),
         ExileTopCardContestExecutor(zones),

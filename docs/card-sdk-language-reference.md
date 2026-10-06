@@ -4370,6 +4370,7 @@ with cards):
 | `copyCard(source)` / `copyCards(from)` | `CopyCardIntoCollectionEffect` / `CopyCollectionIntoCollectionEffect` |
 | `pairWithSource(from)` (soulbond, CR 702.95a — empty `from` is a legal no-op, i.e. a declined "you may pair") | `PairWithSourceEffect` |
 | `reveal(from, …)` | `RevealCollectionEffect` |
+| `look(from, audience?)` — private look (CR 701.20e) at the cards in `from`, shown only to the controller (or `LookAudience.Opponent`); a card in another player's hand emits a `HandLookedAtEvent` carrying just that card, withheld from everyone else. A gather never shows a hand, so this is the step for "look at a card at random in target player's hand" (Urza's Bauble: `look(chooseRandom(1, from = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))))`) | `LookAtCollectionEffect` |
 | `captureControllers(from)` | `CaptureControllersEffect` |
 | `forEachCaptured(collection, original, controllers) { count -> … }` | `ForEachCapturedControllerEffect` |
 | `forEachPlayerCollecting(players) { …; listOf(slotA, slotB) }` → the per-iteration collections unioned across players | `ForEachPlayerCollectingEffect` |

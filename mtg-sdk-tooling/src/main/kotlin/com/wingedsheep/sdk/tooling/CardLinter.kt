@@ -680,7 +680,7 @@ object CardLinter {
 
         // --- Readers -------------------------------------------------------------------------
         for (type in listOf(
-            "CaptureControllers", "GatherSubtypes", "RevealCollection", "SelectFromCollection",
+            "CaptureControllers", "GatherSubtypes", "RevealCollection", "LookAtCollection", "SelectFromCollection",
             "ChoosePile", "MoveCollection", "GrantMayPlayFromExile", "GrantPlayWithoutPayingCost",
             "MakePlotted",
             "GrantPlayWithAdditionalCost", "GrantPlayWithCostIncrease", "FilterCollection",
