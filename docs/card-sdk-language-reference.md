@@ -9693,6 +9693,16 @@ staticAbility {
   spells (Phyrexian Censor: `spellFilter = GameObjectFilter.Any.notSubtype(Subtype.PHYREXIAN)` for
   "one non-Phyrexian spell"): only matching spells cast this turn count, matched against the turn's
   cast records, and only a matching spell is blocked — the rest stay castable.
+- `RestrictDrawsPerTurn(maxPerTurn = 1, affected = Player.EachOpponent)` — a per-turn cap on cards
+  drawn (Narset, Parter of Veils / Leovold, Emissary of Trest: "Each opponent can't draw more than one
+  card each turn."; `affected = Player.Each` is Spirit of the Labyrinth; `maxPerTurn = 0` is "can't
+  draw cards"). A "can't" effect (CR 614.17), **not** a replacement: `DrawLimits` is asked before each
+  individual draw is offered to replacement effects, so a forbidden draw just doesn't happen and can't
+  be replaced (CR 614.17c — no dredge, no Hullbreacher Treasure) or fail on an empty library. Counts
+  `CardsDrawnThisTurnComponent`, so draws made before the source entered count and a replaced draw
+  doesn't. An optional draw the player couldn't fully make is not offered (CR 121.3, via the `May`
+  gate when the `then` leads with the draw); "draw up to N" offers at most the remaining allowance.
+  Smallest cap wins. Use it instead of `PreventDraw` for every printed "can't draw" line.
 - `CantCastSpellsSharingColorWithLastCast` — *global* (all players): can't cast a spell that shares a
   color with the spell most recently cast this turn. Backed by `GameState.lastCastSpellColors` (the
   colors of the last spell cast, cleared each turn). Never blocks the first spell of the turn; a

@@ -1141,6 +1141,8 @@ class StaticAbilityHandler(
             is DamagePersistsThroughCleanup,
             is NoMaximumHandSize,
             is com.wingedsheep.sdk.scripting.SkipDrawStep,
+            // Per-turn draw caps — a "can't" read by DrawLimits at every draw (CR 614.17):
+            is com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn,
             is com.wingedsheep.sdk.scripting.SkipUntapStep,
             is SetMaximumHandSize,
             is PreventManaPoolEmptying,

@@ -24,7 +24,13 @@ import kotlin.reflect.KClass
  * subsequent pipeline effects to reference it via DynamicAmount.VariableReference.
  */
 class DrawUpToExecutor(
-    private val decisionHandler: DecisionHandler = DecisionHandler()
+    private val decisionHandler: DecisionHandler = DecisionHandler(),
+    /**
+     * How many more cards a player may draw this turn ([DrawLimits]), or `null` when uncapped. A
+     * player can't choose to draw cards they can't draw (CR 121.3), so the number offered is capped
+     * by it. Defaults to "never capped" for the bare constructions some tests use.
+     */
+    private val drawAllowance: (GameState, com.wingedsheep.sdk.model.EntityId) -> Int? = { _, _ -> null }
 ) : EffectExecutor<DrawUpToEffect> {
 
     override val effectType: KClass<DrawUpToEffect> = DrawUpToEffect::class
@@ -44,6 +50,7 @@ class DrawUpToExecutor(
         val libraryZone = ZoneKey(playerId, Zone.LIBRARY)
         val librarySize = state.getZone(libraryZone).size
         val actualMax = effect.maxCards.coerceAtMost(librarySize)
+            .coerceAtMost(drawAllowance(state, playerId) ?: Int.MAX_VALUE)
 
         if (actualMax == 0) {
             // Can't draw any cards — store max not drawn and return

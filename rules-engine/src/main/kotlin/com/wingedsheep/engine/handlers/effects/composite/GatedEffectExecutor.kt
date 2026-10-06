@@ -177,6 +177,17 @@ class GatedEffectExecutor(
                     ?.let { effectExecutor(state, it, context) }
                     ?: EffectResult.success(state)
             }
+            // CR 121.3 — "if an effect says that a player can't draw cards and another effect offers
+            // that player the choice to draw a card, that player can't choose to do so." A per-turn
+            // draw cap (RestrictDrawsPerTurn — Narset, Leovold) makes an optional draw unchoosable
+            // whenever the drawer couldn't draw *all* of it: "if the draws are optional, the player
+            // can't choose to draw, even if they could draw one card this way" (the rulings). Like
+            // the search case above, only a may that leads with the draw is skipped.
+            if (optionalDrawIsForbidden(state, effect.then, context)) {
+                return effect.otherwise
+                    ?.let { effectExecutor(state, it, context) }
+                    ?: EffectResult.success(state)
+            }
             // A declared feasibility that isn't met means the may-action is impossible — the player
             // "doesn't", so skip the prompt and run `otherwise` directly. This is the no-target
             // analogue of a targeted "may" with no legal targets falling to its else branch (e.g.
@@ -1024,6 +1035,30 @@ class GatedEffectExecutor(
     }
 
     /** True when [effect]'s first step is a library search (a `GatherCardsEffect(search = true)`). */
+    /**
+     * Whether [effect] leads with a draw that a [com.wingedsheep.engine.handlers.effects.drawing.DrawLimits]
+     * cap forbids in full — some drawer's remaining allowance this turn is below the number of cards
+     * the draw asks for. Uncapped players (the common case) never forbid anything.
+     */
+    private fun optionalDrawIsForbidden(state: GameState, effect: Effect, context: EffectContext): Boolean {
+        val draw = leadingDraw(effect) ?: return false
+        val drawers = context.resolvePlayerTargets(draw.target, state)
+        if (drawers.isEmpty()) return false
+        val count = dynamicAmountEvaluator.evaluate(state, draw.count, context)
+        if (count <= 0) return false
+        return drawers.any { drawer ->
+            val allowance = com.wingedsheep.engine.handlers.effects.drawing.DrawLimits
+                .remainingAllowance(state, cardRegistry, conditionEvaluator, drawer)
+            allowance != null && allowance < count
+        }
+    }
+
+    private fun leadingDraw(effect: Effect): com.wingedsheep.sdk.scripting.effects.DrawCardsEffect? = when (effect) {
+        is com.wingedsheep.sdk.scripting.effects.DrawCardsEffect -> effect
+        is com.wingedsheep.sdk.scripting.effects.CompositeEffect -> effect.effects.firstOrNull()?.let { leadingDraw(it) }
+        else -> null
+    }
+
     private fun leadsWithSearch(effect: Effect): Boolean = when (effect) {
         is com.wingedsheep.sdk.scripting.effects.GatherCardsEffect -> effect.search
         is com.wingedsheep.sdk.scripting.effects.CompositeEffect ->

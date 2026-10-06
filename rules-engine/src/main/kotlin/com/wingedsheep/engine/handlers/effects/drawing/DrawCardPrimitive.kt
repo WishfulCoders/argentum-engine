@@ -54,6 +54,14 @@ class DrawCardPrimitive(
 )
 
     /**
+     * How many more cards [playerId] may draw this turn under the [DrawLimits] caps
+     * ([com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn]), or `null` when nothing caps them.
+     * Callers check it **before** offering a draw to replacement effects (CR 614.17c).
+     */
+    fun drawAllowance(state: GameState, playerId: EntityId): Int? =
+        DrawLimits.remainingAllowance(state, cardRegistry, predicateEvaluator.conditions, playerId)
+
+    /**
      * Draw one card from the top of [playerId]'s library into their hand.
      *
      * @param emptyLibraryReason string included in the [DrawFailedEvent] when
