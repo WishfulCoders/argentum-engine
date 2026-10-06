@@ -986,6 +986,83 @@
     ]
 }
 
+// Esper Sentinel
+{
+    "name": "Esper Sentinel",
+    "manaCost": "{W}",
+    "typeLine": "Artifact Creature — Human Soldier",
+    "oracleText": "Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Esper Sentinel:1",
+                "trigger": {
+                    "type": "NthSpellCastEvent",
+                    "nthSpell": 1,
+                    "player": "EachOpponent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "PayOrSuffer",
+                    "cost": {
+                        "type": "PayDynamicMana",
+                        "amount": {
+                            "type": "EntityProperty",
+                            "entity": "Self",
+                            "numericProperty": "Power"
+                        }
+                    },
+                    "suffer": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "player": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    },
+                    "consequenceDescription": "let Esper Sentinel's controller draw a card"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "12",
+        "rarity": "RARE",
+        "artist": "Eric Deschamps",
+        "flavorText": "The more Esper changes, the more he refuses to.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/3/f3537373-ef54-4578-9d05-6216420ee349.jpg?1783926893",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If a noncreature spell was already cast by an opponent the turn Esper Sentinel enters the battlefield, that opponent already cast their first noncreature spell this turn, and Esper Sentinel's ability won't trigger for that opponent that turn."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "This ability checks Esper Sentinel's power when it resolves, not when the ability goes on the stack. If Esper Sentinel is no longer on the battlefield when it resolves, use the power it had the last time it was on the battlefield."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If Esper Sentinel's has negative power when this ability resolves, then {X} is {0}. The opponent may still choose not to pay the cost if they want you to draw a card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Ethersworn Sphinx
 {
     "name": "Ethersworn Sphinx",
