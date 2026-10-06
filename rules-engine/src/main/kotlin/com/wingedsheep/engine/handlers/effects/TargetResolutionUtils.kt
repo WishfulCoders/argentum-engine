@@ -130,6 +130,12 @@ object TargetResolutionUtils {
             context.targets.firstOrNull()?.toEntityId()?.let { controllerOf(s, it) }
         }
         EffectTarget.ControllerOfTriggeringEntity -> state?.let { controllerOfTriggeringEntity(context, it) }
+        is EffectTarget.AttackedPlayerOrPlaneswalker -> state?.let { s ->
+            // The attacker is read as a value (last-known information once it has left, CR
+            // 608.2h), never gated as an acted-on object: Myr Battlesphere still deals its damage
+            // after it has left the battlefield.
+            entityOf(target.attacker, context, s, projected)?.let { attackedPlayerOrPlaneswalker(s, it) }
+        }
         is EffectTarget.ControllerOfPipelineTarget -> state?.let { s ->
             context.pipeline.storedCollections[target.collectionName]?.getOrNull(target.index)
                 ?.let { controllerOf(s, it) }
@@ -252,6 +258,36 @@ object TargetResolutionUtils {
         resolveDefendingPlayer(context, state)?.takeIf { it in opponents }?.let { return it }
         val defending = com.wingedsheep.engine.mechanics.combat.CombatDefenders.defendingPlayers(state)
         return opponents.firstOrNull { it in defending } ?: opponents.firstOrNull()
+    }
+
+    /**
+     * The player or planeswalker [attackerId] is attacking — "the player or planeswalker it's
+     * attacking" (Hellrider, Myr Battlesphere), as opposed to [defendingPlayerOfAttacker], which
+     * maps a planeswalker to its controller.
+     *
+     * Read from the attacker's live [AttackingComponent], else from the defender frozen into its
+     * battlefield-exit snapshot (CR 608.2h). Null when:
+     * - the attacked planeswalker or battle was removed from combat (CR 506.4c: the creature "is
+     *   not attacking any player, planeswalker, or battle") — the live flag, or, for an attacker
+     *   that has already left, the planeswalker no longer being on the battlefield, a planeswalker,
+     *   or attacked (CR 506.4 strips [com.wingedsheep.engine.state.components.combat.BeingAttackedComponent]);
+     * - the attacker is attacking a battle, which is neither a player nor a planeswalker;
+     * - the attacked player has left the game (CR 800.4a).
+     */
+    fun attackedPlayerOrPlaneswalker(state: GameState, attackerId: EntityId): EntityId? {
+        val container = state.getEntity(attackerId) ?: return null
+        val live = container.get<AttackingComponent>()
+        val defenderId = when {
+            live != null -> live.defenderId.takeUnless { live.attackTargetRemoved }
+            else -> container.get<LastKnownPermanentComponent>()?.snapshot?.attackedDefenderId
+        } ?: return null
+        if (defenderId in state.turnOrder) return defenderId.takeIf { it in state.activePlayers }
+        val projected = state.projectedState
+        return defenderId.takeIf {
+            it in state.getBattlefield() &&
+                projected.isPlaneswalker(it) &&
+                state.getEntity(it)?.has<com.wingedsheep.engine.state.components.combat.BeingAttackedComponent>() == true
+        }
     }
 
     /**

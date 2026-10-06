@@ -306,6 +306,33 @@ sealed interface EffectTarget {
     }
 
     /**
+     * "The player or planeswalker it's attacking": the player or planeswalker [attacker] is
+     * attacking (CR 506.3, 508.1b) — not the defending *player* of a planeswalker attack, which
+     * is [com.wingedsheep.sdk.scripting.references.Player.DefendingPlayer] (CR 802.2a).
+     *
+     * [attacker] is [TriggeringEntity] for "whenever a creature you control attacks, this deals 1
+     * damage to the player or planeswalker it's attacking" (Hellrider) and [Self] for "this
+     * creature … deals X damage to the player or planeswalker it's attacking" (Myr Battlesphere).
+     *
+     * Resolves to nothing when there is no such player or planeswalker:
+     * - the attacked planeswalker has been removed from combat (CR 506.4 — it left the
+     *   battlefield, changed controller or stopped being a planeswalker): the attacker "is not
+     *   attacking any player, planeswalker, or battle" (CR 506.4c);
+     * - the attacker is attacking a battle, which is neither a player nor a planeswalker;
+     * - the attacker was never attacking.
+     *
+     * An attacker that has itself left the battlefield answers from last-known information
+     * (CR 608.2h): what it was attacking as it last existed, provided that player is still in the
+     * game or that planeswalker is still being attacked — Myr Battlesphere's ruling ("it will
+     * still deal X damage to the appropriate player or planeswalker").
+     */
+    @SerialName("AttackedPlayerOrPlaneswalker")
+    @Serializable
+    data class AttackedPlayerOrPlaneswalker(val attacker: SingleEntity = TriggeringEntity) : EffectTarget {
+        override val description: String = "the player or planeswalker it's attacking"
+    }
+
+    /**
      * ATTACHED-TO TRIGGERING PERMANENT: the permanent that the triggering attachment (Aura/
      * Equipment) became attached to — or, for the unattach mirror, came off of. Only meaningful
      * inside a [com.wingedsheep.sdk.scripting.EventPattern.BecomesAttachedEvent] or

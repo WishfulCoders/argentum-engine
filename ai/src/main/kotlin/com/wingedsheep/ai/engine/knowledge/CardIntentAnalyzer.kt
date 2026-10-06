@@ -337,6 +337,8 @@ object CardIntentAnalyzer {
     private fun hitsAnotherPermanent(target: EffectTarget): Boolean = when (target) {
         is EffectTarget.PlayerRef, EffectTarget.Controller, EffectTarget.TargetController,
         EffectTarget.ControllerOfTriggeringEntity, EffectTarget.ControllerOfDamageSource,
+        // Almost always the defending player (Hellrider's ping is a clock, not removal).
+        is EffectTarget.AttackedPlayerOrPlaneswalker,
         EffectTarget.Self -> false
         else -> true
     }

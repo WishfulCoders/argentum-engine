@@ -4718,6 +4718,17 @@ A resolving nonpermanent spell retains its stack instance through serialized eff
   player controls"), which is what lets such a trigger find legal targets at all. Use for
   attack/combat-damage triggers ("defending player mills four cards", "that player sacrifices a
   creature"); pair it with `Chooser.DefendingPlayer` when that player also makes the choice.
+- `EffectTarget.AttackedPlayerOrPlaneswalker(attacker = TriggeringEntity)` — "the player or
+  planeswalker it's attacking": the **object** `attacker` is attacking (CR 506.3), not the defending
+  *player* — a creature attacking a planeswalker resolves to the planeswalker, where
+  `Player.DefendingPlayer` would name its controller. Hellrider = `Triggers.a(Creature.youControl())
+  .attacks()` + `DealDamage(1, AttackedPlayerOrPlaneswalker())`; Myr Battlesphere's "this creature …
+  deals X damage to the player or planeswalker it's attacking" passes `attacker = EffectTarget.Self`.
+  Resolves to **nothing** (the damage is skipped, not an error) once the attacked planeswalker has
+  been removed from combat (CR 506.4c — it left, changed controller or stopped being a
+  planeswalker), when the attacker is attacking a battle, or when the attacked player has left the
+  game. An attacker that has itself left the battlefield answers from its exit snapshot
+  (CR 608.2h), so Battlesphere's ability still hits "the appropriate player or planeswalker".
 - `Player.TriggeringPlayer` — the player bound by the trigger (the caster for `SpellCastEvent`,
   the active player for per-player step triggers — "at the beginning of each opponent's upkeep,
   *that player* …", **the player dealt the damage** for a `DealsDamageEvent` trigger whose

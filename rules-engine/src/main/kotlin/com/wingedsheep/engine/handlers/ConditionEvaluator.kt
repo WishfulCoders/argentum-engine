@@ -1135,6 +1135,7 @@ class ConditionEvaluator(
         EffectTarget.AffectedEntity,
         EffectTarget.AmassedArmy,
         EffectTarget.AttachedToTriggeringPermanent,
+        is EffectTarget.AttackedPlayerOrPlaneswalker,
         EffectTarget.ChosenCreature,
         EffectTarget.Controller,
         EffectTarget.ControllerOfDamageSource,

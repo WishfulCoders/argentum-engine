@@ -117,7 +117,13 @@ class DealDamageExecutor(
 
         // Single target resolution
         val targetId = context.resolveTarget(effect.target, state)
-            ?: return EffectResult.error(state, "No valid target for damage")
+            ?: return if (effect.target is EffectTarget.AttackedPlayerOrPlaneswalker) {
+                // "The player or planeswalker it's attacking" names nothing once that planeswalker
+                // has been removed from combat (CR 506.4c) — the damage simply isn't dealt.
+                EffectResult.success(state)
+            } else {
+                EffectResult.error(state, "No valid target for damage")
+            }
 
         // "You may have that damage dealt to you instead" (Blood of the Martyr) — ask before dealing.
         val (readyState, pause) = OptionalDamageRedirect.beforeDealing(
