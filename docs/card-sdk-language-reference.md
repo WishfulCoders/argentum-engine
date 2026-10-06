@@ -3020,7 +3020,11 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   §5.5. Liliana, Dreadhorde General's −9 is
   `gather(Permanent.opponentControls())` → `chooseOnePerCategory(…, Filters.PermanentTypes)` →
   `sacrifice(exclude(pool, kept))`; swapping the last step gives Consuming Tide's "returns the rest
-  to their hands", and swapping the category list gives Cataclysm / Divine Reckoning. For "all
+  to their hands", and swapping the category list gives Cataclysm / Divine Reckoning. When *one*
+  player makes every pick across everyone's permanents — Sundering Titan's "choose a land of each
+  basic land type, then destroy those lands" — pass `chooser = Chooser.Controller` (and
+  `purpose = "destroy"` for the prompt): `chooseOnePerCategory(lands, Filters.BasicLandTypes,
+  chooser = Chooser.Controller, purpose = "destroy")` → `destroy(chosen)`. For "all
   permanents matching a filter are sacrificed by their controllers" with no choice at all, use
   `Effects.SacrificeAll(filter)` instead.
 - "Return a permanent you control [to its owner's hand]" is a pipeline composition, not an effect type:
@@ -4433,6 +4437,16 @@ effect = Effects.Pipeline {
 }
 ```
 
+`chooser = …` replaces the per-controller split with a single chooser over the whole pool (each
+pool member is a candidate for every category, whoever controls it), and `purpose` is the prompt's
+verb ("Choose a Plains land to destroy"):
+
+```kotlin
+// Sundering Titan: "choose a land of each basic land type, then destroy those lands."
+val lands = gather(CardSource.BattlefieldMatching(GameObjectFilter.Land, player = Player.Each))
+destroy(chooseOnePerCategory(lands, Filters.BasicLandTypes, chooser = Chooser.Controller, purpose = "destroy"))
+```
+
 `run(...)` keeps the builder open: non-pipeline effects (a `ShuffleLibraryEffect`, a damage effect)
 interleave without the builder needing a verb for everything. Optional secondary outputs
 (`storeRemainder`, `storeNonMatching`, `storeMovedAs`) are only serialized when the card actually
@@ -5330,6 +5344,9 @@ This is the player-arm prerequisite for the planned composable mixed `TargetUnio
   order the rules list them: artifact, creature, enchantment, land, planeswalker, battle. The canonical
   expansion of "of each permanent type" — feed it to `chooseOnePerCategory` (§5.5) as in Liliana,
   Dreadhorde General's −9.
+- `Filters.BasicLandTypes` — a `List<GameObjectFilter>`, one land filter per **basic land type**
+  (CR 305.6): Plains, Island, Swamp, Mountain, Forest. "A land of each basic land type" for
+  `chooseOnePerCategory` (Sundering Titan); a dual-typed land matches two entries.
 - **Battle** — `CardPredicate.IsBattle` / `GameObjectFilter.Battle` / `TargetFilter.Battle` /
   `Filters.Unified.battle` / `Filters.Target.battle` (FQL key `battle`): the battle card type (CR 310),
   read from projected state on the battlefield and the printed type line elsewhere, so it works in

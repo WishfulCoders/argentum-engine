@@ -678,17 +678,25 @@ class PipelineBuilder private constructor(private val shared: Shared) {
      * [categories] ([ChooseOnePerCategoryEffect]) — "chooses a permanent they control of each
      * permanent type". Choosers are asked in APNAP order and one permanent may cover several
      * categories. Returns the collection of everyone's picks; feed it to [exclude] for "the rest".
+     *
+     * With [chooser] set, that one player instead picks one member of [from] per category over the
+     * whole pool, whoever controls it — "choose a land of each basic land type" (Sundering Titan).
+     * [purpose] is the prompt's verb ("Choose a Plains to destroy").
      */
     fun chooseOnePerCategory(
         from: CollectionSlot,
         categories: List<GameObjectFilter>,
+        chooser: Chooser? = null,
+        purpose: String = "keep",
         name: String? = null
     ): CollectionSlot {
         val slot = CollectionSlot(slotKey("kept", nextIndex(), name))
         steps += ChooseOnePerCategoryEffect(
             from = from.key,
             categories = categories,
-            storeAs = slot.key
+            storeAs = slot.key,
+            chooser = chooser,
+            purpose = purpose
         )
         return slot
     }

@@ -7,6 +7,7 @@ import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.handlers.effects.ChooserResolution
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -37,6 +38,12 @@ import kotlin.reflect.KClass
  *
  * A category the chooser controls nothing of is skipped and a category with a single candidate
  * resolves itself, so a board with one permanent per type asks nothing at all.
+ *
+ * With [ChooseOnePerCategoryEffect.chooser] set, the per-controller split is dropped: that one
+ * player is the only chooser and every member of the pool is a candidate for every category
+ * (Sundering Titan, whose controller chooses a land of each basic land type from among all
+ * players' lands — "if the only land of a certain type is one you control, you must choose it"
+ * is the single-candidate rule above).
  */
 class ChooseOnePerCategoryExecutor(
     private val predicateEvaluator: PredicateEvaluator,
@@ -56,11 +63,23 @@ class ChooseOnePerCategoryExecutor(
                 state, "No collection named '${effect.from}' in storedCollections"
             )
 
+        val choosers = when (val chooser = effect.chooser) {
+            null -> choosersInApnapOrder(state, pool)
+            else -> when (val outcome = ChooserResolution.resolve(state, chooser, context, pool)) {
+                is ChooserResolution.Outcome.Resolved -> listOf(outcome.playerId)
+                is ChooserResolution.Outcome.NeedsOpponentPick -> return ChooserResolution.pauseForOpponentPick(
+                    state, outcome.opponents, effect, context, "Choose which opponent makes the choices"
+                )
+                // Nobody to choose (no opponent, missing target): nothing is chosen.
+                is ChooserResolution.Outcome.Unresolvable -> emptyList()
+            }
+        }
+
         return collectPicks(
             state = state,
             effect = effect,
             storedCollections = collections,
-            pendingPlayers = choosersInApnapOrder(state, pool),
+            pendingPlayers = choosers,
             startCategory = 0,
             picks = emptyList(),
             sourceId = context.sourceId,
@@ -136,7 +155,7 @@ class ChooseOnePerCategoryExecutor(
      * The members of [pool] that [playerId] controls and that match the category at
      * [categoryIndex]. The category filters are controller-agnostic (`Artifact`, `Creature`, …) —
      * the control scoping comes from the pool split, so each chooser only ever sees their own
-     * permanents.
+     * permanents. A single named [ChooseOnePerCategoryEffect.chooser] sees the whole pool.
      */
     private fun candidatesFor(
         state: GameState,
@@ -149,8 +168,9 @@ class ChooseOnePerCategoryExecutor(
         val category = effect.categories[categoryIndex]
         val projected = state.projectedState
         val predicateContext = PredicateContext(controllerId = playerId, sourceId = sourceId)
+        val ownOnly = effect.chooser == null
         return pool.filter { id ->
-            controllerOf(state, id) == playerId &&
+            (!ownOnly || controllerOf(state, id) == playerId) &&
                 predicateEvaluator.matches(state, projected, id, category, predicateContext)
         }
     }
@@ -196,7 +216,7 @@ class ChooseOnePerCategoryExecutor(
             playerId = playerId,
             sourceId = sourceId,
             sourceName = sourceName,
-            prompt = "Choose $article $noun to keep",
+            prompt = "Choose $article $noun to ${effect.purpose}",
             options = candidates,
             minSelections = 1,
             maxSelections = 1,
