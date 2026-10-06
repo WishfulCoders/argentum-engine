@@ -13250,7 +13250,8 @@ forbids `DynamicAmount.X` in card definitions.
   distinctTypes() / totalCounters(type) / totalCounters()` (no type = every kind of counter,
   `CardNumericProperty.COUNTERS` — Hydra Trainer's "the number of counters on permanents you control"), `zone(player, zone, filter).count() / distinctTypes() / …`,
   `lifeTotal(player)`, `yourLifeTotal()`, `startingLifeTotal(player)`, `playerCount(scope)`,
-  `countPlayersWith(scope, condition)`, `greatestAmongPlayers(inner, players)`, `totalManaSpent()`,
+  `countPlayersWith(scope, condition)`, `greatestAmongPlayers(inner, players)`,
+  `leastAmongPlayers(inner, players)`, `fewestControlledBySinglePlayer(filter, players)`, `totalManaSpent()`,
   `manaSpentOnX(color)`, `manaSpentFromSubtype(subtype)`, `unspentMana(player)`,
   `largestSharedCreatureTypeCount(player)`, `craftedMaterialsTotalPower() / TotalManaValue() /
   ColorCount()`, the entity readers `powerOf / toughnessOf / manaValueOf / countersOn /
@@ -13424,6 +13425,11 @@ forbids `DynamicAmount.X` in card definitions.
   `players = Player.EachOpponent` for the "an opponent controls" wording (Cavern-Hoard Dragon). The
   wrapper takes any `DynamicAmount`, so the off-battlefield siblings ("the greatest number of cards an
   opponent has drawn this turn") are the same shape around a `TurnTracking`.
+- `LeastAmongPlayers(players, inner)` — the minimum twin of `GreatestAmongPlayers`, with the same
+  per-player rebinding and empty-set 0: Oracle's "the number of lands controlled by the player who
+  controls the fewest" (Balance). Every measured player counts, so one who controls none of the
+  counted objects makes the answer 0. Facades: `DynamicAmounts.leastAmongPlayers(inner, players)` and
+  `DynamicAmounts.fewestControlledBySinglePlayer(filter, players)` (a per-player battlefield count).
 - `AggregateZone(player, zone, filter?, aggregation?)` — count cards in a zone.
 - `CountPermanentsOfType(player, subtype)` — count by creature type.
 - `CountCreaturesYouControl` — shorthand for "your creatures".

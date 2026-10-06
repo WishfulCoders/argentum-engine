@@ -164,6 +164,7 @@ class DynamicAmountEvaluator(
         is DynamicAmount.Conditional -> isDeterminable(state, amount.ifTrue, context) &&
             isDeterminable(state, amount.ifFalse, context)
         is DynamicAmount.GreatestAmongPlayers -> isDeterminable(state, amount.inner, context)
+        is DynamicAmount.LeastAmongPlayers -> isDeterminable(state, amount.inner, context)
 
         // Leaves with no entity reference to bind: they read game state, the resolution context
         // or a pipeline slot, each of which [evaluate] answers without a missing referent. A new
@@ -517,6 +518,14 @@ class DynamicAmountEvaluator(
             // means the player being measured, exactly as `ForEachPlayerEffect` does.
             is DynamicAmount.GreatestAmongPlayers ->
                 resolveUnifiedPlayerIds(state, amount.players, context, projectedState).maxOfOrNull { playerId ->
+                    evaluate(state, amount.inner, context.copy(controllerId = playerId), projectedState)
+                } ?: 0
+
+            // "the player who controls the fewest" (Balance) — the minimum twin, with the same
+            // per-player rebinding. Every measured player counts, so a player with none of the
+            // counted objects contributes 0 and that is the answer.
+            is DynamicAmount.LeastAmongPlayers ->
+                resolveUnifiedPlayerIds(state, amount.players, context, projectedState).minOfOrNull { playerId ->
                     evaluate(state, amount.inner, context.copy(controllerId = playerId), projectedState)
                 } ?: 0
 
