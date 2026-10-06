@@ -1123,6 +1123,7 @@ class StaticAbilityHandler(
 
             // Activated abilities (ActivateAbilityHandler / ActivatedAbilityEnumerator):
             is ExtraLoyaltyActivation,
+            is com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed,
             is GrantActivatedAbility,
             is HasAllActivatedAbilitiesOfCards,
             is com.wingedsheep.sdk.scripting.HasAbilitiesOfChosenLinkedExiledCard,

@@ -1454,6 +1454,31 @@ data object ExtraLoyaltyActivation : StaticAbility {
 }
 
 /**
+ * "You may activate this permanent's loyalty abilities any time you could cast an instant."
+ *
+ * Lifts only the *timing* half of CR 606.3 (main phase, own turn, empty stack) for the loyalty
+ * abilities of the permanent that has this ability — its controller may activate them whenever
+ * they have priority (CR 117.1a). The once-per-turn half of CR 606.3 still applies (The Wandering
+ * Emperor ruling 2022-02-18), as does CR 606.6 (enough loyalty to pay a negative cost).
+ *
+ * Wrap in [ConditionalStaticAbility] for a gated permission — The Wandering Emperor uses
+ * `staticAbility { condition = Conditions.SourceEnteredThisTurn; ability = LoyaltyAbilitiesAtInstantSpeed }`
+ * for "As long as The Wandering Emperor entered this turn, …". The condition is evaluated with
+ * the planeswalker as the source each time a loyalty activation is enumerated or validated.
+ *
+ * A player-scoped, filter-based grant ("planeswalkers you control …") is a different shape: the
+ * turn-scoped effect [com.wingedsheep.sdk.scripting.effects.GrantInstantSpeedLoyaltyAbilitiesEffect].
+ * Consulted by `CastPermissionUtils.canActivateLoyaltyAtInstantSpeed`; not a continuous effect,
+ * so it has no projection layer.
+ */
+@SerialName("LoyaltyAbilitiesAtInstantSpeed")
+@Serializable
+data object LoyaltyAbilitiesAtInstantSpeed : StaticAbility {
+    override val description: String =
+        "You may activate this permanent's loyalty abilities any time you could cast an instant"
+}
+
+/**
  * Whether [AdditionalETBOrLTBTriggers] watches the entering side, the leaving side, or both
  * of a permanent's battlefield transit.
  */

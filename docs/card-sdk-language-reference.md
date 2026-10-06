@@ -9854,6 +9854,13 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   a bare grant (Leonin Shikari) applies unconditionally. Consulted by `CastPermissionUtils
   .canEquipAtInstantSpeed` (enumerator) and `ActivateAbilityHandler.validate` (submit path), both
   keyed on `ActivatedAbility.isEquipAbility`.
+- `LoyaltyAbilitiesAtInstantSpeed` — "you may activate this permanent's loyalty abilities any time you could
+  cast an instant": lifts the timing half of CR 606.3 for the loyalty abilities of the permanent that has it (the
+  once-per-turn half and CR 606.6 still apply). Wrap in a `ConditionalStaticAbility` for a gated permission — The
+  Wandering Emperor uses `staticAbility { condition = Conditions.SourceEnteredThisTurn; ability =
+  LoyaltyAbilitiesAtInstantSpeed }`. Consulted by `CastPermissionUtils.canActivateLoyaltyAtInstantSpeed` (both the
+  `ActivatedAbilityEnumerator` and `ActivationValidator`); ignored while the permanent is face down or has lost all
+  abilities. The player-scoped, filter-based one-shot is `GrantInstantSpeedLoyaltyAbilitiesEffect`.
 - `FreeFirstEquipEachTurn` — the controller may pay {0} rather than the equip cost of the **first**
   equip ability they activate each turn (Kíli the Resourceful; Forge Anew's separate timing gate
   confines its equip activations to its controller's turns). This is
