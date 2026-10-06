@@ -10718,7 +10718,7 @@ copy of it (CR 707.10e). The activated-ability analogue of the spell-level `cant
 > **Where set-mechanic helpers live.** The `card { … }` keyword helpers below for *set-specific*
 > mechanics — `mayBeginGameOnBattlefield()`, `flurry { }`, `mobilize(…)`, `firebending(n)`, `sneak(cost)`, `webSlinging(cost)`, `mayhem(cost)`, `madness(cost)`, `decayed()`,
 > `vividEtb { }` / `vividCostReduction()`, `convergeEntersWithCounters(counterType?)`,
-> `impending(time, cost)`, `renew(cost) { }`, `embalm(cost)`, `unearth(cost)`, `enduring()`,
+> `impending(time, cost)`, `renew(cost) { }`, `embalm(cost)`, `reconfigure(cost)`, `unearth(cost)`, `enduring()`,
 > `craft(filter, cost)`, `station()`, `jobSelect()`, `forMirrodin()`, `gift(kind)` — are `CardBuilder` **extension functions** in
 > `mtg-sdk/.../dsl/mechanics/` (one file per mechanic), not methods on the core `CardBuilder`. They
 > stay in package `com.wingedsheep.sdk.dsl`, so the call syntax is unchanged, but a card file that
@@ -12090,6 +12090,17 @@ composite abilities).
   rather than an alternative way to cast, the grant rides the plain `GrantedActivatedAbility` channel — not the
   `GrantedKeywordAbility` record `GrantHarmonize`/`GrantFlashback` need — and `ZoneActivatedAbilityEnumerator` surfaces
   printed **and** granted zone abilities alike.
+- `Reconfigure(cost)` — `card { reconfigure(cost) }` builder helper (CR 702.151, Kamigawa: Neon Dynasty), for
+  Equipment creatures. Adds `Keyword.RECONFIGURE` and the keyword's two activated abilities (CR 702.151a), both
+  sorcery-speed and both composed of existing primitives: `reconfigureAttachAbility(cost)` —
+  `AttachEquipmentEffect` on `TargetFilter.OtherCreatureYouControl` — and `reconfigureUnattachAbility(cost)` —
+  `UnattachEquipmentEffect(Self)` gated by `ActivationRestriction.OnlyIfCondition(SourceMatches(attachedTo(Creature)))`.
+  Neither is an equip ability (`isEquipAbility = false`). The keyword is load-bearing: a creature Equipment can equip
+  only with reconfigure (CR 301.5c — `AttachmentMover.canAttach` and the CR 704.5n SBA), and **any** attachment of an
+  Equipment with reconfigure to a creature (its own ability, Brass Squire, entering attached) stamps a
+  `ReconfiguredComponent(hostId, timestamp)` that `StateProjector` turns into a layer-4 "not a creature, no creature
+  subtypes" effect (CR 702.151b) for as long as it stays attached to that host. The effect isn't a static ability, so it
+  survives the Equipment losing reconfigure; every unattach path drops it. (Lion Sash.)
 - `Unearth(cost)` — `card { unearth(cost) }` builder helper (CR 702.84, Shards of Alara). "[Cost]: Return this card
   from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would
   leave the battlefield, exile it instead of putting it anywhere else. Activate only as a sorcery." Composed entirely

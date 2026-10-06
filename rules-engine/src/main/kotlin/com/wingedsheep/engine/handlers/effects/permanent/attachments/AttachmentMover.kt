@@ -10,9 +10,12 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
+import com.wingedsheep.engine.state.components.battlefield.ReconfiguredComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
+import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EquipmentAttachRestriction
 
@@ -56,7 +59,7 @@ object AttachmentMover {
             }
             card.typeLine.isEquipment ->
                 projected.isCreature(hostId) &&
-                    !(projected.isCreature(attachmentId) && !projected.hasKeyword(attachmentId, "RECONFIGURE")) &&
+                    !(projected.isCreature(attachmentId) && !projected.hasKeyword(attachmentId, Keyword.RECONFIGURE)) &&
                     !EnchantRestriction.hostProtectedFromAttachment(
                         state, projected, cardRegistry, attachmentId, card, hostId
                     ) &&
@@ -129,6 +132,7 @@ object AttachmentMover {
             val existing = container.get<AttachmentsComponent>()?.attachedIds ?: emptyList()
             container.with(AttachmentsComponent(existing + attachmentId))
         }
+        newState = stampReconfigure(newState, attachmentId, hostId)
 
         val container = newState.getEntity(attachmentId)
         events += PermanentAttachedEvent(
@@ -138,5 +142,30 @@ object AttachmentMover {
             controllerId = container?.get<ControllerComponent>()?.playerId ?: fallbackControllerId,
         )
         return newState to events
+    }
+
+    /**
+     * CR 702.151b: "Attaching an Equipment with reconfigure to another creature causes the
+     * Equipment to stop being a creature until it becomes unattached from that creature." Called
+     * by [attach] for every attachment, so the reconfigure ability, Brass Squire-style attach
+     * effects and an Equipment entering the battlefield attached all start the effect. It reads the
+     * *projected* Equipment subtype, reconfigure keyword and host creature type as they are at the
+     * moment of attachment and records a [ReconfiguredComponent] with a fresh layer timestamp;
+     * [com.wingedsheep.engine.mechanics.layers.StateProjector] applies it. Any other attachment
+     * clears a stale record, so the effect never survives onto a host it wasn't created for.
+     */
+    private fun stampReconfigure(state: GameState, attachmentId: EntityId, hostId: EntityId): GameState {
+        val projected = state.projectedState
+        val starts = attachmentId != hostId &&
+            projected.hasSubtype(attachmentId, Subtype.EQUIPMENT.value) &&
+            projected.hasKeyword(attachmentId, Keyword.RECONFIGURE) &&
+            projected.isCreature(hostId)
+        return if (starts) {
+            state.updateEntity(attachmentId) { it.with(ReconfiguredComponent(hostId, state.timestamp)) }.tick()
+        } else if (state.getEntity(attachmentId)?.has<ReconfiguredComponent>() == true) {
+            state.updateEntity(attachmentId) { it.without<ReconfiguredComponent>() }
+        } else {
+            state
+        }
     }
 }

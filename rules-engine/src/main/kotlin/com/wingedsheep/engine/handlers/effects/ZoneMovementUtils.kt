@@ -407,7 +407,11 @@ object ZoneMovementUtils {
             ?: return state to emptyList()
 
         var newState = cleanupReverseAttachmentLink(state, attachmentId)
-        newState = newState.updateEntity(attachmentId) { c -> c.without<AttachedToComponent>() }
+        // Becoming unattached ends reconfigure's "isn't a creature" effect (CR 702.151b).
+        newState = newState.updateEntity(attachmentId) { c ->
+            c.without<AttachedToComponent>()
+                .without<com.wingedsheep.engine.state.components.battlefield.ReconfiguredComponent>()
+        }
         newState = com.wingedsheep.engine.mechanics.BestowCasts.end(newState, attachmentId)
 
         return newState to listOf(
@@ -549,6 +553,8 @@ object ZoneMovementUtils {
             .without<AbilityActivatedEverComponent>()
             .without<AttachedToComponent>()
             .without<AttachmentsComponent>()
+            // Reconfigure's type-changing effect lasts only while attached (CR 702.151b).
+            .without<com.wingedsheep.engine.state.components.battlefield.ReconfiguredComponent>()
             // A creature that leaves the battlefield becomes unpaired (CR 702.95e), and the object
             // that comes back is a new one (CR 400.7) that must not inherit a stale partner id.
             // This strips the *leaving* half; SoulbondPairingCheck unpairs the half left behind.
