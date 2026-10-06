@@ -780,11 +780,42 @@ internal class CastValidator(
                 state, alternativePayment, action.playerId, cardDef, action.cardId, tapForGeneric
             )?.let { return it }
         }
+        validateMinimumX(state, action, cardComponent, cardDef, source, playForFree)?.let { return it }
         val computedCost = castCostTotaller.validationCost(
             state, action, cardDef, cardComponent, playForFree,
             castingFromCommandZone = source.route == CastSourceRoute.COMMANDER,
         ) ?: return "No alternative casting cost available"
         return castCostPayer.validateManaPayment(state, action, computedCost.cost, computedCost.paymentXValue)
+    }
+
+    /**
+     * "X can't be 0" ([com.wingedsheep.sdk.model.CardScript.minimumXValue]) — the floor on the X
+     * announced while casting (CR 601.2b). It binds whenever the cast's total cost carries an {X}:
+     * the printed cost, or an optional cost such as Thieving Skydiver's kicker {X}; an unkicked
+     * Skydiver announces no X at all. A cast without paying the mana cost may only announce X = 0
+     * (CR 107.3b), which such a spell forbids — so it can't be cast that way.
+     */
+    private fun validateMinimumX(
+        state: GameState,
+        action: CastSpell,
+        cardComponent: CardComponent,
+        cardDef: CardDefinition?,
+        source: CastSource,
+        playForFree: Boolean,
+    ): String? {
+        val minimumX = cardDef?.script?.minimumXValue ?: 0
+        if (minimumX <= 0) return null
+        if (playForFree && cardComponent.manaCost.hasX) {
+            return "X can't be less than $minimumX for ${cardComponent.name}, and it must be 0 when cast without paying its mana cost"
+        }
+        val totalCost = castCostTotaller.totalCost(
+            state, action, cardDef, cardComponent, playForFree,
+            castingFromCommandZone = source.route == CastSourceRoute.COMMANDER,
+        ) ?: return null
+        if (totalCost.hasX && (action.xValue ?: 0) < minimumX) {
+            return "X can't be less than $minimumX for ${cardComponent.name}"
+        }
+        return null
     }
 
     /**

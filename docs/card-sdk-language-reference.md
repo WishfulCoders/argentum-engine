@@ -181,6 +181,10 @@ section; do not let SDK additions land without a corresponding doc update.
   its caster (Banefire: `Conditions.CompareAmounts(DynamicAmounts.xValue(), GTE, 5)`). Pair it with an `Effects.If`
   over the same condition when the rider also changes the effect ("…and the damage can't be prevented").
 - `cantBeCopied: Boolean` — spell can't be copied (CR 707.10); copy effects that name it create no copy (Display of Power).
+- `minimumXValue: Int` — the spell's "X can't be 0" (`1`; default `0`): the floor on the X announced while casting
+  it (CR 601.2b), whenever the cast's cost carries an {X} — the printed cost (Welcome the Darkness) or a kicker {X}
+  (Thieving Skydiver: the kicked offer gets `LegalAction.minX = 1` and needs X ≥ 1 affordable; the unkicked cast has no
+  X). `CastValidator` refuses a smaller X, and a free cast of such a spell is impossible (CR 107.3b forces X = 0).
 - `conditionalFlash: Condition?` — gains flash while condition holds.
 - `flashWithCleanupSacrifice: Boolean` — the Mirage-block "You may cast this spell as though it had flash. If you
   cast it any time a sorcery couldn't have been cast, the controller of the permanent it becomes sacrifices it at the
@@ -881,6 +885,8 @@ counts a hybrid Phyrexian pip paid with life like any other Phyrexian pip.
 - `cantBeCountered` — spell is uncounterable.
 - `cantBeCounteredIf = condition` — uncounterable only while `condition` holds for the spell on the stack (Banefire).
 - `cantBeCopied` — spell can't be copied (CR 707.10).
+- `minimumXValue = 1` — "X can't be 0" on a spell (CR 601.2b), printed {X} or kicker {X} (Thieving Skydiver). Set on
+  the card, not in `spell { }`; the activated-ability twin is `activatedAbility { minimumXValue = 1 }`.
 - `xManaRestriction = setOf(Color.BLACK, Color.RED)` — "spend only [colors] on X." Restricts which
   mana may pay the `{X}` portion of the cost (the fixed colored/generic portion is unaffected).
   Available in both `spell { }` and `activatedAbility { }` blocks; honored by the mana solver and the
@@ -1136,6 +1142,14 @@ preview — in the turn-face-up handler.)
   left, CR 608.2h) and offers an ordinary generic `CostAtom.Mana` of that size through the yes/no mana
   prompt. A negative amount is {0} (CR 107.1b) and is still offered, so the payer may decline it.
   **PayOrSuffer-only**, like `PayDynamicLife`.
+- `Costs.pay.ManaCostOf(entity, genericReduction = 0)` — pay the mana cost of **another** object,
+  reduced by `genericReduction` generic mana (**Flash**: "…sacrifice it unless you pay its mana cost
+  reduced by {2}", `entity` = the pipeline's put-onto-the-battlefield creature). Lowered inside
+  `PayOrSufferExecutor` to a concrete mana atom: the object's printed cost with {X} as 0 (CR 107.3h;
+  a spell on the stack keeps its announced X), the reduction off the generic component only
+  (CR 118.7a — {1}{R} becomes {R}), {0} for a cost-less or vanished object. PayOrSuffer-only, like
+  `PayDynamicLife`; the PayOrSuffer mana continuation carries the pipeline's collections, so the
+  suffer effect may name the same object (`Effects.SacrificeTarget(entered.asTarget)`).
 - `Costs.pay.Discard(filter = Any, count = 1, random = false)` — discard cards matching `filter`.
   Random variant prompts a yes/no and the engine picks the discards (Pillaging Horde).
 - `Costs.pay.DiscardHand` — discard your **entire** hand. Nothing is selected (every card goes), so
@@ -3092,7 +3106,11 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   §5.5. Liliana, Dreadhorde General's −9 is
   `gather(Permanent.opponentControls())` → `chooseOnePerCategory(…, Filters.PermanentTypes)` →
   `sacrifice(exclude(pool, kept))`; swapping the last step gives Consuming Tide's "returns the rest
-  to their hands", and swapping the category list gives Cataclysm / Divine Reckoning. For "all
+  to their hands", and swapping the category list gives Cataclysm / Divine Reckoning. When *one*
+  player makes every pick across everyone's permanents — Sundering Titan's "choose a land of each
+  basic land type, then destroy those lands" — pass `chooser = Chooser.Controller` (and
+  `purpose = "destroy"` for the prompt): `chooseOnePerCategory(lands, Filters.BasicLandTypes,
+  chooser = Chooser.Controller, purpose = "destroy")` → `destroy(chosen)`. For "all
   permanents matching a filter are sacrificed by their controllers" with no choice at all, use
   `Effects.SacrificeAll(filter)` instead.
 - "Return a permanent you control [to its owner's hand]" is a pipeline composition, not an effect type:
@@ -4512,6 +4530,16 @@ effect = Effects.Pipeline {
 }
 ```
 
+`chooser = …` replaces the per-controller split with a single chooser over the whole pool (each
+pool member is a candidate for every category, whoever controls it), and `purpose` is the prompt's
+verb ("Choose a Plains land to destroy"):
+
+```kotlin
+// Sundering Titan: "choose a land of each basic land type, then destroy those lands."
+val lands = gather(CardSource.BattlefieldMatching(GameObjectFilter.Land, player = Player.Each))
+destroy(chooseOnePerCategory(lands, Filters.BasicLandTypes, chooser = Chooser.Controller, purpose = "destroy"))
+```
+
 `run(...)` keeps the builder open: non-pipeline effects (a `ShuffleLibraryEffect`, a damage effect)
 interleave without the builder needing a verb for everything. Optional secondary outputs
 (`storeRemainder`, `storeNonMatching`, `storeMovedAs`) are only serialized when the card actually
@@ -5436,6 +5464,9 @@ This is the player-arm prerequisite for the planned composable mixed `TargetUnio
   order the rules list them: artifact, creature, enchantment, land, planeswalker, battle. The canonical
   expansion of "of each permanent type" — feed it to `chooseOnePerCategory` (§5.5) as in Liliana,
   Dreadhorde General's −9.
+- `Filters.BasicLandTypes` — a `List<GameObjectFilter>`, one land filter per **basic land type**
+  (CR 305.6): Plains, Island, Swamp, Mountain, Forest. "A land of each basic land type" for
+  `chooseOnePerCategory` (Sundering Titan); a dual-typed land matches two entries.
 - **Battle** — `CardPredicate.IsBattle` / `GameObjectFilter.Battle` / `TargetFilter.Battle` /
   `Filters.Unified.battle` / `Filters.Target.battle` (FQL key `battle`): the battle card type (CR 310),
   read from projected state on the battlefield and the printed type line elsewhere, so it works in
@@ -6678,6 +6709,7 @@ For `enter()` and `die()`, a filter with no controller predicate means "you cont
 `choosesTargets()`, `putsSpellOrAbilityOnStack()`, `activatesAbility(of?, targeting?, loyalty,
 minLoyaltyRemoved, exhaust, includeManaAbilities, excludeManaAbilities, withoutTapInCost)`,
 `attackTriggersAbility()`, `attacks(with?, minAttackers?)` (you declare attackers), `isAttacked(…)`,
+`isAttackedUnblocked()` (`you` only),
 `isDealtDamage(by?, damageType?)`, `isDealtCombatDamage()`, `getsCounters(type?)` (`you` only — counters
 put on the player by anyone: "whenever you get one or more {E}", `CountersPlacedEvent.recipient`),
 `draws(exceptFirstInDrawStep?)`,
@@ -7102,6 +7134,14 @@ The shapes in this family, with their engine notes.
   `AttachmentTriggerDetector`, because "isn't blocked" is a *negative* over the whole block map,
   which the per-entity attachment path never sees.
   (An ANY-binding filtered variant still isn't wired in `TriggerMatcher`.)
+- `Triggers.you.isAttackedUnblocked()` — "whenever one or more creatures an opponent controls attack you
+  and aren't blocked" (Coveted Jewel), `CreaturesAttackYouUnblockedEvent`. Checked against the
+  defender's own `BlockersDeclaredEvent` (its `blockingPlayerId`; the whole defending team's under
+  Two-Headed Giant): fires when at least one creature attacking *you* — not a planeswalker you control
+  — had no blocker declared for it (CR 509.1h/509.3g), however many others were blocked. It is a
+  batch per **attacking player** (CR 603.2c), fanned out in `TriggerDetector`: once for each opponent
+  with an unblocked creature attacking you, and that opponent is `Player.TriggeringPlayer` ("that
+  player draws three cards and gains control of this artifact").
 
 **`AttackPredicate`** — extensible "facts about an attack declaration."
 Adding a new attack-time mechanic is one new sealed-case + one matcher branch
@@ -13536,7 +13576,8 @@ forbids `DynamicAmount.X` in card definitions.
   distinctTypes() / totalCounters(type) / totalCounters()` (no type = every kind of counter,
   `CardNumericProperty.COUNTERS` — Hydra Trainer's "the number of counters on permanents you control"), `zone(player, zone, filter).count() / distinctTypes() / …`,
   `lifeTotal(player)`, `yourLifeTotal()`, `startingLifeTotal(player)`, `playerCount(scope)`,
-  `countPlayersWith(scope, condition)`, `greatestAmongPlayers(inner, players)`, `totalManaSpent()`,
+  `countPlayersWith(scope, condition)`, `greatestAmongPlayers(inner, players)`,
+  `leastAmongPlayers(inner, players)`, `fewestControlledBySinglePlayer(filter, players)`, `totalManaSpent()`,
   `manaSpentOnX(color)`, `manaSpentFromSubtype(subtype)`, `unspentMana(player)`,
   `largestSharedCreatureTypeCount(player)`, `craftedMaterialsTotalPower() / TotalManaValue() /
   ColorCount()`, the entity readers `powerOf / toughnessOf / manaValueOf / countersOn /
@@ -13710,6 +13751,11 @@ forbids `DynamicAmount.X` in card definitions.
   `players = Player.EachOpponent` for the "an opponent controls" wording (Cavern-Hoard Dragon). The
   wrapper takes any `DynamicAmount`, so the off-battlefield siblings ("the greatest number of cards an
   opponent has drawn this turn") are the same shape around a `TurnTracking`.
+- `LeastAmongPlayers(players, inner)` — the minimum twin of `GreatestAmongPlayers`, with the same
+  per-player rebinding and empty-set 0: Oracle's "the number of lands controlled by the player who
+  controls the fewest" (Balance). Every measured player counts, so one who controls none of the
+  counted objects makes the answer 0. Facades: `DynamicAmounts.leastAmongPlayers(inner, players)` and
+  `DynamicAmounts.fewestControlledBySinglePlayer(filter, players)` (a per-player battlefield count).
 - `AggregateZone(player, zone, filter?, aggregation?)` — count cards in a zone.
 - `CountPermanentsOfType(player, subtype)` — count by creature type.
 - `CountCreaturesYouControl` — shorthand for "your creatures".

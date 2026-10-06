@@ -52,6 +52,40 @@ class TriggerMatcher(
     private val conditionEvaluator: ConditionEvaluator
 ) {
 
+    /**
+     * The players with at least one creature that is attacking [defenderId] — the player, not a
+     * planeswalker or battle (Coveted Jewel ruling 2018-07-13) — and had no creature declared as a
+     * blocker for it (CR 509.1h, 509.3g), in APNAP order. Each is one batch of
+     * [EventPattern.CreaturesAttackYouUnblockedEvent] (CR 603.2c).
+     *
+     * Only the block declaration that covers [defenderId] answers: a creature attacking that
+     * player can be blocked only by that player's creatures (CR 509.1a) — or, when the defending
+     * team blocks as one (Two-Headed Giant, CR 805.10d), by that team's — so another defending
+     * player's declaration says nothing about it, and reading it would fire the trigger before,
+     * and again after, the real one.
+     */
+    fun unblockedAttackingPlayers(
+        event: BlockersDeclaredEvent,
+        defenderId: EntityId,
+        state: GameState
+    ): List<EntityId> {
+        val blockingPlayer = event.blockingPlayerId
+        if (blockingPlayer != null && defenderId !in state.sharedTurnTeam(blockingPlayer)) return emptyList()
+        val blocked = event.blockers.values.flatten().toHashSet()
+        val projected = state.projectedState
+        val attackingPlayers = HashSet<EntityId>()
+        for (entityId in state.getBattlefield()) {
+            val attacking = state.getEntity(entityId)
+                ?.get<com.wingedsheep.engine.state.components.combat.AttackingComponent>() ?: continue
+            if (attacking.defenderId != defenderId || entityId in blocked) continue
+            // Also unblocked per the creature's own record: no BlockedComponent stamped on it.
+            if (state.getEntity(entityId)?.has<com.wingedsheep.engine.state.components.combat.BlockedComponent>() == true) continue
+            val controller = projected.getController(entityId) ?: continue
+            if (controller != defenderId) attackingPlayers += controller
+        }
+        return state.apnapOrder.filter { it in attackingPlayers }
+    }
+
     fun matchesTrigger(
         trigger: EventPattern,
         binding: TriggerBinding,
@@ -230,6 +264,12 @@ class TriggerMatcher(
                     ?.get<com.wingedsheep.engine.state.components.combat.AttackingComponent>() != null
                 isAttacking && event.blockers.values.none { it.contains(combatCreatureId) }
             }
+            // "Whenever one or more creatures an opponent controls attack you and aren't blocked"
+            // (Coveted Jewel). The per-attacking-player fan-out lives in TriggerDetector; this is
+            // the "at least one batch exists" test.
+            is EventPattern.CreaturesAttackYouUnblockedEvent ->
+                event is BlockersDeclaredEvent &&
+                    unblockedAttackingPlayers(event, controllerId, state).isNotEmpty()
             is EventPattern.StateConditionMetEvent -> {
                 // Synthetic — never matched against real events. State triggers fire via
                 // StateTriggerPoller which produces PendingTriggers directly.

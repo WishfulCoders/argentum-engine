@@ -219,6 +219,19 @@ data class CardScript(
     val cantBeCopied: Boolean = false,
 
     /**
+     * The smallest value the caster may announce for {X} while casting this spell — the printed
+     * rule "X can't be 0" is `1` (Thieving Skydiver's "Kicker {X}. X can't be 0.", Mind Grind,
+     * Welcome the Darkness). `0` (the default) puts no floor on X.
+     *
+     * It constrains the announcement of X (CR 107.1b, 601.2b) whenever the cast's cost has an {X}
+     * — the printed cost, or an optional additional cost such as a kicker that contains one — and
+     * has nothing to say when it doesn't (an unkicked Thieving Skydiver has no X to choose). An
+     * effect that lets the spell be cast without paying its mana cost leaves 0 as the only legal
+     * X (CR 107.3b), so such a spell with an {X} in its mana cost can't be cast that way at all.
+     */
+    val minimumXValue: Int = 0,
+
+    /**
      * A condition under which this spell can be cast as though it had flash.
      * Used for Ferocious-style "if you control a creature with power 4 or greater,
      * you may cast this spell as though it had flash" abilities.

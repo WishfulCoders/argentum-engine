@@ -2088,16 +2088,41 @@ data class FilterCollectionEffect(
  * Swapping the last step gives Consuming Tide ("returns the rest to their hands"); swapping the
  * category list gives Cataclysm and Divine Reckoning.
  *
+ * ### One chooser across the whole pool ([chooser])
+ *
+ * Some cards have a *single* player make every pick over everyone's permanents instead — Sundering
+ * Titan: "choose a land of each basic land type, then destroy those lands", where the ability's
+ * controller picks one land per basic land type from among all lands, whoever controls them
+ * (2020-08-07 ruling), and a land with two basic land types may be the pick for both. Setting
+ * [chooser] switches to that shape: the named player is asked once per category over every member
+ * of [from] (no per-controller split), with the same skip-if-empty, single-candidate-is-forced and
+ * one-permanent-many-categories behaviour. [purpose] words the prompt ("Choose a Plains to
+ * destroy").
+ *
+ * ```kotlin
+ * // Sundering Titan: "choose a land of each basic land type, then destroy those lands"
+ * Effects.Pipeline {
+ *     val lands = gather(CardSource.BattlefieldMatching(GameObjectFilter.Land))
+ *     val chosen = chooseOnePerCategory(lands, basicLandTypeFilters, chooser = Chooser.Controller, purpose = "destroy")
+ *     destroy(chosen)
+ * }
+ * ```
+ *
  * @property from Collection to choose from — every candidate, across all affected players.
  * @property categories One filter per choice each controller makes, in the order they are offered.
  * @property storeAs Collection receiving every player's picks (deduplicated).
+ * @property chooser `null` (the default): each controller of a member of [from] picks among their
+ *   own, in APNAP order. Non-null: that one player makes every pick over the whole of [from].
+ * @property purpose The verb the prompt ends on — "Choose a creature to **keep**".
  */
 @SerialName("ChooseOnePerCategory")
 @Serializable
 data class ChooseOnePerCategoryEffect(
     val from: String,
     val categories: List<GameObjectFilter>,
-    val storeAs: String
+    val storeAs: String,
+    val chooser: Chooser? = null,
+    val purpose: String = "keep"
 ) : Effect {
     init {
         require(categories.isNotEmpty()) {
@@ -2106,7 +2131,8 @@ data class ChooseOnePerCategoryEffect(
     }
 
     override val description: String =
-        "each player chooses ${categories.joinToString(", ") { it.description }} they control"
+        if (chooser == null) "each player chooses ${categories.joinToString(", ") { it.description }} they control"
+        else "choose ${categories.joinToString(", ") { it.description }}"
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
         val newCategories = categories.map { it.applyTextReplacement(replacer) }

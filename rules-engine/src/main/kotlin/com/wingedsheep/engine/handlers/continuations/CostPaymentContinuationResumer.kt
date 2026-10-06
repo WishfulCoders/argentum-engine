@@ -63,6 +63,8 @@ class CostPaymentContinuationResumer(
         // Lowered to a concrete generic Mana atom before the frame is built, like DynamicLife.
         is PayCost.DynamicMana ->
             ExecutionResult.error(state, "DynamicMana should have been resolved before payment")
+        is PayCost.ManaCostOf ->
+            ExecutionResult.error(state, "ManaCostOf should have been resolved before payment")
         is PayCost.Atom -> when (val atom = cost.atom) {
             // Yes/no costs: mana, life, mill (the milled cards are the top of the library, so
             // there is nothing to select), and random discard.

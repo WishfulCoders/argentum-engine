@@ -127,6 +127,8 @@ class CostPaymentService(private val services: EngineServices) {
             // EffectContext its amount may need. Reaching the generic cost-payment service means it
             // was used as a spell/ability cost, where no such context exists.
             is PayCost.DynamicLife, is PayCost.DynamicMana -> PaymentResult.Unaffordable(state)
+            // Same: the object whose mana cost is named only exists in the resolving context.
+            is PayCost.ManaCostOf -> PaymentResult.Unaffordable(state)
             is PayCost.Atom -> when (val atom = resolved.atom) {
                 is CostAtom.Mana ->
                     yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "Pay ${atom.cost}?", "Pay ${atom.cost}")
@@ -359,6 +361,7 @@ class CostPaymentService(private val services: EngineServices) {
         is PayCost.Choice -> CostPaymentExecution(state, emptyList(), success = false)
         // See pay(): only reachable when used outside PayOrSuffer, where the amount is unknowable.
         is PayCost.DynamicLife, is PayCost.DynamicMana -> CostPaymentExecution(state, emptyList(), success = false)
+        is PayCost.ManaCostOf -> CostPaymentExecution(state, emptyList(), success = false)
         is PayCost.Atom -> when (val atom = cost.atom) {
             is CostAtom.Mana -> payMana(state, payerId, atom.cost, sourceId)
             is CostAtom.PayLife -> payLife(state, payerId, atom.amount)
@@ -762,7 +765,7 @@ class CostPaymentService(private val services: EngineServices) {
     fun requiredCount(cost: PayCost): Int = when (cost) {
         is PayCost.Atom -> cost.atom.selectionCount
         // A life payment selects nothing, dynamic amount or not.
-        is PayCost.OwnManaCost, is PayCost.Choice, is PayCost.DynamicLife, is PayCost.DynamicMana -> 0
+        is PayCost.OwnManaCost, is PayCost.Choice, is PayCost.DynamicLife, is PayCost.DynamicMana, is PayCost.ManaCostOf -> 0
     }
 
     /**
@@ -790,6 +793,7 @@ class CostPaymentService(private val services: EngineServices) {
                 is PayCost.OwnManaCost -> false
                 // Unknowable without the resolving effect's context; see pay().
                 is PayCost.DynamicLife, is PayCost.DynamicMana -> false
+                is PayCost.ManaCostOf -> false
                 is PayCost.Choice -> c.options.any { canAfford(state, payerId, it, sourceId, manaSolver, predicateEvaluator = predicateEvaluator) }
                 is PayCost.Atom -> when (val atom = c.atom) {
                     is CostAtom.Mana -> manaSolver.canPay(state, payerId, atom.cost)
@@ -895,7 +899,7 @@ class CostPaymentService(private val services: EngineServices) {
             sourceId: EntityId,
             predicateEvaluator: PredicateEvaluator
         ): List<EntityId>? = when (val c = resolve(state, cost, sourceId)) {
-            is PayCost.OwnManaCost, is PayCost.Choice, is PayCost.DynamicLife, is PayCost.DynamicMana -> null
+            is PayCost.OwnManaCost, is PayCost.Choice, is PayCost.DynamicLife, is PayCost.DynamicMana, is PayCost.ManaCostOf -> null
             is PayCost.Atom -> when (val atom = c.atom) {
                 is CostAtom.Discard -> cardsInHand(state, payerId, atom.filter, predicateEvaluator = predicateEvaluator)
                 // The whole hand goes, so there is nothing for the payer to pick.

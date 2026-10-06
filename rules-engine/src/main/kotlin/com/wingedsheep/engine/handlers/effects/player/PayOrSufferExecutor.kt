@@ -110,6 +110,15 @@ class PayOrSufferExecutor(
                     state, effect, context, CostAtom.Mana(ManaCost.parse("{$amount}")), sourceId, sourceCard.name, payingPlayerId
                 )
             }
+            // "…unless you pay its mana cost reduced by {2}" (Flash): the named object's printed
+            // cost, lowered here — where the context that can resolve a pipeline target is in
+            // hand — to a concrete mana atom for the ordinary mana path. An object that is gone
+            // has no cost to read; the payment is then {0}, as for a cost-less object.
+            is PayCost.ManaCostOf ->
+                handleManaCost(
+                    state, effect, context, CostAtom.Mana(manaCostOf(state, cost, context)),
+                    sourceId, sourceCard.name, payingPlayerId
+                )
             // Tamiyo, Collector of Tales / Sigarda, Host of Herons: an "unless you discard/sacrifice"
             // option an opponent's spell or ability offers can't be taken (CR 101.2, the Tamiyo
             // ruling on Mogis and Painful Quandary) — so the consequence happens.
@@ -839,6 +848,22 @@ class PayOrSufferExecutor(
     /**
      * Handle a mana cost - player must pay mana to avoid suffer effect.
      */
+    /**
+     * [PayCost.ManaCostOf] lowered to a concrete cost: the named object's printed mana cost with
+     * {X} as 0 (CR 107.3h) — or, for a spell on the stack, the X announced for it — and the
+     * generic component reduced (CR 118.7a; colored, colorless and hybrid symbols untouched).
+     */
+    private fun manaCostOf(state: GameState, cost: PayCost.ManaCostOf, context: EffectContext): com.wingedsheep.sdk.core.ManaCost {
+        val entityId = context.resolveTarget(cost.entity, state)
+            ?: return com.wingedsheep.sdk.core.ManaCost(emptyList())
+        val entity = state.getEntity(entityId) ?: return com.wingedsheep.sdk.core.ManaCost(emptyList())
+        val printed = entity.get<CardComponent>()?.manaCost ?: return com.wingedsheep.sdk.core.ManaCost(emptyList())
+        val x = if (entityId in state.stack) {
+            entity.get<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>()?.xValue ?: 0
+        } else 0
+        return printed.withXAs(x).reduceGeneric(cost.genericReduction)
+    }
+
     private fun handleManaCost(
         state: GameState,
         effect: PayOrSufferEffect,
@@ -856,7 +881,9 @@ class PayOrSufferExecutor(
 
         // Create a yes/no decision
         val consequence = describeConsequence(effect, sourceName)
-        val prompt = "Pay ${cost.cost} or $consequence?"
+        // A cost reduced (or printed) to nothing still reads as a payment of {0} (CR 118.7).
+        val shownCost = cost.cost.toString().ifEmpty { "{0}" }
+        val prompt = "Pay $shownCost or $consequence?"
 
         val decision = { decisionId: String -> YesNoDecision(
             id = decisionId,
@@ -867,7 +894,7 @@ class PayOrSufferExecutor(
                 sourceName = sourceName,
                 phase = DecisionPhase.RESOLUTION
             ),
-            yesText = "Pay ${cost.cost}",
+            yesText = "Pay $shownCost",
             noText = "Accept consequence"
         ) }
 
@@ -887,7 +914,10 @@ class PayOrSufferExecutor(
             triggeringEntityId = context.triggeringEntityId,
             triggeringPlayerId = context.triggeringPlayerId,
             abilityControllerId = context.controllerId,
-            manaCost = cost.cost
+            manaCost = cost.cost,
+            // A suffer effect may name a collection built earlier in this resolution — Flash
+            // sacrifices "it", the creature its pipeline just put onto the battlefield.
+            storedCollections = context.pipeline.storedCollections
         )
 
         return EffectResult.from(state.suspendForDecision(decision, continuation))
@@ -1044,6 +1074,9 @@ class PayOrSufferExecutor(
             // resolving context, and handlePayLifeCost re-checks affordability for real before
             // charging anyone. Filtering here would silently hide a payable option.
             is PayCost.DynamicLife, is PayCost.DynamicMana -> true
+            // Only reached through a Choice, which has no resolving context to name the object
+            // with; offered, and re-checked for real by handleManaCost when chosen.
+            is PayCost.ManaCostOf -> true
             is PayCost.Choice -> cost.options.any { canPayCost(state, playerId, it, sourceId) }
             is PayCost.Atom -> when (val atom = cost.atom) {
                 is CostAtom.Discard -> findValidCardsInHand(state, playerId, atom.filter, sourceId).size >= atom.count

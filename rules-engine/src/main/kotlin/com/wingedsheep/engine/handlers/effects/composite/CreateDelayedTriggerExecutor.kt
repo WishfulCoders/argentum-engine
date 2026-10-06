@@ -299,6 +299,7 @@ class CreateDelayedTriggerExecutor(
         is DynamicAmount.Divide -> readsPipeline(amount.numerator) || readsPipeline(amount.denominator)
         is DynamicAmount.Conditional -> readsPipeline(amount.ifTrue) || readsPipeline(amount.ifFalse)
         is DynamicAmount.GreatestAmongPlayers -> readsPipeline(amount.inner)
+        is DynamicAmount.LeastAmongPlayers -> readsPipeline(amount.inner)
 
         // Leaves that read game state or the resolution context, never a pipeline slot. A new
         // leaf that reads a stored collection or number belongs in the `true` group above.

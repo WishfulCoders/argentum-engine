@@ -134,6 +134,15 @@ object Filters {
     )
 
     /**
+     * One land filter per **basic land type** (CR 305.6) — Plains, Island, Swamp, Mountain,
+     * Forest, in that order. The canonical expansion of "a land of each basic land type" for
+     * `chooseOnePerCategory` (Sundering Titan). A land with two basic land types matches two of
+     * these filters, so it can be the pick for both; a land with none matches none.
+     */
+    val BasicLandTypes: List<GameObjectFilter> =
+        listOf("Plains", "Island", "Swamp", "Mountain", "Forest").map { GameObjectFilter.Land.withSubtype(it) }
+
+    /**
      * Card with a specific subtype.
      */
     fun WithSubtype(subtype: String): GameObjectFilter = GameObjectFilter.Any.withSubtype(subtype)

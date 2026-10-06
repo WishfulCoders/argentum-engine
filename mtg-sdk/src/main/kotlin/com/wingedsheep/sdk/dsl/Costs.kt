@@ -1024,6 +1024,15 @@ object Costs {
         /** Pay the source permanent's own mana cost (Essence Leak). */
         val OwnManaCost: PayCost = PayCost.OwnManaCost
 
+        /**
+         * Pay [entity]'s mana cost reduced by [genericReduction] generic mana — "sacrifice it unless
+         * you pay its mana cost reduced by {2}" (Flash). PayOrSuffer only; see [PayCost.ManaCostOf].
+         */
+        fun ManaCostOf(
+            entity: com.wingedsheep.sdk.scripting.targets.EffectTarget,
+            genericReduction: Int = 0
+        ): PayCost = PayCost.ManaCostOf(entity, genericReduction)
+
         /** Discard [count] cards matching [filter] (optionally [random]). */
         fun Discard(
             filter: GameObjectFilter = GameObjectFilter.Any,

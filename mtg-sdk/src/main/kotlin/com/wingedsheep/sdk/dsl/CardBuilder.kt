@@ -360,6 +360,13 @@ class CardBuilder(private val name: String) {
     var cantBeCopied: Boolean = false
 
     /**
+     * "X can't be 0" on a spell — the smallest X the caster may announce while casting it
+     * (`1`). Applies whenever the cast's cost carries an {X}, a kicker {X} included (Thieving
+     * Skydiver). See [CardScript.minimumXValue].
+     */
+    var minimumXValue: Int = 0
+
+    /**
      * A condition under which this spell can be cast as though it had flash.
      * Used for Ferocious-style conditional flash abilities.
      */
@@ -971,6 +978,7 @@ class CardBuilder(private val name: String) {
             cantBeCountered = cantBeCountered,
             cantBeCounteredIf = cantBeCounteredIf,
             cantBeCopied = cantBeCopied,
+            minimumXValue = minimumXValue,
             conditionalFlash = conditionalFlash,
             flashWithCleanupSacrifice = flashWithCleanupSacrifice,
             kickerTargetRequirements = spellBuilder?.kickerTargetRequirements ?: emptyList(),
