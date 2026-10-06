@@ -1317,6 +1317,212 @@
     ]
 }
 
+// Grist, the Hunger Tide
+{
+    "name": "Grist, the Hunger Tide",
+    "manaCost": "{1}{B}{G}",
+    "typeLine": "Legendary Planeswalker — Grist",
+    "oracleText": "As long as Grist isn't on the battlefield, it's a 1/1 Insect creature in addition to its other types.\n+1: Create a 1/1 black and green Insect creature token, then mill a card. If an Insect card was milled this way, put a loyalty counter on Grist and repeat this process.\n−2: You may sacrifice a creature. When you do, destroy target creature or planeswalker.\n−5: Each opponent loses life equal to the number of creature cards in your graveyard.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Grist, the Hunger Tide:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "RepeatWhile",
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "CreateToken",
+                                "power": 1,
+                                "toughness": 1,
+                                "colors": [
+                                    "BLACK",
+                                    "GREEN"
+                                ],
+                                "creatureTypes": [
+                                    "Insect"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/0/3/03ce1033-ce07-40ef-9315-beb759af9465.jpg?1783926587"
+                            },
+                            {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "TopOfLibrary",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            },
+                                            "isMill": true
+                                        },
+                                        "storeAs": "gristMilled"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "gristMilled",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "Gated",
+                                "gate": {
+                                    "type": "Gate.WhenCondition",
+                                    "condition": {
+                                        "type": "All",
+                                        "conditions": [
+                                            {
+                                                "type": "CollectionContainsMatch",
+                                                "collection": "gristMilled",
+                                                "filter": "Insect"
+                                            },
+                                            {
+                                                "type": "EntityMatches",
+                                                "entity": "Self",
+                                                "filter": {
+                                                    "cardPredicates": [
+                                                        "IsPermanent"
+                                                    ],
+                                                    "statePredicates": [
+                                                        "IsSource",
+                                                        {
+                                                            "type": "InZone",
+                                                            "zone": "Battlefield"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                "then": {
+                                    "type": "AddCounters",
+                                    "counterType": "LOYALTY",
+                                    "count": 1,
+                                    "target": "Self"
+                                }
+                            }
+                        ]
+                    },
+                    "repeatCondition": {
+                        "type": "WhileCondition",
+                        "condition": {
+                            "type": "CollectionContainsMatch",
+                            "collection": "gristMilled",
+                            "filter": "Insect"
+                        }
+                    }
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Grist, the Hunger Tide:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "ReflexiveTrigger",
+                    "action": {
+                        "type": "Sacrifice",
+                        "filter": "creature"
+                    },
+                    "reflexiveEffect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "reflexiveTargetRequirements": [
+                        {
+                            "type": "TargetCreatureOrPlaneswalker",
+                            "id": "t0"
+                        }
+                    ],
+                    "descriptionOverride": "You may sacrifice a creature. When you do, destroy target creature or planeswalker."
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Grist, the Hunger Tide:3",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -5
+                },
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "AggregateZone",
+                        "player": "You",
+                        "zone": "Graveyard",
+                        "filter": "creature"
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "CreatureOutsideBattlefield",
+                "power": 1,
+                "toughness": 1,
+                "subtypes": [
+                    "Insect"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "202",
+        "rarity": "MYTHIC",
+        "artist": "Yongjae Choi",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/9/69af2825-18c2-4463-b6ba-42eaa070ccc1.jpg?1783926814",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Anywhere but on the battlefield, Grist is a Legendary Planeswalker Creature — Grist Insect. Once it enters the battlefield, it is no longer a creature and is just a planeswalker. Anything that could search for or affect a creature or planeswalker card in zones other than the battlefield could affect Grist. For example, you could put it onto the battlefield with Chord of Calling, it could be countered by Essence Scatter (but not by Negate), and opponents couldn't make you discard it with Duress."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If Grist is no longer on the battlefield as its first loyalty ability resolves, you will still create a 1/1 black and green Insect creature token and mill a card. If an Insect card is milled this way, you won't be able to put a loyalty counter on Grist, but you will still repeat the process."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Grist's second loyalty ability doesn't require a target. If you choose to sacrifice a creature as it resolves, the reflexive triggered ability triggers and you'll choose a target creature or planeswalker to destroy. This will happen even if Grist isn't on the battlefield when the loyalty ability resolves."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "Count the number of creature cards in your graveyard as the third loyalty ability resolves to determine how much life each opponent loses. If Grist is in your graveyard at this time, it'll be a creature card and will contribute to the count."
+            }
+        ]
+    },
+    "startingLoyalty": 3,
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN"
+    ]
+}
+
 // Healer's Flock
 {
     "name": "Healer's Flock",
