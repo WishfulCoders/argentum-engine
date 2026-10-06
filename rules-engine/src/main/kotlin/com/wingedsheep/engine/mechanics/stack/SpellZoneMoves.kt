@@ -1,6 +1,11 @@
 package com.wingedsheep.engine.mechanics.stack
 
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.handlers.effects.permanent.types.restoreDfcFrontFace
+import com.wingedsheep.engine.mechanics.FlashbackGrants
+import com.wingedsheep.engine.mechanics.HarmonizeGrants
+import com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent
+import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.PlayWithoutPayingCostComponent
@@ -31,6 +36,79 @@ internal object SpellZoneMoves {
             .clearLibraryReveals(state, ownerId)
         val (library, advanced) = cleared.nextRandom { shuffle(cleared.getZone(libraryZone)) }
         return advanced.copy(zones = advanced.zones + (libraryZone to library))
+    }
+
+    /**
+     * Put a spell card that leaves the stack without resolving into a permanent — it fizzled
+     * (CR 608.2b), or its entry was replaced by "put it into its owner's graveyard" (Mox Diamond's
+     * unpaid [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid], CR 614.6) — into its owner's
+     * graveyard, honouring what a card leaving the stack for a graveyard is subject to: flashback /
+     * harmonize exile, a not-only-if-resolved after-resolve destination, and graveyard
+     * redirects ("from anywhere" replacements). Returns the new state and the [ZoneChangeEvent].
+     */
+    fun putSpellCardIntoGraveyard(
+        state: GameState,
+        spellId: EntityId,
+        cardComponent: com.wingedsheep.engine.state.components.identity.CardComponent?,
+        spellComponent: SpellOnStackComponent,
+        cardRegistry: com.wingedsheep.engine.registry.CardRegistry,
+        predicateEvaluator: com.wingedsheep.engine.handlers.PredicateEvaluator,
+    ): Pair<GameState, ZoneChangeEvent> {
+        val ownerId = cardComponent?.ownerId ?: spellComponent.casterId
+        val cardDef = cardComponent?.let { cardRegistry.getCard(it.name) }
+        // Flashback (printed or granted — Archmage's Newt) or Harmonize (printed or granted —
+        // Songcrafter Mage): a graveyard cast exiles on resolution instead of returning to the
+        // graveyard. A spell cast *with* flashback is exiled even if a conditional flashback's
+        // condition has since lapsed (Viral Spawning), so the recorded alternative cost counts too.
+        val flashbackExile = spellComponent.castFromZone == Zone.GRAVEYARD &&
+            (spellComponent.alternativeCost == AlternativeCostType.FLASHBACK ||
+                FlashbackGrants.effectiveFlashback(
+                state, spellId, cardDef, spellComponent.casterId, cardRegistry, predicateEvaluator
+            ) != null ||
+                HarmonizeGrants.effectiveHarmonize(state, spellId, cardDef) != null)
+        val exileAfterResolveComp = state.getEntity(spellId)?.get<AfterResolveDestinationComponent>()
+        // Goliath Daydreamer-style components only redirect on actual resolution; if the spell
+        // fizzles or is countered they go to graveyard normally.
+        val riderOnFizzle = exileAfterResolveComp?.takeIf { !it.onlyIfResolved }
+        // A fizzled spell heading to its owner's graveyard is a card put into a graveyard
+        // "from anywhere" — honor RedirectZoneChange replacements (Valgavoth, Leyline).
+        val fizzleRedirect = if (flashbackExile || riderOnFizzle != null) {
+            com.wingedsheep.engine.handlers.effects.ZoneChangeRedirectResult(
+                riderOnFizzle?.zone ?: Zone.EXILE
+            )
+        } else {
+            com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+                .checkZoneChangeRedirect(state, spellId, Zone.STACK, Zone.GRAVEYARD, predicateEvaluator = predicateEvaluator)
+        }
+        val destZone = fizzleRedirect.destinationZone
+        val destZoneKey = ZoneKey(ownerId, destZone)
+
+        var newState = state.updateEntity(spellId) { c ->
+            c.without<SpellOnStackComponent>()
+                .without<TextReplacementComponent>()
+                .without<TargetsComponent>()
+        }
+        newState = newState.addToZone(destZoneKey, spellId)
+        // CR 712.8a — a fizzled card cast transformed is front face up again once off the stack.
+        newState = restoreDfcFrontFace(newState, cardRegistry, spellId)
+        newState = com.wingedsheep.engine.mechanics.PrototypeCasts.end(newState, spellId)
+        val destinationObject = newState.objectRef(spellId)
+        // A card-intrinsic redirect into the library shuffles the card in (Progenitus).
+        if (destZone == Zone.LIBRARY && fizzleRedirect.shuffleIntoLibrary) {
+            newState = SpellZoneMoves.shuffleOwnerLibrary(newState, ownerId)
+        }
+        if (destZone == Zone.EXILE && fizzleRedirect.linkSourceId != null) {
+            newState = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+                .linkExiledToSource(newState, spellId, fizzleRedirect.linkSourceId)
+        }
+
+        return newState to ZoneChangeEvent(
+            spellId,
+            cardComponent?.name ?: "Unknown",
+            Zone.STACK,
+            destZone,
+            ownerId, oldObject = state.objectRef(spellId), newObject = destinationObject
+        )
     }
 
     /**

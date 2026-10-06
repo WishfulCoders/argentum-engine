@@ -122,7 +122,8 @@ class EngineServices(
         effects = effectExecutorRegistry,
         spellCounterer = spellCounterer,
         predicateEvaluator = predicateEvaluator,
-        spliceTargetValidator = targetValidator
+        spliceTargetValidator = targetValidator,
+        costPaymentService = { costPaymentService },
     )
     val triggerProcessor = TriggerProcessor(cardRegistry = cardRegistry, stackResolver = stackResolver, amountEvaluator = dynamicAmountEvaluator, targetFinder = targetFinder)
     val manaSolver = ManaSolver(cardRegistry, predicateEvaluator, scopedPlanner = { scopedManaActivationPlanner })

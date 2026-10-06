@@ -83,6 +83,12 @@ data class ZoneEntryOptions(
     val entryCopy: com.wingedsheep.engine.handlers.effects.copy.EntryCopyChoice? = null,
     /** "As this enters, choose …" answers made before the move ([EffectEntryChoices]). */
     val entryChoices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, com.wingedsheep.engine.state.components.battlefield.ChoiceValue> = emptyMap(),
+    /**
+     * The entrant's [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid] cost has been paid
+     * ([EffectEntryCosts]), so it may enter. A card carrying that replacement that would enter the
+     * battlefield without it is put into its owner's graveyard instead — the "if you don't" branch.
+     */
+    val entryCostPaid: Boolean = false,
     val controllerId: EntityId? = null,
     val libraryPlacement: LibraryPlacement = LibraryPlacement.Top,
     val tapped: Boolean = false,
@@ -354,6 +360,19 @@ class ZoneTransitionService(
             ZoneChangeRedirectResult(destinationZone)
         }
         val actualDestZone = redirectResult.destinationZone
+
+        // "If this would enter, you may [cost] instead. If you don't, put it into its owner's
+        // graveyard" (EntersOnlyIfCostPaid — Mox Diamond; CR 614.6: the replaced entry never
+        // happens). The move executors ask and pay before moving ([EffectEntryCosts]) and pass
+        // `entryCostPaid`; any entry reaching here without that payment takes the unpaid branch —
+        // the card goes to its owner's graveyard and never touches the battlefield. A face-down
+        // entry has no abilities (CR 708.2), and battlefield → battlefield is no entry.
+        if (actualDestZone == Zone.BATTLEFIELD && fromZone != Zone.BATTLEFIELD &&
+            !options.faceDown && !options.entryCostPaid &&
+            entersOnlyIfCostPaid(options.entryCopy?.copiedCard ?: cardComponent)
+        ) {
+            return moveToZone(state, entityId, Zone.GRAVEYARD, ZoneEntryOptions(), currentZoneKey)
+        }
 
         // An entry prohibition ("permanent cards in graveyards can't enter the battlefield") beats
         // whatever directed the move (CR 101.2): the card stays where it is, as an instant would
@@ -1560,6 +1579,11 @@ class ZoneTransitionService(
             playerContainer.with(PermanentEnteredFaceDownThisTurnComponent(existing.count + 1))
         }
     }
+
+    /** Whether [card] carries an [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid] replacement. */
+    private fun entersOnlyIfCostPaid(card: CardComponent): Boolean =
+        cardRegistry.getCard(card.cardDefinitionId)?.script?.replacementEffects
+            ?.any { it is com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid } == true
 
     /**
      * Whether the entering permanent's **own** printed "[this permanent] enters tapped" clause

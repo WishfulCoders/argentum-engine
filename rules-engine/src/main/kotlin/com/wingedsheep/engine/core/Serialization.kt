@@ -266,6 +266,8 @@ val engineSerializersModule = SerializersModule {
         subclass(RepeatWhileContinuation::class)
         subclass(ReflexiveTriggerTargetContinuation::class)
         subclass(ChainCopyAfterActionContinuation::class)
+        subclass(SpellEntryCostContinuation::class)
+        subclass(EffectEntryCostContinuation::class)
     }
 
     polymorphic(AutomaticContinuation::class) {
@@ -299,6 +301,8 @@ val engineSerializersModule = SerializersModule {
         subclass(RepeatWhileContinuation::class)
         subclass(ReflexiveTriggerTargetContinuation::class)
         subclass(ChainCopyAfterActionContinuation::class)
+        subclass(SpellEntryCostContinuation::class)
+        subclass(EffectEntryCostContinuation::class)
     }
 
     polymorphic(AnswerContinuation::class) {

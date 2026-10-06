@@ -356,6 +356,13 @@ data class EffectContext(
     val entryAuraHosts: Map<EntityId, EntityId?> = emptyMap(),
     /** Prepared "as this enters, choose …" answers, stamped on each entrant as it arrives. */
     val entryChoices: Map<EntityId, com.wingedsheep.engine.handlers.effects.EntryChoiceAnswers> = emptyMap(),
+    /**
+     * Settled "if this would enter, you may [cost] instead" payments
+     * ([com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid]) for this zone-moving instruction:
+     * `true` = paid, the entrant enters; `false` = not paid, it goes to its owner's graveyard.
+     */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val entryCostsPaid: Map<EntityId, Boolean> = emptyMap(),
     /** Answers belong to this one discard instruction, including explicit declines. */
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val discardDestinations: Map<EntityId, com.wingedsheep.sdk.scripting.effects.CardDestination.ToZone?> = emptyMap(),

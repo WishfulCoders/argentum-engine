@@ -49,7 +49,12 @@ class MoveToZoneEffectExecutor(
     private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
     private val targetFinder: TargetFinder,
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    /**
+     * Pays an entering card's [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid] cost before it
+     * moves. Without it such a card is not offered the payment and goes to its owner's graveyard.
+     */
+    private val costPaymentService: (() -> com.wingedsheep.engine.mechanics.cost.CostPaymentService)? = null,
 ) : EffectExecutor<MoveToZoneEffect> {
 
     override val effectType: KClass<MoveToZoneEffect> = MoveToZoneEffect::class
@@ -117,6 +122,20 @@ class MoveToZoneEffectExecutor(
             )?.let { return it }
         }
 
+        // "If this would enter, you may [cost] instead" (EntersOnlyIfCostPaid — Mox Diamond): asked
+        // and paid before the move (CR 614.12a); unpaid, the card goes to its owner's graveyard
+        // instead and none of its other as-enters questions are asked.
+        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+            val prepared = com.wingedsheep.engine.handlers.effects.EffectEntryCosts.prepare(
+                state, effect, context, mapOf(targetId to controllerId), cardRegistry, costPaymentService?.invoke())
+            prepared.pause?.let { return it }
+            context = prepared.context
+            if (context.entryCostsPaid[targetId] == false) {
+                val toGraveyard = zones.moveToZone(state, targetId, Zone.GRAVEYARD, ZoneEntryOptions(), currentZone)
+                return EffectResult.success(toGraveyard.state, toGraveyard.events)
+            }
+        }
+
         if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
             val prepared = com.wingedsheep.engine.handlers.effects.copy.CopyAuraEntry.prepare(
                 state, effect, context, mapOf(targetId to controllerId), cardRegistry, targetFinder, zones.predicateEvaluator)
@@ -149,7 +168,8 @@ class MoveToZoneEffectExecutor(
         // Build ZoneEntryOptions based on placement and effect properties
         val entryOptions = buildEntryOptions(effect, cardComponent, controllerId, context.controllerId)
             .copy(lookBackGrants = context.lookBackGrants[targetId], entryCopy = context.entryCopies[targetId], auraHostId = context.entryAuraHosts[targetId],
-                entryChoices = context.entryChoices[targetId]?.values.orEmpty())
+                entryChoices = context.entryChoices[targetId]?.values.orEmpty(),
+                entryCostPaid = context.entryCostsPaid[targetId] == true)
 
         val transitionResult = zones.moveToZone(
             state, targetId, effect.destination, entryOptions, currentZone

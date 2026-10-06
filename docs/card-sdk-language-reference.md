@@ -15180,6 +15180,24 @@ The priority groups are (CR 616.1a–f):
   `Creature.exiledWithSource()` target (see §7 state predicates). Honored across the same graveyard
   paths as `RedirectZoneChange`.
 - `ReplacementEffect.IfYouDoBranchEffect(...)` — branch on "if you do" replacement.
+- `EntersOnlyIfCostPaid(cost: PayCost)` — "If this permanent would enter, you may [cost] instead. If
+  you do, put it onto the battlefield. If you don't, put it into its owner's graveyard." (Mox Diamond:
+  `replacementEffect(EntersOnlyIfCostPaid(Costs.pay.Discard(GameObjectFilter.Land)))`). A
+  self-replacement on the permanent's own entry (CR 614.1a, 614.12), settled **before** it enters
+  (CR 614.12a) through the shared `CostPaymentService` rail, so the payer sees the usual cost prompt
+  (card selection for a discard, battlefield selection for a sacrifice) and may decline. Unpaid —
+  declined, or unpayable (CR 118.3) — the card goes straight to its owner's graveyard and **never
+  enters** (CR 614.6): no zone change to the battlefield, no ETB/LTB triggers. Wired into every
+  entry path: a resolving permanent spell (`PermanentSpellResolver.pauseForEntryCost`, a
+  `SpellEntryCostContinuation` beneath the payment), and effects moving one card (`MoveToZoneEffect`)
+  or a collection (`MoveCollectionEffect`) via `EffectEntryCosts` (prepare-then-replay, outcome on
+  `EffectContext.entryCostsPaid`). Any other route onto the battlefield reaching
+  `ZoneTransitionService.moveToZone` without a recorded payment takes the "if you don't" branch
+  (fail-closed). Applies once per entry (CR 614.5). Not yet consulted by the land-play path
+  (`PlayLandHandler`) or by token creation, so the Ice Age "sacrifice … instead" lands (Lotus Vale,
+  Lake of the Dead) need that wiring first. The cost-payment resumer reports the outcome to any
+  `AwaitsCostOutcome` frame parked directly beneath it — the hook for engine follow-ups that branch
+  on paid vs. not paid.
 - `OnEnterRun(effect)` — generic "as ~ enters the battlefield, run [effect]". The wrapped effect
   executes via the normal effect-executor pipeline at entry time (so `EffectTarget.Self` resolves to
   the entering permanent) and may pause for player input. Compose with atomic pausable effects like

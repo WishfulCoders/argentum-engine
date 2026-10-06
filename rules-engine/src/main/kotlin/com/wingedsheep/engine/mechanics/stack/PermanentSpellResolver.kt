@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EntersAsCopy
+import com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.targets.*
@@ -27,7 +28,9 @@ internal class PermanentSpellResolver(
     private val effects: EffectExecutorRegistry,
     private val predicateEvaluator: PredicateEvaluator,
     private val permanentEntry: PermanentEntry,
-    private val entersWithChoicePrompt: EntersWithChoicePrompt
+    private val entersWithChoicePrompt: EntersWithChoicePrompt,
+    /** Pays an [EntersOnlyIfCostPaid] entry cost (Mox Diamond). Read only while resolving. */
+    private val costPaymentService: () -> com.wingedsheep.engine.mechanics.cost.CostPaymentService,
 ) {
     private val amountEvaluator = predicateEvaluator.amounts
     /**
@@ -79,11 +82,20 @@ internal class PermanentSpellResolver(
         state: GameState,
         spellId: EntityId,
         spellComponent: SpellOnStackComponent,
-        cardComponent: CardComponent?
+        cardComponent: CardComponent?,
+        entryCostSettled: Boolean = false,
     ): ExecutionResult {
         val controllerId = spellComponent.casterId
         val ownerId = cardComponent?.ownerId ?: controllerId
         val cardDef = cardComponent?.cardDefinitionId?.let { cardRegistry.getCard(it) }
+        // "If this would enter, you may [cost] instead" (EntersOnlyIfCostPaid — Mox Diamond) is
+        // settled first: unpaid, the permanent never enters, so none of its other as-enters
+        // questions are asked. It applies once (CR 614.5) — the paid branch comes back here with
+        // [entryCostSettled] set.
+        if (!entryCostSettled && cardDef != null && cardComponent != null && !spellComponent.castFaceDown) {
+            pauseForEntryCost(state, spellId, spellComponent, cardComponent, cardDef, controllerId)
+                ?.let { return it }
+        }
         if (cardDef != null && !spellComponent.castFaceDown) {
             pauseForFirstEntersWithChoice(state, spellId, cardComponent, cardDef, controllerId, ownerId)
                 ?.let { return it }
@@ -102,6 +114,63 @@ internal class PermanentSpellResolver(
         }
 
         return enterBattlefield(state, spellId, spellComponent, cardComponent, cardDef, controllerId)
+    }
+
+    /**
+     * [EntersOnlyIfCostPaid] (Mox Diamond): "If this would enter, you may [cost] instead. If you do,
+     * put it onto the battlefield. If you don't, put it into its owner's graveyard." The spell's
+     * controller — the player it would enter under — is asked to pay through the shared cost rail
+     * (CR 614.12a: before it enters), with a [SpellEntryCostContinuation] parked beneath the payment
+     * to pick the branch once it settles. A cost they can't pay (CR 118.3) takes the "if you don't"
+     * branch at once. Returns null when the card has no such replacement.
+     */
+    private fun pauseForEntryCost(
+        state: GameState,
+        spellId: EntityId,
+        spellComponent: SpellOnStackComponent,
+        cardComponent: CardComponent,
+        cardDef: com.wingedsheep.sdk.model.CardDefinition,
+        controllerId: EntityId,
+    ): ExecutionResult? {
+        val cost = cardDef.script.replacementEffects.filterIsInstance<EntersOnlyIfCostPaid>().firstOrNull()?.cost
+            ?: return null
+        val framed = state.pushContinuation(SpellEntryCostContinuation(spellId))
+        return when (val payment = costPaymentService().pay(framed, controllerId, cost, spellId)) {
+            is com.wingedsheep.engine.mechanics.cost.PaymentResult.Pending ->
+                ExecutionResult.propagatePause(payment.state, payment.events)
+            else -> putIntoGraveyardInstead(state, spellId, spellComponent, cardComponent)
+        }
+    }
+
+    /**
+     * The entry cost asked by [pauseForEntryCost] has settled: paid, the rest of the entry runs
+     * (without asking again); not paid, the card goes to its owner's graveyard instead.
+     */
+    fun resolveAfterEntryCost(state: GameState, spellId: EntityId, paid: Boolean): ExecutionResult {
+        val container = state.getEntity(spellId)
+            ?: return ExecutionResult.error(state, "Spell entity not found: $spellId")
+        val spellComponent = container.get<SpellOnStackComponent>()
+            ?: return ExecutionResult.error(state, "Spell has no SpellOnStackComponent")
+        val cardComponent = container.get<CardComponent>()
+            ?: return ExecutionResult.error(state, "Spell has no CardComponent")
+        return if (paid) resolveRemainingEntry(state, spellId, spellComponent, cardComponent, entryCostSettled = true)
+        else putIntoGraveyardInstead(state, spellId, spellComponent, cardComponent)
+    }
+
+    /**
+     * The "if you don't" branch: the spell has resolved, but its permanent never enters (CR 614.6)
+     * — the card moves from the stack straight to its owner's graveyard. No enters- or
+     * leaves-the-battlefield event is emitted (Mox Diamond's 2008-05-01 ruling).
+     */
+    private fun putIntoGraveyardInstead(
+        state: GameState,
+        spellId: EntityId,
+        spellComponent: SpellOnStackComponent,
+        cardComponent: CardComponent,
+    ): ExecutionResult {
+        val (moved, zoneChange) = SpellZoneMoves.putSpellCardIntoGraveyard(
+            state, spellId, cardComponent, spellComponent, cardRegistry, predicateEvaluator)
+        return ExecutionResult.success(moved, listOf(zoneChange, ResolvedEvent(spellId, cardComponent.name)))
     }
 
     /** Check for EntersAsCopy replacement effect before entering the battlefield (Clone, Mockingbird). */

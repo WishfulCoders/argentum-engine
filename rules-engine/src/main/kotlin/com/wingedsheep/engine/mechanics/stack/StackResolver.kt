@@ -45,7 +45,10 @@ class StackResolver(
     private val predicateEvaluator: PredicateEvaluator,
     /** The cast-time target validator, which re-validates a spliced card's own targets (CR 702.47d). */
     private val spliceTargetValidator: com.wingedsheep.engine.mechanics.targeting.TargetValidator,
-    private val staticAbilityHandler: StaticAbilityHandler = StaticAbilityHandler(cardRegistry)
+    private val staticAbilityHandler: StaticAbilityHandler = StaticAbilityHandler(cardRegistry),
+    /** Pays an `EntersOnlyIfCostPaid` entry cost (Mox Diamond) while a permanent spell resolves. */
+    private val costPaymentService: () -> com.wingedsheep.engine.mechanics.cost.CostPaymentService =
+        { error("No cost-payment service wired into this StackResolver") },
 ) {
     private val spellCaster = SpellCaster(
         cardRegistry, staticAbilityHandler, EventPresentationFactory(Visibility(cardRegistry, conditionEvaluator = predicateEvaluator.conditions))
@@ -55,7 +58,7 @@ class StackResolver(
     private val permanentEntry = PermanentEntry(cardRegistry, staticAbilityHandler, conditionEvaluator = predicateEvaluator.conditions)
     private val nonPermanentSpellResolver = NonPermanentSpellResolver(zones, cardRegistry, effects, predicateEvaluator, spliceTargetValidator)
     private val permanentSpellResolver = PermanentSpellResolver(
-        cardRegistry, effects, predicateEvaluator, permanentEntry, entersWithChoicePrompt
+        cardRegistry, effects, predicateEvaluator, permanentEntry, entersWithChoicePrompt, costPaymentService
     )
     private val spellResolver = SpellResolver(
         cardRegistry = cardRegistry,
@@ -303,6 +306,13 @@ class StackResolver(
      */
     internal fun resolvePermanentSpellAfterEntryCopy(state: GameState, spellId: EntityId): ExecutionResult =
         permanentSpellResolver.resolveAfterEntryCopy(state, spellId)
+
+    /**
+     * Finish resolving a permanent spell whose `EntersOnlyIfCostPaid` entry cost (Mox Diamond) has
+     * settled. See [PermanentSpellResolver.resolveAfterEntryCost].
+     */
+    internal fun resolvePermanentSpellAfterEntryCost(state: GameState, spellId: EntityId, paid: Boolean): ExecutionResult =
+        permanentSpellResolver.resolveAfterEntryCost(state, spellId, paid)
 
     /**
      * Apply the resolving permanent's "enters with …" replacement effects (CR 614.1c). See

@@ -28,7 +28,9 @@ class LibraryExecutors(
     private val castSpellHandler: () -> CastSpellHandler,
     private val playLandHandler: () -> PlayLandHandler,
     private val targetFinder: TargetFinder,
-    private val legalActionEnumerator: () -> com.wingedsheep.engine.legalactions.LegalActionEnumerator
+    private val legalActionEnumerator: () -> com.wingedsheep.engine.legalactions.LegalActionEnumerator,
+    /** Pays an entering permanent's EntersOnlyIfCostPaid cost (Mox Diamond). */
+    private val costPaymentService: (() -> com.wingedsheep.engine.mechanics.cost.CostPaymentService)? = null,
 ) : ExecutorModule {
 
     override fun executors(): List<EffectExecutor<*>> = listOf(
@@ -75,7 +77,7 @@ class LibraryExecutors(
         SelectFromCollectionExecutor(cardRegistry = cardRegistry, predicateEvaluator = zones.predicateEvaluator),
         ChoosePileExecutor(),
         SelectTargetPipelineExecutor(targetFinder = targetFinder),
-        MoveCollectionExecutor(zones, cardRegistry = cardRegistry, targetFinder = targetFinder),
+        MoveCollectionExecutor(zones, cardRegistry = cardRegistry, targetFinder = targetFinder, costPaymentService = costPaymentService),
         FilterCollectionExecutor(predicateEvaluator = zones.predicateEvaluator),
         ChooseOnePerCategoryExecutor(predicateEvaluator = zones.predicateEvaluator),
         PutOnTopOrBottomOfLibraryExecutor(),
