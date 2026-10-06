@@ -1,0 +1,64 @@
+// Ivora, Insatiable Heir
+{
+    "name": "Ivora, Insatiable Heir",
+    "manaCost": "{1}{R}",
+    "typeLine": "Legendary Creature — Vampire Warrior",
+    "oracleText": "Trample\nWhen Ivora enters and whenever it deals combat damage to a player, create a Blood token. (It's an artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")\nWhenever you discard a card, put a +1/+1 counter on Ivora.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "TRAMPLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ivora, Insatiable Heir:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Blood"
+                }
+            },
+            {
+                "id": "Ivora, Insatiable Heir:2",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    }
+                },
+                "effect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Blood"
+                }
+            },
+            {
+                "id": "Ivora, Insatiable Heir:3",
+                "trigger": "DiscardEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "50",
+        "rarity": "UNCOMMON",
+        "artist": "Canata Katana",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/b/2ba70366-b6ae-423a-a8d8-29d2b8afd939.jpg?1783908854"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
