@@ -4111,3 +4111,115 @@
         "BLUE"
     ]
 }
+
+// Wrenn and Six
+{
+    "name": "Wrenn and Six",
+    "manaCost": "{R}{G}",
+    "typeLine": "Legendary Planeswalker — Wrenn",
+    "oracleText": "+1: Return up to one target land card from your graveyard to your hand.\n−1: Wrenn and Six deals 1 damage to any target.\n−7: You get an emblem with \"Instant and sorcery cards in your graveyard have retrace.\" (You may cast instant and sorcery cards from your graveyard by discarding a land card in addition to paying their other costs.)",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Wrenn and Six:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Hand"
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "optional": true,
+                        "filter": {
+                            "baseFilter": "land own:you",
+                            "zone": "Graveyard"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true,
+                "descriptionOverride": "Return up to one target land card from your graveyard to your hand."
+            },
+            {
+                "id": "Wrenn and Six:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -1
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t1"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t1"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true,
+                "descriptionOverride": "Wrenn and Six deals 1 damage to any target."
+            },
+            {
+                "id": "Wrenn and Six:3",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -7
+                },
+                "effect": {
+                    "type": "CreatePermanentEmblem",
+                    "ownedStaticAbilities": [
+                        {
+                            "type": "MayCastFromGraveyard",
+                            "filter": "instant|sorcery",
+                            "additionalCost": {
+                                "type": "AdditionalAtom",
+                                "atom": {
+                                    "type": "AtomDiscard",
+                                    "filter": "land"
+                                }
+                            }
+                        }
+                    ],
+                    "emblemDescription": "Instant and sorcery cards in your graveyard have retrace."
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true,
+                "descriptionOverride": "You get an emblem with \"Instant and sorcery cards in your graveyard have retrace.\""
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "217",
+        "rarity": "MYTHIC",
+        "artist": "Chase Stone",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/a/4a706ecf-3277-40e3-871c-4ba4ead16e20.jpg?1783933076",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "When a spell you cast with retrace resolves or is countered, it's put back into your graveyard. You may use the retrace ability to cast it again."
+            }
+        ]
+    },
+    "startingLoyalty": 3,
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
