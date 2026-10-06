@@ -488,6 +488,64 @@
     ]
 }
 
+// Bone Shards
+{
+    "name": "Bone Shards",
+    "manaCost": "{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "As an additional cost to cast this spell, sacrifice a creature or discard a card.\nDestroy target creature or planeswalker.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetCreatureOrPlaneswalker",
+                "id": "t0"
+            }
+        ],
+        "additionalCosts": [
+            {
+                "type": "ChoiceCost",
+                "options": [
+                    {
+                        "type": "AdditionalAtom",
+                        "atom": {
+                            "type": "AtomSacrifice",
+                            "filter": "creature"
+                        }
+                    },
+                    {
+                        "type": "AdditionalAtom",
+                        "atom": "AtomDiscard"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "76",
+        "artist": "Tommy Arnold",
+        "flavorText": "In the Kathari dumping grounds known as the Boneheaps, its not hard to improvise an offense.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/e/1ee98955-4c47-4d45-9377-608dfa755337.jpg?1783926865",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "You must sacrifice exactly one creature or discard exactly one card to cast this spell; you can't cast it without sacrificing a creature or discarding a card, and you can't sacrifice additional creatures or discard additional cards."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Cabal Initiate
 {
     "name": "Cabal Initiate",
