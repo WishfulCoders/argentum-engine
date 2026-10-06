@@ -381,6 +381,46 @@ data class AllowLoyaltyActivationsThisTurnEffect(
 }
 
 /**
+ * "You may activate [target]'s loyalty ability [count] more times this turn" — the *additive*
+ * sibling of [AllowLoyaltyActivationsThisTurnEffect] (Comet, Stellar Pup's 6 row). CR 606.3 allows
+ * one loyalty activation per permanent per turn; this grant adds [count] to whatever that
+ * permanent's allowance is when an activation is attempted, rather than raising it to a total.
+ *
+ * Additive in both directions the "rather than only once" grant is not: a second resolution the
+ * same turn adds [count] again (Comet rolling 6 twice), and it stacks on top of Oath of Teferi or a
+ * Kaito-style grant ("twice" plus "two more" is four). Activations already made count against the
+ * total as usual. The bonus lapses at end of turn and if the permanent leaves the battlefield
+ * (a new object, CR 400.7).
+ *
+ * The bonus covers every loyalty ability of [target]. Comet's ruling scopes "Comet's loyalty
+ * ability" to his printed ability if he ever has others; nothing in the engine gives a
+ * planeswalker a second loyalty ability, so that refinement is not modelled.
+ *
+ * @property target The planeswalker whose loyalty abilities may be activated more often
+ * @property count How many activations to add to this turn's allowance
+ */
+@SerialName("AllowAdditionalLoyaltyActivationsThisTurn")
+@Serializable
+data class AllowAdditionalLoyaltyActivationsThisTurnEffect(
+    val target: EffectTarget = EffectTarget.Self,
+    val count: Int = 2
+) : Effect {
+    init {
+        require(count >= 1) { "AllowAdditionalLoyaltyActivationsThisTurnEffect.count must be at least 1, was $count" }
+    }
+
+    override val description: String =
+        "you may activate loyalty abilities of ${target.description} ${countWord(count)} more ${if (count == 1) "time" else "times"} this turn"
+
+    private fun countWord(n: Int): String = when (n) {
+        1 -> "one"
+        2 -> "two"
+        3 -> "three"
+        else -> "$n"
+    }
+}
+
+/**
  * Make [target] become prepared (Secrets of Strixhaven). The target must be a permanent whose
  * card has the [com.wingedsheep.sdk.model.CardLayout.PREPARE] layout. Becoming prepared creates a
  * copy of its prepare spell in the controller's exile that may be cast (paying that spell's cost);

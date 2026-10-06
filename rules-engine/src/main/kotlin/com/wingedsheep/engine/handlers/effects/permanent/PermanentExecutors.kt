@@ -251,6 +251,7 @@ class PermanentExecutors(
         PairWithSourceExecutor(),
         // planeswalkers
         AllowLoyaltyActivationsThisTurnExecutor(),
+        AllowAdditionalLoyaltyActivationsThisTurnExecutor(),
         // phasing
         PhaseOutExecutor(),
         PhaseOutUntilLeavesExecutor(),
