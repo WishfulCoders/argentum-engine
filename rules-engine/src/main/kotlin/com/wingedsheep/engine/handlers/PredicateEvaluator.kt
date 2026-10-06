@@ -531,6 +531,50 @@ class PredicateEvaluator(
             projected.crossZoneGrantedSubtypes(state, entityId).any { it.equals(subtype.value, ignoreCase = true) }
 
     /**
+     * The subtypes a "shares a creature type with it" reference has: the triggering creature's
+     * last-known projected subtypes once it has left the battlefield (CR 608.2h — a dead token is
+     * gone, and a dead Changeling's card in the graveyard only lists its printed types), else its
+     * projected subtypes, else its printed ones (a spell on the stack, a card in another zone).
+     */
+    private fun referenceSubtypes(
+        state: GameState,
+        projected: ProjectedState,
+        referenceId: EntityId,
+        context: PredicateContext?
+    ): Set<String> {
+        if (referenceId == context?.triggeringEntityId) {
+            context.resolution?.triggerContext?.lastKnownSubtypes?.let { return it }
+        }
+        return projected.getSubtypes(referenceId).ifEmpty {
+            state.getEntity(referenceId)?.get<CardComponent>()?.typeLine?.subtypes?.map { it.value }?.toSet()
+                ?: emptySet()
+        }
+    }
+
+    /**
+     * Whether [entityId] shares a creature type with [referenceSubtypes]. A Changeling card off
+     * the battlefield has every creature type (CR 702.73a); on the battlefield projection already
+     * folds that in.
+     */
+    private fun sharesCreatureType(
+        state: GameState,
+        projected: ProjectedState,
+        entityId: EntityId,
+        card: CardComponent,
+        projectedValues: ProjectedValues?,
+        referenceSubtypes: Set<String>
+    ): Boolean {
+        if (referenceSubtypes.isEmpty()) return false
+        if (projectedValues == null && Keyword.CHANGELING in card.baseKeywords &&
+            referenceSubtypes.any { it in Subtype.ALL_CREATURE_TYPES }
+        ) return true
+        val entitySubtypes = effectiveSubtypes(state, projected, entityId, card, projectedValues)
+        return entitySubtypes.any { entitySubtype ->
+            referenceSubtypes.any { it.equals(entitySubtype, ignoreCase = true) }
+        }
+    }
+
+    /**
      * The creature/other subtypes an object effectively has for "shares a type with" / chosen-type
      * comparisons. Battlefield permanents use their projected subtype set (empty if face down,
      * Rule 708.2); non-battlefield objects use their printed subtypes plus any cross-zone "is the
@@ -1161,16 +1205,10 @@ class PredicateEvaluator(
 
             CardPredicate.SharesCreatureTypeWithTriggeringEntity -> {
                 val triggeringId = context?.triggeringEntityId ?: return false
-                // Try projected state first, fall back to base CardComponent (for dead creatures)
-                val triggeringSubtypes = projected.getSubtypes(triggeringId).ifEmpty {
-                    state.getEntity(triggeringId)?.get<CardComponent>()?.typeLine?.subtypes?.map { it.value }?.toSet()
-                        ?: emptySet()
-                }
-                if (triggeringSubtypes.isEmpty()) return false
-                val entitySubtypes = effectiveSubtypes(state, projected, entityId, card, projectedValues)
-                entitySubtypes.any { entitySubtype ->
-                    triggeringSubtypes.any { it.equals(entitySubtype, ignoreCase = true) }
-                }
+                sharesCreatureType(
+                    state, projected, entityId, card, projectedValues,
+                    referenceSubtypes(state, projected, triggeringId, context)
+                )
             }
 
             CardPredicate.HasChosenSubtype -> {
@@ -1187,15 +1225,10 @@ class PredicateEvaluator(
 
             is CardPredicate.SharesCreatureTypeWith -> {
                 val referenceId = resolveEntity(state, predicate.entity, context, projected) ?: return false
-                val referenceSubtypes = projected.getSubtypes(referenceId).ifEmpty {
-                    state.getEntity(referenceId)?.get<CardComponent>()?.typeLine?.subtypes?.map { it.value }?.toSet()
-                        ?: emptySet()
-                }
-                if (referenceSubtypes.isEmpty()) return false
-                val entitySubtypes = effectiveSubtypes(state, projected, entityId, card, projectedValues)
-                entitySubtypes.any { entitySubtype ->
-                    referenceSubtypes.any { it.equals(entitySubtype, ignoreCase = true) }
-                }
+                sharesCreatureType(
+                    state, projected, entityId, card, projectedValues,
+                    referenceSubtypes(state, projected, referenceId, context)
+                )
             }
 
             is CardPredicate.SharesCardTypeWith -> {

@@ -93,6 +93,9 @@ object TokenArt {
             "Merfolk" to "https://cards.scryfall.io/art_crop/front/f/b/fb1b292b-2da6-4601-9f93-5eb273ce3a50.jpg?1562636943",
             "Minotaur" to "https://cards.scryfall.io/art_crop/front/6/2/62a8926c-94d7-4399-ad38-f235bbfd1a7e.jpg?1561757290",
             "Monk" to "https://cards.scryfall.io/art_crop/front/1/e/1e498e42-f55c-4afa-b2e2-02345f91cdb5.jpg?1561756357",
+            // Monkey (MMQ — Monkey Cage, errata'd from Ape). No generic Monkey token was ever
+            // printed (only the named Ragavan); this is the green Ape token art (C14).
+            "Monkey" to "https://cards.scryfall.io/art_crop/front/8/3/8343e00c-5fc6-46a0-a238-3759338dced4.jpg?1562542388",
             "Ninja" to "https://cards.scryfall.io/art_crop/front/a/e/aeec04b1-475c-4e55-b72f-327ea5258146.jpg?1732302748",
             "Octopus" to "https://cards.scryfall.io/art_crop/front/1/9/19ac0a35-fae7-49f9-ae96-4406df992dc9.jpg?1562639696",
             "Ogre" to "https://cards.scryfall.io/art_crop/front/3/c/3ca43425-d007-4181-9182-18dc01ad7e90.jpg?1674337914",

@@ -694,6 +694,23 @@ value class CounterType(val name: String) {
          */
         val STORY = CounterType("STORY")
 
+        /**
+         * Corpse counter (LEA — Scavenging Ghoul). A passive spendable store with no inherent rule:
+         * the card's end-step trigger adds one per creature that died this turn, and its regeneration
+         * ability removes one as its cost.
+         */
+        val CORPSE = CounterType("CORPSE")
+
+        /** Passive progress marker used by Amonkhet artifacts such as Edifice of Authority. */
+        val BRICK = CounterType("BRICK")
+
+        /**
+         * Vitality counter (LEA — Living Artifact). A passive spendable store with no inherent rule:
+         * the card's damage trigger adds one per point of damage dealt to its controller, and its
+         * upkeep trigger may remove one to gain 1 life.
+         */
+        val VITALITY = CounterType("VITALITY")
+
         /** Every counter kind the SDK names, in declaration order. */
         val KNOWN: List<CounterType> = listOf(
             PLUS_ONE_PLUS_ONE,
@@ -816,6 +833,9 @@ value class CounterType(val name: String) {
             FADE,
             VOID,
             STORY,
+            CORPSE,
+            BRICK,
+            VITALITY,
         )
 
         /**

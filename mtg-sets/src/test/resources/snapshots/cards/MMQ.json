@@ -3450,6 +3450,55 @@
     ]
 }
 
+// Monkey Cage
+{
+    "name": "Monkey Cage",
+    "manaCost": "{5}",
+    "typeLine": "Artifact",
+    "oracleText": "When a creature enters, sacrifice this artifact and create X 2/2 green Monkey creature tokens, where X is that creature's mana value.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Monkey Cage:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        "SacrificeSelf",
+                        {
+                            "type": "CreateToken",
+                            "count": {
+                                "type": "EntityProperty",
+                                "entity": "TriggeringEntity",
+                                "numericProperty": "ManaValue"
+                            },
+                            "power": 2,
+                            "toughness": 2,
+                            "colors": [
+                                "GREEN"
+                            ],
+                            "creatureTypes": [
+                                "Monkey"
+                            ]
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "307",
+        "rarity": "RARE",
+        "artist": "Carl Critchlow",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/7/07f6be53-7a20-4e6b-a6ce-11cba06af8cb.jpg?1783945911"
+    }
+}
+
 // Nightwind Glider
 {
     "name": "Nightwind Glider",

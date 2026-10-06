@@ -13,33 +13,39 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Timetwister
  * {2}{U}
  * Sorcery
- *
  * Each player shuffles their hand and graveyard into their library, then draws seven cards.
  * (Then put Timetwister into its owner's graveyard.)
  *
- * Two passes over the players, so every player has shuffled before anyone draws: a per-player
- * gather of hand + graveyard → shuffled move into that player's library, then each player draws
- * seven. Timetwister is still on the stack while it resolves, so it isn't shuffled in with the
- * graveyard (2013-07-01 ruling) — the same shape as Temporal Cascade's entwined modes.
+ * Two [Effects.ForEachPlayer] passes, matching the oracle's "each player shuffles …, then draws":
+ * every player shuffles their hand and graveyard (one gather across both zones, one shuffled move —
+ * the same body as Temporal Cascade's first mode) before anyone draws. Timetwister is still on the
+ * stack while it resolves, so it is never part of its own shuffle.
  */
 val Timetwister = card("Timetwister") {
     manaCost = "{2}{U}"
     colorIdentity = "U"
     typeLine = "Sorcery"
-    oracleText = "Each player shuffles their hand and graveyard into their library, then draws seven " +
-        "cards. (Then put Timetwister into its owner's graveyard.)"
+    oracleText = "Each player shuffles their hand and graveyard into their library, then draws seven cards. " +
+        "(Then put Timetwister into its owner's graveyard.)"
 
     spell {
         effect = Effects.ForEachPlayer(
             players = Player.Each,
             Effects.Pipeline {
-                val cards = gather(
+                val handAndGraveyard = gather(
                     CardSource.FromMultipleZones(
                         zones = listOf(Zone.HAND, Zone.GRAVEYARD),
                         player = Player.You,
                     )
                 )
-                move(cards, CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Shuffled))
+                move(
+                    handAndGraveyard,
+                    CardDestination.ToZone(
+                        Zone.LIBRARY,
+                        Player.You,
+                        ZonePlacement.Shuffled,
+                    )
+                )
             },
         ) then Effects.ForEachPlayer(Player.Each, Effects.DrawCards(7))
     }

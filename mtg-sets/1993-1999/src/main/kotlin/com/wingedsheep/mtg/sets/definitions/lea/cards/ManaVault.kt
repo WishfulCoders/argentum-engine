@@ -10,21 +10,22 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Mana Vault
- * {1}
- * Artifact
+ * Mana Vault — Limited Edition Alpha #259
+ * {1} · Artifact
+ *
  * This artifact doesn't untap during your untap step.
  * At the beginning of your upkeep, you may pay {4}. If you do, untap this artifact.
  * At the beginning of your draw step, if this artifact is tapped, it deals 1 damage to you.
  * {T}: Add {C}{C}{C}.
  *
- * "Doesn't untap" is [AbilityFlag.DOESNT_UNTAP] (as on Basalt Monolith); the upkeep untap is the
- * Brass Man [Effects.MayPay] shape. The draw-step damage is an intervening "if" — checked both when
- * the trigger would fire and again on resolution — via [Conditions.SourceIsTapped], so untapping
- * Mana Vault in response (or paying in upkeep) spares the damage.
+ * The Goblin Dirigible upkeep buy-back ([AbilityFlag.DOESNT_UNTAP] + [Effects.MayPay] →
+ * [Effects.Untap] on [EffectTarget.Self]), Basalt Monolith's mana ability, and a draw-step trigger
+ * with Dwarven Hold's intervening "if" (`Conditions.SourceIsTapped`, CR 603.4) — untapping it in
+ * response stops the damage. The Vault itself is the damage source.
  */
 val ManaVault = card("Mana Vault") {
     manaCost = "{1}"
@@ -40,14 +41,12 @@ val ManaVault = card("Mana Vault") {
     triggeredAbility {
         trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.MayPay(ManaCost.parse("{4}"), Effects.Untap(EffectTarget.Self))
-        description = "At the beginning of your upkeep, you may pay {4}. If you do, untap this artifact."
     }
 
     triggeredAbility {
         trigger = Triggers.you.beginningOf(Step.DRAW)
         interveningIf = Conditions.SourceIsTapped
-        effect = Effects.DealDamage(1, EffectTarget.Controller)
-        description = "At the beginning of your draw step, if this artifact is tapped, it deals 1 damage to you."
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
     }
 
     activatedAbility {

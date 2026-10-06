@@ -1,62 +1,54 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.CastSpell
-import com.wingedsheep.engine.core.SelectManaSourcesDecision
-import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.lea.cards.MindTwist
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.model.Deck
 import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 /**
- * Mind Twist (LEA #115) — "Target player discards X cards at random."
+ * Scenario tests for Mind Twist — "Target player discards X cards at random."
+ *
+ * The cast-time X has to reach the random selection inside the resolution pipeline: X=2 must
+ * discard exactly two, and an X larger than the hand discards the whole hand rather than failing.
  */
-class MindTwistScenarioTest : ScenarioTestBase() {
+class MindTwistScenarioTest : FunSpec({
 
-    private fun TestGame.castMindTwist(x: Int) {
-        val card = findCardsInHand(1, "Mind Twist").single()
-        execute(
-            CastSpell(player1Id, card, listOf(ChosenTarget.Player(player2Id)), xValue = x)
-        ).error shouldBe null
-        if (getPendingDecision() is SelectManaSourcesDecision) submitManaSourcesAutoPay().error shouldBe null
-        resolveStack()
+    fun cast(x: Int): Triple<GameTestDriver, Int, Int> {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(MindTwist)
+        driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), skipMulligans = true, startingLife = 20)
+
+        val me = driver.activePlayer!!
+        val opponent = driver.getOpponent(me)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+        val twist = driver.putCardInHand(me, "Mind Twist")
+        driver.giveMana(me, Color.BLACK, x + 1)
+        val handBefore = driver.getHandSize(opponent)
+
+        driver.castXSpell(me, twist, xValue = x, targets = listOf(opponent)).error shouldBe null
+        driver.bothPass()
+
+        return Triple(driver, handBefore, driver.getHandSize(opponent))
     }
 
-    init {
-        test("the target player discards exactly X cards") {
-            val game = scenario()
-                .withPlayers("P1", "P2")
-                .withCardInHand(1, "Mind Twist")
-                .withLandsOnBattlefield(1, "Swamp", 3)
-                .withCardsInHand(2, "Forest", 4)
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-
-            game.castMindTwist(2)
-
-            withClue("two of four cards discarded, no decision asked") {
-                game.hasPendingDecision() shouldBe false
-                game.handSize(2) shouldBe 2
-                game.graveyardSize(2) shouldBe 2
-            }
-        }
-
-        test("X larger than the hand discards the whole hand") {
-            val game = scenario()
-                .withPlayers("P1", "P2")
-                .withCardInHand(1, "Mind Twist")
-                .withLandsOnBattlefield(1, "Swamp", 6)
-                .withCardsInHand(2, "Forest", 2)
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-
-            game.castMindTwist(5)
-
-            game.handSize(2) shouldBe 0
-            game.graveyardSize(2) shouldBe 2
-        }
+    test("X = 2 discards exactly two cards at random") {
+        val (driver, before, after) = cast(2)
+        val opponent = driver.getOpponent(driver.activePlayer!!)
+        withClue("two cards left the hand") { after shouldBe before - 2 }
+        withClue("both went to the graveyard") { driver.getGraveyardCardNames(opponent).size shouldBe 2 }
     }
-}
+
+    test("X larger than the hand discards the whole hand") {
+        val (driver, before, after) = cast(10)
+        val opponent = driver.getOpponent(driver.activePlayer!!)
+        after shouldBe 0
+        driver.getGraveyardCardNames(opponent).size shouldBe before
+    }
+})

@@ -10,12 +10,10 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Wheel of Fortune
  * {2}{R}
  * Sorcery
- *
  * Each player discards their hand, then draws seven cards.
  *
- * Two passes over [Player.Each] in APNAP order: every player discards their hand first, and only
- * then does every player draw seven. "Then" sequences the whole discard before the whole draw,
- * so no player's draw happens while another player still holds their old hand.
+ * Two [Effects.ForEachPlayer] passes, matching Timetwister's shape: every player discards their
+ * hand before anyone draws, so no player's fresh seven can be caught by a later discard.
  */
 val WheelOfFortune = card("Wheel of Fortune") {
     manaCost = "{2}{R}"
@@ -24,13 +22,8 @@ val WheelOfFortune = card("Wheel of Fortune") {
     oracleText = "Each player discards their hand, then draws seven cards."
 
     spell {
-        effect = Effects.ForEachPlayer(
-            players = Player.Each,
-            effects = listOf(Patterns.Hand.discardHand()),
-        ) then Effects.ForEachPlayer(
-            players = Player.Each,
-            effects = listOf(Effects.DrawCards(7)),
-        )
+        effect = Effects.ForEachPlayer(Player.Each, Patterns.Hand.discardHand()) then
+            Effects.ForEachPlayer(Player.Each, Effects.DrawCards(7))
     }
 
     metadata {

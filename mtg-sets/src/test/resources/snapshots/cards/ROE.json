@@ -2000,6 +2000,51 @@
     ]
 }
 
+// Might of the Masses
+{
+    "name": "Might of the Masses",
+    "manaCost": "{G}",
+    "typeLine": "Instant",
+    "oracleText": "Target creature gets +1/+1 until end of turn for each creature you control.",
+    "script": {
+        "spellEffect": {
+            "type": "ModifyStats",
+            "powerModifier": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": "creature"
+            },
+            "toughnessModifier": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": "creature"
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "196",
+        "artist": "Johann Bodin",
+        "flavorText": "The Joraga elves never need ask a troll to leave their territory. They merely grant it their combined strength, and it can't resist embarking on a merry rampage.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/0/10465f4f-f4ff-45d8-bc97-3ec85e5eea70.jpg?1783941962"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Nema Siltlurker
 {
     "name": "Nema Siltlurker",
@@ -2705,6 +2750,52 @@
         "artist": "Ryan Pancoast",
         "flavorText": "Built of wood and iron. Held together by hope and prayer.",
         "imageUri": "https://cards.scryfall.io/normal/front/4/3/437a91e7-f98e-4ed8-9ab7-f4db62979f5b.jpg?1783941955"
+    },
+    "colorIdentityOverride": []
+}
+
+// Runed Servitor
+{
+    "name": "Runed Servitor",
+    "manaCost": "{2}",
+    "typeLine": "Artifact Creature — Construct",
+    "oracleText": "When this creature dies, each player draws a card.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Runed Servitor:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "ActivePlayerFirst"
+                    },
+                    "body": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "224",
+        "rarity": "UNCOMMON",
+        "artist": "Mike Bierek",
+        "flavorText": "Scholars had puzzled for centuries over the ruins at Tal Terig. Its secrets had always lived within one rune-carved head.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/d/9dbbbbf6-e3ed-4a36-bedf-11c3514ff965.jpg?1783941955"
     },
     "colorIdentityOverride": []
 }

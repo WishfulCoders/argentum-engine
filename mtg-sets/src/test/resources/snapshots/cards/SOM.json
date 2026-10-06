@@ -1918,6 +1918,123 @@
     ]
 }
 
+// Golem Artisan
+{
+    "name": "Golem Artisan",
+    "manaCost": "{5}",
+    "typeLine": "Artifact Creature — Golem",
+    "oracleText": "{2}: Target artifact creature gets +1/+1 until end of turn.\n{2}: Target artifact creature gains your choice of flying, trample, or haste until end of turn.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Golem Artisan:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "artifact creature"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{2}: Target artifact creature gets +1/+1 until end of turn."
+            },
+            {
+                "id": "Golem Artisan:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "GrantKeyword",
+                                "keyword": "FLYING",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                }
+                            },
+                            "description": "It gains flying until end of turn"
+                        },
+                        {
+                            "effect": {
+                                "type": "GrantKeyword",
+                                "keyword": "TRAMPLE",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                }
+                            },
+                            "description": "It gains trample until end of turn"
+                        },
+                        {
+                            "effect": {
+                                "type": "GrantKeyword",
+                                "keyword": "HASTE",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                }
+                            },
+                            "description": "It gains haste until end of turn"
+                        }
+                    ],
+                    "countsAsModalSpell": false
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "artifact creature"
+                        },
+                        "id": "t1"
+                    }
+                ],
+                "descriptionOverride": "{2}: Target artifact creature gains your choice of flying, trample, or haste until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "159",
+        "rarity": "UNCOMMON",
+        "artist": "Nic Klein",
+        "flavorText": "Better living through metallurgy.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7ccfc314-2f18-43c2-9ccd-59bb5dbe35e9.jpg?1783941708"
+    }
+}
+
 // Golem's Heart
 {
     "name": "Golem's Heart",
@@ -2003,6 +2120,81 @@
     "colorIdentityOverride": [
         "BLACK"
     ]
+}
+
+// Infiltration Lens
+{
+    "name": "Infiltration Lens",
+    "manaCost": "{1}",
+    "typeLine": "Artifact — Equipment",
+    "oracleText": "Whenever equipped creature becomes blocked by a creature, you may draw two cards.\nEquip {1}",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Infiltration Lens:1",
+                "trigger": {
+                    "type": "BecomesBlockedEvent",
+                    "filter": "creature"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
+                    }
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Infiltration Lens:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "AttachEquipment",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "creature you control"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "creature you control"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isEquipAbility": true
+            }
+        ]
+    },
+    "equipCost": "{1}",
+    "metadata": {
+        "collectorNumber": "167",
+        "rarity": "UNCOMMON",
+        "artist": "Izzy",
+        "flavorText": "Neurok spies carry devices that let them look a few moments into the future, giving them an almost insurmountable edge.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/b/1baa10da-2733-4657-a1ea-74eb5a5a82b1.jpg?1783941707",
+        "rulings": [
+            {
+                "date": "2011-01-01",
+                "text": "If the equipped creature becomes blocked by multiple creatures, Infiltration Lens’s ability triggers that many times."
+            }
+        ]
+    }
 }
 
 // Kuldotha Forgemaster

@@ -282,6 +282,9 @@ class AttachmentTriggerDetector(
     ): TriggerContext {
         return when (event) {
             is DamageDealtEvent -> TriggerContext.fromEvent(event)
+            // The attached creature's last-known information (types, P/T, counters) — "whenever
+            // equipped creature dies" effects compare against it as it last existed (CR 608.2h).
+            is ZoneChangeEvent -> TriggerContext.fromEvent(event)
             else -> TriggerContext(triggeringEntityId = attachedEntityId)
         }
     }

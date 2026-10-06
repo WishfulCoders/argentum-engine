@@ -3991,6 +3991,45 @@
     }
 }
 
+// Panharmonicon
+{
+    "name": "Panharmonicon",
+    "manaCost": "{4}",
+    "typeLine": "Artifact",
+    "oracleText": "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "AdditionalETBOrLTBTriggers",
+                "filter": "artifact|creature",
+                "mustBeYouControl": false,
+                "description": "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "226",
+        "rarity": "RARE",
+        "artist": "Volkan Baǵa",
+        "flavorText": "All who listen hear their own song, a unique melody played just for them.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/5/15856326-d943-476a-9d31-898b9f990bb6.jpg?1783937152",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "You don't need to control the permanent entering the battlefield, only the permanent that has the triggered ability."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "Replacement effects are unaffected by Panharmonicon's ability. For example, a creature that enters the battlefield with one +1/+1 counter on it won't receive an additional +1/+1 counter."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If you control two Panharmonicons, an artifact or creature entering the battlefield causes abilities to trigger three times, not four."
+            }
+        ]
+    }
+}
+
 // Peema Outrider
 {
     "name": "Peema Outrider",

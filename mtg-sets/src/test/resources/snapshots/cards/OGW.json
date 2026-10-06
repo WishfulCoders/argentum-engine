@@ -354,6 +354,134 @@
     ]
 }
 
+// Endbringer
+{
+    "name": "Endbringer",
+    "manaCost": "{5}{C}",
+    "typeLine": "Creature — Eldrazi",
+    "oracleText": "Untap this creature during each other player's untap step.\n{T}: This creature deals 1 damage to any target.\n{C}, {T}: Target creature can't attack or block this turn.\n{C}{C}, {T}: Draw a card.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 5
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Endbringer:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ]
+            },
+            {
+                "id": "Endbringer:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{C}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "CantAttack",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            }
+                        },
+                        {
+                            "type": "CantBlockTargetCreatures",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature"
+                        },
+                        "id": "t1"
+                    }
+                ]
+            },
+            {
+                "id": "Endbringer:3",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{C}{C}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            "UntapSelfDuringOtherUntapSteps"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "3",
+        "rarity": "RARE",
+        "artist": "Vincent Proce",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/b/6bba7509-db77-414f-926f-1f28a4117831.jpg?1783937930",
+        "rulings": [
+            {
+                "date": "2016-01-22",
+                "text": "Endbringer untaps at the same time as the active player's permanents. You can't choose to not untap it at that time."
+            },
+            {
+                "date": "2016-01-22",
+                "text": "If an effect states that Endbringer doesn't untap during your untap step, that effect won't apply during another player's untap step."
+            },
+            {
+                "date": "2016-01-22",
+                "text": "Activating the second activated ability after a creature has legally been declared as an attacker or blocker won't change or undo that attack or block."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Expedite
 {
     "name": "Expedite",

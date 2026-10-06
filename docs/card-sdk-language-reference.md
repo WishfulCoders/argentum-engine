@@ -1329,6 +1329,12 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
 `GrantDynamicStats` (a static ability), `OnEnterRun`, `ReplaceDrawWith` and `RedirectZoneChangeWith`
 (replacement effects). Their serial names are unchanged.
 
+`Triggers.attached.becomesBlocked(by = filter)` uses the same per-blocker semantics for an equipped
+or enchanted creature (Infiltration Lens). Omit `by` for one trigger when that creature first becomes
+blocked. The source and controller remain the attachment; the triggering entity is the blocker with
+`by`, or the attached creature without it. Both declared blocks and later blocking relationships use
+this path, with blocker filters evaluated against projected state.
+
 ### Damage
 
 - `DealDamage(amount, target, damageSource = null, cantBePrevented = false, excessDamageVariable = null, damageDealtVariable = null)`
@@ -1352,9 +1358,11 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
 - `RedirectNextDamage(protectedTargets, redirectTo, amount?, scope, creaturesOnly, optional)`,
   `RedirectCombatDamageToController(target = Self)`, `ReflectCombatDamage(target = Controller)`,
   `RemoveDamageShield(target)` — the redirect / reflect / shield-removal effects.
-- `DealDamageExcessToController(amount, target)` — deal damage to a creature; any amount beyond
+- `DealDamageExcessToController(amount, target, damageSource?)` — deal damage to a creature; any amount beyond
   lethal (CR 120.4a) is dealt to that creature's controller instead (the creature is marked only with
-  the lethal portion). Backed by `DealDamageEffect.excessToController`. Used by Gandalf's Sanction.
+  the lethal portion). Backed by `DealDamageEffect.excessToController`. `damageSource` names another
+  source, as on `DealDamage` (deathtouch on that source makes 1 lethal). Used by Gandalf's Sanction
+  and Ram Through.
 - `DealXDamage(target)` — deal X damage (spell's X).
 - `AmplifyDamageThisTurn(bonus, appliesTo: EventPattern.DamageEvent)` — install an until-end-of-turn
   replacement (CR 616): every damage instance matching `appliesTo` deals `bonus` *additional* damage this
@@ -6308,7 +6316,13 @@ work for abilities-on-stack (which carry no `CardComponent`).
   Sanctum: "enchanted permanent's activated abilities can't be activated" via
   `PreventActivatedAbilities(GameObjectFilter.Permanent.attachedToBySource())`. Resolves
   against `PredicateContext.sourceId`; inert with no source / unattached source, and never matches in
-  group-static projection or trigger-gating contexts (no source there).
+  trigger-gating contexts (no source there). In **group-static projection** it resolves against the
+  projecting permanent, which is how an Aura narrows "enchanted X" with a filter the bare
+  `Scope.AttachedTo` can't carry — Animate Artifact: "as long as enchanted artifact isn't a creature,
+  it's an artifact creature with power and toughness each equal to its mana value" is a
+  `CompositeStaticAbility` of `GrantCardType("CREATURE", …)` and `SetBasePowerToughnessDynamicStatic`
+  over `GroupFilter(GameObjectFilter.Artifact.notCreature().attachedToBySource())`. The filter isn't
+  creature-keyed, so the set resolved at collection stays locked into Layer 7b (CR 613.6).
 - `IsSource` (filter builder `sourceItself()`) — source-relative: matches only the effect's source
   permanent itself. During ability resolution it also matches the captured battlefield visit, so a
   card that left and returned is not the old source. Consequently `notSourceItself()` allows that
@@ -6336,7 +6350,7 @@ work for abilities-on-stack (which carry no `CardComponent`).
   `AttachedToComponent.targetId == sourceId`. Use it to scope a static ability on the *host* to its own
   attachments — Cloud, Midgar Mercenary's "an Equipment attached to it" via
   `GameObjectFilter.Artifact.withSubtype("Equipment").attachedToSource()`. Source-relative; inert with no
-  source context. Negated builder `notAttachedToSource()` — excludes all of the source's own attachments.
+  source context. Also resolves in group-static projection, against the projecting permanent. Negated builder `notAttachedToSource()` — excludes all of the source's own attachments.
   Also legal inside an **activated-ability cost filter** — "{T}, Sacrifice an Equipment attached to Ronin"
   (Ronin, Shadow Stalker), "{1}, Sacrifice an Aura attached to this creature" (Faunsbane Troll) — because
   the sacrifice enumeration (`CostEnumerationUtils.findAbilitySacrificeTargets`) and payment
@@ -6982,7 +6996,7 @@ The shapes in this family, with their engine notes.
 - `Triggers.self.becomesBlocked()` — SELF, no filter.
 - `Triggers.self.becomesBlocked(by = filter)` — "becomes blocked by a [filter] creature": SELF, the
   filter constrains the **blocker** (Ogre Leadfoot, Sylvan Basilisk, Battering Ram). `by` is
-  SELF-only, and `Triggers.self.matching(…).becomesBlocked()` is rejected — under SELF the event's
+  supported by SELF and ATTACHED. Filtered subjects are rejected — for these bindings the event's
   one filter axis is the blocker, so a subject filter would silently be read as a blocker filter.
 - `Triggers.<subject>.blocks(attackerFilter, minBlockedAttackers)` — `filter`
   constrains the blocker (ANY binding). `attackerFilter` constrains the blocked attacker — requires
@@ -8847,7 +8861,10 @@ staticAbility {
     during each other player's untap step" — Bender's Waterskin). Guarded on the source still being tapped,
     so it never double-untaps / double-consumes a stun counter alongside the broad/filtered variants.
 - `UntapLimitPerStep(filter, max)` — global untap-count cap, "Players can't untap more than `max` `filter`
-  permanents during their untap steps" (Damping Field: artifacts, one). Compose with a static
+  permanents during their untap steps" (Damping Field: artifacts, one). `max = 0` is "`filter` don't
+  untap during their controllers' untap steps" (Meekstone: `Creature.powerAtLeast(3)`): the matching
+  permanents drop out of the untap with no prompt, and because the filter is read at the untap step over
+  the final projected state it sees layer-7 P/T changes a layer-6 `DOESNT_UNTAP` group grant can't. Compose with a static
   `condition = Conditions.SourceIsUntapped` for Winter Orb (lands, one); conditions and caps are
   evaluated before the simultaneous untap, so a tapped Orb untapping alongside lands does not
   restrict that action. Printed abilities respect face-down state, ability removal, phasing,
@@ -15674,8 +15691,11 @@ are their printed spellings (`CounterType.printed`). Text converts back only thr
 
 - `+1/+1`, `-1/-1` — power/toughness counters.
 - `loyalty` — planeswalker loyalty.
+- `brick` (`CounterType.BRICK`): AKH — Edifice of Authority. Passive progress marker with no inherent rule; `Conditions.SourceCounterCountAtLeast(BRICK, 3)` gates its second activation. The passive-counter badge displays its count.
 - `mire` (`CounterType.MIRE`): LEA — Cyclopean Tomb. Passive marker read by its counter-bounded Swamp duration and source-linked cleanup history; it has no inherent rule. The existing passive-counter badge displays its count.
 - `collection` (`CounterType.COLLECTION`): MH3 — Charitable Levy. Passive accumulate-then-threshold marker: its noncreature-cast trigger adds one, and `Conditions.SourceCounterCountAtLeast(COLLECTION, 3)` gates the sacrifice. No inherent rule; the passive-counter badge displays its count.
+- `corpse` (`CounterType.CORPSE`): LEA — Scavenging Ghoul. Passive spendable store with no inherent rule: its each-end-step trigger adds one per creature that died this turn (`DynamicAmounts.creaturesDiedThisTurn(Player.Each)`) and `Costs.RemoveCounterFromSelf(CounterType.CORPSE, 1)` pays for its regeneration. The passive-counter badge displays its count.
+- `vitality` (`CounterType.VITALITY`): LEA — Living Artifact. Passive spendable store with no inherent rule: its `Triggers.you.isDealtDamage()` trigger adds `DynamicAmounts.triggerDamageAmount()` of them, and its upkeep trigger may remove one to gain 1 life. The passive-counter badge displays its count.
 - `bounty` (`CounterType.BOUNTY`): J22 — Termination Facilitator. Passive marker with no inherent rule: the card's own observer trigger (`Triggers.a(CreatureOrPlaneswalker.opponentControls().withCounter(BOUNTY)).isDealtDamage()`) destroys a marked permanent when it is dealt damage. The passive-counter badge displays its count.
 - `charge`, `time`, `level`, `quest`, `fade`, `vanishing`, `experience`, `age`, `velocity`, `awakening`,
   `blood`, `cage`, `doom`, `storage`, `divinity` (`CounterType.DIVINITY`, a passive counter used by the Myojin

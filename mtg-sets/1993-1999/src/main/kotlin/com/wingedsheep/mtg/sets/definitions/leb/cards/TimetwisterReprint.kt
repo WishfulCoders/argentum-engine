@@ -13,7 +13,7 @@ val TimetwisterReprint = Printing(
     collectorNumber = "85",
     scryfallId = "09f1958a-50cc-43cc-80e1-988800e44ca8",
     artist = "Mark Tedin",
-    imageUri = "https://cards.scryfall.io/normal/front/0/9/09f1958a-50cc-43cc-80e1-988800e44ca8.jpg?1783948639",
+    imageUri = "https://cards.scryfall.io/normal/front/0/9/09f1958a-50cc-43cc-80e1-988800e44ca8.jpg",
     releaseDate = "1993-10-04",
     rarity = Rarity.RARE,
 )

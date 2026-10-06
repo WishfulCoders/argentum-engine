@@ -14,8 +14,9 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
  * Sorcery
  * Target player discards X cards at random.
  *
- * Rag Man's gather → random select → discard pipeline with the count read from X. A random selection
- * larger than the hand takes the whole hand.
+ * Gather the target player's hand → the engine picks X of them at random
+ * ([com.wingedsheep.sdk.scripting.effects.SelectionMode.Random], which caps at the hand size) →
+ * discard. X greater than the hand discards the whole hand; X = 0 discards nothing.
  */
 val MindTwist = card("Mind Twist") {
     manaCost = "{X}{B}"

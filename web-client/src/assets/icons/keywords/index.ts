@@ -207,4 +207,7 @@ export const counterManaClass: Record<string, string> = {
   TRAINING: 'counter-shield',
   MIRE: 'counter-flood',
   VALOR: 'counter-shield',
+  CORPSE: 'counter-doom',
+  BRICK: 'counter-charge',
+  VITALITY: 'counter-hope',
 }

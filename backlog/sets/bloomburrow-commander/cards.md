@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 150 / 312
+**Implemented:** 151 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -322,7 +322,7 @@
 - [ ] Windgrace's Judgment
 - [ ] Wizard Class
 - [x] Woe Strider
-- [ ] Wolfwillow Haven
+- [x] Wolfwillow Haven
 - [x] Wooded Ridgeline
 - [x] Woodland Cemetery
 - [x] Yavimaya Coast

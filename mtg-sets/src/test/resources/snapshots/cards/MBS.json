@@ -85,50 +85,6 @@
     ]
 }
 
-// Go for the Throat
-{
-    "name": "Go for the Throat",
-    "manaCost": "{1}{B}",
-    "typeLine": "Instant",
-    "oracleText": "Destroy target nonartifact creature.",
-    "script": {
-        "spellEffect": {
-            "type": "MoveToZone",
-            "target": {
-                "type": "BoundVariable",
-                "name": "t0"
-            },
-            "destination": "Graveyard",
-            "byDestruction": true
-        },
-        "targetRequirements": [
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "creature nonartifact"
-                },
-                "id": "t0"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "43",
-        "rarity": "UNCOMMON",
-        "artist": "David Rapoza",
-        "flavorText": "Having flesh is increasingly a liability on Mirrodin.",
-        "imageUri": "https://cards.scryfall.io/normal/front/1/c/1c665cfc-7e9a-444b-96b5-e8e4ef57a98a.jpg?1783941384",
-        "rulings": [
-            {
-                "date": "2011-06-01",
-                "text": "If the targeted creature is also an artifact when Go for the Throat tries to resolve, it won't resolve."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "BLACK"
-    ]
-}
-
 // Green Sun's Zenith
 {
     "name": "Green Sun's Zenith",
@@ -285,85 +241,6 @@
     },
     "colorIdentityOverride": [
         "RED"
-    ]
-}
-
-// Leonin Relic-Warder
-{
-    "name": "Leonin Relic-Warder",
-    "manaCost": "{W}{W}",
-    "typeLine": "Creature — Cat Cleric",
-    "oracleText": "When this creature enters, you may exile target artifact or enchantment.\nWhen this creature leaves the battlefield, return the exiled card to the battlefield under its owner's control.",
-    "creatureStats": {
-        "power": 2,
-        "toughness": 2
-    },
-    "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Leonin Relic-Warder:1",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "to": "Battlefield"
-                },
-                "effect": {
-                    "type": "ExileUntilLeaves",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "optional": true,
-                    "filter": {
-                        "baseFilter": "artifact|enchantment"
-                    },
-                    "id": "t0"
-                }
-            },
-            {
-                "id": "Leonin Relic-Warder:2",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "from": "Battlefield"
-                },
-                "effect": {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "GatherCards",
-                            "source": "FromLinkedExile",
-                            "storeAs": "linked_return"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "linked_return",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Battlefield"
-                            },
-                            "underOwnersControl": true
-                        }
-                    ]
-                }
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "10",
-        "rarity": "UNCOMMON",
-        "artist": "Greg Staples",
-        "imageUri": "https://cards.scryfall.io/normal/front/d/d/dd0900e1-df78-466d-b747-33f22c273d67.jpg?1783941392",
-        "rulings": [
-            {
-                "date": "2011-06-01",
-                "text": "If Leonin Relic-Warder leaves the battlefield before its first ability has resolved, its second ability will trigger and when it resolves, do nothing. Then its first ability will resolve and exile the targeted artifact or enchantment forever."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "WHITE"
     ]
 }
 
@@ -541,52 +418,49 @@
     ]
 }
 
-// Phyrexian Revoker
+// Pierce Strider
 {
-    "name": "Phyrexian Revoker",
-    "manaCost": "{2}",
-    "typeLine": "Artifact Creature — Phyrexian Horror",
-    "oracleText": "As this creature enters, choose a nonland card name.\nActivated abilities of sources with the chosen name can't be activated.",
+    "name": "Pierce Strider",
+    "manaCost": "{4}",
+    "typeLine": "Artifact Creature — Phyrexian Construct",
+    "oracleText": "When this creature enters, target opponent loses 3 life.",
     "creatureStats": {
-        "power": 2,
-        "toughness": 1
+        "power": 3,
+        "toughness": 3
     },
     "script": {
-        "staticAbilities": [
+        "triggeredAbilities": [
             {
-                "type": "PreventActivatedAbilities",
-                "filter": {
-                    "cardPredicates": [
-                        "NameEqualsChosenComponent"
-                    ]
+                "id": "Pierce Strider:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
                 },
-                "anyZone": true
-            }
-        ],
-        "replacementEffects": [
-            {
-                "type": "EntersWithChoice",
-                "choiceType": "CARD_NAME",
-                "cardNamePool": "NONLAND"
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetOpponent",
+                    "id": "t0"
+                },
+                "descriptionOverride": "When this creature enters, target opponent loses 3 life."
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "122",
-        "rarity": "RARE",
-        "artist": "Kev Walker",
-        "flavorText": "Basic senses like sight and taste are reserved for those in power.",
-        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c7bec21-61b0-4e72-848b-82f38e1910e0.jpg?1783941366",
-        "rulings": [
-            {
-                "date": "2020-08-07",
-                "text": "Activated abilities are written in the form \"Cost: Effect.\" Some keywords are activated abilities (such as equip) and will have colons in their reminder texts. Static and triggered abilities of sources with the chosen name are unaffected."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "Phyrexian Revoker's ability affects sources with the chosen name no matter what zone they are in. For example, a cycling ability of a card with the chosen name can't be activated from hand."
-            }
-        ]
+        "collectorNumber": "123",
+        "rarity": "UNCOMMON",
+        "artist": "Igor Kieryluk",
+        "flavorText": "\"Pain isn't a negative stimulus. Pain is a sign of your imperfection.\"\n—Sheoldred, Whispering One",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/8/88b449a5-634f-47b1-a757-86a6849f6777.jpg?1783941365"
     },
     "colorIdentityOverride": []
 }
