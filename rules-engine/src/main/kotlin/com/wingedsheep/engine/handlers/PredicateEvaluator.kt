@@ -2008,6 +2008,16 @@ class PredicateEvaluator(
                     ?.creatureIds?.contains(entityId) == true
             }
 
+            // Dealt damage this turn by a source the evaluating controller controlled at the time:
+            // the damaged object's own record of its sources' damage-time controllers (CR 608.2h).
+            // Forgotten on a zone change (CR 400.7) and at cleanup.
+            StatePredicate.WasDealtDamageBySourceYouControlledThisTurn -> {
+                val you = context?.controllerId
+                you != null && container
+                    .get<com.wingedsheep.engine.state.components.battlefield.DamagedBySourcesThisTurnComponent>()
+                    ?.sources?.any { it.sourceControllerId == you } == true
+            }
+
             StatePredicate.ControlledSinceTurnBegan ->
                 com.wingedsheep.engine.core.ControlHistory.matches(state, projected, entityId)
 

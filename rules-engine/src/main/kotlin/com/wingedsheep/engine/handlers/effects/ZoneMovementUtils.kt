@@ -520,6 +520,10 @@ object ZoneMovementUtils {
             .without<DamageComponent>()
             .without<DamageDealtToCreaturesThisTurnComponent>()
             .without<WasDealtDamageThisTurnComponent>()
+            // Which sources damaged this object this turn, with their damage-time controllers. It
+            // is read as last-known information off the leave event before this strip runs; the
+            // object that arrives elsewhere is new and was never dealt that damage (CR 400.7).
+            .without<com.wingedsheep.engine.state.components.battlefield.DamagedBySourcesThisTurnComponent>()
             .without<HasDealtDamageComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.DamageDealtThisTurnComponent>()
             // Per-turn activation tallies and "was activated this turn" belong to this object; one
@@ -971,6 +975,15 @@ object ZoneMovementUtils {
                 sourceState.getEntity(it)?.get<DamageDealtToCreaturesThisTurnComponent>()?.creatureIds
             }
             if (damaged == null || entityId !in damaged) return false
+        }
+        // "A creature dealt damage this turn by a source you controlled" (Etching of Kumano) — read
+        // off the dying creature's own damage-time record of its sources' controllers, so it holds
+        // even when the source has since died or changed hands. "You" is the replacement's controller.
+        if (StatePredicate.WasDealtDamageBySourceYouControlledThisTurn in filter.statePredicates) {
+            val sources = container
+                .get<com.wingedsheep.engine.state.components.battlefield.DamagedBySourcesThisTurnComponent>()
+                ?.sources
+            if (sources == null || sources.none { it.sourceControllerId == sourceControllerId }) return false
         }
 
         // Check card predicates
