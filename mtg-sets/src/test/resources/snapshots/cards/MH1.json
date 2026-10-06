@@ -668,6 +668,60 @@
     ]
 }
 
+// Eyekite
+{
+    "name": "Eyekite",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Drake",
+    "oracleText": "Flying\nThis creature gets +2/+0 as long as you've drawn two or more cards this turn.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "ModifyStats",
+                    "powerBonus": 2,
+                    "toughnessBonus": 0,
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "PlayerDrewCardsThisTurn",
+                    "atLeast": 2
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "49",
+        "artist": "Dan Murayama Scott",
+        "flavorText": "\"This one will need direction. After all, each of its eyes is larger than its brain.\"\n—Cyla, Lord of the Aerie",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/9/49f7bda8-949a-42aa-9254-f39b791cb9a8.jpg?1783933145",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "Eyekite's effect applies even if you drew two or more cards only before Eyekite entered the battlefield."
+            },
+            {
+                "date": "2019-06-14",
+                "text": "If a spell or ability causes you to put cards into your hand without specifically using the word \"draw,\" Eyekite's effect doesn't count them."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Faerie Seer
 {
     "name": "Faerie Seer",
@@ -1570,6 +1624,167 @@
     ]
 }
 
+// Marit Lage's Slumber
+{
+    "name": "Marit Lage's Slumber",
+    "manaCost": "{1}{U}",
+    "typeLine": "Legendary Snow Enchantment",
+    "oracleText": "Whenever Marit Lage's Slumber or another snow permanent you control enters, scry 1.\nAt the beginning of your upkeep, if you control ten or more snow permanents, sacrifice Marit Lage's Slumber. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Marit Lage's Slumber:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": {
+                        "cardPredicates": [
+                            "IsPermanent",
+                            "IsSnow"
+                        ],
+                        "controllerPredicate": "ControlledByYou"
+                    },
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Scry",
+                    "count": 1
+                },
+                "descriptionOverride": "Whenever Marit Lage's Slumber or another snow permanent you control enters, scry 1."
+            },
+            {
+                "id": "Marit Lage's Slumber:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.DoAction",
+                        "action": "SacrificeSelf",
+                        "successCriterion": "SuccessCriterion.PermanentsSacrificed"
+                    },
+                    "then": {
+                        "type": "CreateToken",
+                        "power": 20,
+                        "toughness": 20,
+                        "colors": [
+                            "BLACK"
+                        ],
+                        "creatureTypes": [
+                            "Avatar"
+                        ],
+                        "keywords": [
+                            "FLYING",
+                            "INDESTRUCTIBLE"
+                        ],
+                        "name": "Marit Lage",
+                        "imageUri": "https://cards.scryfall.io/normal/front/7/b/7b993828-e139-4cb6-a329-487accc1c515.jpg?1783933228",
+                        "legendary": true
+                    }
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": {
+                            "cardPredicates": [
+                                "IsPermanent",
+                                "IsSnow"
+                            ]
+                        }
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 10
+                    }
+                },
+                "descriptionOverride": "At the beginning of your upkeep, if you control ten or more snow permanents, sacrifice Marit Lage's Slumber. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "56",
+        "rarity": "RARE",
+        "artist": "Randy Vargas",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/f/4f5d2a6e-22cd-4493-9e58-e9c2aa3a31ab.jpg?1783933143",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "If you don't control ten or more snow permanents as your upkeep begins, the last ability won't trigger. No player may take any actions during a turn before the turn's upkeep begins."
+            },
+            {
+                "date": "2019-06-14",
+                "text": "If you don't control ten snow permanents as the last ability resolves, you can't sacrifice Marit Lage's Slumber."
+            },
+            {
+                "date": "2019-06-14",
+                "text": "If Marit Lage's Slumber leaves the battlefield before its last ability resolves, you won't be able to sacrifice it, so you won't create Marit Lage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Martyr's Soul
+{
+    "name": "Martyr's Soul",
+    "manaCost": "{2}{W}",
+    "typeLine": "Creature — Spirit Soldier",
+    "oracleText": "Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)\nWhen this creature enters, if you control no tapped lands, put two +1/+1 counters on it.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "CONVOKE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Martyr's Soul:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 2,
+                    "target": "Self"
+                },
+                "interveningIf": {
+                    "type": "Exists",
+                    "player": "You",
+                    "zone": "Battlefield",
+                    "filter": "land tapped",
+                    "negate": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "19",
+        "artist": "Mila Pesic",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c17428c-e31d-42f3-8811-6734abd96b0b.jpg?1783933158",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "If you control any tapped lands as Martyr's Soul enters the battlefield, its last ability doesn't trigger at all. If you control any tapped lands as the ability resolves, you won't put two +1/+1 counters on Martyr's Soul."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Mob
 {
     "name": "Mob",
@@ -1861,6 +2076,52 @@
     "colorIdentityOverride": [
         "BLACK",
         "GREEN"
+    ]
+}
+
+// Oneirophage
+{
+    "name": "Oneirophage",
+    "manaCost": "{3}{U}",
+    "typeLine": "Creature — Squid Illusion",
+    "oracleText": "Flying\nWhenever you draw a card, put a +1/+1 counter on this creature.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Oneirophage:1",
+                "trigger": "DrawEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "60",
+        "rarity": "UNCOMMON",
+        "artist": "Martina Pilcerova",
+        "flavorText": "It manifests at wizard academies to siphon inspiration from young prodigies.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/a/caefbac6-b2a0-4a70-a912-25173eafd7b3.jpg?1783933142",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "If a spell or ability causes you to put cards into your hand without specifically using the word \"draw,\" Oneirophage's ability won't trigger."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -2821,6 +3082,95 @@
         "artist": "Simon Dominic",
         "flavorText": "When Worzel summoned Segovian angels to fight Thomil's Gargantikari gnats, the ensuing battle numbered among the Multiverse's least destructive.",
         "imageUri": "https://cards.scryfall.io/normal/front/b/5/b5dbaec5-502d-48c2-9e71-c12cd0bccc6a.jpg?1783933157"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Settle Beyond Reality
+{
+    "name": "Settle Beyond Reality",
+    "manaCost": "{4}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose one or both —\n• Exile target creature you don't control.\n• Exile target creature you control, then return it to the battlefield under its owner's control.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Exile"
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "creature ctrl:opponent"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "description": "Exile target creature you don't control"
+                },
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                },
+                                "destination": "Exile"
+                            },
+                            {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                },
+                                "destination": "Battlefield"
+                            }
+                        ]
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "creature ctrl:you"
+                            },
+                            "id": "t1"
+                        }
+                    ],
+                    "description": "Exile target creature you control, then return it to the battlefield under its owner's control"
+                }
+            ],
+            "chooseCount": 2,
+            "minChooseCount": 1
+        }
+    },
+    "metadata": {
+        "collectorNumber": "27",
+        "artist": "Anthony Palumbo",
+        "flavorText": "Two taken, two judged, one returned.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/2/72ed8e57-61bb-4e89-9484-ff2be800a449.jpg?1783933156",
+        "rulings": [
+            {
+                "date": "2019-06-14",
+                "text": "Once the exiled creature you control returns, it's considered a new object with no relation to the object that it was. Auras attached to the exiled creatures will be put into their owners' graveyards. Equipment attached to the exiled creatures will become unattached and remain on the battlefield. Any counters on the exiled creatures will cease to exist."
+            },
+            {
+                "date": "2019-06-14",
+                "text": "If a token you control is exiled this way, it will cease to exist and won't return to the battlefield."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "WHITE"

@@ -156,7 +156,7 @@ export function LobbyScreen() {
           {isMomir && <MomirCrest />}
           <h1 className={styles.lobbyTitle}>{view.title}</h1>
           <p className={styles.lobbySubtitle}>{view.subtitle}</p>
-          <LobbyAxisSummary axes={view.axes} />
+          <LobbyAxisSummary axes={view.axes} jumpstart={Boolean(lobbyState?.settings.jumpstartActive)} />
           {view.isWaiting && view.isHost && (
             <button
               type="button"
@@ -363,7 +363,7 @@ export function LobbyScreen() {
               }[id]
               // Built as a list so a group with neither an axis nor any relevant rows can disappear.
               const rows: ReactNode[] = []
-              if (id === 'CARDS') rows.push(<CardsAxisBody key="axis" view={view} commands={commands} />)
+              if (id === 'CARDS') rows.push(<CardsAxisBody key="axis" view={view} commands={commands} jumpstart={Boolean(lobbyState?.settings.jumpstartActive)} />)
               if (id === 'RULES') rows.push(<RulesAxisBody key="axis" view={view} commands={commands} />)
               if (id === 'TABLE') rows.push(<TableAxisBody key="axis" view={view} />)
               if (id === 'EVENT' && eventCaption(view) !== '') {

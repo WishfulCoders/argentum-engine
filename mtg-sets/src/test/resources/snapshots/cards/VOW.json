@@ -14732,7 +14732,16 @@
                         {
                             "type": "TargetObject",
                             "filter": {
-                                "baseFilter": {},
+                                "baseFilter": {
+                                    "anyOf": [
+                                        {},
+                                        {
+                                            "cardPredicates": [
+                                                "IsActivatedOrTriggeredAbility"
+                                            ]
+                                        }
+                                    ]
+                                },
                                 "zone": "Stack"
                             }
                         }

@@ -647,6 +647,7 @@ export interface GridDraftState {
  * Lobby state for tournament lobbies (sealed, draft, Winston draft, or grid draft).
  */
 export interface LobbyState {
+  jumpstart?: import('@/types/messages').JumpstartState | null
   lobbyId: string
   state: 'WAITING_FOR_PLAYERS' | 'DRAFTING' | 'DECK_BUILDING' | 'TOURNAMENT_ACTIVE' | 'TOURNAMENT_COMPLETE'
   players: readonly LobbyPlayerInfo[]
@@ -880,7 +881,7 @@ export type PhaseResult =
   | { type: 'blightVariable'; blightAmount: number }
   | { type: 'payXLife'; payXLifeAmount: number }
   | { type: 'manaColorChoice'; color: string }
-  | { type: 'targeting'; selectedTargets: EntityId[] }
+  | { type: 'targeting'; selectedTargets: EntityId[]; targetGroupCounts?: number[] }
   | { type: 'damageDistribution'; distribution: Record<EntityId, number> }
 
 /**
@@ -1027,6 +1028,7 @@ export type GameStore = {
   /** Host picks what one AI seat plays (premade-decks lobbies — elsewhere it builds from its pool). */
   setLobbyAiDeck: (playerId: string, spec: AiDeckSpec) => void
   stopLobby: () => void
+  pickJumpstartPack: (packId: string, pickNumber: number) => void
   updateLobbySettings: (settings: LobbySettingsUpdate) => void
   /** Disconnected tournament players: playerId -> info */
   disconnectedPlayers: Record<string, { playerName: string; secondsRemaining: number; disconnectedAt: number }>

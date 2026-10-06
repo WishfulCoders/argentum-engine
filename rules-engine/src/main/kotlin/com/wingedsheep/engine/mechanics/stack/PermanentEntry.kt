@@ -160,6 +160,17 @@ internal class PermanentEntry(
             })
         }
 
+        // The Saga's entry lore counters (CR 714.3a / 714.3b), placed in [applyEntryDesignations]:
+        // emit the CountersAddedEvent chapter detection reads, from every entry path (including the
+        // as-enters-choice resumers, which is where a read-ahead Saga enters).
+        if (cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga) {
+            val loreCount = newState.getEntity(spellId)?.get<CountersComponent>()
+                ?.getCount(CounterType.LORE)?.takeIf { it > 0 } ?: 1
+            newState = com.wingedsheep.engine.handlers.effects.DamageUtils
+                .markCounterOnControlledPermanent(newState, spellId, CounterType.LORE, entering = true)
+            counterEvents.add(CountersAddedEvent(spellId, CounterType.LORE, loreCount, cardDef.name))
+        }
+
         newState = applyGlobalEntersTapped(newState, spellId, spellComponent, cardDef, controllerId)
         newState = enterSneakAttacking(newState, spellId, spellComponent, controllerId)
         addCastFaceDoorUnlockedEvents(newState, spellId, cardComponent, controllerId, counterEvents)
@@ -291,6 +302,9 @@ internal class PermanentEntry(
         spellComponent: SpellOnStackComponent
     ): ComponentContainer {
         var updated = container
+        if (spellComponent.castFromZone != null) {
+            updated = updated.with(com.wingedsheep.engine.state.components.battlefield.WasCastComponent)
+        }
         // Track if this permanent was cast from hand (for cards like Phage the Untouchable)
         if (spellComponent.castFromZone == Zone.HAND) {
             updated = updated.with(CastFromHandComponent)
@@ -772,12 +786,16 @@ internal class PermanentEntry(
         // Handle Saga entering the battlefield (Rule 714.3a)
         // Add SagaComponent and initial lore counter (triggers chapter I detection)
         if (cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga) {
-            val current = newState.getEntity(spellId)?.get<CountersComponent>() ?: CountersComponent()
-            // Mark chapter 1 as triggered since lore count will be 1
-            val sagaComponent = SagaComponent(triggeredChapters = setOf(1))
+            val entering = newState.getEntity(spellId)
+            val current = entering?.get<CountersComponent>() ?: CountersComponent()
+            // One lore counter (CR 714.3a), or the read-ahead chosen number (CR 714.3b)
+            val loreCount = entering?.let {
+                com.wingedsheep.engine.handlers.effects.ZoneMovementUtils.sagaEntryLoreCount(it)
+            } ?: 1
+            val sagaComponent = SagaComponent(triggeredChapters = (1..loreCount).toSet())
             newState = newState.updateEntity(spellId) { c ->
                 c.with(sagaComponent)
-                    .with(current.withAdded(CounterType.LORE, 1))
+                    .with(current.withAdded(CounterType.LORE, loreCount))
             }
         }
         return newState

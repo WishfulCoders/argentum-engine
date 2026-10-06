@@ -136,7 +136,15 @@ class PlayLandHandler(
                 .canPlayLand(state, action.playerId, action.cardId, legality)
         val mayPlayFromGraveyard = !inHand && !onTopOfLibrary && !mayPlayFromExile && !mayPlayFromLinkedExile &&
             isInGraveyardWithPlayPermission(state, action.playerId, action.cardId)
-        if (!inHand && !onTopOfLibrary && !mayPlayFromExile && !mayPlayFromLinkedExile && !mayPlayFromGraveyard) {
+        // A resolving effect that instructs "you may play that card" (Djinn of Wishes) can reach into
+        // the library itself, not only its top under a static grant. Its executor grants a per-card
+        // permission for the duration of the play; honoured only mid-resolution, so a stray library
+        // permission can never surface as a land play at priority.
+        val mayPlayFromLibraryByEffect = duringResolution && !inHand && !onTopOfLibrary &&
+            isInLibraryWithPlayPermission(state, action.playerId, action.cardId)
+        if (!inHand && !onTopOfLibrary && !mayPlayFromExile && !mayPlayFromLinkedExile && !mayPlayFromGraveyard &&
+            !mayPlayFromLibraryByEffect
+        ) {
             return "Land is not in your hand"
         }
 
@@ -148,6 +156,13 @@ class PlayLandHandler(
 
         return null
     }
+
+    /**
+     * Would [executeDuringResolution] accept [action] in [state]? Null when the land can be played
+     * mid-resolution, otherwise why not (not your turn, no land play left, a lock, …).
+     */
+    fun validateDuringResolution(state: GameState, action: PlayLand): String? =
+        validate(state, action, duringResolution = true)
 
     /** Play a land when a resolving effect explicitly instructs the player to do so. */
     fun executeDuringResolution(state: GameState, action: PlayLand): ExecutionResult {
@@ -370,10 +385,11 @@ class PlayLandHandler(
                 .unlinkFromAllLinkedExiles(newState, action.cardId)
         }
         // A generic per-card may-play permission (Tablet of Discovery's "you may play that card
-        // this turn") can also leave the card in the graveyard. Lands bypass the stack, so clean
-        // up the permission here too — otherwise it would silently re-authorize the card if it
-        // returned to the graveyard later this turn. No-op when no per-card permission exists.
-        if (fromZone == Zone.GRAVEYARD) {
+        // this turn") can also leave the card in the graveyard, and a resolving "you may play that
+        // card" (Djinn of Wishes) in the library. Lands bypass the stack, so clean up the permission
+        // here too — otherwise it would silently re-authorize the card if it returned to that zone
+        // later this turn. No-op when no per-card permission exists.
+        if (fromZone == Zone.GRAVEYARD || fromZone == Zone.LIBRARY) {
             newState = newState.removeMayPlayPermissionsForCard(action.cardId)
         }
 
@@ -666,6 +682,13 @@ class PlayLandHandler(
         if (library.isEmpty() || library.first() != cardId) return false
         return hasPlayFromTopOfLibrary(state, playerId, cardId)
     }
+
+    private fun isInLibraryWithPlayPermission(
+        state: GameState,
+        playerId: EntityId,
+        cardId: EntityId
+    ): Boolean = cardId in state.getLibrary(playerId) &&
+        state.activeMayPlayFor(cardId, playerId, conditionEvaluator, cardRegistry).any { !it.nonLandOnly }
 
     private fun isInExileWithPlayPermission(
         state: GameState,

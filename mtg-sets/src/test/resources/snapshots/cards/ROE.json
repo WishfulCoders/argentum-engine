@@ -1150,6 +1150,58 @@
     ]
 }
 
+// Goblin Arsonist
+{
+    "name": "Goblin Arsonist",
+    "manaCost": "{R}",
+    "typeLine": "Creature — Goblin Shaman",
+    "oracleText": "When this creature dies, you may have it deal 1 damage to any target.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Goblin Arsonist:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    }
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "147",
+        "artist": "Wayne Reynolds",
+        "flavorText": "With great power comes great risk of getting yourself killed.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/0/707d396d-950b-4ab8-9db2-f40c8f7db062.jpg?1783941975"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Goblin Tunneler
 {
     "name": "Goblin Tunneler",

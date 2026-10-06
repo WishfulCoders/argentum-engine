@@ -231,6 +231,31 @@ export function TournamentLobbySettings({
         </div>
       )}
 
+      {group === 'CARDS' && s.jumpstartEligible && (
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Jumpstart</span>
+          <div className={styles.variantGroup}>
+            <div className={styles.settingsButtons}>
+              <button aria-pressed={s.useJumpstart !== false}
+                onClick={() => updateLobbySettings({ useJumpstart: true })}
+                className={`${styles.settingsButton} ${s.useJumpstart !== false ? styles.settingsButtonActive : ''}`}>
+                Choose themed packs
+              </button>
+              <button aria-pressed={s.useJumpstart === false}
+                onClick={() => updateLobbySettings({ useJumpstart: false })}
+                className={`${styles.settingsButton} ${s.useJumpstart === false ? styles.settingsButtonActive : ''}`}>
+                Traditional {isDraft ? 'draft' : 'sealed'}
+              </button>
+            </div>
+            <p className={styles.variantCaption}>
+              {s.useJumpstart !== false
+                ? 'Choose two themed 20-card packs, lands included. Your 40-card deck is ready to play. Only fully implemented published packs are offered.'
+                : 'Open regular boosters and build your deck using the selected draft or sealed format.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Pool Play (cube Sealed only): no draft at all — everyone builds from the whole cube. */}
       {group === 'CARDS' && isCube && isSealed && (
         <div className={styles.settingsRow}>
@@ -301,7 +326,7 @@ export function TournamentLobbySettings({
 
       {/* Booster/pack counts. Grid Draft uses fixed counts, Premade generates none, and Pool Play
           deals no packs at all — so it gets no pack count rather than an inert one. */}
-      {group === 'CARDS' && !isPremade && !isGridDraft && !isPoolPlay && (
+      {group === 'CARDS' && !s.jumpstartActive && !isPremade && !isGridDraft && !isPoolPlay && (
         perSetCounts ? (
           <div className={styles.settingsRow} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
             <span className={styles.settingsLabel}>{boosterCountLabel(isWinston, countsPacks)}</span>
@@ -362,7 +387,7 @@ export function TournamentLobbySettings({
       )}
 
       {/* Draft timing and pick size. */}
-      {group === 'CARDS' && isAnyDraft && (
+      {group === 'CARDS' && !s.jumpstartActive && isAnyDraft && (
         <div className={styles.settingsRow}>
           <span className={styles.settingsLabel}>{isWinston ? 'Turn timer' : 'Pick timer'}</span>
           <select

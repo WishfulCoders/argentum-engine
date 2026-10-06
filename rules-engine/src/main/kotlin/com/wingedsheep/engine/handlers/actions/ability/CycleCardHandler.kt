@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.ManaAbilityLifeCost
 import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.CardCycledEvent
 import com.wingedsheep.engine.core.CardsDiscardedEvent
@@ -9,7 +10,6 @@ import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.EngineServices
@@ -217,7 +217,7 @@ class CycleCardHandler(
             if (action.paymentStrategy is PaymentStrategy.Explicit) {
                 // Tap specified sources explicitly
                 for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                    val (tappedState, tapEvents) = tapForMana(currentState, sourceId, action.playerId)
+                    val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(zones, currentState, sourceId, action.playerId)
                     currentState = tappedState
                     events.addAll(tapEvents)
                 }

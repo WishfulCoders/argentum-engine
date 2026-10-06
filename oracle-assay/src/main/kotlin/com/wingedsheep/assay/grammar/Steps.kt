@@ -15,6 +15,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Conditions as SdkConditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -682,6 +683,18 @@ object Steps {
             "each opponent loses life",
             script = {
                 CardScript(spellEffect = Effects.LoseLife(it, EffectTarget.PlayerRef(Player.EachOpponent)))
+            },
+            amount = ::lifeLostAmount,
+        ),
+        LifeChange(
+            // "Whenever an opponent draws a card, that player loses 1 life." — Scrawling Crawler.
+            // "That player" is the one the trigger named, `Player.TriggeringPlayer`, exactly as in
+            // [damageRecipients]' row; a run that also declares a target refuses it (see the
+            // `namesPlayer` guard in `merge`), because there it would name the target's owner.
+            "that player loses {n} life", "that player loses life equal to {amount}",
+            "that player loses life",
+            script = {
+                CardScript(spellEffect = Effects.LoseLife(it, EffectTarget.PlayerRef(Player.TriggeringPlayer)))
             },
             amount = ::lifeLostAmount,
         ),
@@ -2092,6 +2105,26 @@ object Steps {
         quantifiedPermanentSteps("tap {q}target {filter}", "tap") { Effects.Tap(it) },
         quantifiedPermanentSteps("untap {q}target {filter}", "untap") { Effects.Untap(it) },
         quantifiedPermanentSteps("tap or untap {q}target {filter}", "tap or untap", effect = ::tapOrUntap),
+        // "Target creature you control explores." / "… connives." — the keyword actions with the
+        // target as their subject, the cast-time twin of `SelfSteps`' "{self} explores" rows.
+        // Singular rows only: the verb agrees with one actor, and no card prints a plural.
+        quantifiedPermanentSteps(
+            "{q}target {filter} explores",
+            "explores",
+            quantifiers = Targets.quantifiers.filterNot { it.plural },
+        ) { Effects.Explore(it) },
+        // Connive also refuses the optional rows. An explore with no creature does nothing, but
+        // `ConniveEffectExecutor` still draws and discards when its subject does not resolve (the
+        // CR 701.50b last-known-information case), so "up to one target creature you control
+        // connives" chosen with no target would loot anyway. Unstable Experiment guards it with a
+        // `TargetMatchesFilter` gate; a bare `Connive` over an optional target is a different card.
+        quantifiedPermanentSteps(
+            "{q}target {filter} connives",
+            "connives",
+            quantifiers = Targets.quantifiers.filter {
+                !it.plural && !it.requirement(1, GameObjectFilter.Creature).optional
+            },
+        ) { Effects.Connive(it) },
         quantifiedPermanentSteps(
             singular = "return {q}target {filter} to its owner's hand",
             name = "return to hand",
@@ -2943,6 +2976,24 @@ object Steps {
         lifeByProperty(Primitives.targetPossessive, EffectTarget.ContextTarget(0), "the chosen object")
 
     /**
+     * "Destroy target creature. **Its controller loses 2 life.**" — Bitter Downfall, Despoil,
+     * Death Bomb, Clutch of the Undercity; "…loses life equal to …" by the same pair.
+     *
+     * [lifeChanges]' loss row with the third-person recipient the SDK spells
+     * `EffectTarget.TargetController`, the field [Tokens]' "its controller creates" rows set. Like
+     * those it is offered only where [targetLifeByProperty] is — a later clause, after the sentence
+     * that chose the permanent — and `renumbered` refuses it unless the line declared exactly one
+     * permanent target, so "Counter target spell. Its controller loses 3 life." (the spell's
+     * controller, no permanent to name) and a line with two targets decline rather than guess.
+     */
+    private val targetControllerLosesLife: List<Phrase<CardScript>> = countedStepPair(
+        "its controller loses {n} life", "its controller loses life equal to {amount}",
+        "its controller loses life",
+        script = { CardScript(spellEffect = Effects.LoseLife(it, EffectTarget.TargetController)) },
+        amount = ::lifeLostAmount,
+    )
+
+    /**
      * The filtered-trigger reading: the name still means the source, the pronoun means the object
      * the trigger matched. Both are offered, with disjoint surfaces, exactly as
      * [SelfSteps.triggering] offers its two.
@@ -3413,6 +3464,19 @@ object Steps {
         // round-trip as the triggering player, which on a spell is no one. The SDK spells the first
         // as the bound slot and the second as a third thing, so the run declines rather than choose.
         if (declared.isNotEmpty() && parts.any { Slots.namesPlayer(it, "TriggeringPlayer") }) return null
+        // **"Its controller" needs one permanent to be the controller of.** "Destroy target creature.
+        // Its controller creates a 3/3 green Beast creature token." reads the token's recipient as
+        // `EffectTarget.TargetController`, which, like `ContextTarget(0)`, names no slot and so is
+        // invisible to the pronoun guard above. After a player target there is no controller to
+        // name, after two targets the model cannot say which one's, and after a spell the cards
+        // that print it (An Offer You Can't Refuse) order the token before the counter so the
+        // spell's controller is still readable — a different model from the printed order. So the
+        // line must declare exactly one permanent target, and anything else declines.
+        if (parts.any { Slots.namesPlayer(it, "TargetController") }) {
+            val single = declared.singleOrNull() ?: return null
+            Targets.targetedFilter(single) ?: return null
+            if (single is TargetObject && (single.count != 1 || single.filter.zone != Zone.BATTLEFIELD)) return null
+        }
         var index = 0
         return parts.map { part ->
             if (part.targetRequirements.isEmpty()) {
@@ -3449,6 +3513,10 @@ object Steps {
         if (head != CardScript(spellEffect = headEffect, targetRequirements = head.targetRequirements)) return null
         if (last != CardScript(spellEffect = lastEffect, targetRequirements = last.targetRequirements)) return null
         if (head.targetRequirements.isNotEmpty() && last.targetRequirements.isNotEmpty()) return null
+        // [merge]'s "that player" guard, for the same reason: "Target opponent discards a card. If
+        // you control a Demon, that player loses 3 life." (Scroll of Griselbrand) names the target.
+        val declares = head.targetRequirements.isNotEmpty() || last.targetRequirements.isNotEmpty()
+        if (declares && listOf(head, last).any { Slots.namesPlayer(it, "TriggeringPlayer") }) return null
         val headEffects = (headEffect as? CompositeEffect)
             ?.takeIf { it == CompositeEffect(it.effects) }
             ?.effects
@@ -3471,11 +3539,17 @@ object Steps {
      * are built twice.
      *
      * @param tag suffixes the rule names so an ambiguity diagnostic can say which cascade it found.
+     * @param condition the condition vocabulary [conditionalClause] slots — [Conditions.condition]
+     *   everywhere but a spell's own text, which names itself; see [spellCascade].
+     * @param gateMayTarget whether a consequence under the given condition may declare targets of
+     *   its own; false only for kicker in a spell, see [spellCascade].
      */
     private class Cascade(
         anaphora: List<Phrase<CardScript>>,
         val tag: String,
         positionScoped: List<Phrase<CardScript>> = emptyList(),
+        private val condition: Phrase<Condition> = Conditions.condition,
+        private val gateMayTarget: (Condition) -> Boolean = { true },
     ) {
 
         /**
@@ -3504,7 +3578,7 @@ object Steps {
          */
         private val laterAtom: Phrase<CardScript> = oneOf(
             "a later spell effect$tag",
-            nonAnaphoric + Continuations.all + targetLifeByProperty + positionScoped,
+            nonAnaphoric + Continuations.all + targetLifeByProperty + targetControllerLosesLife + positionScoped,
         )
 
         private val gatedConsequence: Phrase<CardScript> = oneOf(
@@ -3691,16 +3765,19 @@ object Steps {
          */
         private val conditionalClause: Phrase<CardScript> =
             phrase("if {cond}, {inner}", name = "a conditional clause$tag") {
-                slot("cond", Conditions.condition)
+                slot("cond", condition)
                 slot("inner", gatedConsequence)
                 build { bindings ->
                     val condition = bindings.value<Condition>("cond")
-                    wrap(bindings.value("inner")) { Effects.If(condition, it) }
+                    val inner = bindings.value<CardScript>("inner")
+                    if (inner.targetRequirements.isNotEmpty() && !gateMayTarget(condition)) return@build null
+                    wrap(inner) { Effects.If(condition, it) }
                 }
                 match { script ->
                     val gated = script.spellEffect as? GatedEffect ?: return@match null
                     val gate = gated.gate as? Gate.WhenCondition ?: return@match null
                     val inner = CardScript(spellEffect = gated.then, targetRequirements = script.targetRequirements)
+                    if (inner.targetRequirements.isNotEmpty() && !gateMayTarget(gate.condition)) return@match null
                     if (wrap(inner) { Effects.If(gate.condition, it) } != script) return@match null
                     bind("cond" to gate.condition, "inner" to inner)
                 }
@@ -3732,7 +3809,7 @@ object Steps {
             // a member here, which is what lets "Draw a card. Put a +1/+1 counter on ~." and
             // "{T}: Add {C}. Put a point counter on ~." read at all.
             nonAnaphoric + mayClause + delayedClause + positionScoped +
-                Continuations.all + targetLifeByProperty + SelfSteps.named,
+                Continuations.all + targetLifeByProperty + targetControllerLosesLife + SelfSteps.named,
         )
 
         /** A whole line's clauses, joined. The shape and its KDoc are [clauseRun]. */
@@ -3840,6 +3917,31 @@ object Steps {
     private val sourceCascade =
         Cascade(SelfSteps.anaphoric + sourceLifeByProperty + sourceDamageByProperty, tag = "")
 
+    /**
+     * The cascade an instant's or sorcery's own text takes — [sourceCascade] with the condition
+     * vocabulary a spell speaks: "If **this spell** was kicked, …" where an ability says "if **it**
+     * was kicked". The difference is the subject's spelling and nothing else, which is why it is an
+     * instantiation and not a branch: both forms are `WasKicked`, so registering both in one cascade
+     * would be two printers for one model. See [Conditions.kicked].
+     *
+     * **A kicked consequence that declares a target declines here.** CR 702.33g: a target in the
+     * part of a spell that applies only if it was kicked is chosen only if it was kicked —
+     * otherwise "the spell is cast as if it did not have those targets". `Effects.If` over an
+     * ordinary requirement says the opposite: the target is chosen on every cast and the gate only
+     * decides whether it is used. The SDK spells the rule with `kickerTarget` / `kickerEffect`,
+     * a whole second branch of the spell, which no rule here builds yet; until one does, the line
+     * is a decline and not a reading. Probe is the card the differential surfaced it on. A
+     * permanent's "if it was kicked" needs no guard: there it is an intervening-if, and a trigger
+     * whose condition fails never goes on the stack to choose anything (CR 603.4).
+     */
+    private val spellCascade =
+        Cascade(
+            SelfSteps.anaphoric + sourceLifeByProperty + sourceDamageByProperty,
+            tag = " in a spell",
+            condition = Conditions.spellCondition,
+            gateMayTarget = { it != SdkConditions.WasKicked },
+        )
+
     /** The cascade a filtered trigger's effect takes; see [SelfSteps.triggering]. */
     private val triggeredCascade =
         Cascade(
@@ -3885,6 +3987,12 @@ object Steps {
         Cascade(SelfSteps.named, tag = " after attached damage", positionScoped = Tokens.damageClauses)
 
     val step: Phrase<CardScript> = sourceCascade.step
+
+    /**
+     * The same vocabulary for a spell's own effect line; [Grammar]'s spell line is the only caller.
+     * See [spellCascade].
+     */
+    val spellStep: Phrase<CardScript> = spellCascade.step
 
     /**
      * The same vocabulary for a damage trigger whose subject is the attached creature;

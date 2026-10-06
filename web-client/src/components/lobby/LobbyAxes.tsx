@@ -105,14 +105,14 @@ export function EventAxisStrip({ view, onRecreate }: AxisProps) {
 
 /* ── Bodies: always-visible sub-options and captions ──────────────────── */
 
-export function CardsAxisBody({ view, commands }: Omit<AxisProps, 'onRecreate'>) {
+export function CardsAxisBody({ view, commands, jumpstart = false }: Omit<AxisProps, 'onRecreate'> & { jumpstart?: boolean }) {
   const cards = view.axes.cards
 
   return (
     <>
       <div className={styles.settingsRow}>
         <span className={styles.settingsLabel} />
-        <div className={styles.variantCaption}>{CARDS_CAPTIONS[cards.kind]}</div>
+        <div className={styles.variantCaption}>{jumpstart ? 'Choose two themed packs and play their combined 40-card deck.' : CARDS_CAPTIONS[cards.kind]}</div>
       </div>
 
       {/* Cards → Sealed: which sealed shape. */}
@@ -134,7 +134,7 @@ export function CardsAxisBody({ view, commands }: Omit<AxisProps, 'onRecreate'>)
               />
             </div>
             <div className={styles.variantCaption}>
-              {cards.shape === 'COMMANDER'
+              {jumpstart ? 'Each pack contains 20 cards, including lands. No deckbuilding needed.' : cards.shape === 'COMMANDER'
                 ? 'Open Commander-shaped packs and build a 60-card deck around a commander from your pool. Up to 8 players, playing a 1v1 bracket or one pod at 40 life.'
                 : 'Open 6 boosters and build a 40-card deck.'}
             </div>

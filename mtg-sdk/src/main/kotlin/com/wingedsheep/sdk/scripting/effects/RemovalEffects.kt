@@ -370,7 +370,15 @@ data class MoveToZoneEffect(
      * counter on it" (Goliath Daydreamer). The single-target counterpart of
      * [MoveCollectionEffect.addCounterType]; skipped along with the move when [fromZone] gates it out.
      */
-    val addCounterType: CounterType? = null
+    val addCounterType: CounterType? = null,
+    /**
+     * When non-null, [addCounterType] is placed only if the card landed in [destination] and matches
+     * this filter there, read off *projected* state as it arrives — "if a creature enters this way, it
+     * enters with an additional +1/+1 counter on it" (Recommission). Projected, so a noncreature
+     * artifact that another effect makes a creature on the battlefield (March of the Machines) still
+     * gets the counter, as Recommission's ruling requires. Null places the counter unconditionally.
+     */
+    val addCounterIf: GameObjectFilter? = null
 ) : Effect {
     override val description: String = buildString {
         when {

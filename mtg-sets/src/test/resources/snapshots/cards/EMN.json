@@ -657,6 +657,69 @@
     ]
 }
 
+// Certain Death
+{
+    "name": "Certain Death",
+    "manaCost": "{5}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Destroy target creature. Its controller loses 2 life and you gain 2 life.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": "TargetController"
+                },
+                {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "84",
+        "artist": "Kev Walker",
+        "flavorText": "Some spirits cling to one person, feasting on the growing fear until a final moment of all-consuming terror.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/6/c67784b3-eb55-452e-b965-f63220b88896.jpg?1783937489",
+        "rulings": [
+            {
+                "date": "2016-07-13",
+                "text": "If the creature becomes an illegal target for Certain Death, no player gains or loses life. If it's a legal target but isn't destroyed, most likely due to having indestructible, its controller still loses 2 life and you gain 2 life."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Chittering Host
 {
     "name": "Chittering Host",
@@ -1688,6 +1751,60 @@
             {
                 "date": "2025-01-24",
                 "text": "All Wizards you control get +2/+1 and have flying, not just those created by Docent of Perfection or Final Iteration."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Drag Under
+{
+    "name": "Drag Under",
+    "manaCost": "{2}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Return target creature to its owner's hand.\nDraw a card.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Hand"
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "57",
+        "artist": "Tianhua X",
+        "flavorText": "Some took to their boats to escape the unfolding nightmare. The remains of their vessels now litter the shores of Nephalia.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/d/0dffa444-92ff-41d8-8b55-8896808bbfab.jpg?1783937500",
+        "rulings": [
+            {
+                "date": "2016-07-13",
+                "text": "If the targeted creature becomes an illegal target before Drag Under resolves, you won't draw a card."
             }
         ]
     },
@@ -3207,6 +3324,57 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Liliana's Elite
+{
+    "name": "Liliana's Elite",
+    "manaCost": "{2}{B}",
+    "typeLine": "Creature — Zombie",
+    "oracleText": "This creature gets +1/+1 for each creature card in your graveyard.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantDynamicStats",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "Self"
+                },
+                "powerBonus": {
+                    "type": "Count",
+                    "player": "You",
+                    "zone": "Graveyard",
+                    "filter": "creature"
+                },
+                "toughnessBonus": {
+                    "type": "Count",
+                    "player": "You",
+                    "zone": "Graveyard",
+                    "filter": "creature"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "94",
+        "rarity": "UNCOMMON",
+        "artist": "Deruchenko Alexander",
+        "flavorText": "\"You have to admit, Gideon—he has great form.\"\n—Liliana Vess",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/d/ad542aa9-5c0e-4962-b167-9071e66f9c03.jpg?1783937484",
+        "rulings": [
+            {
+                "date": "2016-07-13",
+                "text": "The ability applies only while Liliana's Elite is on the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

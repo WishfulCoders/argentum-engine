@@ -198,8 +198,11 @@ internal class EffectApplicator(
                     // The cross-zone flags on the modification are read by StateProjector to build
                     // ProjectedState.crossZoneSubtypeGrants; Layer 4 projection here only ever
                     // touches battlefield permanents, so they're irrelevant to this branch.
-                    val chosenType = state.getEntity(effect.sourceId)
-                        ?.chosenCreatureType()
+                    // "The chosen type" is whichever type the source chose as it entered: a
+                    // creature type (Adaptive Automaton) or a basic land type (Thran Portal, whose
+                    // new land type then carries its intrinsic mana ability, CR 305.6).
+                    val source = state.getEntity(effect.sourceId)
+                    val chosenType = source?.chosenCreatureType() ?: source?.chosenLandType()
                     if (chosenType != null) {
                         values.types.add(chosenType)
                         values.subtypes.add(chosenType)
@@ -407,6 +410,9 @@ internal class EffectApplicator(
                 is Modification.CanBlockAdditional -> {
                     values.additionalBlockCount += mod.count
                 }
+                is Modification.ManaAbilitiesCostLife -> {
+                    values.manaAbilityLifeTax += mod.amount
+                }
                 is Modification.CantBeBlockedExceptBy -> {
                     values.cantBeBlockedExceptByFilters.add(mod.blockerFilter)
                 }
@@ -432,6 +438,7 @@ internal class EffectApplicator(
                 }
                 is Modification.RemoveAllAbilities -> {
                     values.keywords.clear()
+                    values.manaAbilityLifeTax = 0
                     values.lostAllAbilities = true
                 }
                 is Modification.NoOp -> {

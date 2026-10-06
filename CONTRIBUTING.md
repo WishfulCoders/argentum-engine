@@ -25,9 +25,9 @@ If anything below is unclear, that's the fastest place to ask.
 ## TL;DR
 
 - **PRs are welcome** — no need to DM first.
-- **A small, well-tested PR is the easiest kind to merge.** One card,
-  faithful to its Scryfall text, with a scenario test and a quick manual
-  playthrough, is exactly what I'm looking for.
+- **A small, careful PR is the easiest kind to merge.** One card, faithful
+  to its Scryfall text, with a quick manual playthrough — and a scenario
+  test if it does anything new or subtle — is exactly what I'm looking for.
 - **Batching is fine when the cards reuse existing effects.** If every card
   in the PR is built from primitives already in `Effects.*` /
   `Patterns.*`, feel free to bundle several. But if a card introduces a
@@ -53,8 +53,13 @@ for, roughly in order:
    second most common reason PRs get sent back. Please read
    [`docs/architecture-principles.md`](docs/architecture-principles.md) before
    adding a new `Effect` type or executor.
-3. **Tested.** A scenario test that exercises the card on a real board is
-   worth more than a unit test of the executor in isolation. The
+3. **Tested where it matters.** A card built from primitives other cards
+   already exercise doesn't need its own test — the card snapshots cover it.
+   Write one when the card adds a new primitive, is the first to use an
+   existing one, or leans on a subtle rules interaction (last-known
+   information, replacement or layer ordering, linked exile). When you do,
+   a scenario test that exercises the card on a real board is worth more
+   than a unit test of the executor in isolation. The
    `generate-scenario` skill produces a starting point; a manual playthrough
    in the UI catches the rest.
 4. **UX is considered.** A correctly-implemented card with no visible trigger,
@@ -81,7 +86,7 @@ if the summary below moves too fast.
 
 1. **Implement** — run the `add-card` skill with the card name and set code.
    It handles Scryfall lookup, oracle errata, set registration, and a starter
-   scenario test.
+   scenario test when the card needs one.
 2. **Generate a scenario and play it manually** — run the `generate-scenario`
    skill with a brief description of what you want to test (the interesting
    interaction, not just the happy path), then start the server and client

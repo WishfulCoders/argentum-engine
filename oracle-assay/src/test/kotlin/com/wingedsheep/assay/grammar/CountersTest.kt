@@ -171,10 +171,11 @@ class CountersTest : StringSpec({
     // band reached four tail families rather than the one it was named for: 18 of the 70 printed
     // "enters with X … counters" lines name a kind other than +1/+1.
     //
-    // Six of those 18 still decline, and on nothing this band owns: `oil`, `study`, `echo`, `void`,
-    // `scream` and `isolation` are counter kinds `CounterType` does not name, so
-    // `Primitives.counterKind`'s gate rejects the word. That gate is the right place for it, so the
-    // fix is SDK vocabulary — one justified `CounterType` constant per kind — and not a wider regex.
+    // The rest decline on nothing this band owns: a kind `CounterType` does not name (`study`,
+    // `echo`, `void`, `scream`, `isolation`) is rejected by `Primitives.counterKind`'s gate. That gate
+    // is the right place for it, so the fix is SDK vocabulary — one justified `CounterType` constant
+    // per kind — and not a wider regex. `oil` is the proof: it read the moment `CounterType.OIL`
+    // joined `KNOWN` (#2501), with no grammar change at all.
     "the announced X reads every counter kind, not just the stat ones" {
         roundTrips("~ enters with X charge counters on it.")
         roundTrips("~ enters with X fire counters on it.")
@@ -182,7 +183,10 @@ class CountersTest : StringSpec({
         fragment("~ enters with X ice counters on it.").script.replacementEffects.single()
             .shouldBeInstanceOf<EntersWithDynamicCounters>()
             .counterType shouldBe CounterType.ICE
-        declines("~ enters with X oil counters on it.")
+        fragment("~ enters with X oil counters on it.").script.replacementEffects.single()
+            .shouldBeInstanceOf<EntersWithDynamicCounters>()
+            .counterType shouldBe CounterType.OIL
+        declines("~ enters with X study counters on it.")
     }
 
     // Stag Beetle's sentence, with the amount vocabulary this band does not own. What matters here is

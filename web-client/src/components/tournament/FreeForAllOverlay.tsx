@@ -110,7 +110,7 @@ export function FreeForAllOverlay({ ffaState }: { ffaState: FfaState }) {
             >
               {isPlayerReady ? '✓ Ready' : ffaState.gamesPlayed > 0 ? 'Play Again' : 'Ready'}
             </button>
-            {!isPlayerReady && deckBuildingState && (
+            {!lobbyState?.settings.jumpstartActive && !isPlayerReady && deckBuildingState && (
               <button onClick={unsubmitDeck} className={styles.editDeckButton}>
                 Edit Deck
               </button>

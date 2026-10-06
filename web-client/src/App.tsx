@@ -37,6 +37,7 @@ import { defendingPlayerOf } from './utils/combatTargets'
 // the whole app while a chunk streams in. `preloadSecondaryScreens` warms them once the browser
 // is idle, so opening a draft still feels instant.
 const importDeckBuilderOverlay = () => import('./components/sealed/DeckBuilderOverlay')
+const JumpstartOverlay = lazy(() => import('./components/draft/JumpstartOverlay').then((m) => ({ default: m.JumpstartOverlay })))
 const importDraftPickOverlay = () => import('./components/draft/DraftPickOverlay')
 const importWinstonDraftOverlay = () => import('./components/draft/WinstonDraftOverlay')
 const importGridDraftOverlay = () => import('./components/draft/GridDraftOverlay')
@@ -393,8 +394,9 @@ export default function App() {
   const showGame = !showLobby && !mulliganState
   // Show deck builder during building phase, or during submitted phase if no tournament yet
   // When tournament exists and deck is submitted, TournamentOverlay (in GameUI) handles UI
-  const showDeckBuilder = deckBuildingState?.phase === 'building' ||
-    (deckBuildingState?.phase === 'submitted' && !tournamentState && !ffaState)
+  const showJumpstart = lobbyState?.settings.jumpstartActive && lobbyState.state === 'DECK_BUILDING' && !tournamentState && !ffaState
+  const showDeckBuilder = !lobbyState?.settings.jumpstartActive && (deckBuildingState?.phase === 'building' ||
+    (deckBuildingState?.phase === 'submitted' && !tournamentState && !ffaState))
   const showDraftPick = lobbyState?.state === 'DRAFTING' && lobbyState?.settings.format === 'DRAFT'
   const showWinstonDraft = lobbyState?.state === 'DRAFTING' && lobbyState?.settings.format === 'WINSTON_DRAFT'
   const showGridDraft = lobbyState?.state === 'DRAFTING' && lobbyState?.settings.format === 'GRID_DRAFT'
@@ -448,6 +450,7 @@ export default function App() {
       {showDeckBuilder && <Suspense fallback={null}><DeckBuilderOverlay /></Suspense>}
 
       {/* Draft picking overlay */}
+      {showJumpstart && <Suspense fallback={null}><JumpstartOverlay /></Suspense>}
       {showDraftPick && <Suspense fallback={null}><DraftPickOverlay /></Suspense>}
 
       {/* Winston Draft overlay */}

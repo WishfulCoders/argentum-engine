@@ -5,7 +5,6 @@ import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.core.TurnFaceUp
 import com.wingedsheep.engine.core.TurnFaceUpEvent
 import com.wingedsheep.engine.handlers.CostHandler
@@ -379,7 +378,7 @@ class TurnFaceUpHandler(
 
                     is PaymentStrategy.Explicit -> {
                         for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                            val (tappedState, tapEvents) = tapForMana(currentState, sourceId, action.playerId)
+                            val (tappedState, tapEvents) = manaAbilitySideEffectExecutor.tapForManaPayingLife(currentState, sourceId, action.playerId)
                             currentState = tappedState
                             events.addAll(tapEvents)
                         }

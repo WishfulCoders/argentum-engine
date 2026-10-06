@@ -9,16 +9,17 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Sheoldred, the Apocalypse — Dominaria United #107
- * {2}{B}{B} · Legendary Creature — Phyrexian Praetor · 4/5 · Mythic
- *
+ * Sheoldred, the Apocalypse
+ * {2}{B}{B}
+ * Legendary Creature — Phyrexian Praetor
+ * 4/5
  * Deathtouch
  * Whenever you draw a card, you gain 2 life.
  * Whenever an opponent draws a card, they lose 2 life.
  *
- * Two per-card draw triggers: `Triggers.you.draws()` fires once per card drawn (a "draw two"
- * gains 4), and `Triggers.anOpponent.draws()` binds the drawing opponent as the triggering player
- * (the Razorkin Needlehead shape), who loses the life — life loss, not damage.
+ * Both draw triggers fire once per individual card drawn (CR 121.2), so "draw two" gains or
+ * drains 4 across two separate stack instances. The drain hits the player who drew via
+ * `Player.TriggeringPlayer`, so in multiplayer only the drawing opponent loses life.
  */
 val SheoldredTheApocalypse = card("Sheoldred, the Apocalypse") {
     manaCost = "{2}{B}{B}"
@@ -50,11 +51,9 @@ val SheoldredTheApocalypse = card("Sheoldred, the Apocalypse") {
         artist = "Chris Rahn"
         flavorText = "\"Gix failed. I shall not.\""
         imageUri = "https://cards.scryfall.io/normal/front/d/6/d67be074-cdd4-41d9-ac89-0a0456c4e4b2.jpg?1783921327"
-
         ruling(
             "2022-09-09",
-            "If you and an opponent draw a card at the same time, you choose the order that the triggered " +
-                "abilities will resolve in."
+            "If you and an opponent draw a card at the same time, you choose the order that the triggered abilities will resolve in."
         )
     }
 }

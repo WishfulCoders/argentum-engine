@@ -1089,6 +1089,13 @@ Each step has a `hasPriority` property. Most steps grant priority; UNTAP and CLE
 engine auto-advances past them). Steps that don't grant priority execute their actions (untap all
 permanents, discard to hand size) and immediately advance to the next step.
 
+**Optional triggered effects.** A "you may" gate stays on the triggered stack object. Targets
+are announced before it enters the stack, even when a remembered answer will decline the effect.
+The existing gated executor asks consent (or applies the player's remembered answer) only when
+that instance resolves, after target validation. Simultaneous identical optional triggers retain
+separate targets, priority windows and resolution choices; no put-on-stack consent batch removes
+those choices. The server/client use the ordinary target decision followed by a resolution yes/no.
+
 **Priority and the "both players pass" rule.** `GameState` tracks priority with two fields:
 
 ```kotlin
@@ -1251,8 +1258,16 @@ or client contract is added. Standalone
 solvers and intermediate-ability affordability retain the independent fixed-output proof. Face-down
 boards retain a uniform source-proof boundary because legacy enumeration inspects hidden printed
 statics; complete floating payments still work. Hidden-zone/distributed-counter cost choices and
-other unsupported mana-ability execution shapes remain explicit uncertainty. Atomic manual-overactivation
-recovery and closing those proof boundaries remain required before a printed card uses the foundation.
+other unsupported mana-ability execution shapes remain explicit uncertainty. Announced fixed-price
+forced-cast payment windows now validate each accepted manual activation/answer prefix at the public
+action boundary. The planner finishes paused production above the payment-restoration frame before
+proving future contribution coverage; speculative future work is discarded. Impossible or uncertain
+prefixes reject with the original input state, costs, question and no events. This lets the player
+retry a failed source or color without a serialized checkpoint or reverse events. Payment-menu
+confirmation reuses the exact cast allocator instead of legacy menu floating. Unscoped payments and
+scopes without a forced cast are unaffected. Captured X-color/Phyrexian choices, reachable mandatory
+mana windows, other casting-cost resources and the remaining proof boundaries still need completion before a printed card uses
+the foundation.
 
 **Tier 3: Cost Execution (Engine).** The `CostHandler` physically pays costs — tapping permanents,
 deducting from the mana pool, sacrificing creatures, discarding cards, paying life. The `ManaPool`
@@ -1386,6 +1401,28 @@ data class CopyOfComponent(
    keywords, and abilities as its base state.
 
 Triggered abilities capture their complete SDK rules text when detected. Target and distribution continuations carry that snapshot onto the stack; `EffectContext.forTriggeredAbility` keeps it through resolution choices. `CopyExceptions.retainResolvingTriggeredAbility` appends the snapshot to the copy’s intrinsic triggered abilities, so later copies inherit it and repeated self-copies add separate instances. Source changes cannot rewrite an ability already on the stack.
+
+Face-down sources use a synthetic `CardComponent` containing only their public copiable values,
+including disguise/cloak ward costs. A copied ward cost travels with the card component, so a
+face-up copy has ward without inheriting face-down status or hidden rules text. Token copies of
+face-down double-faced permanents store public snapshots of both faces on `DoubleFacedComponent`;
+transforming those tokens reads the snapshots rather than the hidden card definitions.
+
+Flip identities store the alternative copiable half on `CardComponent.flipSide`. Copy exceptions
+modify both halves. `FlippedComponent` tracks independent status and the current upright snapshot;
+`withCopyIdentity` selects the active half and refreshes its intrinsic/static/replacement abilities.
+`CopyHistoryComponent` stores ordered identities under temporary copies, separate from the printed
+identity used on zone exit. Expiry removes matching layers even when a newer permanent copy masks them,
+then reselects the exposed identity using current status. Inline numeric/static token text travels
+with the identity rather than only its derived runtime components. Private departure snapshots stay
+separate from public face-down copy-source values. Saved identities missing flip halves recover them
+from their registered definition at identity installation. Serialized snapshots remain source-independent.
+
+Spell copies apply the same `CopyExceptions` to their stored characteristics before placement events.
+Target-choice continuations carry the exceptions, and legal targets are evaluated against a transient
+prospective copy with its own characteristics and controller. This preview is never pushed to the
+stack or published. Later copies inherit the resulting characteristics without inheriting ordinary
+color-changing effects on the original spell. Numeric keyword components travel with copied text.
 
 **Why copy is resolved before entry, not as a continuous effect layer.**
 

@@ -552,6 +552,9 @@ sealed interface ServerMessage {
      */
     @Serializable
     data class LobbySettings(
+        val useJumpstart: Boolean = true,
+        val jumpstartEligible: Boolean = false,
+        val jumpstartActive: Boolean = false,
         val setCodes: List<String>,
         val setNames: List<String>,
         val availableSets: List<AvailableSet> = emptyList(),  // For UI dropdown
@@ -633,12 +636,23 @@ sealed interface ServerMessage {
     @Serializable
     @SerialName("lobbyUpdate")
     data class LobbyUpdate(
+        val jumpstart: JumpstartState? = null,
         val lobbyId: String,
         val state: String,
         val players: List<LobbyPlayerInfo>,
         val settings: LobbySettings,
         val isHost: Boolean
     ) : ServerMessage
+
+    @Serializable
+    data class JumpstartOffer(val id: String, val theme: String, val cards: List<SealedCardInfo>)
+
+    @Serializable
+    data class JumpstartState(
+        val pickNumber: Int,
+        val selectedPacks: List<String>,
+        val offers: List<JumpstartOffer>,
+    )
 
     /**
      * Lobby was stopped/disbanded by the host.

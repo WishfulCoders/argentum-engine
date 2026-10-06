@@ -24,10 +24,10 @@ import {
 import { HelpTip } from '../help/HelpTip'
 import styles from '../ui/GameUI.module.css'
 
-export function LobbyAxisSummary({ axes }: { axes: AxisSelection }) {
+export function LobbyAxisSummary({ axes, jumpstart = false }: { axes: AxisSelection; jumpstart?: boolean }) {
   return (
     <div className={styles.axisSummary} data-testid="lobby-axis-summary">
-      <AxisChip name="Cards" value={cardsLabel(axes.cards)} topicId={cardsTopicId(axes.cards)} />
+      <AxisChip name="Cards" value={jumpstart ? 'Jumpstart' : cardsLabel(axes.cards)} topicId={cardsTopicId(axes.cards)} />
       {axes.rules === 'COMMANDER' && (
         <AxisChip name="Rules" value={rulesLabel(axes.rules)} topicId={rulesTopicId(axes.rules)} />
       )}

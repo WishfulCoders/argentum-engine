@@ -136,6 +136,9 @@ class ManaAbilityEnumerator(
             }
             val manaAbilities = (ownManaAbilities + grantedManaAbilities + staticManaAbilities).let { all ->
                 if (entityId in borrowed) all.filter(BorrowedManaAbilities::isTapManaAbility) else all
+            }.let { all ->
+                // Thran Portal: every mana ability of this permanent costs additional life.
+                com.wingedsheep.engine.mechanics.mana.ManaAbilityLifeCost.withTax(state, entityId, all)
             }
 
             // Apply text-changing effects to mana ability costs

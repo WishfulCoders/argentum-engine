@@ -2262,6 +2262,60 @@
     ]
 }
 
+// Make Disappear
+{
+    "name": "Make Disappear",
+    "manaCost": "{1}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Casualty 1 (As you cast this spell, you may sacrifice a creature with power 1 or greater. When you do, copy this spell and you may choose a new target for the copy.)\nCounter target spell unless its controller pays {2}.",
+    "keywords": [
+        "CASUALTY"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Casualty",
+            "threshold": 1
+        }
+    ],
+    "script": {
+        "spellEffect": {
+            "type": "Counter",
+            "condition": {
+                "type": "CounterCondition.UnlessPaysMana",
+                "cost": "{2}"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "49",
+        "artist": "Inka Schulz",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/f/3f2d6a21-ea77-484b-9e3a-1bd49806f907.jpg?1783923144",
+        "rulings": [
+            {
+                "date": "2022-04-29",
+                "text": "If you pay the casualty cost of a spell, the copy will resolve before the original spell."
+            },
+            {
+                "date": "2022-04-29",
+                "text": "The copy of the spell is created on the stack, so it's not \"cast.\" Abilities that trigger when a player casts a spell won't trigger."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Midnight Assassin
 {
     "name": "Midnight Assassin",

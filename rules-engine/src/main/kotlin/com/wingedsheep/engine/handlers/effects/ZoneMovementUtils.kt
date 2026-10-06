@@ -29,6 +29,7 @@ import com.wingedsheep.engine.state.components.battlefield.WasDealtDamageThisTur
 import com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.ExileOnLeaveBattlefieldComponent
 import com.wingedsheep.engine.state.components.battlefield.SagaComponent
+import com.wingedsheep.engine.state.components.battlefield.numberChoice
 import com.wingedsheep.engine.state.components.battlefield.ReplacementEffectSourceComponent
 import com.wingedsheep.engine.state.components.battlefield.CastFromHandComponent
 import com.wingedsheep.engine.state.components.battlefield.WarpedComponent
@@ -126,8 +127,13 @@ object ZoneMovementUtils {
     )
 
     /**
-     * Apply Saga entry setup to an entity entering the battlefield (Rule 714.3a).
-     * Adds SagaComponent with chapter 1 marked as triggered, and adds an initial lore counter.
+     * Apply Saga entry setup to an entity entering the battlefield (CR 714.3a / 714.3b): adds the
+     * [SagaComponent] with the entry chapters marked as triggered and the entry lore counter(s).
+     *
+     * Idempotent per battlefield stint — a Saga that already carries a [SagaComponent] (stripped
+     * whenever it leaves the battlefield) is left alone. That lets every token-placement path defer
+     * this to the as-enters choice resumer when it pauses for a choice (a read-ahead Saga's lore
+     * count is that choice) while entries that placed the counters before pausing aren't doubled.
      *
      * @return Pair of (updated state, list of events to emit) — empty events if not a Saga
      */
@@ -138,14 +144,31 @@ object ZoneMovementUtils {
         val container = state.getEntity(entityId) ?: return state to emptyList()
         val cardComponent = container.get<CardComponent>() ?: return state to emptyList()
         if (!cardComponent.typeLine.isSaga) return state to emptyList()
+        if (container.has<SagaComponent>()) return state to emptyList()
 
         val current = container.get<CountersComponent>() ?: CountersComponent()
-        val sagaComponent = SagaComponent(triggeredChapters = setOf(1))
+        val loreCount = sagaEntryLoreCount(container)
+        val sagaComponent = SagaComponent(triggeredChapters = (1..loreCount).toSet())
         val newState = state.updateEntity(entityId) { c ->
             c.with(sagaComponent)
-                .with(current.withAdded(CounterType.LORE, 1))
+                .with(current.withAdded(CounterType.LORE, loreCount))
         }.let { DamageUtils.markCounterOnControlledPermanent(it, entityId, CounterType.LORE, entering = true) }
-        return newState to listOf(CountersAddedEvent(entityId, CounterType.LORE, 1, cardComponent.name))
+        return newState to listOf(CountersAddedEvent(entityId, CounterType.LORE, loreCount, cardComponent.name))
+    }
+
+    /**
+     * How many lore counters a Saga enters with: one (CR 714.3a), or — for a Saga with read ahead —
+     * the number chosen as it entered (CR 714.3b), recorded by its `EntersWithChoice(NUMBER)` in the
+     * [com.wingedsheep.sdk.scripting.ChoiceSlot.CHOSEN_NUMBER] slot before this runs — on every entry
+     * route: a cast, an effect's put-onto-the-battlefield (asked before entry), or a token or copy
+     * (asked on arrival, with the counters placed by the choice resumer). A read-ahead Saga whose
+     * choice couldn't be recorded falls back to one.
+     */
+    fun sagaEntryLoreCount(container: ComponentContainer): Int {
+        val cardComponent = container.get<CardComponent>() ?: return 1
+        if (com.wingedsheep.sdk.core.Keyword.READ_AHEAD !in cardComponent.baseKeywords) return 1
+        return container.numberChoice(com.wingedsheep.sdk.scripting.ChoiceSlot.CHOSEN_NUMBER)
+            ?.coerceAtLeast(1) ?: 1
     }
 
     /**
@@ -458,6 +481,7 @@ object ZoneMovementUtils {
             // (CR 400.7 / 707.2). ZoneTransitionService restores the printed
             // CardComponent before this strip runs.
             .without<com.wingedsheep.engine.state.components.identity.CopyOfComponent>()
+            .without<com.wingedsheep.engine.state.components.identity.CopyHistoryComponent>()
             // …and so do the markers that would have reverted a temporary copy later: the card is
             // already its printed self, and a new object must not inherit a stale revert.
             .without<com.wingedsheep.engine.state.components.identity.RevertCopyAtEndOfTurnComponent>()
@@ -473,6 +497,7 @@ object ZoneMovementUtils {
             .without<TappedComponent>()
             .without<SummoningSicknessComponent>()
             .without<CastFromHandComponent>()
+            .without<com.wingedsheep.engine.state.components.battlefield.WasCastComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.CastFromGraveyardComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.CastFromLibraryComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.EnteredFromGraveyardComponent>()

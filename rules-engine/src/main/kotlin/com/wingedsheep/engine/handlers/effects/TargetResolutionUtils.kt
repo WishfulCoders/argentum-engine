@@ -477,7 +477,11 @@ object TargetResolutionUtils {
 
     private fun controllerOf(state: GameState, entityId: EntityId): EntityId? {
         val entity = state.getEntity(entityId) ?: return null
+        // A targeted activated/triggered ability on the stack is a bare container with no
+        // ControllerComponent: "its controller" (Ertai Resurrected) is the ability's controller.
         return entity.get<SpellOnStackComponent>()?.casterId
+            ?: entity.get<ActivatedAbilityOnStackComponent>()?.controllerId
+            ?: entity.get<TriggeredAbilityOnStackComponent>()?.controllerId
             ?: state.projectedState.getController(entityId)
             ?: entity.get<ControllerComponent>()?.playerId
             ?: entity.get<LastKnownPermanentComponent>()?.snapshot?.controllerId

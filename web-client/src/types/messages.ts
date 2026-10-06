@@ -341,6 +341,8 @@ export interface DecisionContext {
    * `gameState.cards` — the server sends only the id, so masking still applies.
    */
   readonly subjectEntityId?: EntityId
+  /** Validated resolution targets; render their identities from the masked state. */
+  readonly targetIds?: readonly EntityId[]
 }
 
 /**
@@ -453,6 +455,7 @@ export interface ChooseTargetsDecision extends PendingDecisionBase {
 }
 
 export interface TargetRequirementInfo {
+  readonly emptyChoiceLabel?: string | null
   readonly index: number
   readonly minTargets: number
   readonly maxTargets: number
@@ -1536,6 +1539,9 @@ export interface AvailableSet {
 }
 
 export interface LobbySettings {
+  readonly useJumpstart?: boolean
+  readonly jumpstartEligible?: boolean
+  readonly jumpstartActive?: boolean
   readonly setCodes: readonly string[]
   readonly setNames: readonly string[]
   readonly availableSets: readonly AvailableSet[]
@@ -1632,7 +1638,14 @@ export interface LobbyCreatedMessage {
   readonly lobbyId: string
 }
 
+export interface JumpstartState {
+  readonly pickNumber: number
+  readonly selectedPacks: readonly string[]
+  readonly offers: readonly { id: string; theme: string; cards: readonly SealedCardInfo[] }[]
+}
+
 export interface LobbyUpdateMessage {
+  readonly jumpstart?: JumpstartState | null
   readonly type: 'lobbyUpdate'
   readonly lobbyId: string
   readonly state: string
@@ -2121,6 +2134,7 @@ export interface TournamentPlayerReconnectedMessage {
  * Matches backend ClientMessage.kt
  */
 export type ClientMessage =
+  | { readonly type: 'pickJumpstartPack'; readonly packId: string; readonly pickNumber: number }
   | ConnectMessage
   | CreateGameMessage
   | JoinGameMessage
@@ -2592,6 +2606,7 @@ export interface UnsubmitDeckMessage {
 }
 
 export interface UpdateLobbySettingsMessage {
+  readonly useJumpstart?: boolean
   readonly type: 'updateLobbySettings'
   readonly setCodes?: readonly string[]
   readonly format?: TournamentFormat
@@ -2876,6 +2891,7 @@ export function createUnsubmitDeckMessage(): UnsubmitDeckMessage {
 
 export function createUpdateLobbySettingsMessage(
   settings: {
+    useJumpstart?: boolean
     setCodes?: readonly string[]
     format?: TournamentFormat
     boosterCount?: number

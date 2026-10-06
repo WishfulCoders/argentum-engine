@@ -246,7 +246,7 @@ class StateProjector {
             .map { effect -> applyControllerGate(effect, projectedValues) }
             .map { effect ->
                 if (effect.affectsFilter != null && filterResolver.isControllerDependentFilter(effect.affectsFilter)) {
-                    effect.copy(affectedEntities = filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues))
+                    effect.copy(affectedEntities = filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues, effect.controllerId))
                 } else {
                     effect
                 }
@@ -278,7 +278,7 @@ class StateProjector {
         }
         for (effect in creatureDependentTypeEffects) {
             val resolved = effect.affectsFilter
-                ?.let { filterResolver.resolveAffectedEntities(state, effect.sourceId, it, projectedValues) }
+                ?.let { filterResolver.resolveAffectedEntities(state, effect.sourceId, it, projectedValues, effect.controllerId) }
                 ?: effect.affectedEntities
             effectApplicator.applyEffect(
                 effect.copy(affectedEntities = lockAffected(effect, resolved)),
@@ -307,7 +307,7 @@ class StateProjector {
         val postTypeEffects = nonControlNonPTEffects.filter { it.layer != Layer.TEXT && it.layer != Layer.TYPE }
             .map { effect ->
                 val resolved = if (effect.affectsFilter != null && filterResolver.isCreatureDependentFilter(effect.affectsFilter)) {
-                    filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues)
+                    filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues, effect.controllerId)
                 } else {
                     effect.affectedEntities
                 }
@@ -398,7 +398,7 @@ class StateProjector {
                 (filterResolver.isSubtypeDependentFilter(effect.affectsFilter) ||
                     filterResolver.isControllerDependentFilter(effect.affectsFilter) ||
                     filterResolver.isCreatureDependentFilter(effect.affectsFilter))) {
-                filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues)
+                filterResolver.resolveAffectedEntities(state, effect.sourceId, effect.affectsFilter, projectedValues, effect.controllerId)
             } else {
                 effect.affectedEntities
             }
@@ -449,7 +449,7 @@ class StateProjector {
                 } == true) continue
             val effect = applyControllerGate(rawEffect, projectedValues)
             val affected = effect.affectsFilter?.let {
-                filterResolver.resolveAffectedEntities(state, effect.sourceId, it, projectedValues)
+                filterResolver.resolveAffectedEntities(state, effect.sourceId, it, projectedValues, effect.controllerId)
             } ?: effect.affectedEntities
             effectApplicator.applyEffect(effect.copy(affectedEntities = affected), state, projectedValues)
         }
@@ -516,6 +516,7 @@ class StateProjector {
                 cantBeBlockedExceptByFilters = v.cantBeBlockedExceptByFilters.toList(),
                 canOnlyBlockCreaturesWithFilters = v.canOnlyBlockCreaturesWithFilters.toList(),
                 additionalBlockCount = v.additionalBlockCount,
+                manaAbilityLifeTax = v.manaAbilityLifeTax,
                 lostAllAbilities = v.lostAllAbilities,
                 basicLandTypesSetByEffect = v.basicLandTypesSetByEffect
             )
@@ -855,12 +856,15 @@ class StateProjector {
             }
 
             var validAffectedEntities = if (floating.effect.dynamicGroupFilter != null) {
-                // Rule 611.2c: re-evaluate filter dynamically to include entities that entered later
+                // Rule 611.2c: re-evaluate filter dynamically to include entities that entered later.
+                // "You" is the effect's controller, fixed at resolution — the source may have left
+                // the battlefield (and with it its controller) or changed hands since.
                 filterResolver.resolveAffectedEntities(
                     state,
                     floating.sourceId ?: EntityId("floating-${floating.id}"),
                     AffectsFilter.Generic(floating.effect.dynamicGroupFilter),
-                    projectedValues
+                    projectedValues,
+                    youId = floating.controllerId
                 )
             } else {
                 // Floating effects normally target battlefield permanents, but a color-change
@@ -910,13 +914,19 @@ class StateProjector {
             // recurse). Include the effect now; the fix-up reverts control for any affected
             // entity whose final projected power exceeds the source's final projected power.
 
-            if (validAffectedEntities.isNotEmpty()) {
+            // A dynamic group stays in even while it matches nothing: it carries its filter as
+            // [ContinuousEffect.affectsFilter], so the post-Layer-2 and post-Layer-4 re-resolves pick
+            // up a creature that becomes yours or becomes a creature this frame (a Threaten after
+            // the effect resolved) — the pre-layer set above reads base control and types only.
+            val dynamicGroup = floating.effect.dynamicGroupFilter
+            if (validAffectedEntities.isNotEmpty() || dynamicGroup != null) {
                 effects.add(
                     ContinuousEffect(
                         sourceId = floating.sourceId ?: EntityId("floating-${floating.id}"),
                         timestamp = floating.timestamp,
                         modification = floating.effect.modification.toModification(),
                         affectedEntities = validAffectedEntities,
+                        affectsFilter = dynamicGroup?.let { AffectsFilter.Generic(it) },
                         // A conditional clause inside a durational grant ("becomes a creature with
                         // 'During your turn, this creature has first strike'"). Re-asked on every
                         // projection by EffectApplicator against the *source's* projected controller,

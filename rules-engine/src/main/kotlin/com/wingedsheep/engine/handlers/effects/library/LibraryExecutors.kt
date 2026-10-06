@@ -61,7 +61,7 @@ class LibraryExecutors(
             cardRegistry = cardRegistry,
             targetFinder = targetFinder,
         ),
-        CastAnyNumberFromCollectionWithoutPayingCostExecutor(),
+        CastAnyNumberFromCollectionWithoutPayingCostExecutor(playLandHandlerProvider = playLandHandler),
         GatherSubtypesExecutor(),
         CaptureControllersExecutor(),
         ChooseCreatureTypePipelineExecutor(),

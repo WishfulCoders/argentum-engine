@@ -176,7 +176,16 @@ class MoveToZoneEffectExecutor(
         // "Exile it with a stash counter on it" — one counter of the named type on the card once it
         // has landed. Mirrors MoveCollectionEffect.addCounterType; no CountersAddedEvent is emitted
         // because the card isn't a permanent in its new zone, so nothing can trigger off it.
-        effect.addCounterType?.let { counterType ->
+        // `addCounterIf` narrows that to "if a creature enters this way" (Recommission): the card must
+        // have landed where it was sent and match the filter in *projected* state there, so an
+        // effect that makes it a creature on arrival (March of the Machines) counts.
+        val counterAllowed = effect.addCounterIf?.let { filter ->
+            actualDestZone == effect.destination && zones.predicateEvaluator.matches(
+                resultState, resultState.projectedState, targetId, filter,
+                com.wingedsheep.engine.handlers.PredicateContext(controllerId = controllerId, sourceId = context.sourceId)
+            )
+        } ?: true
+        if (counterAllowed) effect.addCounterType?.let { counterType ->
             resultState = resultState.updateEntity(targetId) { container ->
                 val existing = container.get<CountersComponent>() ?: CountersComponent()
                 container.with(existing.withAdded(counterType, 1))

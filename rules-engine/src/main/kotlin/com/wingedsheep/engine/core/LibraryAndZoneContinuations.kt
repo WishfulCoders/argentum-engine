@@ -481,5 +481,7 @@ data class CastAnyNumberFromCollectionContinuation(
      * `null` when uncapped. The resumer re-enters the loop with the cast card's mana value spent.
      */
     val maxTotalManaValue: Int? = null,
+    /** "Play lands and cast spells from among them": a chosen land is played, not cast. */
+    val playLands: Boolean = false,
 ) : AnswerContinuation
 

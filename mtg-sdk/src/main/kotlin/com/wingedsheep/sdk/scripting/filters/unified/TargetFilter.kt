@@ -321,8 +321,22 @@ data class TargetFilter(
             zone = Zone.STACK
         )
 
-        /** Target any spell or ability on the stack (spells and activated/triggered abilities) */
-        val SpellOrAbilityOnStack = TargetFilter(GameObjectFilter.Companion.Any, zone = Zone.STACK)
+        /**
+         * Target any spell or ability on the stack (spells and activated/triggered abilities).
+         *
+         * The ability branch is spelled out as an explicit [CardPredicate.IsActivatedOrTriggeredAbility]
+         * sub-filter because the stack-targeting seam offers an ability only when the filter *names*
+         * one (CR 112.1 vs 113.3b/c) — a bare `Any` here reads as "target spell".
+         */
+        val SpellOrAbilityOnStack = TargetFilter(
+            GameObjectFilter(
+                anyOf = listOf(
+                    GameObjectFilter.Companion.Any,
+                    GameObjectFilter(cardPredicates = listOf(CardPredicate.IsActivatedOrTriggeredAbility))
+                )
+            ),
+            zone = Zone.STACK
+        )
 
         /**
          * Target an instant spell, sorcery spell, activated ability, or triggered ability on the

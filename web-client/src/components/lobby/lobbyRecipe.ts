@@ -68,6 +68,7 @@ export const RECIPE_VERSION = 1
 
 /** The host-settable lobby fields worth reproducing. Sparse: absent means "take the default". */
 export interface RecipeSettings {
+  readonly useJumpstart?: boolean
   readonly setCodes?: readonly string[]
   readonly boosterCount?: number
   readonly boosterDistribution?: Readonly<Record<string, number>>
@@ -217,6 +218,7 @@ export function recipeFromLobby(
   const settings: RecipeSettings = s
     ? {
         setCodes: [...s.setCodes],
+        useJumpstart: s.useJumpstart ?? true,
         boosterCount: s.boosterCount,
         boosterDistribution: { ...s.boosterDistribution },
         chaosBoosters: s.chaosBoosters,
@@ -414,6 +416,7 @@ function trimSettings(
   if (raw.picksPerRound !== undefined) out.picksPerRound = clampInt(raw.picksPerRound, 1, 2, 1)
   if (raw.gamesPerMatch !== undefined) out.gamesPerMatch = clampInt(raw.gamesPerMatch, 1, 5, 1)
   if (raw.deckSizeMin !== undefined) out.deckSizeMin = clampInt(raw.deckSizeMin, 40, 100, 60)
+  if (typeof raw.useJumpstart === 'boolean') out.useJumpstart = raw.useJumpstart
   if (typeof raw.chaosBoosters === 'boolean') out.chaosBoosters = raw.chaosBoosters
   if (raw.includedSetProducts && typeof raw.includedSetProducts === 'object') {
     out.includedSetProducts = Object.fromEntries(

@@ -10,7 +10,6 @@ import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.LoyaltyChangedEvent
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.handlers.CostHandler
 import com.wingedsheep.engine.handlers.CostPaymentChoices
 import com.wingedsheep.engine.handlers.costs.GraveyardTotalExileResolver
@@ -418,7 +417,7 @@ internal class ActivationCostPayer(
                         currentState, action.playerId, remainingCost, manaXValue, excludeSources = excluded, xManaRestriction = ability.xManaRestriction
                     ) ?: return ManaTapOutcome.Failed("Selected mana sources cannot pay this ability's cost")
                     for (source in solution.sources) {
-                        val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, action.playerId)
+                        val (tappedState, tapEvents) = autoTapper.tapChosenSource(currentState, source.entityId, action.playerId, solution.manaProduced[source.entityId])
                         currentState = tappedState
                         events.addAll(tapEvents)
                     }

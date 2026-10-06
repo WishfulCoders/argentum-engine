@@ -11248,27 +11248,39 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "GatherCards",
-                            "source": {
-                                "type": "BattlefieldMatching",
-                                "filter": "artifact|creature mv<=2",
-                                "excludeSelf": true
-                            },
-                            "storeAs": "linked_exile"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "linked_exile",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Exile"
-                            },
-                            "linkToSource": true
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "SourceInZone",
+                            "zones": [
+                                "Battlefield"
+                            ]
                         }
-                    ]
+                    },
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "artifact|creature mv<=2",
+                                    "excludeSelf": true
+                                },
+                                "storeAs": "linked_exile"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "linked_exile",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Exile"
+                                },
+                                "linkToSource": true
+                            }
+                        ]
+                    }
                 }
             },
             {

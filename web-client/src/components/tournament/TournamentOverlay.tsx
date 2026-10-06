@@ -230,7 +230,7 @@ export function TournamentOverlay({
               >
                 {isPlayerReady ? '✓ Ready' : readyLabel}
               </button>
-              {tournamentState.currentRound === 0 && !isPlayerReady && (
+              {!lobbyState?.settings.jumpstartActive && tournamentState.currentRound === 0 && !isPlayerReady && (
                 <button onClick={unsubmitDeck} className={styles.editDeckButton}>
                   Edit Deck
                 </button>

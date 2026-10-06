@@ -47,4 +47,24 @@ class PlayFromCollectionWithoutPayingCostExecutor(
             CastFromCollectionWithoutPayingCostExecutor.revokeFreeCast(state, cardId, permissionId)
         )
     }
+
+    companion object {
+        /**
+         * Could [playerId] play land card [cardId] right now through this executor — their turn, a
+         * land play left, no lock? Asked against the same temporarily-granted permission the play
+         * itself uses, and the granted state is thrown away, so the question has no side effects.
+         */
+        fun canPlayLandNow(
+            state: GameState,
+            playLandHandler: PlayLandHandler,
+            playerId: com.wingedsheep.sdk.model.EntityId,
+            sourceId: com.wingedsheep.sdk.model.EntityId?,
+            cardId: com.wingedsheep.sdk.model.EntityId,
+        ): Boolean {
+            val (_, grantedState) = CastFromCollectionWithoutPayingCostExecutor.grantFreeCast(
+                state, cardId, playerId, sourceId, withoutPayingCost = false
+            )
+            return playLandHandler.validateDuringResolution(grantedState, PlayLand(playerId, cardId)) == null
+        }
+    }
 }

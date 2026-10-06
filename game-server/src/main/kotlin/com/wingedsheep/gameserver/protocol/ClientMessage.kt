@@ -293,8 +293,13 @@ sealed interface ClientMessage {
      * Update lobby settings (host only).
      */
     @Serializable
+    @SerialName("pickJumpstartPack")
+    data class PickJumpstartPack(val packId: String, val pickNumber: Int) : ClientMessage
+
+    @Serializable
     @SerialName("updateLobbySettings")
     data class UpdateLobbySettings(
+        val useJumpstart: Boolean? = null,
         val setCodes: List<String>? = null,
         val format: String? = null,           // "SEALED" / "DRAFT" / "COMMANDER_DRAFT" / "COMMANDER_SEALED" / etc.
         val boosterCount: Int? = null,

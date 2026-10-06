@@ -654,6 +654,130 @@
     "colorIdentityOverride": []
 }
 
+// Dreams of Steel and Oil
+{
+    "name": "Dreams of Steel and Oil",
+    "manaCost": "{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target opponent reveals their hand. You choose an artifact or creature card from it, then choose an artifact or creature card from their graveyard. Exile the chosen cards.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "RevealHand",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "filter": "artifact|creature"
+                    },
+                    "storeAs": "gathered1"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered1",
+                    "selection": {
+                        "type": "ChooseExactly",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeSelected": "selected2",
+                    "prompt": "Choose an artifact or creature card from their hand to exile"
+                },
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Graveyard",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "filter": "artifact|creature"
+                    },
+                    "storeAs": "gathered3"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered3",
+                    "selection": {
+                        "type": "ChooseExactly",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeSelected": "selected4",
+                    "prompt": "Choose an artifact or creature card from their graveyard to exile"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "selected2",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Exile",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    }
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "selected4",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Exile",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetOpponent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "92",
+        "rarity": "UNCOMMON",
+        "artist": "Jeremy Wilson",
+        "flavorText": "Mishra's nightmares of Phyrexia rang with screams of agony and groans of twisted metal. The sounds stayed with him long after he awoke.",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/6/261ac92e-c61a-4c11-aa6a-9ae1cb703e5c.jpg?1783920092",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "You must choose an artifact or creature card from their hand if they reveal one. Similarly, you must choose an artifact or creature card from their graveyard if one exists there."
+            },
+            {
+                "date": "2022-10-14",
+                "text": "If the opponent has no artifact or creature cards in their hand, you must still choose an artifact or creature card from their graveyard to exile."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Dwarven Forge-Chanter
 {
     "name": "Dwarven Forge-Chanter",
@@ -774,6 +898,106 @@
         "flavorText": "\"Raw energy contains infinite possibility.\"\n—Urza",
         "imageUri": "https://cards.scryfall.io/normal/front/c/c/cc2a81fb-5045-4b7b-8cfb-b90c4f4a1f51.jpg?1783920019"
     }
+}
+
+// Fallaji Archaeologist
+{
+    "name": "Fallaji Archaeologist",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Human Scout",
+    "oracleText": "When this creature enters, mill three cards. You may put a noncreature, nonland card from among the cards milled this way into your hand. If you don't, put a +1/+1 counter on this creature. (To mill a card, put the top card of your library into your graveyard.)",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Fallaji Archaeologist:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                },
+                                "isMill": true
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            }
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "noncreature nonland",
+                            "storeSelected": "selected2",
+                            "prompt": "You may put a noncreature, nonland card milled this way into your hand",
+                            "selectedLabel": "Put in hand",
+                            "remainderLabel": "Leave in graveyard",
+                            "showAllCards": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected2",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Not",
+                                    "condition": {
+                                        "type": "CollectionContainsMatch",
+                                        "collection": "selected2"
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "AddCounters",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "count": 1,
+                                "target": "Self"
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "48",
+        "artist": "Caroline Gariba",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/0/b0eab397-25a6-4377-8e12-e8acef9675cf.jpg?1783920114"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
 }
 
 // Fallaji Chaindancer
@@ -986,6 +1210,292 @@
     ]
 }
 
+// Gix's Command
+{
+    "name": "Gix's Command",
+    "manaCost": "{3}{B}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose two —\n• Put two +1/+1 counters on up to one creature. It gains lifelink until end of turn.\n• Destroy each creature with power 2 or less.\n• Return up to two creature cards from your graveyard to your hand.\n• Each opponent sacrifices a creature with the greatest power among creatures they control.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "creature"
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered0",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "selected1",
+                                "prompt": "Choose up to one creature to get two +1/+1 counters and lifelink",
+                                "useTargetingUI": true
+                            },
+                            {
+                                "type": "AddCountersToCollection",
+                                "collectionName": "selected1",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "count": 2
+                            },
+                            {
+                                "type": "GrantKeyword",
+                                "keyword": "LIFELINK",
+                                "target": {
+                                    "type": "PipelineTarget",
+                                    "collectionName": "selected1"
+                                }
+                            }
+                        ]
+                    },
+                    "description": "Put two +1/+1 counters on up to one creature; it gains lifelink until end of turn"
+                },
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "creature pow<=2"
+                                },
+                                "storeAs": "destroyAll_gathered"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "destroyAll_gathered",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Destroy"
+                            }
+                        ]
+                    },
+                    "description": "Destroy each creature with power 2 or less"
+                },
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Graveyard",
+                                    "filter": "creature"
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered0",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
+                                },
+                                "storeSelected": "selected1",
+                                "prompt": "Choose up to two creature cards to return to your hand",
+                                "selectedLabel": "Return to hand"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "selected1",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Hand"
+                                }
+                            }
+                        ]
+                    },
+                    "description": "Return up to two creature cards from your graveyard to your hand"
+                },
+                {
+                    "effect": {
+                        "type": "ForceSacrifice",
+                        "filter": {
+                            "cardPredicates": [
+                                "IsCreature"
+                            ],
+                            "statePredicates": [
+                                "HasGreatestPower"
+                            ]
+                        },
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "EachOpponent"
+                        }
+                    },
+                    "description": "Each opponent sacrifices a creature with the greatest power among creatures they control"
+                }
+            ],
+            "chooseCount": 2
+        }
+    },
+    "metadata": {
+        "collectorNumber": "97",
+        "rarity": "RARE",
+        "artist": "Dominik Mayer",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/6/9606de75-c25f-411b-a271-258ac5a60987.jpg?1783920087",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "Since none of the modes have targets, you don't have to choose which creature is getting the counters or which cards you're returning until Gix's Command resolves."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
+// Gix, Yawgmoth Praetor
+{
+    "name": "Gix, Yawgmoth Praetor",
+    "manaCost": "{1}{B}{B}",
+    "typeLine": "Legendary Creature — Phyrexian Praetor",
+    "oracleText": "Whenever a creature deals combat damage to one of your opponents, its controller may pay 1 life. If they do, they draw a card.\n{4}{B}{B}{B}, Discard X cards: Exile the top X cards of target opponent's library. You may play lands and cast spells from among cards exiled this way without paying their mana costs.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Gix, Yawgmoth Praetor:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "EachOpponent"
+                    },
+                    "sourceFilter": "creature"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "PayDynamicLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "payer": "ControllerOfTriggeringEntity"
+                        }
+                    },
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "target": "ControllerOfTriggeringEntity"
+                    },
+                    "decisionMaker": "ControllerOfTriggeringEntity"
+                },
+                "descriptionOverride": "Whenever a creature deals combat damage to one of your opponents, its controller may pay 1 life. If they do, they draw a card."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Gix, Yawgmoth Praetor:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{4}{B}{B}{B}"
+                            }
+                        },
+                        "CostDiscardX"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": "XValue",
+                                "player": "TargetOpponent"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Exile",
+                                "player": "TargetOpponent"
+                            }
+                        },
+                        {
+                            "type": "CastAnyNumberFromCollectionWithoutPayingCost",
+                            "from": "gathered0",
+                            "playLands": true
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetOpponent",
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "Exile the top X cards of target opponent's library. You may play lands and cast spells from among cards exiled this way without paying their mana costs."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "95",
+        "rarity": "MYTHIC",
+        "artist": "Anna Podedworna",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/c/2c76f7e0-37e7-4e87-93a3-a25ba0674645.jpg?1783920090",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "You must play the cards as you resolve the last ability. You can't wait and play them later."
+            },
+            {
+                "date": "2022-10-14",
+                "text": "You may play a land this way only during your own turn and only if you have not yet played a land this turn."
+            },
+            {
+                "date": "2022-10-14",
+                "text": "If a spell you cast this way has an {X} in its mana cost, you must choose 0 for X."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Gnarlroot Pallbearer
 {
     "name": "Gnarlroot Pallbearer",
@@ -1103,6 +1613,68 @@
         "imageUri": "https://cards.scryfall.io/normal/front/0/b/0ba00d0f-0ea5-417c-a792-06b3b9d1c8f1.jpg"
     },
     "colorIdentityOverride": []
+}
+
+// Lay Down Arms
+{
+    "name": "Lay Down Arms",
+    "manaCost": "{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Exile target creature with mana value less than or equal to the number of Plains you control. Its controller gains 3 life.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "target": "TargetController"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "ManaValueAtMostDynamic",
+                                "amount": {
+                                    "type": "AggregateBattlefield",
+                                    "player": "You",
+                                    "filter": "land Plains"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "11",
+        "rarity": "UNCOMMON",
+        "artist": "Liiga Smilshkalne",
+        "flavorText": "She'll swing a blade all her life, but never again for war.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/6/5649ee5a-4485-40a2-96d1-2e061905a71e.jpg?1783920130"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
 }
 
 // Loran of the Third Path
@@ -1246,6 +1818,117 @@
     "colorIdentityOverride": [
         "BLUE"
     ]
+}
+
+// Mishra's Foundry
+{
+    "name": "Mishra's Foundry",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "{T}: Add {C}.\n{2}: This land becomes a 2/2 Assembly-Worker artifact creature until end of turn. It's still a land.\n{1}, {T}: Target attacking Assembly-Worker gets +2/+2 until end of turn.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Mishra's Foundry:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Mishra's Foundry:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "BecomeCreature",
+                    "power": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughness": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "creatureTypes": [
+                        "Assembly-Worker"
+                    ],
+                    "addTypes": [
+                        "ARTIFACT"
+                    ]
+                },
+                "descriptionOverride": "{2}: This land becomes a 2/2 Assembly-Worker artifact creature until end of turn. It's still a land."
+            },
+            {
+                "id": "Mishra's Foundry:3",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature Assembly-Worker attacking"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{1}, {T}: Target attacking Assembly-Worker gets +2/+2 until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "265",
+        "rarity": "RARE",
+        "artist": "Leon Tukker",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/a/da7699b2-e1af-4bc0-8c5b-84ba3e868d7c.jpg?1783920005",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "If Mishra's Foundry becomes a creature and you haven't controlled it continuously since the beginning of your most recent turn, you won't be able to activate its first or last abilities, and it won't be able to attack (unless it somehow gains haste)."
+            },
+            {
+                "date": "2022-10-14",
+                "text": "If Mishra's Foundry is already a creature, activating the second ability will override any previous effects that set its power and/or toughness to specific values. Other effects that are affecting its power and/or toughness, including +1/+1 counters and the effects of spells like Giant Growth, will continue to apply."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Obliterating Bolt
@@ -1444,6 +2127,56 @@
         "artist": "Izzy",
         "flavorText": "The cool, sleek automatons beside her mirrored her own iron resolve.",
         "imageUri": "https://cards.scryfall.io/normal/front/2/a/2abe2af7-deba-4569-822a-2d9309aeaadd.jpg?1783920125"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Recommission
+{
+    "name": "Recommission",
+    "manaCost": "{1}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Return target artifact or creature card with mana value 3 or less from your graveyard to the battlefield. If a creature enters this way, it enters with an additional +1/+1 counter on it.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Battlefield",
+            "fromZone": "Graveyard",
+            "addCounterType": "PLUS_ONE_PLUS_ONE",
+            "addCounterIf": {
+                "cardPredicates": [
+                    "IsCreature"
+                ]
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature|artifact mv<=3 own:you",
+                    "zone": "Graveyard"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "22",
+        "artist": "Andrew Mar",
+        "flavorText": "\"Put your backs into it! If we don't lay claim to it, the Fallaji will!\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/a/2a64e330-1257-4ec3-9a75-889cdcac3ade.jpg?1783920125",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "If a noncreature artifact is returned to the battlefield this way and another effect would cause that artifact to be a creature while it is on the battlefield (such as the ability of March of the Machines), that artifact will enter the battlefield with an additional +1/+1 counter."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "WHITE"
@@ -2300,6 +3033,137 @@
     "colorIdentityOverride": [
         "WHITE",
         "GREEN"
+    ]
+}
+
+// Yotian Frontliner
+{
+    "name": "Yotian Frontliner",
+    "manaCost": "{1}",
+    "typeLine": "Artifact Creature — Soldier",
+    "oracleText": "Whenever this creature attacks, another target creature you control gets +1/+1 until end of turn.\nUnearth {W} ({W}: Return this card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step or if it would leave the battlefield. Unearth only as a sorcery.)",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "UNEARTH"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Yotian Frontliner:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you",
+                        "excludeSelf": true
+                    },
+                    "id": "t0"
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "unearth_{W}",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{W}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": "Self",
+                            "destination": "Battlefield",
+                            "fromZone": "Graveyard"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "SourceInZone",
+                                    "zones": [
+                                        "Battlefield"
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GrantKeyword",
+                                        "keyword": "HASTE",
+                                        "target": "Self",
+                                        "duration": "Permanent"
+                                    },
+                                    {
+                                        "type": "CreateDelayedTrigger",
+                                        "step": "END",
+                                        "effect": {
+                                            "type": "MoveTrackedBattlefieldObject",
+                                            "target": "Self",
+                                            "destination": "Exile"
+                                        }
+                                    },
+                                    {
+                                        "type": "GrantExileOnLeave",
+                                        "target": "Self"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "timing": "SorcerySpeed",
+                "activateFromZone": "Graveyard",
+                "descriptionOverride": "Unearth {W} ({W}: Return this card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step or if it would leave the battlefield. Unearth only as a sorcery.)"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "42",
+        "rarity": "UNCOMMON",
+        "artist": "Jehan Choo",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/f/bfa05d1e-6728-4e77-bfb2-da0b9598e44b.jpg?1783920115",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "If you activate a card's unearth ability but that card is removed from your graveyard before the ability resolves, that unearth ability will do nothing as it resolves."
+            },
+            {
+                "date": "2022-10-14",
+                "text": "Unearth grants haste to the permanent that's returned to the battlefield (even if it's not a creature card). However, neither of the \"exile\" abilities is granted to that permanent. If that permanent loses all its abilities, it will still be exiled at the beginning of the next end step, and if it would leave the battlefield, it is still exiled instead."
+            },
+            {
+                "date": "2022-10-14",
+                "text": "If a permanent returned to the battlefield with unearth would leave the battlefield for any reason, it's exiled instead—unless the spell or ability that's causing the permanent to leave the battlefield is actually trying to exile it!"
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 

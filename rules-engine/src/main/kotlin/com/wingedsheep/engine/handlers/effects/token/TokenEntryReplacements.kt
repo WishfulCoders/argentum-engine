@@ -28,7 +28,9 @@ import com.wingedsheep.sdk.scripting.EntersWithChoice
  * [com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements.pauseForEntersWithChoice],
  * whose existing [com.wingedsheep.engine.core.EntersWithChoiceOnBattlefieldContinuation] resumer
  * records the value, applies the granted-riot branch, loops per riot instance, chains any further
- * printed choice, and fires the token's ETB triggers.
+ * printed choice, places a Saga's entry lore counters (a read-ahead Saga's count is the chosen
+ * number, CR 702.155b — so a paused token skips its own Saga-entry step), and fires the token's ETB
+ * triggers.
  */
 object TokenEntryReplacements {
 

@@ -44,6 +44,7 @@ import {
   setCardDragData,
   sortCards,
   useCardDropZone,
+  useArtOverrides,
   useSetPrintingOverride,
   withOverriddenArt,
   type CardDragSource,
@@ -154,6 +155,18 @@ function entriesFromCards(
  * pair is folded in so the commander's pinned printing survives a save → load
  * round-trip alongside the rest.
  */
+/**
+ * The printed name of the pinned printing when it differs from the oracle name — a deck that
+ * pinned Through the Omenpaths' Spider Manifestation lists it as "Leyline Weaver".
+ */
+function pinnedPrintedName(card: CardSummary | undefined, pinned: PrintingRef | undefined): string | null {
+  if (!card || !pinned) return null
+  const match = card.printedNamePrintings?.find(
+    (p) => p.setCode.toUpperCase() === pinned.setCode.toUpperCase() && p.collectorNumber === pinned.collectorNumber,
+  )
+  return match?.name ?? null
+}
+
 function pinnedPrintingsFromEntries(
   entries: readonly SavedDeckEntry[] | undefined,
   commanderName?: string | null,
@@ -589,18 +602,24 @@ export function DeckbuilderPage() {
   // catalog's default printing.
   // Basic lands ride along unconditionally so the sticky deck-list +/- and "Suggest basic
   // lands" can pin the active set's printing even though basics no longer appear in `filtered`.
+  // `useArtOverrides` layers on cards matched by a printed name ("ademi" → the Through the
+  // Omenpaths printing of Spectacular Spider-Man), so those show and pin that printing too.
   const overrideNames = useMemo(
     () => Array.from(new Set([...filtered.map((c) => c.name), ...BASIC_LAND_ORDER])),
     [filtered],
   )
-  const setPrintingOverride = useSetPrintingOverride(activeSetFilter, overrideNames)
+  const setPrintingOverride = useArtOverrides(
+    parseResult.ast,
+    filtered,
+    useSetPrintingOverride(activeSetFilter, overrideNames),
+  )
 
   // Apply the set-filter art override to filtered cards. Done once here so the catalog
   // grid, the hover preview, and the in-deck-row hover all see the same imageUri without
   // each component needing to know about the override.
   const filteredWithArt = useMemo<CardSummary[]>(
-    () => withOverriddenArt(filtered, activeSetFilter, setPrintingOverride),
-    [filtered, activeSetFilter, setPrintingOverride],
+    () => withOverriddenArt(filtered, setPrintingOverride),
+    [filtered, setPrintingOverride],
   )
 
   const displayed = useMemo(
@@ -685,8 +704,8 @@ export function DeckbuilderPage() {
   // user picked something else explicitly). Also drives the basic-land path: basics no
   // longer appear in the catalog grid, but the sticky deck-list +/- and "Suggest basic
   // lands" still run this so basics align with the selected set's art when available.
+  // A card found by its printed name pins that printing the same way.
   const applySetPinIfAvailable = useCallback((name: string) => {
-    if (!activeSetFilter) return
     const override = setPrintingOverride[name]
     if (!override || pinnedPrintings[name]) return
     setPinnedPrintings((prev) => ({
@@ -697,7 +716,7 @@ export function DeckbuilderPage() {
       ...prev,
       [name]: { imageUri: override.imageUri, backFaceImageUri: override.backFaceImageUri },
     }))
-  }, [activeSetFilter, setPrintingOverride, pinnedPrintings])
+  }, [setPrintingOverride, pinnedPrintings])
 
   const addCard = (card: CardSummary) => {
     setDeckCards((prev) => {
@@ -2970,7 +2989,7 @@ const DeckRow = memo(function DeckRow({
       </button>
       <span className={styles.deckRowCount}>{entry.count}×</span>
       <span className={styles.deckRowName}>
-        {entry.name}
+        {pinnedPrintedName(entry.card, pinnedPrinting) ?? entry.name}
         {unknown && <span className={styles.deckRowUnknownTag}>not implemented</span>}
       </span>
       {showCommanderControls && (

@@ -123,6 +123,9 @@ class CostHandler(private val zones: ZoneTransitionService) {
                 // You can always discard your hand, even if it's empty
                 true
             }
+            // X can be 0 (discard nothing), so this is always payable; the hand caps X in
+            // calculateMaxAffordableX and in the selection pause.
+            is AbilityCost.DiscardX -> true
             is AbilityCost.ExileXFromGraveyard -> {
                 // X can be 0, so this is always payable as long as graveyard exists
                 // maxAffordableX is capped by graveyard size in LegalActionsCalculator
@@ -330,6 +333,24 @@ class CostHandler(private val zones: ZoneTransitionService) {
                         manaPool,
                     )
                 }
+            }
+            is AbilityCost.DiscardX -> {
+                // A GameAction is client-supplied: the discards must be exactly X distinct matching
+                // cards from the payer's hand. With none chosen and no real choice (X equals the
+                // candidates) the engine-direct path takes them all.
+                val xCount = choices.xValue
+                if (xCount == 0) return CostPaymentResult.success(state, manaPool)
+                val candidates = discardXCandidates(state, controllerId, sourceId, cost)
+                val toDiscard = choices.discardChoices.ifEmpty {
+                    if (candidates.size == xCount) candidates else emptyList()
+                }
+                if (toDiscard.size != xCount || toDiscard.distinct().size != xCount ||
+                    toDiscard.any { it !in candidates }
+                ) {
+                    return CostPaymentResult.failure("Must choose $xCount matching card(s) in hand to discard")
+                }
+                val result = zones.discardCards(state, controllerId, toDiscard)
+                CostPaymentResult.success(result.state, manaPool, result.events)
             }
             is AbilityCost.DiscardSelf -> {
                 // Discard the source card from its owner's hand.
@@ -1745,6 +1766,24 @@ class CostHandler(private val zones: ZoneTransitionService) {
     // ActivateAbilityHandler can offer exactly the candidate set this matcher accepts at payment
     // time — see exileCardsFromGraveyard above. Keeps the pause and payment in lockstep instead
     // of re-deriving the filter match in two places.
+    /**
+     * The hand cards an [AbilityCost.DiscardX] cost may discard: [controllerId]'s hand cards
+     * matching the cost's filter, never the ability's own source (a card can't pay for itself
+     * while it is the thing being activated).
+     */
+    internal fun discardXCandidates(
+        state: GameState,
+        controllerId: EntityId,
+        sourceId: EntityId,
+        cost: AbilityCost.DiscardX
+    ): List<EntityId> = findMatchingCardsUnified(
+        state,
+        state.getZone(ZoneKey(controllerId, Zone.HAND)).filter { it != sourceId },
+        cost.filter,
+        controllerId,
+        sourceId = sourceId
+    )
+
     internal fun findMatchingCardsUnified(
         state: GameState,
         cardIds: List<EntityId>,

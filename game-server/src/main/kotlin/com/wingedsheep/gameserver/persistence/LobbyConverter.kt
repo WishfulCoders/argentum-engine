@@ -33,6 +33,7 @@ fun TournamentLobby.toPersistent(): PersistentTournamentLobby {
         setCodes = setCodes,
         setNames = setNames,
         format = format.name,
+        useJumpstart = useJumpstart,
         rules = rules.name,
         boosterCount = boosterCount,
         maxPlayers = maxPlayers,
@@ -46,6 +47,8 @@ fun TournamentLobby.toPersistent(): PersistentTournamentLobby {
                 playerName = playerState.identity.playerName,
                 token = playerState.identity.token,
                 cardPoolNames = playerState.cardPool.map { it.name },
+                jumpstartOffers = playerState.jumpstartOffers,
+                jumpstartSelections = playerState.jumpstartSelections,
                 currentPackNames = playerState.currentPack?.map { it.name },
                 packQueueNames = playerState.packQueue.map { pack -> pack.map { it.name } },
                 submittedDeck = playerState.submittedDeck,
@@ -110,6 +113,7 @@ fun restoreTournamentLobby(
         setNames = persistent.setNames,
         boosterGenerator = boosterGenerator,
         format = format,
+        useJumpstart = persistent.useJumpstart,
         // A row written before the Rules axis existed carries null and has to be inferred. Its
         // deckFormat was never persisted either (a pre-existing gap), so the pack shape is all
         // there is to go on — which is exactly what the old code derived commander-ness from
@@ -195,6 +199,8 @@ fun restoreTournamentLobby(
         val playerState = LobbyPlayerState(
             identity = identity,
             cardPool = cardPool,
+            jumpstartOffers = persistentPlayer.jumpstartOffers,
+            jumpstartSelections = persistentPlayer.jumpstartSelections,
             currentPack = currentPack,
             packQueue = packQueue,
             submittedDeck = persistentPlayer.submittedDeck,

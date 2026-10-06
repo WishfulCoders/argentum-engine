@@ -149,6 +149,7 @@ class LobbyHandler(
         when (message) {
             is ClientMessage.CreateSealedGame -> handleCreateSealedGame(session, message)
             is ClientMessage.JoinSealedGame -> handleJoinSealedGame(session, message)
+            is ClientMessage.PickJumpstartPack -> handleJumpstartPick(session, message)
             is ClientMessage.SubmitSealedDeck -> handleSubmitSealedDeck(session, message)
             is ClientMessage.UnsubmitDeck -> handleUnsubmitDeck(session)
             is ClientMessage.CreateTournamentLobby -> handleCreateTournamentLobby(session, message)
@@ -452,6 +453,37 @@ class LobbyHandler(
         logger.info("Player ${playerSession.playerName} joined sealed game ${sealedSession.sessionId}")
         sealedSession.generatePools()
         sendSealedPoolToAllPlayers(sealedSession)
+    }
+
+    private fun finishAiJumpstartPicks(lobby: TournamentLobby) {
+        lobby.players.values.filter { it.identity.isAi && !it.hasSubmittedDeck }.forEach { player ->
+            while (lobby.players.getValue(player.identity.playerId).jumpstartOffers.isNotEmpty()) {
+                val current = lobby.players.getValue(player.identity.playerId)
+                lobby.pickJumpstart(player.identity.playerId, current.jumpstartOffers.random(), current.jumpstartSelections.size + 1)
+            }
+            val pool = lobby.players.getValue(player.identity.playerId).cardPool
+            lobby.submitDeck(player.identity.playerId, pool.groupingBy { it.name }.eachCount())
+        }
+    }
+
+    private fun handleJumpstartPick(session: WebSocketSession, message: ClientMessage.PickJumpstartPack) {
+        val playerSession = sessionRegistry.getPlayerSession(session.id) ?: return
+        val identity = sessionRegistry.getTokenByWsId(session.id)?.let { sessionRegistry.getIdentityByToken(it) } ?: return
+        val lobby = identity.currentLobbyId?.let(lobbyRepository::findLobbyById) ?: return
+        synchronized(lobby) {
+            if (!lobby.pickJumpstart(identity.playerId, message.packId, message.pickNumber)) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "That Jumpstart choice is no longer available")
+                return
+            }
+            val player = lobby.players.getValue(identity.playerId)
+            if (player.jumpstartSelections.size == 2) {
+                handleLobbyDeckSubmit(session, playerSession, identity, lobby.lobbyId,
+                    player.cardPool.groupingBy { it.name }.eachCount())
+            } else {
+                ctx.broadcastLobbyUpdate(lobby)
+                lobbyRepository.saveLobby(lobby)
+            }
+        }
     }
 
     private fun handleSubmitSealedDeck(session: WebSocketSession, message: ClientMessage.SubmitSealedDeck) {
@@ -867,7 +899,7 @@ class LobbyHandler(
                 val basicLandInfos = lobby.basicLands.values.map { cardToSealedCardInfo(it) }
                 val poolInfos = playerState?.cardPool?.map { cardToSealedCardInfo(it) } ?: emptyList()
 
-                sender.send(session, ServerMessage.SealedPoolGenerated(
+                if (!lobby.isJumpstart) sender.send(session, ServerMessage.SealedPoolGenerated(
                     setCodes = lobby.setCodes,
                     setNames = lobby.setNames,
                     cardPool = poolInfos,
@@ -922,7 +954,7 @@ class LobbyHandler(
         val playerState = lobby.players[identity.playerId]
         val basicLandInfos = lobby.basicLands.values.map { cardToSealedCardInfo(it) }
         val poolInfos = playerState?.cardPool?.map { cardToSealedCardInfo(it) } ?: emptyList()
-        sender.send(session, ServerMessage.SealedPoolGenerated(
+        if (!lobby.isJumpstart) sender.send(session, ServerMessage.SealedPoolGenerated(
             setCodes = lobby.setCodes,
             setNames = lobby.setNames,
             cardPool = poolInfos,
@@ -947,7 +979,7 @@ class LobbyHandler(
         val playerState = lobby.players[identity.playerId]
         val basicLandInfos = lobby.basicLands.values.map { cardToSealedCardInfo(it) }
         val poolInfos = playerState?.cardPool?.map { cardToSealedCardInfo(it) } ?: emptyList()
-        sender.send(session, ServerMessage.SealedPoolGenerated(
+        if (!lobby.isJumpstart) sender.send(session, ServerMessage.SealedPoolGenerated(
             setCodes = lobby.setCodes,
             setNames = lobby.setNames,
             cardPool = poolInfos,
@@ -1293,6 +1325,21 @@ class LobbyHandler(
                 }
                 lobby.ranked = false
             }
+        }
+
+        if (lobby.isJumpstart) {
+            lobby.jumpstartStartError()?.let {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, it)
+                return
+            }
+            if (!lobby.startJumpstart(identity.playerId)) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "Failed to start Jumpstart")
+                return
+            }
+            finishAiJumpstartPicks(lobby)
+            ctx.broadcastLobbyUpdate(lobby)
+            lobbyRepository.saveLobby(lobby)
+            return
         }
 
         when (lobby.format) {
@@ -1697,6 +1744,12 @@ class LobbyHandler(
      * and blocking would prevent the human player from submitting their own deck.
      */
     private fun launchAiDeckBuilding(lobby: TournamentLobby, heuristicDeckbuilding: Boolean = false) {
+        if (lobby.isJumpstart) {
+            finishAiJumpstartPicks(lobby)
+            ctx.broadcastLobbyUpdate(lobby)
+            lobbyRepository.saveLobby(lobby)
+            return
+        }
         val aiPlayers = lobby.players.filter { (playerId, ps) ->
             aiGameManager.isAiPlayer(playerId) && !ps.hasSubmittedDeck && ps.cardPool.isNotEmpty()
         }
@@ -2381,6 +2434,8 @@ class LobbyHandler(
         }
 
         // Update sets if provided (can be empty to disable start)
+        message.useJumpstart?.let { lobby.useJumpstart = it }
+
         if (!lobby.isCube) message.setCodes?.let { newSetCodes ->
             // Allow empty setCodes to disable start button (but won't be able to start)
             // An extension-only selection is allowed here as an intermediate state (the host may

@@ -446,17 +446,10 @@ internal class PermanentSpellResolver(
     ): ExecutionResult {
         // Normal permanent entry
         val (afterEntry, enterEvents) = permanentEntry.enterPermanentOnBattlefield(state, spellId, spellComponent, cardComponent, cardDef)
-        val isSagaEntry = cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga
-        val sagaEvents = if (isSagaEntry) {
-            listOf(CountersAddedEvent(spellId, CounterType.LORE, 1, cardDef!!.name))
-        } else {
-            emptyList()
-        }
-        val enteredState = if (isSagaEntry) {
-            com.wingedsheep.engine.handlers.effects.DamageUtils.markCounterOnControlledPermanent(afterEntry, spellId, CounterType.LORE, entering = true)
-        } else {
-            afterEntry
-        }
+        // The Saga's entry lore counter(s) and their CountersAddedEvent are placed by
+        // [PermanentEntry.enterPermanentOnBattlefield] itself, so the as-enters-choice resume paths
+        // (read ahead's chapter number) get them too.
+        val enteredState = afterEntry
 
         // The generic "as this permanent enters, …" replacement ([OnEnterRun]). The move path
         // (MoveToZoneEffectExecutor) and the land path (PlayLandHandler) already run it; a permanent
@@ -476,11 +469,11 @@ internal class PermanentSpellResolver(
                 )
             if (onEnterResult != null) {
                 return onEnterResult.toExecutionResult().copy(
-                    events = enterEvents + sagaEvents + onEnterResult.events,
+                    events = enterEvents + onEnterResult.events,
                 )
             }
         }
 
-        return ExecutionResult.success(enteredState, enterEvents + sagaEvents)
+        return ExecutionResult.success(enteredState, enterEvents)
     }
 }

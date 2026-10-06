@@ -58,6 +58,7 @@ export interface LobbySliceActions {
    * `boosterCount`, `picksPerRound` and `chaosBoosters` and recalculates the booster distribution on
    * the way through. Splitting a bag across messages would therefore lose fields, not just be slower.
    */
+  pickJumpstartPack: (packId: string, pickNumber: number) => void
   updateLobbySettings: (settings: LobbySettingsUpdate) => void
   addAiToLobby: () => void
   removeAiFromLobby: (playerId: string) => void
@@ -142,6 +143,10 @@ export const createLobbySlice: SliceCreator<LobbySlice> = (set, get) => ({
     clearLobbyId()
     getWebSocket()?.send(createStopLobbyMessage())
     set({ lobbyState: null, deckBuildingState: null, ffaState: null })
+  },
+
+  pickJumpstartPack: (packId, pickNumber) => {
+    getWebSocket()?.send({ type: 'pickJumpstartPack', packId, pickNumber })
   },
 
   updateLobbySettings: (settings) => {

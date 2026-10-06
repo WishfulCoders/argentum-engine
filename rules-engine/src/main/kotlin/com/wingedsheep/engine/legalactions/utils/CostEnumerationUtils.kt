@@ -702,6 +702,22 @@ class CostEnumerationUtils(
             }
         }
 
+        // Cap by the hand cards a DiscardX cost could discard (honouring its filter), for the
+        // case where a `{X}` mana symbol makes this an X-picker ability.
+        val discardXCosts = when (abilityCost) {
+            is AbilityCost.Composite -> abilityCost.costs.filterIsInstance<AbilityCost.DiscardX>()
+            is AbilityCost.DiscardX -> listOf(abilityCost)
+            else -> emptyList()
+        }
+        if (discardXCosts.isNotEmpty()) {
+            val hand = state.getZone(ZoneKey(playerId, Zone.HAND)).filter { it != sourceId }
+            val projected = state.projectedState
+            val context = PredicateContext(controllerId = playerId, sourceId = sourceId)
+            discardXCosts.forEach { cost ->
+                maxX = minOf(maxX, hand.count { predicateEvaluator.matches(state, projected, it, cost.filter, context) })
+            }
+        }
+
         // Cap by the counters available for any X-valued counter-removal cost. Use projected
         // battlefield characteristics so animated/type-changing permanents are included correctly.
         val removeXAtoms = when (abilityCost) {

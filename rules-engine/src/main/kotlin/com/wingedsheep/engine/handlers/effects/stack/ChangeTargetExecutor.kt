@@ -7,6 +7,7 @@ import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.state.GameState
@@ -73,7 +74,11 @@ class ChangeTargetExecutor(
             return EffectResult.success(state)
         }
 
-        val spellController = stackEntity.get<ControllerComponent>()?.playerId ?: context.controllerId
+        // The object's own controller judges the new target ("target creature you control"). An
+        // activated/triggered ability carries no ControllerComponent, so read the stack component.
+        val spellController = TargetResolutionUtils.stackObjectController(state, targetSpell.spellEntityId)
+            ?: stackEntity.get<ControllerComponent>()?.playerId
+            ?: context.controllerId
 
         // "…to this creature" (Hydroelectric Specimen): no choice. CR 115.7a — the target changes
         // only to another legal target, judged by the spell's own requirement from its controller's

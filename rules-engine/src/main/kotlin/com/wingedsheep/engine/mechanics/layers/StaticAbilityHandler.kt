@@ -221,7 +221,8 @@ class StaticAbilityHandler(
         val cardComponent = container.get<CardComponent>() ?: return container
 
         // Get the card definition to access static abilities
-        val cardDef = cardRegistry.getCard(cardComponent) ?: return container
+        val cardDef = cardRegistry.getCard(cardComponent)
+            ?: return addContinuousEffectComponentFromAbilities(container, cardComponent.copyStaticAbilities)
 
         return addContinuousEffectComponent(container, cardDef)
     }
@@ -243,7 +244,8 @@ class StaticAbilityHandler(
         // the static abilities of every currently-unlocked face (CR 709.5). Routing through
         // RoomFaceStatics is what lets a Room face's continuous statics project once its door is
         // unlocked; the component is re-baked on later unlocks by RoomDoorUnlocker.
-        val allStaticAbilities = RoomFaceStatics.activeStaticAbilities(container, cardDefinition)
+        val allStaticAbilities = RoomFaceStatics.activeStaticAbilities(container, cardDefinition) +
+            container.get<CardComponent>()?.copyStaticAbilities.orEmpty()
 
         val spending = mutableListOf<ManaSpendingGrant>()
         fun collectSpending(ability: StaticAbility, conditions: List<Condition> = emptyList()) {
@@ -777,6 +779,12 @@ class StaticAbilityHandler(
             is CanBlockAdditionalForCreatureGroup -> {
                 ContinuousEffectData(
                     modification = Modification.CanBlockAdditional(ability.count),
+                    affectsFilter = convertGroupFilter(ability.filter)
+                )
+            }
+            is com.wingedsheep.sdk.scripting.ManaAbilitiesCostAdditionalLife -> {
+                ContinuousEffectData(
+                    modification = Modification.ManaAbilitiesCostLife(ability.amount),
                     affectsFilter = convertGroupFilter(ability.filter)
                 )
             }

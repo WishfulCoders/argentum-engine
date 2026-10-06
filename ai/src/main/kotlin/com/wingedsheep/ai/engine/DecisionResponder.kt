@@ -159,18 +159,20 @@ class DecisionResponder(
             return bestResponse
         }
 
-        // Multi-target: simulate the best target for each requirement independently. Every probe
+        // Multi-target: choose each requirement against a complete, progressively updated answer. Every probe
         // still has to be a *complete* answer to the decision — `DecisionValidators.validateTargets`
         // rejects a response that leaves a mandatory requirement out, and a rejected probe comes
         // back as `SimulationResult.Illegal` carrying the unchanged state, so every candidate would
         // score identically: the pick would collapse to "the first legal target", and the optional
         // pick-vs-skip comparison below would tie and always skip. Varying one requirement against a
-        // fixed baseline for the others keeps the comparison meaningful.
-        val baseline = minimalCompleteSelection(decision)
-        val selected = decision.targetRequirements.associate { req ->
+        // complete baseline for the others keeps the comparison meaningful. Carry each selected
+        // answer into the next probe: independently legal replacements can conflict when combined
+        // (two copy slots choosing the same object for one target requirement).
+        val selected = minimalCompleteSelection(decision).toMutableMap()
+        for (req in decision.targetRequirements) {
             val targets = decision.legalTargets[req.index] ?: emptyList()
-            if (targets.isEmpty()) {
-                req.index to emptyList()
+            selected[req.index] = if (targets.isEmpty()) {
+                emptyList()
             } else {
                 val ranked = if (targets.size <= maxCandidates) targets
                     else targets.sortedByDescending { targetHeuristic(state, it, playerId) }.take(maxCandidates)
@@ -178,22 +180,22 @@ class DecisionResponder(
                     state, ranked, playerId,
                     tieBreak = { TargetSelection.offBattlefieldWorth(state, it) },
                 ) { target ->
-                    TargetsResponse(decision.id, baseline + (req.index to listOf(target)))
+                    TargetsResponse(decision.id, selected + (req.index to listOf(target)))
                 }
                 // For optional targets, compare best pick against skipping
                 if (req.minTargets == 0) {
-                    val pickResponse = TargetsResponse(decision.id, baseline + (req.index to listOf(best)))
-                    val skipResponse = TargetsResponse(decision.id, baseline + (req.index to emptyList()))
+                    val pickResponse = TargetsResponse(decision.id, selected + (req.index to listOf(best)))
+                    val skipResponse = TargetsResponse(decision.id, selected + (req.index to emptyList()))
                     val pickScore = evaluateResult(simulator.simulateDecision(state, pickResponse), playerId)
                     val skipScore = evaluateResult(simulator.simulateDecision(state, skipResponse), playerId)
-                    if (skipScore >= pickScore) req.index to emptyList()
-                    else req.index to listOf(best)
+                    if (skipScore >= pickScore) emptyList()
+                    else listOf(best)
                 } else {
-                    req.index to listOf(best)
+                    listOf(best)
                 }
             }
         }
-        return TargetsResponse(decision.id, selected)
+        return TargetsResponse(decision.id, selected.toMap())
     }
 
     /** Heuristic for pre-ranking targets before simulation. Higher = better target. */
@@ -852,7 +854,8 @@ class DecisionResponder(
      * to answer at all is how a live game wedges with no backstop able to see it.
      */
     private fun evaluateResult(result: SimulationResult, playerId: EntityId): Double =
-        result.scoreOrRankLast { evaluator.evaluate(it, it.projectedState, playerId) }
+        if (result is SimulationResult.Illegal) Double.NEGATIVE_INFINITY
+        else result.scoreOrRankLast { evaluator.evaluate(it, it.projectedState, playerId) }
 
     /**
      * The candidate whose simulated result scores best. Among candidates that score the same,

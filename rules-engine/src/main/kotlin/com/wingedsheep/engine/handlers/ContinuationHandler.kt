@@ -112,6 +112,11 @@ class ContinuationHandler(
             )
         }
 
+        if (response is TargetsResponse) {
+            val error = com.wingedsheep.engine.handlers.effects.stack.SpellCopyTargets.validate(
+                state, services.targetFinder, suspension.answer, response)
+            if (error != null) return ExecutionResult.error(state, error)
+        }
         val (_, stateAfterPop) = state.popContinuation()
         val result = registry.resume(stateAfterPop, suspension.answer, suspension.question, response, continueWithin)
         // Casting resumers can finish a local picker without draining enclosing work.

@@ -444,6 +444,32 @@ sealed interface AbilityCost : TextReplaceable<AbilityCost> {
         }
     }
 
+    /**
+     * Discard X cards, where X is the ability's X value — "{4}{B}{B}{B}, Discard X cards: …"
+     * (Gix, Yawgmoth Praetor).
+     *
+     * The hand-side twin of [ExileXFromGraveyard]: X *is* the size of the selection. With no `{X}`
+     * in the mana cost the engine pauses for the cards (any number of matching cards in hand,
+     * including none) and binds X to how many were chosen — the value of a variable defined by a
+     * cost choice is announced as the ability is activated (CR 601.2b via CR 602.2b). With a `{X}`
+     * alongside it, the mana X fixes the count and the selection must be exactly that many.
+     * The discard fires discard triggers (it is a discard, CR 701.9).
+     *
+     * @property filter Which cards in hand may be discarded.
+     */
+    @SerialName("CostDiscardX")
+    @Serializable
+    data class DiscardX(
+        val filter: GameObjectFilter = GameObjectFilter.Any
+    ) : AbilityCost {
+        override val description: String = "Discard X ${filter.description}s"
+
+        override fun applyTextReplacement(replacer: TextReplacer): AbilityCost {
+            val newFilter = filter.applyTextReplacement(replacer)
+            return if (newFilter !== filter) copy(filter = newFilter) else this
+        }
+    }
+
     /** Discard your entire hand */
     @SerialName("CostDiscardHand")
     @Serializable

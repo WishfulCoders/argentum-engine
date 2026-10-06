@@ -76,6 +76,11 @@
   pointer-events: none;
 }
 
+/* Targeting banners let board clicks through; their explicit controls remain clickable. */
+.sideBannerTarget button {
+  pointer-events: auto;
+}
+
 .sideBannerSelection {
   composes: sideBanner;
   border: 2px solid var(--color-target);

@@ -191,6 +191,8 @@ enum class PassDirection {
  */
 data class LobbyPlayerState(
     val identity: PlayerIdentity,
+    val jumpstartOffers: List<String> = emptyList(),
+    val jumpstartSelections: List<String> = emptyList(),
     /** For sealed: full pool. For draft: cards picked so far. */
     val cardPool: List<CardDefinition> = emptyList(),
     /** Draft only: current pack to pick from. */
@@ -297,6 +299,7 @@ class TournamentLobby(
     var setNames: List<String>,
     private val boosterGenerator: BoosterGenerator,
     var format: TournamentFormat = TournamentFormat.SEALED,
+    var useJumpstart: Boolean = true,
     var boosterCount: Int = 6,        // Sealed: boosters in pool, Draft: packs per player (usually 3)
     var boosterDistribution: Map<String, Int> = emptyMap(),  // Per-set booster counts (e.g., {"ONS": 2, "LGN": 2, "SCG": 2})
     var maxPlayers: Int = 8,
@@ -934,6 +937,41 @@ class TournamentLobby(
      * Generate sealed pools for all players and transition to DECK_BUILDING.
      * Only the host can trigger this. Valid for SEALED and COMMANDER_SEALED formats.
      */
+    /** Automatic only for a single Jumpstart set using ordinary limited rules. */
+    val jumpstartEligible: Boolean get() = !isCube && setCodes == listOf("JMP") &&
+        !usesCommanderRules && format in setOf(TournamentFormat.SEALED, TournamentFormat.DRAFT)
+    val isJumpstart: Boolean get() = jumpstartEligible && useJumpstart
+    private val jumpstartPacks by lazy { com.wingedsheep.gameserver.jumpstart.JumpstartPacks(boosterGenerator) }
+
+    fun jumpstartStartError(): String? = if (isJumpstart &&
+        jumpstartPacks.available(bannedCardNames).map { it.theme }.distinct().size < 3
+    ) "Jumpstart needs at least three complete themes after card bans. Remove bans or choose traditional draft/sealed."
+    else null
+
+    fun startJumpstart(playerId: EntityId): Boolean {
+        if (!isJumpstart || !isHost(playerId) || state != LobbyState.WAITING_FOR_PLAYERS || players.size < 2) return false
+        if (jumpstartStartError() != null) return false
+        players.replaceAll { _, player -> player.copy(jumpstartOffers = jumpstartPacks.offer(bannedCardNames)) }
+        state = LobbyState.DECK_BUILDING
+        return true
+    }
+
+    /** The pick number makes retries harmless, even when a theme is offered in both rounds. */
+    fun pickJumpstart(playerId: EntityId, packId: String, pickNumber: Int): Boolean {
+        if (!isJumpstart || state != LobbyState.DECK_BUILDING) return false
+        val player = players[playerId] ?: return false
+        if (player.hasSubmittedDeck || player.jumpstartSelections.size >= 2 ||
+            pickNumber != player.jumpstartSelections.size + 1 || packId !in player.jumpstartOffers) return false
+        val pack = jumpstartPacks.packs.find { it.id == packId } ?: return false
+        val selected = player.jumpstartSelections + packId
+        players[playerId] = player.copy(
+            cardPool = player.cardPool + pack.cards,
+            jumpstartSelections = selected,
+            jumpstartOffers = if (selected.size == 2) emptyList() else jumpstartPacks.offer(bannedCardNames),
+        )
+        return true
+    }
+
     fun startDeckBuilding(requestingPlayerId: EntityId): Boolean {
         if (!isHost(requestingPlayerId)) return false
         if (state != LobbyState.WAITING_FOR_PLAYERS) return false
@@ -1681,6 +1719,11 @@ class TournamentLobby(
             return DeckSubmissionResult.Error("Deck already submitted")
         }
 
+        if (isJumpstart && (playerState.jumpstartSelections.size != 2 ||
+            deckList != playerState.cardPool.groupingBy { it.name }.eachCount())) {
+            return DeckSubmissionResult.Error("Jumpstart decks must contain exactly the two chosen packs")
+        }
+
         if (isPremade) {
             // Pool-free validation: count + 4-of rule. Card existence is checked by the
             // caller via DeckValidator (it has access to the CardRegistry).
@@ -1725,6 +1768,7 @@ class TournamentLobby(
      * The caller should verify the player's match hasn't started yet.
      */
     fun unsubmitDeck(playerId: EntityId): Boolean {
+        if (isJumpstart) return false
         val isPremadeWaiting = format == TournamentFormat.PREMADE_DECKS && state == LobbyState.WAITING_FOR_PLAYERS
         if (state != LobbyState.DECK_BUILDING && state != LobbyState.TOURNAMENT_ACTIVE && !isPremadeWaiting) {
             return false
@@ -1872,11 +1916,27 @@ class TournamentLobby(
             lobbyId = lobbyId,
             state = state.name,
             players = playerInfos,
+            jumpstart = if (isJumpstart && state != LobbyState.WAITING_FOR_PLAYERS) players[forPlayerId]?.let { player ->
+                ServerMessage.JumpstartState(
+                    pickNumber = player.jumpstartSelections.size + 1,
+                    selectedPacks = player.jumpstartSelections,
+                    offers = player.jumpstartOffers.mapNotNull { id ->
+                        jumpstartPacks.packs.find { it.id == id }?.let { pack ->
+                            ServerMessage.JumpstartOffer(pack.id, pack.theme, pack.cards.map {
+                                com.wingedsheep.gameserver.handler.ConnectionHandler.cardToSealedCardInfo(it)
+                            })
+                        }
+                    },
+                )
+            } else null,
             settings = ServerMessage.LobbySettings(
                 setCodes = setCodes,
                 setNames = setNames,
                 availableSets = availableSets,
                 format = format.name,
+                useJumpstart = useJumpstart,
+                jumpstartEligible = jumpstartEligible,
+                jumpstartActive = isJumpstart,
                 boosterCount = boosterCount,
                 boosterDistribution = boosterDistribution,
                 maxPlayers = maxPlayers,

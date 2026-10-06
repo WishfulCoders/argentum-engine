@@ -192,6 +192,18 @@ internal fun AbilityCost.extractExileXFromGraveyardCost(): AbilityCost.ExileXFro
     }
 
 /**
+ * Pull the [AbilityCost.DiscardX] sub-cost out of an ability cost, or null if none. Used by the
+ * legal-actions submission path to pause for *which* hand cards the player discards, binding X to
+ * how many (Gix, Yawgmoth Praetor — X with no `{X}` mana symbol).
+ */
+internal fun AbilityCost.extractDiscardXCost(): AbilityCost.DiscardX? =
+    when (this) {
+        is AbilityCost.DiscardX -> this
+        is AbilityCost.Composite -> costs.filterIsInstance<AbilityCost.DiscardX>().firstOrNull()
+        else -> null
+    }
+
+/**
  * Pull the [CostAtom.Sacrifice] sub-cost out of an ability cost (top-level [AbilityCost.Atom] or
  * inside a [AbilityCost.Composite]), or null if none. Used by the legal-actions submission path
  * to detect that an activation needs to pause for a sacrifice-target selection when the player

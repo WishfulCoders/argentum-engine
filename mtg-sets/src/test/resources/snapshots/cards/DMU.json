@@ -558,6 +558,58 @@
     "colorIdentityOverride": []
 }
 
+// Cut Down
+{
+    "name": "Cut Down",
+    "manaCost": "{B}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target creature with total power and toughness 5 or less.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "TotalPowerAndToughnessAtMost",
+                                "max": 5
+                            }
+                        ]
+                    }
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "89",
+        "rarity": "UNCOMMON",
+        "artist": "Dominik Mayer",
+        "flavorText": "\"There can be no mercy, no half measures. When facing Phyrexians, it's kill swiftly or die.\"\n—Jodah",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/5/753db072-5d6a-4f37-8f7d-255572ecd3bd.jpg?1783921335",
+        "rulings": [
+            {
+                "date": "2022-09-09",
+                "text": "The total power and toughness of a creature is determined by adding its power and toughness. For example, the total power and toughness of a 3/2 creature is 5."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Deathbloom Gardener
 {
     "name": "Deathbloom Gardener",
@@ -590,6 +642,72 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Destroy Evil
+{
+    "name": "Destroy Evil",
+    "manaCost": "{1}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Choose one —\n• Destroy target creature with toughness 4 or greater.\n• Destroy target enchantment.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "creature tou>=4"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "description": "Destroy target creature with toughness 4 or greater"
+                },
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t1"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "enchantment"
+                            },
+                            "id": "t1"
+                        }
+                    ],
+                    "description": "Destroy target enchantment"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "17",
+        "artist": "Anna Christenson",
+        "flavorText": "Serra's grace most often manifests as a healing touch, but it may also grant a merciful death.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/f/4f7862ef-2c8d-4d28-9e50-7cc41861f245.jpg?1783921366"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -668,6 +786,122 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Ertai Resurrected
+{
+    "name": "Ertai Resurrected",
+    "manaCost": "{2}{U}{B}",
+    "typeLine": "Legendary Creature — Phyrexian Human Wizard",
+    "oracleText": "Flash\nWhen Ertai Resurrected enters, choose up to one —\n• Counter target spell, activated ability, or triggered ability. Its controller draws a card.\n• Destroy another target creature or planeswalker. Its controller draws a card.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ertai Resurrected:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "DrawCards",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        },
+                                        "target": "TargetController"
+                                    },
+                                    {
+                                        "type": "Counter",
+                                        "target": "CounterTarget.SpellOrAbility"
+                                    }
+                                ]
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": {
+                                            "anyOf": [
+                                                {},
+                                                {
+                                                    "cardPredicates": [
+                                                        "IsActivatedOrTriggeredAbility"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "zone": "Stack"
+                                    },
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "Counter target spell, activated ability, or triggered ability. Its controller draws a card"
+                        },
+                        {
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "MoveToZone",
+                                        "target": {
+                                            "type": "BoundVariable",
+                                            "name": "t1"
+                                        },
+                                        "destination": "Graveyard",
+                                        "byDestruction": true
+                                    },
+                                    {
+                                        "type": "DrawCards",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        },
+                                        "target": "TargetController"
+                                    }
+                                ]
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": "creature|planeswalker",
+                                        "excludeSelf": true
+                                    },
+                                    "id": "t1"
+                                }
+                            ],
+                            "description": "Destroy another target creature or planeswalker. Its controller draws a card"
+                        }
+                    ],
+                    "minChooseCount": 0
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "199",
+        "rarity": "RARE",
+        "artist": "Ryan Pancoast",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/f/7f7e780e-fbc5-4dc0-b5c7-efcb8645c7c6.jpg?1783921288"
+    },
+    "colorIdentityOverride": [
+        "BLUE",
+        "BLACK"
     ]
 }
 
@@ -846,6 +1080,172 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Founding the Third Path
+{
+    "name": "Founding the Third Path",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment — Saga",
+    "oracleText": "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger. Sacrifice after III.)\nI — You may cast an instant or sorcery spell with mana value 1 or 2 from your hand without paying its mana cost.\nII — Target player mills four cards.\nIII — Exile target instant or sorcery card from your graveyard. Copy it. You may cast the copy.",
+    "keywords": [
+        "READ_AHEAD"
+    ],
+    "script": {
+        "replacementEffects": [
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "NUMBER",
+                "minValue": 1,
+                "maxValue": 3
+            }
+        ],
+        "sagaChapters": [
+            {
+                "chapter": 1,
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": "instant|sorcery mv>=1 mv<=2"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "selectedLabel": "Cast without paying its mana cost"
+                        },
+                        {
+                            "type": "CastFromCollectionWithoutPayingCost",
+                            "from": "selected1"
+                        }
+                    ]
+                }
+            },
+            {
+                "chapter": 2,
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                },
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "isMill": true
+                            },
+                            "storeAs": "milled"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "milled",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard",
+                                "player": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetPlayer",
+                    "id": "t0"
+                }
+            },
+            {
+                "chapter": 3,
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            },
+                            "destination": "Exile"
+                        },
+                        {
+                            "type": "CopyCardIntoCollection",
+                            "source": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            },
+                            "storeAs": "copy1"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": "Gate.MayDecide",
+                            "then": {
+                                "type": "CastFromCollectionWithoutPayingCost",
+                                "from": "copy1",
+                                "payManaCost": true
+                            },
+                            "descriptionOverride": "You may cast the copy."
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "instant|sorcery own:you",
+                        "zone": "Graveyard"
+                    },
+                    "id": "t1"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "50",
+        "rarity": "UNCOMMON",
+        "artist": "Chris Seaman",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/d/2d841faa-9e0b-45ff-9dfd-f8a169d9af76.jpg?1783921351",
+        "rulings": [
+            {
+                "date": "2022-09-09",
+                "text": "If you cast a card \"without paying its mana cost,\" you can't choose to cast it for any alternative costs. You can, however, pay additional costs. If the card has any mandatory additional costs, you must pay those to cast the card."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If the card has {X} in its mana cost, you must choose 0 as the value of X when casting it without paying its mana cost."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "You must pay all costs for the copy of a spell you cast as Founding the Third Path's last chapter ability resolves. If you choose to cast it, you must cast as the ability resolves. You can't wait and cast it at a later time."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "As a Saga with read ahead enters the battlefield, its controller chooses a number from one to that Saga's greatest chapter number. The Saga enters the battlefield with the chosen number of lore counters. Neither choosing the number nor putting the counters on the Saga use the stack, and neither can be responded to."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -2804,6 +3204,118 @@
     ]
 }
 
+// Temporary Lockdown
+{
+    "name": "Temporary Lockdown",
+    "manaCost": "{1}{W}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "When this enchantment enters, exile each nonland permanent with mana value 2 or less until this enchantment leaves the battlefield.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Temporary Lockdown:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "SourceInZone",
+                            "zones": [
+                                "Battlefield"
+                            ]
+                        }
+                    },
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "nonland permanent mv<=2",
+                                    "excludeSelf": true
+                                },
+                                "storeAs": "linked_exile"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "linked_exile",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Exile"
+                                },
+                                "linkToSource": true
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "Temporary Lockdown:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "linked_return"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "linked_return",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            },
+                            "underOwnersControl": true
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "36",
+        "rarity": "RARE",
+        "artist": "Bryan Sola",
+        "flavorText": "\"Any one of us could be compromised,\" said Karn. \"No one leaves until we know who can be trusted.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/2/82b3088f-7b49-45e9-b447-129a597ceb75.jpg?1783921358",
+        "rulings": [
+            {
+                "date": "2022-09-09",
+                "text": "If Temporary Lockdown leaves the battlefield before its enters-the-battlefield ability resolves, no permanents will be exiled."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "Auras with mana value 3 or greater attached to an exiled permanent will be put into their owners' graveyards. Equipment with mana value 3 or greater attached to an exiled creature will become unattached and remain on the battlefield. Any counters on the exiled permanent will cease to exist."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "Aura cards exiled this way will return to the battlefield attached to a permanent that they could enchant (based on their enchant ability) chosen by their owner. They cannot enchant any permanents that are entering the battlefield at the same time."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If a token is exiled, it ceases to exist. It won't be returned to the battlefield. The mana value of a token that isn't a copy of another permanent is always 0."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "In a multiplayer game, if Temporary Lockdown's owner leaves the game, the exiled cards will return to the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Territorial Maro
 {
     "name": "Territorial Maro",
@@ -2848,6 +3360,68 @@
     "colorIdentityOverride": [
         "GREEN"
     ]
+}
+
+// Thran Portal
+{
+    "name": "Thran Portal",
+    "manaCost": "",
+    "typeLine": "Land — Gate",
+    "oracleText": "This land enters tapped unless you control two or fewer other lands.\nAs this land enters, choose a basic land type.\nThis land is the chosen type in addition to its other types.\nMana abilities of this land cost an additional 1 life to activate.",
+    "script": {
+        "staticAbilities": [
+            "GrantChosenSubtype",
+            "ManaAbilitiesCostAdditionalLife"
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersTapped",
+                "unlessCondition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land",
+                        "excludeSelf": true
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                }
+            },
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "BASIC_LAND_TYPE"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "259",
+        "rarity": "RARE",
+        "artist": "Sarah Finnigan",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/f/ef074a2e-a387-4af8-a180-74b145d93992.jpg?1783921255",
+        "rulings": [
+            {
+                "date": "2022-09-09",
+                "text": "Thran Portal will have the appropriate intrinsic mana ability for the basic land type chosen as it enters the battlefield. It is still a Gate and still has its other abilities, including the last ability, which makes the mana ability associated with its basic land type cost 1 life to activate."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If Thran Portal somehow gains another mana ability, that ability also costs an additional 1 life to activate."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If you control more than one Thran Portal, the last ability of each of them applies only to itself."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If a Thran Portal somehow enters the battlefield without a basic land type having been chosen for it, it does not have any mana abilities."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Tidepool Turtle

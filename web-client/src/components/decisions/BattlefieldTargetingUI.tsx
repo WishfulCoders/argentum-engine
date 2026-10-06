@@ -177,7 +177,7 @@ export function BattlefieldTargetingUI({
         )}
         {canDecline && selectedCount === 0 && (
           <button onClick={handleDecline} className={`${styles.confirmButton} ${styles.confirmButtonSmall}`}>
-            Decline
+            {targetReq?.emptyChoiceLabel ?? 'Decline'}
           </button>
         )}
         {selectedCount > 0 && (

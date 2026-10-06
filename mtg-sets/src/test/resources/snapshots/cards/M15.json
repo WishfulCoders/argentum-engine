@@ -567,6 +567,109 @@
     ]
 }
 
+// Cruel Sadist
+{
+    "name": "Cruel Sadist",
+    "manaCost": "{B}",
+    "typeLine": "Creature — Human Assassin",
+    "oracleText": "{B}, {T}, Pay 1 life: Put a +1/+1 counter on this creature.\n{2}{B}, {T}, Remove X +1/+1 counters from this creature: It deals X damage to target creature.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Cruel Sadist:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{B}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomPayLife",
+                                "amount": 1
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            },
+            {
+                "id": "Cruel Sadist:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}{B}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomRemoveCounters",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "count": "XValue",
+                                "self": true
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": "XValue",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature"
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "93",
+        "rarity": "RARE",
+        "artist": "Min Yum",
+        "flavorText": "Face of innocence. Hand of death.\nDesigned by Edmund McMillen",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/3/a31c94f3-c45b-4ced-b523-15e80ae1a82d.jpg?1783939185",
+        "rulings": [
+            {
+                "date": "2014-07-18",
+                "text": "You can remove any +1/+1 counters from Cruel Sadist to activate its second ability, not just those put on Cruel Sadist by its first ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Dauntless River Marshal
 {
     "name": "Dauntless River Marshal",
@@ -1515,6 +1618,43 @@
     "colorIdentityOverride": []
 }
 
+// Military Intelligence
+{
+    "name": "Military Intelligence",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "Whenever you attack with two or more creatures, draw a card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Military Intelligence:1",
+                "trigger": {
+                    "type": "YouAttackEvent",
+                    "minAttackers": 2
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "69",
+        "rarity": "UNCOMMON",
+        "artist": "Craig J Spearing",
+        "flavorText": "To know the battlefield is to anticipate the enemy. To know the enemy is to anticipate victory.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/1/f10fafb6-3476-4cf1-a762-42fec628a579.jpg?1783939190"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Miner's Bane
 {
     "name": "Miner's Bane",
@@ -1569,6 +1709,85 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Necromancer's Stockpile
+{
+    "name": "Necromancer's Stockpile",
+    "manaCost": "{1}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "{1}{B}, Discard a creature card: Draw a card. If the discarded card was a Zombie card, create a tapped 2/2 black Zombie creature token.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Necromancer's Stockpile:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}{B}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomDiscard",
+                                "filter": "creature"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "EntityMatches",
+                                    "entity": "DiscardedAsCost",
+                                    "filter": "Zombie"
+                                }
+                            },
+                            "then": {
+                                "type": "CreateToken",
+                                "power": 2,
+                                "toughness": 2,
+                                "colors": [
+                                    "BLACK"
+                                ],
+                                "creatureTypes": [
+                                    "Zombie"
+                                ],
+                                "tapped": true
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "108",
+        "rarity": "RARE",
+        "artist": "Seb McKinnon",
+        "flavorText": "The experiments decided to perform some research of their own.",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/b/2ba07e86-fdef-4f51-808e-7780883eefe3.jpg?1783939181"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

@@ -1214,3 +1214,36 @@ data class IncreaseActivatedAbilityCost(
         return if (newFilter !== filter || newAmount !== amount) copy(filter = newFilter, amount = newAmount) else this
     }
 }
+
+/**
+ * The mana abilities of permanents matching [filter] cost an additional [amount] life to activate
+ * — Thran Portal's "Mana abilities of this land cost an additional 1 life to activate."
+ *
+ * The life is an extra *cost* (CR 118.3 — it can be paid only if the player's life total is at
+ * least [amount], CR 119.4), folded into **every** mana ability the matching permanent has: its
+ * printed ones, the intrinsic ability its basic land types give it (CR 305.6), and any ability
+ * granted to it. It is the life-cost counterpart of [IncreaseActivatedAbilityCost] restricted to
+ * mana abilities, and like any static ability it stops applying once the permanent loses its
+ * abilities.
+ *
+ * Lowered by the engine to a Layer 6 projected value, so manual activation, legal-action
+ * enumeration and every auto-pay path read one answer.
+ *
+ * @property amount Additional life each mana-ability activation costs.
+ * @property filter Which permanents' mana abilities are taxed — [GroupFilter.source] (the
+ *   default) for "this land". Several Thran Portals each tax only themselves (printed ruling).
+ */
+@SerialName("ManaAbilitiesCostAdditionalLife")
+@Serializable
+data class ManaAbilitiesCostAdditionalLife(
+    val amount: Int = 1,
+    val filter: GroupFilter = GroupFilter.source()
+) : StaticAbility {
+    override val description: String =
+        "Mana abilities of ${filter.description} cost an additional $amount life to activate"
+
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newFilter = filter.applyTextReplacement(replacer)
+        return if (newFilter !== filter) copy(filter = newFilter) else this
+    }
+}

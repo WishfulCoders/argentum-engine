@@ -10,6 +10,7 @@ data class PersistentTournamentLobby(
     val lobbyId: String,
     val setCodes: List<String> = emptyList(),
     val setNames: List<String> = emptyList(),
+    val useJumpstart: Boolean = false,
     val format: String = "SEALED",  // TournamentFormat enum name
     /**
      * Rules axis: [com.wingedsheep.sdk.core.GameRules] name, or **null for a row written before the
@@ -79,6 +80,8 @@ data class PersistentLobbyPlayer(
     val playerId: String,
     val playerName: String,
     val token: String,
+    val jumpstartOffers: List<String> = emptyList(),
+    val jumpstartSelections: List<String> = emptyList(),
     val cardPoolNames: List<String>,  // Card names only
     val currentPackNames: List<String>? = null,  // Draft only: current pack cards
     val packQueueNames: List<List<String>> = emptyList(),  // Draft only: queued packs (async passing)

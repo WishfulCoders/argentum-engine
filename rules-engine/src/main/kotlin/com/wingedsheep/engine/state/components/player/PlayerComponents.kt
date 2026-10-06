@@ -235,6 +235,29 @@ data class ManaPoolComponent(
     fun empty(): ManaPoolComponent = ManaPoolComponent()
 
     /**
+     * Add every unit of [other] to this pool, unchanged: colour, restriction, riders, expiry, snow
+     * mark and provenance all travel with the mana ("you add the mana lost this way" — Drain Power).
+     * Per-activation spending obligations belong to the player who activated, so they don't.
+     */
+    fun plus(other: ManaPoolComponent): ManaPoolComponent = ManaPoolComponent(
+        white = white + other.white,
+        blue = blue + other.blue,
+        black = black + other.black,
+        red = red + other.red,
+        green = green + other.green,
+        colorless = colorless + other.colorless,
+        restrictedMana = restrictedMana + other.restrictedMana.map { it.copy(obligationIds = emptySet()) },
+        manaBySubtype = sumCounts(manaBySubtype, other.manaBySubtype),
+        manaBySource = sumCounts(manaBySource, other.manaBySource),
+        manaByCardType = sumCounts(manaByCardType, other.manaByCardType),
+        snowMana = sumCounts(snowMana, other.snowMana),
+        snowColorless = snowColorless + other.snowColorless
+    )
+
+    private fun <K> sumCounts(a: Map<K, Int>, b: Map<K, Int>): Map<K, Int> =
+        if (b.isEmpty()) a else a + b.mapValues { (k, v) -> (a[k] ?: 0) + v }
+
+    /**
      * Empty the pool as a step or phase ends (CR 500.5 / 703.4q), the engine's turn-based
      * mana-loss action. This is the single emptying primitive for every mana-loss point, applying
      * the per-player mana-loss statics:
@@ -1131,6 +1154,19 @@ data class CardsDrawnThisTurnComponent(
  */
 @Serializable
 data class CardsInHandAtTurnStartComponent(
+    val count: Int = 0
+) : Component
+
+/**
+ * How many untapped lands this player controlled **at the beginning of the current turn**. Written
+ * alongside [CardsInHandAtTurnStartComponent] in `BeginningPhaseManager.performUntapStep`, before the
+ * active player's permanents phase in or untap, and overwritten there each turn.
+ *
+ * Backs [com.wingedsheep.sdk.scripting.values.TurnTracker.UNTAPPED_LANDS_AT_TURN_START] and, through
+ * it, Power Surge.
+ */
+@Serializable
+data class UntappedLandsAtTurnStartComponent(
     val count: Int = 0
 ) : Component
 

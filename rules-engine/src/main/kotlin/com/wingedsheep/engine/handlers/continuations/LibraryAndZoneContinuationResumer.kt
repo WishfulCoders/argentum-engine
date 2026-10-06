@@ -23,6 +23,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CastAnyNumberFromCollectionWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
+import com.wingedsheep.sdk.scripting.effects.PlayFromCollectionWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
@@ -1240,7 +1241,13 @@ class LibraryAndZoneContinuationResumer(
         val stateForCast = state.copy(priorityPlayerId = continuation.casterId)
         val castResult = castSpellHandler.execute(
             stateForCast,
-            CastSpell(continuation.casterId, continuation.cardId, chosenTargets, faceIndex = continuation.faceIndex),
+            CastSpell(
+                continuation.casterId, continuation.cardId, chosenTargets, faceIndex = continuation.faceIndex,
+                // The response is keyed by requirement, so it knows each group's size; inference
+                // can't always recover it (two optional groups with overlapping filters).
+                targetGroupCounts = response.selectedTargets.keys.maxOrNull()
+                    ?.let { last -> (0..last).map { response.selectedTargets[it]?.size ?: 0 } },
+            ),
         )
 
         if (castResult.error != null) {
@@ -1354,7 +1361,12 @@ class LibraryAndZoneContinuationResumer(
         // CastFromCollectionWithoutPayingCostExecutor no-ops on it, leaving it in exile. Ask the
         // executor's own precondition the same question it will ask, so that pick doesn't burn a
         // cast. Deterministic over the same state, so the two answers can't disagree.
-        val castWillInitiate = (continuation.maxCasts == null && continuation.maxTotalManaValue == null) ||
+        // A land under "play lands and cast spells" is played, not cast: it goes through the
+        // land-play path and spends nothing from a spell budget.
+        val playsLand = continuation.playLands &&
+            CastAnyNumberFromCollectionWithoutPayingCostExecutor.isLand(state, chosenId)
+        val castWillInitiate = !playsLand && (
+            (continuation.maxCasts == null && continuation.maxTotalManaValue == null) ||
             CastFromCollectionWithoutPayingCostExecutor.prepareTargetSelection(
                 state = state,
                 cardId = chosenId,
@@ -1362,9 +1374,11 @@ class LibraryAndZoneContinuationResumer(
                 cardRegistry = services.cardRegistry,
                 targetFinder = targetFinder,
             ) !is CastFromCollectionWithoutPayingCostExecutor.TargetPrep.NoLegalTargets
+            )
 
         val effects = listOf(
-            CastFromCollectionWithoutPayingCostEffect(from = singleKey, payManaCost = continuation.payManaCost),
+            if (playsLand) PlayFromCollectionWithoutPayingCostEffect(from = singleKey)
+            else CastFromCollectionWithoutPayingCostEffect(from = singleKey, payManaCost = continuation.payManaCost),
             CastAnyNumberFromCollectionWithoutPayingCostEffect(
                 from = continuation.from,
                 payManaCost = continuation.payManaCost,
@@ -1379,6 +1393,7 @@ class LibraryAndZoneContinuationResumer(
                         budget - CastAnyNumberFromCollectionWithoutPayingCostExecutor.manaValueOf(state, chosenId)
                     } else budget
                 },
+                playLands = continuation.playLands,
             ),
         )
         val result = effectRunner.executeRemainingEffects(state, effects, loopContext)

@@ -12,6 +12,8 @@ export function PlayerTargetingUI({
 }: {
   decision: ChooseTargetsDecision
 }) {
+  const submitTargetsDecision = useGameStore((s) => s.submitTargetsDecision)
+  const emptyChoiceLabel = decision.targetRequirements[0]?.emptyChoiceLabel
   const submitCancelDecision = useGameStore((s) => s.submitCancelDecision)
 
   const handleCancel = () => {
@@ -29,6 +31,14 @@ export function PlayerTargetingUI({
       <div className={styles.hint}>
         Click a player's life total
       </div>
+      {emptyChoiceLabel && (
+        <div className={styles.buttonContainerSmall}>
+          <button className={`${styles.confirmButton} ${styles.confirmButtonSmall}`}
+            onClick={() => submitTargetsDecision(decision.id, { 0: [] })}>
+            {emptyChoiceLabel}
+          </button>
+        </div>
+      )}
       {decision.canCancel && (
         <div className={styles.buttonContainerSmall}>
           <button onClick={handleCancel} className={`${styles.confirmButton} ${styles.confirmButtonSmall}`}>

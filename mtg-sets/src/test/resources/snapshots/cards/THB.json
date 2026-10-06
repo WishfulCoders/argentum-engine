@@ -1125,6 +1125,115 @@
     ]
 }
 
+// Flicker of Fate
+{
+    "name": "Flicker of Fate",
+    "manaCost": "{1}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Exile target creature or enchantment, then return it to the battlefield under its owner's control.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Battlefield"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature|enchantment"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "16",
+        "artist": "Tomasz Jedruszek",
+        "flavorText": "An infinite journey in an infinitesimal time.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/9/59e19bac-176c-4e37-bfc8-27c00de7c37f.jpg?1783931597",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "Once the exiled permanent returns, it's considered a new object with no relation to the object that it was. Auras attached to the exiled permanent will be put into their owners' graveyards. Equipment attached to the exiled permanent will become unattached and remain on the battlefield. Any counters on the exiled permanent will cease to exist."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If a token is exiled this way, it will cease to exist and won't return to the battlefield."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If an Aura is put onto the battlefield without being cast, the Aura's controller-to-be chooses what it will enchant as it comes back onto the battlefield. An Aura put onto the battlefield this way doesn't target anything (so it could be attached to an opponent's permanent with hexproof, for example), but the Aura's enchant ability restricts what it can be attached to. If the Aura can't legally be attached to anything, it remains in its current zone."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Glory Bearers
+{
+    "name": "Glory Bearers",
+    "manaCost": "{3}{W}",
+    "typeLine": "Enchantment Creature — Human Cleric",
+    "oracleText": "Whenever another creature you control attacks, it gets +0/+1 until end of turn.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Glory Bearers:1",
+                "trigger": {
+                    "type": "AttackEvent",
+                    "filter": "creature ctrl:you"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 0
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "TriggeringEntity"
+                },
+                "descriptionOverride": "Whenever another creature you control attacks, it gets +0/+1 until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "17",
+        "artist": "Tyler Walpole",
+        "flavorText": "\"We are bearers of the ancient light, keepers of sun-crowned Heliod's blessings. Fight, and the light will protect you!\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/a/8a70e1be-f04a-43c1-8fca-205a24e3db38.jpg?1783931596"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Grim Physician
 {
     "name": "Grim Physician",
@@ -2253,6 +2362,77 @@
     ]
 }
 
+// Phalanx Tactics
+{
+    "name": "Phalanx Tactics",
+    "manaCost": "{1}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Target creature you control gets +2/+1 until end of turn. Each other creature you control gets +1/+1 until end of turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Group",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you",
+                            "excludeTarget": true
+                        }
+                    },
+                    "body": {
+                        "type": "ModifyStats",
+                        "powerModifier": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "toughnessModifier": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "target": "IterationEntity"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "31",
+        "rarity": "UNCOMMON",
+        "artist": "Bayard Wu",
+        "flavorText": "Every soldier has a place to stand and a role to play.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/f/5f114a10-0b00-4f3a-bd73-d4c791fbf4d5.jpg?1783931592"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Pharika's Libation
 {
     "name": "Pharika's Libation",
@@ -3145,6 +3325,100 @@
     ]
 }
 
+// Stinging Lionfish
+{
+    "name": "Stinging Lionfish",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment Creature — Fish",
+    "oracleText": "Whenever you cast your first spell during each opponent's turn, you may tap or untap target nonland permanent.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Stinging Lionfish:1",
+                "trigger": {
+                    "type": "NthSpellCastEvent",
+                    "nthSpell": 1,
+                    "player": "You"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Modal",
+                        "modes": [
+                            {
+                                "effect": {
+                                    "type": "TapUntap",
+                                    "target": {
+                                        "type": "BoundVariable",
+                                        "name": "t0"
+                                    }
+                                },
+                                "description": "Tap that permanent"
+                            },
+                            {
+                                "effect": {
+                                    "type": "TapUntap",
+                                    "target": {
+                                        "type": "BoundVariable",
+                                        "name": "t0"
+                                    },
+                                    "tap": false
+                                },
+                                "description": "Untap that permanent"
+                            }
+                        ],
+                        "countsAsModalSpell": false
+                    },
+                    "descriptionOverride": "Whenever you cast your first spell during each opponent's turn, you may tap or untap target nonland permanent."
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "nonland permanent"
+                    },
+                    "id": "t0"
+                },
+                "triggerRestriction": "IsOpponentsTurn",
+                "descriptionOverride": "Whenever you cast your first spell during each opponent's turn, you may tap or untap target nonland permanent."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "69",
+        "rarity": "UNCOMMON",
+        "artist": "Christopher Burdett",
+        "flavorText": "Starfish are its favorite prey.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/1/0162a0b8-a2d1-4664-a445-331aee6d5175.jpg?1783931577",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "An ability that triggers when you cast a spell resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "This ability triggers only on your very first spell during an opponent's turn, not the first spell after the card is on the battlefield. If you cast a spell before it's on the battlefield (including if you cast this card somehow during an opponent's turn), the ability won't trigger."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If you have more than one opponent, this ability can trigger once during each of those opponents' turns."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "In a Two-Headed Giant game, this ability triggers no more than once during each opposing team's turn."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Sunmane Pegasus
 {
     "name": "Sunmane Pegasus",
@@ -3527,6 +3801,45 @@
     "colorIdentityOverride": []
 }
 
+// Transcendent Envoy
+{
+    "name": "Transcendent Envoy",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment Creature — Griffin",
+    "oracleText": "Flying\nAura spells you cast cost {1} less to cast.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ModifySpellCost",
+                "target": {
+                    "type": "YouCast",
+                    "filter": "Aura"
+                },
+                "modification": {
+                    "type": "ReduceGeneric",
+                    "amount": 1
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "40",
+        "artist": "Zezhou Chen",
+        "flavorText": "\"The first griffins were made by the gods to capture falling stars; they were given the keenest eyes and the swiftest wings, and sent to keep watch above the clouds.\"\n—*The Cosmogony*",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/9/a9241289-28d2-4827-970e-81bdecbb5c16.jpg?1783931589"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Triton Waverider
 {
     "name": "Triton Waverider",
@@ -3695,6 +4008,68 @@
         "artist": "Volkan Baǵa",
         "flavorText": "\"May the skies be clear of gales and gulls.\"\n—Meletian prayer",
         "imageUri": "https://cards.scryfall.io/normal/front/8/6/869fee23-df75-448d-9fca-6ba6713d459f.jpg"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Wavebreak Hippocamp
+{
+    "name": "Wavebreak Hippocamp",
+    "manaCost": "{2}{U}",
+    "typeLine": "Enchantment Creature — Horse Fish",
+    "oracleText": "Whenever you cast your first spell during each opponent's turn, draw a card.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Wavebreak Hippocamp:1",
+                "trigger": {
+                    "type": "NthSpellCastEvent",
+                    "nthSpell": 1,
+                    "player": "You"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "triggerRestriction": "IsOpponentsTurn",
+                "descriptionOverride": "Whenever you cast your first spell during each opponent's turn, draw a card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "80",
+        "rarity": "RARE",
+        "artist": "Caio Monteiro",
+        "flavorText": "Tritons search for omens in its wake.",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/9/d900dff5-1196-443f-b9b0-b8e75c67c868.jpg?1783931573",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "An ability that triggers when you cast a spell resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "This ability triggers only on your very first spell during an opponent's turn, not the first spell after the card is on the battlefield. If you cast a spell before it's on the battlefield (including if you cast this card somehow during an opponent's turn), the ability won't trigger."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If you have more than one opponent, this ability can trigger once during each of those opponents' turns."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "In a Two-Headed Giant game, this ability triggers no more than once during each opposing team's turn."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "BLUE"

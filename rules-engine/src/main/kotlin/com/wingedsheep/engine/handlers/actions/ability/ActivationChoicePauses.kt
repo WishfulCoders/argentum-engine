@@ -5,6 +5,7 @@ import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ActivateAbilityChooseManaXContinuation
 import com.wingedsheep.engine.core.ActivateAbilityChooseXContinuation
 import com.wingedsheep.engine.core.ActivateAbilityControllerTargetContinuation
+import com.wingedsheep.engine.core.ActivateAbilityDiscardXContinuation
 import com.wingedsheep.engine.core.ActivateAbilityExileFromGraveyardContinuation
 import com.wingedsheep.engine.core.ActivateAbilityExileXFromGraveyardContinuation
 import com.wingedsheep.engine.core.ActivateAbilityOpponentChooserContinuation
@@ -63,6 +64,7 @@ internal class ActivationChoicePauses(
             ?: tapXPermanentsChoice(state, activation)
             ?: manaXChoice(state, activation)
             ?: exileXFromGraveyardChoice(state, activation)
+            ?: discardXChoice(state, activation)
             ?: exileFromGraveyardChoice(state, activation)
             ?: sacrificeChoice(state, activation)
             ?: putOnLibraryChoice(state, activation)
@@ -246,6 +248,51 @@ internal class ActivationChoicePauses(
                     prompt = prompt,
                     context = castingContext(action, sourceName),
                     options = exileXCandidates,
+                    minSelections = minSelections,
+                    maxSelections = maxSelections
+                )
+            },
+            answer = continuation
+        )
+    }
+
+    // -------------------------------------------------------------------
+    // DiscardX pause (legal-actions submission path) — the hand-side twin of the
+    // ExileXFromGraveyard pause above. "Discard X cards" with no `{X}` mana (Gix, Yawgmoth
+    // Praetor) is one decision: pick the cards, and X is how many were picked. A mana `{X}`
+    // alongside it fixes the count instead. Skipped when the discards are pre-filled
+    // (engine-direct path, or the resume after this pause), when X is a bound zero, or when there
+    // is no real choice (X equals the candidates, which CostHandler pays as-is).
+    // -------------------------------------------------------------------
+    private fun discardXChoice(state: GameState, activation: Activation): ExecutionResult? {
+        val action = activation.action
+        val sourceName = activation.sourceName
+        val discardXCost = activation.effectiveCost.extractDiscardXCost() ?: return null
+        val settled = (action.costPayment?.discardedCards?.isNotEmpty() == true) || action.xValue == 0
+        if (settled) return null
+        val candidates = costHandler.discardXCandidates(state, action.playerId, action.sourceId, discardXCost)
+        val fixedCount = action.xValue
+        val minSelections = fixedCount ?: 0
+        val maxSelections = fixedCount ?: candidates.size
+        if (candidates.size <= minSelections) return null
+        val prompt = if (fixedCount != null) {
+            "Select $fixedCount card${if (fixedCount > 1) "s" else ""} to discard for $sourceName"
+        } else {
+            "Select any number of cards to discard for $sourceName (X is the number you choose)"
+        }
+        val continuation = ActivateAbilityDiscardXContinuation(
+            action = action,
+            discardCandidates = candidates,
+            fixedCount = fixedCount
+        )
+        return state.suspendForDecision(
+            question = { decisionId ->
+                SelectCardsDecision(
+                    id = decisionId,
+                    playerId = action.playerId,
+                    prompt = prompt,
+                    context = castingContext(action, sourceName),
+                    options = candidates,
                     minSelections = minSelections,
                     maxSelections = maxSelections
                 )

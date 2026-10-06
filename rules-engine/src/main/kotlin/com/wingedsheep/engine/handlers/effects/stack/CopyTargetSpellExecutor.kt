@@ -11,6 +11,7 @@ import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.state.components.stack.TargetsComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.effects.CopyExceptions
 import com.wingedsheep.sdk.scripting.effects.CopyTargetSpellEffect
 import kotlin.reflect.KClass
 
@@ -57,6 +58,14 @@ class CopyTargetSpellExecutor(
         val targetsComponent = container.get<TargetsComponent>()
         val targetRequirements = targetsComponent?.targetRequirements ?: emptyList()
 
+        val exceptions = effect.exceptions.let { value ->
+            if (!value.retainResolvingTriggeredAbility) value
+            else value.copy(
+                retainResolvingTriggeredAbility = false,
+                addedTriggeredAbilities = value.addedTriggeredAbilities + listOfNotNull(context.resolvingTriggeredAbility)
+            )
+        }
+
         // Token-side riders (CR 707.10f): keywords baked onto, and a delayed sacrifice trigger for,
         // the token the copy resolves into when the copied spell is a permanent spell. Stamped on
         // the copy entity and consumed by StackResolver at resolution.
@@ -87,7 +96,7 @@ class CopyTargetSpellExecutor(
                 return EffectResult.from(
                     putInheritedCopies(
                         state, spellEntityId, context.controllerId, copyCount,
-                        effect.keywordsForCopy.toSet(), effect.removeLegendary, tokenRiders
+                        effect.keywordsForCopy.toSet(), effect.removeLegendary, tokenRiders, exceptions
                     )
                 )
             }
@@ -105,7 +114,8 @@ class CopyTargetSpellExecutor(
                 totalCopies = copyCount,
                 priorEvents = emptyList(),
                 keywordsForCopy = effect.keywordsForCopy.toSet(),
-                removeLegendary = effect.removeLegendary
+                removeLegendary = effect.removeLegendary,
+                exceptions = exceptions
             ))
         }
 
@@ -116,7 +126,7 @@ class CopyTargetSpellExecutor(
             return EffectResult.from(
                 putInheritedCopies(
                     state, spellEntityId, context.controllerId, copyCount,
-                    effect.keywordsForCopy.toSet(), effect.removeLegendary, tokenRiders
+                    effect.keywordsForCopy.toSet(), effect.removeLegendary, tokenRiders, exceptions
                 )
             )
         }
@@ -127,7 +137,7 @@ class CopyTargetSpellExecutor(
         // CR 707.10f token tagging happens at resolution in StackResolver.
         return promptForCopyTargets(
             state, context, spellEntityId, spellEffect, targetRequirements, spellName,
-            effect.keywordsForCopy.toSet(), effect.removeLegendary, copyCount, tokenRiders
+            effect.keywordsForCopy.toSet(), effect.removeLegendary, copyCount, tokenRiders, exceptions
         )
     }
 
@@ -144,7 +154,8 @@ class CopyTargetSpellExecutor(
         copyCount: Int,
         keywordsForCopy: Set<String>,
         removeLegendary: Boolean,
-        tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent?
+        tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent?,
+        exceptions: CopyExceptions
     ): ExecutionResult {
         var currentState = state
         val allEvents = mutableListOf<GameEvent>()
@@ -154,7 +165,8 @@ class CopyTargetSpellExecutor(
                 sourceSpellId = spellEntityId,
                 copyIndex = i,
                 copyTotal = copyCount,
-                controllerId = controllerId
+                controllerId = controllerId,
+                exceptions = exceptions
             )
             if (copyResult.outcome !is Outcome.Done) return copyResult
             currentState = StormCopyEffectExecutor.applyCopyMutations(
@@ -164,29 +176,6 @@ class CopyTargetSpellExecutor(
             allEvents.addAll(copyResult.events)
         }
         return ExecutionResult.success(currentState, allEvents)
-    }
-
-    private fun applyKeywordsToCopy(
-        result: com.wingedsheep.engine.core.ExecutionResult,
-        keywords: List<String>
-    ): com.wingedsheep.engine.core.ExecutionResult {
-        if (keywords.isEmpty() || result.outcome !is Outcome.Done) return result
-        val copyId = result.events.asReversed().firstNotNullOfOrNull { event ->
-            when (event) {
-                is com.wingedsheep.engine.core.SpellCopiedEvent -> event.copyEntityId
-                is com.wingedsheep.engine.core.AbilityActivatedEvent -> event.abilityEntityId
-                else -> null
-            }
-        } ?: return result
-        val updated = result.newState.updateEntity(copyId) { container ->
-            val existing = container.get<com.wingedsheep.engine.state.components.stack.SpellGrantedKeywordsComponent>()
-            container.with(
-                com.wingedsheep.engine.state.components.stack.SpellGrantedKeywordsComponent(
-                    (existing?.keywords ?: emptySet()) + keywords
-                )
-            )
-        }
-        return com.wingedsheep.engine.core.ExecutionResult.success(updated, result.events)
     }
 
     private fun promptForCopyTargets(
@@ -200,25 +189,23 @@ class CopyTargetSpellExecutor(
         removeLegendary: Boolean = false,
         copyCount: Int = 1,
         tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent? = null,
+        exceptions: CopyExceptions = CopyExceptions.None,
     ): EffectResult {
 
-        val legalTargetsMap = mutableMapOf<Int, List<EntityId>>()
-        for ((index, requirement) in targetRequirements.withIndex()) {
-            val legalTargets = targetFinder.findLegalTargets(
-                state, requirement, context.controllerId, context.sourceId
-            )
-            legalTargetsMap[index] = legalTargets
-        }
+        val prompt = SpellCopyTargets.prompt(
+            state, targetFinder, spellEntityId, context.controllerId, targetRequirements, exceptions
+        )
+        val legalTargetsMap = prompt.legal
 
-        // CR 707.10c: no legal replacement for some requirement, so nothing can be re-chosen —
+        // CR 707.10c: no legal replacement in any slot, so nothing can be re-chosen —
         // the copies still go on the stack inheriting the source's (now-illegal) targets and
         // fizzle on resolution per 608.2b / 112.3b, exactly as the Storm path does.
-        val hasNoLegalTargets = legalTargetsMap.any { (_, targets) -> targets.isEmpty() }
+        val hasNoLegalTargets = legalTargetsMap.values.all { it.isEmpty() }
         if (hasNoLegalTargets) {
             return EffectResult.from(
                 putInheritedCopies(
                     state, spellEntityId, context.controllerId, copyCount,
-                    keywordsForCopy, removeLegendary, tokenRiders
+                    keywordsForCopy, removeLegendary, tokenRiders, exceptions
                 )
             )
         }
@@ -239,15 +226,10 @@ class CopyTargetSpellExecutor(
             totalCopies = copyCount,
             keywordsForCopy = keywordsForCopy,
             removeLegendary = removeLegendary,
-            tokenRiders = tokenRiders
+            tokenRiders = tokenRiders,
+            exceptions = exceptions
         )
-        val targetReqInfos = targetRequirements.mapIndexed { index, req ->
-            TargetRequirementInfo(
-                index = index,
-                description = req.description,
-                mustDifferFromEarlier = req is com.wingedsheep.sdk.scripting.targets.TargetOther
-            )
-        }
+        val targetReqInfos = prompt.requirements
 
         // Matches the Storm path's labelling so a multi-copy prompt says which copy it is for.
         val copyLabel = if (copyCount > 1) "copy 1 of $copyCount of $spellName" else "copy of $spellName"

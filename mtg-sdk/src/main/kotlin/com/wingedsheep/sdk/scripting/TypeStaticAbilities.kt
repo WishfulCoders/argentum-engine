@@ -42,8 +42,11 @@ data class GrantSubtype(
  * Used by Leyline of Transformation / Conspiracy / Xenograft: "Creatures you control are the
  * chosen type in addition to their other types."
  *
- * This is a Layer 4 (type-changing) continuous effect. If the source has no chosen creature
- * type, no subtype is added.
+ * This is a Layer 4 (type-changing) continuous effect. "The chosen type" is the creature type the
+ * source chose as it entered or, failing that, its chosen basic land type — Thran Portal ("As this
+ * land enters, choose a basic land type. This land is the chosen type in addition to its other
+ * types."), which thereby gains that type's intrinsic mana ability. If the source chose neither,
+ * no subtype is added.
  *
  * The [filter] half is the standard battlefield projection (Layer 4). The two cross-zone flags
  * extend the grant beyond the battlefield, modeling the Conspiracy / Leyline-of-Transformation

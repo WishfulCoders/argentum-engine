@@ -342,6 +342,13 @@ object Costs {
         AbilityCost.ExileXFromGraveyard(filter)
 
     /**
+     * Discard X cards, where X is the ability's X value — chosen by how many cards are discarded
+     * when there is no `{X}` mana (Gix, Yawgmoth Praetor: "{4}{B}{B}{B}, Discard X cards: …").
+     */
+    fun DiscardX(filter: GameObjectFilter = GameObjectFilter.Any): AbilityCost =
+        AbilityCost.DiscardX(filter)
+
+    /**
      * Collect evidence [amount] (CR 701.59) — exile any number of cards from your graveyard with
      * total mana value [amount] or greater. Unlike [ExileFromGraveyard] the constraint is a floor on
      * the exiled cards' **total mana value**, not on their count. Per CR 701.59b the ability is not

@@ -668,6 +668,7 @@ object CardLinter {
         put("DrawUpTo" to "storeNotDrawnAs", write(Space.NUMBER))
         put("Fight" to "excessDamageVariable", write(Space.NUMBER))
         put("DealDamage" to "excessDamageVariable", write(Space.NUMBER))
+        put("DealDamage" to "damageDealtVariable", write(Space.NUMBER))
         put("PayCounters" to "storeAmountAs", write(Space.NUMBER))
         put("CollectEvidenceChosenAmount" to "storeAmountAs", write(Space.NUMBER))
         put("PayManaCostRepeatedly" to "storeCountAs", write(Space.NUMBER))
@@ -881,6 +882,14 @@ object CardLinter {
         "SourceChosenModeIs" to "MODE",
         "CardTypeEqualsChosenComponent" to "CARD_TYPE",
         "ConvokedSource" to "CONVOKED_CREATURES",
+    )
+
+    /**
+     * Fallback slots a [slotReaders] node also accepts: `GrantChosenSubtype` reads the chosen
+     * creature type, or failing that the chosen basic land type (Thran Portal).
+     */
+    private val slotReaderFallbacks: Map<String, Set<String>> = mapOf(
+        "GrantChosenSubtype" to setOf("LAND_TYPE"),
     )
 
     /** Node types whose `slot` field names the slot they read. */
@@ -1544,7 +1553,8 @@ object CardLinter {
 
     private fun checkSlots(cardName: String, slots: SlotUsage, findings: MutableList<CardValidationError>) {
         for ((slot, nodeType) in slots.reads) {
-            if (slot !in slots.declared) {
+            val fallbacks = slotReaderFallbacks[nodeType].orEmpty()
+            if (slot !in slots.declared && fallbacks.none { it in slots.declared }) {
                 findings.add(
                     CardValidationError.UndeclaredChoiceSlotRead(
                         cardName = cardName,

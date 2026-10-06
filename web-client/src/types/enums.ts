@@ -184,6 +184,7 @@ export enum Keyword {
   // ETB modification
   AMPLIFY = 'AMPLIFY',
   RIOT = 'RIOT',
+  READ_AHEAD = 'READ_AHEAD',
   // Defense
   DEFENDER = 'DEFENDER',
   INDESTRUCTIBLE = 'INDESTRUCTIBLE',
@@ -286,6 +287,7 @@ export enum Keyword {
   FORETELL = 'FORETELL',
   RENEW = 'RENEW',
   EMBALM = 'EMBALM',
+  UNEARTH = 'UNEARTH',
   ANNIHILATOR = 'ANNIHILATOR',
   BUSHIDO = 'BUSHIDO',
   RAMPAGE = 'RAMPAGE',
@@ -337,6 +339,7 @@ export const KeywordDisplayNames: Record<Keyword, string> = {
   [Keyword.BANDING]: 'Banding',
   [Keyword.AMPLIFY]: 'Amplify',
   [Keyword.RIOT]: 'Riot',
+  [Keyword.READ_AHEAD]: 'Read ahead',
   [Keyword.DEFENDER]: 'Defender',
   [Keyword.INDESTRUCTIBLE]: 'Indestructible',
   [Keyword.HEXPROOF]: 'Hexproof',
@@ -414,6 +417,7 @@ export const KeywordDisplayNames: Record<Keyword, string> = {
   [Keyword.FORETELL]: 'Foretell',
   [Keyword.RENEW]: 'Renew',
   [Keyword.EMBALM]: 'Embalm',
+  [Keyword.UNEARTH]: 'Unearth',
   [Keyword.ANNIHILATOR]: 'Annihilator',
   [Keyword.BUSHIDO]: 'Bushido',
   [Keyword.RAMPAGE]: 'Rampage',

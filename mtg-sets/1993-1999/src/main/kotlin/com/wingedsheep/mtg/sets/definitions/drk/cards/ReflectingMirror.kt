@@ -41,13 +41,13 @@ val ReflectingMirror = card("Reflecting Mirror") {
         "is you. The new target must be a player. X is twice the mana value of that spell."
 
     activatedAbility {
-        val spellOrAbilityWithSingleTarget = target(TargetFilter.SpellOrAbilityOnStack)
+        val spellWithSingleTarget = target(TargetFilter.SpellOnStack)
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap)
         effect = Effects.If(
             condition = Conditions.CompareAmounts(
                 DynamicAmounts.xValue(),
                 ComparisonOperator.GTE,
-                DynamicAmounts.manaValueOf(spellOrAbilityWithSingleTarget) * 2,
+                DynamicAmounts.manaValueOf(spellWithSingleTarget) * 2,
             ),
             then = Effects.ChangeTarget(
                 newTargetMustBePlayer = true,

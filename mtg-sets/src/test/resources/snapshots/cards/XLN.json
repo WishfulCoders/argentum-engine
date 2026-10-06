@@ -96,6 +96,80 @@
     ]
 }
 
+// Blight Keeper
+{
+    "name": "Blight Keeper",
+    "manaCost": "{B}",
+    "typeLine": "Creature — Bat Imp",
+    "oracleText": "Flying\n{7}{B}, {T}, Sacrifice this creature: Target opponent loses 4 life and you gain 4 life.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Blight Keeper:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{7}{B}"
+                            }
+                        },
+                        "CostTap",
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "LoseLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 4
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 4
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetOpponent",
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "92",
+        "artist": "Ben Wootten",
+        "flavorText": "It withers fruit and flesh alike.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/b/3bcabe2d-82d2-4c1b-8f28-21dc29c9dbf2.jpg?1783935767"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Blinding Fog
 {
     "name": "Blinding Fog",
@@ -2323,6 +2397,68 @@
     ]
 }
 
+// Lookout's Dispersal
+{
+    "name": "Lookout's Dispersal",
+    "manaCost": "{2}{U}",
+    "typeLine": "Instant",
+    "oracleText": "This spell costs {1} less to cast if you control a Pirate.\nCounter target spell unless its controller pays {4}.",
+    "script": {
+        "spellEffect": {
+            "type": "Counter",
+            "condition": {
+                "type": "CounterCondition.UnlessPaysMana",
+                "cost": "{4}"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifySpellCost",
+                "target": "SelfCast",
+                "modification": {
+                    "type": "ReduceGeneric",
+                    "amount": 1
+                },
+                "gating": {
+                    "type": "OnlyIf",
+                    "condition": {
+                        "type": "Exists",
+                        "player": "You",
+                        "zone": "Battlefield",
+                        "filter": "permanent Pirate"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "62",
+        "rarity": "UNCOMMON",
+        "artist": "Ryan Yee",
+        "flavorText": "Her song plucks the strings of the storm, shifting wind and storm into a harmony that will carry her ship to safety.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/5/f5751a3c-7695-4c47-9cbd-92fd5b1b7ec9.jpg?1783935780",
+        "rulings": [
+            {
+                "date": "2017-09-29",
+                "text": "Once you announce that you're casting Lookout's Dispersal, no player may take other actions until the spell's been paid for. Notably, players can't try to raise the spell's cost by removing your Pirates."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Looming Altisaur
 {
     "name": "Looming Altisaur",
@@ -2681,6 +2817,105 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Perilous Voyage
+{
+    "name": "Perilous Voyage",
+    "manaCost": "{1}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Return target nonland permanent you don't control to its owner's hand. If its mana value was 2 or less, scry 2.",
+    "script": {
+        "spellEffect": {
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "numericProperty": "ManaValue"
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                }
+            },
+            "then": {
+                "type": "Composite",
+                "effects": [
+                    {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Hand"
+                    },
+                    {
+                        "type": "Scry",
+                        "count": 2
+                    }
+                ]
+            },
+            "otherwise": {
+                "type": "MoveToZone",
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                },
+                "destination": "Hand"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsNonland",
+                            "IsPermanent"
+                        ],
+                        "controllerPredicate": {
+                            "type": "ControllerNot",
+                            "predicate": "ControlledByYou"
+                        }
+                    }
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "67",
+        "rarity": "UNCOMMON",
+        "artist": "Wesley Burt",
+        "flavorText": "For the first time in her life, Vraska tried to prevent death.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/9/c9f6623e-2784-4bc9-9d8c-3eee9c78c350.jpg?1783935777",
+        "rulings": [
+            {
+                "date": "2017-09-29",
+                "text": "If the target permanent is an illegal target by the time Perilous Voyage resolves, the entire spell doesn't resolve. You won't scry."
+            },
+            {
+                "date": "2017-09-29",
+                "text": "Use the permanent's mana value as it existed on the battlefield to determine whether you scry."
+            },
+            {
+                "date": "2017-09-29",
+                "text": "If a permanent has {X} in its mana cost, X is considered to be 0."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -3452,6 +3687,49 @@
     ]
 }
 
+// Shaper Apprentice
+{
+    "name": "Shaper Apprentice",
+    "manaCost": "{1}{U}",
+    "typeLine": "Creature — Merfolk Wizard",
+    "oracleText": "This creature has flying as long as you control another Merfolk.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 1
+    },
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantKeyword",
+                    "keyword": "FLYING",
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "Exists",
+                    "player": "You",
+                    "zone": "Battlefield",
+                    "filter": "permanent Merfolk",
+                    "excludeSelf": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "75",
+        "artist": "Yongjae Choi",
+        "flavorText": "The River Heralds would wreck a thousand ships to keep intruders from finding the golden city.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/2/02955471-5ffc-4c7b-83fe-a69816415ca1.jpg?1783935774"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Sheltering Light
 {
     "name": "Sheltering Light",
@@ -3938,6 +4216,88 @@
         "artist": "Scott Murphy",
         "flavorText": "\"They're searching in the same direction we are. And for the same thing, I'll wager.\"",
         "imageUri": "https://cards.scryfall.io/normal/front/f/7/f7c33ef4-60bb-4f95-92a5-7abedaac6767.jpg?1782710448"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Storm Sculptor
+{
+    "name": "Storm Sculptor",
+    "manaCost": "{3}{U}",
+    "typeLine": "Creature — Merfolk Wizard",
+    "oracleText": "This creature can't be blocked.\nWhen this creature enters, return a creature you control to its owner's hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Storm Sculptor:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "creature",
+                                "player": "You"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Return a creature you control to its owner's hand",
+                            "useTargetingUI": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature enters, return a creature you control to its owner's hand."
+            }
+        ],
+        "staticAbilities": [
+            "CantBeBlocked"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "85",
+        "artist": "Sidharth Chaturvedi",
+        "flavorText": "In his hands, the wind can become a weapon or a means of escape.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/5/9532b735-8390-4379-ae43-2bd00d281dd6.jpg?1783935768",
+        "rulings": [
+            {
+                "date": "2017-09-29",
+                "text": "Storm Sculptor's last ability doesn't target the creature you'll return to hand. You choose one as the ability resolves. No player may take actions between the time you choose a creature to return and the time you do so."
+            },
+            {
+                "date": "2017-09-29",
+                "text": "Storm Sculptor's last ability isn't optional. If Storm Sculptor is the only creature you control when the ability resolves, you'll have to return it to its owner's hand."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "BLUE"
@@ -4745,6 +5105,66 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Watertrap Weaver
+{
+    "name": "Watertrap Weaver",
+    "manaCost": "{2}{U}",
+    "typeLine": "Creature — Merfolk Wizard",
+    "oracleText": "When this creature enters, tap target creature an opponent controls. That creature doesn't untap during its controller's next untap step.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Watertrap Weaver:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "TapUntap",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "DOESNT_UNTAP",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "duration": "UntilAfterAffectedControllersNextUntap"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:opponent"
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "87",
+        "artist": "Josu Hernaiz",
+        "flavorText": "The river is a powerful friend.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/d/0d973568-d7b0-443f-a09d-44f6b02da5d4.jpg?1783935768"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 

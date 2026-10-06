@@ -7,6 +7,7 @@ import com.wingedsheep.engine.core.ActivateAbilityControllerTargetContinuation
 import com.wingedsheep.engine.core.ActivateAbilityExileFromGraveyardContinuation
 import com.wingedsheep.engine.core.ActivateAbilityVariablePermanentsContinuation
 import com.wingedsheep.engine.core.ActivateAbilityExileXFromGraveyardContinuation
+import com.wingedsheep.engine.core.ActivateAbilityDiscardXContinuation
 import com.wingedsheep.engine.core.ActivateAbilitySacrificeContinuation
 import com.wingedsheep.engine.core.ActivateAbilityPutOnLibraryContinuation
 import com.wingedsheep.engine.core.ActivateAbilityTapXTargetsContinuation
@@ -55,6 +56,7 @@ class ActivateAbilityXCostContinuationResumer(
         resumer(ActivateAbilityChooseXContinuation::class, ::resumeChooseX),
         resumer(ActivateAbilityChooseManaXContinuation::class, ::resumeChooseManaX),
         resumer(ActivateAbilityExileXFromGraveyardContinuation::class, ::resumeExileXFromGraveyard),
+        resumer(ActivateAbilityDiscardXContinuation::class, ::resumeDiscardX),
         resumer(ActivateAbilityTapXTargetsContinuation::class, ::resumeTapXTargets),
         resumer(ActivateAbilityExileFromGraveyardContinuation::class, ::resumeExileFromGraveyard),
         resumer(ActivateAbilitySacrificeContinuation::class, ::resumeSacrifice),
@@ -207,6 +209,37 @@ class ActivateAbilityXCostContinuationResumer(
     }
 
     /**
+     * Resume after the player picks the hand cards for a `DiscardX` cost. Like
+     * [resumeExileXFromGraveyard], X *is* the size of the selection unless a `{X}` mana symbol
+     * already fixed it.
+     */
+    private fun resumeDiscardX(
+        state: GameState,
+        continuation: ActivateAbilityDiscardXContinuation,
+        response: DecisionResponse,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        if (response !is CardsSelectedResponse) {
+            return ExecutionResult.error(state, "Expected card-selection response for ActivateAbility DiscardX")
+        }
+        val selected = response.selectedCards
+        if (selected.any { it !in continuation.discardCandidates } || selected.distinct().size != selected.size) {
+            return ExecutionResult.error(state, "Selected card is not in the list of valid discard candidates")
+        }
+        val fixedCount = continuation.fixedCount
+        if (fixedCount != null && selected.size != fixedCount) {
+            return ExecutionResult.error(state, "Expected $fixedCount cards to discard, got ${selected.size}")
+        }
+        val action = continuation.action
+        val replay = action.copy(
+            xValue = fixedCount ?: selected.size,
+            costPayment = (action.costPayment ?: AdditionalCostPayment())
+                .copy(discardedCards = selected)
+        )
+        return reenter(handler.execute(state, replay), checkForMore)
+    }
+
+    /**
      * Resume after the player picks which permanents to sacrifice for a `Sacrifice` activated-ability
      * cost (Sage of Lat-Nam etc.). Re-enters the handler with the chosen permanents filled into
      * `costPayment.sacrificedPermanents`; CostHandler then sacrifices exactly those.
@@ -348,7 +381,12 @@ class ActivateAbilityXCostContinuationResumer(
         if (chosen.size < expectedMin) {
             return ExecutionResult.error(state, "Not enough targets chosen")
         }
-        val replay = continuation.action.copy(targets = chosen)
+        // The response is keyed by requirement, so it knows each group's size; inference can't
+        // always recover it (two optional groups with the same filter).
+        val replay = continuation.action.copy(
+            targets = chosen,
+            targetGroupCounts = continuation.requirements.indices.map { response.selectedTargets[it]?.size ?: 0 },
+        )
         return reenter(handler.execute(state, replay), checkForMore)
     }
 

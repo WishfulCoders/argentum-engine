@@ -73,6 +73,7 @@ import com.wingedsheep.sdk.scripting.effects.MarkMustBlockThisTurnEffect
 import com.wingedsheep.sdk.scripting.effects.RemoveSuspectedEffect
 import com.wingedsheep.sdk.scripting.effects.SuspectEffect
 import com.wingedsheep.sdk.scripting.effects.CantBlockGroupEffect
+import com.wingedsheep.sdk.scripting.effects.CantBeBlockedGroupEffect
 import com.wingedsheep.sdk.scripting.effects.CantActivateLoyaltyAbilitiesEffect
 import com.wingedsheep.sdk.scripting.effects.CantCastSpellsEffect
 import com.wingedsheep.sdk.scripting.effects.CantSearchLibrariesEffect
@@ -258,16 +259,19 @@ object Effects {
      * @param damageSource The object dealing the damage, when it isn't the resolving spell or
      *   ability's source ("target creature you control deals damage equal to its power …").
      * @param cantBePrevented "This damage can't be prevented" (Arrow Storm's raid rider).
+     * @param damageDealtVariable stores the total damage actually dealt ("the damage dealt this
+     *   way"); bind it with `runStoringNumber { DealDamage(..., damageDealtVariable = it) }`.
      */
     fun DealDamage(
         amount: Int,
         target: EffectTarget,
         damageSource: EffectTarget? = null,
         cantBePrevented: Boolean = false,
-        excessDamageVariable: String? = null
+        excessDamageVariable: String? = null,
+        damageDealtVariable: String? = null
     ): Effect = DealDamageEffect(
         DynamicAmount.Fixed(amount), target, cantBePrevented = cantBePrevented, damageSource = damageSource,
-        excessDamageVariable = excessDamageVariable
+        excessDamageVariable = excessDamageVariable, damageDealtVariable = damageDealtVariable
     )
 
     /**
@@ -279,10 +283,11 @@ object Effects {
         target: EffectTarget,
         damageSource: EffectTarget? = null,
         cantBePrevented: Boolean = false,
-        excessDamageVariable: String? = null
+        excessDamageVariable: String? = null,
+        damageDealtVariable: String? = null
     ): Effect = DealDamageEffect(
         amount, target, cantBePrevented = cantBePrevented, damageSource = damageSource,
-        excessDamageVariable = excessDamageVariable
+        excessDamageVariable = excessDamageVariable, damageDealtVariable = damageDealtVariable
     )
 
     /**
@@ -2693,9 +2698,9 @@ object Effects {
     fun RetainUnspentMana(vararg colors: Color): Effect =
         com.wingedsheep.sdk.scripting.effects.RetainUnspentManaEffect(colors.toSet())
 
-    /** Forced mana loss, independent of step/phase retention abilities. */
-    fun LoseUnspentMana(target: EffectTarget = EffectTarget.Controller): Effect =
-        com.wingedsheep.sdk.scripting.effects.LoseUnspentManaEffect(target)
+    /** Forced mana loss, independent of step/phase retention abilities; [transferTo] adds the lost mana to that player. */
+    fun LoseUnspentMana(target: EffectTarget = EffectTarget.Controller, transferTo: EffectTarget? = null): Effect =
+        com.wingedsheep.sdk.scripting.effects.LoseUnspentManaEffect(target, transferTo)
 
     /**
      * Add a dynamic amount of colorless mana.
@@ -4502,6 +4507,10 @@ object Effects {
     fun CastAnyNumberFromCollectionWithoutPayingCost(from: CollectionSlot): Effect =
         CastAnyNumberFromCollectionWithoutPayingCost(from.key)
 
+    /** Play lands and cast spells from among the cards in [from] without paying their mana costs. */
+    fun PlayAnyNumberFromCollectionWithoutPayingCost(from: CollectionSlot): Effect =
+        PlayAnyNumberFromCollectionWithoutPayingCost(from.key)
+
     /** Cast up to [maxCasts] of the cards in [from] without paying their mana costs. */
     fun CastUpToNFromCollectionWithoutPayingCost(from: CollectionSlot, maxCasts: Int): Effect =
         CastUpToNFromCollectionWithoutPayingCost(from.key, maxCasts)
@@ -4541,7 +4550,9 @@ object Effects {
      * Prefer the named shortcuts ([Destroy], [Exile], [ReturnToHand], [PutOnTopOfLibrary],
      * [ShuffleIntoLibrary], [PutOntoBattlefield], …) when one fits; reach for `Move` for the
      * less-common shapes (custom placement, `fromZone` gating, face-down entry, linked exile,
-     * `positionFromTop`, controller override).
+     * `positionFromTop`, controller override). `addCounterType` + `addCounterIf` spell "it enters
+     * with a counter on it" and its conditional form "if a creature enters this way, it enters with
+     * an additional +1/+1 counter" (the filter is read off projected state as the card lands).
      */
     fun Move(
         target: EffectTarget,
@@ -4553,7 +4564,8 @@ object Effects {
         faceDown: FaceDownMode? = null,
         linkToSource: Boolean = false,
         positionFromTop: Int? = null,
-        addCounterType: CounterType? = null
+        addCounterType: CounterType? = null,
+        addCounterIf: GameObjectFilter? = null
     ): Effect = MoveToZoneEffect(
         target = target,
         destination = destination,
@@ -4564,7 +4576,8 @@ object Effects {
         faceDown = faceDown,
         linkToSource = linkToSource,
         positionFromTop = positionFromTop,
-        addCounterType = addCounterType
+        addCounterType = addCounterType,
+        addCounterIf = addCounterIf
     )
 
     /**
@@ -4722,6 +4735,16 @@ object Effects {
      */
     fun CastAnyNumberFromCollectionWithoutPayingCost(from: String): Effect =
         CastAnyNumberFromCollectionWithoutPayingCostEffect(from = from)
+
+    /**
+     * "You may **play lands and cast spells** from among [them] without paying their mana costs"
+     * (Gix, Yawgmoth Praetor) — [CastAnyNumberFromCollectionWithoutPayingCost] with land plays
+     * allowed. During this effect's resolution the controller is offered the cards one at a time;
+     * a land is played as their land for the turn (only on their own turn with a land play left),
+     * a spell is cast for free. Cards left unplayed stay where they are.
+     */
+    fun PlayAnyNumberFromCollectionWithoutPayingCost(from: String): Effect =
+        CastAnyNumberFromCollectionWithoutPayingCostEffect(from = from, playLands = true)
 
     /**
      * Cast **up to [maxCasts]** of the cards stored under [from] without paying their mana costs,
@@ -5073,7 +5096,8 @@ object Effects {
         addedTokenKeywords: Set<com.wingedsheep.sdk.core.Keyword> = emptySet(),
         sacrificeTokenAtStep: com.wingedsheep.sdk.core.Step? = null,
         sacrificeTokenOnlyOnControllersTurn: Boolean = false,
-        copies: DynamicAmount = DynamicAmount.Fixed(1)
+        copies: DynamicAmount = DynamicAmount.Fixed(1),
+        exceptions: com.wingedsheep.sdk.scripting.effects.CopyExceptions = com.wingedsheep.sdk.scripting.effects.CopyExceptions.None
     ): Effect =
         CopyTargetSpellEffect(
             target,
@@ -5082,7 +5106,8 @@ object Effects {
             addedTokenKeywords,
             sacrificeTokenAtStep,
             sacrificeTokenOnlyOnControllersTurn,
-            copies
+            copies,
+            exceptions
         )
 
     /**
@@ -5430,6 +5455,13 @@ object Effects {
      */
     fun CantBlockGroup(filter: GroupFilter, duration: Duration = Duration.EndOfTurn): Effect =
         CantBlockGroupEffect(filter, duration)
+
+    /**
+     * "[Filter] can't be blocked this turn." — a floating group restriction that also covers
+     * creatures matching [filter] later in the turn (Rule 611.2c). Jace, Arcane Strategist's −7.
+     */
+    fun CantBeBlockedGroup(filter: GroupFilter, duration: Duration = Duration.EndOfTurn): Effect =
+        CantBeBlockedGroupEffect(filter, duration)
 
     /**
      * Target creature can't attack this turn.

@@ -782,6 +782,62 @@
     ]
 }
 
+// Consign to the Pit
+{
+    "name": "Consign to the Pit",
+    "manaCost": "{5}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Destroy target creature. Consign to the Pit deals 2 damage to that creature's controller.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": "TargetController"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "69",
+        "artist": "Colin Boyer",
+        "flavorText": "First your whole life flashes before your eyes. Then you have considerable time to reflect on every regret as you plummet.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/9/09991fad-4282-4a17-bfb1-03eaa13502df.jpg?1783933695",
+        "rulings": [
+            {
+                "date": "2019-01-25",
+                "text": "If the target creature is an illegal target by the time Consign to the Pit tries to resolve, the spell doesn't resolve. No player is dealt damage. If the target is legal but not destroyed (most likely because it has indestructible), its controller is dealt damage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Coral Commando
 {
     "name": "Coral Commando",
@@ -2485,6 +2541,77 @@
         "artist": "Mark Zug",
         "flavorText": "In times of unrest, the crowd is eager for the comfort of strong convictions.",
         "imageUri": "https://cards.scryfall.io/normal/front/2/b/2bd746e3-8934-4c86-894e-2cb1738b1d58.jpg"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Justiciar's Portal
+{
+    "name": "Justiciar's Portal",
+    "manaCost": "{1}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Exile target creature you control, then return that card to the battlefield under its owner's control. It gains first strike until end of turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Battlefield"
+                },
+                {
+                    "type": "GrantKeyword",
+                    "keyword": "FIRST_STRIKE",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "13",
+        "artist": "Micah Epstein",
+        "flavorText": "With the new guildmaster's innovations, arresters can arrive on the scene moments before a crime is committed.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/d/1df611df-3490-4b07-8034-6da9a0122a81.jpg?1783933722",
+        "rulings": [
+            {
+                "date": "2019-01-25",
+                "text": "Once the exiled creature returns, it's considered a new object with no relation to the object that it was. Auras attached to the exiled creature will be put into their owners' graveyards. Equipment attached to the exiled creature will become unattached and remain on the battlefield. Any counters on the exiled creature will cease to exist."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "The creature returns untapped unless another effect causes it to enter the battlefield tapped."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "If a token is exiled this way, it will cease to exist and won't return to the battlefield."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "WHITE"

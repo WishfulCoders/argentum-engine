@@ -3156,6 +3156,77 @@
     }
 }
 
+// Scuttlemutt
+{
+    "name": "Scuttlemutt",
+    "manaCost": "{3}",
+    "typeLine": "Artifact Creature — Scarecrow",
+    "oracleText": "{T}: Add one mana of any color.\n{T}: Target creature becomes the color or colors of your choice until end of turn.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Scuttlemutt:1",
+                "cost": "CostTap",
+                "effect": "AddManaOfChoice",
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "{T}: Add one mana of any color."
+            },
+            {
+                "id": "Scuttlemutt:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "ChooseColorThen",
+                    "then": {
+                        "type": "ChangeColorToChosen",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "prompt": "Choose one or more colors",
+                    "maxColors": 5
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{T}: Target creature becomes the color or colors of your choice until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "263",
+        "artist": "Jeremy Jarvis",
+        "flavorText": "Built to shuttle goods from the river, it took off one day carrying a cauldron of dyes.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/7/07cb3ab2-6d34-4cbf-ad46-070516a7cc54.jpg?1783942709",
+        "rulings": [
+            {
+                "date": "2019-07-12",
+                "text": "You must choose one or more of the five colors of Magic while resolving Scuttlemutt’s last ability. You can’t choose “artifact,” “colorless,” or “chartreuse.”"
+            },
+            {
+                "date": "2019-07-12",
+                "text": "The target creature has only the colors Scuttlemutt gives it—Scuttlemutt’s ability overwrites any previous colors the creature had."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "In the Commander variant, the color identities of cards are determined as the game begins. Changing the colors of a player’s commander doesn’t affect its color identity or the cards that can be legally included in the deck."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Scuzzback Marauders
 {
     "name": "Scuzzback Marauders",

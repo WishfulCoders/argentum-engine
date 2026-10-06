@@ -89,6 +89,7 @@
                     "linkToSource": false,
                     "positionFromTop": null,
                     "addCounterType": null,
+                    "addCounterIf": null,
                     "description": "Destroy target"
                 },
                 "imageUri": "https://cards.scryfall.io/normal/front/c/0/c0acc41f-b55b-47cb-8803-d39d72788799.jpg?1562940493",

@@ -75,6 +75,8 @@ data class ProjectedValues(
     val cantBeBlockedExceptByFilters: List<com.wingedsheep.sdk.scripting.GameObjectFilter> = emptyList(),
     val canOnlyBlockCreaturesWithFilters: List<com.wingedsheep.sdk.scripting.GameObjectFilter> = emptyList(),
     val additionalBlockCount: Int = 0,
+    /** Extra life every mana ability of this permanent costs to activate (Thran Portal). */
+    val manaAbilityLifeTax: Int = 0,
     val lostAllAbilities: Boolean = false,
     /**
      * True when a continuous effect SET this permanent's basic land types (Blood Moon,
@@ -265,6 +267,13 @@ class ProjectedState(
     fun getAdditionalBlockCount(entityId: EntityId): Int =
         projectedValues[entityId]?.additionalBlockCount ?: 0
 
+    /**
+     * The additional life each mana ability of [entityId] costs to activate — Thran Portal's
+     * [com.wingedsheep.sdk.scripting.ManaAbilitiesCostAdditionalLife]. 0 for nearly everything.
+     */
+    fun getManaAbilityLifeTax(entityId: EntityId): Int =
+        projectedValues[entityId]?.manaAbilityLifeTax ?: 0
+
     fun hasLostAllAbilities(entityId: EntityId): Boolean =
         projectedValues[entityId]?.lostAllAbilities == true
 
@@ -318,6 +327,7 @@ internal fun buildIntermediateProjectedState(
             cantBeBlockedExceptByFilters = v.cantBeBlockedExceptByFilters.toList(),
             canOnlyBlockCreaturesWithFilters = v.canOnlyBlockCreaturesWithFilters.toList(),
             additionalBlockCount = v.additionalBlockCount,
+            manaAbilityLifeTax = v.manaAbilityLifeTax,
             lostAllAbilities = v.lostAllAbilities,
             name = v.name
         )

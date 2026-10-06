@@ -1542,6 +1542,36 @@
     ]
 }
 
+// Drownyard Explorers
+{
+    "name": "Drownyard Explorers",
+    "manaCost": "{3}{U}",
+    "typeLine": "Creature — Human Wizard",
+    "oracleText": "When this creature enters, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Drownyard Explorers:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": "Investigate"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "56",
+        "artist": "Anthony Palumbo",
+        "flavorText": "\"Angels and inquisitors terrorize villages, but no one seems to notice the stirring out at sea.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/7/3714713f-deb4-4b1c-8764-35287293ca18.jpg?1783937802"
+    }
+}
+
 // Drownyard Temple
 {
     "name": "Drownyard Temple",
@@ -3331,6 +3361,61 @@
     ]
 }
 
+// Jace's Scrutiny
+{
+    "name": "Jace's Scrutiny",
+    "manaCost": "{1}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Target creature gets -4/-0 until end of turn.\nInvestigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": -4
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 0
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "Investigate"
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "70",
+        "artist": "Slawomir Maniak",
+        "flavorText": "\"Just a collage of images: cryptoliths, the sea, a tangle of shipwrecks.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/d/3d0eea0d-c790-4d91-962f-f05b22d0c8fa.jpg?1783937795",
+        "rulings": [
+            {
+                "date": "2016-04-08",
+                "text": "You can't cast a spell without choosing legal targets. If all of those targets become illegal, the spell doesn't resolve and you won't investigate."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Jace, Unraveler of Secrets
 {
     "name": "Jace, Unraveler of Secrets",
@@ -4114,6 +4199,84 @@
     ]
 }
 
+// Not Forgotten
+{
+    "name": "Not Forgotten",
+    "manaCost": "{1}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Put target card from a graveyard on your choice of the top or bottom of its owner's library. Create a 1/1 white Spirit creature token with flying.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ChooseAction",
+                    "choices": [
+                        {
+                            "label": "Put it on top of its owner's library",
+                            "effect": {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "destination": "Library",
+                                "placement": "Top"
+                            }
+                        },
+                        {
+                            "label": "Put it on the bottom of its owner's library",
+                            "effect": {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "destination": "Library",
+                                "placement": "Bottom"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Spirit"
+                    ],
+                    "keywords": [
+                        "FLYING"
+                    ]
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Graveyard"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "30",
+        "rarity": "UNCOMMON",
+        "artist": "Darek Zabrocki",
+        "flavorText": "Visit the dead, and they may return the favor.",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/6/66ecdadf-56f7-4dfb-9c3c-7d240ba19b00.jpg?1783937815"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Odric, Lunarch Marshal
 {
     "name": "Odric, Lunarch Marshal",
@@ -4691,6 +4854,61 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Press for Answers
+{
+    "name": "Press for Answers",
+    "manaCost": "{1}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Tap target creature. It doesn't untap during its controller's next untap step.\nInvestigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "TapUntap",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GrantKeyword",
+                    "keyword": "DOESNT_UNTAP",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "duration": "UntilAfterAffectedControllersNextUntap"
+                },
+                "Investigate"
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "80",
+        "artist": "Steve Prescott",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/e/5ec8b8bf-7b02-4f5e-bbd3-9560f9888192.jpg?1783937790",
+        "rulings": [
+            {
+                "date": "2016-04-08",
+                "text": "You can't cast a spell without choosing legal targets. If all of those targets become illegal, the spell doesn't resolve and you won't investigate."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 

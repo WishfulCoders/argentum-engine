@@ -461,6 +461,9 @@ data class StormCopyTargetContinuation(
     val keywordsForCopy: Set<String> = emptySet(),
     val removeLegendary: Boolean = false,
     val tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent? = null,
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val exceptions: com.wingedsheep.sdk.scripting.effects.CopyExceptions = com.wingedsheep.sdk.scripting.effects.CopyExceptions.None,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 
@@ -517,11 +520,18 @@ data class StormCopyModalTargetContinuation(
     val chosenModes: List<Int>,
     val modeTargetRequirements: Map<Int, List<TargetRequirement>>,
     val accumulatedOrdinalTargets: List<List<ChosenTarget>>,
+    /** Flat target positions kept across earlier mode questions, including their old object identity. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val retainedTargetIndices: Set<Int> = emptySet(),
     val currentOrdinal: Int,
     /** Keyword enum names (e.g., "WITHER") to grant to each copy while it's on the stack. */
     val keywordsForCopy: Set<String> = emptySet(),
     /** If true, strip the Legendary supertype from each resulting copy. */
     val removeLegendary: Boolean = false,
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val exceptions: com.wingedsheep.sdk.scripting.effects.CopyExceptions = com.wingedsheep.sdk.scripting.effects.CopyExceptions.None,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 
@@ -688,6 +698,24 @@ data class ActivateAbilityExileFromGraveyardContinuation(
 data class ActivateAbilityExileXFromGraveyardContinuation(
     val action: ActivateAbility,
     val exileCandidates: List<EntityId>,
+    val fixedCount: Int? = null
+) : AnswerContinuation
+
+/**
+ * Resume after a player picks the hand cards for an
+ * [com.wingedsheep.sdk.scripting.AbilityCost.DiscardX] cost — the hand-side twin of
+ * [ActivateAbilityExileXFromGraveyardContinuation]. The resumer re-enters the handler with the
+ * chosen cards in `costPayment.discardedCards` and `xValue` bound to how many were chosen.
+ *
+ * @property action The original [ActivateAbility] (`costPayment.discardedCards` still empty).
+ * @property discardCandidates The hand cards matching the cost's filter, offered as options.
+ * @property fixedCount Non-null when a `{X}` mana symbol already fixed X; the selection must then
+ *   be exactly this many. Null when X is defined by the discard alone (Gix, Yawgmoth Praetor).
+ */
+@Serializable
+data class ActivateAbilityDiscardXContinuation(
+    val action: ActivateAbility,
+    val discardCandidates: List<EntityId>,
     val fixedCount: Int? = null
 ) : AnswerContinuation
 

@@ -453,6 +453,11 @@ data class CastFromCollectionWithoutPayingCostEffect(
  * Play the first card in [from] during this effect's resolution without paying its mana cost.
  * Spells use the ordinary synthesized-cast pipeline; lands are played as a special action and
  * still consume one of the controller's land plays for the turn.
+ *
+ * The card may sit in exile (Fight Rigging's hideaway card) or in the library (Djinn of Wishes'
+ * revealed top card). A land is played only on its controller's turn with a land play left (CR
+ * 305.2b, 305.3); otherwise that part of the instruction is ignored and the card stays put, so a
+ * follow-up "if you don't, exile it" reads the card's zone (`filter(revealed, currentlyIn(...))`).
  */
 @SerialName("PlayFromCollectionWithoutPayingCost")
 @Serializable
@@ -517,8 +522,17 @@ data class PlayFromCollectionWithoutPayingCostEffect(
  * @property maxCasts Maximum number of cards that may still be cast by this loop, or `null`
  *   for no cap. A value of `0` or less makes the effect a no-op. Only meaningful alongside the
  *   default `payManaCost = false` — see above.
+ * **Playing lands too.** [playLands] is the "you may **play lands and cast spells** from among
+ * [them]" wording (Gix, Yawgmoth Praetor). Land cards in the collection are offered alongside the
+ * spells, but only while the controller could play a land right now — on their own turn, with a
+ * land play left, and not locked out (CR 305.2, 305.3; Gix's ruling: "only during your own turn
+ * and only if you have not yet played a land this turn"). A chosen land is *played* through the
+ * normal land-play path (a special action, CR 116.2a), so it uses up that land play; it is not a
+ * spell, so it spends none of a [maxCasts] / [maxTotalManaValue] budget.
+ *
  * @property maxTotalManaValue Remaining total-mana-value budget for the casts, or `null` for no
  *   cap. Only meaningful alongside the default `payManaCost = false`.
+ * @property playLands When true, land cards in the collection may be played as lands.
  */
 @SerialName("CastAnyNumberFromCollectionWithoutPayingCost")
 @Serializable
@@ -527,10 +541,17 @@ data class CastAnyNumberFromCollectionWithoutPayingCostEffect(
     val payManaCost: Boolean = false,
     val maxCasts: Int? = null,
     val maxTotalManaValue: Int? = null,
+    val playLands: Boolean = false,
 ) : Effect {
     override val description: String = buildString {
-        append("Cast ")
-        append(if (maxCasts == null) "any number of those cards" else "up to $maxCasts of those cards")
+        append(if (playLands) "Play lands and cast spells from among " else "Cast ")
+        append(
+            when {
+                playLands -> "those cards"
+                maxCasts == null -> "any number of those cards"
+                else -> "up to $maxCasts of those cards"
+            }
+        )
         if (maxTotalManaValue != null) append(" with total mana value $maxTotalManaValue or less")
         if (!payManaCost) append(" without paying their mana costs")
     }

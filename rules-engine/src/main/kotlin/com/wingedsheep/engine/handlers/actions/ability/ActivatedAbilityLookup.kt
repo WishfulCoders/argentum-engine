@@ -2,6 +2,7 @@ package com.wingedsheep.engine.handlers.actions.ability
 
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.mechanics.mana.IntrinsicManaAbilities
+import com.wingedsheep.engine.mechanics.mana.ManaAbilityLifeCost
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
@@ -86,6 +87,28 @@ internal class ActivatedAbilityResolver(
      * cannot advertise one grant set and validate another.
      */
     fun lookup(
+        state: GameState,
+        sourceId: EntityId,
+        abilityId: AbilityId,
+    ): ActivatedAbilityLookup? {
+        val found = lookupUntaxed(state, sourceId, abilityId) ?: return null
+        // Thran Portal: a taxed permanent's mana abilities cost additional life, whichever branch
+        // supplied the ability — folded into the cost so validation and payment both see it.
+        val tax = ManaAbilityLifeCost.tax(state, sourceId)
+        if (tax <= 0 || !found.ability.isManaAbility) return found
+        val taxed = ManaAbilityLifeCost.withTax(found.ability, tax)
+        return when (found) {
+            is ActivatedAbilityLookup.DirectDefinition -> found.copy(ability = taxed)
+            is ActivatedAbilityLookup.DefinitionDerivedClass -> found.copy(ability = taxed)
+            is ActivatedAbilityLookup.CopyException -> found.copy(ability = taxed)
+            is ActivatedAbilityLookup.RuntimeGranted -> found.copy(ability = taxed)
+            is ActivatedAbilityLookup.StaticGranted -> found.copy(ability = taxed)
+            is ActivatedAbilityLookup.EmblemGranted -> found.copy(ability = taxed)
+            is ActivatedAbilityLookup.Intrinsic -> found.copy(ability = taxed)
+        }
+    }
+
+    private fun lookupUntaxed(
         state: GameState,
         sourceId: EntityId,
         abilityId: AbilityId,

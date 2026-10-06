@@ -657,6 +657,16 @@ sealed interface Modification {
     }
 
     /**
+     * "Mana abilities of this land cost an additional N life to activate" (Thran Portal) — lowered
+     * from [com.wingedsheep.sdk.scripting.ManaAbilitiesCostAdditionalLife]. Cumulative; read via
+     * [ProjectedState.getManaAbilityLifeTax].
+     */
+    @Serializable
+    data class ManaAbilitiesCostLife(val amount: Int) : Modification {
+        override val layer get() = Layer.ABILITY
+    }
+
+    /**
      * Blocking restriction: creature can only be blocked by creatures matching the filter.
      * Generalized "can't be blocked except by X" — used for Shifting Sliver
      * ("Slivers can't be blocked except by Slivers"), Realm of Koh's Spirit token
@@ -800,6 +810,7 @@ internal data class MutableProjectedValues(
     val cantBeBlockedExceptByFilters: MutableList<GameObjectFilter> = mutableListOf(),
     val canOnlyBlockCreaturesWithFilters: MutableList<GameObjectFilter> = mutableListOf(),
     var additionalBlockCount: Int = 0,
+    var manaAbilityLifeTax: Int = 0,
     var lostAllAbilities: Boolean = false,
     /** See [com.wingedsheep.engine.mechanics.layers.ProjectedValues.basicLandTypesSetByEffect]. */
     var basicLandTypesSetByEffect: Boolean = false

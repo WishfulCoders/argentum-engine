@@ -8,6 +8,7 @@ import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.SearchCardInfo
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.actions.land.PlayLandHandler
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -42,9 +43,15 @@ import kotlin.reflect.KClass
  * A non-null `maxTotalManaValue` is the remaining budget for the "spells with total mana value N
  * or less" wording: only cards whose mana value fits are offered, and the resumer re-enters with
  * the cast card's mana value spent (again only once the cast actually initiates).
+ *
+ * With `playLands` ("play lands and cast spells from among them" — Gix, Yawgmoth Praetor) land
+ * cards are offered too, but only while the controller could play one right now (their turn, a
+ * land play left, no lock — asked of the land-play pipeline itself). Without it, land cards are
+ * offered exactly as before: callers filter them out upstream.
  */
-class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
-    EffectExecutor<CastAnyNumberFromCollectionWithoutPayingCostEffect> {
+class CastAnyNumberFromCollectionWithoutPayingCostExecutor(
+    private val playLandHandlerProvider: () -> PlayLandHandler,
+) : EffectExecutor<CastAnyNumberFromCollectionWithoutPayingCostEffect> {
 
     override val effectType: KClass<CastAnyNumberFromCollectionWithoutPayingCostEffect> =
         CastAnyNumberFromCollectionWithoutPayingCostEffect::class
@@ -64,6 +71,14 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
         // that doesn't fit now never will (the budget only shrinks), so it leaves the pool.
         val candidates = stillCastable(state, context.pipeline.storedCollections[effect.from].orEmpty())
             .filter { id -> remainingManaValue == null || manaValueOf(state, id) <= remainingManaValue }
+            .filter { id ->
+                // A land is never cast; under "play lands" it is offered only while it could be
+                // played now. A land the controller can't play stays out of the pool.
+                !effect.playLands || !isLand(state, id) ||
+                    PlayFromCollectionWithoutPayingCostExecutor.canPlayLandNow(
+                        state, playLandHandlerProvider(), context.controllerId, context.sourceId, id
+                    )
+            }
         if (candidates.isEmpty()) return EffectResult.success(state)
 
         val controllerId = context.controllerId
@@ -84,7 +99,13 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
             id = decisionId,
             playerId = controllerId,
             prompt = buildString {
-                append(if (effect.payManaCost) "Choose a spell to cast" else "Choose a spell to cast for free")
+                append(
+                    when {
+                        effect.playLands -> "Choose a land to play or a spell to cast for free"
+                        effect.payManaCost -> "Choose a spell to cast"
+                        else -> "Choose a spell to cast for free"
+                    }
+                )
                 // "$n remaining", not "$n more": the card being chosen right now is one of them.
                 if (remainingCasts != null) append(" ($remainingCasts remaining)")
                 if (remainingManaValue != null) append(" (total mana value $remainingManaValue remaining)")
@@ -115,6 +136,7 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
             payManaCost = effect.payManaCost,
             maxCasts = effect.maxCasts,
             maxTotalManaValue = effect.maxTotalManaValue,
+            playLands = effect.playLands,
         )
 
         return EffectResult.from(state.withPriority(controllerId).suspendForDecision(decision, continuation, emptyList()))
@@ -124,6 +146,9 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
         /** A card's mana value off the stack — X counts as 0, which a free cast also forces (CR 107.3b). */
         fun manaValueOf(state: GameState, id: EntityId): Int =
             state.getEntity(id)?.get<CardComponent>()?.manaValue ?: 0
+
+        fun isLand(state: GameState, id: EntityId): Boolean =
+            state.getEntity(id)?.get<CardComponent>()?.typeLine?.isLand == true
     }
 
     /** Cards from the collection that are still in their owner's exile (castable from there). */

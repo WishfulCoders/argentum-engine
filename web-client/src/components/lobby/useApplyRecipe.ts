@@ -177,6 +177,7 @@ function cubeUpdateFor(settings: RecipeSettings): PendingCubeUpdate | null {
  */
 function tournamentSettings(settings: RecipeSettings): PendingSettingsUpdate {
   return {
+    ...(settings.useJumpstart !== undefined ? { useJumpstart: settings.useJumpstart } : {}),
     ...(settings.boosterCount !== undefined ? { boosterCount: settings.boosterCount } : {}),
     ...(settings.boosterDistribution ? { boosterDistribution: { ...settings.boosterDistribution } } : {}),
     ...(settings.chaosBoosters !== undefined ? { chaosBoosters: settings.chaosBoosters } : {}),

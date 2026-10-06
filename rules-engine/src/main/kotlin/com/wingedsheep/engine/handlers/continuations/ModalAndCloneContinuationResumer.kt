@@ -17,6 +17,7 @@ import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
 import com.wingedsheep.engine.state.components.battlefield.withCastChoice
 import com.wingedsheep.engine.legalactions.utils.TargetEnumerationUtils
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.scripting.targets.withCount
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
@@ -276,6 +277,11 @@ class ModalAndCloneContinuationResumer(
                 }
             }
 
+        // Each requirement owns only the targets picked for it, so a short "up to N" group
+        // doesn't absorb a later requirement's targets.
+        val boundRequirements = continuation.targetRequirements.mapIndexed { i, req ->
+            req.withCount(response.selectedTargets[i]?.size ?: 0)
+        }
         val context = EffectContext(
             resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
             sourceId = continuation.sourceId,
@@ -283,7 +289,7 @@ class ModalAndCloneContinuationResumer(
             controllerId = continuation.controllerId,
             xValue = continuation.xValue,
             targets = chosenTargets,
-            pipeline = continuation.pipeline.copy(namedTargets = continuation.pipeline.namedTargets + EffectContext.buildNamedTargets(continuation.targetRequirements, chosenTargets)),
+            pipeline = continuation.pipeline.copy(namedTargets = continuation.pipeline.namedTargets + EffectContext.buildNamedTargets(boundRequirements, chosenTargets)),
             triggeringEntityId = continuation.triggeringEntityId
         )
 
@@ -920,9 +926,17 @@ class ModalAndCloneContinuationResumer(
             )?.let { return it }
         }
 
-        // Final choice resolved — emit the entry event, so the permanent's enters triggers (landfall,
-        // "when ~ enters") fire now that the chosen value is recorded. The permanent already moved to
-        // the battlefield when it was placed; the caller deliberately left this event to us.
+        // Final choice resolved — the Saga's entry lore counters (CR 714.3a / 714.3b). A token that
+        // paused for an as-enters choice left them to us: a read-ahead Saga's count *is* the number
+        // just chosen (CR 702.155b), so they can only be placed now. No-op for a non-Saga, and for a
+        // Saga whose entry already placed them (a land played or moved through the zone pipeline).
+        val (sagaState, sagaEvents) = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+            .applySagaEntryIfNeeded(newState, entityId)
+        newState = sagaState
+
+        // Emit the entry event, so the permanent's enters triggers (landfall, "when ~ enters") fire
+        // now that the chosen value is recorded. The permanent already moved to the battlefield when
+        // it was placed; the caller deliberately left this event to us.
         val zoneChangeEvent = ZoneChangeEvent(
             entityId,
             cardComponent?.name ?: "Unknown",
@@ -932,7 +946,7 @@ class ModalAndCloneContinuationResumer(
             copyOfOriginalName = continuation.copyOfOriginalName,
             oldObject = continuation.entryOldObject, newObject = continuation.entryNewObject,
         )
-        return checkForMore(newState, syntheticRiotEvents + zoneChangeEvent)
+        return checkForMore(newState, syntheticRiotEvents + zoneChangeEvent + sagaEvents)
     }
 
     /**

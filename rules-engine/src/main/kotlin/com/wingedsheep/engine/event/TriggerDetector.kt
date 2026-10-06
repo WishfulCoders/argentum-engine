@@ -3766,9 +3766,16 @@ class TriggerDetector(
             val controllerId = container.get<ControllerComponent>()?.playerId
                 ?: cardComponent.ownerId ?: continue
             val finalChapter = sagaChapters.maxOf { it.chapter }
+            // Read ahead (CR 702.155a): the turn the Saga entered, a chapter can only trigger when
+            // the Saga has exactly that chapter's number of lore counters — so the chapters
+            // skipped by entering with N counters don't trigger.
+            val readAheadEntryTurn = state.projectedState.hasKeyword(
+                entityId, com.wingedsheep.sdk.core.Keyword.READ_AHEAD
+            ) && container.has<com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent>()
 
             // Fire chapters that are newly reached by this counter addition
             for (chapter in sagaChapters.sortedBy { it.chapter }) {
+                if (readAheadEntryTurn && loreCount != chapter.chapter) continue
                 // Chapter triggers if lore count now >= chapter number
                 // AND it wasn't already triggered before this counter addition
                 if (loreCount >= chapter.chapter && previousLoreCount < chapter.chapter) {

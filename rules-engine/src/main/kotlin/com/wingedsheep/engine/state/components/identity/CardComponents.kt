@@ -111,6 +111,12 @@ data class CardComponent(
      * which is the one place the modal/nonmodal split is decided.
      */
     val manaValueOverride: Int? = null,
+    /** The alternative copiable flip half, frozen with any copy exceptions on both halves. */
+    val flipSide: CardComponent? = null,
+    /** Numeric abilities added as copiable text, retained across flip-half selection and expiry. */
+    val copyNumericKeywords: List<com.wingedsheep.sdk.scripting.KeywordAbility.Numeric> = emptyList(),
+    /** Intrinsic static text on inline tokens without a registered definition. */
+    val copyStaticAbilities: List<com.wingedsheep.sdk.scripting.StaticAbility> = emptyList(),
     /** Rules text added by copy effects; copied and restored with the identity, not a layer-six grant. */
     val copyTriggeredAbilities: List<com.wingedsheep.sdk.scripting.TriggeredAbility> = emptyList(),
     /**
@@ -118,6 +124,8 @@ data class CardComponent(
      * [copyTriggeredAbilities]; read through [ownActivatedAbilities] alongside the definition's own.
      */
     val copyActivatedAbilities: List<com.wingedsheep.sdk.scripting.ActivatedAbility> = emptyList(),
+    /** Intrinsic ward costs carried by a copy whose values have no printed card definition. */
+    val copyWardCosts: List<com.wingedsheep.sdk.scripting.effects.WardCost> = emptyList(),
     /** Copiable spending-rule abilities, baked from the active printed statics on entry/unlock. */
     val manaSpendingGrants: List<ManaSpendingGrant> = emptyList(),
 ) : Component {

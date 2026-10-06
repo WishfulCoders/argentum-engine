@@ -26,6 +26,72 @@
     }
 }
 
+// Acrobatic Maneuver
+{
+    "name": "Acrobatic Maneuver",
+    "manaCost": "{2}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Exile target creature you control, then return that card to the battlefield under its owner's control.\nDraw a card.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Battlefield"
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "1",
+        "artist": "Winona Nelson",
+        "flavorText": "Renegades find ever more creative ways to work around the Consulate's aether regulations.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/4/74f92174-f38f-4623-a5f7-f5be7f7dcc9d.jpg?1783937239",
+        "rulings": [
+            {
+                "date": "2016-09-20",
+                "text": "After the creature returns to the battlefield, it will be a new object with no connection to the creature that was exiled. It won't be in combat or have any additional abilities it may have had before it was exiled. Any +1/+1 counters on it or Auras attached to it are removed, and any Equipment will no longer be attached."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "If a creature token is exiled this way, it will cease to exist and won't return to the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Aerial Responder
 {
     "name": "Aerial Responder",
@@ -858,6 +924,82 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Built to Last
+{
+    "name": "Built to Last",
+    "manaCost": "{W}",
+    "typeLine": "Instant",
+    "oracleText": "Target creature gets +2/+2 until end of turn. If it's an artifact creature, it gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "filter": "artifact creature"
+                        }
+                    },
+                    "then": {
+                        "type": "GrantKeyword",
+                        "keyword": "INDESTRUCTIBLE",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "7",
+        "artist": "Svetlin Velinov",
+        "flavorText": "Consulate-built automatons have a lifetime warranty.",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/f/ef3e09a4-93d0-4ed7-bbee-82108672d5f8.jpg?1783937236",
+        "rulings": [
+            {
+                "date": "2016-09-20",
+                "text": "An artifact creature gains indestructible in addition to getting +2/+2, not instead of it."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -3547,6 +3689,57 @@
     ]
 }
 
+// Ninth Bridge Patrol
+{
+    "name": "Ninth Bridge Patrol",
+    "manaCost": "{1}{W}",
+    "typeLine": "Creature — Dwarf Soldier",
+    "oracleText": "Whenever another creature you control leaves the battlefield, put a +1/+1 counter on this creature.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ninth Bridge Patrol:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature ctrl:you",
+                    "from": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                },
+                "descriptionOverride": "Whenever another creature you control leaves the battlefield, put a +1/+1 counter on this creature."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "22",
+        "artist": "Ryan Alexander Lee",
+        "flavorText": "The Consulate keeps watch at each of the eleven bridges to ensure that the market remains a haven for commerce, not for con artists.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/0/10a22cf8-4441-48ab-8adc-ae071cbc5999.jpg?1783937230",
+        "rulings": [
+            {
+                "date": "2020-11-10",
+                "text": "If Ninth Bridge Patrol is dealt lethal damage at the same time as another creature you control, it won't receive a counter from its ability in time to save it."
+            },
+            {
+                "date": "2020-11-10",
+                "text": "Ninth Bridge Patrol's ability doesn't care where the creature went or whether it's a creature in its new zone. It may have died, been exiled, returned to your hand, and so on. It won't trigger if an object remains on the battlefield but ceases to be a creature. It won't trigger if a creature phases out."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Ornamental Courage
 {
     "name": "Ornamental Courage",
@@ -5538,6 +5731,88 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Wispweaver Angel
+{
+    "name": "Wispweaver Angel",
+    "manaCost": "{4}{W}{W}",
+    "typeLine": "Creature — Angel",
+    "oracleText": "Flying\nWhen this creature enters, you may exile another target creature you control, then return that card to the battlefield under its owner's control.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 4
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Wispweaver Angel:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "destination": "Exile"
+                            },
+                            {
+                                "type": "MoveToZone",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "destination": "Battlefield"
+                            }
+                        ]
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you",
+                        "excludeSelf": true
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "35",
+        "rarity": "UNCOMMON",
+        "artist": "James Ryman",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/7/57300d02-faad-43b2-afa9-023d1c3a0901.jpg?1783937225",
+        "rulings": [
+            {
+                "date": "2016-09-20",
+                "text": "Auras attached to the exiled creature will be put into their owners' graveyards. Equipment attached to the exiled creature will become unattached and remain on the battlefield. Any counters on the exiled creature will cease to exist."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "If a creature token is exiled this way, it will cease to exist and won't return to the battlefield."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "Wispweaver Angel's triggered ability can target another Wispweaver Angel. If so, the two Angels can loop in and out of exile as many times as you'd like before you choose to target another creature or not to use the triggered ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 

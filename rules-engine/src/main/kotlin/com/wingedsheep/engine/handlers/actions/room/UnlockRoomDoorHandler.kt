@@ -8,7 +8,6 @@ import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.core.RoomFullyUnlockedEvent
-import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.core.UnlockRoomDoor
 import com.wingedsheep.engine.handlers.CostHandler
 import com.wingedsheep.engine.handlers.actions.ActionHandler
@@ -277,7 +276,7 @@ class UnlockRoomDoorHandler(
             }
             is PaymentStrategy.Explicit -> {
                 for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                    val (tappedState, tapEvents) = tapForMana(currentState, sourceId, action.playerId)
+                    val (tappedState, tapEvents) = manaAbilitySideEffectExecutor.tapForManaPayingLife(currentState, sourceId, action.playerId)
                     currentState = tappedState
                     events.addAll(tapEvents)
                 }

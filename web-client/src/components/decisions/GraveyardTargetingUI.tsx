@@ -163,7 +163,9 @@ export function GraveyardTargetingUI({
           : 'up to one card'
         : `${numWord(minTargets)} to ${numWord(maxTargets)} cards`
 
-  const helperText = isOptionalTarget
+  const helperText = targetReq?.emptyChoiceLabel
+    ? 'Choose a new target, or keep the original target.'
+    : isOptionalTarget
     ? `Optional: choose ${countPhrase} to ${actionVerb}, or decline.`
     : `Choose ${countPhrase} to ${actionVerb}.`
 
@@ -187,9 +189,9 @@ export function GraveyardTargetingUI({
         responsive={responsive}
         onConfirm={handleConfirm}
         confirmText={isOptionalTarget ? optionalConfirmText : 'Confirm Target'}
-        showFailToFind={isOptionalTarget}
-        failToFindText="Decline Trigger"
-        confirmRequiresSelection={isOptionalTarget}
+        showFailToFind={isOptionalTarget || !!targetReq?.emptyChoiceLabel}
+        failToFindText={targetReq?.emptyChoiceLabel ?? 'Decline Trigger'}
+        confirmRequiresSelection={isOptionalTarget || !!targetReq?.emptyChoiceLabel}
         sortByType={true}
         useGlobalHover={true}
         {...(onViewBattlefield ? { onViewBattlefield } : {})}
@@ -279,8 +281,8 @@ export function GraveyardTargetingUI({
         onMinimize={() => setMinimized(true)}
         {...(onViewBattlefield ? { onViewBattlefield } : {})}
         confirmText={isOptionalTarget ? optionalConfirmText : 'Confirm Target'}
-        declineText={isOptionalTarget ? 'Decline Trigger' : undefined}
-        confirmRequiresSelection={isOptionalTarget}
+        declineText={targetReq?.emptyChoiceLabel ?? (isOptionalTarget ? 'Decline Trigger' : undefined)}
+        confirmRequiresSelection={isOptionalTarget || !!targetReq?.emptyChoiceLabel}
         {...(onBack ? { onBack } : {})}
       />
     </div>

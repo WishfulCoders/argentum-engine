@@ -1,4 +1,5 @@
 package com.wingedsheep.engine.handlers.continuations
+import com.wingedsheep.engine.mechanics.mana.ManaAbilityLifeCost
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.engine.handlers.effects.mana.ManaProvenanceTracker
 
@@ -12,6 +13,8 @@ import com.wingedsheep.engine.mechanics.mana.isSatisfiedBy
 import com.wingedsheep.engine.mechanics.mana.ManaPool
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.activeManaSpendingScope
+import com.wingedsheep.engine.state.forcedPlayFor
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -61,6 +64,16 @@ class ManaPaymentContinuationResumer(
         if (response !is ManaSourcesSelectedResponse) return ExecutionResult.error(state, "Expected mana sources")
         val player = continuation.action.playerId
         if (response.declined) return checkForMore(state.withPriority(player), emptyList())
+        val cast = continuation.action as? CastSpell
+        if (cast != null && state.forcedPlayFor(player, cast.cardId) != null &&
+            state.activeManaSpendingScope(player) != null) {
+            // Use the same execution-backed allocation as a direct cast. Legacy menu floating
+            // bypasses per-activation identities and cannot enforce contribution obligations.
+            val strategy = if (response.autoPay) PaymentStrategy.AutoPay
+                else PaymentStrategy.Explicit(response.selectedSources)
+            return services.castSpellHandler.executeWithLockedManaCost(state.withPriority(player),
+                cast.copy(paymentStrategy = strategy), continuation.lockedCastCost)
+        }
         val decision = services.manaSolver.findAvailableManaSources(state, player, continuation.paymentContext)
             .filter { it.entityId !in continuation.excludedSources && it.tapPermanentsSubCost == null &&
                 (continuation.paymentContext == null || it.restriction?.isSatisfiedBy(continuation.paymentContext) != false) }.map { source ->
@@ -729,7 +742,7 @@ class ManaPaymentContinuationResumer(
                     ?: return ExecutionResult.error(state, "Cannot pay mana cost with auto-pay")
 
                 for (source in solution.sources) {
-                    val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, playerId)
+                    val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(services.zones, currentState, source.entityId, playerId, solution.manaProduced[source.entityId])
                     currentState = tappedState
                     events.addAll(tapEvents)
                 }
@@ -1136,7 +1149,7 @@ class ManaPaymentContinuationResumer(
                     ?: return ExecutionResult.error(state, "Cannot pay mana cost with auto-pay")
 
                 for (source in solution.sources) {
-                    val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, playerId)
+                    val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(services.zones, currentState, source.entityId, playerId, solution.manaProduced[source.entityId])
                     currentState = tappedState
                     events.addAll(tapEvents)
                 }
@@ -1310,7 +1323,7 @@ class ManaPaymentContinuationResumer(
                 ?: return ExecutionResult.error(state, "Cannot pay mana cost")
 
             for (source in solution.sources) {
-                val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, playerId)
+                val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(services.zones, currentState, source.entityId, playerId, solution.manaProduced[source.entityId])
                 currentState = tappedState
                 events.addAll(tapEvents)
             }
@@ -1402,7 +1415,7 @@ class ManaPaymentContinuationResumer(
                     ?: return ExecutionResult.error(state, "Cannot pay mana cost with auto-pay")
 
                 for (source in solution.sources) {
-                    val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, playerId)
+                    val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(services.zones, currentState, source.entityId, playerId, solution.manaProduced[source.entityId])
                     currentState = tappedState
                     events.addAll(tapEvents)
                 }
@@ -1529,7 +1542,7 @@ class ManaPaymentContinuationResumer(
                 events.add(PermanentsSacrificedEvent(sourceController, listOf(sourceId)))
                 events.addAll(transition.events)
             } else {
-                val (tappedState, tapEvents) = tapForMana(currentState, sourceId, fallbackControllerId)
+                val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(services.zones, currentState, sourceId, fallbackControllerId, ManaAbilityLifeCost.creditedProduction(source.producesColors))
                 currentState = tappedState
                 events.addAll(tapEvents)
             }
@@ -1690,7 +1703,7 @@ class ManaPaymentContinuationResumer(
         // Tap the source and each chosen permanent, then credit the source's mana to the pool.
         var currentState = state
         val events = mutableListOf<GameEvent>()
-        val (headTappedState, headTapEvents) = tapForMana(currentState, headSourceId, continuation.payingPlayerId)
+        val (headTappedState, headTapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(services.zones, currentState, headSourceId, continuation.payingPlayerId, ManaAbilityLifeCost.creditedProduction(sourceOption.producesColors))
         currentState = headTappedState
         events.addAll(headTapEvents)
         for (chosen in response.selectedCards) {
