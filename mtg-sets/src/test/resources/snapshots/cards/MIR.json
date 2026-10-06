@@ -2006,6 +2006,102 @@
     ]
 }
 
+// Flash
+{
+    "name": "Flash",
+    "manaCost": "{1}{U}",
+    "typeLine": "Instant",
+    "oracleText": "You may put a creature card from your hand onto the battlefield. If you do, sacrifice it unless you pay its mana cost reduced by {2}.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand",
+                        "filter": "creature"
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered0",
+                    "selection": {
+                        "type": "ChooseUpTo",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeSelected": "selected1",
+                    "prompt": "You may put a creature card from your hand onto the battlefield"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "selected1",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
+                    },
+                    "storeMovedAs": "moved2"
+                },
+                {
+                    "type": "ConditionalOnCollection",
+                    "collection": "moved2",
+                    "ifNotEmpty": {
+                        "type": "PayOrSuffer",
+                        "cost": {
+                            "type": "ManaCostOf",
+                            "entity": {
+                                "type": "PipelineTarget",
+                                "collectionName": "moved2"
+                            },
+                            "genericReduction": 2
+                        },
+                        "suffer": {
+                            "type": "SacrificeTarget",
+                            "target": {
+                                "type": "PipelineTarget",
+                                "collectionName": "moved2"
+                            }
+                        },
+                        "consequenceDescription": "sacrifice the creature Flash put onto the battlefield"
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "66",
+        "rarity": "RARE",
+        "artist": "David Ho",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/3/63af3c26-5b1f-46f6-9aa2-036c615bf5ea.jpg?1783947110",
+        "rulings": [
+            {
+                "date": "2018-03-16",
+                "text": "If the creature has {X} in its mana cost, X is considered to be 0."
+            },
+            {
+                "date": "2018-03-16",
+                "text": "Only the generic mana in that creature's mana cost is reduced. For example, if that creature's mana cost is {1}{R}, you'll have to pay {R} to keep it."
+            },
+            {
+                "date": "2018-03-16",
+                "text": "The creature enters the battlefield, so it will trigger enters-the-battlefield abilities even if you choose not to pay."
+            },
+            {
+                "date": "2018-03-16",
+                "text": "If you choose not to pay, the creature is sacrificed immediately. No player will get priority in between the creature entering the battlefield and being sacrificed. Sacrificing the creature this way will trigger any abilities that trigger when it leaves the battlefield, and those abilities will be put onto the stack at the same time as those that triggered when it entered the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Flood Plain
 {
     "name": "Flood Plain",
