@@ -6542,7 +6542,7 @@ put on the player by anyone: "whenever you get one or more {E}", `CountersPlaced
 `drawsNth(n)`, `revealsFirstDraw(card?)`, `discards(card?, batch?)`, `cycles()`, `playsLand(…)`,
 `permanentTurnedFaceUp(filter)`, `searchesLibrary()`, `shufflesLibrary()`, `gainsLife(firstTimeEachTurn?)`,
 `losesLife()`, `losesGame()`, `sacrifices(filter, batch?)`,
-`sacrificesAnother(filter)`, `taps(filter, batch?)`, `tapsLandForMana(land?)`, `createsToken(token?)`,
+`sacrificesAnother(filter)`, `taps(filter, batch?)`, `tapsLandForMana(land?)`, `createsToken(token?, batch?)`,
 `exploits(nontoken?)`, `commitsCrime()`, `givesAGift()`, `scries()`, `surveils()`, `scriesOrSurveils()`, `proliferates()`,
 `discovers()`, `collectsEvidence()`, `forages()`, `investigates(firstTimeEachTurn?)`, `solvesACase()`, `clashes(andWins?)`,
 `isTemptedByTheRing(bearerChosen?)`, `bends(types)`, `manifestsDread()`, `expends(n)`,
@@ -6845,6 +6845,13 @@ The shapes in this family, with their engine notes.
   ability's controller — `Player.You`, `Player.EachOpponent` (a real opponent test) or `Player.Any` —
   the same vocabulary `LifeLossEvent.player` uses. The replacement side reads it off the player alone,
   since no token entity exists yet.
+- `EventPattern.TokenCreationEvent(…, batch = true)` / `Triggers.you.createsToken(token, batch = true)` —
+  "Whenever you create **one or more** [creature] tokens" (Staff of the Storyteller). **Per batch**: fires at
+  most once per simultaneous creation however many matching tokens it made (CR 603.2c), and not at all
+  when none of them match `tokenFilter`. Each token is held to the same per-token test as above (created,
+  not a token copy of a spell; right controller; filter), read by a dedicated batch pass in
+  `TriggerDetector` (category `TOKENS_CREATED_BATCH`); the matching tokens are the trigger's captured
+  collection. Replacement effects ignore the flag.
 
 ### Combat
 

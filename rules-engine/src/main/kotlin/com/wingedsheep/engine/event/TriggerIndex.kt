@@ -68,6 +68,7 @@ enum class TriggerCategory {
     LEAVE_WITHOUT_DYING,
     CREATURES_DIED_BATCH,
     PERMANENTS_ENTERED_BATCH,
+    TOKENS_CREATED_BATCH,
     COUNTERS_ADDED,
     COUNTERS_REMOVED,
     GIFT_GIVEN,
@@ -240,8 +241,11 @@ class TriggerIndex(
                 is SdkGameEvent.ZoneChangeEvent -> listOf(TriggerCategory.ZONE_CHANGE)
                 // "Whenever you create a token" matches token-creation ZoneChangeEvents (fromZone ==
                 // null), so it indexes under the same category as those events (TriggerMatcher.
-                // matchesTokenCreationTrigger does the create-specific filtering).
-                is SdkGameEvent.TokenCreationEvent -> listOf(TriggerCategory.ZONE_CHANGE)
+                // matchesTokenCreationTrigger does the create-specific filtering). The "one or more"
+                // batch shape is read only by TriggerDetector's token-creation batch pass.
+                is SdkGameEvent.TokenCreationEvent ->
+                    if (trigger.batch) listOf(TriggerCategory.TOKENS_CREATED_BATCH)
+                    else listOf(TriggerCategory.ZONE_CHANGE)
                 is SdkGameEvent.DrawEvent -> listOf(TriggerCategory.DRAW)
                 is SdkGameEvent.NthCardDrawnEvent -> listOf(TriggerCategory.DRAW)
                 is SdkGameEvent.CardRevealedFromDrawEvent -> listOf(TriggerCategory.CARD_REVEALED)

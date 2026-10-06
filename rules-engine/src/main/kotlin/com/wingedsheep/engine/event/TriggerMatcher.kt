@@ -851,8 +851,10 @@ class TriggerMatcher(
             is EventPattern.DamageEvent -> false
             is EventPattern.CounterPlacementEvent -> false
             // "Whenever you create a token" (Mirkwood Bats) — fires per token created (CR's
-            // singular templating), matched against each token-creation ZoneChangeEvent.
-            is EventPattern.TokenCreationEvent -> matchesTokenCreationTrigger(trigger, event, controllerId, state)
+            // singular templating), matched against each token-creation ZoneChangeEvent. The
+            // "one or more" batch shape fires only from TriggerDetector's batch pass.
+            is EventPattern.TokenCreationEvent ->
+                !trigger.batch && matchesTokenCreationTrigger(trigger, event, controllerId, state)
             is EventPattern.LifeLossEvent -> {
                 event is LifeChangedEvent &&
                     event.reason != com.wingedsheep.engine.core.LifeChangeReason.LIFE_GAIN &&
@@ -1053,9 +1055,10 @@ class TriggerMatcher(
      * copy of a permanent spell enters from [Zone.STACK] instead and is explicitly **not** created
      * (CR 608.3f / 111.13), so the `fromZone == null` gate excludes it. One event is emitted per
      * token, so this fires once per token created (the singular "a token" templating), e.g. each
-     * Soldier from Horn of Gondor's `{3},{T}` drains separately.
+     * Soldier from Horn of Gondor's `{3},{T}` drains separately. The batch pass for "one or more"
+     * ([EventPattern.TokenCreationEvent.batch]) asks the same per-token question of every event.
      */
-    private fun matchesTokenCreationTrigger(
+    internal fun matchesTokenCreationTrigger(
         trigger: EventPattern.TokenCreationEvent,
         event: EngineGameEvent,
         controllerId: EntityId,

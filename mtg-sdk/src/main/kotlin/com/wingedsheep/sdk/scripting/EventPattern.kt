@@ -232,12 +232,30 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      *
      * [controller] names the player the tokens are created under, read relative to the observing
      * ability's controller — the same [Player] vocabulary as [LifeLossEvent.player].
+     *
+     * As a trigger, a token is *created* only when it enters from nowhere (CR 111.1, 701.7a); a
+     * token copy of a permanent spell becomes a token as it resolves and is explicitly not
+     * "created" (CR 111.13, 608.3f), so it never matches either shape below.
      */
     @SerialName("TokenCreationEvent")
     @Serializable
     data class TokenCreationEvent(
         val controller: Player = Player.You,
-        val tokenFilter: GameObjectFilter? = null
+        val tokenFilter: GameObjectFilter? = null,
+        /**
+         * Trigger-only axis. `false` (the default) is the singular "whenever you create a token":
+         * it fires once per token (Mirkwood Bats). `true` is "whenever you create **one or more**
+         * [tokenFilter] tokens": it fires at most **once** per simultaneous creation, however many
+         * matching tokens that creation made (CR 603.2c — one event, one trigger; Staff of the
+         * Storyteller adds one story counter for a whole Krenko's batch of Goblins). A batch with
+         * no token that matches [tokenFilter] (only noncreature tokens, for a creature filter)
+         * doesn't trigger it. The matching tokens are exposed to the payoff as the trigger's
+         * captured collection.
+         *
+         * The batch is detected by a dedicated pass over each event batch; the per-event path
+         * skips a batch pattern. Replacement effects ([ReplacementEffect.appliesTo]) never read it.
+         */
+        val batch: Boolean = false,
     ) : EventPattern {
         override val description: String = buildString {
             append("one or more ")

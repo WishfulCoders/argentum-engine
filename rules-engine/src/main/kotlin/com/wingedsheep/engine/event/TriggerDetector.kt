@@ -400,6 +400,11 @@ class TriggerDetector(
         // and fires the trigger at most once per observer.
         detectPermanentsEnteredBatchTriggers(state, events, triggers, index)
 
+        // Detect "whenever you create one or more [creature] tokens" batching triggers
+        // (TokenCreationEvent(batch = true), e.g. Staff of the Storyteller). One creation that
+        // makes several tokens fires the trigger once, not once per token.
+        detectTokensCreatedBatchTriggers(state, events, triggers, index)
+
         // A `ReflexiveTriggerEffect`'s action half completed — turn it into a real CR 603.12
         // reflexive triggered ability instead of resolving it inline. Unconditional: the event
         // itself IS the trigger condition, so this bypasses TriggerIndex/TriggerSpec matching
@@ -3611,6 +3616,51 @@ class TriggerDetector(
                 triggerContext = TriggerContext(diedBatchTotalPower = batchTotalPower)
             )
         )
+    }
+
+    /**
+     * Detect "whenever you create one or more [filtered] tokens" batching triggers
+     * (`TokenCreationEvent(batch = true)`, Staff of the Storyteller).
+     *
+     * Each token-creation [ZoneChangeEvent] in the batch is asked the per-token question the
+     * singular trigger asks ([TriggerMatcher.matchesTokenCreationTrigger]: entered from nowhere —
+     * so a token copy of a permanent spell, which is not "created" (CR 111.13, 608.3f), never
+     * counts — under the right player's control, matching the token filter). If any token does,
+     * the ability triggers **once** for the batch (CR 603.2c), however many tokens it made, and the
+     * matching tokens are exposed as the trigger's captured collection.
+     *
+     * The batch is one settle boundary's events — the same simultaneity unit every other "one or
+     * more" trigger here uses — so a single instruction creating several tokens (CR 701.7a) is one
+     * creation.
+     */
+    private fun detectTokensCreatedBatchTriggers(
+        state: GameState,
+        events: List<EngineGameEvent>,
+        triggers: MutableList<PendingTrigger>,
+        index: TriggerIndex
+    ) {
+        val creations = events.filter { it is ZoneChangeEvent && it.fromZone == null && it.toZone == Zone.BATTLEFIELD }
+        if (creations.isEmpty()) return
+
+        for (entry in index.getEntitiesForCategory(TriggerCategory.TOKENS_CREATED_BATCH)) {
+            for (ability in entry.abilities) {
+                val trigger = ability.trigger
+                if (trigger !is EventPattern.TokenCreationEvent || !trigger.batch) continue
+                val created = creations.filter { event ->
+                    matcher.matchesTokenCreationTrigger(trigger, event, entry.controllerId, state)
+                }.map { (it as ZoneChangeEvent).entityId }
+                if (created.isEmpty()) continue
+                triggers.add(
+                    PendingTrigger(
+                        ability = ability,
+                        sourceId = entry.entityId,
+                        sourceName = entry.cardComponent.name,
+                        controllerId = entry.controllerId,
+                        triggerContext = TriggerContext(capturedEntityIds = created)
+                    )
+                )
+            }
+        }
     }
 
     /**
