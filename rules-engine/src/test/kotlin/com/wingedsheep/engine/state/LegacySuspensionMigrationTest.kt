@@ -281,7 +281,9 @@ class LegacySuspensionMigrationTest : ScenarioTestBase() {
      * independently verifies their capture, retention after departure and serialization.
      */
     private fun normalizeRouting(value: JsonElement, root: Boolean = false): JsonElement = when (value) {
-        is JsonObject -> JsonObject(((if (root) value - "controlAtTurnStart" else value) - "targetObjectRefs" - "referencedObjects").mapValues { (key, child) ->
+        is JsonObject -> JsonObject(((if (root) value - "controlAtTurnStart" else value) - "targetObjectRefs" - "referencedObjects" -
+            // The graveyard turn history (Crawling Sensation) postdates the capture.
+            "com.wingedsheep.engine.state.components.player.CardsPutIntoGraveyardThisTurnComponent").mapValues { (key, child) ->
             when {
                 root && key == "nextRoutingId" -> JsonPrimitive(0)
                 key == "question" && "answer" in value -> {
@@ -321,10 +323,36 @@ class LegacySuspensionMigrationTest : ScenarioTestBase() {
                 value.getValue("snowMana") shouldBe JsonObject(emptyMap())
                 value.getValue("snowColorless") shouldBe JsonPrimitive(0)
                 value - "snowMana" - "snowColorless"
+            } else if (value["type"] == JsonPrimitive(
+                    "com.wingedsheep.engine.state.components.player.LandDropsComponent"
+                )) {
+                // The direct lands-played count postdates the capture.
+                value.getValue("playedThisTurn") shouldBe JsonPrimitive(0)
+                value - "playedThisTurn"
             } else if ("colorlessAsAnyColor" in value && "singleUse" in value) {
-                // MayPlayPermission's colorless-as-any-color rider postdates the capture.
+                // MayPlayPermission's colorless-as-any-color and face-down riders postdate the capture.
                 value.getValue("colorlessAsAnyColor") shouldBe JsonPrimitive(false)
-                value - "colorlessAsAnyColor"
+                value.getValue("castFaceDown") shouldBe JsonPrimitive(false)
+                value.getValue("turnsFaceUpInstead") shouldBe JsonPrimitive(false)
+                value - "colorlessAsAnyColor" - "castFaceDown" - "turnsFaceUpInstead"
+            } else if (value["type"] == JsonPrimitive(
+                    "com.wingedsheep.engine.state.components.stack.SpellOnStackComponent"
+                )) {
+                // The turns-face-up-instead rider (Illusionary Mask) postdates the capture.
+                value.getValue("turnsFaceUpInstead") shouldBe JsonPrimitive(false)
+                value - "turnsFaceUpInstead"
+            } else if (value["type"] == JsonPrimitive(
+                    "com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent"
+                )) {
+                // The recorded activation payment postdates the capture.
+                value - "manaSpent"
+            } else if (value["type"] == JsonPrimitive(
+                    "com.wingedsheep.engine.state.components.identity.PlayWithoutPayingCostComponent"
+                )) {
+                // The turn-keyed waiver expiry (Ignite the Future) postdates the capture.
+                value.getValue("expiresAfterTurn") shouldBe JsonNull
+                value.getValue("expiryControllerId") shouldBe JsonNull
+                value - "expiresAfterTurn" - "expiryControllerId"
             } else value
             JsonObject(fields.mapValues { withoutPostCaptureCardDefaults(it.value) })
         }

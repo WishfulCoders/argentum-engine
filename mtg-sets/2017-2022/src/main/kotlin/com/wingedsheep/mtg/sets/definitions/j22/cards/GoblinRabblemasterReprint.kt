@@ -4,8 +4,8 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Goblin Rabblemaster reprint in J22. The canonical [com.wingedsheep.sdk.model.CardDefinition]
- * lives in M15, the card's earliest real printing.
+ * Goblin Rabblemaster reprint in J22. Canonical CardDefinition lives in Magic 2015 (its earliest real printing),
+ * `com.wingedsheep.mtg.sets.definitions.m15.cards.GoblinRabblemaster`.
  */
 val GoblinRabblemasterReprint = Printing(
     oracleId = "24661b81-6bee-4ad8-b3ab-53cb65005c51",

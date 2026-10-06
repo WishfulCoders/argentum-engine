@@ -293,9 +293,27 @@ class ObjectTriggerSubject internal constructor(
         requires: Set<DamagePredicate> = emptySet(),
     ): TriggerSpec = dealsDamage(to, DamageType.Combat, requireExcess, batch, requires)
 
-    /** "is dealt damage [by a source matching [by]]". */
-    fun isDealtDamage(by: GameObjectFilter = GameObjectFilter.Any): TriggerSpec {
+    /**
+     * "is dealt damage" — or, with [by], "a source matching [by] deals damage to <subject>".
+     * Without [by], simultaneous damage to the subject is one event (CR 603.2c): it triggers once
+     * and "that much" is the total (Fungusaur, Boros Reckoner, Pain for All). With [by] it
+     * triggers once per damage source, which becomes the triggering entity — "whenever a source
+     * deals damage to this creature" is `by = GameObjectFilter.Any` (Nested Ghoul, Phyrexian
+     * Obliterator). Under [Triggers.a] / [Triggers.another] the subject filter picks the damaged
+     * permanent, which becomes the triggering entity ("whenever a creature an opponent controls
+     * with a bounty counter on it is dealt damage, destroy it"); that observer form takes no [by].
+     */
+    fun isDealtDamage(by: GameObjectFilter? = null): TriggerSpec {
+        if (binding == TriggerBinding.ANY || binding == TriggerBinding.OTHER) {
+            require(by == null) {
+                "Triggers.a/another(…).isDealtDamage() can't filter the damage source"
+            }
+            return spec(DamageReceivedEvent(recipient = filterOrAny))
+        }
         unfiltered("isDealtDamage")
+        require(by == null || binding == TriggerBinding.SELF) {
+            "Triggers.attached.isDealtDamage() can't filter the damage source"
+        }
         return spec(DamageReceivedEvent(source = by))
     }
 
@@ -574,8 +592,12 @@ class ObjectTriggerSubject internal constructor(
     }
 
     /**
-     * "at the beginning of enchanted creature's controller's [step]" (Lingering Death) — the step
-     * belongs to the attached permanent's controller.
+     * "at the beginning of the [step] of enchanted creature's controller" (Lingering Death,
+     * Wanderlust) — the step belongs to the attached permanent's controller, but the ability is
+     * still the Aura's: the Aura's controller controls it. "That player" is bound as the triggering
+     * player — reach them with `Player.TriggeringPlayer`, not `EffectTarget.Controller`. For an
+     * ability the Aura *grants* ("enchanted creature has 'at the beginning of your upkeep …'"),
+     * use `GrantTriggeredAbility` with `Triggers.you.beginningOf(step)` (Custody Battle).
      */
     fun beginningOf(step: Step): TriggerSpec {
         unfiltered("beginningOf")
@@ -679,12 +701,17 @@ class BatchTriggerSubject internal constructor(
     /**
      * "are put into your graveyard [from your library]" — from anywhere by default. The matching
      * cards are the captured collection (Hedge Shredder's "put them onto the battlefield").
+     * [firstTimeEachTurn] is "… from anywhere for the first time each turn" (Crawling Sensation) —
+     * only the batch holding the turn's first matching card, whether or not the source saw the earlier one.
      */
-    fun putIntoYourGraveyard(fromLibrary: Boolean = false): TriggerSpec {
+    fun putIntoYourGraveyard(fromLibrary: Boolean = false, firstTimeEachTurn: Boolean = false): TriggerSpec {
         noOther("putIntoYourGraveyard")
+        require(!(fromLibrary && firstTimeEachTurn)) {
+            "putIntoYourGraveyard: firstTimeEachTurn is only modelled for the from-anywhere trigger"
+        }
         return spec(
             if (fromLibrary) CardsPutIntoGraveyardFromLibraryEvent(filter = filter)
-            else CardsPutIntoYourGraveyardEvent(filter = filter)
+            else CardsPutIntoYourGraveyardEvent(filter = filter, firstTimeEachTurn = firstTimeEachTurn)
         )
     }
 

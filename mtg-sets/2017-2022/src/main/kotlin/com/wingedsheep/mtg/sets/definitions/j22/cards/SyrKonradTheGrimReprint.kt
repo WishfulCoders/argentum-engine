@@ -4,7 +4,8 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Syr Konrad, the Grim reprint in J22. Canonical CardDefinition lives in its earliest set.
+ * Syr Konrad, the Grim reprint in J22. Canonical CardDefinition lives in Throne of Eldraine (its earliest real printing),
+ * `com.wingedsheep.mtg.sets.definitions.eld.cards.SyrKonradTheGrim`.
  */
 val SyrKonradTheGrimReprint = Printing(
     oracleId = "14c3ff84-1e82-4606-a433-869fc52cc382",

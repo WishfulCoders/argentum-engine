@@ -85,50 +85,6 @@
     ]
 }
 
-// Go for the Throat
-{
-    "name": "Go for the Throat",
-    "manaCost": "{1}{B}",
-    "typeLine": "Instant",
-    "oracleText": "Destroy target nonartifact creature.",
-    "script": {
-        "spellEffect": {
-            "type": "MoveToZone",
-            "target": {
-                "type": "BoundVariable",
-                "name": "t0"
-            },
-            "destination": "Graveyard",
-            "byDestruction": true
-        },
-        "targetRequirements": [
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "creature nonartifact"
-                },
-                "id": "t0"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "43",
-        "rarity": "UNCOMMON",
-        "artist": "David Rapoza",
-        "flavorText": "Having flesh is increasingly a liability on Mirrodin.",
-        "imageUri": "https://cards.scryfall.io/normal/front/1/c/1c665cfc-7e9a-444b-96b5-e8e4ef57a98a.jpg?1783941384",
-        "rulings": [
-            {
-                "date": "2011-06-01",
-                "text": "If the targeted creature is also an artifact when Go for the Throat tries to resolve, it won't resolve."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "BLACK"
-    ]
-}
-
 // Green Sun's Zenith
 {
     "name": "Green Sun's Zenith",
@@ -232,82 +188,59 @@
     "colorIdentityOverride": []
 }
 
-// Leonin Relic-Warder
+// Kuldotha Flamefiend
 {
-    "name": "Leonin Relic-Warder",
-    "manaCost": "{W}{W}",
-    "typeLine": "Creature — Cat Cleric",
-    "oracleText": "When this creature enters, you may exile target artifact or enchantment.\nWhen this creature leaves the battlefield, return the exiled card to the battlefield under its owner's control.",
+    "name": "Kuldotha Flamefiend",
+    "manaCost": "{4}{R}{R}",
+    "typeLine": "Creature — Elemental",
+    "oracleText": "When this creature enters, you may sacrifice an artifact. If you do, this creature deals 4 damage divided as you choose among any number of targets.",
     "creatureStats": {
-        "power": 2,
-        "toughness": 2
+        "power": 4,
+        "toughness": 4
     },
     "script": {
         "triggeredAbilities": [
             {
-                "id": "Leonin Relic-Warder:1",
+                "id": "Kuldotha Flamefiend:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "ExileUntilLeaves",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    }
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "Sacrifice",
+                            "filter": "artifact"
+                        }
+                    },
+                    "then": {
+                        "type": "DividedDamage",
+                        "totalDamage": 4,
+                        "minTargets": 0,
+                        "maxTargets": 4
+                    },
+                    "descriptionOverride": "You may sacrifice an artifact. If you do, this creature deals 4 damage divided as you chose among the targets."
                 },
                 "targetRequirement": {
-                    "type": "TargetObject",
-                    "optional": true,
-                    "filter": {
-                        "baseFilter": "artifact|enchantment"
-                    },
-                    "id": "t0"
-                }
-            },
-            {
-                "id": "Leonin Relic-Warder:2",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "from": "Battlefield"
+                    "type": "AnyTarget",
+                    "count": 4,
+                    "minCount": 0,
+                    "optional": true
                 },
-                "effect": {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "GatherCards",
-                            "source": "FromLinkedExile",
-                            "storeAs": "linked_return"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "linked_return",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Battlefield"
-                            },
-                            "underOwnersControl": true
-                        }
-                    ]
-                }
+                "descriptionOverride": "You may sacrifice an artifact. If you do, this creature deals 4 damage divided as you choose among any number of targets."
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "10",
+        "collectorNumber": "69",
         "rarity": "UNCOMMON",
-        "artist": "Greg Staples",
-        "imageUri": "https://cards.scryfall.io/normal/front/d/d/dd0900e1-df78-466d-b747-33f22c273d67.jpg?1783941392",
-        "rulings": [
-            {
-                "date": "2011-06-01",
-                "text": "If Leonin Relic-Warder leaves the battlefield before its first ability has resolved, its second ability will trigger and when it resolves, do nothing. Then its first ability will resolve and exile the targeted artifact or enchantment forever."
-            }
-        ]
+        "artist": "Raymond Swanland",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/8/189fea03-24db-4574-bbc2-4d3bc9e629a5.jpg?1783941378"
     },
     "colorIdentityOverride": [
-        "WHITE"
+        "RED"
     ]
 }
 
@@ -408,6 +341,63 @@
     ]
 }
 
+// Nested Ghoul
+{
+    "name": "Nested Ghoul",
+    "manaCost": "{3}{B}{B}",
+    "typeLine": "Creature — Phyrexian Zombie Warrior",
+    "oracleText": "Whenever a source deals damage to this creature, create a 2/2 black Phyrexian Zombie creature token.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Nested Ghoul:1",
+                "trigger": {
+                    "type": "DamageReceivedEvent",
+                    "source": {}
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [
+                        "BLACK"
+                    ],
+                    "creatureTypes": [
+                        "Phyrexian",
+                        "Zombie"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/4/6/46769d11-a7ae-43ac-8c00-e1681955949b.jpg?1783941356"
+                },
+                "descriptionOverride": "Whenever a source deals damage to this creature, create a 2/2 black Phyrexian Zombie creature token."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "48",
+        "rarity": "UNCOMMON",
+        "artist": "Dave Kendall",
+        "flavorText": "\"The chest cavity is cleared of useless meat. I know just what to do with the space.\"\n—Gyed, Vault Priest",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/0/c035ff58-9df3-4db4-b9d0-97d58080ecfe.jpg?1783941383",
+        "rulings": [
+            {
+                "date": "2011-06-01",
+                "text": "Nested Ghoul's ability will trigger if a source with infect deals damage to it."
+            },
+            {
+                "date": "2011-06-01",
+                "text": "If multiple sources deal damage to Nested Ghoul simultaneously (because it was blocked by multiple creatures, for example), the ability will trigger for each source dealing damage to Nested Ghoul."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Ogre Resister
 {
     "name": "Ogre Resister",
@@ -426,56 +416,6 @@
     "colorIdentityOverride": [
         "RED"
     ]
-}
-
-// Phyrexian Revoker
-{
-    "name": "Phyrexian Revoker",
-    "manaCost": "{2}",
-    "typeLine": "Artifact Creature — Phyrexian Horror",
-    "oracleText": "As this creature enters, choose a nonland card name.\nActivated abilities of sources with the chosen name can't be activated.",
-    "creatureStats": {
-        "power": 2,
-        "toughness": 1
-    },
-    "script": {
-        "staticAbilities": [
-            {
-                "type": "PreventActivatedAbilities",
-                "filter": {
-                    "cardPredicates": [
-                        "NameEqualsChosenComponent"
-                    ]
-                },
-                "anyZone": true
-            }
-        ],
-        "replacementEffects": [
-            {
-                "type": "EntersWithChoice",
-                "choiceType": "CARD_NAME",
-                "cardNamePool": "NONLAND"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "122",
-        "rarity": "RARE",
-        "artist": "Kev Walker",
-        "flavorText": "Basic senses like sight and taste are reserved for those in power.",
-        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c7bec21-61b0-4e72-848b-82f38e1910e0.jpg?1783941366",
-        "rulings": [
-            {
-                "date": "2020-08-07",
-                "text": "Activated abilities are written in the form \"Cost: Effect.\" Some keywords are activated abilities (such as equip) and will have colons in their reminder texts. Static and triggered abilities of sources with the chosen name are unaffected."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "Phyrexian Revoker's ability affects sources with the chosen name no matter what zone they are in. For example, a cycling ability of a card with the chosen name can't be activated from hand."
-            }
-        ]
-    },
-    "colorIdentityOverride": []
 }
 
 // Quilled Slagwurm

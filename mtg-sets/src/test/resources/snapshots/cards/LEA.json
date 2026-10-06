@@ -59,6 +59,133 @@
     ]
 }
 
+// Animate Dead
+{
+    "name": "Animate Dead",
+    "manaCost": "{1}{B}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature card in a graveyard\nWhen this Aura enters, if it's on the battlefield, it loses \"enchant creature card in a graveyard\" and gains \"enchant creature put onto the battlefield with this Aura.\" Return enchanted creature card to the battlefield under your control and attach this Aura to it. When this Aura leaves the battlefield, that creature's controller sacrifices it.\nEnchanted creature gets -1/-0.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Animate Dead:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Graveyard",
+                                "player": "Each",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsCreature"
+                                    ],
+                                    "statePredicates": [
+                                        "IsAttachedToBySource"
+                                    ]
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        },
+                        {
+                            "type": "EnchantPutOntoBattlefield",
+                            "from": "gathered0"
+                        },
+                        {
+                            "type": "CreateDelayedTrigger",
+                            "effect": {
+                                "type": "SacrificeTarget",
+                                "target": {
+                                    "type": "PipelineTarget",
+                                    "collectionName": "gathered0"
+                                },
+                                "sacrificedByItsController": true
+                            },
+                            "trigger": {
+                                "event": {
+                                    "type": "ZoneChangeEvent",
+                                    "from": "Battlefield"
+                                }
+                            },
+                            "watchedTarget": "Self",
+                            "expiry": "DelayedTriggerExpiry.Never",
+                            "fireOnce": true,
+                            "carryCollections": [
+                                "gathered0"
+                            ]
+                        }
+                    ]
+                },
+                "interveningIf": {
+                    "type": "SourceInZone",
+                    "zones": [
+                        "Battlefield"
+                    ]
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": -1,
+                "toughnessBonus": 0
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature",
+                "zone": "Graveyard"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "92",
+        "rarity": "UNCOMMON",
+        "artist": "Anson Maddocks",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/f/8fd7861d-925f-4b4c-a4ab-60be6f43d50b.jpg?1783948699",
+        "rulings": [
+            {
+                "date": "2016-06-08",
+                "text": "If Animate Dead isn't on the battlefield as its triggered ability resolves, none of its effects happen. The creature card won't be returned to the battlefield."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "Animate Dead is an Aura, albeit with an unusual enchant ability. You target a creature card in a graveyard when you cast it. It enters the battlefield attached to that card. Then it returns that card to the battlefield, and attaches itself to the card again (since the card is a new object on the battlefield). Animate Dead itself never moves into a graveyard during this process."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "Once the creature is returned to the battlefield, Animate Dead can't be attached to anything other than it (unless Animate Dead somehow manages to put a different creature onto the battlefield). Attempting to move Animate Dead to another creature won't work."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "Abilities such as shroud and protection function only on the battlefield unless otherwise specified. A creature card with shroud may be targeted by Animate Dead, and Animate Dead will become attached to the creature that enters the battlefield."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "If the creature put onto the battlefield has protection from black—or if the creature can't legally be enchanted by Animate Dead for another reason—Animate Dead won't be able to attach to it. It will be put into the graveyard as a state-based action, causing its delayed triggered ability to trigger. When the trigger resolves, if the creature's still on the battlefield, its controller will sacrifice it."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Armageddon
 {
     "name": "Armageddon",
@@ -817,6 +944,226 @@
     ]
 }
 
+// Chaoslace
+{
+    "name": "Chaoslace",
+    "manaCost": "{R}",
+    "typeLine": "Instant",
+    "oracleText": "Target spell or permanent becomes red. (Its mana symbols remain unchanged.)",
+    "script": {
+        "spellEffect": {
+            "type": "ChangeColor",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "colors": [
+                "RED"
+            ],
+            "duration": "Permanent"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetSpellOrPermanent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "139",
+        "rarity": "RARE",
+        "artist": "Dameon Willich",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/2/72ea2048-57bc-43d5-8987-33ca727f1a97.jpg?1783948689"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Circle of Protection: Blue
+{
+    "name": "Circle of Protection: Blue",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "{1}: The next time a blue source of your choice would deal damage to you this turn, prevent that damage.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Circle of Protection: Blue:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "PreventDamageShield",
+                    "sourceFilter": {
+                        "type": "PreventFromChosen",
+                        "eligible": {
+                            "cardPredicates": [
+                                {
+                                    "type": "HasColor",
+                                    "color": "BLUE"
+                                }
+                            ]
+                        }
+                    },
+                    "nextInstanceOnly": true
+                },
+                "descriptionOverride": "{1}: The next time a blue source of your choice would deal damage to you this turn, prevent that damage."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "10",
+        "artist": "Dameon Willich",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/4/848b1a7f-e8ba-40b5-92b7-af1e963a0319.jpg?1783948716"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Circle of Protection: Green
+{
+    "name": "Circle of Protection: Green",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "{1}: The next time a green source of your choice would deal damage to you this turn, prevent that damage.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Circle of Protection: Green:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "PreventDamageShield",
+                    "sourceFilter": {
+                        "type": "PreventFromChosen",
+                        "eligible": {
+                            "cardPredicates": [
+                                {
+                                    "type": "HasColor",
+                                    "color": "GREEN"
+                                }
+                            ]
+                        }
+                    },
+                    "nextInstanceOnly": true
+                },
+                "descriptionOverride": "{1}: The next time a green source of your choice would deal damage to you this turn, prevent that damage."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "11",
+        "artist": "Sandra Everingham",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/a/1ae32d20-b438-4f43-b603-e8f706ecfb03.jpg?1783948716"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Circle of Protection: Red
+{
+    "name": "Circle of Protection: Red",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "{1}: The next time a red source of your choice would deal damage to you this turn, prevent that damage.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Circle of Protection: Red:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "PreventDamageShield",
+                    "sourceFilter": {
+                        "type": "PreventFromChosen",
+                        "eligible": {
+                            "cardPredicates": [
+                                {
+                                    "type": "HasColor",
+                                    "color": "RED"
+                                }
+                            ]
+                        }
+                    },
+                    "nextInstanceOnly": true
+                },
+                "descriptionOverride": "{1}: The next time a red source of your choice would deal damage to you this turn, prevent that damage."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "12",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/3/b3dd94c5-42f6-4148-be6e-2a3a4226cc0e.jpg?1783948715"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Circle of Protection: White
+{
+    "name": "Circle of Protection: White",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "{1}: The next time a white source of your choice would deal damage to you this turn, prevent that damage.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Circle of Protection: White:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "PreventDamageShield",
+                    "sourceFilter": {
+                        "type": "PreventFromChosen",
+                        "eligible": {
+                            "cardPredicates": [
+                                {
+                                    "type": "HasColor",
+                                    "color": "WHITE"
+                                }
+                            ]
+                        }
+                    },
+                    "nextInstanceOnly": true
+                },
+                "descriptionOverride": "{1}: The next time a white source of your choice would deal damage to you this turn, prevent that damage."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "13",
+        "artist": "Douglas Shuler",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/2/92df19c9-e127-42d9-8dd2-7fa5a7095428.jpg?1783948715"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Clockwork Beast
 {
     "name": "Clockwork Beast",
@@ -1310,6 +1657,52 @@
     }
 }
 
+// Cursed Land
+{
+    "name": "Cursed Land",
+    "manaCost": "{2}{B}{B}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant land\nAt the beginning of the upkeep of enchanted land's controller, this Aura deals 1 damage to that player.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Cursed Land:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "land"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "97",
+        "rarity": "UNCOMMON",
+        "artist": "Jesper Myrfors",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/f/cf5f3c61-1e54-4eea-bf82-311cfa988e6a.jpg?1783948697"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Cyclopean Tomb
 {
     "name": "Cyclopean Tomb",
@@ -1613,6 +2006,42 @@
     ]
 }
 
+// Deathlace
+{
+    "name": "Deathlace",
+    "manaCost": "{B}",
+    "typeLine": "Instant",
+    "oracleText": "Target spell or permanent becomes black. (Mana symbols on that permanent remain unchanged.)",
+    "script": {
+        "spellEffect": {
+            "type": "ChangeColor",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "colors": [
+                "BLACK"
+            ],
+            "duration": "Permanent"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetSpellOrPermanent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "101",
+        "rarity": "RARE",
+        "artist": "Sandra Everingham",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/f/6ff1cefc-62cb-4525-b0c5-2b09603b4314.jpg?1783948696"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Demonic Tutor
 {
     "name": "Demonic Tutor",
@@ -1796,6 +2225,82 @@
             }
         ]
     }
+}
+
+// Drain Power
+{
+    "name": "Drain Power",
+    "manaCost": "{U}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target player activates a mana ability of each land they control. Then that player loses all unspent mana and you add the mana lost this way.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "ControlledPermanents",
+                        "player": "TargetPlayer",
+                        "filter": "land"
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Collection",
+                        "collection": "gathered0"
+                    },
+                    "body": {
+                        "type": "ActivateManaAbility",
+                        "permanent": "IterationEntity"
+                    }
+                },
+                {
+                    "type": "LoseUnspentMana",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "transferTo": "Controller"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetPlayer",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "56",
+        "rarity": "RARE",
+        "artist": "Douglas Shuler",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/a/ea3830c5-cc66-453e-9e53-0636e00ee0ee.jpg?1783948706",
+        "rulings": [
+            {
+                "date": "2013-04-15",
+                "text": "A mana ability is an ability that (1) isn't a loyalty ability, (2) doesn't target, and (3) could add mana when it resolves."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "This card forces the target player to draw mana from lands if they are untapped, but that player can choose how to draw the mana if a land they control has multiple mana abilities, or mana abilities with choices."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "Your opponent may use instants and abilities of permanents in response to this spell before you get the mana."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If a land can draw a variable amount of mana, the target player (not the player of this spell) chooses how much to draw."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
 }
 
 // Drudge Skeletons
@@ -2172,6 +2677,59 @@
     ]
 }
 
+// Fastbond
+{
+    "name": "Fastbond",
+    "manaCost": "{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "You may play any number of lands on each of your turns.\nWhenever you play a land, if it wasn't the first land you played this turn, this enchantment deals 1 damage to you.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Fastbond:1",
+                "trigger": "LandPlayedEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "You"
+                    }
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "TurnTracking",
+                        "player": "You",
+                        "tracker": "LANDS_PLAYED"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantAdditionalLandDrop",
+                "count": null
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "192",
+        "rarity": "RARE",
+        "artist": "Mark Poole",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/5/a575a9af-e1de-4a1d-91d8-440585377e4f.jpg?1783948678"
+    }
+}
+
 // Fear
 {
     "name": "Fear",
@@ -2199,6 +2757,52 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Feedback
+{
+    "name": "Feedback",
+    "manaCost": "{2}{U}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant enchantment\nAt the beginning of the upkeep of enchanted enchantment's controller, this Aura deals 1 damage to that player.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Feedback:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "enchantment"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "57",
+        "rarity": "UNCOMMON",
+        "artist": "Quinton Hoover",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/e/0eb8f591-d763-49bf-8ef9-86265aaa72f7.jpg?1783948705"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -2523,6 +3127,48 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Fungusaur
+{
+    "name": "Fungusaur",
+    "manaCost": "{3}{G}",
+    "typeLine": "Creature — Fungus Dinosaur",
+    "oracleText": "Whenever this creature is dealt damage, put a +1/+1 counter on it.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Fungusaur:1",
+                "trigger": "DamageReceivedEvent",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "195",
+        "rarity": "RARE",
+        "artist": "Daniel Gelon",
+        "flavorText": "Rather than sheltering her young, the female Fungusaur often injures her own offspring, thereby ensuring their rapid growth.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5ad89f0d-b09b-40a0-84d6-3ee60dec7e23.jpg",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "If more than one creature damages it at one time, it only gets one counter."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -3150,6 +3796,60 @@
     ]
 }
 
+// Howling Mine
+{
+    "name": "Howling Mine",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "At the beginning of each player's draw step, if this artifact is untapped, that player draws an additional card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Howling Mine:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "DRAW",
+                    "player": "Each"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                },
+                "interveningIf": {
+                    "type": "EntityMatches",
+                    "entity": "Self",
+                    "filter": "untapped"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "247",
+        "rarity": "RARE",
+        "artist": "Mark Poole",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/1/51f8f6e1-a451-4262-90d3-5107caf54175.jpg?1783948666",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "It does not trigger at all if this is tapped at the start of the draw step, and it checks this again on resolution."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If Howling Mine leaves the battlefield before it resolves, then the last known tap or untap state of the card is used for resolution."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Hurloon Minotaur
 {
     "name": "Hurloon Minotaur",
@@ -3388,6 +4088,110 @@
     "colorIdentityOverride": []
 }
 
+// Illusionary Mask
+{
+    "name": "Illusionary Mask",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "{X}: You may choose a creature card in your hand whose mana cost could be paid by some amount of, or all of, the mana you spent on {X}. If you do, you may cast that card face down as a 2/2 creature spell without paying its mana cost. If the creature that spell becomes as it resolves has not been turned face up and would assign or deal damage, be dealt damage, or become tapped, instead it's turned face up and assigns or deals damage, is dealt damage, or becomes tapped. Activate only as a sorcery.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Illusionary Mask:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{X}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsCreature",
+                                        "ManaCostPayableWithManaSpent"
+                                    ]
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "You may choose a creature card whose mana cost the mana spent on X could pay",
+                            "selectedLabel": "Choose"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": "Gate.MayDecide",
+                            "then": {
+                                "type": "CastFromCollectionWithoutPayingCost",
+                                "from": "selected1",
+                                "castFaceDown": true,
+                                "turnsFaceUpInstead": true
+                            }
+                        }
+                    ]
+                },
+                "timing": "SorcerySpeed",
+                "descriptionOverride": "Choose a creature card in your hand and cast it face down"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "249",
+        "rarity": "RARE",
+        "artist": "Amy Weber",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/2/62ef2f37-b8ad-47ad-89ca-d6abcb7ff21b.jpg?1783948666",
+        "rulings": [
+            {
+                "date": "2009-10-01",
+                "text": "Illusionary Mask's ability will continue to apply to creatures cast face down with it, even if Illusionary Mask has left the battlefield."
+            },
+            {
+                "date": "2009-10-01",
+                "text": "While the creature card is face down, it's a 2/2 creature with no name, mana cost, color, creature type, abilities, or expansion symbol. Since it has no mana cost, its mana value is 0."
+            },
+            {
+                "date": "2009-10-01",
+                "text": "You can turn a face-down permanent face up if it would have morph while face up. This applies to creatures you cast face down as a result of Illusionary Mask's effect. The rest of Illusionary Mask's effect applies to it as well."
+            },
+            {
+                "date": "2009-10-01",
+                "text": "You actually cast the card face-down, much as when playing a spell with Morph. It can be responded to and countered."
+            },
+            {
+                "date": "2009-10-01",
+                "text": "The effect that turns it face-up is a replacement effect. It doesn't use the stack and can't be responded to."
+            },
+            {
+                "date": "2009-10-01",
+                "text": "Both the amount and types of mana you spend on {X} are taken into account while you're choosing a creature card from your hand. For example, if you spent {U}{U} on {X}, you can choose a creature card with mana cost {U}{U}, {1}{U}, {2}, or {W/U}{W/U}, among other possibilities, but not one that costs {2}{U} or one that costs {G}."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "The creature enters face down, so none of its \"enters\" abilities will trigger or have any effect. Also none of its \"As this enters\" abilities apply."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Instill Energy
 {
     "name": "Instill Energy",
@@ -3549,6 +4353,43 @@
         "artist": "Dan Frazier",
         "imageUri": "https://cards.scryfall.io/normal/front/5/7/5786de12-cade-43c2-a6b0-0c5b294b9d0e.jpg?1783948665"
     }
+}
+
+// Ironclaw Orcs
+{
+    "name": "Ironclaw Orcs",
+    "manaCost": "{1}{R}",
+    "typeLine": "Creature — Orc",
+    "oracleText": "This creature can't block creatures with power 2 or greater.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "CanOnlyBlockCreaturesWith",
+                "blockerFilter": {
+                    "cardPredicates": [
+                        "IsCreature",
+                        {
+                            "type": "PowerAtMost",
+                            "max": 1
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "159",
+        "artist": "Anson Maddocks",
+        "flavorText": "Generations of genetic weeding have given rise to the deviously cowardly Ironclaw clan. To say that Orcs in general are vicious, depraved, and ignoble does not do justice to the Ironclaw.",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/5/d56421a8-34ae-4033-943f-c59a7bf2b6f9.jpg?1783948684"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
 }
 
 // Ironroot Treefolk
@@ -3842,6 +4683,63 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Keldon Warlord
+{
+    "name": "Keldon Warlord",
+    "manaCost": "{2}{R}{R}",
+    "typeLine": "Creature — Human Barbarian",
+    "oracleText": "Keldon Warlord's power and toughness are each equal to the number of non-Wall creatures you control.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": {
+                    "cardPredicates": [
+                        "IsCreature",
+                        {
+                            "type": "NotSubtype",
+                            "subtype": "Wall"
+                        }
+                    ]
+                }
+            }
+        },
+        "toughness": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": {
+                    "cardPredicates": [
+                        "IsCreature",
+                        {
+                            "type": "NotSubtype",
+                            "subtype": "Wall"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "160",
+        "rarity": "UNCOMMON",
+        "artist": "Kev Brockschmidt",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/f/8fe3fd83-969c-4add-888f-86f4306b067c.jpg",
+        "rulings": [
+            {
+                "date": "2008-08-01",
+                "text": "This is a Characteristic-Defining Ability. It checks the number of non-Wall creatures you control continuously, and applies in all zones. It is never “locked in”."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
@@ -4148,6 +5046,42 @@
         "rarity": "UNCOMMON",
         "artist": "Dameon Willich",
         "imageUri": "https://cards.scryfall.io/normal/front/e/2/e292577e-6232-44fa-a9c2-cc09949c6ed3.jpg"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Lifelace
+{
+    "name": "Lifelace",
+    "manaCost": "{G}",
+    "typeLine": "Instant",
+    "oracleText": "Target spell or permanent becomes green. (Mana symbols on that permanent remain unchanged.)",
+    "script": {
+        "spellEffect": {
+            "type": "ChangeColor",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "colors": [
+                "GREEN"
+            ],
+            "duration": "Permanent"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetSpellOrPermanent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "207",
+        "rarity": "RARE",
+        "artist": "Amy Weber",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/8/38cb601b-a35c-412e-b386-e77dad3daa54.jpg?1783948675"
     },
     "colorIdentityOverride": [
         "GREEN"
@@ -5312,6 +6246,69 @@
     "colorIdentityOverride": []
 }
 
+// Orcish Artillery
+{
+    "name": "Orcish Artillery",
+    "manaCost": "{1}{R}{R}",
+    "typeLine": "Creature — Orc Warrior",
+    "oracleText": "{T}: This creature deals 2 damage to any target and 3 damage to you.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 3
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Orcish Artillery:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 3
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "165",
+        "rarity": "UNCOMMON",
+        "artist": "Anson Maddocks",
+        "flavorText": "In a rare display of ingenuity, the Orcs invented an incredibly destructive weapon. Most Orcish artillerists are those who dared criticize its effectiveness.",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/9/a97208b1-a91b-4129-8a00-2f97b418accc.jpg?1783948683"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Orcish Oriflamme
 {
     "name": "Orcish Oriflamme",
@@ -5738,6 +6735,94 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Psionic Blast
+{
+    "name": "Psionic Blast",
+    "manaCost": "{2}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Psionic Blast deals 4 damage to any target and 2 damage to you.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 4
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "You"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "74",
+        "rarity": "UNCOMMON",
+        "artist": "Douglas Shuler",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/6/a6a86e6e-bfff-46af-9d36-c912901fea92.jpg?1783948702"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Purelace
+{
+    "name": "Purelace",
+    "manaCost": "{W}",
+    "typeLine": "Instant",
+    "oracleText": "Target spell or permanent becomes white. (Mana symbols on that permanent remain unchanged.)",
+    "script": {
+        "spellEffect": {
+            "type": "ChangeColor",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "colors": [
+                "WHITE"
+            ],
+            "duration": "Permanent"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetSpellOrPermanent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "rarity": "RARE",
+        "artist": "Sandra Everingham",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/f/2facf462-55cd-4da4-997f-2cf4add75628.jpg?1783948710"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -7432,6 +8517,42 @@
     ]
 }
 
+// Thoughtlace
+{
+    "name": "Thoughtlace",
+    "manaCost": "{U}",
+    "typeLine": "Instant",
+    "oracleText": "Target spell or permanent becomes blue. (Mana symbols on that permanent remain unchanged.)",
+    "script": {
+        "spellEffect": {
+            "type": "ChangeColor",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "colors": [
+                "BLUE"
+            ],
+            "duration": "Permanent"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetSpellOrPermanent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "82",
+        "rarity": "RARE",
+        "artist": "Mark Poole",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/3/23749375-1416-47a4-9251-52f41fe2fae9.jpg?1783948700"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Throne of Bone
 {
     "name": "Throne of Bone",
@@ -8506,6 +9627,52 @@
     ]
 }
 
+// Wanderlust
+{
+    "name": "Wanderlust",
+    "manaCost": "{2}{G}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nAt the beginning of the upkeep of enchanted creature's controller, this Aura deals 1 damage to that player.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Wanderlust:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "226",
+        "rarity": "UNCOMMON",
+        "artist": "Cornelius Brudi",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/2/220a03ca-8c9b-4acb-821d-f6577fbb20fb.jpg?1783948671"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // War Mammoth
 {
     "name": "War Mammoth",
@@ -8527,6 +9694,52 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Warp Artifact
+{
+    "name": "Warp Artifact",
+    "manaCost": "{B}{B}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant artifact\nAt the beginning of the upkeep of enchanted artifact's controller, this Aura deals 1 damage to that player.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Warp Artifact:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "artifact"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "133",
+        "rarity": "RARE",
+        "artist": "Amy Weber",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/e/9e5e07a2-fbdf-4c4c-996a-fce40bab5de5.jpg?1783948689"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

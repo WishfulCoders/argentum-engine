@@ -167,6 +167,74 @@
     ]
 }
 
+// Destructive Tampering
+{
+    "name": "Destructive Tampering",
+    "manaCost": "{2}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose one —\n• Destroy target artifact.\n• Creatures without flying can't block this turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Graveyard",
+                        "byDestruction": true
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "artifact"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "description": "Destroy target artifact"
+                },
+                {
+                    "effect": {
+                        "type": "CantBlockGroup",
+                        "filter": {
+                            "baseFilter": {
+                                "cardPredicates": [
+                                    "IsCreature",
+                                    {
+                                        "type": "NotKeyword",
+                                        "keyword": "FLYING"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "description": "Creatures without flying can't block this turn"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "78",
+        "artist": "Titus Lunter",
+        "flavorText": "\"I don't think they'll appreciate my . . . adjustments.\"\n—Karavin, renegade saboteur",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/0/00154b70-57d2-4c32-860f-1c36fc49b10c.jpg?1783936756",
+        "rulings": [
+            {
+                "date": "2020-06-23",
+                "text": "Because the effect of Destructive Tampering's second mode doesn't change the characteristics of any permanents, the set of creatures affected by it is constantly updated. Creatures without flying that enter the battlefield later in the turn won't be able to block."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Druid of the Cowl
 {
     "name": "Druid of the Cowl",
@@ -202,94 +270,6 @@
     ]
 }
 
-// Fatal Push
-{
-    "name": "Fatal Push",
-    "manaCost": "{B}",
-    "typeLine": "Instant",
-    "oracleText": "Destroy target creature if it has mana value 2 or less.\nRevolt — Destroy that creature if it has mana value 4 or less instead if a permanent left the battlefield under your control this turn.",
-    "script": {
-        "spellEffect": {
-            "type": "Gated",
-            "gate": {
-                "type": "Gate.WhenCondition",
-                "condition": {
-                    "type": "Any",
-                    "conditions": [
-                        {
-                            "type": "EntityMatches",
-                            "entity": {
-                                "type": "ContextTarget",
-                                "index": 0
-                            },
-                            "filter": "creature mv<=2"
-                        },
-                        {
-                            "type": "All",
-                            "conditions": [
-                                "PermanentLeftBattlefieldThisTurn",
-                                {
-                                    "type": "EntityMatches",
-                                    "entity": {
-                                        "type": "ContextTarget",
-                                        "index": 0
-                                    },
-                                    "filter": "creature mv<=4"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            },
-            "then": {
-                "type": "MoveToZone",
-                "target": {
-                    "type": "BoundVariable",
-                    "name": "t0"
-                },
-                "destination": "Graveyard",
-                "byDestruction": true
-            }
-        },
-        "targetRequirements": [
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "creature"
-                },
-                "id": "t0"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "57",
-        "rarity": "UNCOMMON",
-        "artist": "Eric Deschamps",
-        "imageUri": "https://cards.scryfall.io/normal/front/b/5/b5e81649-9954-424c-89d1-f87d73b66047.jpg?1783936764",
-        "rulings": [
-            {
-                "date": "2020-08-07",
-                "text": "Fatal Push can target any creature, even one with mana value 5 or greater. The creature's mana value is checked only as Fatal Push resolves."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "If a creature on the battlefield has {X} in its mana cost, X is considered to be 0."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "Revolt abilities don't care why the permanent left the battlefield, who caused it to move, or where it moved to."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "Tokens that leave the battlefield will satisfy a revolt ability."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "BLACK"
-    ]
-}
-
 // Gifted Aetherborn
 {
     "name": "Gifted Aetherborn",
@@ -313,6 +293,72 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Hungry Flames
+{
+    "name": "Hungry Flames",
+    "manaCost": "{2}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Hungry Flames deals 3 damage to target creature and 2 damage to target player or planeswalker.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t1"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            },
+            {
+                "type": "TargetPlayerOrPlaneswalker",
+                "id": "t1"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "84",
+        "rarity": "UNCOMMON",
+        "artist": "Izzy",
+        "flavorText": "In the hold of the *Heart of Kiran*, Chandra answered Dovin Baan's sabotage with an explosive retort.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/c/4ca23676-f36f-4266-ba4f-5e9ebf3adb57.jpg?1783936754",
+        "rulings": [
+            {
+                "date": "2017-02-09",
+                "text": "You can't cast Hungry Flames unless you target both a creature and a player. If one target is illegal as Hungry Flames resolves, the spell deals damage to the remaining legal target."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
@@ -362,10 +408,6 @@
         "flavorText": "Aboard her ship, the *Dragon's Smile*, Kari follows no one's rules but her own.",
         "imageUri": "https://cards.scryfall.io/normal/front/7/2/72495879-39ce-449d-ad2f-ef32ea46f3aa.jpg?1783936752",
         "rulings": [
-            {
-                "date": "2017-02-09",
-                "text": "Although Ragavan is attacking, it was never declared as an attacking creature (for the purposes of abilities that trigger whenever a creature attacks, for example)."
-            },
             {
                 "date": "2017-02-09",
                 "text": "The delayed triggered ability that exiles Ragavan triggers at end of combat even if Kari Zev is no longer on the battlefield."

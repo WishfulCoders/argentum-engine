@@ -488,6 +488,84 @@
     ]
 }
 
+// Dragon Egg
+{
+    "name": "Dragon Egg",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Dragon Egg",
+    "oracleText": "Defender\nWhen this creature dies, create a 2/2 red Dragon creature token with flying and \"{R}: This token gets +1/+0 until end of turn.\"",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 2
+    },
+    "keywords": [
+        "DEFENDER"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Dragon Egg:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 2,
+                    "toughness": 2,
+                    "colors": [
+                        "RED"
+                    ],
+                    "creatureTypes": [
+                        "Dragon"
+                    ],
+                    "keywords": [
+                        "FLYING"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/0/e/0efaa5b5-984d-4eff-81b6-9b4989f149eb.jpg?1783939882",
+                    "activatedAbilities": [
+                        {
+                            "id": "Dragon Egg:1",
+                            "cost": {
+                                "type": "CostAtomWrapper",
+                                "atom": {
+                                    "type": "AtomMana",
+                                    "cost": "{R}"
+                                }
+                            },
+                            "effect": {
+                                "type": "ModifyStats",
+                                "powerModifier": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                },
+                                "toughnessModifier": {
+                                    "type": "Fixed",
+                                    "amount": 0
+                                },
+                                "target": "Self"
+                            },
+                            "descriptionOverride": "{R}: This token gets +1/+0 until end of turn."
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature dies, create a 2/2 red Dragon creature token with flying and \"{R}: This token gets +1/+0 until end of turn.\""
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "137",
+        "rarity": "UNCOMMON",
+        "artist": "Jack Wang",
+        "flavorText": "Dragon birth lairs are littered with treasure to entice the young from their eggs.",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/c/dc2048f7-0c68-4142-9aad-de9b91fe5958.jpg?1783939914"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Elvish Mystic
 {
     "name": "Elvish Mystic",
@@ -597,6 +675,80 @@
         "imageUri": "https://cards.scryfall.io/normal/front/1/a/1ad5a84b-ae9b-4ed1-a4de-b91bbf8ed0a5.jpg"
     },
     "colorIdentityOverride": []
+}
+
+// Enlarge
+{
+    "name": "Enlarge",
+    "manaCost": "{3}{G}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target creature gets +7/+7 and gains trample until end of turn. It must be blocked this turn if able. (A creature with trample can deal excess combat damage to the player or planeswalker it's attacking.)",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 7
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 7
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GrantKeyword",
+                    "keyword": "TRAMPLE",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "MustBeBlocked",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "allCreatures": false
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "170",
+        "rarity": "UNCOMMON",
+        "artist": "Michael Komarck",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/4/b46cd181-59d8-4d4c-a8b6-e6b38704009c.jpg?1783939906",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "Only one creature is required to block the affected creature. Other creatures may also block it and are free to block other creatures or not block at all."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "If each creature the defending player controls can't block for any reason (such as being tapped), then the affected creature isn't blocked. If there's a cost associated with blocking the affected creature, the defending player isn't forced to pay that cost, so it doesn't have to be blocked in that case either."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
 }
 
 // Galerider Sliver
@@ -1435,6 +1587,104 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Shadowborn Demon
+{
+    "name": "Shadowborn Demon",
+    "manaCost": "{3}{B}{B}",
+    "typeLine": "Creature — Demon",
+    "oracleText": "Flying\nWhen this creature enters, destroy target non-Demon creature.\nAt the beginning of your upkeep, if there are fewer than six creature cards in your graveyard, sacrifice a creature.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 6
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Shadowborn Demon:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsCreature",
+                                {
+                                    "type": "NotSubtype",
+                                    "subtype": "Demon"
+                                }
+                            ]
+                        }
+                    },
+                    "id": "t0"
+                }
+            },
+            {
+                "id": "Shadowborn Demon:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Sacrifice",
+                    "filter": "creature"
+                },
+                "interveningIf": {
+                    "type": "Not",
+                    "condition": {
+                        "type": "Compare",
+                        "left": {
+                            "type": "Count",
+                            "player": "You",
+                            "zone": "Graveyard",
+                            "filter": "creature"
+                        },
+                        "operator": "GTE",
+                        "right": {
+                            "type": "Fixed",
+                            "amount": 6
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "115",
+        "rarity": "MYTHIC",
+        "artist": "Lucas Graciano",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/8/3884c05b-c10e-4f1d-a8bd-8b5118657972.jpg?1783939920",
+        "rulings": [
+            {
+                "date": "2013-07-01",
+                "text": "Shadowborn Demon's enters-the-battlefield ability is mandatory. If you control the only non-Demon creature, you must choose it as the target."
+            },
+            {
+                "date": "2013-07-01",
+                "text": "The last ability checks whether you have fewer than six creature cards in your graveyard when it would trigger. If you have six or more, it won't trigger at all. The ability will check again when it tries to resolve. If at that time you have six or more, the ability won't do anything."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.m15.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -15,19 +16,18 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Goblin Rabblemaster
- * {2}{R} — Creature — Goblin Warrior 2/2 (Rare) — Magic 2015 #145
- * Artist: Svetlin Velinov
+ * Goblin Rabblemaster — Magic 2015 #145
+ * {2}{R}
+ * Creature — Goblin Warrior
+ * 2/2
  *
  * Other Goblin creatures you control attack each combat if able.
  * At the beginning of combat on your turn, create a 1/1 red Goblin creature token with haste.
  * Whenever this creature attacks, it gets +1/+0 until end of turn for each other attacking Goblin.
  *
- * - The attack requirement is a [MustAttack] static over the other Goblins you control; it does
- *   not force Rabblemaster itself (two Rabblemasters force each other — ruling 2014-07-18).
- * - The pump counts other attacking Goblins as the trigger resolves and locks the bonus in
- *   (ruling 2014-07-18). The count has no controller clause, so it is [Player.Each], with the
- *   aggregate's own `excludeSelf` for "other" (as on Cenn's Heir).
+ * "Other" in both places is the aggregate's own `excludeSelf`, not a subtract-one, so the counts stay
+ * right if Rabblemaster stops being a Goblin. The attack count has no controller clause, so it is
+ * [Player.Each] — a teammate's attacking Goblins count too. The bonus is locked in on resolution.
  */
 val GoblinRabblemaster = card("Goblin Rabblemaster") {
     manaCost = "{2}{R}"
@@ -41,7 +41,7 @@ val GoblinRabblemaster = card("Goblin Rabblemaster") {
 
     staticAbility {
         ability = MustAttack(
-            GroupFilter(GameObjectFilter.Creature.withSubtype("Goblin").youControl(), excludeSelf = true)
+            GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN).youControl(), excludeSelf = true)
         )
     }
 
@@ -59,13 +59,12 @@ val GoblinRabblemaster = card("Goblin Rabblemaster") {
 
     triggeredAbility {
         trigger = Triggers.self.attacks()
-        val otherAttackingGoblins = DynamicAmounts.battlefield(
-            Player.Each,
-            GameObjectFilter.Creature.withSubtype("Goblin").attacking(),
-            excludeSelf = true
-        ).count()
         effect = Effects.ModifyStats(
-            power = otherAttackingGoblins,
+            power = DynamicAmounts.battlefield(
+                Player.Each,
+                GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN).attacking(),
+                excludeSelf = true
+            ).count(),
             toughness = DynamicAmounts.fixed(0),
             target = EffectTarget.Self
         )
@@ -77,7 +76,14 @@ val GoblinRabblemaster = card("Goblin Rabblemaster") {
         collectorNumber = "145"
         artist = "Svetlin Velinov"
         imageUri = "https://cards.scryfall.io/normal/front/e/e/ee9c697e-d2c0-413b-9142-ecf5d7cf5322.jpg?1783939173"
-        ruling("2014-07-18", "Although Goblin Rabblemaster doesn't force itself to attack, if you control two of them, they'll force each other to attack if able.")
-        ruling("2014-07-18", "The number of attacking Goblins is counted as the last ability resolves, and the bonus is locked in at that time.")
+        ruling(
+            "2014-07-18",
+            "Although Goblin Rabblemaster doesn't force itself to attack, if you control two of them, " +
+                "they'll force each other to attack if able."
+        )
+        ruling(
+            "2014-07-18",
+            "The number of attacking Goblins is counted as the last ability resolves, and the bonus is locked in at that time."
+        )
     }
 }

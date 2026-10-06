@@ -4,8 +4,8 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Kari Zev, Skyship Raider reprint in J22. The canonical [com.wingedsheep.sdk.model.CardDefinition]
- * lives in AER, the card's earliest real printing.
+ * Kari Zev, Skyship Raider reprint in J22. Canonical CardDefinition lives in Aether Revolt (its earliest real
+ * printing), `com.wingedsheep.mtg.sets.definitions.aer.cards.KariZevSkyshipRaider`.
  */
 val KariZevSkyshipRaiderReprint = Printing(
     oracleId = "786baa29-afd4-40f0-95c8-920a972b9175",

@@ -322,7 +322,8 @@
                 "effect": {
                     "type": "CreatePredefinedToken",
                     "tokenType": "Treasure"
-                }
+                },
+                "descriptionOverride": "Whenever Captain Lannery Storm attacks, create a Treasure token."
             },
             {
                 "id": "Captain Lannery Storm:2",
@@ -343,7 +344,8 @@
                         "amount": 0
                     },
                     "target": "Self"
-                }
+                },
+                "descriptionOverride": "Whenever you sacrifice a Treasure, Captain Lannery Storm gets +1/+0 until end of turn."
             }
         ]
     },
@@ -1437,6 +1439,75 @@
     ]
 }
 
+// Firecannon Blast
+{
+    "name": "Firecannon Blast",
+    "manaCost": "{1}{R}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Firecannon Blast deals 3 damage to target creature.\nRaid — Firecannon Blast deals 6 damage instead if you attacked this turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "TurnTracking",
+                        "player": "You",
+                        "tracker": "PLAYER_ATTACKED"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            },
+            "then": {
+                "type": "DealDamage",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 6
+                },
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                }
+            },
+            "otherwise": {
+                "type": "DealDamage",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 3
+                },
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                }
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "145",
+        "artist": "Svetlin Velinov",
+        "flavorText": "Goblins' fearlessness and diminutive size make them the perfect cannoneers.",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/1/b1f083c3-d7b0-4d3d-8551-af52c7883d83.jpg?1783935746"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Frenzied Raptor
 {
     "name": "Frenzied Raptor",
@@ -1808,108 +1879,6 @@
     },
     "colorIdentityOverride": [
         "BLUE"
-    ]
-}
-
-// Heartless Pillage
-{
-    "name": "Heartless Pillage",
-    "manaCost": "{2}{B}",
-    "typeLine": "Sorcery",
-    "oracleText": "Target opponent discards two cards.\nRaid — If you attacked this turn, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
-    "script": {
-        "spellEffect": {
-            "type": "Composite",
-            "effects": [
-                {
-                    "type": "GatherCards",
-                    "source": {
-                        "type": "FromZone",
-                        "zone": "Hand",
-                        "player": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        }
-                    },
-                    "storeAs": "hand"
-                },
-                {
-                    "type": "SelectFromCollection",
-                    "from": "hand",
-                    "selection": {
-                        "type": "ChooseExactly",
-                        "count": {
-                            "type": "Fixed",
-                            "amount": 2
-                        }
-                    },
-                    "chooser": "TargetPlayer",
-                    "storeSelected": "discarded",
-                    "prompt": "Choose 2 cards to discard"
-                },
-                {
-                    "type": "MoveCollection",
-                    "from": "discarded",
-                    "destination": {
-                        "type": "ToZone",
-                        "zone": "Graveyard",
-                        "player": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        }
-                    },
-                    "moveType": "Discard"
-                },
-                {
-                    "type": "Gated",
-                    "gate": {
-                        "type": "Gate.WhenCondition",
-                        "condition": {
-                            "type": "Compare",
-                            "left": {
-                                "type": "TurnTracking",
-                                "player": "You",
-                                "tracker": "PLAYER_ATTACKED"
-                            },
-                            "operator": "GTE",
-                            "right": {
-                                "type": "Fixed",
-                                "amount": 1
-                            }
-                        }
-                    },
-                    "then": {
-                        "type": "CreatePredefinedToken",
-                        "tokenType": "Treasure"
-                    }
-                }
-            ]
-        },
-        "targetRequirements": [
-            {
-                "type": "TargetOpponent",
-                "id": "t0"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "109",
-        "rarity": "UNCOMMON",
-        "artist": "Sara Winters",
-        "imageUri": "https://cards.scryfall.io/normal/front/c/5/c5e791ce-1380-4de0-b314-246ea6dfc3cc.jpg?1783935759",
-        "rulings": [
-            {
-                "date": "2020-08-07",
-                "text": "If you've attacked with a creature this turn, you'll get a Treasure even if the target opponent discards one or zero cards."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "You create only one Treasure token if you attacked this turn, no matter how many creatures you attacked with beyond the first."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "BLACK"
     ]
 }
 
@@ -3380,6 +3349,53 @@
     ]
 }
 
+// Rigging Runner
+{
+    "name": "Rigging Runner",
+    "manaCost": "{R}",
+    "typeLine": "Creature — Goblin Pirate",
+    "oracleText": "First strike\nRaid — This creature enters with a +1/+1 counter on it if you attacked this turn.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "FIRST_STRIKE"
+    ],
+    "script": {
+        "replacementEffects": [
+            {
+                "type": "EntersWithCounters",
+                "count": 1,
+                "selfOnly": true,
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "TurnTracking",
+                        "player": "You",
+                        "tracker": "PLAYER_ATTACKED"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "157",
+        "rarity": "UNCOMMON",
+        "artist": "Simon Dominic",
+        "flavorText": "The hook makes him feel brave, and the hat makes him feel fancy.",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/b/eb9983ce-8ca6-450a-9cac-5396ba8e1690.jpg?1783935740"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Ripjaw Raptor
 {
     "name": "Ripjaw Raptor",
@@ -4167,6 +4183,65 @@
         "imageUri": "https://cards.scryfall.io/normal/front/8/5/85506a24-8d60-475c-9f43-65994caca7d4.jpg?1783935702"
     },
     "colorIdentityOverride": []
+}
+
+// Storm Fleet Pyromancer
+{
+    "name": "Storm Fleet Pyromancer",
+    "manaCost": "{4}{R}",
+    "typeLine": "Creature — Human Pirate Wizard",
+    "oracleText": "Raid — When this creature enters, if you attacked this turn, this creature deals 2 damage to any target.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Storm Fleet Pyromancer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "id": "t0"
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "TurnTracking",
+                        "player": "You",
+                        "tracker": "PLAYER_ATTACKED"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "163",
+        "artist": "Kieran Yanner",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/b/ab5f5e45-2abb-43e1-aecb-97f0390282a7.jpg?1783935739"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
 }
 
 // Storm Fleet Spy

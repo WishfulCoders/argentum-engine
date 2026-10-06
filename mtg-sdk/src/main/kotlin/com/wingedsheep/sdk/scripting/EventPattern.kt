@@ -1277,21 +1277,35 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
     }
 
     /**
-     * When this permanent is dealt damage.
+     * When a permanent is dealt damage.
      * Binding SELF = "whenever this creature is dealt damage".
      *
-     * The [source] filter distinguishes "damaged by a creature" vs "damaged by a spell".
+     * [source] picks between the two Oracle wordings, which trigger differently:
+     * - `null` — "whenever this is dealt damage" (Fungusaur, Boros Reckoner). Damage dealt to the
+     *   recipient simultaneously is one trigger event (CR 603.2c): two blockers' combat damage
+     *   (CR 510.2) triggers it once, and "that much damage" is the total. The damaged permanent is
+     *   the triggering entity.
+     * - a filter — "whenever a [source matching it] deals damage to this" (Nested Ghoul with
+     *   [GameObjectFilter.Any], Tephraderm with `Creature`). Triggers once per source, and the
+     *   damage source is the triggering entity, so "that source's controller" resolves.
+     *
+     * [recipient] is the observer form (binding ANY / OTHER): "whenever a creature an opponent
+     * controls with a bounty counter on it is dealt damage" (Termination Facilitator). It is matched
+     * against the damaged permanent as the damage is dealt, and the damaged permanent is the
+     * triggering entity. `null` under ANY means any recipient, players included.
      */
     @SerialName("DamageReceivedEvent")
     @Serializable
     data class DamageReceivedEvent(
-        val source: GameObjectFilter = GameObjectFilter.Any
+        val source: GameObjectFilter? = null,
+        val recipient: GameObjectFilter? = null,
     ) : EventPattern {
         override val description: String = buildString {
-            append("this is dealt damage")
-            if (source != GameObjectFilter.Any) {
-                append(" by ")
-                append(source.description)
+            val damaged = recipient?.description ?: "this"
+            when (source) {
+                null -> append("$damaged is dealt damage")
+                GameObjectFilter.Any -> append("a source deals damage to $damaged")
+                else -> append("$damaged is dealt damage by ${source.description}")
             }
         }
     }
@@ -2747,11 +2761,20 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * Examples:
      * - "Whenever one or more permanent cards are put into your graveyard from anywhere"
      *   → CardsPutIntoYourGraveyardEvent(filter = GameObjectFilter.Permanent)
+     * - "Whenever one or more land cards are put into your graveyard from anywhere for the first
+     *   time each turn" → CardsPutIntoYourGraveyardEvent(filter = Land, firstTimeEachTurn = true)
+     *   (Crawling Sensation)
+     *
+     * [firstTimeEachTurn] fires only for the batch that carries the turn's *first* matching card
+     * into your graveyard. It is turn history, not a cap on this trigger: a land that hit your
+     * graveyard earlier in the turn — even before the source was on the battlefield — closes the
+     * window, which is what separates it from `oncePerTurn`.
      */
     @SerialName("CardsPutIntoYourGraveyardEvent")
     @Serializable
     data class CardsPutIntoYourGraveyardEvent(
-        val filter: GameObjectFilter = GameObjectFilter.Any
+        val filter: GameObjectFilter = GameObjectFilter.Any,
+        val firstTimeEachTurn: Boolean = false
     ) : EventPattern {
         override val description: String = buildString {
             append("one or more ")
@@ -2760,6 +2783,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
                 append(" ")
             }
             append("cards are put into your graveyard from anywhere")
+            if (firstTimeEachTurn) append(" for the first time each turn")
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): EventPattern {

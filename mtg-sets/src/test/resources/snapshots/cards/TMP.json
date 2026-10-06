@@ -54,6 +54,59 @@
     ]
 }
 
+// Aftershock
+{
+    "name": "Aftershock",
+    "manaCost": "{2}{R}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Destroy target artifact, creature, or land. Aftershock deals 3 damage to you.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "You"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "artifact|creature|land"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "160",
+        "artist": "Hannibal King",
+        "flavorText": "\"Every act of destruction has a repercussion.\"\n—Karn, silver golem",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/9/c91a26b2-03f8-43f0-a3a4-ff6c5a3690c4.jpg?1783946633"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Altar of Dementia
 {
     "name": "Altar of Dementia",
@@ -1851,6 +1904,68 @@
         "artist": "Stephen Daniele",
         "flavorText": "\"If they don't pinch, they burn. Can't ya eat any of da bugs here?\"\n—Squee, goblin cabin hand",
         "imageUri": "https://cards.scryfall.io/normal/front/a/3/a312f0cf-225a-4f3d-b9a7-c47dd03b25c3.jpg"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Fireslinger
+{
+    "name": "Fireslinger",
+    "manaCost": "{1}{R}",
+    "typeLine": "Creature — Human Wizard",
+    "oracleText": "{T}: This creature deals 1 damage to any target and 1 damage to you.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Fireslinger:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "173",
+        "artist": "Jeff Reitz",
+        "flavorText": "\"Remember the moral of the fireslinger fable: with power comes isolation.\"\n—Karn, silver golem",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/e/de253d94-9968-47da-bb7a-9c8ebf50f4e0.jpg?1783946631"
     },
     "colorIdentityOverride": [
         "RED"

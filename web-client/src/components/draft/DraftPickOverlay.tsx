@@ -8,6 +8,8 @@ import { HoverCardPreview } from '../ui/HoverCardPreview'
 import { useDfcHoverFlip } from '../ui/useDfcHoverFlip'
 import { SetSynergiesButton } from './SetSynergiesOverlay'
 import { RarityBadge } from './RarityBadge'
+import { MobileCardPreview, MobileDraftTabBar, MobilePoolView, type MobileDraftTab } from './MobileDraftPool'
+import { getCardColors, getCmc, type PoolGrouping } from './draftPool'
 import { fetchAdvisors, type AdvisorInfo } from '@/api/aiAssist'
 
 /**
@@ -69,8 +71,11 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
   const [hoveredCard, setHoveredCard] = useState<SealedCardInfo | null>(null)
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
   const [selectedCards, setSelectedCards] = useState<string[]>([])
-  // On mobile, sidebar is hidden by default; on desktop it's always shown
-  const [showPickedCards, setShowPickedCards] = useState(!responsive.isMobile)
+  // Phone layout only: the pack and the pool share the screen behind a bottom tab bar (desktop
+  // always shows the pool sidebar). The pack selection survives switching tabs.
+  const [mobileTab, setMobileTab] = useState<MobileDraftTab>('pack')
+  const [poolGrouping, setPoolGrouping] = useState<PoolGrouping>('color')
+  const [previewCard, setPreviewCard] = useState<SealedCardInfo | null>(null)
 
   // How many cards to pick this round
   const picksRequired = draftState.picksPerRound
@@ -227,262 +232,271 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          padding: responsive.isMobile ? '8px 12px' : '12px 24px',
-          backgroundColor: '#222',
-          borderBottom: '1px solid #444',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <h2 style={{ color: 'white', margin: 0, fontSize: responsive.isMobile ? 16 : 22 }}>
-            Draft - {settings.setNames.join(' + ')}
-          </h2>
-          <PackPickIndicator
-            packNumber={draftState.packNumber}
-            pickNumber={draftState.pickNumber}
-            totalPacks={totalPacks}
-            picksPerPack={draftState.picksPerPack}
-          />
-          <SetSynergiesButton setCodes={settings.setCodes} cardPool={draftState.pickedCards} />
-          {settings.aiAssistEnabled && draftState.currentPack.length > 0 && (
-            <SuggestPickControl />
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {/* Pack flow indicator */}
-          <PassDirectionIndicator playerOrder={playerOrder} passDirection={draftState.passDirection} />
-
-          {/* Timer - only show when player has a pack to pick from */}
-          {draftState.currentPack.length > 0 ? (
-            <Timer seconds={draftState.timeRemaining} warning={timerWarning} />
-          ) : (
-            <div
-              style={{
-                padding: '6px 14px',
-                backgroundColor: 'rgba(255, 152, 0, 0.15)',
-                borderRadius: 6,
-                color: '#ff9800',
-                fontWeight: 600,
-                fontSize: 14,
-              }}
-            >
-              Waiting...
-            </div>
-          )}
-
-          {/* Picked count */}
-          <div
-            style={{
-              padding: '6px 14px',
-              backgroundColor: '#333',
-              borderRadius: 6,
-              color: '#4fc3f7',
-              fontWeight: 600,
-              fontSize: responsive.fontSize.normal,
-            }}
-          >
-            {totalPicks != null ? `${totalPicked} / ${totalPicks}` : totalPicked}
-          </div>
-
-          {/* Toggle picked cards sidebar - mobile only */}
-          {responsive.isMobile && (
-            <button
-              onClick={() => setShowPickedCards(!showPickedCards)}
-              style={{
-                padding: '6px 14px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: showPickedCards ? '#4fc3f7' : '#444',
-                color: showPickedCards ? '#000' : '#ccc',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-              }}
-            >
-              Pool
-            </button>
-          )}
-
-          {/* Leave/Stop button */}
-          {isHost ? (
-            <button
-              onClick={stopLobby}
-              style={{
-                padding: '6px 14px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: '#c0392b',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-              }}
-            >
-              Stop Draft
-            </button>
-          ) : (
-            <button
-              onClick={leaveLobby}
-              style={{
-                padding: '6px 14px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: '#c0392b',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-              }}
-            >
-              Leave
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Pack cards area */}
+      {responsive.isMobile ? (
+        <MobileDraftHeader
+          draftState={draftState}
+          settings={settings}
+          totalPacks={totalPacks}
+          isHost={isHost}
+          onStop={stopLobby}
+          onLeave={leaveLobby}
+          timerWarning={timerWarning}
+        />
+      ) : (
         <div
           style={{
-            flex: 1,
+            padding: responsive.isMobile ? '8px 12px' : '12px 24px',
+            backgroundColor: '#222',
+            borderBottom: '1px solid #444',
             display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
-          {/* Queued packs indicator */}
-          {draftState.queuedPacks > 0 && draftState.currentPack.length > 0 && (
-            <div
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                borderBottom: '1px solid rgba(255, 152, 0, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <span style={{ color: '#ff9800', fontSize: 13 }}>
-                {draftState.queuedPacks} more {draftState.queuedPacks === 1 ? 'pack' : 'packs'} queued
-              </span>
-            </div>
-          )}
-
-          {/* Pack cards grid */}
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: responsive.isMobile ? 12 : 24,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: draftState.currentPack.length > 0 ? 'flex-start' : 'center',
-            }}
-          >
-            {draftState.currentPack.length > 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: responsive.isMobile ? 8 : 12,
-                  justifyContent: 'center',
-                  alignItems: 'flex-start',
-                  maxWidth: 1200,
-                }}
-              >
-                {(['MYTHIC', 'RARE', 'UNCOMMON', 'COMMON'] as const).flatMap((rarity) => {
-                  const cards = packByRarity[rarity]
-                  if (!cards || cards.length === 0) return []
-                  return cards.map((card) => (
-                    <PackCard
-                      key={card.name}
-                      card={card}
-                      rarity={rarity}
-                      isSelected={selectedCards.includes(card.name)}
-                      onClick={() => handleCardClick(card.name)}
-                      onHover={handleHover}
-                      responsive={responsive}
-                      score={pickScores?.[card.name]?.score ?? null}
-                      reason={pickScores?.[card.name]?.reason}
-                      isRecommended={recommendedPick.includes(card.name)}
-                    />
-                  ))
-                })}
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 16,
-                  color: '#888',
-                }}
-              >
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    border: '3px solid #444',
-                    borderTopColor: '#ff9800',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                  }}
-                />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                <div style={{ fontSize: 18, fontWeight: 500 }}>
-                  Waiting for next pack...
-                </div>
-                <div style={{ fontSize: 14, color: '#555' }}>
-                  Other players are still making their picks
-                </div>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <h2 style={{ color: 'white', margin: 0, fontSize: responsive.isMobile ? 16 : 22 }}>
+              Draft - {settings.setNames.join(' + ')}
+            </h2>
+            <PackPickIndicator
+              packNumber={draftState.packNumber}
+              pickNumber={draftState.pickNumber}
+              totalPacks={totalPacks}
+              picksPerPack={draftState.picksPerPack}
+            />
+            <SetSynergiesButton setCodes={settings.setCodes} cardPool={draftState.pickedCards} />
+            {settings.aiAssistEnabled && draftState.currentPack.length > 0 && (
+              <SuggestPickControl />
             )}
           </div>
 
-          {/* Confirm pick button - only show when there's a pack */}
-          {draftState.currentPack.length > 0 && (
-            <div
-              style={{
-                padding: responsive.isMobile ? '12px' : '16px 24px',
-                backgroundColor: '#222',
-                borderTop: '1px solid #444',
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
-              <button
-                onClick={handleConfirmPick}
-                disabled={selectedCards.length !== picksRequired}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* Pack flow indicator */}
+            <PassDirectionIndicator playerOrder={playerOrder} passDirection={draftState.passDirection} />
+
+            {/* Timer - only show when player has a pack to pick from */}
+            {draftState.currentPack.length > 0 ? (
+              <Timer seconds={draftState.timeRemaining} warning={timerWarning} />
+            ) : (
+              <div
                 style={{
-                  padding: responsive.isMobile ? '12px 32px' : '14px 48px',
-                  fontSize: responsive.isMobile ? 16 : 18,
-                  backgroundColor: selectedCards.length === picksRequired ? '#4caf50' : '#555',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: selectedCards.length === picksRequired ? 'pointer' : 'not-allowed',
+                  padding: '6px 14px',
+                  backgroundColor: 'rgba(255, 152, 0, 0.15)',
+                  borderRadius: 6,
+                  color: '#ff9800',
                   fontWeight: 600,
-                  transition: 'background-color 0.15s',
+                  fontSize: 14,
                 }}
               >
-                {selectedCards.length === picksRequired
-                  ? `Pick ${selectedCards.join(' & ')}`
-                  : picksRequired > 1
-                    ? `Select ${picksRequired} cards (${selectedCards.length}/${picksRequired})`
-                    : 'Select a card'}
-              </button>
-            </div>
-          )}
-        </div>
+                Waiting...
+              </div>
+            )}
 
-        {/* Picked cards sidebar - always visible on desktop */}
-        {(showPickedCards || !responsive.isMobile) && (
+            {/* Picked count */}
+            <div
+              style={{
+                padding: '6px 14px',
+                backgroundColor: '#333',
+                borderRadius: 6,
+                color: '#4fc3f7',
+                fontWeight: 600,
+                fontSize: responsive.fontSize.normal,
+              }}
+            >
+              {totalPicks != null ? `${totalPicked} / ${totalPicks}` : totalPicked}
+            </div>
+
+            {/* Leave/Stop button */}
+            {isHost ? (
+              <button
+                onClick={stopLobby}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: responsive.fontSize.normal,
+                  backgroundColor: '#c0392b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                Stop Draft
+              </button>
+            ) : (
+              <button
+                onClick={leaveLobby}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: responsive.fontSize.normal,
+                  backgroundColor: '#c0392b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                Leave
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Phone Pool tab */}
+        {responsive.isMobile && mobileTab === 'pool' && (
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <MobilePoolView
+              cards={draftState.pickedCards}
+              picksPerRound={picksRequired}
+              grouping={poolGrouping}
+              onGroupingChange={setPoolGrouping}
+              onPreview={setPreviewCard}
+            />
+          </div>
+        )}
+
+        {/* Pack cards area */}
+        {(!responsive.isMobile || mobileTab === 'pack') && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Queued packs indicator — on phones the Pack tab's badge carries this instead */}
+            {!responsive.isMobile && draftState.queuedPacks > 0 && draftState.currentPack.length > 0 && (
+              <div
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                  borderBottom: '1px solid rgba(255, 152, 0, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span style={{ color: '#ff9800', fontSize: 13 }}>
+                  {draftState.queuedPacks} more {draftState.queuedPacks === 1 ? 'pack' : 'packs'} queued
+                </span>
+              </div>
+            )}
+
+            {/* Pack cards grid */}
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: responsive.isMobile ? 12 : 24,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: draftState.currentPack.length > 0 ? 'flex-start' : 'center',
+              }}
+            >
+              {draftState.currentPack.length > 0 ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: responsive.isMobile ? 8 : 12,
+                    justifyContent: 'center',
+                    alignItems: 'flex-start',
+                    maxWidth: 1200,
+                  }}
+                >
+                  {(['MYTHIC', 'RARE', 'UNCOMMON', 'COMMON'] as const).flatMap((rarity) => {
+                    const cards = packByRarity[rarity]
+                    if (!cards || cards.length === 0) return []
+                    return cards.map((card) => (
+                      <PackCard
+                        key={card.name}
+                        card={card}
+                        rarity={rarity}
+                        isSelected={selectedCards.includes(card.name)}
+                        onClick={() => handleCardClick(card.name)}
+                        onHover={handleHover}
+                        responsive={responsive}
+                        score={pickScores?.[card.name]?.score ?? null}
+                        reason={pickScores?.[card.name]?.reason}
+                        isRecommended={recommendedPick.includes(card.name)}
+                      />
+                    ))
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 16,
+                    color: '#888',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      border: '3px solid #444',
+                      borderTopColor: '#ff9800',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                    }}
+                  />
+                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  <div style={{ fontSize: 18, fontWeight: 500 }}>
+                    Waiting for next pack...
+                  </div>
+                  <div style={{ fontSize: 14, color: '#555' }}>
+                    Other players are still making their picks
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm pick button - only show when there's a pack */}
+            {draftState.currentPack.length > 0 && (
+              <div
+                style={{
+                  padding: responsive.isMobile ? '12px' : '16px 24px',
+                  backgroundColor: '#222',
+                  borderTop: '1px solid #444',
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                <button
+                  onClick={handleConfirmPick}
+                  disabled={selectedCards.length !== picksRequired}
+                  style={{
+                    padding: responsive.isMobile ? '12px 32px' : '14px 48px',
+                    fontSize: responsive.isMobile ? 16 : 18,
+                    backgroundColor: selectedCards.length === picksRequired ? '#4caf50' : '#555',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: selectedCards.length === picksRequired ? 'pointer' : 'not-allowed',
+                    fontWeight: 600,
+                    transition: 'background-color 0.15s',
+                  }}
+                >
+                  {selectedCards.length === picksRequired
+                    ? `Pick ${selectedCards.join(' & ')}`
+                    : picksRequired > 1
+                      ? `Select ${picksRequired} cards (${selectedCards.length}/${picksRequired})`
+                      : 'Select a card'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Picked cards sidebar - desktop only; phones use the Pool tab */}
+        {!responsive.isMobile && (
           <PickedCardsSidebar
             pickedByColor={pickedByColor}
             analytics={pickedAnalytics}
@@ -492,6 +506,19 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
           />
         )}
       </div>
+
+      {responsive.isMobile && (
+        <MobileDraftTabBar
+          tab={mobileTab}
+          onChange={setMobileTab}
+          packsWaiting={(draftState.currentPack.length > 0 ? 1 : 0) + draftState.queuedPacks}
+          pickedLabel={totalPicks != null ? `${totalPicked} / ${totalPicks}` : String(totalPicked)}
+        />
+      )}
+
+      {previewCard && responsive.isMobile && (
+        <MobileCardPreview card={previewCard} onClose={() => setPreviewCard(null)} />
+      )}
 
       {/* Card preview on hover */}
       {hoveredCard && !responsive.isMobile && (
@@ -508,16 +535,116 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
   )
 }
 
-function PackPickIndicator({ packNumber, pickNumber, totalPacks, picksPerPack }: { packNumber: number; pickNumber: number; totalPacks: number; picksPerPack: number | null }) {
+/**
+ * Phone header: two rows that fit a 320–640px screen, so every control is on screen. The
+ * pass-order strip is left out (it alone is wider than a phone), and the queued-pack banner and
+ * picked count move to the bottom tab bar.
+ */
+function MobileDraftHeader({
+  draftState,
+  settings,
+  totalPacks,
+  isHost,
+  onStop,
+  onLeave,
+  timerWarning,
+}: {
+  draftState: DraftState
+  settings: LobbySettings
+  totalPacks: number
+  isHost: boolean
+  onStop: () => void
+  onLeave: () => void
+  timerWarning: boolean
+}) {
+  return (
+    <div
+      style={{
+        padding: '8px 12px',
+        backgroundColor: '#222',
+        borderBottom: '1px solid #444',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h2
+          style={{
+            color: 'white',
+            margin: 0,
+            fontSize: 16,
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          Draft - {settings.setNames.join(' + ')}
+        </h2>
+        <PackPickIndicator
+          packNumber={draftState.packNumber}
+          pickNumber={draftState.pickNumber}
+          totalPacks={totalPacks}
+          picksPerPack={draftState.picksPerPack}
+          compact
+        />
+        {draftState.currentPack.length > 0 ? (
+          <Timer seconds={draftState.timeRemaining} warning={timerWarning} />
+        ) : (
+          <div
+            style={{
+              padding: '6px 10px',
+              backgroundColor: 'rgba(255, 152, 0, 0.15)',
+              borderRadius: 6,
+              color: '#ff9800',
+              fontWeight: 600,
+              fontSize: 13,
+              flexShrink: 0,
+            }}
+          >
+            Waiting...
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <SetSynergiesButton setCodes={settings.setCodes} cardPool={draftState.pickedCards} />
+        {settings.aiAssistEnabled && draftState.currentPack.length > 0 && <SuggestPickControl />}
+        <button
+          onClick={isHost ? onStop : onLeave}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 14px',
+            fontSize: 13,
+            backgroundColor: '#c0392b',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {isHost ? 'Stop Draft' : 'Leave'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function PackPickIndicator({ packNumber, pickNumber, totalPacks, picksPerPack, compact = false }: { packNumber: number; pickNumber: number; totalPacks: number; picksPerPack: number | null; compact?: boolean }) {
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        padding: '4px 12px',
+        gap: compact ? 4 : 8,
+        padding: compact ? '4px 8px' : '4px 12px',
         backgroundColor: '#333',
         borderRadius: 6,
+        flexShrink: compact ? 0 : undefined,
+        whiteSpace: compact ? 'nowrap' : undefined,
       }}
     >
       <span style={{ color: '#888', fontSize: 13 }}>Pack</span>
@@ -1235,33 +1362,6 @@ function PickedCardRow({
 }
 
 // Helper functions
-
-function getCardColors(card: SealedCardInfo): Set<string> {
-  const cost = card.manaCost || ''
-  const colors = new Set<string>()
-  if (cost.includes('W')) colors.add('W')
-  if (cost.includes('U')) colors.add('U')
-  if (cost.includes('B')) colors.add('B')
-  if (cost.includes('R')) colors.add('R')
-  if (cost.includes('G')) colors.add('G')
-  return colors
-}
-
-function getCmc(card: SealedCardInfo): number {
-  const cost = card.manaCost || ''
-  let cmc = 0
-  const matches = cost.match(/\{([^}]+)\}/g) || []
-  for (const match of matches) {
-    const inner = match.slice(1, -1)
-    const num = parseInt(inner, 10)
-    if (!isNaN(num)) {
-      cmc += num
-    } else if (inner !== 'X') {
-      cmc += 1
-    }
-  }
-  return cmc
-}
 
 function getCreatureSubtypes(cards: readonly SealedCardInfo[]): Array<{ type: string; count: number; legendaryCount: number }> {
   const counts = new Map<string, number>()

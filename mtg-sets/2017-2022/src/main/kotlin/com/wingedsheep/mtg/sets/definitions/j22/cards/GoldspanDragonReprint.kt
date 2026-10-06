@@ -4,8 +4,7 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Goldspan Dragon reprint in Jumpstart 2022. Canonical [com.wingedsheep.sdk.model.CardDefinition] lives in its
- * earliest set's `cards/` package; this row contributes only per-printing presentation data.
+ * Goldspan Dragon reprint in J22. Canonical CardDefinition lives in its earliest set.
  */
 val GoldspanDragonReprint = Printing(
     oracleId = "716b3ea2-45b7-4a8f-af72-de7f4e510eff",

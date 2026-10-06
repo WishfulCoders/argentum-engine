@@ -3867,6 +3867,68 @@
     ]
 }
 
+// Ruthless Disposal
+{
+    "name": "Ruthless Disposal",
+    "manaCost": "{4}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "As an additional cost to cast this spell, discard a card and sacrifice a creature.\nTwo target creatures each get -13/-13 until end of turn.",
+    "script": {
+        "spellEffect": {
+            "type": "ForEach",
+            "space": "IterationSpace.Targets",
+            "body": {
+                "type": "ModifyStats",
+                "powerModifier": {
+                    "type": "Fixed",
+                    "amount": -13
+                },
+                "toughnessModifier": {
+                    "type": "Fixed",
+                    "amount": -13
+                },
+                "target": {
+                    "type": "ContextTarget",
+                    "index": 0
+                }
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "count": 2,
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ],
+        "additionalCosts": [
+            {
+                "type": "AdditionalAtom",
+                "atom": "AtomDiscard"
+            },
+            {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomSacrifice",
+                    "filter": "creature"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "103",
+        "rarity": "UNCOMMON",
+        "artist": "Dave Kendall",
+        "flavorText": "\"Do try to pull your weight, Geralf. I feel like I'm doing everything.\"\n—Ghoulcaller Gisa",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/e/fe81c78f-e3e2-4513-9711-896e6a1e6aba.jpg?1783937476"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Savage Alliance
 {
     "name": "Savage Alliance",
@@ -4148,6 +4210,72 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Skirsdag Supplicant
+{
+    "name": "Skirsdag Supplicant",
+    "manaCost": "{2}{B}",
+    "typeLine": "Creature — Human Cleric",
+    "oracleText": "{B}, {T}, Discard a card: Each player loses 2 life.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 3
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Skirsdag Supplicant:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{B}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": "AtomDiscard"
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "Each"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "104",
+        "artist": "Anastasia Ovchinnikova",
+        "flavorText": "\"I can no longer stand by as these Skirsdag infiltrators rot the church from within. Even the Lunarch Council is compromised. What a fool I've been.\"\n—Odric",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/3/b3f63897-15a1-4b34-9916-d9df62f66785.jpg?1783937475",
+        "rulings": [
+            {
+                "date": "2016-07-13",
+                "text": "If Skirsdag Supplicant's ability causes each player's life total to become 0 or less, the game ends in a draw."
+            },
+            {
+                "date": "2016-07-13",
+                "text": "In a Two-Headed Giant game, Skirsdag Supplicant's ability causes each player to lose 2 life, so each team loses a total of 4 life."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

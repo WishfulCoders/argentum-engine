@@ -1555,8 +1555,11 @@ object Effects {
     /**
      * Grant "play without paying mana cost" permission to all cards in a named collection.
      * Card must still be in a playable zone (hand, or exile with GrantMayPlayFromExile).
+     * Lasts this turn unless [expiry] says otherwise — match the paired grant's expiry for
+     * "until the end of your next turn … without paying their mana costs".
      */
-    fun GrantPlayWithoutPayingCost(from: String): Effect = GrantPlayWithoutPayingCostEffect(from)
+    fun GrantPlayWithoutPayingCost(from: String, expiry: MayPlayExpiry = MayPlayExpiry.EndOfTurn): Effect =
+        GrantPlayWithoutPayingCostEffect(from, expiry)
 
     /**
      * Require [additionalCost] when casting cards in a named collection. Compose with
@@ -2701,6 +2704,10 @@ object Effects {
     /** Forced mana loss, independent of step/phase retention abilities; [transferTo] adds the lost mana to that player. */
     fun LoseUnspentMana(target: EffectTarget = EffectTarget.Controller, transferTo: EffectTarget? = null): Effect =
         com.wingedsheep.sdk.scripting.effects.LoseUnspentManaEffect(target, transferTo)
+
+    /** [permanent]'s controller activates one of its mana abilities, if able (Drain Power). */
+    fun ActivateManaAbility(permanent: EffectTarget): Effect =
+        com.wingedsheep.sdk.scripting.effects.ActivateManaAbilityEffect(permanent)
 
     /**
      * Add a dynamic amount of colorless mana.
@@ -4447,8 +4454,9 @@ object Effects {
     fun MakePlotted(from: CollectionSlot, ownerControls: Boolean = false): Effect =
         MakePlottedEffect(from.key, ownerControls)
 
-    /** Until end of turn, the cards in [from] may be played without paying their mana costs. */
-    fun GrantPlayWithoutPayingCost(from: CollectionSlot): Effect = GrantPlayWithoutPayingCostEffect(from.key)
+    /** The cards in [from] may be played without paying their mana costs — this turn, or until [expiry]. */
+    fun GrantPlayWithoutPayingCost(from: CollectionSlot, expiry: MayPlayExpiry = MayPlayExpiry.EndOfTurn): Effect =
+        GrantPlayWithoutPayingCostEffect(from.key, expiry)
 
     /** Casting the cards in [from] this turn requires [additionalCost]. */
     fun GrantPlayWithAdditionalCost(from: CollectionSlot, additionalCost: AdditionalCost): Effect =
@@ -4466,6 +4474,24 @@ object Effects {
             com.wingedsheep.sdk.scripting.effects.Chooser.Controller,
         storeCastTo: String? = null,
     ): Effect = CastFromCollectionWithoutPayingCost(from.key, storeCastTo, insteadOfGraveyard, caster)
+
+    /**
+     * "You may cast that card face down as a 2/2 creature spell without paying its mana cost" —
+     * the first card in [from], during this effect's resolution; the card needs no morph. With
+     * [turnsFaceUpInstead] the permanent it becomes carries Illusionary Mask's rider: until turned
+     * face up, it turns face up instead of assigning/dealing damage, being dealt damage, or
+     * becoming tapped, and then does so.
+     */
+    fun CastFaceDownFromCollection(
+        from: CollectionSlot,
+        turnsFaceUpInstead: Boolean = false,
+        storeCastTo: String? = null,
+    ): Effect = CastFromCollectionWithoutPayingCostEffect(
+        from = from.key,
+        storeCastTo = storeCastTo,
+        castFaceDown = true,
+        turnsFaceUpInstead = turnsFaceUpInstead,
+    )
 
     /**
      * Cast a card from [from], paying its mana cost (see the String overload). [additionalManaCost]
@@ -6203,6 +6229,17 @@ object Effects {
         attachment: EffectTarget,
         hostFilter: GameObjectFilter = GameObjectFilter.Creature
     ): Effect = com.wingedsheep.sdk.scripting.effects.AttachToChosenHostEffect(attachment, hostFilter)
+
+    /**
+     * "It loses its enchant ability and gains 'enchant [filter] put onto the battlefield with this
+     * Aura' … attach this Aura to it" — the reanimation-Aura sentence (Animate Dead). Replaces the
+     * source Aura's enchant restriction with "the objects in [from] that match [filter]" and attaches
+     * it to the first one it legally can. See [com.wingedsheep.sdk.scripting.effects.EnchantPutOntoBattlefieldEffect].
+     */
+    fun EnchantPutOntoBattlefield(
+        from: CollectionSlot,
+        filter: GameObjectFilter = GameObjectFilter.Creature
+    ): Effect = com.wingedsheep.sdk.scripting.effects.EnchantPutOntoBattlefieldEffect(from.key, filter)
 
     /**
      * Unattach an Aura/Equipment from its host without moving zones (CR 701.3d). No-op if [target]

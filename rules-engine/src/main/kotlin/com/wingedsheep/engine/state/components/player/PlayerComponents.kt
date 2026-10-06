@@ -392,21 +392,26 @@ data class PlayerTurnsTakenComponent(
 
 /**
  * Tracks land drops for the turn.
+ *
+ * [playedThisTurn] counts land plays directly rather than deriving them from
+ * `maxPerTurn - remaining`: an effect-granted extra drop (Explore) raises [remaining] alone, so
+ * the derived count would come up short — Fastbond's "if it wasn't the first land" would miss.
  */
 @Serializable
 data class LandDropsComponent(
     val remaining: Int = 1,
-    val maxPerTurn: Int = 1
+    val maxPerTurn: Int = 1,
+    val playedThisTurn: Int = 0
 ) : Component {
     /**
      * Use a land drop.
      */
-    fun use(): LandDropsComponent = copy(remaining = remaining - 1)
+    fun use(): LandDropsComponent = copy(remaining = remaining - 1, playedThisTurn = playedThisTurn + 1)
 
     /**
      * Reset for a new turn.
      */
-    fun reset(): LandDropsComponent = copy(remaining = maxPerTurn)
+    fun reset(): LandDropsComponent = copy(remaining = maxPerTurn, playedThisTurn = 0)
 
     /**
      * Check if a land can be played.
@@ -1712,6 +1717,19 @@ data class CreatureCardsPutIntoGraveyardThisTurnComponent(val count: Int = 0) : 
  */
 @Serializable
 data class CardsPutIntoGraveyardFromLibraryThisTurnComponent(val count: Int = 0) : Component
+
+/**
+ * The cards put into this player's graveyard from any other zone this turn, in arrival order (a
+ * card that arrives twice is listed twice). Cleared at end of turn by CleanupPhaseManager.
+ *
+ * Recorded by the same `moveToZone` hook as [CreatureCardsPutIntoGraveyardThisTurnComponent], keyed
+ * on the owner, tokens excluded (a token isn't a card, CR 111.6). Turn history: a card that later
+ * leaves the graveyard stays listed. Backs the `firstTimeEachTurn` axis of the batched "one or more
+ * [filter] cards are put into your graveyard from anywhere" trigger (Crawling Sensation) — the
+ * detector asks whether any card listed *before* the current batch already matched.
+ */
+@Serializable
+data class CardsPutIntoGraveyardThisTurnComponent(val cardIds: List<EntityId> = emptyList()) : Component
 
 /**
  * Marks that this player has flipped one or more coins already this turn. Presence alone is the

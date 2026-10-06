@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.event
 
+import com.wingedsheep.engine.state.components.player.CardsPutIntoGraveyardThisTurnComponent
 import com.wingedsheep.engine.core.ClassLevelChangedEvent
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.AttackersDeclaredEvent
@@ -284,6 +285,9 @@ class TriggerDetector(
     ): List<PendingTrigger> {
         val index = buildTriggerIndex(state)
         val triggers = mutableListOf<PendingTrigger>()
+        // Slot in [triggers] of each "is dealt damage" trigger already raised by this batch's
+        // combat damage, keyed by ability instance and recipient — see [foldSimultaneousDamage].
+        val combatDamageSlots = mutableMapOf<List<Any?>, Int>()
 
         for ((eventIndex, event) in events.withIndex()) {
             // DrawEvent firing counts are derived from CardsDrawnThisTurnComponent, which `state`
@@ -298,6 +302,7 @@ class TriggerDetector(
                     .sumOf { it.count }
             } else 0
             val detected = detectTriggersForEvent(state, event, index, samePlayerDrawsLaterInBatch)
+                .let { foldSimultaneousDamage(it, event, triggers, combatDamageSlots) }
             triggers.addAll(detected.map { pending ->
                 val selfZoneEvent = event is ZoneChangeEvent && event.entityId == pending.sourceId
                 val attachedDeparture = selfZoneEvent && pending.ability.binding == TriggerBinding.ATTACHED &&
@@ -338,6 +343,9 @@ class TriggerDetector(
         // The main loop in detectTriggersForEvent only checks battlefield creatures,
         // so dead creatures miss each other's death events. Fix that here.
         deathAndLeaveDetector.detectSimultaneousDeathTriggers(state, index.statics, events, triggers)
+        // The same look-back for "a creature dealt damage by this creature this turn dies" whose
+        // damaging creature died alongside its victim (Dread Slaver trading in combat).
+        deathAndLeaveDetector.detectDepartedDamagingSourceDiesTriggers(state, index.statics, events, triggers)
 
         // Detect "whenever one or more cards are put into your graveyard from your library"
         // batching triggers (e.g., Sidisi, Brood Tyrant). Groups library→graveyard zone changes
@@ -659,8 +667,14 @@ class TriggerDetector(
             }
         }
 
-        // Check ATTACHED step triggers on auras (e.g., Custody Battle, Lingering Death)
-        // For ATTACHED + StepEvent(Player.You), "you" = the attached creature's controller
+        // Check ATTACHED step triggers on auras — "at the beginning of the upkeep of enchanted
+        // creature's controller" (Lingering Death, Wanderlust). The binding re-scopes only the
+        // *timing*: StepEvent(Player.You) reads the attached permanent's controller. The trigger is
+        // still the Aura's, so the Aura's controller controls it (CR 113.8) and it is put on the
+        // stack in that player's APNAP slot (CR 603.3b). "That player" — the attached permanent's
+        // controller — is bound as the triggering player, for `Player.TriggeringPlayer` to read.
+        // An ability the Aura *grants* the creature ("enchanted creature has 'at the beginning of
+        // your upkeep …'") is a GrantTriggeredAbility instead (Custody Battle), owned by the creature.
         for ((targetId, attachments) in index.aurasByTarget) {
             val enchantedController = projected.getController(targetId) ?: continue
             for (entry in attachments) {
@@ -675,8 +689,12 @@ class TriggerDetector(
                                 ability = ability,
                                 sourceId = entry.entityId,
                                 sourceName = entry.cardComponent.name,
-                                controllerId = enchantedController,
-                                triggerContext = TriggerContext(step = step, triggeringEntityId = activePlayerId)
+                                controllerId = entry.controllerId,
+                                triggerContext = TriggerContext(
+                                    step = step,
+                                    triggeringEntityId = enchantedController,
+                                    triggeringPlayerId = enchantedController
+                                )
                             )
                         )
                     }
@@ -1725,16 +1743,7 @@ class TriggerDetector(
                                         enchantedCreatureLastKnownPower = enchantedPower,
                                         // Never clobber a capture the event itself carries
                                         // (manifest dread's graveyard cards).
-                                        capturedEntityIds = capturedTargets ?: ctx.capturedEntityIds,
-                                        // "Whenever a source deals damage to this creature" binds
-                                        // the damage *source*, so "that source's controller …"
-                                        // (Belltower Sphinx) resolves. DamageTriggerDetector owns
-                                        // the same rule for the case where the creature died to
-                                        // that damage; both paths must agree.
-                                        triggeringEntityId =
-                                            if (event is DamageDealtEvent &&
-                                                DamageTriggerDetector.bindsDamageSource(ability)
-                                            ) event.sourceId else ctx.triggeringEntityId
+                                        capturedEntityIds = capturedTargets ?: ctx.capturedEntityIds
                                     )
                                 }
                             )
@@ -2148,6 +2157,11 @@ class TriggerDetector(
      * Detect cycling triggers on the card that was cycled.
      * Cards like Renewed Faith have "When you cycle this card, you may gain 2 life."
      * The card is now in the graveyard, but its cycling trigger still fires.
+     *
+     * Only [TriggerBinding.SELF] cycle triggers belong here: an `ANY`-bound
+     * [EventPattern.CycleEvent] is an observer ("whenever you cycle another card", Drannith
+     * Stinger) owned by the battlefield pass. The card being cycled was in hand, not on the
+     * battlefield, so its observer ability isn't functioning and must not fire off its own cycling.
      */
     private fun detectCyclingCardTriggers(
         state: GameState,
@@ -2162,7 +2176,7 @@ class TriggerDetector(
         val abilities = abilityResolver.getTriggeredAbilities(entityId, cardComponent.cardDefinitionId, state, statics)
 
         for (ability in abilities) {
-            if (ability.trigger is EventPattern.CycleEvent) {
+            if (ability.trigger is EventPattern.CycleEvent && ability.binding == TriggerBinding.SELF) {
                 triggers.add(
                     PendingTrigger(
                         ability = ability,
@@ -2435,6 +2449,9 @@ class TriggerDetector(
                 val hasMatch = ownerEvents.any { event ->
                     cardMatchesGraveyardBatchFilter(state, event.entityId, trigger.filter)
                 }
+                if (hasMatch && trigger.firstTimeEachTurn &&
+                    matchedGraveyardEarlierThisTurn(state, controllerId, ownerEvents, trigger.filter)
+                ) continue
 
                 if (hasMatch) {
                     triggers.add(
@@ -2594,6 +2611,28 @@ class TriggerDetector(
      * matches [filter] for graveyard batching triggers. Card-characteristic predicates are
      * evaluated against the card's base [CardComponent]; [GameObjectFilter.Any] always matches.
      */
+    /**
+     * "For the first time each turn": did a card matching [filter] reach [ownerId]'s graveyard this
+     * turn *before* the current batch? The owner's [CardsPutIntoGraveyardThisTurnComponent] already
+     * lists this batch's arrivals (the move recorded them), so they are taken off the tail once per
+     * event before the earlier history is searched.
+     */
+    private fun matchedGraveyardEarlierThisTurn(
+        state: GameState,
+        ownerId: EntityId,
+        batch: List<ZoneChangeEvent>,
+        filter: GameObjectFilter
+    ): Boolean {
+        val arrivals = state.getEntity(ownerId)?.get<CardsPutIntoGraveyardThisTurnComponent>()?.cardIds
+            ?: return false
+        val earlier = arrivals.toMutableList()
+        for (event in batch) {
+            val at = earlier.lastIndexOf(event.entityId)
+            if (at >= 0) earlier.removeAt(at)
+        }
+        return earlier.any { cardMatchesGraveyardBatchFilter(state, it, filter) }
+    }
+
     private fun cardMatchesGraveyardBatchFilter(
         state: GameState,
         entityId: EntityId,
@@ -3130,6 +3169,48 @@ class TriggerDetector(
         }
         triggers.clear()
         triggers.addAll(merged)
+    }
+
+    /**
+     * "Whenever this is dealt damage" triggers once per damage *event* (CR 603.2c), and combat
+     * damage is dealt simultaneously (CR 510.2): two blockers hitting Fungusaur are one event,
+     * one +1/+1 counter, and Boros Reckoner's "that much damage" is the total. The engine emits
+     * one [DamageDealtEvent] per source, so the recipient form ([EventPattern.DamageReceivedEvent]
+     * with no `source` filter) folds a combat event's triggers into the one this batch already
+     * raised for the same ability and recipient, summing the damage. Returns the triggers still
+     * to add. The per-source form ("a source deals damage to this") is untouched — it triggers
+     * once per source by its own wording (Nested Ghoul's ruling).
+     */
+    private fun foldSimultaneousDamage(
+        detected: List<PendingTrigger>,
+        event: EngineGameEvent,
+        triggers: MutableList<PendingTrigger>,
+        slots: MutableMap<List<Any?>, Int>
+    ): List<PendingTrigger> {
+        if (event !is DamageDealtEvent || !event.isCombatDamage) return detected
+        val kept = mutableListOf<PendingTrigger>()
+        for (pending in detected) {
+            val trigger = pending.ability.trigger
+            if (trigger !is EventPattern.DamageReceivedEvent || trigger.source != null) {
+                kept.add(pending)
+                continue
+            }
+            val key = listOf(pending.sourceId, pending.ability.id, pending.granterId, event.targetId)
+            val slot = slots[key]
+            if (slot == null) {
+                // The caller appends `kept` to `triggers` in order, so this is its final slot.
+                slots[key] = triggers.size + kept.size
+                kept.add(pending)
+                continue
+            }
+            val first = triggers[slot]
+            val ctx = first.triggerContext
+            triggers[slot] = first.copy(triggerContext = ctx.copy(
+                damageAmount = (ctx.damageAmount ?: 0) + event.amount,
+                excessDamageAmount = ((ctx.excessDamageAmount ?: 0) + event.excessAmount).takeIf { it > 0 }
+            ))
+        }
+        return kept
     }
 
     private fun isPerRecipientCounterTrigger(pending: PendingTrigger): Boolean {

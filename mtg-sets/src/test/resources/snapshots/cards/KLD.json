@@ -1038,6 +1038,47 @@
     ]
 }
 
+// Chandra's Pyrohelix
+{
+    "name": "Chandra's Pyrohelix",
+    "manaCost": "{1}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Chandra's Pyrohelix deals 2 damage divided as you choose among one or two targets.",
+    "script": {
+        "spellEffect": {
+            "type": "DividedDamage",
+            "totalDamage": 2,
+            "maxTargets": 2
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "count": 2,
+                "minCount": 1
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "111",
+        "artist": "Kieran Yanner",
+        "flavorText": "\"This one's for my mom, and this one's for me.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/5/05659715-3002-4bd0-919e-664814c1ca57.jpg?1783937196",
+        "rulings": [
+            {
+                "date": "2019-05-03",
+                "text": "You divide the damage as you cast Chandra's Pyrohelix, not as it resolves. Each target must be assigned at least 1 damage. In other words, as you cast Chandra's Pyrohelix, you choose whether to have it deal 2 damage to a single target, or deal 1 damage to each of two targets."
+            },
+            {
+                "date": "2019-05-03",
+                "text": "If Chandra's Pyrohelix targets two creatures and one becomes an illegal target, the remaining target is dealt 1 damage, not 2."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Chandra, Torch of Defiance
 {
     "name": "Chandra, Torch of Defiance",
@@ -2627,6 +2668,81 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Ghirapur Guide
+{
+    "name": "Ghirapur Guide",
+    "manaCost": "{2}{G}",
+    "typeLine": "Creature — Elf Scout",
+    "oracleText": "{2}{G}: Target creature you control can't be blocked by creatures with power 2 or less this turn.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Ghirapur Guide:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}{G}"
+                    }
+                },
+                "effect": {
+                    "type": "GrantStaticAbility",
+                    "ability": {
+                        "type": "CantBeBlockedBy",
+                        "blockerFilter": {
+                            "cardPredicates": [
+                                "IsCreature",
+                                {
+                                    "type": "PowerAtMost",
+                                    "max": 2
+                                }
+                            ]
+                        }
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{2}{G}: Target creature you control can't be blocked by creatures with power 2 or less this turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "156",
+        "rarity": "UNCOMMON",
+        "artist": "Scott Murphy",
+        "flavorText": "Fairgoers were delighted to find that even outside the fairgrounds, Ghirapur was a city of wonders.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/2/92b6ad4a-3701-4ee8-8e1e-46cdab8e730f.jpg?1783937179",
+        "rulings": [
+            {
+                "date": "2018-07-13",
+                "text": "Once a creature with power 2 or less has blocked a creature, activating Ghirapur Guide's ability won't change or undo that block."
+            },
+            {
+                "date": "2018-07-13",
+                "text": "Once a creature with power 3 or greater has blocked the target creature, changing the power of the blocking creature won't change or undo that block."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -4932,6 +5048,99 @@
     }
 }
 
+// Spark of Creativity
+{
+    "name": "Spark of Creativity",
+    "manaCost": "{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose target creature. Exile the top card of your library. You may have Spark of Creativity deal damage to that creature equal to the exiled card's mana value. If you don't, you may play that card until end of turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "TopOfLibrary",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "gathered0",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Exile"
+                    }
+                },
+                {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayDecide",
+                        "prompt": "Have Spark of Creativity deal damage to that creature equal to the exiled card's mana value? (If you don't, you may play that card until end of turn.)"
+                    },
+                    "then": {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "ManaValueSumOfCollection",
+                            "collectionName": "gathered0"
+                        },
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "otherwise": {
+                        "type": "GrantMayPlayFromExile",
+                        "from": "gathered0"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "131",
+        "rarity": "UNCOMMON",
+        "artist": "Johann Bodin",
+        "flavorText": "\"To invent is to rebel.\"\n—Pia Nalaar",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/1/718bf224-5e1b-439c-a998-ceec5c0a8903.jpg?1783937188",
+        "rulings": [
+            {
+                "date": "2016-09-20",
+                "text": "You can't cast Spark of Creativity without targeting a creature. If the creature becomes an illegal target for Spark of Creativity, none of its effects happen. You don't exile the top card of your library."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "If a card in exile has {X} in its mana cost, X is considered to be 0."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "If a land card is exiled this way, you can play that land card until end of turn if you have any available land plays."
+            },
+            {
+                "date": "2016-09-20",
+                "text": "Spark of Creativity doesn't change when you can play the exiled card. For example, if you exile a creature card without flash, you can cast it only during your main phase when the stack is empty."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Spirebluff Canal
 {
     "name": "Spirebluff Canal",
@@ -5642,6 +5851,63 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Welding Sparks
+{
+    "name": "Welding Sparks",
+    "manaCost": "{2}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Welding Sparks deals X damage to target creature, where X is 3 plus the number of artifacts you control.",
+    "script": {
+        "spellEffect": {
+            "type": "DealDamage",
+            "amount": {
+                "type": "Add",
+                "left": {
+                    "type": "Fixed",
+                    "amount": 3
+                },
+                "right": {
+                    "type": "AggregateBattlefield",
+                    "player": "You",
+                    "filter": "artifact"
+                }
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "140",
+        "artist": "Raymond Swanland",
+        "flavorText": "\"The fires of invention burn in all of us. I fight for the freedom to unleash those flames.\"\n—Pia Nalaar",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/e/fe2d98db-64c4-40b4-b6c8-61da8cc09f42.jpg?1783937186",
+        "rulings": [
+            {
+                "date": "2020-11-10",
+                "text": "If you control zero artifacts, Welding Sparks deals 3 damage to the target creature."
+            },
+            {
+                "date": "2020-11-10",
+                "text": "The number of artifacts you control is counted only as Welding Sparks resolves."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 

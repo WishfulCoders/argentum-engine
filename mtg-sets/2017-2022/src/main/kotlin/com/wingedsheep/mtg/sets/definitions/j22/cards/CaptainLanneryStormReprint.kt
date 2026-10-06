@@ -4,7 +4,8 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Captain Lannery Storm reprint in J22. Canonical CardDefinition lives in its earliest set.
+ * Captain Lannery Storm reprint in J22. Canonical CardDefinition lives in Ixalan (its earliest real printing),
+ * `com.wingedsheep.mtg.sets.definitions.xln.cards.CaptainLanneryStorm`.
  */
 val CaptainLanneryStormReprint = Printing(
     oracleId = "235bf0ba-658c-463f-b112-7478ba27bd7b",

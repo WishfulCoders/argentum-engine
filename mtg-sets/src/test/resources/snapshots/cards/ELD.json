@@ -44,127 +44,44 @@
     ]
 }
 
-// Bonecrusher Giant
+// Bloodhaze Wolverine
 {
-    "name": "Bonecrusher Giant",
-    "manaCost": "{2}{R}",
-    "typeLine": "Creature — Giant",
-    "oracleText": "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller.",
+    "name": "Bloodhaze Wolverine",
+    "manaCost": "{1}{R}",
+    "typeLine": "Creature — Wolverine",
+    "oracleText": "Whenever you draw your second card each turn, this creature gets +1/+1 and gains first strike until end of turn.",
     "creatureStats": {
-        "power": 4,
-        "toughness": 3
+        "power": 2,
+        "toughness": 1
     },
     "script": {
         "triggeredAbilities": [
             {
-                "id": "Bonecrusher Giant:1",
+                "id": "Bloodhaze Wolverine:1",
                 "trigger": {
-                    "type": "BecomesTargetEvent",
-                    "spellsOnly": true
+                    "type": "NthCardDrawnEvent",
+                    "nthCard": 2
                 },
+                "binding": "ANY",
                 "effect": {
-                    "type": "DealDamage",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 2
-                    },
-                    "target": {
-                        "type": "PlayerRef",
-                        "player": "ControllerOfTargetingSource"
-                    }
-                },
-                "descriptionOverride": "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller."
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "115",
-        "rarity": "RARE",
-        "artist": "Victor Adame Minguez",
-        "flavorText": "Not every tale ends in glory.",
-        "imageUri": "https://cards.scryfall.io/normal/front/0/9/09fd2d9c-1793-4beb-a3fb-7a869f660cd4.jpg?1783932628",
-        "rulings": [
-            {
-                "date": "2019-10-04",
-                "text": "Bonecrusher Giant's ability resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "If a spell targets Bonecrusher Giant more than once, its ability triggers only once."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "Stomp only stops damage from being prevented by effects that specifically use the word \"prevent.\""
-            },
-            {
-                "date": "2019-10-04",
-                "text": "If the chosen target is an illegal target by the time Stomp tries to resolve, the spell won't resolve. Damage can be prevented as usual."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "RED"
-    ],
-    "layout": "ADVENTURE",
-    "cardFaces": [
-        {
-            "name": "Stomp",
-            "manaCost": "{1}{R}",
-            "typeLine": "Instant — Adventure",
-            "oracleText": "Damage can't be prevented this turn. Stomp deals 2 damage to any target. (Then exile this card. You may cast the creature later from exile.)",
-            "script": {
-                "spellEffect": {
                     "type": "Composite",
                     "effects": [
-                        "DamageCantBePreventedThisTurn",
                         {
-                            "type": "DealDamage",
-                            "amount": {
+                            "type": "ModifyStats",
+                            "powerModifier": {
                                 "type": "Fixed",
-                                "amount": 2
+                                "amount": 1
                             },
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t0"
-                            }
-                        }
-                    ]
-                },
-                "targetRequirements": [
-                    {
-                        "type": "AnyTarget",
-                        "id": "t0"
-                    }
-                ]
-            }
-        }
-    ]
-}
-
-// Brazen Borrower
-{
-    "name": "Brazen Borrower",
-    "manaCost": "{1}{U}{U}",
-    "typeLine": "Creature — Faerie Rogue",
-    "oracleText": "Flash\nFlying\nThis creature can block only creatures with flying.",
-    "creatureStats": {
-        "power": 3,
-        "toughness": 1
-    },
-    "keywords": [
-        "FLASH",
-        "FLYING"
-    ],
-    "script": {
-        "staticAbilities": [
-            {
-                "type": "CanOnlyBlockCreaturesWith",
-                "blockerFilter": {
-                    "cardPredicates": [
-                        "IsCreature",
+                            "toughnessModifier": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": "Self"
+                        },
                         {
-                            "type": "HasKeyword",
-                            "keyword": "FLYING"
+                            "type": "GrantKeyword",
+                            "keyword": "FIRST_STRIKE",
+                            "target": "Self"
                         }
                     ]
                 }
@@ -172,47 +89,27 @@
         ]
     },
     "metadata": {
-        "collectorNumber": "39",
-        "rarity": "MYTHIC",
-        "artist": "Eric Deschamps",
-        "imageUri": "https://cards.scryfall.io/normal/front/c/2/c2089ec9-0665-448f-bfe9-d181de127814.jpg?1783932663",
+        "collectorNumber": "113",
+        "artist": "Evan Shipard",
+        "flavorText": "\"Build a moat. If we're lucky, it can't swim.\"\n—Syr Branigan, knight of Ardenvale",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/d/3d6c0bc1-cb07-4009-83b1-1122381cf9c4.jpg?1783932628",
         "rulings": [
             {
-                "date": "2025-06-06",
-                "text": "If a spell is cast as an Adventure, its controller exiles it instead of putting it into its owner's graveyard as it resolves. For as long as it remains exiled, that player may play it using its primary characteristics. If an Adventure spell leaves the stack in any way other than resolving, that card won't be exiled and the spell's controller won't be able to play that card from exile later."
+                "date": "2019-10-04",
+                "text": "If Bloodhaze Wolverine gains first strike after first-strike combat damage has been dealt, it will just deal regular combat damage."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "The triggered ability can trigger only once each turn. It doesn't matter whether the permanent with that ability was on the battlefield when the first card was drawn. If it's not on the battlefield when the second card is drawn, the ability can't trigger at all that turn. It won't trigger when the third or fourth card is drawn."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If a spell or ability causes you to put cards into your hand without specifically using the word \"draw,\" it's not a card drawn."
             }
         ]
     },
     "colorIdentityOverride": [
-        "BLUE"
-    ],
-    "layout": "ADVENTURE",
-    "cardFaces": [
-        {
-            "name": "Petty Theft",
-            "manaCost": "{1}{U}",
-            "typeLine": "Instant — Adventure",
-            "oracleText": "Return target nonland permanent an opponent controls to its owner's hand. (Then exile this card. You may cast the creature later from exile.)",
-            "script": {
-                "spellEffect": {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "destination": "Hand"
-                },
-                "targetRequirements": [
-                    {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "nonland permanent ctrl:opponent"
-                        },
-                        "id": "t0"
-                    }
-                ]
-            }
-        }
+        "RED"
     ]
 }
 
@@ -884,6 +781,69 @@
     "colorIdentityOverride": []
 }
 
+// Irencrag Pyromancer
+{
+    "name": "Irencrag Pyromancer",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Human Wizard",
+    "oracleText": "Whenever you draw your second card each turn, this creature deals 3 damage to any target.",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Irencrag Pyromancer:1",
+                "trigger": {
+                    "type": "NthCardDrawnEvent",
+                    "nthCard": 2
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "128",
+        "rarity": "RARE",
+        "artist": "Jason Rainville",
+        "flavorText": "\"Fear of fire is a sensible instinct. If I were you, I'd be terrified.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/a/9a7b0ead-5629-429d-bede-8154f3fae96d.jpg?1783932622",
+        "rulings": [
+            {
+                "date": "2019-10-04",
+                "text": "The triggered ability can trigger only once each turn. It doesn't matter whether the permanent with that ability was on the battlefield when the first card was drawn. If it's not on the battlefield when the second card is drawn, the ability can't trigger at all that turn. It won't trigger when the third or fourth card is drawn."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If an effect instructs you to draw multiple cards, the ability triggers after you draw whichever is the second one for the turn. You choose a target (if any) for the ability after you've drawn and looked at all of the cards and finished resolving the spell or ability that caused you to draw them."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If a spell or ability causes you to put cards into your hand without specifically using the word \"draw,\" it's not a card drawn."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Jousting Dummy
 {
     "name": "Jousting Dummy",
@@ -1093,6 +1053,66 @@
     "colorIdentityOverride": []
 }
 
+// Mad Ratter
+{
+    "name": "Mad Ratter",
+    "manaCost": "{3}{R}",
+    "typeLine": "Creature — Goblin",
+    "oracleText": "Whenever you draw your second card each turn, create two 1/1 black Rat creature tokens.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mad Ratter:1",
+                "trigger": {
+                    "type": "NthCardDrawnEvent",
+                    "nthCard": 2
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "BLACK"
+                    ],
+                    "creatureTypes": [
+                        "Rat"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/e/4/e43a205e-43ea-4b3e-92ab-c2ee2172a50a.jpg?1783932482"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "130",
+        "rarity": "UNCOMMON",
+        "artist": "Johann Bodin",
+        "flavorText": "\"Gather round and tell me all from the courts and castles.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/a/9a4cabcc-fb29-4bf2-b5ba-32b8c96aefd6.jpg?1783932620",
+        "rulings": [
+            {
+                "date": "2019-10-04",
+                "text": "The triggered ability can trigger only once each turn. It doesn't matter whether the permanent with that ability was on the battlefield when the first card was drawn. If it's not on the battlefield when the second card is drawn, the ability can't trigger at all that turn. It won't trigger when the third or fourth card is drawn."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If a spell or ability causes you to put cards into your hand without specifically using the word \"draw,\" it's not a card drawn."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Mantle of Tides
 {
     "name": "Mantle of Tides",
@@ -1183,177 +1203,6 @@
         ]
     },
     "colorIdentityOverride": [
-        "BLUE"
-    ]
-}
-
-// Oko, Thief of Crowns
-{
-    "name": "Oko, Thief of Crowns",
-    "manaCost": "{1}{G}{U}",
-    "typeLine": "Legendary Planeswalker — Oko",
-    "oracleText": "+2: Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\n+1: Target artifact or creature loses all abilities and becomes a green Elk creature with base power and toughness 3/3.\n−5: Exchange control of target artifact or creature you control and target creature an opponent controls with power 3 or less.",
-    "script": {
-        "activatedAbilities": [
-            {
-                "id": "Oko, Thief of Crowns:1",
-                "cost": {
-                    "type": "CostLoyalty",
-                    "change": 2
-                },
-                "effect": {
-                    "type": "CreatePredefinedToken",
-                    "tokenType": "Food"
-                },
-                "timing": "SorcerySpeed",
-                "isPlaneswalkerAbility": true
-            },
-            {
-                "id": "Oko, Thief of Crowns:2",
-                "cost": {
-                    "type": "CostLoyalty",
-                    "change": 1
-                },
-                "effect": {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "RemoveAllAbilities",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t0"
-                            },
-                            "duration": "Permanent"
-                        },
-                        {
-                            "type": "BecomeCreature",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t0"
-                            },
-                            "power": {
-                                "type": "Fixed",
-                                "amount": 3
-                            },
-                            "toughness": {
-                                "type": "Fixed",
-                                "amount": 3
-                            },
-                            "creatureTypes": [
-                                "Elk"
-                            ],
-                            "removeTypes": [
-                                "ARTIFACT",
-                                "ENCHANTMENT",
-                                "LAND",
-                                "PLANESWALKER",
-                                "BATTLE",
-                                "KINDRED"
-                            ],
-                            "colors": [
-                                "GREEN"
-                            ],
-                            "duration": "Permanent"
-                        }
-                    ]
-                },
-                "targetRequirements": [
-                    {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature|artifact"
-                        },
-                        "id": "t0"
-                    }
-                ],
-                "timing": "SorcerySpeed",
-                "isPlaneswalkerAbility": true
-            },
-            {
-                "id": "Oko, Thief of Crowns:3",
-                "cost": {
-                    "type": "CostLoyalty",
-                    "change": -5
-                },
-                "effect": {
-                    "type": "ExchangeControl",
-                    "target1": {
-                        "type": "BoundVariable",
-                        "name": "t1"
-                    },
-                    "target2": {
-                        "type": "BoundVariable",
-                        "name": "t2"
-                    }
-                },
-                "targetRequirements": [
-                    {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature|artifact ctrl:you"
-                        },
-                        "id": "t1"
-                    },
-                    {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature pow<=3 ctrl:opponent"
-                        },
-                        "id": "t2"
-                    }
-                ],
-                "timing": "SorcerySpeed",
-                "isPlaneswalkerAbility": true
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "197",
-        "rarity": "MYTHIC",
-        "artist": "Yongjae Choi",
-        "imageUri": "https://cards.scryfall.io/normal/front/3/4/3462a3d0-5552-49fa-9eb7-100960c55891.jpg?1783932594",
-        "rulings": [
-            {
-                "date": "2019-10-04",
-                "text": "Oko's second ability overwrites all previous effects that set the creature's base power and toughness to specific values. Any power- or toughness-setting effects that start to apply after Oko's second ability resolves will overwrite this effect."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "Effects that modify a creature's power and/or toughness, such as the effect of Festive Funeral, will apply to the creature no matter when they started to take effect. The same is true for any counters that change its power and/or toughness."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "Oko's second ability overwrites all colors and creature types the affected creature has. It's just a green Elk. The creature keeps any supertypes (such as legendary) it has, but loses any other card types it has (such as artifact)."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "The effects of Oko's second ability lasts indefinitely. It doesn't expire during the cleanup step or if you or Oko leave the game."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "If either of the target permanents is an illegal target when Oko's last ability resolves, the exchange won't happen."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "Gaining control of a permanent doesn't cause you to gain control of any Auras or Equipment attached to it. Gaining control of an Equipment doesn't cause it to become unattached, although its new controller may activate its equip abilities during their main phase."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "Oko's second ability may target a permanent that is only temporarily an artifact or a creature, such as Oko, the Trickster. If this happens, the effect causes that permanent to remain a green Elk creature even after the temporary effect expires."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "The effects of Oko's third ability lasts indefinitely. It doesn't expire during the cleanup step or if the creature you take has its power raised above 3 later."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "If the affected creature gains an ability after Oko's second ability resolves, it will keep that ability."
-            }
-        ]
-    },
-    "startingLoyalty": 4,
-    "colorIdentityOverride": [
-        "GREEN",
         "BLUE"
     ]
 }
@@ -1513,111 +1362,6 @@
         "artist": "Chris Rallis",
         "flavorText": "At first, Syr Fenwick scoffed when he saw his opponents for the final match.",
         "imageUri": "https://cards.scryfall.io/normal/front/6/b/6bd1dd34-d480-4dfd-9f82-73c4e24a11fc.jpg?1783932619"
-    },
-    "colorIdentityOverride": [
-        "RED"
-    ]
-}
-
-// Robber of the Rich
-{
-    "name": "Robber of the Rich",
-    "manaCost": "{1}{R}",
-    "typeLine": "Creature — Human Archer Rogue",
-    "oracleText": "Reach, haste\nWhenever this creature attacks, if defending player has more cards in hand than you, exile the top card of their library. During any turn you attacked with a Rogue, you may cast that card and you may spend mana as though it were mana of any color to cast that spell.",
-    "creatureStats": {
-        "power": 2,
-        "toughness": 2
-    },
-    "keywords": [
-        "REACH",
-        "HASTE"
-    ],
-    "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Robber of the Rich:1",
-                "trigger": "AttackEvent",
-                "effect": {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "GatherCards",
-                            "source": {
-                                "type": "TopOfLibrary",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                },
-                                "player": "DefendingPlayer"
-                            },
-                            "storeAs": "gathered0",
-                            "lookAudience": "None"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "gathered0",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Exile",
-                                "player": "DefendingPlayer"
-                            }
-                        },
-                        {
-                            "type": "GrantMayPlayFromExile",
-                            "from": "gathered0",
-                            "expiry": "Permanent",
-                            "withAnyManaType": true,
-                            "condition": {
-                                "type": "PlayerAttackedWithCreaturesThisTurn",
-                                "filter": "creature Rogue",
-                                "atLeast": 1
-                            },
-                            "nonLandOnly": true
-                        }
-                    ]
-                },
-                "interveningIf": {
-                    "type": "Compare",
-                    "left": {
-                        "type": "AggregateZone",
-                        "player": "DefendingPlayer",
-                        "zone": "Hand"
-                    },
-                    "operator": "GT",
-                    "right": {
-                        "type": "AggregateZone",
-                        "player": "You",
-                        "zone": "Hand"
-                    }
-                },
-                "descriptionOverride": "Whenever this creature attacks, if defending player has more cards in hand than you, exile the top card of their library. During any turn you attacked with a Rogue, you may cast that card and you may spend mana as though it were mana of any color to cast that spell."
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "138",
-        "rarity": "MYTHIC",
-        "artist": "Paul Scott Canavan",
-        "imageUri": "https://cards.scryfall.io/normal/front/0/e/0ecbe097-ba51-42e5-957c-382eb66c08f0.jpg?1783932619",
-        "rulings": [
-            {
-                "date": "2019-10-04",
-                "text": "If the defending player doesn't have more cards in hand than you immediately after Robber of the Rich attacks, its ability doesn't trigger at all. If that player doesn't have more cards in hand as the ability resolves, the ability does nothing."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "If Robber of the Rich leaves the battlefield, the effect allowing you to cast the exiled card if you attacked with a Rogue continues to apply, even during later turns—as long as you attack with a Rogue during those later turns."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "An effect that instructs you to \"cast\" a card doesn't allow you to play lands."
-            },
-            {
-                "date": "2019-10-04",
-                "text": "Casting an exiled card causes it to leave exile. You can't cast it multiple times."
-            }
-        ]
     },
     "colorIdentityOverride": [
         "RED"
@@ -2498,15 +2242,49 @@
                         "player": "EachOpponent"
                     }
                 },
-                "descriptionOverride": "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
+                "descriptionOverride": "Syr Konrad deals 1 damage to each opponent."
             },
             {
                 "id": "Syr Konrad, the Grim:2",
                 "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "filter": "creature",
-                    "to": "Graveyard",
-                    "excludeFrom": "Battlefield"
+                    "type": "AnyOfEvents",
+                    "events": [
+                        {
+                            "type": "ZoneChangeEvent",
+                            "filter": "creature",
+                            "from": "Hand",
+                            "to": "Graveyard"
+                        },
+                        {
+                            "type": "ZoneChangeEvent",
+                            "filter": "creature",
+                            "from": "Library",
+                            "to": "Graveyard"
+                        },
+                        {
+                            "type": "ZoneChangeEvent",
+                            "filter": "creature",
+                            "from": "Stack",
+                            "to": "Graveyard"
+                        },
+                        {
+                            "type": "ZoneChangeEvent",
+                            "filter": "creature",
+                            "from": "Exile",
+                            "to": "Graveyard"
+                        },
+                        {
+                            "type": "ZoneChangeEvent",
+                            "filter": "creature",
+                            "from": "Command",
+                            "to": "Graveyard"
+                        },
+                        {
+                            "type": "ZoneChangeEvent",
+                            "filter": "creature own:you",
+                            "from": "Graveyard"
+                        }
+                    ]
                 },
                 "binding": "ANY",
                 "effect": {
@@ -2520,33 +2298,12 @@
                         "player": "EachOpponent"
                     }
                 },
-                "descriptionOverride": "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
-            },
-            {
-                "id": "Syr Konrad, the Grim:3",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "filter": "creature own:you",
-                    "from": "Graveyard"
-                },
-                "binding": "ANY",
-                "effect": {
-                    "type": "DealDamage",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 1
-                    },
-                    "target": {
-                        "type": "PlayerRef",
-                        "player": "EachOpponent"
-                    }
-                },
-                "descriptionOverride": "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
+                "descriptionOverride": "Syr Konrad deals 1 damage to each opponent."
             }
         ],
         "activatedAbilities": [
             {
-                "id": "Syr Konrad, the Grim:4",
+                "id": "Syr Konrad, the Grim:3",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2580,7 +2337,8 @@
                             }
                         }
                     ]
-                }
+                },
+                "descriptionOverride": "Each player mills a card."
             }
         ]
     },
@@ -2801,6 +2559,114 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Wicked Guardian
+{
+    "name": "Wicked Guardian",
+    "manaCost": "{3}{B}",
+    "typeLine": "Creature — Human Noble",
+    "oracleText": "When this creature enters, you may have it deal 2 damage to another creature you control. If you do, draw a card.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Wicked Guardian:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.DoAction",
+                            "action": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "BattlefieldMatching",
+                                            "filter": "creature",
+                                            "player": "You",
+                                            "excludeSelf": true
+                                        },
+                                        "storeAs": "gathered0"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "gathered0",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "wickedGuardianDamaged",
+                                        "prompt": "Choose another creature you control to deal 2 damage to",
+                                        "useTargetingUI": true
+                                    },
+                                    {
+                                        "type": "ForEach",
+                                        "space": {
+                                            "type": "IterationSpace.Collection",
+                                            "collection": "wickedGuardianDamaged"
+                                        },
+                                        "body": {
+                                            "type": "DealDamage",
+                                            "amount": {
+                                                "type": "Fixed",
+                                                "amount": 2
+                                            },
+                                            "target": "IterationEntity"
+                                        }
+                                    }
+                                ]
+                            },
+                            "successCriterion": {
+                                "type": "SuccessCriterion.CollectionNonEmpty",
+                                "name": "wickedGuardianDamaged"
+                            }
+                        },
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
+                    }
+                },
+                "descriptionOverride": "When this creature enters, you may have it deal 2 damage to another creature you control. If you do, draw a card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "109",
+        "artist": "Matt Stewart",
+        "flavorText": "\"Some are born to greatness. You were born to scrub greatness's floors.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/1/71cd91b2-0f9b-4582-ad90-32fa3ee1fde7.jpg?1783932630",
+        "rulings": [
+            {
+                "date": "2019-10-04",
+                "text": "If Wicked Guardian leaves the battlefield before its triggered ability resolves, you may still have it deal 2 damage to another creature you control and draw a card."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If the damage Wicked Guardian deals is prevented (perhaps because you chose for it to deal 2 damage to a creature with protection from black), you still draw a card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

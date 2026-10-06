@@ -344,6 +344,165 @@
     ]
 }
 
+// Chandra, Flame's Fury
+{
+    "name": "Chandra, Flame's Fury",
+    "manaCost": "{4}{R}{R}",
+    "typeLine": "Legendary Planeswalker — Chandra",
+    "oracleText": "+1: Chandra deals 2 damage to any target.\n−2: Chandra deals 4 damage to target creature and 2 damage to that creature's controller.\n−8: Chandra deals 10 damage to target player and each creature that player controls.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Chandra, Flame's Fury:1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Chandra, Flame's Fury:2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 4
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            }
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            },
+                            "target": "TargetController"
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature"
+                        },
+                        "id": "t1"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Chandra, Flame's Fury:3",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -8
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 10
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t2"
+                            }
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Group",
+                                "filter": {
+                                    "baseFilter": {
+                                        "cardPredicates": [
+                                            "IsCreature"
+                                        ],
+                                        "controllerPredicate": {
+                                            "type": "ControlledByReferencedPlayer",
+                                            "target": {
+                                                "type": "BoundVariable",
+                                                "name": "t2"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "body": {
+                                "type": "DealDamage",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 10
+                                },
+                                "target": "IterationEntity"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetPlayer",
+                        "id": "t2"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "294",
+        "rarity": "MYTHIC",
+        "artist": "Magali Villeneuve",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/d/5d1c6c4b-62ab-4d44-a2d7-64b44d163606.jpg?1783932919",
+        "rulings": [
+            {
+                "date": "2019-07-12",
+                "text": "If the target creature is an illegal target by the time Chandra's second ability resolves, the ability doesn't resolve. No player is dealt damage. Similarly, if the target player is an illegal target by the time Chandra's last ability resolves, no creatures are dealt damage."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "Chandra's last ability targets the player, not their creatures. A creature with hexproof may be dealt damage this way."
+            }
+        ]
+    },
+    "startingLoyalty": 4,
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Cryptic Caves
 {
     "name": "Cryptic Caves",
@@ -841,6 +1000,100 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Glint-Horn Buccaneer
+{
+    "name": "Glint-Horn Buccaneer",
+    "manaCost": "{1}{R}{R}",
+    "typeLine": "Creature — Minotaur Pirate",
+    "oracleText": "Haste\nWhenever you discard a card, this creature deals 1 damage to each opponent.\n{1}{R}, Discard a card: Draw a card. Activate only if this creature is attacking.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 4
+    },
+    "keywords": [
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Glint-Horn Buccaneer:1",
+                "trigger": "DiscardEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                },
+                "descriptionOverride": "Whenever you discard a card, this creature deals 1 damage to each opponent."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Glint-Horn Buccaneer:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}{R}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": "AtomDiscard"
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "restrictions": [
+                    {
+                        "type": "ActivationOnlyIfCondition",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": "Self",
+                            "filter": "attacking"
+                        }
+                    }
+                ],
+                "descriptionOverride": "{1}{R}, Discard a card: Draw a card. Activate only if this creature is attacking."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "141",
+        "rarity": "RARE",
+        "artist": "Zack Stella",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/f/df2df9cb-14f5-470f-b438-20f4ae8d0d59.jpg?1783932979",
+        "rulings": [
+            {
+                "date": "2019-07-12",
+                "text": "The middle ability of Glint-Horn Buccaneer is a triggered ability, not an activated ability. It doesn't allow you to discard a card whenever you want; rather, you need some other way of discarding a card, such as by activating its last ability."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "In a Two-Headed Giant game, Glint-Horn Buccaneer's triggered ability causes the opposing team to be dealt 1 damage twice."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
@@ -1911,6 +2164,83 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Wildfire Elemental
+{
+    "name": "Wildfire Elemental",
+    "manaCost": "{2}{R}{R}",
+    "typeLine": "Creature — Elemental",
+    "oracleText": "Whenever an opponent is dealt noncombat damage, creatures you control get +1/+0 until end of turn.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Wildfire Elemental:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageNonCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "EachOpponent"
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Group",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        }
+                    },
+                    "body": {
+                        "type": "ModifyStats",
+                        "powerModifier": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "toughnessModifier": {
+                            "type": "Fixed",
+                            "amount": 0
+                        },
+                        "target": "IterationEntity"
+                    }
+                },
+                "descriptionOverride": "Whenever an opponent is dealt noncombat damage, creatures you control get +1/+0 until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "297",
+        "artist": "Svetlin Velinov",
+        "flavorText": "\"Fire is always dancing, leaping and whirling, seeking more fuel. It never rests, so why should I?\"\n—Chandra Nalaar",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/7/272e317c-55c4-43b2-91aa-3e0009cfd7d5.jpg?1783932917",
+        "rulings": [
+            {
+                "date": "2019-07-12",
+                "text": "Combat damage is the damage that's dealt automatically by attacking and blocking creatures. Any other damage is noncombat damage, even if it's dealt during a combat phase by an attacking or blocking creature."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "The last ability of Wildfire Elemental triggers once for each event in which an opponent is dealt noncombat damage, regardless of how much damage that player is dealt."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "Wildfire Elemental's triggered ability affects only creatures you control at the time it resolves. Creatures you begin to control later in the turn won't get +1/+0."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "In a multiplayer game, if a source deals damage to multiple opponents at the same time, the last ability of Wildfire Elemental will trigger that many times."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 

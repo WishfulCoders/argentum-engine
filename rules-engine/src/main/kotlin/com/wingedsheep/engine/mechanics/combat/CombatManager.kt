@@ -104,6 +104,10 @@ class CombatManager(
     fun applyCombatDamage(state: GameState, firstStrike: Boolean = false): ExecutionResult =
         damagePhase.applyCombatDamage(state, firstStrike)
 
+    /** Fix the first-strike combat damage step's assigners as the step begins (CR 510.4). */
+    fun stampFirstStrikeStepAssigners(state: GameState): GameState =
+        damagePhase.stampFirstStrikeStepAssigners(state)
+
     /**
      * Drop the damage assignments chosen in the first-strike combat damage step, so the regular
      * one assigns from scratch.
@@ -158,7 +162,7 @@ class CombatManager(
                     .without<DamageAssignmentComponent>()
                     .without<DamageAssignmentOrderComponent>()
                     .without<AttackerOrderComponent>()
-                    .without<DealtFirstStrikeDamageComponent>()
+                    .without<FirstStrikeStepAssignerComponent>()
                     .without<RequiresManualDamageAssignmentComponent>()
                     .without<AttackersDeclaredThisCombatComponent>()
                     .without<BlockersDeclaredThisCombatComponent>()

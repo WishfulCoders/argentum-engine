@@ -47,7 +47,7 @@ import com.wingedsheep.engine.state.components.combat.BlockedComponent
 import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.combat.DamageAssignmentComponent
 import com.wingedsheep.engine.state.components.combat.DamageAssignmentOrderComponent
-import com.wingedsheep.engine.state.components.combat.DealtFirstStrikeDamageComponent
+import com.wingedsheep.engine.state.components.combat.FirstStrikeStepAssignerComponent
 import com.wingedsheep.engine.state.components.combat.RequiresManualDamageAssignmentComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.CommanderComponent
@@ -476,6 +476,7 @@ object ZoneMovementUtils {
             .without<FaceDownComponent>()
             .without<com.wingedsheep.engine.state.components.identity.FaceDownModeComponent>()
             .without<MorphDataComponent>()
+            .without<com.wingedsheep.engine.state.components.identity.TurnsFaceUpInsteadComponent>()
             .without<RevealedToComponent>()
             // Copy effects on permanents end when the object leaves the battlefield
             // (CR 400.7 / 707.2). ZoneTransitionService restores the printed
@@ -555,6 +556,9 @@ object ZoneMovementUtils {
             // A blink returns a new object (CR 400.7); it must not carry a stale "host left" marker
             // from a prior attachment, and an Equipment that itself re-enters starts unmarked.
             .without<AttachmentHostLeftComponent>()
+            // An enchant ability the Aura gained on the battlefield (Animate Dead) belongs to that
+            // object; the card that leaves has its printed enchant ability again (CR 400.7).
+            .without<com.wingedsheep.engine.state.components.battlefield.GainedEnchantRestrictionComponent>()
             .without<EnteredThisTurnComponent>()
             .without<ExileOnLeaveBattlefieldComponent>()
             .without<com.wingedsheep.engine.state.components.battlefield.EnteredViaAbilityComponent>()
@@ -582,7 +586,7 @@ object ZoneMovementUtils {
             .without<DamageAssignmentComponent>()
             .without<DamageAssignmentOrderComponent>()
             .without<AttackerOrderComponent>()
-            .without<DealtFirstStrikeDamageComponent>()
+            .without<FirstStrikeStepAssignerComponent>()
             .without<RequiresManualDamageAssignmentComponent>()
     }
 
@@ -1204,7 +1208,7 @@ object ZoneMovementUtils {
             }
         }
 
-        return EffectResult.success(newState, listOfNotNull(tappedEvent))
+        return EffectResult.success(newState, tappedEvent)
     }
 
     /**

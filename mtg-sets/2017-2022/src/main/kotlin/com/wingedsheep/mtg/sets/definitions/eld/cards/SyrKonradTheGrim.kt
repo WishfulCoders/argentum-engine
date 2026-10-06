@@ -7,10 +7,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -20,68 +17,58 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Legendary Creature — Human Knight
  * 5/4
  * Whenever another creature dies, or a creature card is put into a graveyard from anywhere other
- * than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each
- * opponent.
+ * than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to
+ * each opponent.
  * {1}{B}: Each player mills a card.
  *
- * One printed ability with three trigger events, authored as three triggered abilities with the
- * same effect — the events are disjoint, so no single event fires it twice:
- *  - "another creature dies" is an OTHER-bound battlefield-to-graveyard trigger, so it uses the
- *    leaves-the-battlefield look-back and fires for each creature that dies at the same time as
- *    Syr Konrad (ruling), tokens included;
- *  - "a creature card is put into a graveyard from anywhere other than the battlefield" is
- *    `to = GRAVEYARD, excludeFrom = BATTLEFIELD` over any graveyard — a discard, a mill, a
- *    countered creature spell;
- *  - "a creature card leaves your graveyard" is `from = GRAVEYARD` over creature cards you own,
- *    per card rather than batched.
+ * Modeling notes:
+ *  - The three trigger conditions share one effect but not one binding: "another creature dies"
+ *    excludes Syr Konrad itself (OTHER), while the two card-movement clauses watch every card
+ *    (ANY). So the printed ability is split into two triggered abilities with the same effect.
+ *    The clauses are disjoint (a death is from the battlefield; the second clause excludes the
+ *    battlefield; the third starts in a graveyard), so no single event fires both.
+ *  - "From anywhere other than the battlefield" has no exclude-from axis, so it is spelled as the
+ *    union of every other zone a card can reach a graveyard from: hand, library, stack, exile,
+ *    and the command zone.
+ *  - "Leaves your graveyard" is `changesZone(from = GRAVEYARD)` with any destination, keyed on
+ *    `.ownedByYou()`: a card is only ever in its owner's graveyard (CR 400.3), whereas control
+ *    would follow a reanimated card to whoever returned it.
  */
 val SyrKonradTheGrim = card("Syr Konrad, the Grim") {
     manaCost = "{3}{B}{B}"
     colorIdentity = "B"
     typeLine = "Legendary Creature — Human Knight"
+    oracleText = "Whenever another creature dies, or a creature card is put into a graveyard from " +
+        "anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad " +
+        "deals 1 damage to each opponent.\n" +
+        "{1}{B}: Each player mills a card. (They each put the top card of their library into their graveyard.)"
     power = 5
     toughness = 4
-    oracleText = "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent.\n" +
-        "{1}{B}: Each player mills a card. (They each put the top card of their library into their graveyard.)"
-
-    val pingEachOpponent = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
-    val abilityText = "Whenever another creature dies, or a creature card is put into a graveyard from anywhere " +
-        "other than the battlefield, or a creature card leaves your graveyard, Syr Konrad deals 1 damage to each opponent."
 
     triggeredAbility {
         trigger = Triggers.another(GameObjectFilter.Creature).dies()
-        effect = pingEachOpponent
-        description = abilityText
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        description = "Syr Konrad deals 1 damage to each opponent."
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.ZoneChangeEvent(
-                filter = GameObjectFilter.Creature,
-                to = Zone.GRAVEYARD,
-                excludeFrom = Zone.BATTLEFIELD,
-            ),
-            binding = TriggerBinding.ANY,
+        val creatureCard = Triggers.a(GameObjectFilter.Creature)
+        trigger = Triggers.or(
+            creatureCard.changesZone(from = Zone.HAND, to = Zone.GRAVEYARD),
+            creatureCard.changesZone(from = Zone.LIBRARY, to = Zone.GRAVEYARD),
+            creatureCard.changesZone(from = Zone.STACK, to = Zone.GRAVEYARD),
+            creatureCard.changesZone(from = Zone.EXILE, to = Zone.GRAVEYARD),
+            creatureCard.changesZone(from = Zone.COMMAND, to = Zone.GRAVEYARD),
+            Triggers.a(GameObjectFilter.Creature.ownedByYou()).changesZone(from = Zone.GRAVEYARD),
         )
-        effect = pingEachOpponent
-        description = abilityText
-    }
-
-    triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.ownedByYou(),
-                from = Zone.GRAVEYARD,
-            ),
-            binding = TriggerBinding.ANY,
-        )
-        effect = pingEachOpponent
-        description = abilityText
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        description = "Syr Konrad deals 1 damage to each opponent."
     }
 
     activatedAbility {
         cost = Costs.Mana("{1}{B}")
         effect = Patterns.Library.mill(1, EffectTarget.PlayerRef(Player.Each))
+        description = "Each player mills a card."
     }
 
     metadata {
