@@ -45,7 +45,13 @@ import kotlin.reflect.KClass
 class MoveCollectionExecutor(
     private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
-    private val targetFinder: TargetFinder? = null
+    private val targetFinder: TargetFinder? = null,
+    /**
+     * Pays an entering card's [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid] cost before it
+     * moves. Without it (helper-only constructions) such a card is not offered the payment and
+     * goes to its owner's graveyard — the transition service's fail-closed reading.
+     */
+    private val costPaymentService: (() -> com.wingedsheep.engine.mechanics.cost.CostPaymentService)? = null,
 ) : EffectExecutor<MoveCollectionEffect> {
     private val predicateEvaluator = zones.predicateEvaluator
 
@@ -117,6 +123,31 @@ class MoveCollectionExecutor(
             com.wingedsheep.engine.handlers.effects.copy.EffectCopyEntry.prepare(
                 state, effect, context, entrants, cardRegistry, predicateEvaluator
             )?.let { return it }
+            // "If this would enter, you may [cost] instead" (EntersOnlyIfCostPaid — Mox Diamond):
+            // asked and paid before anything moves (CR 614.12a). An unpaid entrant is put into its
+            // owner's graveyard instead, before the rest move, and drops out of this instruction.
+            val preparedCosts = com.wingedsheep.engine.handlers.effects.EffectEntryCosts.prepare(
+                state, effect, context, entrants, cardRegistry, costPaymentService?.invoke())
+            preparedCosts.pause?.let { return it }
+            context = preparedCosts.context
+            val declined = com.wingedsheep.engine.handlers.effects.EffectEntryCosts.declinedEntrants(context)
+                .filter { it in entrants && it !in state.getBattlefield() }
+            if (declined.isNotEmpty()) {
+                var afterDeclines = state
+                val declineEvents = mutableListOf<com.wingedsheep.engine.core.GameEvent>()
+                for (id in declined) {
+                    val moved = zones.moveToZone(afterDeclines, id, Zone.GRAVEYARD)
+                    afterDeclines = moved.state
+                    declineEvents += moved.events
+                }
+                // The rest of the instruction moves without them: replay it over the collection
+                // minus the declined entrants (their settled answers stay on the context).
+                val remaining = context.pipeline.storedCollections[effect.from].orEmpty() - declined.toSet()
+                val narrowed = context.copy(pipeline = context.pipeline.copy(
+                    storedCollections = context.pipeline.storedCollections + (effect.from to remaining)))
+                val rest = execute(afterDeclines, effect, narrowed)
+                return rest.copy(events = declineEvents + rest.events)
+            }
             if (targetFinder != null) {
                 val prepared = com.wingedsheep.engine.handlers.effects.copy.CopyAuraEntry.prepare(
                     state, effect, context, entrants, cardRegistry, targetFinder, predicateEvaluator)
@@ -957,6 +988,7 @@ class MoveCollectionExecutor(
                 controllerId = actualDestPlayerId,
                 entryCopy = context.entryCopies[cardId],
                 entryChoices = context.entryChoices[cardId]?.values.orEmpty(),
+                entryCostPaid = context.entryCostsPaid[cardId] == true,
                 auraHostId = context.entryAuraHosts[cardId],
                 libraryPlacement = chosenPlacement,
                 tapped = destination.placement == ZonePlacement.Tapped || destination.placement == ZonePlacement.TappedAndAttacking,

@@ -536,6 +536,53 @@ data class OnEnterRun(
     }
 }
 
+/**
+ * "If this permanent would enter, you may [cost] instead. If you do, put it onto the battlefield.
+ * If you don't, put it into its owner's graveyard." — Mox Diamond.
+ *
+ * A self-replacement on the permanent's own entry (CR 614.1a "instead", CR 614.12 — it comes from
+ * the permanent itself and affects only it). If the event is replaced it never happens (CR 614.6):
+ * the modified event is "pay [cost], then put it onto the battlefield", or, if the player doesn't
+ * pay — they decline, or can't (CR 118.3) — "put it into its owner's graveyard". On the declined
+ * branch the card **never touches the battlefield**: no enters-the-battlefield or leaves-the-
+ * battlefield event, no chance to tap it for mana (Mox Diamond's 2008-05-01 ruling).
+ *
+ * The cost is chosen and paid before the permanent enters (CR 614.12a), by the player it would
+ * enter under the control of, through the shared [com.wingedsheep.sdk.scripting.costs.PayCost]
+ * payment rail — so a discard is a real discard (madness, "whenever you discard" triggers).
+ *
+ * Applies however the permanent would enter: a resolving permanent spell, or an effect putting the
+ * card onto the battlefield (a reanimation, Show and Tell, Tinker). It applies once per entry
+ * (CR 614.5) — the paid branch's own "put it onto the battlefield" is not offered the choice again.
+ *
+ * The Ice Age / Visions / Weatherlight lands that read "If this land would enter, sacrifice … instead.
+ * If you do, put this land onto the battlefield. If you don't, put it into its owner's graveyard."
+ * (Lotus Vale, Lake of the Dead) are the same event shape; their rulings ("If you don't sacrifice the
+ * lands, Lotus Vale never enters") read the payment as declinable too. A land *played* is not wired
+ * through this replacement yet (the land-play path, `PlayLandHandler`, doesn't consult it).
+ */
+@SerialName("EntersOnlyIfCostPaid")
+@Serializable
+data class EntersOnlyIfCostPaid(
+    val cost: com.wingedsheep.sdk.scripting.costs.PayCost,
+    override val appliesTo: EventPattern = EventPattern.ZoneChangeEvent(
+        filter = GameObjectFilter.Any,
+        to = Zone.BATTLEFIELD
+    )
+) : ReplacementEffect {
+    override val description: String =
+        "If this permanent would enter, you may ${cost.description} instead. If you do, put it onto " +
+            "the battlefield. If you don't, put it into its owner's graveyard."
+
+    override fun applyTextReplacement(replacer: TextReplacer): ReplacementEffect {
+        val newCost = cost.applyTextReplacement(replacer)
+        val newAppliesTo = appliesTo.applyTextReplacement(replacer)
+        return if (newCost !== cost || newAppliesTo !== appliesTo)
+            copy(cost = newCost, appliesTo = newAppliesTo)
+        else this
+    }
+}
+
 @SerialName("EntersTapped")
 @Serializable
 data class EntersTapped(

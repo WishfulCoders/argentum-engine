@@ -2,6 +2,7 @@ package com.wingedsheep.engine.handlers.continuations
 
 import com.wingedsheep.engine.mechanics.cost.SharedCreatureTypeTapCost
 import com.wingedsheep.engine.core.suspendForDecision
+import com.wingedsheep.engine.core.AwaitsCostOutcome
 import com.wingedsheep.engine.core.CardsSelectedResponse
 import com.wingedsheep.engine.core.CostPaymentContinuation
 import com.wingedsheep.engine.core.CostPaymentManaSelectionContinuation
@@ -276,13 +277,24 @@ class CostPaymentContinuationResumer(
         priorEvents: List<GameEvent>,
         continuation: CostPaymentContinuation,
         checkForMore: CheckForMore
-    ): ExecutionResult = runFollowup(state, priorEvents, continuation.onPaid, continuation, checkForMore)
+    ): ExecutionResult = runFollowup(settleOutcome(state, paid = true), priorEvents, continuation.onPaid, continuation, checkForMore)
 
     private fun declined(
         state: GameState,
         continuation: CostPaymentContinuation,
         checkForMore: CheckForMore
-    ): ExecutionResult = runFollowup(state, emptyList(), continuation.onDeclined, continuation, checkForMore)
+    ): ExecutionResult = runFollowup(settleOutcome(state, paid = false), emptyList(), continuation.onDeclined, continuation, checkForMore)
+
+    /**
+     * Tell an [AwaitsCostOutcome] frame parked directly beneath this payment how it ended, so its
+     * auto-resumer (which `checkForMore` reaches once the follow-up is done) can branch on it.
+     */
+    private fun settleOutcome(state: GameState, paid: Boolean): GameState {
+        val waiting = state.peekContinuation() as? AwaitsCostOutcome ?: return state
+        if (waiting.paid != null) return state
+        val (_, popped) = state.popContinuation()
+        return popped.pushContinuation(waiting.settled(paid))
+    }
 
     private fun runFollowup(
         state: GameState,

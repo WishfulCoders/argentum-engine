@@ -52,7 +52,7 @@ class FacadeBoundaryTest : FunSpec({
      */
     val pipelineSteps = listOf(
         "GatherCardsEffect", "SelectFromCollectionEffect", "MoveCollectionEffect", "FilterCollectionEffect",
-        "RevealCollectionEffect", "ConditionalOnCollectionEffect", "GatherUntilMatchEffect",
+        "RevealCollectionEffect", "LookAtCollectionEffect", "ConditionalOnCollectionEffect", "GatherUntilMatchEffect",
         "GatherSubtypesEffect", "ChoosePileEffect", "CaptureControllersEffect", "ForEachCapturedControllerEffect",
         "StoreCardNameEffect", "StoreNumberEffect", "SelectTargetEffect", "ChooseOptionEffect",
         "ChooseOnePerCategoryEffect", "NoteCreatureTypeEffect", "PairWithSourceEffect",

@@ -2668,6 +2668,54 @@
     ]
 }
 
+// Lion's Eye Diamond
+{
+    "name": "Lion's Eye Diamond",
+    "manaCost": "{0}",
+    "typeLine": "Artifact",
+    "oracleText": "Discard your hand, Sacrifice this artifact: Add three mana of any one color. Activate only as an instant.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Lion's Eye Diamond:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        "CostDiscardHand",
+                        "CostSacrificeSelf"
+                    ]
+                },
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    }
+                },
+                "timing": "ManaAbility",
+                "restrictions": [
+                    "OnlyAsInstant"
+                ],
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "307",
+        "rarity": "RARE",
+        "artist": "Margaret Organ-Kean",
+        "flavorText": "Held in the lion's eye\n—Zhalfirin saying meaning \"caught in the moment of crisis\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/3/63bacc32-d6ba-420c-9b49-299c08e5fb39.jpg?1783947041",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "The ability is a mana ability, so it is activated and resolves as a mana ability, but it can only be activated at times when you can cast an instant. Yes, this is a bit weird."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Mana Prism
 {
     "name": "Mana Prism",

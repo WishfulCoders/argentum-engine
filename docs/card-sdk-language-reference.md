@@ -4408,6 +4408,7 @@ with cards):
 | `copyCard(source)` / `copyCards(from)` | `CopyCardIntoCollectionEffect` / `CopyCollectionIntoCollectionEffect` |
 | `pairWithSource(from)` (soulbond, CR 702.95a — empty `from` is a legal no-op, i.e. a declined "you may pair") | `PairWithSourceEffect` |
 | `reveal(from, …)` | `RevealCollectionEffect` |
+| `look(from, audience?)` — private look (CR 701.20e) at the cards in `from`, shown only to the controller (or `LookAudience.Opponent`); a card in another player's hand emits a `HandLookedAtEvent` carrying just that card, withheld from everyone else. A gather never shows a hand, so this is the step for "look at a card at random in target player's hand" (Urza's Bauble: `look(chooseRandom(1, from = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))))`) | `LookAtCollectionEffect` |
 | `captureControllers(from)` | `CaptureControllersEffect` |
 | `forEachCaptured(collection, original, controllers) { count -> … }` | `ForEachCapturedControllerEffect` |
 | `forEachPlayerCollecting(players) { …; listOf(slotA, slotB) }` → the per-iteration collections unioned across players | `ForEachPlayerCollectingEffect` |
@@ -10655,6 +10656,15 @@ before `genericCostReduction` and the battlefield statics. Kami of Jealous Thirs
 - `OnlyIfCondition(c)` — condition gate.
 - `OnlyDuringYourTurn` / `DuringPhase(p)` / `DuringStep(s)` / `BeforeStep(s)` — timing gates (compose
   via `All(...)`, e.g. `All(DuringStep(UPKEEP), OnlyDuringYourTurn)` for "only during your upkeep").
+- `OnlyAsInstant` — *"Activate only as an instant"* (CR 602.5e): only while the player holds priority
+  (CR 304.5) and no decision is pending. Meaningful on a **mana ability** only — an ordinary ability
+  needs priority anyway — where it closes the CR 605.3a windows a mana ability could otherwise use:
+  mid-cast cost payment and "a rule or effect asks for a mana payment" (ward, "you may pay …"). The
+  ability stays a mana ability (CR 605.1; it doesn't use the stack), but `ManaSolver` never counts or
+  offers it as a payment source (`LegalityKernel.activatableOnlyWithPriority`), so the player activates
+  it first, with priority, and pays from the floating mana. Lion's Eye Diamond:
+  `activatedAbility { cost = Costs.Composite(Costs.DiscardHand, Costs.SacrificeSelf); effect =
+  Effects.AddAnyColorMana(3); manaAbility = true; restrictions = listOf(ActivationRestriction.OnlyAsInstant) }`.
 
 Every restriction is decided in one place, `LegalityKernel` (`rules-engine/.../legality/`): the
 activation handler's `validate`, every ability enumerator and the auto-tap `ManaSolver` ask it, and
@@ -15306,6 +15316,24 @@ The priority groups are (CR 616.1a–f):
   Zone.GRAVEYARD))`; `CounterType.VOID` is then a pure exile marker its sacrifice ability gathers by
   (`CardSource.FromZone(Zone.EXILE, Player.EachOpponent, Any.withCounter(VOID))`).
 - `ReplacementEffect.IfYouDoBranchEffect(...)` — branch on "if you do" replacement.
+- `EntersOnlyIfCostPaid(cost: PayCost)` — "If this permanent would enter, you may [cost] instead. If
+  you do, put it onto the battlefield. If you don't, put it into its owner's graveyard." (Mox Diamond:
+  `replacementEffect(EntersOnlyIfCostPaid(Costs.pay.Discard(GameObjectFilter.Land)))`). A
+  self-replacement on the permanent's own entry (CR 614.1a, 614.12), settled **before** it enters
+  (CR 614.12a) through the shared `CostPaymentService` rail, so the payer sees the usual cost prompt
+  (card selection for a discard, battlefield selection for a sacrifice) and may decline. Unpaid —
+  declined, or unpayable (CR 118.3) — the card goes straight to its owner's graveyard and **never
+  enters** (CR 614.6): no zone change to the battlefield, no ETB/LTB triggers. Wired into every
+  entry path: a resolving permanent spell (`PermanentSpellResolver.pauseForEntryCost`, a
+  `SpellEntryCostContinuation` beneath the payment), and effects moving one card (`MoveToZoneEffect`)
+  or a collection (`MoveCollectionEffect`) via `EffectEntryCosts` (prepare-then-replay, outcome on
+  `EffectContext.entryCostsPaid`). Any other route onto the battlefield reaching
+  `ZoneTransitionService.moveToZone` without a recorded payment takes the "if you don't" branch
+  (fail-closed). Applies once per entry (CR 614.5). Not yet consulted by the land-play path
+  (`PlayLandHandler`) or by token creation, so the Ice Age "sacrifice … instead" lands (Lotus Vale,
+  Lake of the Dead) need that wiring first. The cost-payment resumer reports the outcome to any
+  `AwaitsCostOutcome` frame parked directly beneath it — the hook for engine follow-ups that branch
+  on paid vs. not paid.
 - `OnEnterRun(effect)` — generic "as ~ enters the battlefield, run [effect]". The wrapped effect
   executes via the normal effect-executor pipeline at entry time (so `EffectTarget.Self` resolves to
   the entering permanent) and may pause for player input. Compose with atomic pausable effects like

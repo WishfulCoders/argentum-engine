@@ -28,6 +28,24 @@ class CoreAutoResumerModule(
             val result = services.stackResolver.finishResolvingSpell(state, continuation)
             mergeAndContinue(result, events, checkForMore)
         },
+        // "If this would enter, you may [cost] instead" (EntersOnlyIfCostPaid, Mox Diamond): the
+        // payment above has settled — the cost-payment resumer stamped the outcome on the frame.
+        autoResumer(SpellEntryCostContinuation::class, canResume = { it.paid != null }) { state, continuation, events, checkForMore ->
+            val result = services.stackResolver.resolvePermanentSpellAfterEntryCost(
+                state, continuation.spellId, paid = continuation.paid == true)
+            mergeAndContinue(result, events, checkForMore)
+        },
+        autoResumer(EffectEntryCostContinuation::class, canResume = { it.paid != null }) { state, continuation, events, checkForMore ->
+            val context = com.wingedsheep.engine.handlers.effects.EffectEntryCosts.answered(
+                continuation.context, continuation.entityId, paid = continuation.paid == true)
+            val result = services.effectExecutorRegistry.execute(state, continuation.effect, context)
+            when (result.outcome) {
+                is Outcome.Done -> checkForMore(
+                    exposeCollectionsToNextFrame(result.state, result.updatedCollections), events + result.events)
+                is Outcome.Paused -> ExecutionResult.propagatePause(result.state, events + result.events)
+                else -> result.toExecutionResult().let { it.copy(events = events + it.events) }
+            }
+        },
         autoResumer(AdvanceStepContinuation::class) { state, _, events, checkForMore ->
             mergeAndContinue(services.turnManager.advanceStep(state), events, checkForMore)
         },

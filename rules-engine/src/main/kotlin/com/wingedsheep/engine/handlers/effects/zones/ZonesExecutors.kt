@@ -24,12 +24,14 @@ class ZonesExecutors(
     private val recursion: (GameState, Effect, EffectContext) -> EffectResult,
     private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
-    private val targetFinder: TargetFinder
+    private val targetFinder: TargetFinder,
+    /** Pays an entering permanent's EntersOnlyIfCostPaid cost (Mox Diamond). */
+    private val costPaymentService: (() -> com.wingedsheep.engine.mechanics.cost.CostPaymentService)? = null,
 ) : ExecutorModule {
 
 
     override fun executors(): List<EffectExecutor<*>> = listOf(
-        MoveToZoneEffectExecutor(zones, cardRegistry, targetFinder, recursion),
+        MoveToZoneEffectExecutor(zones, cardRegistry, targetFinder, recursion, costPaymentService),
         ExileAndGrantOwnerPlayPermissionExecutor(zones),
         WarpExileExecutor(zones),
         MoveTrackedBattlefieldObjectExecutor(zones),

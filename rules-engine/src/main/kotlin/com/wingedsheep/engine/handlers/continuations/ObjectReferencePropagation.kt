@@ -120,6 +120,7 @@ internal fun AutomaticContinuation.objectReferences(): ObjectReferenceEnvironmen
     is ForEachContinuation -> effectContext.objectReferences
     is RepeatWhileContinuation -> effectContext.objectReferences
     is ReflexiveTriggerTargetContinuation -> effectContext.objectReferences
+    is EffectEntryCostContinuation -> context.objectReferences
     else -> null
 }
 
@@ -241,6 +242,7 @@ internal fun AutomaticContinuation.withObjectReferences(refs: ObjectReferenceEnv
     is ForEachContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is RepeatWhileContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is ReflexiveTriggerTargetContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
+    is EffectEntryCostContinuation -> copy(context = context.copy(objectReferences = refs))
     else -> this
 }
 

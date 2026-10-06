@@ -114,6 +114,14 @@ class LegalityKernel(
             if (state.getEntity(sourceId)?.has<SummoningSicknessComponent>() == true)
                 "You must have controlled this permanent continuously since your most recent turn began"
             else null
+        // CR 602.5e / 304.5 — "only as an instant" means only while holding priority. A pending
+        // decision means the game is stopped mid-action (a spell being cast, a cost or an effect
+        // asking for mana — the CR 605.3a windows a mana ability could otherwise use), so nobody
+        // holds priority at that moment even if `priorityPlayerId` still names them.
+        is ActivationRestriction.OnlyAsInstant ->
+            if (state.pendingDecision != null || !state.hasPriority(playerId))
+                "This ability can only be activated any time you could cast an instant"
+            else null
         is ActivationRestriction.All -> restriction.restrictions.firstNotNullOfOrNull {
             activationRestrictionFailure(state, playerId, sourceId, it, ability)
         }
@@ -316,6 +324,17 @@ class LegalityKernel(
             ability.restrictionLeaves().any {
                 it is ActivationRestriction.OncePerTurn || it is ActivationRestriction.MaxPerTurn
             }
+
+        /**
+         * Whether [ability] can be activated only while its player holds priority
+         * ([ActivationRestriction.OnlyAsInstant], CR 602.5e) — so a mana ability carrying it never
+         * produces mana *during* a payment (CR 605.3a's mid-cast and "asked for a mana payment"
+         * windows). The affordability helpers in `ManaSolver` count mana a payment could still
+         * raise, and must leave such an ability out: the player can activate it beforehand, with
+         * priority, and the mana then counts as floating.
+         */
+        fun activatableOnlyWithPriority(ability: ActivatedAbility): Boolean =
+            ability.restrictionLeaves().any { it is ActivationRestriction.OnlyAsInstant }
 
         /** Whether activating [ability] must be recorded in the source's once-ever memory. */
         fun tracksActivationsEver(ability: ActivatedAbility): Boolean =

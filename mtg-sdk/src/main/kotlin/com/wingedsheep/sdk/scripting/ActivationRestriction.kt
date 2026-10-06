@@ -103,6 +103,31 @@ sealed interface ActivationRestriction {
     data object ControlledSinceYourMostRecentTurn : ActivationRestriction
 
     /**
+     * "Activate only as an instant" (CR 602.5e): the player must follow the timing rules for casting
+     * an instant — i.e. hold priority (CR 304.5) — though the ability isn't an instant.
+     *
+     * Only meaningful on a **mana ability**. An ordinary activated ability can only ever be activated
+     * with priority anyway, so on one this restriction changes nothing (it is the printed reminder
+     * on Witch Engine). A mana ability, though, may normally also be activated without priority —
+     * mid-cast while paying a cost, or whenever a rule or effect asks for a mana payment
+     * (CR 605.3a) — and this restriction takes exactly those windows away. CR 605.1 is explicit that
+     * the ability stays a mana ability "regardless of … what timing restrictions (such as 'Activate
+     * only as an instant') [it] may have": it still doesn't use the stack and resolves immediately
+     * (CR 605.3b), it just can't be activated while a spell is being cast or a cost paid.
+     *
+     * It lives here rather than in [TimingRule] because a mana ability's [TimingRule] is already
+     * [TimingRule.ManaAbility] by construction (the DSL derives it from `manaAbility = true`); the
+     * 602.5e clause is an extra restriction layered on top, not a different timing class.
+     *
+     * Example: Lion's Eye Diamond — "Discard your hand, Sacrifice this artifact: Add three mana of any
+     * one color. Activate only as an instant." (2004-10-04 ruling: "it can only be activated at times
+     * when you can cast an instant.")
+     */
+    @SerialName("OnlyAsInstant")
+    @Serializable
+    data object OnlyAsInstant : ActivationRestriction
+
+    /**
      * Composite restriction requiring multiple conditions.
      * Example: "Activate only during your turn, before attackers are declared."
      */
