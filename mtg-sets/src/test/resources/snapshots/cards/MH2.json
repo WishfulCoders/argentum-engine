@@ -1170,6 +1170,89 @@
     ]
 }
 
+// Fury
+{
+    "name": "Fury",
+    "manaCost": "{3}{R}{R}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Double strike\nWhen this creature enters, it deals 4 damage divided as you choose among any number of target creatures and/or planeswalkers.\nEvoke—Exile a red card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "DOUBLE_STRIKE",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "red"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Fury:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DividedDamage",
+                    "totalDamage": 4,
+                    "minTargets": 0,
+                    "maxTargets": 4
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "count": 4,
+                    "minCount": 0,
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature|planeswalker"
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "it deals 4 damage divided as you choose among any number of target creatures and/or planeswalkers."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "126",
+        "rarity": "MYTHIC",
+        "artist": "Raoul Vitale",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/d/bd281158-8180-40b9-a5b7-03cfc712d81a.jpg?1783926844",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "If some of the targets are illegal as the triggered ability tries to resolve, the original division of damage still applies, but the damage that would have been dealt to the illegal targets isn't dealt at all."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "You divide the damage as you put the triggered ability on the stack, not as it resolves. Each target must be assigned at least 1 damage. You can't choose more than four targets and deal 0 damage to some of them."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Gargadon
 {
     "name": "Gargadon",
