@@ -1943,6 +1943,92 @@
     ]
 }
 
+// Leyline Binding
+{
+    "name": "Leyline Binding",
+    "manaCost": "{5}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "Flash\nDomain — This spell costs {1} less to cast for each basic land type among lands you control.\nWhen this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.",
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Leyline Binding:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "MoveUntilSourceLeaves",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "nonland permanent ctrl:opponent"
+                    },
+                    "id": "t0"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifySpellCost",
+                "target": "SelfCast",
+                "modification": {
+                    "type": "ReduceGenericBy",
+                    "source": {
+                        "type": "Dynamic",
+                        "amount": {
+                            "type": "AggregateBattlefield",
+                            "player": "You",
+                            "filter": "land",
+                            "aggregation": "DISTINCT_BASIC_LAND_SUBTYPES"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "24",
+        "rarity": "RARE",
+        "artist": "Cristi Balanescu",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/c/3c3ac3dd-35db-447f-8674-37b4680a1ef7.jpg?1783921363",
+        "rulings": [
+            {
+                "date": "2024-04-12",
+                "text": "Leyline Binding's domain ability doesn't change its mana value, which is always 6."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If Leyline Binding leaves the battlefield before its enters-the-battlefield ability resolves, the target permanent won't be exiled."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "If a token is exiled, it ceases to exist. It won't be returned to the battlefield."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "Auras attached to the exiled permanent will be put into their owners' graveyards. Equipment attached to an exiled creature will become unattached and remain on the battlefield. Any counters on the exiled permanent will cease to exist."
+            },
+            {
+                "date": "2022-09-09",
+                "text": "Leyline Binding's last ability is a single ability that creates two one-shot effects: one that exiles the permanent when the ability resolves, and another that returns the exiled card to the battlefield immediately after Leyline Binding leaves the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Llanowar Loamspeaker
 {
     "name": "Llanowar Loamspeaker",
