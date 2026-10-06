@@ -663,6 +663,7 @@ object CardLinter {
         put("StoreNumber" to "name", write(Space.NUMBER))
         put("FlipCoins" to "storeHeadsAs", write(Space.NUMBER))
         put("FlipCoinsUntilLoss" to "storeWinsAs", write(Space.NUMBER))
+        put("RollDie" to "storeResultAs", write(Space.NUMBER))
         put("PlayerGuessesConditionEffect" to "storeGuessedRightAs", write(Space.NUMBER))
         put("ForEachCapturedController" to "countVariable", write(Space.NUMBER))
         put("DrawUpTo" to "storeNotDrawnAs", write(Space.NUMBER))

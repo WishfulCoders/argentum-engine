@@ -2292,6 +2292,30 @@ data class CoinFlipEvent(
 ) : GameEvent
 
 /**
+ * One die was rolled (CR 706). Emitted by every die roll a game instruction asks for, so a future
+ * "whenever you roll a die" / "whenever you roll a natural 20" trigger can match on it without
+ * touching the executors.
+ *
+ * @property playerId The player who rolled.
+ * @property sides Faces on the die (CR 706.1a — a d20 has 20).
+ * @property naturalResult The face that came up, before any modifier (CR 706.2).
+ * @property result The natural result after every applicable modifier — the number a results
+ *   table and "the result" read (CR 706.2, 706.3a). Equals [naturalResult] when unmodified.
+ * @property sourceId The object whose instruction caused the roll.
+ * @property sourceName That object's name, for the log.
+ */
+@Serializable
+@SerialName("DieRolledEvent")
+data class DieRolledEvent(
+    val playerId: EntityId,
+    val sides: Int,
+    val naturalResult: Int,
+    val result: Int,
+    val sourceId: EntityId,
+    val sourceName: String
+) : GameEvent
+
+/**
  * Emitted when a player has been scheduled to control another player's next turn
  * (Mindslaver-style hijack). PR 1 ships this as informational only — the full
  * input/visibility routing arrives in a follow-up PR.
