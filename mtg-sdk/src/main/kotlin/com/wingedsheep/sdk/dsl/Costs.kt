@@ -1056,6 +1056,13 @@ object Costs {
         fun PayDynamicLife(amount: DynamicAmount): PayCost = PayCost.DynamicLife(amount)
 
         /**
+         * Pay {X} generic mana, X computed when the cost is offered — "unless that player pays {X},
+         * where X is this creature's power" (Esper Sentinel). PayOrSuffer only; see
+         * [PayCost.DynamicMana].
+         */
+        fun PayDynamicMana(amount: DynamicAmount): PayCost = PayCost.DynamicMana(amount)
+
+        /**
          * Put [count] counters of [counterType] on a permanent matching [filter] the payer
          * controls — Tourach's Chant's "unless they put a -1/-1 counter on a creature they
          * control". Unpayable when they control no matching permanent.

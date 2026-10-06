@@ -64,6 +64,28 @@ sealed interface PayCost : TextReplaceable<PayCost> {
     }
 
     /**
+     * Pay {X} — generic mana in an amount computed when the cost is offered rather than printed —
+     * "draw a card unless that player pays {X}, where X is this creature's power" (Esper Sentinel).
+     *
+     * The mana sibling of [DynamicLife], and lowered the same way: `PayOrSufferExecutor` evaluates
+     * [amount] in the resolving `EffectContext` (so a source that has left the battlefield is read by
+     * its last-known information, CR 608.2h) and offers an ordinary generic [CostAtom.Mana] cost of
+     * that size. A negative amount is {0} (CR 107.1b) — a cost the payer may still decline to pay.
+     * Like [DynamicLife] it is **PayOrSuffer-only**: as a spell or ability cost the amount is
+     * unknowable before resolution, and the cost-payment service reports it unaffordable.
+     */
+    @SerialName("PayDynamicMana")
+    @Serializable
+    data class DynamicMana(val amount: DynamicAmount) : PayCost {
+        override val description: String get() = "pay {X}, where X is ${amount.description}"
+
+        override fun applyTextReplacement(replacer: TextReplacer): PayCost {
+            val newAmount = amount.applyTextReplacement(replacer)
+            return if (newAmount !== amount) copy(amount = newAmount) else this
+        }
+    }
+
+    /**
      * Pay the mana cost of the permanent the cost applies to (its own mana cost).
      *
      * Resolved at payment time by reading the source permanent's `CardComponent.manaCost`,

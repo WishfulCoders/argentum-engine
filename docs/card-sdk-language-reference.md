@@ -1115,6 +1115,13 @@ preview — in the turn-face-up handler.)
   cost it reports unaffordable, because affordability there has to be known before any context
   exists. Same idea as `PayCost.OwnManaCost`, which is likewise resolved at payment time.
   (CR 119.4). "...unless you pay 3 life."
+- `Costs.pay.PayDynamicMana(amount: DynamicAmount)` — "pay **{X}**, where X is **&lt;rule&gt;**" (**Esper
+  Sentinel**: "draw a card unless that player pays {X}, where X is this creature's power"). The mana sibling
+  of `PayDynamicLife`, lowered the same way: `PayOrSufferExecutor` evaluates the amount in the resolving
+  context (so `DynamicAmounts.sourcePower()` falls back to last-known information once the source has
+  left, CR 608.2h) and offers an ordinary generic `CostAtom.Mana` of that size through the yes/no mana
+  prompt. A negative amount is {0} (CR 107.1b) and is still offered, so the payer may decline it.
+  **PayOrSuffer-only**, like `PayDynamicLife`.
 - `Costs.pay.Discard(filter = Any, count = 1, random = false)` — discard cards matching `filter`.
   Random variant prompts a yes/no and the engine picks the discards (Pillaging Horde).
 - `Costs.pay.DiscardHand` — discard your **entire** hand. Nothing is selected (every card goes), so
