@@ -362,6 +362,222 @@
     ]
 }
 
+// Balance
+{
+    "name": "Balance",
+    "manaCost": "{1}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Each player chooses a number of lands they control equal to the number of lands controlled by the player who controls the fewest, then sacrifices the rest. Players discard cards and sacrifice creatures the same way.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "ActivePlayerFirst"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "ControlledPermanents",
+                                    "filter": "land"
+                                },
+                                "storeAs": "gathered1"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered1",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "LeastAmongPlayers",
+                                        "inner": {
+                                            "type": "AggregateBattlefield",
+                                            "player": "You",
+                                            "filter": "land"
+                                        }
+                                    }
+                                },
+                                "storeSelected": "selected2",
+                                "storeRemainder": "remainder2",
+                                "prompt": "Choose lands to keep, as many as the player with the fewest lands controls; the rest are sacrificed.",
+                                "selectedLabel": "Keep",
+                                "remainderLabel": "Sacrifice",
+                                "useTargetingUI": true
+                            }
+                        ]
+                    },
+                    "collectCollections": {
+                        "remainder2": "collected3"
+                    }
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "collected3",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Sacrifice"
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "ActivePlayerFirst"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand"
+                                },
+                                "storeAs": "gathered6"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered6",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "LeastAmongPlayers",
+                                        "inner": {
+                                            "type": "AggregateZone",
+                                            "player": "You",
+                                            "zone": "Hand"
+                                        }
+                                    }
+                                },
+                                "storeSelected": "selected7",
+                                "storeRemainder": "remainder7",
+                                "prompt": "Choose cards to keep, as many as the player with the fewest cards in hand has; the rest are discarded.",
+                                "selectedLabel": "Keep",
+                                "remainderLabel": "Discard"
+                            }
+                        ]
+                    },
+                    "collectCollections": {
+                        "remainder7": "collected8"
+                    }
+                },
+                {
+                    "type": "CaptureControllers",
+                    "from": "collected8",
+                    "storeAs": "controllers9"
+                },
+                {
+                    "type": "ForEachCapturedController",
+                    "collection": "collected8",
+                    "originalCollection": "collected8",
+                    "controllerSnapshot": "controllers9",
+                    "countVariable": "count10",
+                    "effects": [
+                        {
+                            "type": "FilterCollection",
+                            "from": "collected8",
+                            "filter": "own:you",
+                            "storeMatching": "matching11"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "matching11",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            },
+                            "moveType": "Discard"
+                        }
+                    ]
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "ActivePlayerFirst"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "ControlledPermanents",
+                                    "filter": "creature"
+                                },
+                                "storeAs": "gathered14"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered14",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "LeastAmongPlayers",
+                                        "inner": {
+                                            "type": "AggregateBattlefield",
+                                            "player": "You",
+                                            "filter": "creature"
+                                        }
+                                    }
+                                },
+                                "storeSelected": "selected15",
+                                "storeRemainder": "remainder15",
+                                "prompt": "Choose creatures to keep, as many as the player with the fewest creatures controls; the rest are sacrificed.",
+                                "selectedLabel": "Keep",
+                                "remainderLabel": "Sacrifice",
+                                "useTargetingUI": true
+                            }
+                        ]
+                    },
+                    "collectCollections": {
+                        "remainder15": "collected16"
+                    }
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "collected16",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Sacrifice"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "3",
+        "rarity": "RARE",
+        "artist": "Mark Poole",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/f/6f9ea46a-411f-40ce-a873-a905180093f4.jpg?1783948717",
+        "rulings": [
+            {
+                "date": "2016-06-08",
+                "text": "First the player whose turn it is chooses which lands (if any) to keep, then each other player in turn order does the same. Each player will know the choices made by the players who chose before them. All of the unchosen lands are then sacrificed simultaneously. Then the process is repeated for cards in hand, except that no cards are revealed until all players have chosen what to discard, at which point those cards are all discarded simultaneously. Lastly, the process is repeated for creatures, and players will again know earlier choices made when deciding what to sacrifice. All of the unchosen creatures are then sacrificed simultaneously."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "Balance doesn't have targets, so permanents that can't be targeted, such as a creature with shroud or protection from white, are valid choices to be sacrificed."
+            },
+            {
+                "date": "2016-06-08",
+                "text": "Each type of object is counted during the corresponding part of the process. Cards in hand are counted after lands have been sacrificed, and creatures on the battlefield are counted after cards have been discarded. Thus, a land creature sacrificed to the first part of the spell would not be counted when determining how many creatures are on the battlefield for the last part."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Basalt Monolith
 {
     "name": "Basalt Monolith",
