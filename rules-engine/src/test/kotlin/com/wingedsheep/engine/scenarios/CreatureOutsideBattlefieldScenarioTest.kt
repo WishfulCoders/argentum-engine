@@ -1,6 +1,8 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CardEntityFactory
+import com.wingedsheep.engine.handlers.effects.BattlefieldEntry
+import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
@@ -144,6 +146,28 @@ class CreatureOutsideBattlefieldScenarioTest : ScenarioTestBase() {
             game.castSpell(1, "Grave Count").error shouldBe null
             game.resolveStack()
             withClue("the graveyard count includes Grist as a creature card") { game.getLifeTotal(1) shouldBe 21 }
+        }
+
+        test("an ad-hoc battlefield insertion (return from linked exile) restores the printed characteristics") {
+            val game = scenario()
+                .withPlayers("Grist", "Opponent")
+                .withCardInHand(1, "Test Grist")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+            val gristId = game.findCardsInHand(1, "Test Grist").single()
+            game.assertCreatureCard(gristId)
+
+            val placed = BattlefieldEntry.place(
+                game.state.removeFromZone(ZoneKey(game.player1Id, Zone.HAND), gristId),
+                game.player1Id,
+                gristId
+            )
+            val c = placed.getEntity(gristId)!!.get<CardComponent>()!!
+            c.typeLine.isCreature shouldBe false
+            c.typeLine.subtypes.map { it.value }.contains("Insect") shouldBe false
+            placed.projectedState.isCreature(gristId) shouldBe false
+            placed.projectedState.isPlaneswalker(gristId) shouldBe true
         }
 
         test("put directly onto the battlefield by the scenario builder it is a planeswalker only") {
