@@ -91,7 +91,10 @@ object CardEntityFactory {
             ControllerComponent(ownerId)
         )
 
-        return applyDefinitionDecorations(container, cardDef)
+        // Cards are minted outside the battlefield (library, hand, command zone), where an
+        // "as long as this isn't on the battlefield" characteristic applies (CR 113.6c).
+        return com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics
+            .leaveBattlefield(applyDefinitionDecorations(container, cardDef), cardDef)
     }
 
     /**

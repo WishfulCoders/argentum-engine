@@ -1127,6 +1127,9 @@ class StaticAbilityHandler(
 
             // Activated abilities (ActivateAbilityHandler / ActivatedAbilityEnumerator):
             is ExtraLoyaltyActivation,
+            is com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed,
+            // Off-battlefield characteristics (OffBattlefieldCharacteristics, on zone transitions):
+            is com.wingedsheep.sdk.scripting.CreatureOutsideBattlefield,
             is GrantActivatedAbility,
             is HasAllActivatedAbilitiesOfCards,
             is com.wingedsheep.sdk.scripting.HasAbilitiesOfChosenLinkedExiledCard,

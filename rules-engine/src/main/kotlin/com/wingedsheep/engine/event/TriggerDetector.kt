@@ -2104,13 +2104,23 @@ class TriggerDetector(
             val ability = global.ability
             // Use a dummy sourceId for matchesTrigger (global abilities aren't attached to entities)
             if (matcher.matchesTrigger(ability.trigger, ability.binding, event, global.sourceId, global.controllerId, state)) {
+                // Same trigger-time capture as the battlefield and command-zone scans, so an
+                // emblem's "whenever you cast a spell that targets one or more permanents, gain
+                // control of those permanents" (Dack Fayden) acts on the targets the spell had when
+                // the ability triggered, even if the spell is countered or retargeted in response
+                // (CR 113.7a).
+                val capturedTargets = (event as? SpellCastEvent)?.let {
+                    matcher.capturedCastTargets(ability.trigger, it, state, global.sourceId, global.controllerId)
+                }
                 triggers.add(
                     PendingTrigger(
                         ability = ability,
                         sourceId = global.sourceId,
                         sourceName = global.sourceName,
                         controllerId = global.controllerId,
-                        triggerContext = TriggerContext.fromEvent(event)
+                        triggerContext = TriggerContext.fromEvent(event).let { ctx ->
+                            ctx.copy(capturedEntityIds = capturedTargets ?: ctx.capturedEntityIds)
+                        }
                     )
                 )
             }

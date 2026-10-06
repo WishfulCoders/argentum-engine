@@ -236,7 +236,10 @@ internal class PermanentEntry(
         resolvingAsSpellCopy: Boolean,
         auraTargetId: EntityId?
     ): ComponentContainer {
-        var updated = c.without<SpellOnStackComponent>()
+        // A spell that was a creature only because it wasn't on the battlefield (Grist, the Hunger
+        // Tide — CR 113.6c) becomes a permanent with its printed characteristics.
+        var updated = com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics.enterBattlefield(c)
+            .without<SpellOnStackComponent>()
             .without<TargetsComponent>()
             .without<com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent>()
             .with(ControllerComponent(controllerId))

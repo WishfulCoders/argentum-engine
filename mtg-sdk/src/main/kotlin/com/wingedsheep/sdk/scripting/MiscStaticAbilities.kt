@@ -1516,6 +1516,62 @@ data object ExtraLoyaltyActivation : StaticAbility {
 }
 
 /**
+ * "As long as this card isn't on the battlefield, it's a [power]/[toughness] [subtypes] creature in
+ * addition to its other types" — Grist, the Hunger Tide.
+ *
+ * An ability that states the zone it doesn't function in functions everywhere else, even before
+ * the game begins (CR 113.6c): in the library, hand, graveyard, exile, the command zone and on the
+ * stack the card is also a creature with these creature [subtypes] and base power/toughness, so it
+ * is a creature card to a search, a creature spell to Essence Scatter and a creature card for a
+ * graveyard count (Grist rulings 2021-06-18). On the battlefield it has only its printed
+ * characteristics — a planeswalker, not a creature.
+ *
+ * Not a layer effect: the engine writes these characteristics into the card's own
+ * characteristics whenever the card is outside the battlefield and restores the printed ones as it
+ * enters the battlefield (`OffBattlefieldCharacteristics`), because off-battlefield objects are
+ * read from their card characteristics rather than projected.
+ *
+ * @property subtypes Creature types added ("Insect").
+ */
+@SerialName("CreatureOutsideBattlefield")
+@Serializable
+data class CreatureOutsideBattlefield(
+    val power: Int,
+    val toughness: Int,
+    val subtypes: Set<String> = emptySet()
+) : StaticAbility {
+    override val description: String =
+        "As long as this card isn't on the battlefield, it's a $power/$toughness" +
+            (if (subtypes.isEmpty()) "" else " ${subtypes.joinToString(" ")}") +
+            " creature in addition to its other types"
+}
+
+/**
+ * "You may activate this permanent's loyalty abilities any time you could cast an instant."
+ *
+ * Lifts only the *timing* half of CR 606.3 (main phase, own turn, empty stack) for the loyalty
+ * abilities of the permanent that has this ability — its controller may activate them whenever
+ * they have priority (CR 117.1a). The once-per-turn half of CR 606.3 still applies (The Wandering
+ * Emperor ruling 2022-02-18), as does CR 606.6 (enough loyalty to pay a negative cost).
+ *
+ * Wrap in [ConditionalStaticAbility] for a gated permission — The Wandering Emperor uses
+ * `staticAbility { condition = Conditions.SourceEnteredThisTurn; ability = LoyaltyAbilitiesAtInstantSpeed }`
+ * for "As long as The Wandering Emperor entered this turn, …". The condition is evaluated with
+ * the planeswalker as the source each time a loyalty activation is enumerated or validated.
+ *
+ * A player-scoped, filter-based grant ("planeswalkers you control …") is a different shape: the
+ * turn-scoped effect [com.wingedsheep.sdk.scripting.effects.GrantInstantSpeedLoyaltyAbilitiesEffect].
+ * Consulted by `CastPermissionUtils.canActivateLoyaltyAtInstantSpeed`; not a continuous effect,
+ * so it has no projection layer.
+ */
+@SerialName("LoyaltyAbilitiesAtInstantSpeed")
+@Serializable
+data object LoyaltyAbilitiesAtInstantSpeed : StaticAbility {
+    override val description: String =
+        "You may activate this permanent's loyalty abilities any time you could cast an instant"
+}
+
+/**
  * Whether [AdditionalETBOrLTBTriggers] watches the entering side, the leaving side, or both
  * of a permanent's battlefield transit.
  */

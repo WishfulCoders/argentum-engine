@@ -1256,6 +1256,28 @@ class CleanupPhaseManager(
                 newState = newState.updateEntity(entityId) { it.without<MustAttackThisTurnComponent>() }
             }
 
+            // Expire "attacks [defender] … if able" requirements whose turn is ending (Gideon,
+            // Battle-Forged's +2 lasts for exactly one of the creature controller's turns).
+            // Pending ones (not yet armed) wait for their turn.
+            val turnEnding = newState.turnNumber
+            val creaturesWithDefenderRequirement = newState.entities.filter { (_, container) ->
+                container.has<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>()
+            }.keys
+            for (entityId in creaturesWithDefenderRequirement) {
+                newState = newState.updateEntity(entityId) { container ->
+                    val component = container
+                        .get<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>()!!
+                    val remaining = component.requirements.filter { req ->
+                        req.activeOnTurn == null || req.activeOnTurn > turnEnding
+                    }
+                    if (remaining.isEmpty()) {
+                        container.without<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>()
+                    } else {
+                        container.with(component.copy(requirements = remaining))
+                    }
+                }
+            }
+
             // Remove CanAttackDespiteDefenderThisTurnComponent (Krotiq Nestguard's "can attack
             // this turn as though it didn't have defender" activated ability).
             val creaturesWithCanAttackDespiteDefender = newState.entities.filter { (_, container) ->

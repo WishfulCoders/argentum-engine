@@ -31,10 +31,24 @@ object BattlefieldEntry {
 
     /**
      * Add [entityId] to [controllerId]'s battlefield and record the ETB-by-type.
+     *
+     * A card that was also a creature only because it wasn't on the battlefield (Grist, the Hunger
+     * Tide — CR 113.6c) gets its printed characteristics back first, so an ad-hoc return (from
+     * linked exile, say) doesn't put it onto the battlefield as a creature and the ETB-by-type
+     * record sees what actually entered.
      */
     fun place(state: GameState, controllerId: EntityId, entityId: EntityId): GameState {
         val battlefieldZone = ZoneKey(controllerId, Zone.BATTLEFIELD)
-        val withZone = state.addToZone(battlefieldZone, entityId)
+        val printed = if (state.getEntity(entityId)
+                ?.has<com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristicsComponent>() == true
+        ) {
+            state.updateEntity(entityId) {
+                com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics.enterBattlefield(it)
+            }
+        } else {
+            state
+        }
+        val withZone = printed.addToZone(battlefieldZone, entityId)
         return PermanentEntryTracker.record(withZone, controllerId, entityId)
     }
 }

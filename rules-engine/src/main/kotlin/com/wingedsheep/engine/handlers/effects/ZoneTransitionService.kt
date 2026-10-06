@@ -756,6 +756,14 @@ class ZoneTransitionService(
             }
 
             newState = newState.updateEntity(entityId) { c -> stripBattlefieldComponents(c) }
+            // "As long as this isn't on the battlefield, it's also a creature" (Grist, the Hunger
+            // Tide) comes back into force everywhere off the battlefield (CR 113.6c).
+            if (actualDestZone != Zone.BATTLEFIELD) {
+                newState = newState.updateEntity(entityId) { c ->
+                    com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics
+                        .leaveBattlefield(c, cardRegistry)
+                }
+            }
             newState = removeFloatingEffectsTargeting(newState, entityId)
 
             // A permanent's battlefield-scoped granted *static* abilities end when it leaves the
@@ -819,6 +827,12 @@ class ZoneTransitionService(
                 // event. By the time we reach this point those triggers are already queued on
                 // the stack with their own captured ability data, so it is safe to wipe.
                 newState = newState.withoutObjectGrants(entityId)
+                // Restore printed characteristics before anything (an entry copy, the entry
+                // itself, enters triggers) looks at the entering permanent: Grist, the Hunger Tide
+                // is no longer a creature once it is on the battlefield (CR 113.6c).
+                newState = newState.updateEntity(entityId) { c ->
+                    com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics.enterBattlefield(c)
+                }
                 if (!options.faceDown) {
                     options.entryCopy?.let { choice ->
                         // Face tracking belongs to the physical entrant, not the copied definition.

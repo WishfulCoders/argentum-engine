@@ -598,6 +598,8 @@ object ZoneMovementUtils {
             .without<AttackerOrderComponent>()
             .without<FirstStrikeStepAssignerComponent>()
             .without<RequiresManualDamageAssignmentComponent>()
+            // "Attacks [defender] … if able" binds this object only (CR 400.7).
+            .without<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>()
     }
 
     /**

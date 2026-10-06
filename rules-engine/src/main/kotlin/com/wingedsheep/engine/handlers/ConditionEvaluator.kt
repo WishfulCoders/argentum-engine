@@ -277,6 +277,12 @@ class ConditionEvaluator(
                 operator = ComparisonOperator.GTE
             )
 
+            is com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat -> CountProgress(
+                current = countAttackedWithCreaturesThisCombatCtx(state, condition, ctx, cap = Int.MAX_VALUE),
+                required = condition.atLeast,
+                operator = ComparisonOperator.GTE
+            )
+
             // "There are no suspected Skeletons you control" reads as a count against zero rather
             // than a bare unmet flag, which is what makes Case of the Stashed Skeleton's progress
             // legible: 1/0 while one is still suspected, 0/0 once it isn't.
@@ -608,6 +614,8 @@ class ConditionEvaluator(
 
             // Player-relative trackers (resolve [Player] against the current context).
             is PlayerAttackedWithCreaturesThisTurn -> evaluateAttackedWithCreaturesCtx(state, condition, ctx)
+            is com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat ->
+                evaluateAttackedWithCreaturesThisCombatCtx(state, condition, ctx)
             is com.wingedsheep.sdk.scripting.conditions.PlayerAttackedPlayerThisTurn ->
                 evaluateAttackedPlayerThisTurnCtx(state, condition, ctx)
             is PlayerCastSpellsThisTurn -> evaluateCastSpellsThisTurnCtx(state, condition, ctx)
@@ -1514,6 +1522,14 @@ class ConditionEvaluator(
         condition.atLeast <= 0 ||
             countAttackedWithCreaturesCtx(state, condition, ctx, cap = condition.atLeast) >= condition.atLeast
 
+    private fun evaluateAttackedWithCreaturesThisCombatCtx(
+        state: GameState,
+        condition: com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat,
+        ctx: ConditionEvaluationContext
+    ): Boolean =
+        condition.atLeast <= 0 ||
+            countAttackedWithCreaturesThisCombatCtx(state, condition, ctx, cap = condition.atLeast) >= condition.atLeast
+
     /**
      * How many creatures matching [condition] have attacked this turn, stopping once [cap] of them
      * are found. The boolean evaluation above is this count against `atLeast`; the progress badge
@@ -1524,13 +1540,42 @@ class ConditionEvaluator(
         condition: PlayerAttackedWithCreaturesThisTurn,
         ctx: ConditionEvaluationContext,
         cap: Int
+    ): Int = countRecordedAttackersCtx(state, condition.player, condition.filter, ctx, cap) { container ->
+        container.get<PlayerAttackersThisTurnComponent>()?.attackerIds
+    }
+
+    /**
+     * The per-combat sibling of [countAttackedWithCreaturesCtx]: reads the creatures declared as
+     * attackers in the current combat (CR 508.1), a record cleared when the combat phase ends
+     * (CR 511.3).
+     */
+    private fun countAttackedWithCreaturesThisCombatCtx(
+        state: GameState,
+        condition: com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat,
+        ctx: ConditionEvaluationContext,
+        cap: Int
+    ): Int = countRecordedAttackersCtx(state, condition.player, condition.filter, ctx, cap) { container ->
+        container.get<com.wingedsheep.engine.state.components.combat.PlayerAttackersThisCombatComponent>()?.attackerIds
+    }
+
+    /**
+     * Count the creatures in [player]'s attack record (read by [record] off each scoped player)
+     * that match [filter], stopping once [cap] are found.
+     */
+    private inline fun countRecordedAttackersCtx(
+        state: GameState,
+        player: Player,
+        filter: com.wingedsheep.sdk.scripting.GameObjectFilter,
+        ctx: ConditionEvaluationContext,
+        cap: Int,
+        record: (com.wingedsheep.engine.state.ComponentContainer) -> Set<EntityId>?
     ): Int {
         if (cap <= 0) return 0
         // Player.Each / Player.Any make this the *player-agnostic* count — "three or more creatures
         // attacked this turn" (Case of the Gateway Express) rather than "you attacked with three or
         // more". Every other scope resolves to the single player it names, so Player.You behaves
         // exactly as before.
-        val playerIds = when (condition.player) {
+        val playerIds = when (player) {
             is Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders
                 .allDefendingPlayersInApnapOrder(state)
             is Player.Each, is Player.Any -> state.activePlayers
@@ -1538,16 +1583,13 @@ class ConditionEvaluator(
                 val controller = resolvePlayer(state, Player.You, ctx) ?: return 0
                 state.getOpponents(controller)
             }
-            else -> listOfNotNull(resolvePlayer(state, condition.player, ctx))
+            else -> listOfNotNull(resolvePlayer(state, player, ctx))
         }
         if (playerIds.isEmpty()) return 0
         // Attackers are recorded per declaring player, so the union is the set of creatures that
         // attacked at all this turn — a creature counts once even if two scopes both name it.
         val attackerIds = playerIds.flatMapTo(mutableSetOf()) { playerId ->
-            state.getEntity(playerId)
-                ?.get<PlayerAttackersThisTurnComponent>()
-                ?.attackerIds
-                ?: emptySet()
+            state.getEntity(playerId)?.let(record) ?: emptySet()
         }
         if (attackerIds.isEmpty()) return 0
         val predicateContext = when (ctx) {
@@ -1561,7 +1603,7 @@ class ConditionEvaluator(
         val projected = ctx.projectedStateFor(state)
         var matches = 0
         for (id in attackerIds) {
-            if (predicates.matches(state, projected, id, condition.filter, predicateContext)) {
+            if (predicates.matches(state, projected, id, filter, predicateContext)) {
                 matches++
                 if (matches >= cap) return matches
             }

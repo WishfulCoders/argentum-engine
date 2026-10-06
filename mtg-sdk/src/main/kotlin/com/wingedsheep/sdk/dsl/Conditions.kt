@@ -1623,6 +1623,21 @@ object Conditions {
         PlayerAttackedWithCreaturesThisTurn(Player.Each, filter, atLeast)
 
     /**
+     * If [atLeast] or more creatures matching [filter] were declared as attackers **this combat**,
+     * whoever declared them — the per-combat sibling of [CreaturesAttackedThisTurn]. Creatures that
+     * attacked and have since left the battlefield or combat still count; creatures put onto the
+     * battlefield attacking don't (CR 508.4). Kytheon, Hero of Akros: "if Kytheon and at least two
+     * other creatures attacked this combat" is
+     * `All(SourceAttackedThisCombat, CreaturesAttackedThisCombat(2, GameObjectFilter.Any.notSourceItself()))`.
+     */
+    fun CreaturesAttackedThisCombat(
+        atLeast: Int,
+        filter: com.wingedsheep.sdk.scripting.GameObjectFilter =
+            com.wingedsheep.sdk.scripting.GameObjectFilter.Any
+    ): ConditionInterface =
+        com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat(Player.Each, filter, atLeast)
+
+    /**
      * Whether [attacker] attacked [defender] this turn (CR 508.6) — declared one or more
      * attackers whose defending player was [defender]. Defaults [defender] to [Player.You].
      * Negate with [Not] for "didn't attack you that turn" (Faramir, Prince of Ithilien).

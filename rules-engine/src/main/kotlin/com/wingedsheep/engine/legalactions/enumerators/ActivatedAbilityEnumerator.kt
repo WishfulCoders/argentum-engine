@@ -123,7 +123,11 @@ class ActivatedAbilityEnumerator(
                 // Sorcery-speed abilities: skip during non-main phases / opponent's turn.
                 // Equip abilities are exempt while the controller has an active instant-speed-equip
                 // permission (Forge Anew "During your turn …", Leonin Shikari) — CR 702.6e timing lifted.
+                // Loyalty abilities are exempt here: their CR 606.3 timing (and any instant-speed
+                // permission lifting it) is checked in the planeswalker branch below, mirroring
+                // ActivationValidator.checkSorcerySpeedTiming's isPlaneswalkerAbility exemption.
                 if (ability.timing == TimingRule.SorcerySpeed && !context.canPlaySorcerySpeed &&
+                    !ability.isPlaneswalkerAbility &&
                     !(ability.isEquipAbility && context.castPermissionUtils.canEquipAtInstantSpeed(state, playerId))
                 ) continue
 

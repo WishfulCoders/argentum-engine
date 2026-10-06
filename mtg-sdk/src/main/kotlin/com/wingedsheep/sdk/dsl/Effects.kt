@@ -5597,6 +5597,20 @@ object Effects {
         MarkMustAttackThisTurnEffect(target)
 
     /**
+     * "[target] attacks [defender] [window] if able" — the creature must attack that specific
+     * player, planeswalker or battle while the requirement is in force (CR 508.1d). Gideon,
+     * Battle-Forged's +2 is `MarkMustAttackDefender(creature, EffectTarget.Self,
+     * AttackRequirementWindow.CONTROLLERS_NEXT_TURN)`; "attacks you this turn if able" is
+     * `MarkMustAttackDefender(creature, EffectTarget.Controller, AttackRequirementWindow.THIS_TURN)`.
+     */
+    fun MarkMustAttackDefender(
+        target: EffectTarget,
+        defender: EffectTarget = EffectTarget.Self,
+        window: com.wingedsheep.sdk.scripting.effects.AttackRequirementWindow =
+            com.wingedsheep.sdk.scripting.effects.AttackRequirementWindow.CONTROLLERS_NEXT_TURN
+    ): Effect = com.wingedsheep.sdk.scripting.effects.MarkMustAttackDefenderEffect(target, defender, window)
+
+    /**
      * Mark a creature as required to block this turn if able ("target creature blocks this turn if
      * able", Culvert Ambusher).
      *

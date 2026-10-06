@@ -194,7 +194,8 @@ abstract class ScenarioTestBase : FunSpec() {
             state = state.addToZone(ZoneKey(playerId, Zone.BATTLEFIELD), cardId)
 
             // Update card entity with battlefield-specific components
-            var container = state.getEntity(cardId)!!
+            var container = com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics
+                .enterBattlefield(state.getEntity(cardId)!!)
             container = container.with(ControllerComponent(playerId))
 
             if (tapped) {
@@ -536,6 +537,10 @@ abstract class ScenarioTestBase : FunSpec() {
             // morph, protection, self-redirects, hexproof-from, Toxic) — shared with the real
             // CardEntityFactory so scenario entities never quietly lose one.
             container = CardEntityFactory.applyDefinitionDecorations(container, cardDef)
+            // Minted outside the battlefield, like CardEntityFactory.create; withCardOnBattlefield
+            // restores the printed characteristics (Grist, the Hunger Tide — CR 113.6c).
+            container = com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics
+                .leaveBattlefield(container, cardDef)
 
             state = state.withEntity(cardId, container)
             return cardId

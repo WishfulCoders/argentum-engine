@@ -1301,6 +1301,7 @@ serialized shape; the facade for each is:
 | `LoseLifeEffect` | `Effects.LoseLife` |
 | `MarkExileControllerGraveyardOnDeathEffect` | `Effects.MarkExileControllerGraveyardOnDeath` |
 | `MarkExileOnDeathEffect` | `Effects.MarkExileOnDeath` |
+| `MarkMustAttackDefenderEffect` | `Effects.MarkMustAttackDefender` |
 | `MarkMustAttackThisTurnEffect` | `Effects.MarkMustAttackThisTurn` |
 | `MarkSpellExileWithCountersEffect` | `Effects.MarkSpellExileWithCounters` |
 | `ModalEffect` | `Effects.Modal` |
@@ -2916,6 +2917,18 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   `AttackPhaseManager` and removed during cleanup. It composes with the token pipeline for “that
   token attacks this combat if able”: create the token, then target
   `PipelineTarget(CREATED_TOKENS, 0)` with this facade.
+- `Effects.MarkMustAttackDefender(target, defender = Self, window = CONTROLLERS_NEXT_TURN)`
+  (`MarkMustAttackDefenderEffect`) — "[creature] attacks [defender] [this turn | during its
+  controller's next turn] if able": a per-creature requirement naming *which* player, planeswalker or
+  battle to attack (Gideon, Battle-Forged's +2 — `defender = EffectTarget.Self`; "attacks you" is
+  `EffectTarget.Controller`). Recorded on the creature as a `MustAttackDefenderComponent` (defender by
+  entity + object generation, so a defender that left and returned no longer counts, CR 400.7);
+  `AttackRequirementWindow.CONTROLLERS_NEXT_TURN` arms at the start of the next turn taken by the
+  creature's controller *at that time* (so a control change moves it), `THIS_TURN` is in force at
+  once, and both expire in that turn's cleanup. `AttackPhaseManager` enforces it under CR 508.1d —
+  only while the creature is able to attack that defender at no cost and without breaking a goad or
+  Taunt requirement — and lists the creature in `mandatoryAttackers`. Shown as a "Must Attack
+  <defender>" badge. Stripped when the creature leaves the battlefield.
 - `Effects.MarkMustBlockThisTurn(target = ContextTarget(0))` (`MarkMustBlockThisTurnEffect`) —
   "target creature blocks this turn if able". Adds a `Layer.ABILITY` floating
   `SerializableModification.SetMustBlock` for `Duration.EndOfTurn`, i.e. the same projected
@@ -10026,6 +10039,22 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   a bare grant (Leonin Shikari) applies unconditionally. Consulted by `CastPermissionUtils
   .canEquipAtInstantSpeed` (enumerator) and `ActivateAbilityHandler.validate` (submit path), both
   keyed on `ActivatedAbility.isEquipAbility`.
+- `CreatureOutsideBattlefield(power, toughness, subtypes)` — "as long as this card isn't on the
+  battlefield, it's a P/T [subtypes] creature in addition to its other types" (Grist, the Hunger Tide;
+  CR 113.6c). Not a layer effect: off-battlefield objects are read from their card characteristics, so
+  `OffBattlefieldCharacteristics` writes the creature type, subtypes and base P/T into the card's
+  `CardComponent` whenever it is outside the battlefield (minted by `CardEntityFactory`, or leaving the
+  battlefield in `ZoneTransitionService`) and restores the printed ones as it becomes a permanent
+  (`ZoneTransitionService` battlefield entry and `PermanentEntry` spell resolution). So it is a
+  creature card to searches and graveyard counts and a creature spell on the stack, and only a
+  planeswalker on the battlefield.
+- `LoyaltyAbilitiesAtInstantSpeed` — "you may activate this permanent's loyalty abilities any time you could
+  cast an instant": lifts the timing half of CR 606.3 for the loyalty abilities of the permanent that has it (the
+  once-per-turn half and CR 606.6 still apply). Wrap in a `ConditionalStaticAbility` for a gated permission — The
+  Wandering Emperor uses `staticAbility { condition = Conditions.SourceEnteredThisTurn; ability =
+  LoyaltyAbilitiesAtInstantSpeed }`. Consulted by `CastPermissionUtils.canActivateLoyaltyAtInstantSpeed` (both the
+  `ActivatedAbilityEnumerator` and `ActivationValidator`); ignored while the permanent is face down or has lost all
+  abilities. The player-scoped, filter-based one-shot is `GrantInstantSpeedLoyaltyAbilitiesEffect`.
 - `FreeFirstEquipEachTurn` — the controller may pay {0} rather than the equip cost of the **first**
   equip ability they activate each turn (Kíli the Resourceful; Forge Anew's separate timing gate
   confines its equip activations to its controller's turns). This is
@@ -13064,6 +13093,12 @@ default to "you" so card authors don't need to pass it explicitly.
   "three or more creatures attacked this turn" — rather than the controller-scoped
   `YouAttackedWithCreaturesThisTurn`. The record is keyed to the player who *declared* the attacker,
   so a creature whose controller changed after attacking still counts.
+- `CreaturesAttackedThisCombat(atLeast, filter = Any)` — the **per-combat** sibling
+  (`PlayerAttackedWithCreaturesThisCombat(Player.Each, filter, atLeast)`): creatures *declared* as
+  attackers in the current combat (CR 508.1), so ones that died or left combat still count and ones
+  put onto the battlefield attacking (CR 508.4) never do. Backed by `PlayerAttackersThisCombatComponent`,
+  cleared when the combat phase ends (CR 511.3). Kytheon, Hero of Akros: `All(SourceAttackedThisCombat,
+  CreaturesAttackedThisCombat(2, GameObjectFilter.Any.notSourceItself()))`.
 - `PlayerAttackedPlayerThisTurn(attacker, defender = Player.You)` — whether `attacker` "attacked"
   `defender` this turn (CR 508.6): they declared one or more attackers whose defending player was
   `defender` (the player directly, or the controller of a planeswalker / protector of a battle the

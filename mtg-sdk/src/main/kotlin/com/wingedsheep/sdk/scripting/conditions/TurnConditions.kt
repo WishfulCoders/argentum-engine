@@ -230,6 +230,43 @@ data class PlayerAttackedWithCreaturesThisTurn(
 }
 
 /**
+ * Condition: "If [player] attacked with [atLeast] or more creatures matching [filter] **this
+ * combat**" — the per-combat sibling of [PlayerAttackedWithCreaturesThisTurn].
+ *
+ * Counts every creature declared as an attacker (CR 508.1) in the current combat phase, whoever
+ * declared them for [Player.Each] / [Player.Any]. The record is the set of creatures *declared*,
+ * so a creature that attacked and then died or was removed from combat still counts, while a
+ * creature put onto the battlefield attacking (CR 508.4) never does — it was never declared
+ * (Kytheon, Hero of Akros ruling 2015-06-22). The record resets when the combat phase ends
+ * (CR 511.3), so a second combat in one turn starts from zero.
+ *
+ * [filter] is matched against each creature's current state (projected while on the battlefield,
+ * its card characteristics elsewhere); `GameObjectFilter.Any.notSourceItself()` expresses "other
+ * creatures" — Kytheon's "if Kytheon and at least two other creatures attacked this combat" is
+ * `All(SourceAttackedThisCombat, PlayerAttackedWithCreaturesThisCombat(Player.Each,
+ * Any.notSourceItself(), 2))`.
+ */
+@SerialName("PlayerAttackedWithCreaturesThisCombat")
+@Serializable
+data class PlayerAttackedWithCreaturesThisCombat(
+    val player: Player = Player.Each,
+    val filter: GameObjectFilter = GameObjectFilter.Any,
+    val atLeast: Int
+) : Condition {
+    override val description: String =
+        if (player is Player.Each || player is Player.Any) {
+            "if $atLeast or more ${DynamicAmount.pluralize(filter.description)} attacked this combat"
+        } else {
+            "if ${player.description} attacked with $atLeast or more " +
+                "${DynamicAmount.pluralize(filter.description)} this combat"
+        }
+    override fun applyTextReplacement(replacer: TextReplacer): Condition {
+        val newFilter = filter.applyTextReplacement(replacer)
+        return if (newFilter !== filter) copy(filter = newFilter) else this
+    }
+}
+
+/**
  * Condition: "If [attacker] attacked [defender] this turn" (CR 508.6) — i.e. [attacker]
  * declared one or more creatures as attackers whose defending player was [defender] (the
  * player itself, or the controller of a planeswalker / protector of a battle the creature

@@ -482,10 +482,13 @@ class CastPermissionUtils(
      * True when [playerId] holds a turn-scoped instant-speed loyalty grant
      * ([com.wingedsheep.engine.state.components.player.InstantSpeedLoyaltyGrantsComponent] —
      * Jace's Machinations) whose planeswalker filter matches [sourceId], read on projected state
-     * from [playerId]'s perspective. Lifts only the sorcery-timing half of CR 606.3; the caller
-     * still enforces the once-per-turn limit.
+     * from [playerId]'s perspective, or when the planeswalker itself has an active
+     * [com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed] static (The Wandering
+     * Emperor). Lifts only the sorcery-timing half of CR 606.3; the caller still enforces the
+     * once-per-turn limit and CR 606.6.
      */
     fun canActivateLoyaltyAtInstantSpeed(state: GameState, playerId: EntityId, sourceId: EntityId): Boolean {
+        if (hasOwnInstantSpeedLoyaltyPermission(state, playerId, sourceId)) return true
         val grants = state.getEntity(playerId)
             ?.get<com.wingedsheep.engine.state.components.player.InstantSpeedLoyaltyGrantsComponent>()
             ?: return false
@@ -494,6 +497,42 @@ class CastPermissionUtils(
         return grants.filters.any { filter ->
             predicateEvaluator.matches(state, state.projectedState, sourceId, filter, context)
         }
+    }
+
+    /**
+     * True when the permanent [sourceId] has its own
+     * [com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed] static ability and, when it is
+     * wrapped in a [com.wingedsheep.sdk.scripting.ConditionalStaticAbility], the condition holds
+     * with [sourceId] as the source (CR 611.3a — a static ability's effect applies at any given
+     * moment to whatever its text indicates). A permanent that has lost all abilities (CR 613.1f)
+     * or is face down (CR 708.2) has no such ability.
+     */
+    private fun hasOwnInstantSpeedLoyaltyPermission(
+        state: GameState,
+        playerId: EntityId,
+        sourceId: EntityId
+    ): Boolean {
+        val container = state.getEntity(sourceId) ?: return false
+        val card = container.get<CardComponent>() ?: return false
+        val projected = state.projectedState
+        if (projected.isFaceDown(sourceId) || projected.hasLostAllAbilities(sourceId)) return false
+        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return false
+        val classLevel = container
+            .get<com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent>()?.currentLevel
+        for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {
+            when {
+                ability is com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed -> return true
+                ability is com.wingedsheep.sdk.scripting.ConditionalStaticAbility &&
+                    ability.ability is com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed -> {
+                    val context = com.wingedsheep.engine.handlers.EffectContext(
+                        sourceId = sourceId,
+                        controllerId = playerId,
+                    )
+                    if (conditionEvaluator.evaluate(state, ability.condition, context)) return true
+                }
+            }
+        }
+        return false
     }
 
     /**
