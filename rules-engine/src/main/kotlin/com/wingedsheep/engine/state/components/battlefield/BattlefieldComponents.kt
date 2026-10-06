@@ -537,6 +537,20 @@ data class GainedEnchantRestrictionComponent(
 ) : Component
 
 /**
+ * Whether the attached object [container] is an Aura, for the "is it enchanted?" scans over a
+ * host's attachments (enchanted creatures, modified, "dies while enchanted"). Those scans run inside
+ * projection too, so they read the attachment's printed type line — plus the one way a non-Aura
+ * permanent becomes an Aura while attached: Necromancy "becomes an Aura with 'enchant creature put
+ * onto the battlefield with Necromancy'", which always comes with the gained enchant ability
+ * ([GainedEnchantRestrictionComponent]) that is its whole enchant restriction.
+ */
+fun isAuraAttachment(container: com.wingedsheep.engine.state.ComponentContainer?): Boolean =
+    container != null && (
+        container.get<com.wingedsheep.engine.state.components.identity.CardComponent>()?.typeLine?.isAura == true ||
+            container.has<GainedEnchantRestrictionComponent>()
+        )
+
+/**
  * Tracks what is attached to this permanent.
  */
 @Serializable

@@ -718,12 +718,14 @@ internal class AffectsFilterResolver(
         }
         // "Enchanted creatures you control get +2/+2" (A Tale for the Ages) is a layer-7c group
         // static, so this has to resolve during projection: read the base attachment index and the
-        // attached card's printed type line — an Aura's own Aura-ness is never granted or removed by
-        // a continuous effect, so no projected lookup is needed for the attachment itself.
+        // attached card's printed type line — an Aura's own Aura-ness is not otherwise granted or
+        // removed by a continuous effect, so no projected lookup is needed for the attachment itself.
+        // The one exception, a permanent that "becomes an Aura" with a gained enchant ability
+        // (Necromancy), is recognised by its GainedEnchantRestrictionComponent (isAuraAttachment).
         StatePredicate.IsEnchanted -> {
             val attachments = container.get<AttachmentsComponent>()
             attachments != null && attachments.attachedIds.any { attachId ->
-                state.getEntity(attachId)?.get<CardComponent>()?.typeLine?.isAura == true
+                com.wingedsheep.engine.state.components.battlefield.isAuraAttachment(state.getEntity(attachId))
             }
         }
         // "…enchanted by Auras you control…" (Archon of the Wild Rose) — same attachment scan as
@@ -733,7 +735,7 @@ internal class AffectsFilterResolver(
         is StatePredicate.IsEnchantedByAura -> {
             val attachments = container.get<AttachmentsComponent>()
             attachments != null && sourceController != null && attachments.attachedIds.any { attachId ->
-                if (state.getEntity(attachId)?.get<CardComponent>()?.typeLine?.isAura != true) return@any false
+                if (!com.wingedsheep.engine.state.components.battlefield.isAuraAttachment(state.getEntity(attachId))) return@any false
                 val auraController = projectedController(state, attachId, projectedValues) ?: return@any false
                 predicate.auraController.evaluateWith { leaf ->
                     when (leaf) {

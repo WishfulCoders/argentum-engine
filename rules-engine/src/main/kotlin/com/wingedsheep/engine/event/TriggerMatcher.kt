@@ -2576,8 +2576,9 @@ class TriggerMatcher(
     private fun hasAttachmentOfKind(state: GameState, entityId: EntityId, equipment: Boolean): Boolean {
         val attachments = state.getEntity(entityId)?.get<AttachmentsComponent>() ?: return false
         return attachments.attachedIds.any { attachId ->
-            val typeLine = state.getEntity(attachId)?.get<CardComponent>()?.typeLine
-            if (equipment) typeLine?.isEquipment == true else typeLine?.isAura == true
+            val attachment = state.getEntity(attachId)
+            if (equipment) attachment?.get<CardComponent>()?.typeLine?.isEquipment == true
+            else com.wingedsheep.engine.state.components.battlefield.isAuraAttachment(attachment)
         }
     }
 }
