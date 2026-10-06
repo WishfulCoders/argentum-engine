@@ -198,3 +198,154 @@
         "BLACK"
     ]
 }
+
+// Umezawa's Jitte
+{
+    "name": "Umezawa's Jitte",
+    "manaCost": "{2}",
+    "typeLine": "Legendary Artifact — Equipment",
+    "oracleText": "Whenever equipped creature deals combat damage, put two charge counters on Umezawa's Jitte.\nRemove a charge counter from Umezawa's Jitte: Choose one —\n• Equipped creature gets +2/+2 until end of turn.\n• Target creature gets -1/-1 until end of turn.\n• You gain 2 life.\nEquip {2}",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Umezawa's Jitte:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "CHARGE",
+                    "count": 2,
+                    "target": "Self"
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Umezawa's Jitte:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomRemoveCounters",
+                        "counterType": "CHARGE",
+                        "self": true
+                    }
+                },
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "ModifyStats",
+                                "powerModifier": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                },
+                                "toughnessModifier": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                },
+                                "target": "EquippedCreature"
+                            },
+                            "description": "Equipped creature gets +2/+2 until end of turn"
+                        },
+                        {
+                            "effect": {
+                                "type": "ModifyStats",
+                                "powerModifier": {
+                                    "type": "Fixed",
+                                    "amount": -1
+                                },
+                                "toughnessModifier": {
+                                    "type": "Fixed",
+                                    "amount": -1
+                                },
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": "creature"
+                                    },
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "Target creature gets -1/-1 until end of turn"
+                        },
+                        {
+                            "effect": {
+                                "type": "GainLife",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            }
+                        }
+                    ],
+                    "countsAsModalSpell": false
+                },
+                "descriptionOverride": "Remove a charge counter from Umezawa's Jitte: Choose one — Equipped creature gets +2/+2 until end of turn; Target creature gets -1/-1 until end of turn; or You gain 2 life."
+            },
+            {
+                "id": "Umezawa's Jitte:3",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{2}"
+                    }
+                },
+                "effect": {
+                    "type": "AttachEquipment",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "creature you control"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        },
+                        "id": "creature you control"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isEquipAbility": true
+            }
+        ]
+    },
+    "equipCost": "{2}",
+    "metadata": {
+        "collectorNumber": "163",
+        "rarity": "RARE",
+        "artist": "Christopher Moeller",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/b/3b6e5956-f795-451b-bb24-56462d1ced27.jpg?1783944176",
+        "rulings": [
+            {
+                "date": "2005-02-01",
+                "text": "Umezawa's Jitte's activated ability generates a modal choice. The choice is made when the ability is activated."
+            },
+            {
+                "date": "2005-02-01",
+                "text": "The ability can be used any time Umezawa's Jitte's controller has priority — only the \"target creature\" choice has additional requirements. Choosing the \"Equipped creature gets +2/+2 until end of turn\" mode does nothing if the Jitte isn't equipped to a creature when the ability resolves."
+            },
+            {
+                "date": "2005-02-01",
+                "text": "If the Jitte leaves the battlefield after the \"+2/+2\" mode is announced but before it resolves, the bonus is given to the creature that was most recently equipped once the ability resolves."
+            },
+            {
+                "date": "2005-02-01",
+                "text": "If the Jitte is moved after the \"+2/+2\" mode is announced but before it resolves, the bonus is given to the creature that is equipped when the ability resolves."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
