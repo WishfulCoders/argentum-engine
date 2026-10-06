@@ -172,6 +172,27 @@ sealed interface Player {
     }
 
     /**
+     * "Each player other than [excluded]" — every player in the game except the one [excluded]
+     * resolves to, in APNAP order (CR 101.4). A plural reference, read by
+     * `ForEachPlayer(Player.EachOtherThan(...), …)` and by player-aggregating amounts.
+     *
+     * [excluded] is a single-player reference resolved once, when the loop starts, so a relational
+     * one such as [ControllerOf] reads last-known information (CR 608.2h) when its object has
+     * already left the battlefield earlier in the same resolution — Fractured Identity: "Exile
+     * target nonland permanent. Each player other than its controller creates a token that's a copy
+     * of it." If [excluded] resolves to nobody, nobody is excluded.
+     *
+     * Not [EachOpponent]: "other than its controller" is relative to an *object's* controller, who
+     * may be you (exile your own permanent and only your opponents get copies) or an opponent (and
+     * then you and the remaining opponents do).
+     */
+    @SerialName("EachOtherThan")
+    @Serializable
+    data class EachOtherThan(val excluded: Player) : Player {
+        override val description: String = "each player other than ${excluded.description}"
+    }
+
+    /**
      * The player currently being considered as a target (CR 115). Bound by the engine's
      * target enumerator/validator to each candidate player in turn while evaluating a
      * [com.wingedsheep.sdk.scripting.targets.TargetPlayer.restriction] /
@@ -398,6 +419,7 @@ sealed interface Player {
             ControllerOfAffectedEntity -> "its controller's"
             EachTargetedPlayer -> "those players'"
             is InCollection -> "those players'"
+            is EachOtherThan -> "each of those players'"
             Each -> "each player's"
             ActivePlayerFirst -> "each player's"
             EachOpponent -> "each opponent's"

@@ -289,6 +289,10 @@ class ForEachExecutor(
             // in APNAP order and skipping anyone who has left the game. A missing collection is
             // nobody, not everybody.
             is Player.InCollection -> TargetResolutionUtils.playersInCollection(state, context, player.collection)
+            // "Each player other than its controller" (Fractured Identity): APNAP order (CR 101.4)
+            // minus the one player the excluded reference names, resolved now — after an earlier step
+            // exiled the object, its controller comes from last-known information (CR 608.2h).
+            is Player.EachOtherThan -> TargetResolutionUtils.eachOtherThan(state, context, player)
             Player.EachTargetedPlayer -> context.targets
                 .filterIsInstance<com.wingedsheep.engine.state.components.stack.ChosenTarget.Player>()
                 .map { it.playerId }

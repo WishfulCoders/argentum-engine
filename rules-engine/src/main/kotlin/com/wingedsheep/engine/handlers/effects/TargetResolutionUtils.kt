@@ -343,7 +343,8 @@ object TargetResolutionUtils {
             // either to its first player is exactly the bug they exist to avoid, so neither gets a
             // single-player arm.
             Player.Each, Player.EachOpponent, Player.EachDefendingPlayer, Player.ActivePlayerFirst,
-            Player.EachTargetedPlayer, Player.OwnersOfLinkedExile, is Player.InCollection -> null
+            Player.EachTargetedPlayer, Player.OwnersOfLinkedExile, is Player.InCollection,
+            is Player.EachOtherThan -> null
         }
     }
 
@@ -455,6 +456,16 @@ object TargetResolutionUtils {
             ?: entity.get<ControllerComponent>()?.playerId
             ?: entity.get<LastKnownPermanentComponent>()?.snapshot?.controllerId
             ?: entity.get<CardComponent>()?.ownerId
+    }
+
+    /**
+     * The players [Player.EachOtherThan] names: every player still in the game in APNAP order
+     * (CR 101.4), minus the single player its `excluded` reference resolves to. A reference that
+     * resolves to nobody excludes nobody.
+     */
+    fun eachOtherThan(state: GameState, context: EffectContext, player: Player.EachOtherThan): List<EntityId> {
+        val excluded = resolvePlayerRef(player.excluded, context, state)
+        return state.apnapOrder.filter { it != excluded }
     }
 
     /**

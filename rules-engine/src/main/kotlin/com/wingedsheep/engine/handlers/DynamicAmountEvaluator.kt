@@ -1492,6 +1492,7 @@ class DynamicAmountEvaluator(
                 TargetResolutionUtils.resolvePlayerRef(player, context, state)
             )
             is Player.OwnersOfLinkedExile -> TargetResolutionUtils.linkedExileOwners(state, context)
+            is Player.EachOtherThan -> TargetResolutionUtils.eachOtherThan(state, context, player)
         }
     }
 

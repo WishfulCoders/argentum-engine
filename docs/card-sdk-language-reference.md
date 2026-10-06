@@ -2448,6 +2448,11 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   token copy of another permanent (or a card in any zone — the executor copies the target's `CardComponent`,
   so a graveyard/exile card works; pass `EffectTarget.PipelineTarget("name")` to copy a card a prior pipeline
   step exiled/stored, as Nexus of Becoming and Mardu Siegebreaker do).
+  A target chosen as a **permanent** that an earlier step of the same resolution moved off the
+  battlefield is copied **as it last existed there** (CR 608.2h, CR 707.2): what it was copying, its
+  transformed face, its face-down shell — read from the `LastKnownCopiableComponent` the departure left
+  on the card (stamped only when leaving changed the copiable values, dropped on its next zone change).
+  A card targeted in its current zone, an iteration entity or a pipeline card is copied as it is now.
   `overrideColors`/`overrideSubtypes` replace the copy's colors/subtypes
   outright for "a token that's a copy … except it's a 5/5 black Demon" wording (Ardyn, the Usurper).
   `addedColors` *unions* extra colors onto the copy (vs `overrideColors` which replaces; ignored when
@@ -4707,6 +4712,12 @@ A resolving nonpermanent spell retains its stack instance through serialized eff
   they contribute nothing (CR 608.2b). Like `Each` / `EachOpponent` / `OwnersOfLinkedExile` it is a
   *list-only* reference: the single-player resolver returns null for it deliberately, so a
   `ForEach`-over-players reads it through its own arm.
+- `Player.EachOtherThan(excluded)` — "each player other than [excluded]": every player still in the
+  game in APNAP order (CR 101.4) except the one the single-player reference `excluded` resolves to (an
+  unresolved reference excludes nobody). Resolved once, as the loop starts, so `ControllerOf("target")`
+  reads the last-known controller of a target an earlier step already moved (CR 608.2h). Not
+  `EachOpponent`: the excluded player is an *object's* controller, who may be you. List-only like
+  `EachTargetedPlayer`. **Fractured Identity** = `Exile(t) then ForEachPlayer(EachOtherThan(ControllerOf("target")), CreateTokenCopyOfTarget(t))`.
 - `Player.InCollection(collection)` — "those players": every player a `StorePlayerEffect` recorded in a
   pipeline collection earlier in the resolution, in APNAP order (CR 101.4), skipping players who
   have left the game. An empty or missing collection is *nobody*. Reach it as `slot.asPlayers` from a

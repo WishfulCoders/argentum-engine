@@ -19,6 +19,7 @@ import com.wingedsheep.engine.state.Component
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
+import com.wingedsheep.engine.state.components.identity.LastKnownCopiableComponent
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
 import com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
@@ -81,7 +82,7 @@ class CreateTokenCopyOfTargetExecutor(
         val targetId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.success(state)
 
-        val targetContainer = state.getEntity(targetId)
+        val targetContainer = copySource(state, context, effect.target, targetId)
             ?: return EffectResult.success(state)
 
         val targetCard = targetContainer.copiableCardComponent()
@@ -150,6 +151,36 @@ class CreateTokenCopyOfTargetExecutor(
     }
 
     /**
+     * The object the tokens copy. A target chosen as a **permanent** that has since left the
+     * battlefield — moved by an earlier step of this same resolution — is copied as it last existed
+     * there (CR 608.2h, CR 707.2): Fractured Identity's "Exile target nonland permanent. Each player
+     * other than its controller creates a token that's a copy of it" copies what the permanent was
+     * copying, its transformed face, or its face-down 2/2 shell, not the card now sitting in exile
+     * (the [LastKnownCopiableComponent] the departure left behind). Any other target — a permanent
+     * still on the battlefield, or a card targeted in the zone it is in — is copied as it is now.
+     */
+    private fun copySource(
+        state: GameState,
+        context: EffectContext,
+        target: com.wingedsheep.sdk.scripting.targets.EffectTarget,
+        targetId: EntityId,
+    ): ComponentContainer? {
+        val container = state.getEntity(targetId) ?: return null
+        if (targetId in state.getBattlefield()) return container
+        val lastKnown = container.get<LastKnownCopiableComponent>() ?: return container
+        // Only a reference to a chosen target, chosen as a permanent: an iteration entity or a
+        // pipeline card (a graveyard card gathered later) is copied as it is now.
+        val chosen = when (target) {
+            is com.wingedsheep.sdk.scripting.targets.EffectTarget.ContextTarget -> context.positionalTarget(target.index)
+            is com.wingedsheep.sdk.scripting.targets.EffectTarget.BoundVariable -> context.pipeline.namedTargets[target.name]
+            else -> null
+        }
+        val targetedAsPermanent = chosen is com.wingedsheep.engine.state.components.stack.ChosenTarget.Permanent &&
+            chosen.entityId == targetId
+        return if (targetedAsPermanent) lastKnown.asContainer() else container
+    }
+
+    /**
      * Create [count] token copies of the effect's target. When [auraHostId] is non-null every
      * created token enters attached to it (the Aura path — see the class docs); otherwise the
      * tokens enter unattached. Split out of [execute] so the Aura host-choice continuation can
@@ -170,7 +201,7 @@ class CreateTokenCopyOfTargetExecutor(
     ): EffectResult {
         val targetId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.success(state)
-        val targetContainer = state.getEntity(targetId)
+        val targetContainer = copySource(state, context, effect.target, targetId)
             ?: return EffectResult.success(state)
         val targetCard = targetContainer.copiableCardComponent()
             ?: return EffectResult.success(state)
