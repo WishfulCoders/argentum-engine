@@ -2384,6 +2384,14 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   Hatchery) is `numericKeywords = listOf(KeywordAbility.toxic(1))`. They land on the same components a card's
   printed numeric keywords do, so the token's toxic reaches combat damage, `withKeyword(TOXIC)` and
   `KeywordValue(TOXIC)`.
+  `attackingEach: Player?` (with `attacking = true`) is "for each opponent, create … that's tapped and
+  attacking **that player or a planeswalker they control**" (Adeline, Resplendent Cathar; myriad's shape):
+  `count` tokens per player it resolves to (`Player.EachOpponent`), each attacking that player or one of
+  their planeswalkers. The effect specifies the side, so CR 508.4's free choice narrows to it; the token's
+  controller picks as the tokens enter — a `ChooseTargetsDecision` only for a side that controls a
+  planeswalker, all picks made before any token is created. A planeswalker so attacked is marked
+  attacked (CR 506.4 tracks it), and its unblocked token's damage removes loyalty. Without it, an
+  unspecified "tapped and attacking" token attacks the defending player as before.
   `sacrificeAtStep: Step?` arms a delayed trigger that sacrifices each created token at the beginning of the next
   step of that kind — the "create …, sacrifice it at the beginning of the next end step" rider (Harried Dronesmith
   passes `Step.END`; because its ability triggers at the beginning of combat on the controller's own turn, "your
@@ -4742,6 +4750,17 @@ A resolving nonpermanent spell retains its stack instance through serialized eff
   player controls"), which is what lets such a trigger find legal targets at all. Use for
   attack/combat-damage triggers ("defending player mills four cards", "that player sacrifices a
   creature"); pair it with `Chooser.DefendingPlayer` when that player also makes the choice.
+- `EffectTarget.AttackedPlayerOrPlaneswalker(attacker = TriggeringEntity)` — "the player or
+  planeswalker it's attacking": the **object** `attacker` is attacking (CR 506.3), not the defending
+  *player* — a creature attacking a planeswalker resolves to the planeswalker, where
+  `Player.DefendingPlayer` would name its controller. Hellrider = `Triggers.a(Creature.youControl())
+  .attacks()` + `DealDamage(1, AttackedPlayerOrPlaneswalker())`; Myr Battlesphere's "this creature …
+  deals X damage to the player or planeswalker it's attacking" passes `attacker = EffectTarget.Self`.
+  Resolves to **nothing** (the damage is skipped, not an error) once the attacked planeswalker has
+  been removed from combat (CR 506.4c — it left, changed controller or stopped being a
+  planeswalker), when the attacker is attacking a battle, or when the attacked player has left the
+  game. An attacker that has itself left the battlefield answers from its exit snapshot
+  (CR 608.2h), so Battlesphere's ability still hits "the appropriate player or planeswalker".
 - `Player.TriggeringPlayer` — the player bound by the trigger (the caster for `SpellCastEvent`,
   the active player for per-player step triggers — "at the beginning of each opponent's upkeep,
   *that player* …", **the player dealt the damage** for a `DealsDamageEvent` trigger whose

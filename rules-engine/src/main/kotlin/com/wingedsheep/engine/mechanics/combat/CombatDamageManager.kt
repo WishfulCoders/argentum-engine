@@ -1033,7 +1033,7 @@ internal class CombatDamageManager(
         // Combat damage must consult them too; the whole amount moves to the new recipient, which
         // then runs the full pipeline itself (amplification, prevention, …).
         val (staticRedirectTo, staticRedirectSource) =
-            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator)) {
+            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = true)) {
                 null to null
             } else {
                 DamageUtils.findStaticDamageRedirect(
@@ -1100,7 +1100,7 @@ internal class CombatDamageManager(
         }
         val gainsByController = linkedMapOf<EntityId, Int>()
         val surviving = assignments.filter { assignment ->
-            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator)) {
+            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = true)) {
                 return@filter true
             }
             val (controllerId, gainsLife) = DamageUtils.groupPreventionShieldController(
@@ -1177,8 +1177,8 @@ internal class CombatDamageManager(
             val cantBePrevented = assignments
                 .filter { it.targetId == targetId }
                 .let { hits ->
-                    hits.isEmpty() && DamageUtils.isDamagePreventionDisabled(state, targetId, predicateEvaluator = predicateEvaluator) ||
-                        hits.any { DamageUtils.isDamagePreventionDisabled(state, targetId, it.sourceId, predicateEvaluator = predicateEvaluator) }
+                    hits.isEmpty() && DamageUtils.isDamagePreventionDisabled(state, targetId, predicateEvaluator = predicateEvaluator, isCombatDamage = true) ||
+                        hits.any { DamageUtils.isDamagePreventionDisabled(state, targetId, it.sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = true) }
                 }
             val shielded = applyShieldCounterToDamage(newState, targetId, cantBePrevented)
             if (shielded != null) {
@@ -1885,7 +1885,7 @@ internal class CombatDamageManager(
                             .merge(attackerId, amplified) { a, b -> a + b }
                     } else {
                         val damageCantBePrevented =
-                            DamageUtils.isDamagePreventionDisabled(state, targetId, attackerId, predicateEvaluator = predicateEvaluator)
+                            DamageUtils.isDamagePreventionDisabled(state, targetId, attackerId, predicateEvaluator = predicateEvaluator, isCombatDamage = true)
                         val attackerColors = projected.getColors(attackerId)
                         val attackerSubtypes = projected.getSubtypes(attackerId)
                         val attackerTypes = projected.getTypes(attackerId)

@@ -223,7 +223,7 @@ object DamageUtils {
 
         // Check for global "damage can't be prevented" effects (Sunspine Lynx, Leyline of Punishment)
         @Suppress("NAME_SHADOWING")
-        val cantBePrevented = cantBePrevented || isDamagePreventionDisabled(state, targetId, sourceId, predicateEvaluator = zones.predicateEvaluator)
+        val cantBePrevented = cantBePrevented || isDamagePreventionDisabled(state, targetId, sourceId, predicateEvaluator = zones.predicateEvaluator, isCombatDamage = isCombatDamage)
 
         // Check for damage redirection (Glarecaster, Zealous Inquisitor). Whippoorwill's clause
         // shuts this half off too — "…or dealt instead to another permanent or player" — so a
@@ -1432,14 +1432,21 @@ object DamageUtils {
      * end gets the unscoped answer only. That is deliberately the safe direction: an unknown
      * instance never blanks a prevention shield or a protection keyword it might not cover.
      *
+     * The pattern's `damageType` scopes it the same way: "**combat** damage can't be prevented"
+     * (Frenzied Baloth; Questing Beast's "combat damage that would be dealt by creatures you
+     * control") covers combat damage only (CR 510.2), so a caller that doesn't say whether the
+     * damage is combat gets no answer from a combat- or noncombat-only effect.
+     *
      * @param recipientId the entity being damaged, when the caller knows it
      * @param sourceId the source dealing the damage, when the caller knows it
+     * @param isCombatDamage whether the instance is combat damage, when the caller knows it
      */
     fun isDamagePreventionDisabled(
         state: GameState,
         recipientId: EntityId? = null,
         sourceId: EntityId? = null,
-        predicateEvaluator: PredicateEvaluator
+        predicateEvaluator: PredicateEvaluator,
+        isCombatDamage: Boolean? = null,
     ): Boolean {
         // Turn-scoped "Damage can't be prevented this turn" (Fear, Fire, Foes!).
         if (state.damageCantBePreventedThisTurn) return true
@@ -1459,6 +1466,12 @@ object DamageUtils {
             for (effect in replacementComponent.replacementEffects) {
                 if (effect !is DamageCantBePrevented) continue
                 val pattern = effect.appliesTo as? EventPattern.DamageEvent ?: continue
+                val typeMatches = when (pattern.damageType) {
+                    DamageType.Any -> true
+                    DamageType.Combat -> isCombatDamage == true
+                    DamageType.NonCombat -> isCombatDamage == false
+                }
+                if (!typeMatches) continue
                 // Unscoped: the printed "damage can't be prevented" with no source or recipient
                 // clause. Answers for every instance, including the ones this call knows nothing about.
                 if (pattern.source == GameObjectFilter.Any && pattern.recipient == Recipient.Any) {
@@ -1549,7 +1562,7 @@ object DamageUtils {
         // CR 615.12 — when damage can't be prevented, prevention shields aren't reduced and prevent
         // nothing. When any battlefield "damage can't be prevented" (Spider-Punk) or the "this turn"
         // one-shot (Fear, Fire, Foes!) is active, no shield applies and the damage passes through in full.
-        if (isDamagePreventionDisabled(state, targetId, sourceId, predicateEvaluator = predicateEvaluator)) {
+        if (isDamagePreventionDisabled(state, targetId, sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = isCombatDamage)) {
             return PreventionShieldResult(state, amount)
         }
 
@@ -2174,7 +2187,7 @@ object DamageUtils {
                 remainingCount = present - removed, byDamagePrevention = true
             ))
             val disabled = preventionDisabled ?: isDamagePreventionDisabled(
-                state, targetId, sourceId, predicateEvaluator = predicateEvaluator
+                state, targetId, sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = isCombatDamage
             ).also { preventionDisabled = it }
             if (!disabled) remaining -= removed
         }

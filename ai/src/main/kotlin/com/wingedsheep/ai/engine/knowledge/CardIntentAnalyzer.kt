@@ -340,7 +340,8 @@ object CardIntentAnalyzer {
         is EffectTarget.PlayerRef, EffectTarget.Controller, EffectTarget.TargetController,
         EffectTarget.ControllerOfTriggeringEntity, EffectTarget.ControllerOfDamageSource,
         is EffectTarget.AttackedBy -> false
-
+        // Almost always the defending player (Hellrider's ping is a clock, not removal).
+        is EffectTarget.AttackedPlayerOrPlaneswalker,
         EffectTarget.Self -> false
         else -> true
     }

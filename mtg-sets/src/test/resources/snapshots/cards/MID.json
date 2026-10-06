@@ -1,3 +1,80 @@
+// Adeline, Resplendent Cathar
+{
+    "name": "Adeline, Resplendent Cathar",
+    "manaCost": "{1}{W}{W}",
+    "typeLine": "Legendary Creature — Human Knight",
+    "oracleText": "Vigilance\nAdeline's power is equal to the number of creatures you control.\nWhenever you attack, for each opponent, create a 1/1 white Human creature token that's tapped and attacking that player or a planeswalker they control.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "AggregateBattlefield",
+                "player": "You",
+                "filter": "creature"
+            }
+        },
+        "toughness": 4
+    },
+    "keywords": [
+        "VIGILANCE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Adeline, Resplendent Cathar:1",
+                "trigger": "YouAttackEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Human"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/b/7/b7667345-e11b-4cad-ac4c-84eb1c5656c5.jpg?1783925225",
+                    "tapped": true,
+                    "attacking": true,
+                    "attackingEach": "EachOpponent"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "1",
+        "rarity": "RARE",
+        "artist": "Bryan Sola",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/8/18092f68-b96e-4084-9eba-b240d2195d81.jpg?1783925668",
+        "rulings": [
+            {
+                "date": "2021-09-24",
+                "text": "The ability that defines Adeline's power works in all zones, not just the battlefield. As long as Adeline is on the battlefield (and still a creature), that ability will count Adeline itself."
+            },
+            {
+                "date": "2021-09-24",
+                "text": "Attacking with any creatures will cause Adeline's last ability to trigger. Adeline doesn't have to be among them."
+            },
+            {
+                "date": "2021-09-24",
+                "text": "You choose whether each token is attacking that opponent or a planeswalker they control as those tokens enter the battlefield."
+            },
+            {
+                "date": "2021-09-24",
+                "text": "Although the Human tokens created by the triggered ability are attacking, they were never declared as attacking creatures (for the purposes of abilities that trigger whenever a creature attacks, for example)."
+            },
+            {
+                "date": "2021-09-24",
+                "text": "Tokens will be created for each of your opponents, not just opponents that you attacked."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Ambitious Farmhand
 {
     "name": "Ambitious Farmhand",

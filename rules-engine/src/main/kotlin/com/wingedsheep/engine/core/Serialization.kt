@@ -306,6 +306,7 @@ val engineSerializersModule = SerializersModule {
     polymorphic(AnswerContinuation::class) {
         subclass(TurnStartReplacementContinuation::class)
         subclass(TokenCreationReplacementContinuation::class)
+        subclass(EntersAttackingDefenderContinuation::class)
         subclass(SacrificeContinuation::class)
         subclass(ChooseOnePerCategoryContinuation::class)
         subclass(ExileMultiZoneContinuation::class)

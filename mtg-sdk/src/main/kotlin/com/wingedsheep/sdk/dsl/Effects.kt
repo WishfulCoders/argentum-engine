@@ -2957,6 +2957,10 @@ object Effects {
      *   beginning of the next step of this kind — the "create …, sacrifice it at the beginning of
      *   the next end step" rider (Harried Dronesmith). The plain-token sibling of the parameter of
      *   the same name on [CreateTokenCopyOfTarget]. Null (the default) leaves the token permanent.
+     * @param attackingEach With `attacking = true`: "for each opponent, create … attacking that
+     *   player or a planeswalker they control" (Adeline, Resplendent Cathar) — [count] tokens per
+     *   player it resolves to, each attacking that player or one of their planeswalkers
+     *   ([CreateTokenEffect.attackingEach]).
      */
     fun CreateToken(
         power: Int,
@@ -2983,11 +2987,12 @@ object Effects {
         initialCounters: Map<CounterType, Int> = emptyMap(),
         stampCreator: Boolean = false,
         numericKeywords: List<KeywordAbility.Numeric> = emptyList(),
+        attackingEach: Player? = null,
     ): CreateTokenEffect = CreateToken(
         DynamicAmount.Fixed(count), power, toughness, colors, creatureTypes, keywords, controller, imageUri,
         name, legendary, tapped, artifactToken, enchantmentToken, staticAbilities, exileAtStep,
         sacrificeAtStep, attacking, triggeredAbilities, activatedAbilities, dynamicPower, dynamicToughness,
-        initialCounters, stampCreator, numericKeywords,
+        initialCounters, stampCreator, numericKeywords, attackingEach,
     )
 
     /**
@@ -3029,11 +3034,12 @@ object Effects {
         initialCounters: Map<CounterType, Int> = emptyMap(),
         stampCreator: Boolean = false,
         numericKeywords: List<KeywordAbility.Numeric> = emptyList(),
+        attackingEach: Player? = null,
     ): CreateTokenEffect = CreateTokenEffect(
         count = count, power = power, toughness = toughness, colors = colors,
         creatureTypes = creatureTypes, keywords = keywords, name = name, imageUri = imageUri,
         controller = controller, dynamicPower = dynamicPower, dynamicToughness = dynamicToughness,
-        tapped = tapped, attacking = attacking, legendary = legendary,
+        tapped = tapped, attacking = attacking, attackingEach = attackingEach, legendary = legendary,
         artifactToken = artifactToken, enchantmentToken = enchantmentToken,
         staticAbilities = staticAbilities, triggeredAbilities = triggeredAbilities,
         activatedAbilities = activatedAbilities, exileAtStep = exileAtStep,
