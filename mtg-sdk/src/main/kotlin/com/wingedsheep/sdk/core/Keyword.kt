@@ -507,6 +507,22 @@ enum class Keyword(val displayName: String) {
     OVERLOAD("Overload"),
 
     /**
+     * Reconfigure [cost] (CR 702.151, Kamigawa: Neon Dynasty). Represents two activated abilities
+     * (CR 702.151a): "[Cost]: Attach this permanent to another target creature you control. Activate
+     * only as a sorcery" and "[Cost]: Unattach this permanent. Activate only if this permanent is
+     * attached to a creature and only as a sorcery." Both are added by the `reconfigure(cost)` DSL
+     * helper; neither is an equip ability.
+     *
+     * Load-bearing, not display-only: an Equipment that is also a creature can equip a creature only
+     * if it has reconfigure (CR 301.5c), so `AttachmentMover.canAttach` and the CR 704.5n
+     * state-based action read it from projected state. And attaching an Equipment with reconfigure
+     * to another creature — by its own ability or any other effect — makes it stop being a creature
+     * until it becomes unattached from that creature (CR 702.151b); the engine records that on the
+     * attach and projects it in layer 4, independent of whether the keyword survives afterwards.
+     */
+    RECONFIGURE("Reconfigure"),
+
+    /**
      * Daybound (CR 702.145, Innistrad: Midnight Hunt / Crimson Vow). Found on the **front** faces of
      * some transforming double-faced cards; represents three static abilities: "If it is night and
      * this permanent is represented by a transforming double-faced card, it enters transformed"; "As

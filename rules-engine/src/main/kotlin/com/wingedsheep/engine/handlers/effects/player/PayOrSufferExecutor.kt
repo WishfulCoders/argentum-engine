@@ -16,6 +16,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -96,6 +97,17 @@ class PayOrSufferExecutor(
                 val amount = maxOf(0, dynamicAmountEvaluator.evaluate(state, cost.amount, context, state.projectedState))
                 handlePayLifeCost(
                     state, effect, context, CostAtom.PayLife(amount), sourceId, sourceCard.name, payingPlayerId
+                )
+            }
+            // "...unless that player pays {X}, where X is <rule>" (Esper Sentinel): lowered here, in
+            // the resolving context, to an ordinary generic mana cost — so a source that has left
+            // the battlefield is read by last-known information (CR 608.2h). A negative X is {0}
+            // (CR 107.1b), which the payer is still asked about and may decline (Esper Sentinel
+            // ruling 2021-06-18).
+            is PayCost.DynamicMana -> {
+                val amount = maxOf(0, dynamicAmountEvaluator.evaluate(state, cost.amount, context, state.projectedState))
+                handleManaCost(
+                    state, effect, context, CostAtom.Mana(ManaCost.parse("{$amount}")), sourceId, sourceCard.name, payingPlayerId
                 )
             }
             // Tamiyo, Collector of Tales / Sigarda, Host of Herons: an "unless you discard/sacrifice"
@@ -1031,7 +1043,7 @@ class PayOrSufferExecutor(
             // Offered rather than filtered out: the amount can only be evaluated in the
             // resolving context, and handlePayLifeCost re-checks affordability for real before
             // charging anyone. Filtering here would silently hide a payable option.
-            is PayCost.DynamicLife -> true
+            is PayCost.DynamicLife, is PayCost.DynamicMana -> true
             is PayCost.Choice -> cost.options.any { canPayCost(state, playerId, it, sourceId) }
             is PayCost.Atom -> when (val atom = cost.atom) {
                 is CostAtom.Discard -> findValidCardsInHand(state, playerId, atom.filter, sourceId).size >= atom.count

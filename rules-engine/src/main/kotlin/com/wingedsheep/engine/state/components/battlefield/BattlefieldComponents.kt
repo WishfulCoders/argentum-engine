@@ -632,6 +632,30 @@ data class ReplacementEffectSourceComponent(
 ) : Component
 
 /**
+ * Reconfigure's type-changing effect (CR 702.151b): "Attaching an Equipment with reconfigure to
+ * another creature causes the Equipment to stop being a creature until it becomes unattached from
+ * that creature."
+ *
+ * Stamped on the Equipment by [com.wingedsheep.engine.handlers.effects.permanent.attachments.AttachmentMover.attach]
+ * whenever an Equipment that has reconfigure becomes attached to a creature — by its reconfigure
+ * ability or by any other effect (Brass Squire). [com.wingedsheep.engine.mechanics.layers.StateProjector]
+ * turns it into a layer-4 effect (CR 613.1d) with [timestamp] that removes the creature card type
+ * and every creature subtype, for as long as the Equipment is still attached to [hostId]. It is a
+ * one-shot-created effect, not a static ability of the Equipment, so it keeps applying if the
+ * Equipment loses reconfigure (or all abilities) while attached; it ends when the Equipment becomes
+ * unattached, moves to another host (a new effect is stamped for the new host), or leaves the
+ * battlefield.
+ *
+ * @property hostId the creature the Equipment was attached to when the effect began
+ * @property timestamp the effect's layer timestamp (CR 613.7) — the moment of attachment
+ */
+@Serializable
+data class ReconfiguredComponent(
+    val hostId: EntityId,
+    val timestamp: Long
+) : Component
+
+/**
  * Timestamp for ordering continuous effects in the layer system (Rule 613.7).
  *
  * Currently never stamped — [com.wingedsheep.engine.mechanics.layers.StateProjector]

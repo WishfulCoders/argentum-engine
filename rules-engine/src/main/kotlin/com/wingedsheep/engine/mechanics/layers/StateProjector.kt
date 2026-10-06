@@ -804,6 +804,34 @@ class StateProjector {
             )
         }
 
+        // 1c. Reconfigure (CR 702.151b): an Equipment with reconfigure that became attached to a
+        // creature stops being a creature until it becomes unattached from that creature — and so,
+        // with no creature type left, it has no creature subtypes either (CR 205.3d; the
+        // 2022-02-18 Neon Dynasty ruling: "It also loses any creature subtypes it had"). The effect
+        // was created by the attachment, not by a static ability of the Equipment
+        // (`fromStaticAbility = false`), so it survives the Equipment losing its abilities, and
+        // it is timestamped at the attachment for layer-4 ordering (CR 613.7). It applies only
+        // while the Equipment is still attached to the host it was created for; every unattach path
+        // removes the record outright.
+        for (entityId in state.getBattlefield()) {
+            val container = state.getEntity(entityId) ?: continue
+            val reconfigured = container.get<com.wingedsheep.engine.state.components.battlefield.ReconfiguredComponent>()
+                ?: continue
+            val host = container.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()?.targetId
+            if (host != reconfigured.hostId) continue
+            for (modification in RECONFIGURED_TYPE_CHANGES) {
+                effects.add(
+                    ContinuousEffect(
+                        sourceId = entityId,
+                        timestamp = reconfigured.timestamp,
+                        modification = modification,
+                        affectedEntities = setOf(entityId),
+                        fromStaticAbility = false
+                    )
+                )
+            }
+        }
+
         // 2. Collect floating effects (from resolved spells like Giant Growth)
         for (floating in state.floatingEffects) {
             if (floating.duration is Duration.WhileSourceTapped) {
@@ -1093,3 +1121,9 @@ class StateProjector {
 
 /** The zones "cards you own that aren't on the battlefield" reach (the stack is the spells half). */
 private val OWNED_ZONES_OUTSIDE_BATTLEFIELD = listOf(Zone.HAND, Zone.LIBRARY, Zone.GRAVEYARD, Zone.EXILE, Zone.COMMAND)
+
+/** Reconfigure's layer-4 change (CR 702.151b): not a creature, and so no creature subtypes. */
+private val RECONFIGURED_TYPE_CHANGES: List<Modification> = listOf(
+    Modification.RemoveType("CREATURE"),
+    Modification.SetCreatureSubtypes(emptySet()),
+)

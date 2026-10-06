@@ -272,6 +272,15 @@ class CastSpellEnumerator(
                 val maxReduction = offer.variableSacrificeTargets.size * offer.variableSacrificeReduction
                 effectiveCost = effectiveCost.reduceGeneric(maxReduction)
             }
+            // Likewise the march cycle's exile-for-reduction (CR 601.2f). What the printed generic
+            // can't absorb pays down an announced X instead (the reduction applies to the total
+            // cost, X included), so it raises the X ceiling below.
+            var exileReductionForX = 0
+            if (offer.variableExileReduction > 0 && offer.exileTargets.isNotEmpty()) {
+                val maxReduction = offer.exileTargets.size * offer.variableExileReduction
+                exileReductionForX = (maxReduction - effectiveCost.genericAmount).coerceAtLeast(0)
+                effectiveCost = effectiveCost.reduceGeneric(maxReduction)
+            }
 
             // Save base cost for blight path, then add extra mana for the "pay" path
             val blightBaseCost = effectiveCost
@@ -608,7 +617,8 @@ class CastSpellEnumerator(
                 } else 0
                 val fixedCost = effectiveCost.cmc  // X contributes 0 to CMC
                 val xSymbolCount = effectiveCost.xCount.coerceAtLeast(1)
-                ((availableSources + delveAvailable + waterbendAvailable + convokeAvailable + improviseAvailable - fixedCost) / xSymbolCount)
+                ((availableSources + delveAvailable + waterbendAvailable + convokeAvailable + improviseAvailable +
+                    exileReductionForX - fixedCost) / xSymbolCount)
                     .coerceAtLeast(0)
             } else null
 
@@ -2671,12 +2681,15 @@ class CastSpellEnumerator(
                     .filterIsInstance<AdditionalCost.ExileVariableCards>()
                     .firstOrNull()?.description
                     ?: additionalCosts
+                        .filterIsInstance<AdditionalCost.ExileCardsForCostReduction>()
+                        .firstOrNull()?.description
+                    ?: additionalCosts
                         .firstNotNullOfOrNull { (it as? AdditionalCost.Atom)?.atom as? CostAtom.ExileFrom }
                         ?.description?.replaceFirstChar { it.uppercase() }
                     ?: "Exile cards from your graveyard"
                 add(AdditionalCostData(
                     description = exileCostDesc,
-                    costType = "ExileFromGraveyard",
+                    costType = if (offer.exileZone == Zone.HAND) "ExileFromHand" else "ExileFromGraveyard",
                     validExileTargets = offer.exileTargets,
                     exileMinCount = offer.exileMinCount,
                     exileMaxCount = offer.exileTargets.size

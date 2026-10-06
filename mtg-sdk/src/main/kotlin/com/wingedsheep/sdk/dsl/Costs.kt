@@ -791,6 +791,17 @@ object Costs {
             costReductionPerCreature: Int = 2
         ): AdditionalCost = AdditionalCost.SacrificeCreaturesForCostReduction(filter, costReductionPerCreature)
 
+        /**
+         * "You may exile any number of [filter] cards from your [fromZone]. This spell costs
+         * {[costReductionPerCard]} less to cast for each card exiled this way." (the march cycle —
+         * March of Otherworldly Light). See [AdditionalCost.ExileCardsForCostReduction].
+         */
+        fun ExileCardsForCostReduction(
+            filter: GameObjectFilter,
+            costReductionPerCard: Int,
+            fromZone: CostZone = CostZone.HAND
+        ): AdditionalCost = AdditionalCost.ExileCardsForCostReduction(filter, costReductionPerCard, fromZone)
+
         /** Forage (exile three cards from your graveyard or sacrifice a Food). */
         val Forage: AdditionalCost = AdditionalCost.Forage
 
@@ -1043,6 +1054,13 @@ object Costs {
          * to its mana value" (Wand of Ith). PayOrSuffer only; see [PayCost.DynamicLife].
          */
         fun PayDynamicLife(amount: DynamicAmount): PayCost = PayCost.DynamicLife(amount)
+
+        /**
+         * Pay {X} generic mana, X computed when the cost is offered — "unless that player pays {X},
+         * where X is this creature's power" (Esper Sentinel). PayOrSuffer only; see
+         * [PayCost.DynamicMana].
+         */
+        fun PayDynamicMana(amount: DynamicAmount): PayCost = PayCost.DynamicMana(amount)
 
         /**
          * Put [count] counters of [counterType] on a permanent matching [filter] the payer

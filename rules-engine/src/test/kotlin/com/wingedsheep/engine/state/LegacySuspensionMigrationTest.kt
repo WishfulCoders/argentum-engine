@@ -353,6 +353,10 @@ class LegacySuspensionMigrationTest : ScenarioTestBase() {
                 value.getValue("expiresAfterTurn") shouldBe JsonNull
                 value.getValue("expiryControllerId") shouldBe JsonNull
                 value - "expiresAfterTurn" - "expiryControllerId"
+            } else if (value["type"] == JsonPrimitive("MoveToZone") && "positionFromTopAmount" in value) {
+                // The computed library position (Unexpectedly Absent) postdates the capture.
+                value.getValue("positionFromTopAmount") shouldBe JsonNull
+                value - "positionFromTopAmount"
             } else value
             JsonObject(fields.mapValues { withoutPostCaptureCardDefaults(it.value) })
         }

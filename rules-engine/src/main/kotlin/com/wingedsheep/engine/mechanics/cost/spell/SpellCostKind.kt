@@ -145,6 +145,10 @@ class SpellCostOffer {
     var variablePermanentsTargets = emptyList<EntityId>()
     var exileTargets = emptyList<EntityId>()
     var exileMinCount = 0
+    /** The zone [exileTargets] come from — picks the client's exile picker (hand vs graveyard). */
+    var exileZone: Zone = Zone.GRAVEYARD
+    /** Generic mana each exiled card takes off the total cost (march cycle); 0 for none. */
+    var variableExileReduction = 0
     var collectEvidenceCost: CostAtom.CollectEvidence? = null
     var discardTargets = emptyList<EntityId>()
     var discardCount = 0

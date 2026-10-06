@@ -248,6 +248,55 @@ internal object SacrificeForCostReductionCostKind : SpellCostKind<AdditionalCost
     }
 }
 
+/**
+ * "You may exile any number of white cards from your hand. This spell costs {2} less to cast for each
+ * card exiled this way" (the march cycle). The exile sibling of [SacrificeForCostReductionCostKind]:
+ * always payable (exiling none is a legal choice), and the reduction is part of the total cost
+ * (`CastCostTotaller`, CR 601.2f), priced from the declared exiles.
+ */
+internal object ExileForCostReductionCostKind : SpellCostKind<AdditionalCost.ExileCardsForCostReduction> {
+    override fun canPay(state: GameState, payerId: EntityId, cost: AdditionalCost.ExileCardsForCostReduction, costHandler: CostHandler) = true
+
+    override fun enumerate(env: SpellCostEnumeration, cost: AdditionalCost.ExileCardsForCostReduction, offer: SpellCostOffer): Boolean {
+        offer.exileTargets = env.costUtils.findExileTargets(
+            env.state, env.playerId, cost.filter, cost.fromZone.toZone(), excludeSelfId = env.castCardId
+        )
+        offer.exileMinCount = 0
+        offer.exileZone = cost.fromZone.toZone()
+        offer.variableExileReduction = cost.costReductionPerCard
+        return true
+    }
+
+    override fun selectionSupplied(cost: AdditionalCost.ExileCardsForCostReduction, payment: AdditionalCostPayment) =
+        payment.exiledCards.isNotEmpty()
+
+    override fun validate(check: SpellCostCheck, cost: AdditionalCost.ExileCardsForCostReduction): String? {
+        val state = check.state
+        val exiled = check.payment?.exiledCards ?: emptyList()
+        if (exiled.distinct().size != exiled.size) return "A card can only be exiled once"
+        val zone = cost.fromZone.toZone()
+        val zoneCards = state.getZone(ZoneKey(check.playerId, zone))
+        val context = PredicateContext(controllerId = check.playerId)
+        for (cardId in exiled) {
+            if (cardId == check.action.cardId) return "A spell can't exile itself to pay its own cost"
+            if (cardId !in zoneCards) return "Card to exile is not in your ${cost.fromZone.description}"
+            if (!check.predicateEvaluator.matches(state, state.projectedState, cardId, cost.filter, context)) {
+                val cardName = state.getEntity(cardId)?.get<CardComponent>()?.name ?: "Card"
+                return "$cardName doesn't match the required filter: ${cost.filter.description}"
+            }
+        }
+        return null
+    }
+
+    override fun pay(ledger: SpellCostLedger, cost: AdditionalCost.ExileCardsForCostReduction): String? {
+        val exiledCards = ledger.payment.exiledCards
+        ledger.exiledAsCostCards.addAll(exiledCards)
+        exileFromOwnZone(ledger, exiledCards, cost.fromZone.toZone())
+        ledger.exiledCardCount = exiledCards.size
+        return null
+    }
+}
+
 /** Forage as an additional cost to cast (Feed the Cycle's forage mode): exile three cards or sacrifice a Food. */
 internal object ForageCostKind : SpellCostKind<AdditionalCost.Forage> {
     override fun canPay(state: GameState, payerId: EntityId, cost: AdditionalCost.Forage, costHandler: CostHandler) =

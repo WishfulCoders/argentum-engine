@@ -935,6 +935,16 @@ cast action advertises the first selection cost as `additionalCostInfo` and the 
   sacrificed permanent is snapshotted, so "for each Spirit sacrificed this way" is
   `DynamicAmounts.permanentsSacrificedThisWay()`. For "… this spell costs {2} less for each" use
   `SacrificeCreaturesForCostReduction` instead.
+- `Costs.additional.ExileCardsForCostReduction(filter, costReductionPerCard, fromZone = CostZone.HAND)` —
+  "as an additional cost to cast this spell, you may exile any number of white cards from your hand. This
+  spell costs {2} less to cast for each card exiled this way" (the Neon Dynasty march cycle — March of
+  Otherworldly Light). The exile sibling of `SacrificeCreaturesForCostReduction`: always payable (exiling
+  none is legal), offered as a `costType = "ExileFromHand"` picker with `exileMinCount = 0`, and the client
+  returns the picks in `additionalCostPayment.exiledCards`. The reduction is part of the total cost
+  (CR 601.2f, `CastCostTotaller`): it takes generic mana off first and, on an X spell, then pays down the
+  announced X (X is locked in as generic mana, CR 107.3a) — but never coloured mana, and exiling more than
+  it can use is legal. The legal-action `maxAffordableX` counts the possible exiles. The spell's X (its
+  effect, a `manaValueAtMostX()` target cap, its mana value on the stack) stays the announced value.
 - `Costs.additional.TapForTotalPower(totalPower, filter = GameObjectFilter.Creature)` — "tap any number of
   creatures you control with total power N or more" (Teamwork N, CR 702.194a). A
   `CostAtom.VariablePermanents` with `action = TAP`, `xMeasure = TOTAL_POWER`, `minMeasure = N` and
@@ -1119,6 +1129,13 @@ preview — in the turn-face-up handler.)
   cost it reports unaffordable, because affordability there has to be known before any context
   exists. Same idea as `PayCost.OwnManaCost`, which is likewise resolved at payment time.
   (CR 119.4). "...unless you pay 3 life."
+- `Costs.pay.PayDynamicMana(amount: DynamicAmount)` — "pay **{X}**, where X is **&lt;rule&gt;**" (**Esper
+  Sentinel**: "draw a card unless that player pays {X}, where X is this creature's power"). The mana sibling
+  of `PayDynamicLife`, lowered the same way: `PayOrSufferExecutor` evaluates the amount in the resolving
+  context (so `DynamicAmounts.sourcePower()` falls back to last-known information once the source has
+  left, CR 608.2h) and offers an ordinary generic `CostAtom.Mana` of that size through the yes/no mana
+  prompt. A negative amount is {0} (CR 107.1b) and is still offered, so the payer may decline it.
+  **PayOrSuffer-only**, like `PayDynamicLife`.
 - `Costs.pay.Discard(filter = Any, count = 1, random = false)` — discard cards matching `filter`.
   Random variant prompts a yes/no and the engine picks the discards (Pillaging Horde).
 - `Costs.pay.DiscardHand` — discard your **entire** hand. Nothing is selected (every card goes), so
@@ -1721,6 +1738,10 @@ this path, with blocker filters evaluated against projected state.
 - `PutSecondFromTopOrBottomOfLibrary(target)` — second-from-top or bottom.
 - `ShuffleIntoLibrary(target, fromZone?)` — shuffle target into owner's library. `fromZone` skips the move if the card has left that zone by resolution ("shuffle this card into your library from your graveyard" — Kogla and Yidaro).
 - `PutIntoLibraryNthFromTop(target, positionFromTop)` — place N from the top.
+- `PutIntoLibraryBeneathTop(target, cardsAbove: DynamicAmount)` — "put it into its owner's library just
+  beneath the top X cards of that library" (Unexpectedly Absent, `DynamicAmounts.xValue()`). Lowers to
+  `MoveToZoneEffect.positionFromTopAmount`, evaluated on resolution: 0 (or less) is the top, more than the
+  library holds is the bottom.
 - `PutOntoBattlefield(target, tapped?)` — put target on the battlefield.
 - `PutOntoBattlefieldUnderYourControl(target)` — under controller's control.
 - `PutOntoBattlefieldFromGraveyard(target, underYourControl = false, tapped = false)` — the *guarded* return:
@@ -10890,7 +10911,7 @@ copy of it (CR 707.10e). The activated-ability analogue of the spell-level `cant
 > **Where set-mechanic helpers live.** The `card { … }` keyword helpers below for *set-specific*
 > mechanics — `mayBeginGameOnBattlefield()`, `flurry { }`, `mobilize(…)`, `firebending(n)`, `sneak(cost)`, `webSlinging(cost)`, `mayhem(cost)`, `madness(cost)`, `decayed()`,
 > `vividEtb { }` / `vividCostReduction()`, `convergeEntersWithCounters(counterType?)`,
-> `impending(time, cost)`, `renew(cost) { }`, `embalm(cost)`, `unearth(cost)`, `enduring()`,
+> `impending(time, cost)`, `renew(cost) { }`, `embalm(cost)`, `reconfigure(cost)`, `unearth(cost)`, `enduring()`,
 > `craft(filter, cost)`, `station()`, `jobSelect()`, `forMirrodin()`, `gift(kind)` — are `CardBuilder` **extension functions** in
 > `mtg-sdk/.../dsl/mechanics/` (one file per mechanic), not methods on the core `CardBuilder`. They
 > stay in package `com.wingedsheep.sdk.dsl`, so the call syntax is unchanged, but a card file that
@@ -12269,6 +12290,17 @@ composite abilities).
   rather than an alternative way to cast, the grant rides the plain `GrantedActivatedAbility` channel — not the
   `GrantedKeywordAbility` record `GrantHarmonize`/`GrantFlashback` need — and `ZoneActivatedAbilityEnumerator` surfaces
   printed **and** granted zone abilities alike.
+- `Reconfigure(cost)` — `card { reconfigure(cost) }` builder helper (CR 702.151, Kamigawa: Neon Dynasty), for
+  Equipment creatures. Adds `Keyword.RECONFIGURE` and the keyword's two activated abilities (CR 702.151a), both
+  sorcery-speed and both composed of existing primitives: `reconfigureAttachAbility(cost)` —
+  `AttachEquipmentEffect` on `TargetFilter.OtherCreatureYouControl` — and `reconfigureUnattachAbility(cost)` —
+  `UnattachEquipmentEffect(Self)` gated by `ActivationRestriction.OnlyIfCondition(SourceMatches(attachedTo(Creature)))`.
+  Neither is an equip ability (`isEquipAbility = false`). The keyword is load-bearing: a creature Equipment can equip
+  only with reconfigure (CR 301.5c — `AttachmentMover.canAttach` and the CR 704.5n SBA), and **any** attachment of an
+  Equipment with reconfigure to a creature (its own ability, Brass Squire, entering attached) stamps a
+  `ReconfiguredComponent(hostId, timestamp)` that `StateProjector` turns into a layer-4 "not a creature, no creature
+  subtypes" effect (CR 702.151b) for as long as it stays attached to that host. The effect isn't a static ability, so it
+  survives the Equipment losing reconfigure; every unattach path drops it. (Lion Sash.)
 - `Unearth(cost)` — `card { unearth(cost) }` builder helper (CR 702.84, Shards of Alara). "[Cost]: Return this card
   from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would
   leave the battlefield, exile it instead of putting it anywhere else. Activate only as a sorcery." Composed entirely

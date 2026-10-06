@@ -182,6 +182,26 @@ internal class CastCostTotaller(
             }
         }
 
+        // Exile-for-cost-reduction (the march cycle). The reduction applies to the *total* cost,
+        // whose generic part includes the announced value of X (CR 601.2f, 107.3a) — March of
+        // Otherworldly Light's ruling: with X=6, "{6}{W}", each exiled card takes {2} off. So when
+        // the declared exiles reduce past the other generic mana, X is locked in as generic mana
+        // first and the reduction is taken from that; coloured symbols always remain.
+        if (cardDef != null && action.additionalCostPayment != null) {
+            val reduction = cardDef.script.additionalCosts
+                .filterIsInstance<AdditionalCost.ExileCardsForCostReduction>()
+                .sumOf { action.additionalCostPayment.exiledCards.size * it.costReductionPerCard }
+            if (reduction > 0) {
+                val xValue = action.xValue ?: 0
+                if (reduction > effectiveCost.genericAmount && effectiveCost.hasX && xValue > 0 &&
+                    cardDef.script.xManaRestriction.isEmpty()
+                ) {
+                    effectiveCost = effectiveCost.withXAs(xValue)
+                }
+                effectiveCost = effectiveCost.reduceGeneric(reduction)
+            }
+        }
+
         return effectiveCost
     }
 

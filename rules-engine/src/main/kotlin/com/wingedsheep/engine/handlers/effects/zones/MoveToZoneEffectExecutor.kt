@@ -166,7 +166,11 @@ class MoveToZoneEffectExecutor(
         }
 
         // Build ZoneEntryOptions based on placement and effect properties
-        val entryOptions = buildEntryOptions(effect, cardComponent, controllerId, context.controllerId)
+        // A computed library position ("just beneath the top X cards") is read now, on resolution.
+        val dynamicPosition = effect.positionFromTopAmount
+            ?.takeIf { effect.destination == Zone.LIBRARY }
+            ?.let { maxOf(0, zones.predicateEvaluator.amounts.evaluate(state, it, context)) }
+        val entryOptions = buildEntryOptions(effect, cardComponent, controllerId, context.controllerId, dynamicPosition)
             .copy(lookBackGrants = context.lookBackGrants[targetId], entryCopy = context.entryCopies[targetId], auraHostId = context.entryAuraHosts[targetId],
                 entryChoices = context.entryChoices[targetId]?.values.orEmpty(),
                 entryCostPaid = context.entryCostsPaid[targetId] == true)
@@ -384,9 +388,11 @@ class MoveToZoneEffectExecutor(
         effect: MoveToZoneEffect,
         cardComponent: CardComponent,
         controllerId: com.wingedsheep.sdk.model.EntityId,
-        moverId: com.wingedsheep.sdk.model.EntityId
+        moverId: com.wingedsheep.sdk.model.EntityId,
+        dynamicPosition: Int? = null
     ): ZoneEntryOptions {
         val libraryPlacement = when {
+            dynamicPosition != null -> LibraryPlacement.NthFromTop(dynamicPosition)
             effect.positionFromTop != null && effect.destination == Zone.LIBRARY ->
                 LibraryPlacement.NthFromTop(effect.positionFromTop!!)
             effect.placement == ZonePlacement.Top -> LibraryPlacement.Top
