@@ -288,6 +288,62 @@
     ]
 }
 
+// Hullbreacher
+{
+    "name": "Hullbreacher",
+    "manaCost": "{2}{U}",
+    "typeLine": "Creature — Merfolk Pirate",
+    "oracleText": "Flash\nIf an opponent would draw a card except the first one they draw in each of their draw steps, instead you create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "replacementEffects": [
+            {
+                "type": "ReplaceDrawWith",
+                "replacementEffect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Treasure",
+                    "controller": {
+                        "type": "PlayerRef",
+                        "player": "ControllerOfSource"
+                    },
+                    "imageUri": "https://cards.scryfall.io/normal/front/2/8/284ec798-2725-4741-8748-578c259d0623.jpg?1783928585"
+                },
+                "appliesTo": {
+                    "type": "DrawEvent",
+                    "player": "EachOpponent",
+                    "exceptFirstInDrawStep": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "74",
+        "rarity": "RARE",
+        "artist": "Sidharth Chaturvedi",
+        "flavorText": "\"I don't need a map to find riches.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/d/4df8aabc-7fcb-4b7b-980b-18f499e6c170.jpg?1783928862",
+        "rulings": [
+            {
+                "date": "2020-11-10",
+                "text": "If multiple replacement effects apply to the same card draw, the player drawing the card chooses the order in which to apply them."
+            },
+            {
+                "date": "2020-11-10",
+                "text": "If you control multiple Hullbreachers while an opponent would draw a card except their first one in their draw step, you'll create only one Treasure."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Ingenuity Engine
 {
     "name": "Ingenuity Engine",
