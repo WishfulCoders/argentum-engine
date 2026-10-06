@@ -69,97 +69,6 @@
     ]
 }
 
-// Fiery Confluence
-{
-    "name": "Fiery Confluence",
-    "manaCost": "{2}{R}{R}",
-    "typeLine": "Sorcery",
-    "oracleText": "Choose three. You may choose the same mode more than once.\n• Fiery Confluence deals 1 damage to each creature.\n• Fiery Confluence deals 2 damage to each opponent.\n• Destroy target artifact.",
-    "script": {
-        "spellEffect": {
-            "type": "Modal",
-            "modes": [
-                {
-                    "effect": {
-                        "type": "ForEach",
-                        "space": {
-                            "type": "IterationSpace.Group",
-                            "filter": {
-                                "baseFilter": "creature"
-                            }
-                        },
-                        "body": {
-                            "type": "DealDamage",
-                            "amount": {
-                                "type": "Fixed",
-                                "amount": 1
-                            },
-                            "target": "IterationEntity"
-                        }
-                    },
-                    "description": "Fiery Confluence deals 1 damage to each creature"
-                },
-                {
-                    "effect": {
-                        "type": "DealDamage",
-                        "amount": {
-                            "type": "Fixed",
-                            "amount": 2
-                        },
-                        "target": {
-                            "type": "PlayerRef",
-                            "player": "EachOpponent"
-                        }
-                    },
-                    "description": "Fiery Confluence deals 2 damage to each opponent"
-                },
-                {
-                    "effect": {
-                        "type": "MoveToZone",
-                        "target": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        },
-                        "destination": "Graveyard",
-                        "byDestruction": true
-                    },
-                    "targetRequirements": [
-                        {
-                            "type": "TargetObject",
-                            "filter": {
-                                "baseFilter": "artifact"
-                            },
-                            "id": "t0"
-                        }
-                    ],
-                    "description": "Destroy target artifact"
-                }
-            ],
-            "chooseCount": 3,
-            "allowRepeat": true
-        }
-    },
-    "metadata": {
-        "collectorNumber": "26",
-        "rarity": "RARE",
-        "artist": "Kieran Yanner",
-        "imageUri": "https://cards.scryfall.io/normal/front/7/b/7b61c9bc-16e8-417f-99e7-8bd83d4666c5.jpg?1783938111",
-        "rulings": [
-            {
-                "date": "2015-11-04",
-                "text": "If the first or second modes are chosen multiple times, each of those modes represents a separate damage-dealing event."
-            },
-            {
-                "date": "2015-11-04",
-                "text": "If a mode requires a target, you can select that mode only if there's a legal target available. Each time you select that mode, you can choose a different target, or you can choose the same target."
-            }
-        ]
-    },
-    "colorIdentityOverride": [
-        "RED"
-    ]
-}
-
 // Gigantoplasm
 {
     "name": "Gigantoplasm",
@@ -227,61 +136,91 @@
     ]
 }
 
-// Grasp of Fate
+// Mystic Confluence
 {
-    "name": "Grasp of Fate",
-    "manaCost": "{1}{W}{W}",
-    "typeLine": "Enchantment",
-    "oracleText": "When this enchantment enters, for each opponent, exile up to one target nonland permanent that player controls until this enchantment leaves the battlefield. (Those permanents return under their owners' control.)",
+    "name": "Mystic Confluence",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Choose three. You may choose the same mode more than once.\n• Counter target spell unless its controller pays {3}.\n• Return target creature to its owner's hand.\n• Draw a card.",
     "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Grasp of Fate:1",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "to": "Battlefield"
-                },
-                "effect": {
-                    "type": "MoveUntilSourceLeaves",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "Counter",
+                        "condition": {
+                            "type": "CounterCondition.UnlessPaysMana",
+                            "cost": "{3}"
+                        }
                     },
-                    "destination": "Exile"
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": {},
+                                "zone": "Stack"
+                            },
+                            "id": "t0"
+                        }
+                    ]
                 },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "optional": true,
-                    "filter": {
-                        "baseFilter": "nonland permanent ctrl:opponent"
+                {
+                    "effect": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t1"
+                        },
+                        "destination": "Hand"
                     },
-                    "id": "t0"
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "creature"
+                            },
+                            "id": "t1"
+                        }
+                    ],
+                    "description": "Return target creature to its owner's hand"
+                },
+                {
+                    "effect": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
                 }
-            }
-        ]
+            ],
+            "chooseCount": 3,
+            "allowRepeat": true
+        }
     },
     "metadata": {
-        "collectorNumber": "3",
+        "collectorNumber": "14",
         "rarity": "RARE",
-        "artist": "Tomasz Jedruszek",
-        "imageUri": "https://cards.scryfall.io/normal/front/4/2/42e1e595-4000-4c89-a2cd-dbaec25baa71.jpg?1783938117",
+        "artist": "Kieran Yanner",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/1/81bbffc2-6f58-4baa-8f95-168eab106b15.jpg?1783938114",
         "rulings": [
             {
-                "date": "2015-11-04",
-                "text": "If Grasp of Fate leaves the battlefield before its triggered ability resolves, no nonland permanents will be exiled."
+                "date": "2021-03-19",
+                "text": "No matter which combination of modes you choose, you always follow the instructions in the order they are written."
             },
             {
-                "date": "2015-11-04",
-                "text": "If a token is exiled, it ceases to exist. It won't be returned to the battlefield."
+                "date": "2021-03-19",
+                "text": "If the middle mode is chosen more than once, you choose the relative order to return the target creatures."
             },
             {
-                "date": "2015-11-04",
-                "text": "The exiled cards return to the battlefield immediately after Grasp of Fate leaves the battlefield. Nothing happens between the two events, including state-based actions."
+                "date": "2021-03-19",
+                "text": "If you choose the first and/or second modes but all of the targets become illegal before Mystic Confluence resolves, the spell won't resolve. If you also chose the last mode once or twice, you won't draw any cards. If at least one target is still legal, the spell will resolve but will have no effect on any illegal targets."
             }
         ]
     },
     "colorIdentityOverride": [
-        "WHITE"
+        "BLUE"
     ]
 }
 

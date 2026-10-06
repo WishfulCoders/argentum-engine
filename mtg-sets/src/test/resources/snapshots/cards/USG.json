@@ -4772,6 +4772,113 @@
     ]
 }
 
+// Time Spiral
+{
+    "name": "Time Spiral",
+    "manaCost": "{4}{U}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Exile Time Spiral. Each player shuffles their hand and graveyard into their library, then draws seven cards. You untap up to six lands.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "Each"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromMultipleZones",
+                                    "zones": [
+                                        "Hand",
+                                        "Graveyard"
+                                    ]
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "gathered0",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Library",
+                                    "placement": "Shuffled"
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "Each"
+                    },
+                    "body": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 7
+                        }
+                    }
+                },
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 6
+                                }
+                            },
+                            "storeSelected": "selected1"
+                        },
+                        {
+                            "type": "TapUntapCollection",
+                            "collectionName": "selected1",
+                            "tap": false
+                        }
+                    ]
+                }
+            ]
+        },
+        "selfExileOnResolve": true
+    },
+    "metadata": {
+        "collectorNumber": "103",
+        "rarity": "RARE",
+        "artist": "Michael Sutfin",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/3/f3d62dbd-63db-4ac9-950f-9852627f23f2.jpg?1783946354",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "You choose which lands to untap as the spell resolves. They aren't targeted, and they don't have to be lands that you control."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Tolarian Academy
 {
     "name": "Tolarian Academy",

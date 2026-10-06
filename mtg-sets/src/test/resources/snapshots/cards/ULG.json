@@ -620,6 +620,112 @@
     ]
 }
 
+// Frantic Search
+{
+    "name": "Frantic Search",
+    "manaCost": "{2}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Draw two cards, then discard two cards. Untap up to three lands.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
+                },
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand"
+                            },
+                            "storeAs": "hand"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "hand",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            },
+                            "storeSelected": "discarded",
+                            "prompt": "Choose 2 cards to discard"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "discarded",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Graveyard"
+                            },
+                            "moveType": "Discard"
+                        }
+                    ]
+                },
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                }
+                            },
+                            "storeSelected": "selected1"
+                        },
+                        {
+                            "type": "TapUntapCollection",
+                            "collectionName": "selected1",
+                            "tap": false
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "artist": "Jeff Miracola",
+        "flavorText": "Motivation was high in the academy once students realized flunking their exams could kill them.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/9/1904db14-6df7-424f-afa5-e3dfab31300a.jpg?1783946247",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "You choose which lands to untap as the spell resolves. They aren't targeted, and they don't have to be lands that you control."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "You draw two cards and discard two cards all while Frantic Search is resolving. Nothing can happen between the two, and no player may choose to take actions."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Ghitu Fire-Eater
 {
     "name": "Ghitu Fire-Eater",
