@@ -366,6 +366,13 @@ class CardBuilder(private val name: String) {
     var conditionalFlash: Condition? = null
 
     /**
+     * "You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't
+     * have been cast, the controller of the permanent it becomes sacrifices it at the beginning of
+     * the next cleanup step." See [com.wingedsheep.sdk.model.CardScript.flashWithCleanupSacrifice].
+     */
+    var flashWithCleanupSacrifice: Boolean = false
+
+    /**
      * An alternative cost the caster may pay instead of the spell's mana cost.
      * Used for cards like Zahid, Djinn of the Lamp.
      */
@@ -965,6 +972,7 @@ class CardBuilder(private val name: String) {
             cantBeCounteredIf = cantBeCounteredIf,
             cantBeCopied = cantBeCopied,
             conditionalFlash = conditionalFlash,
+            flashWithCleanupSacrifice = flashWithCleanupSacrifice,
             kickerTargetRequirements = spellBuilder?.kickerTargetRequirements ?: emptyList(),
             kickerSpellEffect = spellBuilder?.kickerEffect,
             cleaveTargetRequirements = spellBuilder?.cleaveTargetRequirements ?: emptyList(),

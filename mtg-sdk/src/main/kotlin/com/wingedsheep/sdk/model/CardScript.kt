@@ -226,6 +226,30 @@ data class CardScript(
     val conditionalFlash: @Serializable Condition? = null,
 
     /**
+     * "You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't
+     * have been cast, the controller of the permanent it becomes sacrifices it at the beginning of
+     * the next cleanup step." — the Mirage-block instant-speed permanent (Necromancy, Armor of
+     * Thorns, Parapet, Spider Climb, Soar, Ward of Lights, …).
+     *
+     * The first sentence is a casting permission like [conditionalFlash] that is always on. The
+     * second is owed only when that permission was the one that let the spell be cast: cast at a
+     * time a sorcery couldn't have been (CR 307.1 — your main phase, empty stack, you have priority)
+     * and with no *other* rule or effect allowing it then (printed flash, a flash grant, an
+     * "as though it had flash" cast permission). Necromancy's 2022-12-08 ruling: "The sacrifice
+     * occurs only if you cast it using its own ability. If you cast it using some other effect …
+     * then it won't be sacrificed." A spell cast while another spell or ability is resolving
+     * ("you may cast it") isn't cast under this permission either.
+     *
+     * The sacrifice is a delayed triggered ability (CR 603.7a: created by the static ability that
+     * let the player cast the spell), set up as the spell becomes a permanent. It triggers at the
+     * beginning of the next cleanup step and is put on the stack in that step (CR 514.3a). It
+     * affects only the permanent the spell became: once that object leaves the battlefield it is
+     * gone for the trigger, even if it returns (CR 603.7c / 400.7). Whoever controls the permanent
+     * then sacrifices it.
+     */
+    val flashWithCleanupSacrifice: Boolean = false,
+
+    /**
      * Alternate target requirements used when this spell declared an optional additional cost.
      * When non-empty and the cast declared *any* slot on that rail, these replace
      * [targetRequirements] (e.g., Fight with Fire: unkicked targets one creature, kicked divides

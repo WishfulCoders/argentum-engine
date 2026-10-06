@@ -688,15 +688,17 @@ class CastZoneResolver(
      * `ConditionalStaticAbility` — by a turn-scoped player grant, or by its own conditionalFlash
      * condition. Delegates to [FlashTypeGrants], the shared decision
      * `CastPermissionUtils.hasGrantedFlash` also uses, so this authoritative cast-time re-check can
-     * never disagree with what enumeration offered.
+     * never disagree with what enumeration offered. [includeCleanupSacrificeFlash] = false leaves
+     * out the card's own `flashWithCleanupSacrifice` permission (see [FlashTypeGrants]).
      */
-    fun hasGrantedFlash(state: GameState, spellCardId: EntityId): Boolean =
+    fun hasGrantedFlash(state: GameState, spellCardId: EntityId, includeCleanupSacrificeFlash: Boolean = true): Boolean =
         FlashTypeGrants.hasGrantedFlash(
             state = state,
             spellCardId = spellCardId,
             cardRegistry = cardRegistry,
             predicateEvaluator = predicateEvaluator,
             conditionEvaluator = conditionEvaluator,
+            includeCleanupSacrificeFlash = includeCleanupSacrificeFlash,
         )
 
     /**

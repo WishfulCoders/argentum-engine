@@ -107,6 +107,14 @@ data class SpellOnStackComponent(
     val alternativeCost: com.wingedsheep.engine.core.AlternativeCostType? = null,
     val wasWarped: Boolean = false,  // For warp - permanent is exiled at end step
     val wasDashed: Boolean = false,  // For dash (CR 702.109) - permanent gains haste, returns to hand at next end step
+    /**
+     * Cast at a time a sorcery couldn't have been cast under the card's own
+     * `flashWithCleanupSacrifice` permission (Necromancy, Armor of Thorns): the permanent it
+     * becomes is sacrificed by its controller at the beginning of the next cleanup step. Stamped by
+     * the cast handler (`CastValidator.castOwesCleanupSacrifice`); a copy of the spell wasn't cast,
+     * so it never carries this.
+     */
+    val sacrificeAtNextCleanup: Boolean = false,
     val wasEvoked: Boolean = false,  // For evoke - permanent is sacrificed on ETB
     val wasImpending: Boolean = false,  // For impending - permanent enters with time counters and isn't a creature until they're gone
     val wasOverloaded: Boolean = false,  // For overload (CR 702.96) - spell has no targets and resolves with its "each" variant

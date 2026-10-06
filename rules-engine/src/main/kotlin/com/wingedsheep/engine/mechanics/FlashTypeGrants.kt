@@ -26,8 +26,13 @@ import com.wingedsheep.sdk.scripting.StaticAbility
  * They live in different packages and neither can see the other's private helpers, so the whole
  * decision lives here rather than being written twice. Both delegate; neither keeps a copy.
  *
- * Three sources are consulted, in order:
+ * Four sources are consulted, in order:
  *
+ * 0. **The card's own `flashWithCleanupSacrifice`** — the Mirage-block "You may cast this spell as
+ *    though it had flash. If you cast it any time a sorcery couldn't have been cast, … sacrifices it
+ *    at the beginning of the next cleanup step" (Necromancy). Always on. The cast handler asks again
+ *    with this source left out (`includeCleanupSacrificeFlash = false`): when nothing else allows
+ *    the instant-speed cast, this permission is the one used and the sacrifice is owed.
  * 1. **The card's own `conditionalFlash`** — "this spell has flash as long as …" printed on the
  *    card itself (ferocious and friends), evaluated in the caster's context.
  * 2. **Turn-scoped player grants** — `GrantFlashToSpellsEffect` writes
@@ -56,6 +61,10 @@ object FlashTypeGrants {
     /**
      * Whether [spellCardId] may currently be cast as though it had flash by something other than a
      * printed flash keyword. Callers `||` this with their own printed-keyword check.
+     *
+     * [includeCleanupSacrificeFlash] = false asks whether something *other than* the card's own
+     * `flashWithCleanupSacrifice` permission allows it — the question that decides whether casting
+     * it at instant speed owes the cleanup-step sacrifice.
      */
     fun hasGrantedFlash(
         state: GameState,
@@ -63,13 +72,19 @@ object FlashTypeGrants {
         cardRegistry: CardRegistry,
         predicateEvaluator: PredicateEvaluator,
         conditionEvaluator: ConditionEvaluator,
+        includeCleanupSacrificeFlash: Boolean = true,
     ): Boolean {
         val spellOwner = state.getEntity(spellCardId)?.get<ControllerComponent>()?.playerId
             ?: return false
 
-        // 1. The card's own conditionalFlash (e.g. Ferocious).
         val spellDef = state.getEntity(spellCardId)?.get<CardComponent>()
             ?.let { cardRegistry.getCard(it.cardDefinitionId) }
+
+        // 0. The card's own "you may cast this spell as though it had flash" with its cleanup-step
+        // sacrifice (Necromancy).
+        if (includeCleanupSacrificeFlash && spellDef?.script?.flashWithCleanupSacrifice == true) return true
+
+        // 1. The card's own conditionalFlash (e.g. Ferocious).
         val conditionalFlash = spellDef?.script?.conditionalFlash
         if (conditionalFlash != null) {
             val effectContext = EffectContext(sourceId = spellCardId, controllerId = spellOwner)

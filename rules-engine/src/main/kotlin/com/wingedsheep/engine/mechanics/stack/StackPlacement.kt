@@ -165,6 +165,9 @@ internal object StackPlacement {
         val copiedSpellComp = sourceSpell.copy(
             casterId = copyController,
             castFromZone = null,
+            // "If you cast it any time a sorcery couldn't have been cast" (Necromancy): a copy
+            // wasn't cast, so its permanent owes no cleanup-step sacrifice.
+            sacrificeAtNextCleanup = false,
             entryKeywordGrants = emptyList(),
             manaSpentWhite = 0,
             manaSpentBlue = 0,

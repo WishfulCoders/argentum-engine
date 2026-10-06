@@ -176,6 +176,12 @@ section; do not let SDK additions land without a corresponding doc update.
   over the same condition when the rider also changes the effect ("…and the damage can't be prevented").
 - `cantBeCopied: Boolean` — spell can't be copied (CR 707.10); copy effects that name it create no copy (Display of Power).
 - `conditionalFlash: Condition?` — gains flash while condition holds.
+- `flashWithCleanupSacrifice: Boolean` — the Mirage-block "You may cast this spell as though it had flash. If you
+  cast it any time a sorcery couldn't have been cast, the controller of the permanent it becomes sacrifices it at the
+  beginning of the next cleanup step." (Necromancy, Armor of Thorns, Parapet, Spider Climb). The permission is always on;
+  the sacrifice is owed only when *this* permission was what let it be cast (no printed flash, flash grant or other
+  "as though it had flash" permission applied, and not cast mid-resolution) — the engine stamps that on the spell and
+  arms a delayed cleanup-step sacrifice for the permanent it becomes (CR 603.7a, 514.3a).
 - `layout: CardLayout` — physical layout shape (see §2).
 - `meldResult: Boolean` — this card is the permanent a **meld pair** combines into (CR 701.42) — Chittering Host,
   Brisela, Voice of Nightmares, Hanweir, the Writhing Township, Ragnarok, Divine Deliverance. Set it on the *result*,
@@ -864,6 +870,8 @@ counts a hybrid Phyrexian pip paid with life like any other Phyrexian pip.
 - `dash` — cast from hand for the dash cost (CR 702.109); gains haste, returned to owner's hand at
   the beginning of the next end step (not exiled — unlike warp, dash has no later recast).
 - `conditionalFlash` — flash while condition holds.
+- `flashWithCleanupSacrifice = true` — "you may cast this spell as though it had flash; if you cast it any time a
+  sorcery couldn't have been cast, … sacrifices it at the beginning of the next cleanup step" (Necromancy).
 - `cantBeCountered` — spell is uncounterable.
 - `cantBeCounteredIf = condition` — uncounterable only while `condition` holds for the spell on the stack (Banefire).
 - `cantBeCopied` — spell can't be copied (CR 707.10).

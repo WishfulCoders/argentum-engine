@@ -457,19 +457,62 @@ internal class CastValidator(
         cardDef: CardDefinition?,
         source: CastSource,
     ): String? {
+        if (timingAllows(state, action, cardComponent, cardDef, source, includeCleanupSacrificeFlash = true)) return null
+        return "You can only cast sorcery-speed spells during your main phase with an empty stack"
+    }
+
+    /**
+     * Whether casting [action] now owes the cleanup-step sacrifice of a `flashWithCleanupSacrifice`
+     * card (Necromancy: "If you cast it any time a sorcery couldn't have been cast, the controller
+     * of the permanent it becomes sacrifices it at the beginning of the next cleanup step"). Asked
+     * of the state before the spell moved to the stack. True only when the card's own permission is
+     * what allows the cast: a sorcery couldn't be cast now (CR 307.1) and no other rule or effect
+     * allows it at this time either — printed flash, a flash grant, an "as though it had flash" cast
+     * permission. The card's 2022-12-08 ruling: "The sacrifice occurs only if you cast it using its
+     * own ability. If you cast it using some other effect (for example, if another effect allowed
+     * you to cast it as though it had flash), then it won't be sacrificed." With several
+     * permissions available the caster would always pick the one that costs nothing more.
+     */
+    fun castOwesCleanupSacrifice(inputState: GameState, action: CastSpell): Boolean {
+        if (action.castFaceDown) return false
+        val state = com.wingedsheep.engine.mechanics.CastCharacteristics.announce(inputState, action, cardRegistry)
+        val cardComponent = state.getEntity(action.cardId)?.get<CardComponent>() ?: return false
+        val cardDef = com.wingedsheep.engine.mechanics.CastCharacteristics.definitionForCast(
+            cardRegistry.getCard(cardComponent.cardDefinitionId), action
+        ) ?: return false
+        if (!cardDef.script.flashWithCleanupSacrifice) return false
+        val source = castSource(state, action, cardComponent) ?: return false
+        return !timingAllows(state, action, cardComponent, cardDef, source, includeCleanupSacrificeFlash = false)
+    }
+
+    /**
+     * Whether some timing permission lets [action] be cast now: sorcery timing (CR 307.1), an
+     * instant, printed or granted flash, or another "as though it had flash" permission.
+     * [includeCleanupSacrificeFlash] = false leaves out the card's own `flashWithCleanupSacrifice`
+     * permission (see [castOwesCleanupSacrifice]).
+     */
+    private fun timingAllows(
+        state: GameState,
+        action: CastSpell,
+        cardComponent: CardComponent,
+        cardDef: CardDefinition?,
+        source: CastSource,
+        includeCleanupSacrificeFlash: Boolean,
+    ): Boolean {
         val transformedFace = source.transformedFace
         val effectiveTypeLine = action.faceIndex
             ?.let { cardDef?.cardFaces?.getOrNull(it)?.typeLine }
             ?: transformedFace?.typeLine
             ?: cardComponent.typeLine
-        if (effectiveTypeLine.isInstant) return null
+        if (effectiveTypeLine.isInstant) return true
         // Printed flash comes off the same face as the type line above, for the same reason:
         // CR 712.11c evaluates only the face being cast, so a modal DFC whose *front* has flash
         // grants none to a sorcery-speed back. `transformedFace` is null for an ordinary cast, which
         // leaves this reading the card's own keywords. A *granted* flash below is a property of the
         // card object, not of a face, so it is unaffected.
         val faceKeywords = transformedFace?.keywords ?: cardDef?.keywords ?: emptySet()
-        val grantedFlash = faceKeywords.contains(Keyword.FLASH) || zoneResolver.hasGrantedFlash(state, action.cardId)
+        val grantedFlash = faceKeywords.contains(Keyword.FLASH) ||
+            zoneResolver.hasGrantedFlash(state, action.cardId, includeCleanupSacrificeFlash)
         // A from-exile may-play permission with an "as though it had flash" rider (Azula, Cunning
         // Usurper) lets a non-instant exiled card be cast at instant speed (CR 702.8).
         val mayPlayFlash = state.activeMayPlayFor(action.cardId, action.playerId, conditionEvaluator, cardRegistry)
@@ -485,13 +528,9 @@ internal class CastValidator(
         val grantedAltCostFlash = action.useAlternativeCost && cardDef != null &&
             action.alternativeCostType == AlternativeCostType.GRANTED &&
             costCalculator.findAlternativeCastingCosts(state, action.playerId, cardDef).firstOrNull()?.asThoughFlash == true
-        if (!grantedFlash && !mayPlayFlash && !flashTimingKicker && !grantedAltCostFlash &&
-            !isCastingForSneak(state, action, cardDef) &&
-            !turnManager.canPlaySorcerySpeed(state, action.playerId)
-        ) {
-            return "You can only cast sorcery-speed spells during your main phase with an empty stack"
-        }
-        return null
+        return grantedFlash || mayPlayFlash || flashTimingKicker || grantedAltCostFlash ||
+            isCastingForSneak(state, action, cardDef) ||
+            turnManager.canPlaySorcerySpeed(state, action.playerId)
     }
 
     /**
