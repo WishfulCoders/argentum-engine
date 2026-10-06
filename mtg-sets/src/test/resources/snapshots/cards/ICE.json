@@ -735,6 +735,157 @@
     ]
 }
 
+// Dance of the Dead
+{
+    "name": "Dance of the Dead",
+    "manaCost": "{1}{B}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature card in a graveyard\nWhen this Aura enters, if it's on the battlefield, it loses \"enchant creature card in a graveyard\" and gains \"enchant creature put onto the battlefield with this Aura.\" Put enchanted creature card onto the battlefield tapped under your control and attach this Aura to it. When this Aura leaves the battlefield, that creature's controller sacrifices it.\nEnchanted creature gets +1/+1 and doesn't untap during its controller's untap step.\nAt the beginning of the upkeep of enchanted creature's controller, that player may pay {1}{B}. If the player does, untap that creature.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Dance of the Dead:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Graveyard",
+                                "player": "Each",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsCreature"
+                                    ],
+                                    "statePredicates": [
+                                        "IsAttachedToBySource"
+                                    ]
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield",
+                                "placement": "Tapped"
+                            }
+                        },
+                        {
+                            "type": "EnchantPutOntoBattlefield",
+                            "from": "gathered0"
+                        },
+                        {
+                            "type": "CreateDelayedTrigger",
+                            "effect": {
+                                "type": "SacrificeTarget",
+                                "target": {
+                                    "type": "PipelineTarget",
+                                    "collectionName": "gathered0"
+                                },
+                                "sacrificedByItsController": true
+                            },
+                            "trigger": {
+                                "event": {
+                                    "type": "ZoneChangeEvent",
+                                    "from": "Battlefield"
+                                }
+                            },
+                            "watchedTarget": "Self",
+                            "expiry": "DelayedTriggerExpiry.Never",
+                            "fireOnce": true,
+                            "carryCollections": [
+                                "gathered0"
+                            ]
+                        }
+                    ]
+                },
+                "interveningIf": {
+                    "type": "SourceInZone",
+                    "zones": [
+                        "Battlefield"
+                    ]
+                }
+            },
+            {
+                "id": "Dance of the Dead:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "PayManaCost",
+                            "cost": "{1}{B}"
+                        }
+                    },
+                    "then": {
+                        "type": "TapUntap",
+                        "target": "EnchantedCreature",
+                        "tap": false
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 1,
+                "toughnessBonus": 1
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "DOESNT_UNTAP"
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature",
+                "zone": "Graveyard"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "118",
+        "rarity": "UNCOMMON",
+        "artist": "Randy Gallegos",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/7/e7c53ba4-9956-4cd6-85ca-2d6b61a5127c.jpg?1783947505",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "This is a new wording. Dance of the Dead is now an Aura. You target a creature card in a graveyard when you cast it. It enters attached to that card. Then it returns that card to the battlefield, and attaches itself to that card again (since the card is treated as a new object on the battlefield)."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "Once the creature is returned to the battlefield, Dance of the Dead can't be attached to anything other than it (unless Dance of the Dead somehow manages to put a different creature onto the battlefield). Attempting to move Dance of the Dead to another creature won't work."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "If the creature card put onto the battlefield has protection from black (or anything that prevents this from legally being attached), this won't be able to attach to it. Then this will go to the graveyard as a state-based action, causing the creature to be sacrificed."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If more than one Dance of the Dead ends up on a creature, each contributes a +1/+1. But you only have to pay the untap cost once. You may pay for each one, however, and untap the card more than once during upkeep."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Dark Banishing
 {
     "name": "Dark Banishing",
