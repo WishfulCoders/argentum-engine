@@ -2656,6 +2656,104 @@
     "hasNoManaCost": true
 }
 
+// Solitude
+{
+    "name": "Solitude",
+    "manaCost": "{3}{W}{W}",
+    "typeLine": "Creature — Elemental Incarnation",
+    "oracleText": "Flash\nLifelink\nWhen this creature enters, exile up to one other target creature. That creature's controller gains life equal to its power.\nEvoke—Exile a white card from your hand.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH",
+        "LIFELINK",
+        "EVOKE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Evoke",
+            "cost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "white"
+                    }
+                }
+            ]
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Solitude:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "EntityProperty",
+                                "entity": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "numericProperty": "Power"
+                            },
+                            "target": "TargetController"
+                        },
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Exile"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "creature",
+                        "excludeSelf": true
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "exile up to one other target creature. That creature's controller gains life equal to its power."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "rarity": "MYTHIC",
+        "artist": "Evan Shipard",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/7/47a6234f-309f-4e03-9263-66da48b57153.jpg?1783926885",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as an evoke cost), add any cost increases, then apply any cost reductions. The mana value of the spell is determined by only its mana cost, no matter what the total cost to cast that spell was."
+            },
+            {
+                "date": "2021-06-18",
+                "text": "If you pay the evoke cost, you can have the creature's own triggered ability resolve before the evoke triggered ability. You can cast spells after that ability resolves but before you have to sacrifice the creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Soul of Migration
 {
     "name": "Soul of Migration",
