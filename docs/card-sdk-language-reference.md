@@ -180,6 +180,10 @@ section; do not let SDK additions land without a corresponding doc update.
   its caster (Banefire: `Conditions.CompareAmounts(DynamicAmounts.xValue(), GTE, 5)`). Pair it with an `Effects.If`
   over the same condition when the rider also changes the effect ("…and the damage can't be prevented").
 - `cantBeCopied: Boolean` — spell can't be copied (CR 707.10); copy effects that name it create no copy (Display of Power).
+- `minimumXValue: Int` — the spell's "X can't be 0" (`1`; default `0`): the floor on the X announced while casting
+  it (CR 601.2b), whenever the cast's cost carries an {X} — the printed cost (Welcome the Darkness) or a kicker {X}
+  (Thieving Skydiver: the kicked offer gets `LegalAction.minX = 1` and needs X ≥ 1 affordable; the unkicked cast has no
+  X). `CastValidator` refuses a smaller X, and a free cast of such a spell is impossible (CR 107.3b forces X = 0).
 - `conditionalFlash: Condition?` — gains flash while condition holds.
 - `layout: CardLayout` — physical layout shape (see §2).
 - `meldResult: Boolean` — this card is the permanent a **meld pair** combines into (CR 701.42) — Chittering Host,
@@ -872,6 +876,8 @@ counts a hybrid Phyrexian pip paid with life like any other Phyrexian pip.
 - `cantBeCountered` — spell is uncounterable.
 - `cantBeCounteredIf = condition` — uncounterable only while `condition` holds for the spell on the stack (Banefire).
 - `cantBeCopied` — spell can't be copied (CR 707.10).
+- `minimumXValue = 1` — "X can't be 0" on a spell (CR 601.2b), printed {X} or kicker {X} (Thieving Skydiver). Set on
+  the card, not in `spell { }`; the activated-ability twin is `activatedAbility { minimumXValue = 1 }`.
 - `xManaRestriction = setOf(Color.BLACK, Color.RED)` — "spend only [colors] on X." Restricts which
   mana may pay the `{X}` portion of the cost (the fixed colored/generic portion is unaffected).
   Available in both `spell { }` and `activatedAbility { }` blocks; honored by the mana solver and the

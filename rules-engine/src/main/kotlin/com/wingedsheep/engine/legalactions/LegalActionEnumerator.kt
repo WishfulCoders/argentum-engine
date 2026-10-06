@@ -108,8 +108,9 @@ class LegalActionEnumerator(
         } else {
             offers
         }
+        val floored = com.wingedsheep.engine.legalactions.enumerators.SpellMinimumXOffer.annotate(context, permitted)
         return com.wingedsheep.engine.legalactions.enumerators.AdditionalManaForCountersOffer
-            .annotate(context, permitted, predicateEvaluator = predicateEvaluator)
+            .annotate(context, floored, predicateEvaluator = predicateEvaluator)
     }
 
     /**
