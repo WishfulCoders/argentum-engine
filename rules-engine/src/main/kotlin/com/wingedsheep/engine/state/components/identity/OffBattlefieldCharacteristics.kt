@@ -47,7 +47,7 @@ object OffBattlefieldCharacteristics {
     /** Apply the card's [CreatureOutsideBattlefield] additions, if it has any and they aren't applied. */
     fun leaveBattlefield(container: ComponentContainer, cardRegistry: CardRegistry): ComponentContainer {
         val card = container.get<CardComponent>() ?: return container
-        return leaveBattlefield(container, cardRegistry.getCard(card.cardDefinitionId))
+        return leaveBattlefield(container, cardRegistry.getCard(card))
     }
 
     /** [leaveBattlefield] with the card's definition already in hand (card creation). */

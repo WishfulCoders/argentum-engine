@@ -87,7 +87,7 @@ object DrawLimits {
         for (source in battlefield) {
             val entity = state.getEntity(source) ?: continue
             if (entity.has<FaceDownComponent>() || projected.hasLostAllAbilities(source)) continue
-            val definition = entity.get<CardComponent>()?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
+            val definition = entity.get<CardComponent>()?.let { cardRegistry.getCard(it) } ?: continue
             val statics = RoomFaceStatics.activeStaticAbilities(entity, definition)
             if (statics.none(::mayCap)) continue
             val controller = projected.getController(source) ?: continue

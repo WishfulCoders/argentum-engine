@@ -516,7 +516,7 @@ class CastPermissionUtils(
         val card = container.get<CardComponent>() ?: return false
         val projected = state.projectedState
         if (projected.isFaceDown(sourceId) || projected.hasLostAllAbilities(sourceId)) return false
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return false
+        val cardDef = cardRegistry.getCard(card) ?: return false
         val classLevel = container
             .get<com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent>()?.currentLevel
         for (ability in cardDef.script.effectiveStaticAbilities(classLevel)) {

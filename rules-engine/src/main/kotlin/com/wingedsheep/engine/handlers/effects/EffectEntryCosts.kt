@@ -34,7 +34,7 @@ object EffectEntryCosts {
     /** The entry cost [entityId] would pay as it enters, read off the card that would enter. */
     fun costFor(state: GameState, entityId: EntityId, context: EffectContext, registry: CardRegistry) =
         enteringCard(state, entityId, context)
-            ?.let { registry.getCard(it.cardDefinitionId) }
+            ?.let { registry.getCard(it) }
             ?.script?.replacementEffects
             ?.filterIsInstance<EntersOnlyIfCostPaid>()
             ?.firstOrNull()

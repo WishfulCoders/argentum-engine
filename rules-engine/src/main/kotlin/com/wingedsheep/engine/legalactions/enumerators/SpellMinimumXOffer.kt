@@ -28,7 +28,7 @@ internal object SpellMinimumXOffer {
             val cast = legal.action as? CastSpell ?: return@map legal
             if (!legal.hasXCost && !cast.useWithoutPayingManaCost) return@map legal
             val card = context.state.getEntity(cast.cardId)?.get<CardComponent>() ?: return@map legal
-            val minimumX = context.cardRegistry.getCard(card.cardDefinitionId)?.script?.minimumXValue ?: 0
+            val minimumX = context.cardRegistry.getCard(card)?.script?.minimumXValue ?: 0
             when {
                 minimumX <= 0 -> legal
                 cast.useWithoutPayingManaCost -> if (card.manaCost.hasX) legal.copy(affordable = false) else legal

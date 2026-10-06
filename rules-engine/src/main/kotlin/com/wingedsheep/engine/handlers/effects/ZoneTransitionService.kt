@@ -1630,7 +1630,7 @@ class ZoneTransitionService(
 
     /** Whether [card] carries an [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid] replacement. */
     private fun entersOnlyIfCostPaid(card: CardComponent): Boolean =
-        cardRegistry.getCard(card.cardDefinitionId)?.script?.replacementEffects
+        cardRegistry.getCard(card)?.script?.replacementEffects
             ?.any { it is com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid } == true
 
     /**
