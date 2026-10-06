@@ -91,7 +91,7 @@ internal class ProtectionModifier(
         // per-recipient (Whippoorwill) as well as global (Sunspine Lynx): one marked creature must
         // take its damage in full without blanking protection for everyone else in the combat.
         return assignments.filter { assignment ->
-            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator)) {
+            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = true)) {
                 return@filter true
             }
             val sourceColors = projected.getColors(assignment.sourceId)
@@ -137,7 +137,7 @@ internal class PlayerProtectionModifier(
         // *source* (Excruciator), so one attacker's damage may ignore player protection while
         // another attacker's in the same combat does not.
         return assignments.filter { assignment ->
-            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator)) {
+            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator, isCombatDamage = true)) {
                 return@filter true
             }
             !PlayerProtectionRules.isProtectedFromSource(
