@@ -160,7 +160,16 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
          * Disa the Restless; Ultron's Auxiliary) is `to = GRAVEYARD, excludeFrom = BATTLEFIELD`:
          * a discard, a mill, a countered spell, but never a death.
          */
-        val excludeFrom: Zone? = null
+        val excludeFrom: Zone? = null,
+        /**
+         * When true, a battlefield entry matches only if the object **wasn't cast** — Containment
+         * Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead." A
+         * permanent spell resolving onto the battlefield (CR 608.3) was cast (CR 601.2i), unless
+         * it is a copy of a spell, which is a token (CR 707.10f, 111.1); every other entry — put
+         * onto the battlefield by an effect, played as a land (CR 305.1), a token — wasn't. Only
+         * meaningful for `to = BATTLEFIELD` patterns.
+         */
+        val notCast: Boolean = false
     ) : EventPattern {
         override val description: String = buildString {
             append(describeObjectForEvent(filter))
@@ -191,6 +200,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             }
             if (excludeFrom != null) append(" from anywhere other than ${excludeFrom.displayName}")
             if (requireCraftMaterial) append(" while you're activating a craft ability")
+            if (notCast) append(" and it wasn't cast")
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): EventPattern {

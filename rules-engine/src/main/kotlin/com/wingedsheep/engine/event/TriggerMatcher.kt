@@ -1111,6 +1111,11 @@ class TriggerMatcher(
         // "while you're activating a craft ability" (Market Gnome, CR 702.167) — fire only when
         // this exile was a chosen craft material, not on any other exile.
         if (trigger.requireCraftMaterial && !event.craftMaterial) return false
+        // "…and it wasn't cast": an entry from the stack is a resolving permanent spell, which was
+        // cast unless it is a (token) copy of a spell.
+        if (trigger.notCast && event.fromZone == com.wingedsheep.sdk.core.Zone.STACK &&
+            state.getEntity(event.entityId)?.has<com.wingedsheep.engine.state.components.identity.TokenComponent>() != true
+        ) return false
 
         // Check binding
         when (binding) {
@@ -1392,6 +1397,8 @@ class TriggerMatcher(
             com.wingedsheep.sdk.scripting.predicates.CardPredicate.HasXInManaCost ->
                 // Printed cost's {X} symbol, not the computed CMC. Face-down has no mana cost.
                 if (isFaceDown) false else cardComponent.manaCost.hasX
+            is com.wingedsheep.sdk.scripting.predicates.CardPredicate.ManaCostIs ->
+                if (isFaceDown) false else predicate.matches(cardComponent.manaCost)
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.ColoredManaSymbolsAtLeast ->
                 // "a noncreature spell with one or more blue mana symbols in its mana cost"
                 // (Namor the Sub-Mariner). Printed cost, shared counting rule (CR 107.4e/f);

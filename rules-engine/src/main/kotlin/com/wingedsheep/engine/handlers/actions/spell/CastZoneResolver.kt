@@ -252,7 +252,35 @@ class CastZoneResolver(
         // other players' graveyards too. Grants without it are held to the caster's own graveyard
         // by `mayCastFromGraveyardGrantApplies`.
         if (state.turnOrder.none { cardId in state.getZone(ZoneKey(it, Zone.GRAVEYARD)) }) return emptyList()
+        // CR 305.9 — a land can't be cast. A `playLands` grant (Serra Paragon, Yawgmoth's Will) can
+        // match a land card; that card is *played* through `graveyardLandPlayGrant`, never cast.
+        if (cardComponent.typeLine.isLand) return emptyList()
         return mayCastFromGraveyardGrantsWithSources(state, playerId, cardId).map { it.second }
+    }
+
+    /**
+     * The [MayCastFromGraveyard] grant with [MayCastFromGraveyard.playLands] that lets [playerId]
+     * play the land card [cardId] from their graveyard right now (CR 305.1), paired with the entity
+     * it hangs off — or null when none applies. Read through the same enumeration as the cast half,
+     * so the filter, the during-your-turn gate and a spent `oncePerTurn` allowance gate a land play
+     * exactly as they gate a cast; a land play is never from another player's graveyard (CR 305.1
+     * plays a card you own... from *your* graveyard), whatever `fromAnyGraveyard` says.
+     *
+     * When several apply, an unlimited grant is preferred over a once-per-turn one (so no allowance
+     * is burned when it needn't be — the player's best choice), then a grant without a rider.
+     */
+    fun graveyardLandPlayGrant(
+        state: GameState,
+        playerId: EntityId,
+        cardId: EntityId
+    ): Pair<EntityId, MayCastFromGraveyard>? {
+        if (cardId !in state.getZone(ZoneKey(playerId, Zone.GRAVEYARD))) return null
+        val card = state.getEntity(cardId)?.get<CardComponent>() ?: return null
+        if (!card.typeLine.isLand) return null
+        val grants = mayCastFromGraveyardGrantsWithSources(state, playerId, cardId).filter { it.second.playLands }
+        return grants.firstOrNull { !it.second.oncePerTurn && !it.second.hasEntryRider }
+            ?: grants.firstOrNull { !it.second.oncePerTurn }
+            ?: grants.firstOrNull()
     }
 
     /**
@@ -357,7 +385,8 @@ class CastZoneResolver(
                 it.entersWithCounter == selection.entersWithCounter &&
                     it.addedSubtypeOnEntry == selection.addedSubtype &&
                     it.exileInsteadOfGraveyard == selection.exileInsteadOfGraveyard &&
-                    it.additionalCost == selection.additionalCost
+                    it.additionalCost == selection.additionalCost &&
+                    it.gainsAbility == selection.gainsAbility
             }?.let { return it }
         }
         // Unspecified: a mandatory rider still wins, and among the rest a grant that owes no extra
@@ -1005,6 +1034,7 @@ class CastZoneResolver(
                 is CardPredicate.ManaValueIsEven -> cmc % 2 == 0
                 is CardPredicate.ManaValueIsOdd -> cmc % 2 != 0
                 is CardPredicate.HasXInManaCost -> card.manaCost.hasX
+                is CardPredicate.ManaCostIs -> predicate.matches(card.manaCost)
                 is CardPredicate.ColoredManaSymbolsAtLeast ->
                     card.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
                 // --- Power / toughness (null base P/T — e.g. */noncreature — never matches) ---

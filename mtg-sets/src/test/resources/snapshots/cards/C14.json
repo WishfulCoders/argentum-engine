@@ -1,3 +1,60 @@
+// Containment Priest
+{
+    "name": "Containment Priest",
+    "manaCost": "{1}{W}",
+    "typeLine": "Creature — Human Cleric",
+    "oracleText": "Flash\nIf a nontoken creature would enter and it wasn't cast, exile it instead.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "replacementEffects": [
+            {
+                "type": "RedirectZoneChange",
+                "newDestination": "Exile",
+                "appliesTo": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature nontoken",
+                    "to": "Battlefield",
+                    "notCast": true
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "5",
+        "rarity": "RARE",
+        "artist": "John Stanko",
+        "flavorText": "Some protection requires a bit of finesse.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/2/c2c794b9-09da-49be-b258-b0e21f1663e3.jpg?1783938874",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "Containment Priest's last ability won't affect any creatures that were cast, including ones cast from unusual zones such as your graveyard."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If a noncreature card wasn't cast and is entering the battlefield as a creature (due to an effect such as that of March of the Machines), it will be exiled. Conversely, if a creature card wasn't cast and is entering the battlefield as a noncreature permanent (for example, Heliod, Sun-Crowned with insufficient devotion), it won't be exiled."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If Containment Priest enters the battlefield without being cast, its ability won't exile itself."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If Containment Priest enters the battlefield at the same time as other creatures, its ability won't affect those creatures."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Creeperhulk
 {
     "name": "Creeperhulk",

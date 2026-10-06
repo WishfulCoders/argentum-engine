@@ -5739,6 +5739,73 @@
     "colorIdentityOverride": []
 }
 
+// Yawgmoth's Will
+{
+    "name": "Yawgmoth's Will",
+    "manaCost": "{2}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Until end of turn, you may play lands and cast spells from your graveyard.\nIf a card would be put into your graveyard from anywhere this turn, exile that card instead.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GrantStaticAbility",
+                    "ability": {
+                        "type": "MayCastFromGraveyard",
+                        "filter": {},
+                        "playLands": true
+                    },
+                    "target": "Controller"
+                },
+                {
+                    "type": "GrantReplacementEffect",
+                    "replacement": {
+                        "type": "RedirectZoneChange",
+                        "newDestination": "Exile",
+                        "appliesTo": {
+                            "type": "ZoneChangeEvent",
+                            "filter": "nontoken own:you",
+                            "to": "Graveyard"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "171",
+        "rarity": "RARE",
+        "artist": "Ron Spencer",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/d/6d3e3c3a-d351-4d91-8884-312d4b6f540d.jpg?1783946334",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "The second ability creates a replacement effect. It applies to both costs and effects."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If you play a card using Yawgmoth's Will and something triggers only when \"cast from your hand\", that something will not trigger. Such things trigger based on where the card came from."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "To \"play a card\" is to either cast a spell or to put a land onto the battlefield using the main phase special action."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "It will exile itself since it goes to the graveyard after its effect starts."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If you cast a Buyback spell, then there will be two effects trying to replace where the card goes. You get to choose if the Buyback returns the card to your hand or the card gets exiled."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Zephid
 {
     "name": "Zephid",

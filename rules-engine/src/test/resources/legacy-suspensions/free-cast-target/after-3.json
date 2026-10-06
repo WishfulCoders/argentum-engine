@@ -27,6 +27,10 @@
                 "type": "com.wingedsheep.engine.state.components.player.LandDropsComponent",
                 "remaining": 1,
                 "maxPerTurn": 1
+            },
+            "com.wingedsheep.engine.state.components.player.SpellsCastThisGameComponent": {
+                "type": "com.wingedsheep.engine.state.components.player.SpellsCastThisGameComponent",
+                "count": 1
             }
         },
         "player-2": {

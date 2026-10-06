@@ -29,10 +29,26 @@ class PlayLandEnumerator : ActionEnumerator {
         }
 
         // Lands from graveyard (Muldrotha)
-        if (context.castPermissionUtils.hasGraveyardPlayPermissionForType(state, playerId, "LAND")) {
-            val graveyardCards = state.getZone(ZoneKey(playerId, Zone.GRAVEYARD))
+        val graveyardCards = state.getZone(ZoneKey(playerId, Zone.GRAVEYARD))
+        val anyGraveyardLand = context.castPermissionUtils.hasGraveyardPlayPermissionForType(state, playerId, "LAND")
+        if (anyGraveyardLand) {
             for (cardId in graveyardCards) {
                 val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: continue
+                result.addAll(landPlays(context, cardId, cardComponent, sourceZone = "GRAVEYARD"))
+            }
+        } else if (graveyardCards.isNotEmpty() &&
+            (state.grantedStaticAbilities.isNotEmpty() || state.getBattlefield(playerId).isNotEmpty())
+        ) {
+            // Card-filtered "play a land from your graveyard" grants of the MayCastFromGraveyard
+            // family (Serra Paragon, Yawgmoth's Will) — asked per card, through the same resolver
+            // the handler authorizes with, so the offer and the play answer the same question.
+            val zones = com.wingedsheep.engine.handlers.actions.spell.CastZoneResolver(
+                context.cardRegistry, context.conditionEvaluator, context.legality
+            )
+            for (cardId in graveyardCards) {
+                val cardComponent = state.getEntity(cardId)?.get<CardComponent>() ?: continue
+                if (!cardComponent.typeLine.isLand) continue
+                if (zones.graveyardLandPlayGrant(state, playerId, cardId) == null) continue
                 result.addAll(landPlays(context, cardId, cardComponent, sourceZone = "GRAVEYARD"))
             }
         }

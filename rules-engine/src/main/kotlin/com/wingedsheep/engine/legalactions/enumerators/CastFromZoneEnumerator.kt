@@ -2490,10 +2490,7 @@ class CastFromZoneEnumerator(
             // The permission's cast-this-way entry rider, recorded on the action so the handler
             // applies exactly the permission the player chose, and surfaced in the action text so the
             // options read differently when riders differ.
-            val riderSelection = GraveyardCastRiderSelection(
-                permission.entersWithCounter, permission.addedSubtypeOnEntry, permission.exileInsteadOfGraveyard,
-                permission.additionalCost
-            )
+            val riderSelection = GraveyardCastRiderSelection.of(permission)
             val riderSuffix = graveyardRiderSuffix(permission)
 
             // Your own graveyard, or every player's for a `fromAnyGraveyard` grant (The Great Work).
@@ -2508,6 +2505,9 @@ class CastFromZoneEnumerator(
                 if (scopedCardId != null && cardId != scopedCardId) continue
                 val container = state.getEntity(cardId) ?: continue
                 val cardComponent = container.get<CardComponent>() ?: continue
+                // CR 305.9 — a land can't be cast; a `playLands` grant's land half is offered by
+                // PlayLandEnumerator as a land play instead.
+                if (cardComponent.typeLine.isLand) continue
                 val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
 
                 // Check if card matches filter
@@ -2539,7 +2539,7 @@ class CastFromZoneEnumerator(
                 if (!canPayGrantCost) continue
 
                 // Collapse permissions indistinguishable to the player (same card, life cost, rider, extra cost).
-                if (!emitted.add("$cardId|$lifeCost|${permission.entersWithCounter}|${permission.addedSubtypeOnEntry}|${permission.exileInsteadOfGraveyard}|${permission.additionalCost}")) continue
+                if (!emitted.add("$cardId|$lifeCost|${permission.entersWithCounter}|${permission.addedSubtypeOnEntry}|${permission.exileInsteadOfGraveyard}|${permission.additionalCost}|${permission.gainsAbility}")) continue
 
                 val effectiveCost = context.costCalculator.calculateEffectiveCost(state, cardDef, playerId)
                 val costString = effectiveCost.toString()
@@ -2625,6 +2625,7 @@ class CastFromZoneEnumerator(
             permission.additionalCost?.let { add(it.description.replaceFirstChar { c -> c.lowercase() }) }
             permission.entersWithCounter?.let { add("enters with a ${it.name.lowercase()} counter") }
             permission.addedSubtypeOnEntry?.let { add("becomes a $it") }
+            permission.gainsAbility?.let { add("it gains \"${it.description}\"") }
         }
         if (parts.isEmpty()) return ""
         return " (" + parts.joinToString("; ") + ")"

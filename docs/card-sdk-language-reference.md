@@ -5873,6 +5873,13 @@ This is the player-arm prerequisite for the planned composable mixed `TargetUnio
   printed cost. Face-down objects (no mana cost) never match; the cast-record path returns `false`
   (a record stores the resolved mana value, not the printed cost). Used by *Paradox Surveyor*
   ("a card with {X} in its mana cost"). Underlying predicate: `CardPredicate.HasXInManaCost`.
+- `.withManaCost(vararg costs)` — the card's **printed mana cost is exactly** one of `costs`, symbol
+  for symbol (CR 202.1), not its mana value: *Urza's Saga*'s "an artifact card with mana cost {0} or
+  {1}" is `GameObjectFilter.Artifact.withManaCost("{0}", "{1}")` — a `{U}` or `{X}` artifact doesn't
+  match, and neither does a card with **no** mana cost (CR 202.1b; the engine's empty `ManaCost`),
+  which is not a `{0}` card. Symbols compare as a multiset. Face-down objects never match; the
+  cast-record path returns `false`. Underlying predicate: `CardPredicate.ManaCostIs(manaCost)`
+  (several costs fold into `CardPredicate.Or`).
 - `.coloredManaSymbolsAtLeast(vararg colors, min = 1)` — the card's **printed** mana cost contains
   at least `min` mana symbols of `colors`: "a noncreature spell with one or more blue mana symbols
   in its mana cost" (*Namor the Sub-Mariner*, `coloredManaSymbolsAtLeast(Color.BLUE)`), and the
@@ -8073,6 +8080,18 @@ the saga permanent (e.g. "This creature deals damage equal to its power …"). C
 Dominant back faces that "stay" instead self-exile on their final chapter, dodging 714.4 via its
 "not the source of a chapter ability on the stack" clause.)*
 
+### Saga lands — "Enchantment Land — Urza's Saga"
+
+A Saga can also be a land (Urza's Saga). Author it like any Saga — a type line with `Land` and the
+`Saga` subtype plus `sagaChapter` blocks, `manaCost = ""` — and it can only be played, never cast
+(CR 305.9). Playing it bypasses the stack and the zone-transition pipeline, so `PlayLandHandler`
+calls the same `ZoneMovementUtils.applySagaEntryIfNeeded` hook every other entry uses: the played
+land enters with its lore counter (CR 714.3a's intrinsic replacement), chapter I triggers (CR
+714.2b), lore accrues at precombat main and the land is sacrificed after its final chapter like any
+Saga. "This Saga gains '{T}: Add {C}'" is `Effects.GrantActivatedAbility(ActivatedAbility(…,
+isManaAbility = true, timing = TimingRule.ManaAbility), EffectTarget.Self, Duration.Permanent)`.
+Covered by `SagaLandAndManaCostScenarioTest` and `UrzasSagaScenarioTest`.
+
 ### Saga chapter resolution (CR 714)
 
 - `Triggers.you.sagaChapterResolves(true)` — fires when the *final* chapter ability of a Saga you
@@ -10148,7 +10167,7 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   (basic-land-type) and granted mana abilities alike and stops when the land loses its abilities. The manual
   activation sees it as a `PayLife` cost atom (unpayable below `amount` life, CR 119.4); auto-pay prices the source
   as a pain source (preferring untaxed sources) and charges the life when it taps it.
-- `MayCastFromGraveyard(filter, lifeCost = 0, duringYourTurnOnly = false, entersWithCounter = null, addedSubtypeOnEntry = null, oncePerTurn = false, exileInsteadOfGraveyard = false, fromAnyGraveyard = false, additionalCost = null)`
+- `MayCastFromGraveyard(filter, lifeCost = 0, duringYourTurnOnly = false, entersWithCounter = null, addedSubtypeOnEntry = null, oncePerTurn = false, exileInsteadOfGraveyard = false, fromAnyGraveyard = false, additionalCost = null, playLands = false, gainsAbility = null)`
   — cast spells matching `filter` from your graveyard following normal timing, optionally paying
   `lifeCost` life. Free for Yawgmoth's Agenda (`MayCastFromGraveyard(Nonland)`); `lifeCost = 1,
   duringYourTurnOnly = true` for Festival of Embers. **`oncePerTurn`** limits the grant to one cast
@@ -10167,9 +10186,25 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   ability resolves (CR 611.2c) and a card that reaches the graveyard later that turn is not covered; the
   card gathers its graveyard and hands each card its own `GrantStaticAbility(MayCastFromGraveyard(...),
   EffectTarget.Self, Duration.EndOfTurn)`. Both read sites treat a graveyard-card anchor this way.
-  Pair with `MayPlayLandsFromGraveyard` for "play
-  lands and cast spells from your graveyard". Lands are *played*, not cast, so they need the lands
-  permission separately. This grants permission over *other* cards in your graveyard from a
+  **`playLands = true`** widens the verb to "play" (CR 305.1): a *land* card matching `filter` may
+  also be played from your own graveyard under the grant — as the land-play special action, land drop
+  and all — and a land is never offered as a cast (CR 305.9; `CastFromZoneEnumerator` and
+  `CastZoneResolver.applicableMayCastFromGraveyardGrants` skip lands). The land half is read by
+  `CastZoneResolver.graveyardLandPlayGrant`, which `PlayLandEnumerator` and `PlayLandHandler` both ask,
+  through the same grant enumeration as the cast half (printed, emblem and `GrantStaticAbility`
+  anchorings alike). With `oncePerTurn` the land play and the cast share the grant's **one**
+  allowance (the land play stamps the same `MayCastFromGraveyardUsedThisTurnComponent`): Serra
+  Paragon = `MayCastFromGraveyard(Permanent.manaValueAtMost(3), duringYourTurnOnly = true,
+  oncePerTurn = true, playLands = true, gainsAbility = …)` — a land's mana value is 0, so one filter
+  reads "a land or a permanent spell with mana value 3 or less". A land play uses this grant only when
+  no allowance-free permission (a per-card may-play, Crucible-style `MayPlayLandsFromGraveyard`, an
+  unspent Muldrotha land use) already authorizes it; among grants, an unlimited one is preferred.
+  `MayPlayLandsFromGraveyard` remains the plain Crucible of Worlds static.
+  **`gainsAbility`** is the "If you do, it gains '…'" rider: the spell cast (CR 400.7h) or land played
+  (CR 400.7i) under the grant is handed that `TriggeredAbility` as a `GrantedTriggeredAbility` with
+  `Duration.Permanent`; a permanent spell keeps it as it resolves (CR 400.7b) and a countered spell
+  drops it with the stack object. Part of the rider identity (`GraveyardCastRiderSelection.gainsAbility`)
+  like the entry riders. This grants permission over *other* cards in your graveyard from a
   battlefield permanent — for a card that grants permission to cast *itself* from a zone, use
   `MayCastSelfFromZones`. **Cast-this-way entry rider:** `entersWithCounter` (a `CounterType`) and
   `addedSubtypeOnEntry` (a subtype string) apply only to a permanent cast from the graveyard *under
@@ -13771,6 +13806,14 @@ both spellings, and the ability its bare-noun line grants says "Regenerate this 
   narrows to cards with that exact name — every physical copy counts, not just the source object. Yidaro,
   Wandering Monster: `Conditions.CompareAmounts(DynamicAmounts.cardsCycledThisGame("Yidaro, Wandering
   Monster"), GTE, Fixed(4))`. Backed by the never-cleared per-player `CardsCycledThisGameComponent`.
+- `SpellsCastThisGame(player = Player.You)` (facade `DynamicAmounts.spellsCastThisGame(player)`) — how
+  many spells `player` has cast **this game** (CR 601.2i: counted as each cast completes, alongside the
+  turn's cast history; copies merely put on the stack never count). Evaluated while a spell is being
+  proposed, it doesn't yet include that spell, so Once Upon a Time's "if this spell is the first spell
+  you've cast this game, you may cast it without paying its mana cost" is
+  `SelfAlternativeCost(ManaCost.parse("{0}"), condition = Conditions.CompareAmounts(
+  DynamicAmounts.spellsCastThisGame(), ComparisonOperator.EQ, 0))`. Backed by the never-cleared
+  per-player `SpellsCastThisGameComponent`.
 - `CraftedMaterialsTotalPower` — total printed power of the cards exiled to craft the source
   permanent (CR 702.167c). Reads the source's `CraftedFromExiledComponent`. Used for the
   `*`-power CDA on Mastercraft Raptor (Saheeli's Lattice back face). Evaluates to 0 when the
@@ -15350,7 +15393,18 @@ The priority groups are (CR 616.1a–f):
 - `RedirectZoneChange(newDestination, appliesTo, linkToSource = false, selfOnly = false, shuffleIntoLibrary = false, reveal = false, requiredCause = ZoneChangeCause.Any)`
   — redirect a zone change to a different destination (Rest in Peace / Leyline of the Void: graveyard →
   exile). `appliesTo` is an `EventPattern.ZoneChangeEvent(filter, from?, to?)`; the `filter`'s
-  `controllerPredicate` scopes it (e.g. `OwnedByOpponent` for Leyline). When `linkToSource = true` and
+  `controllerPredicate` scopes it (e.g. `OwnedByOpponent` for Leyline). **Battlefield entries** (`to = Zone.BATTLEFIELD`) are
+  matched against the permanent *as it would exist on the battlefield* (CR 614.12 —
+  `ZoneMovementUtils.checkZoneChangeRedirect` projects a throwaway state with the object placed under
+  its entering controller, face down if it enters face down, carrying its own statics), so March of the
+  Machines makes an entering artifact a creature, a manifested card is a 2/2 creature and a creature
+  card with "isn't a creature" is not. `ZoneChangeEvent(notCast = true)` restricts an entry to objects
+  that **weren't cast** — a resolving permanent spell was, unless it is a (token) copy of one; an
+  effect's put-onto-the-battlefield, a land play and a token weren't. Containment Priest =
+  `RedirectZoneChange(Zone.EXILE, ZoneChangeEvent(Creature.nontoken(), to = BATTLEFIELD, notCast =
+  true))`. A land play (`PlayLandHandler`) consults battlefield-entry redirects too (CR 305.1): a
+  redirected play still uses the land drop and counts as played (CR 305.2a), only its destination is
+  replaced (CR 614.6). `notCast` is honoured by `TriggerMatcher` as well. When `linkToSource = true` and
   `newDestination = Zone.EXILE`, each redirected card is added to the source permanent's
   `LinkedExileComponent`, so the source can later reference — and grant playing of — the cards it exiled.
   Valgavoth, Terror Eater pairs it with `GrantMayCastFromLinkedExile`: "If a card you didn't control

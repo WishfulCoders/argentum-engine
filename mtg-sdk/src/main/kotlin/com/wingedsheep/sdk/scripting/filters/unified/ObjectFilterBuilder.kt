@@ -250,6 +250,17 @@ interface ObjectFilterBuilder<out Self> {
     fun hasXInManaCost() = withCardPredicate(CardPredicate.HasXInManaCost)
 
     /**
+     * Printed mana cost is exactly one of [costs] — "an artifact card with mana cost {0} or {1}"
+     * (Urza's Saga) is `withManaCost("{0}", "{1}")`. Symbols, not mana value: see
+     * [CardPredicate.ManaCostIs].
+     */
+    fun withManaCost(vararg costs: String): Self {
+        require(costs.isNotEmpty()) { "withManaCost needs at least one mana cost" }
+        val each = costs.map { CardPredicate.ManaCostIs(com.wingedsheep.sdk.core.ManaCost.parse(it)) }
+        return withCardPredicate(each.singleOrNull() ?: CardPredicate.Or(each))
+    }
+
+    /**
      * Printed mana cost contains at least [min] mana symbols of [colors] — "with one or more blue
      * mana symbols in its mana cost" (Namor the Sub-Mariner), or every colour at `min = 3` for
      * Omnath, Locus of All's "three or more colored mana symbols in its mana cost". Hybrid and

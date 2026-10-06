@@ -197,6 +197,7 @@ class DynamicAmountEvaluator(
         is DynamicAmount.PlayerCount,
         is DynamicAmount.PlayerCounterCount,
         is DynamicAmount.CardsCycledThisGame,
+        is DynamicAmount.SpellsCastThisGame,
         is DynamicAmount.Speed,
         DynamicAmount.SpellsCastLastTurn,
         is DynamicAmount.SpellsCastThisTurn,
@@ -363,6 +364,13 @@ class DynamicAmountEvaluator(
             is DynamicAmount.PlayerCounterCount ->
                 resolveUnifiedPlayerIds(state, amount.player, context, projectedState)
                     .sumOf { counterCountOf(state, it, amount.counterType) }
+
+            is DynamicAmount.SpellsCastThisGame ->
+                resolveUnifiedPlayerIds(state, amount.player, context, projectedState).sumOf { playerId ->
+                    state.getEntity(playerId)
+                        ?.get<com.wingedsheep.engine.state.components.player.SpellsCastThisGameComponent>()
+                        ?.count ?: 0
+                }
 
             is DynamicAmount.CardsCycledThisGame ->
                 resolveUnifiedPlayerIds(state, amount.player, context, projectedState).sumOf { playerId ->
