@@ -541,6 +541,105 @@
     ]
 }
 
+// Gut, True Soul Zealot
+{
+    "name": "Gut, True Soul Zealot",
+    "manaCost": "{2}{R}",
+    "typeLine": "Legendary Creature — Goblin Shaman",
+    "oracleText": "Whenever you attack, you may sacrifice another creature or an artifact. If you do, create a 4/1 black Skeleton creature token with menace that's tapped and attacking. (It can't be blocked except by two or more creatures.)\nChoose a Background (You can have a Background as a second commander.)",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Gut, True Soul Zealot:1",
+                "trigger": "YouAttackEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "Sacrifice",
+                            "filter": {
+                                "anyOf": [
+                                    {
+                                        "cardPredicates": [
+                                            "IsCreature"
+                                        ],
+                                        "statePredicates": [
+                                            {
+                                                "type": "StateNot",
+                                                "predicate": "IsSource"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "cardPredicates": [
+                                            "IsArtifact"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "type": "CreateToken",
+                        "power": 4,
+                        "toughness": 1,
+                        "colors": [
+                            "BLACK"
+                        ],
+                        "creatureTypes": [
+                            "Skeleton"
+                        ],
+                        "keywords": [
+                            "MENACE"
+                        ],
+                        "imageUri": "https://cards.scryfall.io/normal/front/c/f/cf4c245f-af2f-46a7-81f3-670a04940901.jpg?1783922321",
+                        "tapped": true,
+                        "attacking": true
+                    }
+                },
+                "descriptionOverride": "Whenever you attack, you may sacrifice another creature or an artifact. If you do, create a 4/1 black Skeleton creature token with menace that's tapped and attacking."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "180",
+        "rarity": "UNCOMMON",
+        "artist": "Wayne Reynolds",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/d/3d8ca18d-9099-4f1e-95c1-f04da58a26bd.jpg?1783922736",
+        "rulings": [
+            {
+                "date": "2022-06-10",
+                "text": "You choose the player or planeswalker the Skeleton is attacking."
+            },
+            {
+                "date": "2022-06-10",
+                "text": "Gut doesn't have to be among the attacking creatures."
+            },
+            {
+                "date": "2022-06-10",
+                "text": "Although the Skeleton is an attacking creature, it was never declared as an attacking creature. This means that abilities that trigger whenever a creature attacks won't trigger when it enters the battlefield attacking."
+            },
+            {
+                "date": "2022-06-10",
+                "text": "Any effects that say the Skeleton can't attack (such as that of Propaganda) affect only the declaration of attackers. They won't stop the Skeleton from entering the battlefield attacking."
+            },
+            {
+                "date": "2022-06-10",
+                "text": "If Gut somehow becomes an artifact, you may sacrifice it to its own ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Pseudodragon Familiar
 {
     "name": "Pseudodragon Familiar",
