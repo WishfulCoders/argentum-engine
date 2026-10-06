@@ -1228,8 +1228,13 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
          * event batch instead of once per damaged recipient — "Whenever one or more creatures
          * your opponents control are dealt excess noncombat damage" (Magmatic Galleon) vs the
          * per-recipient "Whenever a creature is dealt excess noncombat damage" (Fall of Cair
-         * Andros). Only honored for `TriggerBinding.ANY` observer triggers; SELF/ATTACHED
-         * damage triggers are inherently per-source-event.
+         * Andros). Only honored for `TriggerBinding.ANY` observer triggers.
+         *
+         * Not needed for the source side: with the default [recipient] = [Recipient.Any] ("whenever
+         * this / equipped creature deals combat damage"), a source's simultaneous combat damage to
+         * several recipients (CR 510.2) is already one trigger event (CR 603.2c) and the engine
+         * triggers it once per combat damage step, summing the damage (Umezawa's Jitte, Drinker of
+         * Sorrow). A named recipient ("to a player", "to a creature") stays per recipient.
          */
         val batch: Boolean = false
     ) : EventPattern {

@@ -88,6 +88,31 @@ class LostJitteScenarioTest : FunSpec({
         driver.chargeCounters(jitte) shouldBe 1
     }
 
+    test("damage split between two blockers is one combat-damage trigger: one counter, not two") {
+        // CR 510.2 / 603.2c: the equipped creature's combat damage in one step is one event.
+        val driver = createDriver()
+        driver.initMirrorMatch(deck = Deck.of("Plains" to 20, "Forest" to 20), startingLife = 20)
+
+        val attacker = driver.player1
+        val defender = driver.player2
+
+        val equipped = driver.putCreatureOnBattlefield(attacker, "Gurmag Angler") // 5/5
+        driver.removeSummoningSickness(equipped)
+        val jitte = driver.putEquipmentAttached(attacker, "Lost Jitte", equipped)
+        val b1 = driver.putCreatureOnBattlefield(defender, "Grizzly Bears")
+        val b2 = driver.putCreatureOnBattlefield(defender, "Grizzly Bears")
+
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.declareAttackers(attacker, listOf(equipped), defender)
+        driver.bothPass()
+        driver.declareBlockers(defender, mapOf(b1 to listOf(equipped), b2 to listOf(equipped)))
+        driver.passPriorityUntil(Step.END_COMBAT)
+
+        driver.state.getBattlefield().contains(b1) shouldBe false
+        driver.state.getBattlefield().contains(b2) shouldBe false
+        driver.chargeCounters(jitte) shouldBe 1
+    }
+
     test("remove a charge counter: put a +1/+1 counter on equipped creature") {
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Plains" to 20, "Forest" to 20), startingLife = 20)
