@@ -20,6 +20,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class SourceKind(val phrase: String) {
     SPELL("spells"),
+
+    /**
+     * A spell that is one or more colors (CR 105.2) — Emrakul, the Aeons Torn. Every colored
+     * spell is also a [SPELL]; the reverse doesn't hold, so a colorless spell has only [SPELL].
+     */
+    COLORED_SPELL("spells that are one or more colors"),
     PERMANENT_CAST_THIS_TURN("permanents that were cast this turn"),
     ACTIVATED_ABILITY("activated abilities"),
     TRIGGERED_ABILITY("triggered abilities");
@@ -28,6 +34,7 @@ enum class SourceKind(val phrase: String) {
         /** The source kind a [ProtectionScope] names, or null for a characteristic scope. */
         fun of(scope: ProtectionScope): SourceKind? = when (scope) {
             ProtectionScope.Spells -> SPELL
+            ProtectionScope.ColoredSpells -> COLORED_SPELL
             ProtectionScope.PermanentsCastThisTurn -> PERMANENT_CAST_THIS_TURN
             ProtectionScope.ActivatedAbilities -> ACTIVATED_ABILITY
             ProtectionScope.TriggeredAbilities -> TRIGGERED_ABILITY
@@ -53,6 +60,23 @@ object SourceKindProtection {
     /** A spell: a card on the stack as a spell (CR 112.1), or a copy of one. */
     fun isSpell(state: GameState, entityId: EntityId): Boolean =
         state.getEntity(entityId)?.has<SpellOnStackComponent>() == true
+
+    /**
+     * A spell that is one or more colors (CR 105.2): [isSpell], and its colors are non-empty.
+     * See [spellIsColored] for how a spell's colors are read.
+     */
+    fun isColoredSpell(state: GameState, entityId: EntityId): Boolean =
+        isSpell(state, entityId) && spellIsColored(state, entityId)
+
+    /**
+     * Whether the spell [entityId] — on the stack, or still in hand while it's being cast — has one
+     * or more colors. A recolored spell's colors are projected; otherwise a spell's colors are its
+     * card's (a copy carries the copied card's), the same reading damage prevention uses for a
+     * spell source.
+     */
+    private fun spellIsColored(state: GameState, entityId: EntityId): Boolean =
+        state.projectedState.getColors(entityId).isNotEmpty() ||
+            state.getEntity(entityId)?.get<CardComponent>()?.colors.orEmpty().isNotEmpty()
 
     /**
      * A permanent that was cast this turn: on the battlefield, entered this turn, and entered by
@@ -83,6 +107,11 @@ object SourceKindProtection {
             TargetingSourceType.ACTIVATED_ABILITY -> add(SourceKind.ACTIVATED_ABILITY)
             TargetingSourceType.TRIGGERED_ABILITY -> add(SourceKind.TRIGGERED_ABILITY)
             TargetingSourceType.ANY -> if (sourceId != null && isSpell(state, sourceId)) add(SourceKind.SPELL)
+        }
+        // A colored spell also has the narrower quality. Only a spell can: an ability from a
+        // colored source is still an ability, not a colored spell.
+        if (SourceKind.SPELL in this && sourceId != null && spellIsColored(state, sourceId)) {
+            add(SourceKind.COLORED_SPELL)
         }
         if (targetingSourceType != TargetingSourceType.SPELL && sourceId != null &&
             isPermanentCastThisTurn(state, sourceId)
@@ -119,13 +148,17 @@ object SourceKindProtection {
 
     /**
      * True when [protectedId] has protection from [sourceId] as an *object* — the damage,
-     * attachment and blocking legs (CR 702.16c–f). Only [SourceKind.SPELL] and
-     * [SourceKind.PERMANENT_CAST_THIS_TURN] describe objects; ability kinds never match here.
+     * attachment and blocking legs (CR 702.16c–f). Only [SourceKind.SPELL],
+     * [SourceKind.COLORED_SPELL] and [SourceKind.PERMANENT_CAST_THIS_TURN] describe objects;
+     * ability kinds never match here.
      */
     fun isProtectedFromObject(state: GameState, protectedId: EntityId, sourceId: EntityId?): Boolean {
         if (sourceId == null) return false
         val projected = state.projectedState
         if (projected.hasKeyword(protectedId, protectionKeyword(SourceKind.SPELL)) && isSpell(state, sourceId)) return true
+        if (projected.hasKeyword(protectedId, protectionKeyword(SourceKind.COLORED_SPELL)) &&
+            isColoredSpell(state, sourceId)
+        ) return true
         return projected.hasKeyword(protectedId, protectionKeyword(SourceKind.PERMANENT_CAST_THIS_TURN)) &&
             isPermanentCastThisTurn(state, sourceId)
     }

@@ -11192,11 +11192,15 @@ composite abilities).
   *hexproof* namespace format the oracle text but have no targeting wiring yet and are deliberately not
   projected.
 - **Source-kind scopes** — qualities that are a *kind of source* rather than a characteristic
-  (CR 702.16a): `ProtectionScope.Spells`, `ProtectionScope.PermanentsCastThisTurn`,
-  `ProtectionScope.ActivatedAbilities`, `ProtectionScope.TriggeredAbilities`. Usable in both
-  `Protection(...)` and `Hexproof(...)`; one ability per quality, as printed (CR 702.16g / 702.11f):
+  (CR 702.16a): `ProtectionScope.Spells`, `ProtectionScope.ColoredSpells`,
+  `ProtectionScope.PermanentsCastThisTurn`, `ProtectionScope.ActivatedAbilities`,
+  `ProtectionScope.TriggeredAbilities`. Usable in both `Protection(...)` and `Hexproof(...)`; one
+  ability per quality, as printed (CR 702.16g / 702.11f):
   - "protection from spells and from permanents that were cast this turn" (Emrakul, the World Anew) —
     `Protection(Spells)` + `Protection(PermanentsCastThisTurn)`;
+  - "protection from spells that are one or more colors" (Emrakul, the Aeons Torn) —
+    `Protection(ColoredSpells)`: a spell whose colors are non-empty (CR 105.2). A colorless spell, and
+    every ability (even one from a colored source), still targets and damages it;
   - "hexproof from activated and triggered abilities" (Volatile Stormdrake) —
     `Hexproof(ActivatedAbilities)` + `Hexproof(TriggeredAbilities)`.
 

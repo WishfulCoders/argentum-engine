@@ -188,6 +188,7 @@ fun ProtectionScope.protectionDescription(): String = when (this) {
     ProtectionScope.Everything -> "everything"
     ProtectionScope.EachOpponent -> "each opponent"
     ProtectionScope.Spells -> "spells"
+    ProtectionScope.ColoredSpells -> "spells that are one or more colors"
     ProtectionScope.PermanentsCastThisTurn -> "permanents that were cast this turn"
     ProtectionScope.ActivatedAbilities -> "activated abilities"
     ProtectionScope.TriggeredAbilities -> "triggered abilities"
