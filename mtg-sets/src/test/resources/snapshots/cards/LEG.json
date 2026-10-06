@@ -508,6 +508,75 @@
     ]
 }
 
+// Chain Lightning
+{
+    "name": "Chain Lightning",
+    "manaCost": "{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Chain Lightning deals 3 damage to any target. Then that player or that permanent's controller may pay {R}{R}. If the player does, they may copy this spell and may choose a new target for that copy.",
+    "script": {
+        "spellEffect": {
+            "type": "ChainCopy",
+            "action": {
+                "type": "DealDamage",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 3
+                },
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "t0"
+                }
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "copyRecipient": "AFFECTED_PLAYER",
+            "copyCost": {
+                "type": "PayAtom",
+                "atom": {
+                    "type": "AtomMana",
+                    "cost": "{R}{R}"
+                }
+            },
+            "copyTargetRequirement": "AnyTarget"
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "137",
+        "artist": "Sandra Everingham",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/5/b5883762-ca0a-4932-8d2a-41a45796a5f8.jpg?1783948058",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "As Chain Lightning resolves, either the original or one of the copies, the targeted player or the controller of the targeted permanent may copy it. The copy has the same text, target, and color as the resolving spell, though the player creating the copy may choose a new target for it. Once that copy is created (or not), the Chain Lightning finishes resolving and leaves the stack."
+            },
+            {
+                "date": "2022-12-08",
+                "text": "The player putting the copy of the spell on the stack controls that copy."
+            },
+            {
+                "date": "2022-12-08",
+                "text": "The copy of Chain Lightning is created on the stack, so it's not cast. Abilities that trigger when a player casts a spell won't trigger. Players may respond to that spell before it resolves."
+            },
+            {
+                "date": "2022-12-08",
+                "text": "If the targeted player or permanent is an illegal target as Chain Lightning tries to resolve, the spell doesn't resolve and none of its effects happen. It can't be copied."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Chromium
 {
     "name": "Chromium",
