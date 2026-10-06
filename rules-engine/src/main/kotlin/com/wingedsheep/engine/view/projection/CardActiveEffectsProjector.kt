@@ -534,6 +534,27 @@ internal class CardActiveEffectsProjector(
                 )
             )
         }
+
+        // "Attacks [defender] … if able" (Gideon, Battle-Forged's +2): one badge per named
+        // requirement, saying whether it is in force this turn or waiting for the controller's turn.
+        val defenderRequirements = state.getEntity(entityId)
+            ?.get<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>()
+            ?.requirements.orEmpty()
+        for ((index, requirement) in defenderRequirements.withIndex()) {
+            val defenderName = state.getEntity(requirement.defenderId)?.get<PlayerComponent>()?.name
+                ?: state.getEntity(requirement.defenderId)
+                    ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()?.name
+                ?: "its named defender"
+            val window = if (requirement.activeOnTurn == null) "during its controller's next turn" else "this turn"
+            effects.add(
+                ClientCardEffect(
+                    effectId = "must_attack_defender_$index",
+                    name = "Must Attack $defenderName",
+                    description = "This creature attacks $defenderName $window if able",
+                    icon = "must-attack"
+                )
+            )
+        }
         return effects
     }
 

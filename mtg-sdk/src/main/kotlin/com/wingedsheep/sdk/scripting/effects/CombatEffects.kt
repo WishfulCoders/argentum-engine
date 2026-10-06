@@ -615,6 +615,52 @@ data class MarkMustAttackThisTurnEffect(
     override val description: String = "${target.description} attacks this turn if able"
 }
 
+/** When a [MarkMustAttackDefenderEffect] requirement is in force. */
+@Serializable
+enum class AttackRequirementWindow(val phrase: String) {
+    /** "… attacks [defender] this turn if able" — in force from resolution to the end of this turn. */
+    THIS_TURN("this turn"),
+
+    /**
+     * "… attacks [defender] during its controller's next turn if able" — in force for the whole of
+     * the next turn taken by whoever controls the creature *then*: if control changes before that
+     * turn, it applies during the new controller's next turn (Gideon, Battle-Forged ruling
+     * 2015-06-22).
+     */
+    CONTROLLERS_NEXT_TURN("during its controller's next turn"),
+}
+
+/**
+ * "[target] attacks [defender] [window] if able" — a per-creature attack requirement that names
+ * **which** player, planeswalker or battle to attack (Gideon, Battle-Forged's +2: "Up to one target
+ * creature an opponent controls attacks Gideon during its controller's next turn if able").
+ *
+ * The sibling of [MarkMustAttackThisTurnEffect] (attack anyone) and the creature-level counterpart
+ * of [TauntEffect] (every creature a player controls attacks you). It is a requirement in the
+ * CR 508.1d sense, never a guarantee: while it is in force, the creature must attack [defender] if
+ * it can do so — it is untapped, has been under its controller's control since the turn began, no
+ * restriction stops it attacking that defender (CR 508.1c), and no cost is attached to attacking
+ * (CR 508.1d: a player is never forced to pay one). If [defender] can't be attacked at all — it
+ * left the battlefield (CR 400.7: a returned permanent is a new object), stopped being a
+ * planeswalker, or is controlled by the creature's own controller — the requirement imposes
+ * nothing and the creature may attack anyone or not at all (ruling 2015-06-22).
+ *
+ * @property target The creature that must attack (typically the ability's target).
+ * @property defender The player or permanent it must attack — [EffectTarget.Self] for "attacks
+ *   [this planeswalker]", [EffectTarget.Controller] for "attacks you".
+ * @property window When the requirement is in force.
+ */
+@SerialName("MarkMustAttackDefender")
+@Serializable
+data class MarkMustAttackDefenderEffect(
+    val target: EffectTarget = EffectTarget.ContextTarget(0),
+    val defender: EffectTarget = EffectTarget.Self,
+    val window: AttackRequirementWindow = AttackRequirementWindow.CONTROLLERS_NEXT_TURN
+) : Effect {
+    override val description: String =
+        "${target.description} attacks ${defender.description} ${window.phrase} if able"
+}
+
 /**
  * Mark a creature as "blocks this turn if able" (Culvert Ambusher).
  *

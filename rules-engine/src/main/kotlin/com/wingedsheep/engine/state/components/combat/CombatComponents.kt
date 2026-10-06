@@ -298,6 +298,55 @@ data class PlayerAttackersThisTurnComponent(
  * during your untap step if it attacked during your last turn". Note the untap step it gates runs
  * *before* that turn's cleanup, so the record read there is genuinely the previous turn's.
  */
+/**
+ * The creatures this player declared as attackers in the **current combat** (CR 508.1) — the
+ * per-combat sibling of [PlayerAttackersThisTurnComponent]. Being a record of *declarations*, it
+ * still names a creature that has since died or been removed from combat, and never names one put
+ * onto the battlefield attacking (CR 508.4). Stamped at declaration on every member of the
+ * attacking team and cleared when the combat phase ends (CR 511.3,
+ * [com.wingedsheep.engine.mechanics.combat.CombatManager.endCombat]). Backs
+ * [com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat] (Kytheon, Hero of
+ * Akros).
+ */
+@Serializable
+data class PlayerAttackersThisCombatComponent(
+    val attackerIds: Set<EntityId>
+) : Component
+
+/**
+ * One "[creature] attacks [defender] … if able" requirement
+ * ([com.wingedsheep.sdk.scripting.effects.MarkMustAttackDefenderEffect]).
+ *
+ * @property defenderId The player, planeswalker or battle to attack.
+ * @property defenderGeneration The defender's object generation when the requirement was created
+ *   (null for a player). A permanent that left and came back is a new object (CR 400.7) and no
+ *   longer satisfies the requirement's "Gideon".
+ * @property activeOnTurn The turn number the requirement is in force for; null while it is still
+ *   waiting for "its controller's next turn" to begin.
+ */
+@Serializable
+data class MustAttackDefenderRequirement(
+    val defenderId: EntityId,
+    val defenderGeneration: Long? = null,
+    val activeOnTurn: Int? = null
+)
+
+/**
+ * Attack requirements naming a specific defender, carried by the creature they bind
+ * (Gideon, Battle-Forged's +2). Requirements waiting for "its controller's next turn" are armed at
+ * the start of the next turn taken by the creature's controller at that time (TurnManager), and
+ * each is dropped in the cleanup step of the turn it was in force for. Stripped when the creature
+ * leaves the battlefield (CR 400.7). Validated by `AttackPhaseManager` under CR 508.1d.
+ */
+@Serializable
+data class MustAttackDefenderComponent(
+    val requirements: List<MustAttackDefenderRequirement>
+) : Component {
+    /** The requirements in force during turn [turnNumber]. */
+    fun activeOn(turnNumber: Int): List<MustAttackDefenderRequirement> =
+        requirements.filter { it.activeOnTurn == turnNumber }
+}
+
 @Serializable
 data class PlayerAttackersLastTurnComponent(
     val attackerIds: Set<EntityId>

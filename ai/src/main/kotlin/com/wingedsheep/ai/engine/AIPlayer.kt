@@ -170,6 +170,23 @@ class AIPlayer(
                         }
                         .firstOrNull { it.error == null } ?: fallbackResult
                 }
+                if (fallbackResult.error != null && fallback is DeclareAttackers && fallback.attackers.isNotEmpty()) {
+                    // A requirement may name *which* defender a creature must attack ("attacks
+                    // Gideon during its controller's next turn if able"), so sending every mandatory
+                    // attacker at the first legal defender can still be rejected: retry with one
+                    // mandatory attacker re-pointed at each other legal defender.
+                    val defenders = simulator.getLegalActions(current, playerId)
+                        .find { it.actionType == "DeclareAttackers" }
+                        ?.validAttackTargets.orEmpty()
+                    fallbackResult = fallback.attackers.keys.asSequence()
+                        .flatMap { attacker -> defenders.asSequence().map { attacker to it } }
+                        .map { (attacker, defender) ->
+                            processor.process(
+                                current, DeclareAttackers(playerId, fallback.attackers + (attacker to defender))
+                            ).result
+                        }
+                        .firstOrNull { it.error == null } ?: fallbackResult
+                }
                 if (fallbackResult.error != null) break
                 current = fallbackResult.state
                 iterations++

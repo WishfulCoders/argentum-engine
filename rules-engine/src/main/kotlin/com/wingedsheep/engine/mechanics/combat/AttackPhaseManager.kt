@@ -162,6 +162,13 @@ internal class AttackPhaseManager(
             return ExecutionResult.error(state, goadValidation)
         }
 
+        // Check "attacks [defender] … if able" requirements naming a defender (Gideon, Battle-Forged)
+        val defenderRequirementValidation =
+            validateMustAttackDefenderRequirements(state, attackingPlayer, attackers, projected, opponents)
+        if (defenderRequirementValidation != null) {
+            return ExecutionResult.error(state, defenderRequirementValidation)
+        }
+
         // Check "each opponent must attack you … with at least one creature" (Trove of Temptation)
         val attackYouValidation = validateOpponentsMustAttackYou(state, attackingPlayer, attackers, projected)
         if (attackYouValidation != null) {
@@ -341,6 +348,15 @@ internal class AttackPhaseManager(
                     .with(AttackersDeclaredThisTurnComponent)
                 if (attackers.isNotEmpty()) {
                     updated = updated.with(PlayerAttackedThisTurnComponent)
+                    // The per-combat record (Kytheon's "attacked this combat"), cleared by endCombat.
+                    val previousThisCombat = container
+                        .get<com.wingedsheep.engine.state.components.combat.PlayerAttackersThisCombatComponent>()
+                        ?.attackerIds ?: emptySet()
+                    updated = updated.with(
+                        com.wingedsheep.engine.state.components.combat.PlayerAttackersThisCombatComponent(
+                            previousThisCombat + attackers.keys
+                        )
+                    )
                     val previous = container.get<PlayerAttackersThisTurnComponent>()
                     updated = updated.with(
                         PlayerAttackersThisTurnComponent(
@@ -881,6 +897,98 @@ internal class AttackPhaseManager(
     }
 
     /**
+     * Validate [com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent]
+     * requirements — "[creature] attacks [defender] … if able" (Gideon, Battle-Forged's +2).
+     *
+     * CR 508.1d: a creature under such a requirement that is able to attack its named defender must
+     * attack that defender (if it carries several, one of them). "Able" is
+     * [ableRequiredDefenders]; when no named defender is able, the requirement imposes nothing and
+     * the creature may attack anyone or nothing (ruling 2015-06-22).
+     */
+    private fun validateMustAttackDefenderRequirements(
+        state: GameState,
+        attackingPlayer: EntityId,
+        attackers: Map<EntityId, EntityId>,
+        projected: ProjectedState,
+        opponents: List<EntityId>
+    ): String? {
+        val validAttackers = getValidAttackers(state, attackingPlayer)
+        for (attackerId in validAttackers) {
+            val able = ableRequiredDefenders(state, projected, attackingPlayer, attackerId, opponents, validAttackers)
+            if (able.isEmpty()) continue
+            val chosen = attackers[attackerId]
+            if (chosen == null || chosen !in able) {
+                val cardName = state.getEntity(attackerId)?.get<CardComponent>()?.name ?: "Creature"
+                val defenderName = able.joinToString(" or ") { defenderName(state, it) }
+                return "$cardName must attack $defenderName this combat if able"
+            }
+        }
+        return null
+    }
+
+    /**
+     * The defenders named by [attackerId]'s in-force "attacks [defender] … if able" requirements that
+     * it is actually able to attack this combat (CR 508.1d):
+     *
+     *  - the defender is still the object the requirement named (a permanent that left and came
+     *    back is a new object, CR 400.7) and is still a legal attack target for [attackingPlayer] —
+     *    a player the attacking player may attack, a planeswalker one of them controls, or a battle
+     *    one of them protects;
+     *  - no restriction stops this creature attacking it (CR 508.1c) and attacking it costs nothing,
+     *    neither an attack tax nor a sacrifice (CR 508.1d: costs are never forced) —
+     *    [canAttackFreely], which also yields to a goad requirement that points away from the
+     *    defender's controller (obeying one requirement by breaking another gains nothing);
+     *  - no active Taunt points every creature at a different defender (same reasoning).
+     */
+    private fun ableRequiredDefenders(
+        state: GameState,
+        projected: ProjectedState,
+        attackingPlayer: EntityId,
+        attackerId: EntityId,
+        opponents: List<EntityId>,
+        validAttackers: List<EntityId>
+    ): Set<EntityId> {
+        val component = state.getEntity(attackerId)
+            ?.get<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>()
+            ?: return emptySet()
+        val inForce = component.activeOn(state.turnNumber)
+        if (inForce.isEmpty()) return emptySet()
+        val legalPlayers = CombatDefenders.legalDefendingPlayers(state, attackingPlayer)
+        val taunt = state.sharedTurnTeam(attackingPlayer)
+            .firstNotNullOfOrNull { member -> state.getEntity(member)?.get<MustAttackPlayerComponent>() }
+            ?.takeIf { it.activeThisTurn }
+        val able = mutableSetOf<EntityId>()
+        for (requirement in inForce) {
+            val defenderId = requirement.defenderId
+            if (taunt != null && taunt.defenderId != defenderId) continue
+            val isPlayer = defenderId in state.turnOrder
+            val legalTarget = if (isPlayer) {
+                defenderId in legalPlayers
+            } else {
+                defenderId in state.getBattlefield() &&
+                    state.objectRef(defenderId)?.generation == requirement.defenderGeneration &&
+                    (
+                        (projected.isPlaneswalker(defenderId) && projected.getController(defenderId) in legalPlayers) ||
+                            (projected.isBattle(defenderId) && Battles.canBeAttackedBy(state, defenderId, attackingPlayer, legalPlayers))
+                        )
+            }
+            if (!legalTarget) continue
+            val defenderPlayer = defenderControllerOf(state, projected, defenderId)
+            if (canAttackFreely(
+                    state, projected, attackingPlayer, attackerId, listOf(defenderId),
+                    defenderPlayer, opponents, validAttackers
+                )
+            ) able.add(defenderId)
+        }
+        return able
+    }
+
+    private fun defenderName(state: GameState, defenderId: EntityId): String =
+        state.getEntity(defenderId)?.get<PlayerComponent>()?.name
+            ?: state.getEntity(defenderId)?.get<CardComponent>()?.name
+            ?: "that defender"
+
+    /**
      * Validate [com.wingedsheep.sdk.scripting.OpponentsMustAttackYou] (Trove of Temptation): for
      * each player [OpponentsMustAttackYouRequirement] says must be attacked, the declaration has
      * to send at least one creature at that player or a planeswalker they control — if able.
@@ -1110,6 +1218,16 @@ internal class AttackPhaseManager(
         for (attackerId in validAttackers) {
             val container = state.getEntity(attackerId) ?: continue
             if (container.has<GoadedComponent>()) {
+                mandatory.add(attackerId)
+            }
+        }
+
+        // 5. "Attacks [defender] … if able" (Gideon, Battle-Forged) — only while a named defender
+        // is one this creature is able to attack (CR 508.1d).
+        val opponents = state.getOpponents(attackingPlayer)
+        val projected = state.projectedState
+        for (attackerId in validAttackers) {
+            if (ableRequiredDefenders(state, projected, attackingPlayer, attackerId, opponents, validAttackers).isNotEmpty()) {
                 mandatory.add(attackerId)
             }
         }

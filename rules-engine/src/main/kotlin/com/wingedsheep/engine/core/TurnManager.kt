@@ -218,6 +218,12 @@ class TurnManager(
             }
         }
 
+        // Arm "attacks [defender] during its controller's next turn if able" requirements (Gideon,
+        // Battle-Forged): a pending requirement comes into force on the first turn, after it was
+        // created, that the creature's *current* controller takes — so a creature that changed
+        // control waits for its new controller's turn (ruling 2015-06-22).
+        newState = armMustAttackDefenderRequirements(newState, newState.sharedTurnTeam(playerId).toSet())
+
         val events = mutableListOf<GameEvent>(TurnChangedEvent(newState.turnNumber, playerId))
 
         // Activate a Mindslaver-style *turn*-scoped hijack scheduled on this player. Per Scryfall
@@ -1422,6 +1428,31 @@ class TurnManager(
 
             true
         }
+    }
+
+    /**
+     * Arm every pending [com.wingedsheep.engine.state.components.combat.MustAttackDefenderRequirement]
+     * on a battlefield creature controlled by one of [activeTeam] for this turn.
+     */
+    private fun armMustAttackDefenderRequirements(state: GameState, activeTeam: Set<EntityId>): GameState {
+        var newState = state
+        val projected = state.projectedState
+        for (entityId in state.getBattlefield()) {
+            val component = state.getEntity(entityId)
+                ?.get<com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent>() ?: continue
+            if (component.requirements.none { it.activeOnTurn == null }) continue
+            if (projected.getController(entityId) !in activeTeam) continue
+            newState = newState.updateEntity(entityId) { container ->
+                container.with(
+                    component.copy(
+                        requirements = component.requirements.map {
+                            if (it.activeOnTurn == null) it.copy(activeOnTurn = state.turnNumber) else it
+                        }
+                    )
+                )
+            }
+        }
+        return newState
     }
 
     fun getMandatoryAttackers(state: GameState, playerId: EntityId): List<EntityId> {

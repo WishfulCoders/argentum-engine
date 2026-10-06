@@ -1269,6 +1269,7 @@ serialized shape; the facade for each is:
 | `LoseLifeEffect` | `Effects.LoseLife` |
 | `MarkExileControllerGraveyardOnDeathEffect` | `Effects.MarkExileControllerGraveyardOnDeath` |
 | `MarkExileOnDeathEffect` | `Effects.MarkExileOnDeath` |
+| `MarkMustAttackDefenderEffect` | `Effects.MarkMustAttackDefender` |
 | `MarkMustAttackThisTurnEffect` | `Effects.MarkMustAttackThisTurn` |
 | `MarkSpellExileWithCountersEffect` | `Effects.MarkSpellExileWithCounters` |
 | `ModalEffect` | `Effects.Modal` |
@@ -2858,6 +2859,18 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   `AttackPhaseManager` and removed during cleanup. It composes with the token pipeline for “that
   token attacks this combat if able”: create the token, then target
   `PipelineTarget(CREATED_TOKENS, 0)` with this facade.
+- `Effects.MarkMustAttackDefender(target, defender = Self, window = CONTROLLERS_NEXT_TURN)`
+  (`MarkMustAttackDefenderEffect`) — "[creature] attacks [defender] [this turn | during its
+  controller's next turn] if able": a per-creature requirement naming *which* player, planeswalker or
+  battle to attack (Gideon, Battle-Forged's +2 — `defender = EffectTarget.Self`; "attacks you" is
+  `EffectTarget.Controller`). Recorded on the creature as a `MustAttackDefenderComponent` (defender by
+  entity + object generation, so a defender that left and returned no longer counts, CR 400.7);
+  `AttackRequirementWindow.CONTROLLERS_NEXT_TURN` arms at the start of the next turn taken by the
+  creature's controller *at that time* (so a control change moves it), `THIS_TURN` is in force at
+  once, and both expire in that turn's cleanup. `AttackPhaseManager` enforces it under CR 508.1d —
+  only while the creature is able to attack that defender at no cost and without breaking a goad or
+  Taunt requirement — and lists the creature in `mandatoryAttackers`. Shown as a "Must Attack
+  <defender>" badge. Stripped when the creature leaves the battlefield.
 - `Effects.MarkMustBlockThisTurn(target = ContextTarget(0))` (`MarkMustBlockThisTurnEffect`) —
   "target creature blocks this turn if able". Adds a `Layer.ABILITY` floating
   `SerializableModification.SetMustBlock` for `Duration.EndOfTurn`, i.e. the same projected
@@ -12855,6 +12868,12 @@ default to "you" so card authors don't need to pass it explicitly.
   "three or more creatures attacked this turn" — rather than the controller-scoped
   `YouAttackedWithCreaturesThisTurn`. The record is keyed to the player who *declared* the attacker,
   so a creature whose controller changed after attacking still counts.
+- `CreaturesAttackedThisCombat(atLeast, filter = Any)` — the **per-combat** sibling
+  (`PlayerAttackedWithCreaturesThisCombat(Player.Each, filter, atLeast)`): creatures *declared* as
+  attackers in the current combat (CR 508.1), so ones that died or left combat still count and ones
+  put onto the battlefield attacking (CR 508.4) never do. Backed by `PlayerAttackersThisCombatComponent`,
+  cleared when the combat phase ends (CR 511.3). Kytheon, Hero of Akros: `All(SourceAttackedThisCombat,
+  CreaturesAttackedThisCombat(2, GameObjectFilter.Any.notSourceItself()))`.
 - `PlayerAttackedPlayerThisTurn(attacker, defender = Player.You)` — whether `attacker` "attacked"
   `defender` this turn (CR 508.6): they declared one or more attackers whose defending player was
   `defender` (the player directly, or the controller of a planeswalker / protector of a battle the
