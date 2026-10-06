@@ -1,3 +1,78 @@
+// Leovold, Emissary of Trest
+{
+    "name": "Leovold, Emissary of Trest",
+    "manaCost": "{B}{G}{U}",
+    "typeLine": "Legendary Creature — Elf Advisor",
+    "oracleText": "Each opponent can't draw more than one card each turn.\nWhenever you or a permanent you control becomes the target of a spell or ability an opponent controls, you may draw a card.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Leovold, Emissary of Trest:1",
+                "trigger": {
+                    "type": "BecomesTargetEvent",
+                    "targetFilter": "permanent ctrl:you",
+                    "byOpponent": true,
+                    "includePlayerTargets": true,
+                    "targetPlayer": "You"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            "RestrictDrawsPerTurn"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "77",
+        "rarity": "MYTHIC",
+        "artist": "Magali Villeneuve",
+        "flavorText": "\"I'm sure we can come to an arrangement.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/9/49bb0ad3-1082-41f1-82a4-52a4006cc9b6.jpg?1783937339",
+        "rulings": [
+            {
+                "date": "2018-12-07",
+                "text": "Your opponents can draw a maximum of one card each on each player's turn. Subsequent card draws during that turn are ignored."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If an opponent hasn't drawn any cards in a turn and a spell or ability instructs that player to draw multiple cards, that player will just draw one card. However, if the draws are optional, the player can't choose to draw, even if they could draw one card this way."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "Leovold will \"see\" cards drawn by opponents earlier in the turn before it entered the battlefield, although Leovold can't affect cards drawn before it entered the battlefield. For example, if an opponent draws two cards, then Leovold enters the battlefield, that opponent can't draw more cards that turn, but the two drawn cards are unaffected."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "Replacement effects (such as that of dredge or Laboratory Maniac's ability) can't be used to replace draws that Leovold disallows. However, if an opponent's first draw is replaced (by a dredge ability, for example), that draw didn't happen and Leovold won't stop the next draw."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If you and a permanent you control each become the target of the same spell or ability an opponent controls, Leovold's ability will trigger twice. The same is true if two permanents you control become the target of the same spell or ability an opponent controls."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN",
+        "BLUE"
+    ]
+}
+
 // Recruiter of the Guard
 {
     "name": "Recruiter of the Guard",
