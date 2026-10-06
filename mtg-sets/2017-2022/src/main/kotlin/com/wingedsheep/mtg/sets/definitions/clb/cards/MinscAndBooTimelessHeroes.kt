@@ -13,9 +13,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.conditions.SacrificedPermanentHadSubtype
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 private const val SACRIFICED_POWER = "minscSacrificedPower"
 private const val SACRIFICED_HAMSTER = "minscSacrificedHamster"
@@ -88,17 +86,13 @@ val MinscAndBooTimelessHeroes = card("Minsc & Boo, Timeless Heroes") {
     }
 
     loyaltyAbility(-2) {
-        val x = DynamicAmount.VariableReference(SACRIFICED_POWER)
+        val x = DynamicAmounts.storedNumber(SACRIFICED_POWER)
         effect = Effects.ReflexiveTrigger(
             action = Effects.SacrificeOwn(GameObjectFilter.Creature) then
                 Effects.StoreNumber(SACRIFICED_POWER, DynamicAmounts.sacrificedPower()) then
                 Effects.StoreNumber(
                     SACRIFICED_HAMSTER,
-                    DynamicAmount.Conditional(
-                        SacrificedPermanentHadSubtype("Hamster"),
-                        DynamicAmount.Fixed(1),
-                        DynamicAmount.Fixed(0)
-                    )
+                    DynamicAmounts.conditional(Conditions.SacrificedHadSubtype("Hamster"), 1, 0)
                 ),
             optional = false,
             descriptionOverride = "Sacrifice a creature. When you do, Minsc & Boo deals X damage to any target, " +
@@ -107,7 +101,7 @@ val MinscAndBooTimelessHeroes = card("Minsc & Boo, Timeless Heroes") {
             val anyTarget = target(Targets.Any)
             effect = Effects.DealDamage(x, anyTarget) then Effects.If(
                 condition = Conditions.CompareAmounts(
-                    DynamicAmount.VariableReference(SACRIFICED_HAMSTER), ComparisonOperator.GTE, 1
+                    DynamicAmounts.storedNumber(SACRIFICED_HAMSTER), ComparisonOperator.GTE, 1
                 ),
                 then = Effects.DrawCards(x)
             )
