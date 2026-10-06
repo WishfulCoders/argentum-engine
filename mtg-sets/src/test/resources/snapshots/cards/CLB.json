@@ -541,6 +541,254 @@
     ]
 }
 
+// Minsc & Boo, Timeless Heroes
+{
+    "name": "Minsc & Boo, Timeless Heroes",
+    "manaCost": "{2}{R}{G}",
+    "typeLine": "Legendary Planeswalker — Minsc",
+    "oracleText": "When Minsc & Boo enters and at the beginning of your upkeep, you may create Boo, a legendary 1/1 red Hamster creature token with trample and haste.\n+1: Put three +1/+1 counters on up to one target creature with trample or haste.\n−2: Sacrifice a creature. When you do, Minsc & Boo deals X damage to any target, where X is that creature's power. If the sacrificed creature was a Hamster, draw X cards.\nMinsc & Boo, Timeless Heroes can be your commander.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Minsc & Boo, Timeless Heroes:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "CreateToken",
+                        "power": 1,
+                        "toughness": 1,
+                        "colors": [
+                            "RED"
+                        ],
+                        "creatureTypes": [
+                            "Hamster"
+                        ],
+                        "keywords": [
+                            "TRAMPLE",
+                            "HASTE"
+                        ],
+                        "name": "Boo",
+                        "imageUri": "https://cards.scryfall.io/normal/front/0/d/0d0475e9-68ae-4553-a5ef-650091e04967.jpg?1783922320",
+                        "legendary": true
+                    },
+                    "descriptionOverride": "When Minsc & Boo enters, you may create Boo, a legendary 1/1 red Hamster creature token with trample and haste."
+                },
+                "descriptionOverride": "When Minsc & Boo enters, you may create Boo, a legendary 1/1 red Hamster creature token with trample and haste."
+            },
+            {
+                "id": "Minsc & Boo, Timeless Heroes:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "CreateToken",
+                        "power": 1,
+                        "toughness": 1,
+                        "colors": [
+                            "RED"
+                        ],
+                        "creatureTypes": [
+                            "Hamster"
+                        ],
+                        "keywords": [
+                            "TRAMPLE",
+                            "HASTE"
+                        ],
+                        "name": "Boo",
+                        "imageUri": "https://cards.scryfall.io/normal/front/0/d/0d0475e9-68ae-4553-a5ef-650091e04967.jpg?1783922320",
+                        "legendary": true
+                    },
+                    "descriptionOverride": "At the beginning of your upkeep, you may create Boo, a legendary 1/1 red Hamster creature token with trample and haste."
+                },
+                "descriptionOverride": "At the beginning of your upkeep, you may create Boo, a legendary 1/1 red Hamster creature token with trample and haste."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Minsc & Boo, Timeless Heroes:3",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 3,
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "optional": true,
+                        "filter": {
+                            "baseFilter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "Or",
+                                        "predicates": [
+                                            {
+                                                "type": "And",
+                                                "predicates": [
+                                                    "IsCreature",
+                                                    {
+                                                        "type": "HasKeyword",
+                                                        "keyword": "TRAMPLE"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "And",
+                                                "predicates": [
+                                                    "IsCreature",
+                                                    {
+                                                        "type": "HasKeyword",
+                                                        "keyword": "HASTE"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "Minsc & Boo, Timeless Heroes:4",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -2
+                },
+                "effect": {
+                    "type": "ReflexiveTrigger",
+                    "action": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "Sacrifice",
+                                "filter": "creature"
+                            },
+                            {
+                                "type": "StoreNumber",
+                                "name": "minscSacrificedPower",
+                                "amount": {
+                                    "type": "EntityProperty",
+                                    "entity": "SacrificedAsCost",
+                                    "numericProperty": "Power"
+                                }
+                            },
+                            {
+                                "type": "StoreNumber",
+                                "name": "minscSacrificedHamster",
+                                "amount": {
+                                    "type": "Conditional",
+                                    "condition": {
+                                        "type": "SacrificedPermanentHadSubtype",
+                                        "subtype": "Hamster"
+                                    },
+                                    "ifTrue": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    },
+                                    "ifFalse": {
+                                        "type": "Fixed",
+                                        "amount": 0
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "optional": false,
+                    "reflexiveEffect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "DealDamage",
+                                "amount": {
+                                    "type": "VariableReference",
+                                    "variableName": "minscSacrificedPower"
+                                },
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t1"
+                                }
+                            },
+                            {
+                                "type": "Gated",
+                                "gate": {
+                                    "type": "Gate.WhenCondition",
+                                    "condition": {
+                                        "type": "Compare",
+                                        "left": {
+                                            "type": "VariableReference",
+                                            "variableName": "minscSacrificedHamster"
+                                        },
+                                        "operator": "GTE",
+                                        "right": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "type": "DrawCards",
+                                    "count": {
+                                        "type": "VariableReference",
+                                        "variableName": "minscSacrificedPower"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "reflexiveTargetRequirements": [
+                        {
+                            "type": "AnyTarget",
+                            "id": "t1"
+                        }
+                    ],
+                    "descriptionOverride": "Sacrifice a creature. When you do, Minsc & Boo deals X damage to any target, where X is that creature's power. If the sacrificed creature was a Hamster, draw X cards."
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "285",
+        "rarity": "MYTHIC",
+        "artist": "Andreas Zafiratos",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/2/928036c9-11b8-493e-b9f2-8fbd3487cd19.jpg?1790212691",
+        "rulings": [
+            {
+                "date": "2022-06-10",
+                "text": "If there is no legal target for the reflexive trigger in Minsc & Boo's second loyalty ability, or if the target is illegal as the ability tries to resolve, you will not draw any cards even if the sacrificed creature was a Hamster."
+            }
+        ]
+    },
+    "startingLoyalty": 3,
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
+
 // Pseudodragon Familiar
 {
     "name": "Pseudodragon Familiar",
