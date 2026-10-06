@@ -9867,6 +9867,15 @@ riders, matching how the engine already treats e.g. City of Brass's damage durin
   a bare grant (Leonin Shikari) applies unconditionally. Consulted by `CastPermissionUtils
   .canEquipAtInstantSpeed` (enumerator) and `ActivateAbilityHandler.validate` (submit path), both
   keyed on `ActivatedAbility.isEquipAbility`.
+- `CreatureOutsideBattlefield(power, toughness, subtypes)` — "as long as this card isn't on the
+  battlefield, it's a P/T [subtypes] creature in addition to its other types" (Grist, the Hunger Tide;
+  CR 113.6c). Not a layer effect: off-battlefield objects are read from their card characteristics, so
+  `OffBattlefieldCharacteristics` writes the creature type, subtypes and base P/T into the card's
+  `CardComponent` whenever it is outside the battlefield (minted by `CardEntityFactory`, or leaving the
+  battlefield in `ZoneTransitionService`) and restores the printed ones as it becomes a permanent
+  (`ZoneTransitionService` battlefield entry and `PermanentEntry` spell resolution). So it is a
+  creature card to searches and graveyard counts and a creature spell on the stack, and only a
+  planeswalker on the battlefield.
 - `LoyaltyAbilitiesAtInstantSpeed` — "you may activate this permanent's loyalty abilities any time you could
   cast an instant": lifts the timing half of CR 606.3 for the loyalty abilities of the permanent that has it (the
   once-per-turn half and CR 606.6 still apply). Wrap in a `ConditionalStaticAbility` for a gated permission — The

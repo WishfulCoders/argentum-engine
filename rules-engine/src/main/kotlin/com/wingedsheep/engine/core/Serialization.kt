@@ -525,6 +525,7 @@ val engineSerializersModule = SerializersModule {
         subclass(FlippedComponent::class)
         subclass(CopyHistoryComponent::class)
         subclass(EntryCharacteristicsComponent::class)
+        subclass(com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristicsComponent::class)
         subclass(RoomComponent::class)
         subclass(CantBeCounteredComponent::class)
         subclass(CantBeCopiedComponent::class)
@@ -669,9 +670,9 @@ val engineSerializersModule = SerializersModule {
         subclass(CanAttackDespiteDefenderThisTurnComponent::class)
         subclass(PlayerAttackedThisTurnComponent::class)
         subclass(PlayerAttackersThisTurnComponent::class)
-        subclass(PlayerAttackersLastTurnComponent::class)
         subclass(com.wingedsheep.engine.state.components.combat.PlayerAttackersThisCombatComponent::class)
         subclass(com.wingedsheep.engine.state.components.combat.MustAttackDefenderComponent::class)
+        subclass(PlayerAttackersLastTurnComponent::class)
         subclass(PlayerAttackedPlayersThisTurnComponent::class)
 
         // Player components
