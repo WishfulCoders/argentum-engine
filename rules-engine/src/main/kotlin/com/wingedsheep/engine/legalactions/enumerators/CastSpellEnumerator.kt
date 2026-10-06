@@ -1416,7 +1416,7 @@ class CastSpellEnumerator(
                 context,
                 applySpellWaterbendMetadata(
                     context,
-                    expandSacrificeDefinedX(context, expandChoiceAdditionalCosts(context, result))
+                    markXDividedDamage(context, expandSacrificeDefinedX(context, expandChoiceAdditionalCosts(context, result)))
                 )
             )
         )
@@ -1590,6 +1590,31 @@ class CastSpellEnumerator(
             }
         }
         return out
+    }
+
+    /**
+     * Post-process: a divided-damage spell whose total *is* X — "X damage divided as you choose
+     * among any number of target creatures" — cast through an offer that doesn't fix X itself.
+     * X is announced as the spell is cast, before its targets and their division (CR 601.2b–d):
+     * the `{X}` the player picks, or the life declared for a "pay X life" additional cost (Fire
+     * Covenant). The enumerator can't know it, so the offer's [LegalAction.totalDamageToDistribute]
+     * stays the unbound placeholder and [LegalAction.damageTotalIsX] tells the client to divide the
+     * X it already collected. Offers that fixed X ([expandSacrificeDefinedX]) are already exact.
+     */
+    private fun markXDividedDamage(
+        context: EnumerationContext,
+        actions: List<LegalAction>
+    ): List<LegalAction> = actions.map { la ->
+        val cs = la.action as? CastSpell
+        if (cs == null || cs.xValue != null || cs.faceIndex != null || !la.requiresDamageDistribution) return@map la
+        val cardDef = context.state.getEntity(cs.cardId)?.get<CardComponent>()?.name
+            ?.let { context.cardRegistry.getCard(it) }
+        val divided = cardDef?.script?.spellEffect as? DividedDamageEffect
+        val announcesX = cardDef != null &&
+            (cardDef.manaCost.hasX || com.wingedsheep.engine.mechanics.cost.spell.AnnouncedX.paysXLife(cardDef.script.additionalCosts))
+        if (divided?.dynamicTotal == com.wingedsheep.sdk.scripting.values.DynamicAmount.XValue && announcesX) {
+            la.copy(damageTotalIsX = true)
+        } else la
     }
 
     /**

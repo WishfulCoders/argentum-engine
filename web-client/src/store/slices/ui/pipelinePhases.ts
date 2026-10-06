@@ -6,6 +6,7 @@
  * - enterPhase: calls the appropriate start* method for a phase
  */
 import type {
+  CastSpellAction,
   ChosenTarget,
   EntityId,
   LegalActionInfo,
@@ -51,6 +52,17 @@ function targetEntityId(target: ChosenTarget): EntityId {
     case 'Card':
       return target.cardId
   }
+}
+
+/**
+ * The X a cast has announced so far: the `{X}` it chose, or — for a spell whose additional cost is
+ * "pay X life" (Vicious Rivalry, Fire Covenant), which never also has an `{X}` — the life declared
+ * for that cost. Null until either is known. Mirrors the server's `AnnouncedX`.
+ */
+export function castAnnouncedX(action: CastSpellAction): number | null {
+  if (typeof action.xValue === 'number') return action.xValue
+  const lifeX = action.additionalCostPayment?.payXLifeAmount
+  return typeof lifeX === 'number' ? lifeX : null
 }
 
 /**
@@ -1149,8 +1161,11 @@ export function enterPhase(
       const chosenX: number | null = (() => {
         if (gameState == null) return null
         if (action.type === 'CastSpell' || action.type === 'ActivateAbility' || action.type === 'TurnFaceUp') {
-          return typeof action.xValue === 'number' ? action.xValue : null
+          if (typeof action.xValue === 'number') return action.xValue
         }
+        // A "pay X life" additional cost announces the spell's X (Fire Covenant); its phase runs
+        // before targeting, so the life declared there caps an X-driven target count.
+        if (action.type === 'CastSpell') return castAnnouncedX(action)
         return null
       })()
       const filterByX = (

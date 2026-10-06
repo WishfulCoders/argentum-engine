@@ -54,6 +54,7 @@ import com.wingedsheep.engine.mechanics.SpliceCasts
 import com.wingedsheep.engine.mechanics.WarpGrants
 import com.wingedsheep.engine.mechanics.WebSlinging
 import com.wingedsheep.engine.mechanics.cost.VariablePermanentsCost
+import com.wingedsheep.engine.mechanics.cost.spell.AnnouncedX
 import com.wingedsheep.engine.mechanics.cost.spell.SpellCostCheck
 import com.wingedsheep.engine.mechanics.cost.spell.SpellCostLedger
 import com.wingedsheep.engine.mechanics.cost.spell.SpellCosts
@@ -816,6 +817,9 @@ internal class CastValidator(
             addAll(SpliceCasts.targetRequirementsFor(state, action.splicedCardIds, cardRegistry))
         }.map { req -> castText?.let { req.applyTextReplacement(it) } ?: req }
         if (targetRequirements.isEmpty()) return null
+        // The X the cast announces caps an X-driven target count and bounds an X filter — the
+        // `{X}`, or the life a "pay X life" additional cost declares (Fire Covenant).
+        val announcedX = AnnouncedX.of(action, cardDef)
         val sourceColors = (transformedFace ?: cardDef).colors
         val sourceSubtypes = (transformedFace ?: cardDef).typeLine.subtypes.map { it.value }.toSet()
         // A choose-N modal cast that sends its targets per mode already says which mode each target
@@ -836,13 +840,13 @@ internal class CastValidator(
                 val size = modalEffect!!.modes.getOrNull(mode)?.targetRequirements?.size ?: 0
                 targetValidator.bindTargetGroups(
                     state, modeTargets, targetRequirements.subList(cursor, cursor + size), action.playerId,
-                    sourceColors, sourceSubtypes, action.cardId, action.xValue, TargetingSourceType.SPELL,
+                    sourceColors, sourceSubtypes, action.cardId, announcedX, TargetingSourceType.SPELL,
                 ).also { cursor += size }
             }
             val tailTargets = action.targets.drop(union.size)
             val tail = targetValidator.bindTargetGroups(
                 state, tailTargets, targetRequirements.subList(cursor, targetRequirements.size), action.playerId,
-                sourceColors, sourceSubtypes, action.cardId, action.xValue, TargetingSourceType.SPELL,
+                sourceColors, sourceSubtypes, action.cardId, announcedX, TargetingSourceType.SPELL,
             )
             (perMode + tail).firstNotNullOfOrNull { it.error }?.let {
                 return TargetValidator.TargetGroupBinding(targetRequirements.map { 0 }, it)
@@ -862,7 +866,7 @@ internal class CastValidator(
             sourceColors = sourceColors,
             sourceSubtypes = sourceSubtypes,
             sourceId = action.cardId,
-            xValue = action.xValue,
+            xValue = announcedX,
             targetingSourceType = TargetingSourceType.SPELL,
             explicitCounts = action.targetGroupCounts ?: modeCounts
         )
@@ -872,8 +876,9 @@ internal class CastValidator(
      * A divided-damage spell aimed at more than one target (CR 601.2d): the distribution names
      * exactly the chosen targets, sums to the spell's damage, and gives each at least 1. The kicked
      * or cleaved effect is the one divided when that variant is cast. A `dynamicTotal` is evaluated
-     * with the announced X — the same value the stack object carries to resolution — so "X damage
-     * divided …" where X is fixed by a cost (Nahiri's Sacrifice) validates against that X.
+     * with the announced X ([AnnouncedX]) — the same value the stack object carries to resolution —
+     * so "X damage divided …" where X is fixed by a cost validates against that X: the sacrificed
+     * permanent's mana value (Nahiri's Sacrifice) or the life paid (Fire Covenant).
      */
     private fun validateDamageDistribution(state: GameState, action: CastSpell, cardDef: CardDefinition?): String? {
         val spellEffect = if (action.declaredCostSlot != null && cardDef?.script?.kickerSpellEffect != null) {
@@ -892,7 +897,7 @@ internal class CastValidator(
             return "Damage distribution targets must match chosen targets"
         }
         val total = spellEffect.dynamicTotal?.let { amount ->
-            val context = EffectContext(sourceId = action.cardId, controllerId = action.playerId, xValue = action.xValue)
+            val context = EffectContext(sourceId = action.cardId, controllerId = action.playerId, xValue = AnnouncedX.of(action, cardDef))
             predicateEvaluator.amounts.evaluate(state, amount, context).coerceAtLeast(0)
         } ?: spellEffect.totalDamage
         val totalDistributed = distribution.values.sum()

@@ -74,8 +74,11 @@ internal class JevActions(
         val payment = costs.map(::cost).reduceOrNull(::combine)
         val manaPayment = manaPayment(info)
         val alternative = alternative(info)
-        val damage = if (info.requiresDamageDistribution && info.totalDamageToDistribute != null) {
-            JevDecisions(q, label).distribute("Divide damage", targets.map(::targetId), info.totalDamageToDistribute!!, info.minDamagePerTarget ?: 1)
+        // An X-divided total divides the X this cast announced: the chosen {X}, or the life paid for
+        // a "pay X life" additional cost (Fire Covenant); otherwise the offer's own total.
+        val totalToDivide = if (info.damageTotalIsX) x ?: payment?.payXLifeAmount else info.totalDamageToDistribute
+        val damage = if (info.requiresDamageDistribution && totalToDivide != null) {
+            JevDecisions(q, label).distribute("Divide damage", targets.map(::targetId), totalToDivide, info.minDamagePerTarget ?: 1)
         } else null
         return when (action) {
             is CastSpell -> action.copy(targets = targets.ifEmpty { action.targets }, xValue = x ?: action.xValue,

@@ -1000,6 +1000,12 @@ export interface LegalActionInfo {
   readonly totalDamageToDistribute?: number
   /** Minimum damage per target (usually 1 per MTG rules) */
   readonly minDamagePerTarget?: number
+  /**
+   * The divided total is the X announced earlier in this cast — the chosen `{X}`, or the life
+   * declared for a "pay X life" additional cost (Fire Covenant) — not `totalDamageToDistribute`,
+   * which is only an unbound-X placeholder.
+   */
+  readonly damageTotalIsX?: boolean
   /** Preview of which lands/sources would be auto-tapped if this spell is cast (for UI highlighting) */
   readonly autoTapPreview?: readonly EntityId[]
   /** Available mana sources for pre-cast selection */

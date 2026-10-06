@@ -936,8 +936,13 @@ cast action advertises the first selection cost as `additionalCostInfo` and the 
   effects through the resolution **X value** — i.e. read it with `DynamicAmount.XValue` and filter with
   `CardPredicate.ManaValueAtMostX` / `manaValueAtMostX()` (Vicious Rivalry: "pay X life; destroy all
   artifacts and creatures with mana value X or less"). A card using this cost must **not** also have an
-  `{X}` in its mana cost — both write the same X slot. The client shows a numeric X picker (no target
-  step); the AI declares X = 0 by default.
+  `{X}` in its mana cost — both write the same X slot. The declared life is the X the spell
+  **announces** (CR 107.3a, 601.2b; engine `AnnouncedX`), so everything X drives at cast time reads it
+  too: an X-driven target cap (`targets(…, unlimited = true, dynamicMaxCount = DynamicAmounts.xValue())`)
+  and an X divided total (`Effects.DividedDamage(total = 0, dynamicTotal = DynamicAmounts.xValue())`,
+  CR 601.2d) — Fire Covenant: "pay X life … deals X damage divided as you choose among any number of
+  target creatures". The client's X picker runs before targeting; a divided-X offer carries
+  `damageTotalIsX` so the division step divides the declared X. The default AI declares X = 0.
 - `Costs.additional.PayLifePerTarget(amountPerTarget)` — "this spell costs N life more to cast for
   each target." Pair with an unbounded `targets(TargetFilter.Creature, unlimited = true)` etc.; the engine
   auto-pays `amountPerTarget × action.targets.size` at cast resolution (Phyrexian Purge).
