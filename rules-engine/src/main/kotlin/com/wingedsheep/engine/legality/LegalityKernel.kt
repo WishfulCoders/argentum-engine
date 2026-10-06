@@ -16,6 +16,9 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.RoomFaceStatics
+import com.wingedsheep.engine.state.components.identity.EmblemLinkedSourceComponent
+import com.wingedsheep.engine.state.components.identity.emblemStaticAbilitiesOf
+import com.wingedsheep.engine.handlers.effects.linkedexile.LinkedExileLookup
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.ActivationRestriction
@@ -231,6 +234,21 @@ class LegalityKernel(
                 if (grant.oncePerTurn && container.has<MayCastFromLinkedExileUsedThisTurnComponent>()) continue
             }
             result.add(LinkedExileGranter(entityId, grant, linked.exiledIds))
+        }
+        // Emblems after permanents: an emblem whose own text grants the permission over the pile of
+        // the permanent that created it — "You may play cards exiled with Tibalt, Cosmic Impostor"
+        // (CR 114.4: an emblem's abilities function from the command zone; the pile is that
+        // specific object's, even after it has left the battlefield).
+        for ((emblemId, ability) in state.emblemStaticAbilitiesOf(playerId)) {
+            val grant = ability as? GrantMayCastFromLinkedExile ?: continue
+            val emblem = state.getEntity(emblemId) ?: continue
+            val visit = emblem.get<EmblemLinkedSourceComponent>() ?: continue
+            if (usableNow) {
+                if (grant.duringYourTurnOnly && !state.isActiveTurnFor(playerId)) continue
+                if (grant.oncePerTurn && emblem.has<MayCastFromLinkedExileUsedThisTurnComponent>()) continue
+            }
+            val pile = LinkedExileLookup.exiledCardsOfVisit(state, visit.sourceId, visit.battlefieldTimestamp)
+            result.add(LinkedExileGranter(emblemId, grant, pile))
         }
         return result
     }

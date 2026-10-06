@@ -199,6 +199,11 @@ data class GrantAlternativeCastingCost(
  * When this permanent leaves the battlefield, the static ability naturally ceases to apply
  * and the exiled cards can no longer be cast. The cards remain in exile.
  *
+ * On an **emblem** (in `CreatePermanentEmblemEffect.ownedStaticAbilities`) "this permanent" is the
+ * permanent whose ability created the emblem — "You may play cards exiled with Tibalt, Cosmic
+ * Impostor" (CR 114.4). The engine binds the emblem to that permanent's battlefield visit, so the
+ * permission outlives it and covers only what that object exiled (CR 400.7).
+ *
  * Used by Rona, Disciple of Gix and similar cards. Dawnhand Dissident uses the
  * [duringYourTurnOnly] timing restriction and the [additionalCost] gate (a distributed
  * counter-removal) to gate its reanimation ability.

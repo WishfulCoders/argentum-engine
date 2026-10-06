@@ -53,6 +53,19 @@ object LinkedExileLookup {
     }
 
     /**
+     * The cards still exiled with one specific battlefield visit of [sourceId] — the visit that
+     * entered at [battlefieldTimestamp] — in exile order. While that visit is live this is the
+     * source's own pile; once it has left the battlefield (or come back as a new object, CR 400.7)
+     * it is the pile retained for the departed visit. Backs an emblem's "cards exiled with
+     * [that permanent]" ([com.wingedsheep.engine.state.components.identity.EmblemLinkedSourceComponent]).
+     */
+    fun exiledCardsOfVisit(state: GameState, sourceId: EntityId, battlefieldTimestamp: Long): List<EntityId> {
+        val current = state.getEntity(sourceId)?.get<BattlefieldEntryTimestampComponent>()?.timestamp
+        if (current == battlefieldTimestamp) return exiledCards(state, sourceId)
+        return state.departedLinkedExile[battlefieldTimestamp].orEmpty().filter { isStillExiled(state, it) }
+    }
+
+    /**
      * The [index]-th card still exiled with [sourceId], or null when the pile is shorter than that.
      * Backs [com.wingedsheep.sdk.scripting.targets.EffectTarget.LinkedExiledCard], whose default
      * index 0 is "the exiled card" of every Imprint permanent (Imprint exiles exactly one).

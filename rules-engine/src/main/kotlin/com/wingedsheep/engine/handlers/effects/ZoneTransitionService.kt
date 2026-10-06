@@ -804,6 +804,7 @@ class ZoneTransitionService(
             newState = newState.updateEntity(entityId) { c ->
                 c.without<LastKnownPermanentComponent>()
                     .without<com.wingedsheep.engine.state.components.battlefield.DealtDamageToThisGameComponent>()
+                    .without<com.wingedsheep.engine.state.components.identity.LastKnownCopiableComponent>()
             }
         }
 
@@ -968,6 +969,16 @@ class ZoneTransitionService(
                     c.without<FlippedComponent>().withCopyIdentity(flipped.unflippedCard, cardRegistry)
                 }
             }
+        }
+
+        // 7b''. Last-known copiable values (CR 608.2h, CR 707.2): the copy, transformed face,
+        // flipped half or face-down status a departing permanent had is gone from the card now, so
+        // an effect copying the permanent it just moved (Fractured Identity) reads them from here.
+        // Stamped only when the departure changed something a copy reads.
+        if (leavingBattlefield && actualDestZone != Zone.BATTLEFIELD) {
+            com.wingedsheep.engine.state.components.identity.LastKnownCopiableComponent
+                .capture(container, newState.getEntity(entityId))
+                ?.let { lki -> newState = newState.updateEntity(entityId) { it.with(lki) } }
         }
 
         // 7c. Clear the CR 903.9a "already asked this stay" marker on every commander zone

@@ -51,3 +51,30 @@ fun GameState.emblemStaticAbilitiesOf(
     }
     return result
 }
+
+/**
+ * The battlefield visit of the permanent whose ability created this emblem — the object an emblem's
+ * rules text names when it says "cards exiled with [that permanent]" (Tibalt, Cosmic Impostor:
+ * "You may play cards exiled with Tibalt, Cosmic Impostor, …").
+ *
+ * An emblem has no linked-exile pile of its own, so a
+ * [com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile] in its
+ * [EmblemStaticAbilityComponent] reads the pile of the object recorded here. The object is a
+ * *visit*, not an entity id (CR 400.7): the emblem keeps working after that permanent has left the
+ * battlefield (the 2021-02-05 Tibalt ruling — "even after that Tibalt leaves the battlefield"), and it
+ * never covers cards a later visit of the same card exiles, since that is a different object with
+ * an emblem of its own. Pile lookups go through
+ * [com.wingedsheep.engine.handlers.effects.linkedexile.LinkedExileLookup.exiledCardsOfVisit].
+ *
+ * Recorded by `CreatePermanentEmblemExecutor` only for an emblem that owns such a grant, so every
+ * other emblem's state is unchanged.
+ *
+ * @property sourceId the creating permanent's entity id.
+ * @property battlefieldTimestamp that permanent's battlefield-entry timestamp for the visit that
+ *   created the emblem.
+ */
+@Serializable
+data class EmblemLinkedSourceComponent(
+    val sourceId: EntityId,
+    val battlefieldTimestamp: Long,
+) : Component

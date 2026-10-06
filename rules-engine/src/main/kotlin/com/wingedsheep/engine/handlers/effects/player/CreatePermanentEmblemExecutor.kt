@@ -16,6 +16,9 @@ import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.EmblemSourceComponent
 import com.wingedsheep.engine.state.components.identity.EmblemActivatedAbilityComponent
 import com.wingedsheep.engine.state.components.identity.EmblemStaticAbilityComponent
+import com.wingedsheep.engine.state.components.identity.EmblemLinkedSourceComponent
+import com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent
+import com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.Duration
@@ -87,6 +90,19 @@ class CreatePermanentEmblemExecutor : EffectExecutor<CreatePermanentEmblemEffect
             emblemContainer = emblemContainer.with(
                 EmblemStaticAbilityComponent(effect.ownedStaticAbilities)
             )
+        }
+        // "You may play cards exiled with [this planeswalker]" (Tibalt, Cosmic Impostor): the
+        // emblem's linked-exile grant reads the pile of the battlefield visit that created it, which
+        // outlives that permanent (CR 400.7 — a later visit is a different object). The visit is the
+        // resolving ability's own (an ability that outlived its source still names it), falling back
+        // to the live permanent's timestamp for an as-enters replacement.
+        if (effect.ownedStaticAbilities.any { it is GrantMayCastFromLinkedExile }) {
+            val sourceId = context.sourceId
+            val timestamp = context.sourceBattlefieldTimestamp
+                ?: sourceId?.let { state.getEntity(it)?.get<BattlefieldEntryTimestampComponent>()?.timestamp }
+            if (sourceId != null && timestamp != null) {
+                emblemContainer = emblemContainer.with(EmblemLinkedSourceComponent(sourceId, timestamp))
+            }
         }
 
         var newState = stateWithId.withEntity(emblemId, emblemContainer)

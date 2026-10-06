@@ -2479,6 +2479,11 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   token copy of another permanent (or a card in any zone — the executor copies the target's `CardComponent`,
   so a graveyard/exile card works; pass `EffectTarget.PipelineTarget("name")` to copy a card a prior pipeline
   step exiled/stored, as Nexus of Becoming and Mardu Siegebreaker do).
+  A target chosen as a **permanent** that an earlier step of the same resolution moved off the
+  battlefield is copied **as it last existed there** (CR 608.2h, CR 707.2): what it was copying, its
+  transformed face, its face-down shell — read from the `LastKnownCopiableComponent` the departure left
+  on the card (stamped only when leaving changed the copiable values, dropped on its next zone change).
+  A card targeted in its current zone, an iteration entity or a pipeline card is copied as it is now.
   `overrideColors`/`overrideSubtypes` replace the copy's colors/subtypes
   outright for "a token that's a copy … except it's a 5/5 black Demon" wording (Ardyn, the Usurper).
   `addedColors` *unions* extra colors onto the copy (vs `overrideColors` which replaces; ignored when
@@ -2705,6 +2710,7 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
 - `CreatePermanentEmblem(groupFilter?, powerBonus?, toughnessBonus?, grantedKeywords?, grantedActivatedAbilities?, ownedStaticAbilities?, emblemDescription)` — permanent planeswalker emblem whose dynamically evaluated group receives the listed stats, keywords, and activated abilities. Unlike a one-shot group grant, the emblem also affects matching permanents that enter later. The activated-ability form powers Arlinn Kord's emblem.
   - `ownedStaticAbilities` carries wording the emblem has **itself** rather than grants to a group — "You may cast spells from your hand without paying their mana costs" (Tamiyo, Field Researcher's −7) is `MayCastWithoutPayingManaCost(controllerOnly = true)`, the same static Omniscience prints. Such an emblem leaves `groupFilter` and the group modifications at their defaults. The emblem entity lives outside every zone, so a scan that only walks the battlefield won't see it; the free-cast scan (`CostCalculator.hasFreeCastPermission`) consults emblem statics explicitly. `firstSpellOfTurnOnly` / `oncePerTurn` gates are rejected there rather than approximated, since both key off marking a *battlefield* source used.
   - The graveyard permissions read emblems too: `MayPlayLandsFromGraveyard` and `MayCastFromGraveyard` in `ownedStaticAbilities` are honoured by the land-play and graveyard-cast scans (legal actions and handlers alike) exactly as if a permanent the emblem's controller controls printed them — Wrenn and Realmbreaker's −7 is `listOf(MayPlayLandsFromGraveyard, MayCastFromGraveyard(GameObjectFilter.NonlandPermanent))` ("permanent spells" never includes a land). The emblem entity is the grant's source, so `oncePerTurn` on an emblem-held `MayCastFromGraveyard` works. The engine helper is `GameState.emblemStaticAbilitiesOf(playerId)`.
+  - **"Cards exiled with [the planeswalker that made it]"** — a `GrantMayCastFromLinkedExile` in `ownedStaticAbilities` reads the linked-exile pile of the permanent whose ability created the emblem. The executor records that permanent's battlefield *visit* on the emblem (`EmblemLinkedSourceComponent`: entity id + entry timestamp), and the linked-exile granter scan (`LegalityKernel.linkedExileGranters`, after the battlefield granters) reads the pile through `LinkedExileLookup.exiledCardsOfVisit` — the live pile while that visit lasts, the retained departed pile afterwards. So the permission survives the planeswalker leaving the battlefield and never covers what a later visit of the same card exiles (CR 400.7). Spells and lands alike, through the ordinary linked-exile cast / land-play paths. Tibalt, Cosmic Impostor = `OnEnterRun(CreatePermanentEmblem(ownedStaticAbilities = listOf(GrantMayCastFromLinkedExile(filter = Any, withAnyManaType = true)), …))` plus loyalty abilities that exile with `linkToSource = true`.
   - A battlefield-scope `GrantWard` in `ownedStaticAbilities` is a ward grant from the emblem — "Knights you control get +1/+0 and have ward {1}" (Teferi Akosa of Zhalfir's −2) is `groupFilter = <Knights you control>, powerBonus = 1, ownedStaticAbilities = listOf(GrantWard(WardCost.Mana("{1}"), <Knights you control>))`. The ward trigger reads it exactly as a grant printed on a permanent the emblem's controller controls (`BattlefieldStaticsIndex` collects it alongside the battlefield walk), and the emblem projects the WARD keyword onto the group itself — don't also list `WARD` in `grantedKeywords`.
 
 ### Ability granting
@@ -4755,6 +4761,12 @@ A resolving nonpermanent spell retains its stack instance through serialized eff
   they contribute nothing (CR 608.2b). Like `Each` / `EachOpponent` / `OwnersOfLinkedExile` it is a
   *list-only* reference: the single-player resolver returns null for it deliberately, so a
   `ForEach`-over-players reads it through its own arm.
+- `Player.EachOtherThan(excluded)` — "each player other than [excluded]": every player still in the
+  game in APNAP order (CR 101.4) except the one the single-player reference `excluded` resolves to (an
+  unresolved reference excludes nobody). Resolved once, as the loop starts, so `ControllerOf("target")`
+  reads the last-known controller of a target an earlier step already moved (CR 608.2h). Not
+  `EachOpponent`: the excluded player is an *object's* controller, who may be you. List-only like
+  `EachTargetedPlayer`. **Fractured Identity** = `Exile(t) then ForEachPlayer(EachOtherThan(ControllerOf("target")), CreateTokenCopyOfTarget(t))`.
 - `Player.InCollection(collection)` — "those players": every player a `StorePlayerEffect` recorded in a
   pipeline collection earlier in the resolution, in APNAP order (CR 101.4), skipping players who
   have left the game. An empty or missing collection is *nobody*. Reach it as `slot.asPlayers` from a
