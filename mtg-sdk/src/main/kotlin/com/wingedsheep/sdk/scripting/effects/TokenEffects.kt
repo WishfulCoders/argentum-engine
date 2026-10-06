@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.StaticAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
@@ -60,6 +61,19 @@ data class CreateTokenEffect(
     val dynamicToughness: DynamicAmount? = null,
     val tapped: Boolean = false,
     val attacking: Boolean = false,
+    /**
+     * "For each opponent, create … that's tapped and attacking **that player or a planeswalker
+     * they control**" (Adeline, Resplendent Cathar; the myriad shape, CR 702.116a). With
+     * [attacking], the [count] tokens are created once *for each* player this resolves to, all in
+     * one simultaneous event, and each token attacks that player or a planeswalker that player
+     * controls — the effect specifies the defender, so CR 508.4's free choice is narrowed to those,
+     * and the token's controller picks among them as it enters (a decision only when that player
+     * controls a planeswalker). A player who isn't an opponent of the token's controller gets
+     * tokens that aren't attacking (a creature can't attack its own side).
+     *
+     * Null keeps the unspecified "tapped and attacking" defender.
+     */
+    val attackingEach: Player? = null,
     val legendary: Boolean = false,
     val artifactToken: Boolean = false,
     /**
@@ -138,7 +152,8 @@ data class CreateTokenEffect(
         // "enchantment creature" — the extra card type precedes "creature". (artifactToken is
         // intentionally not rendered here to keep existing artifact-token descriptions stable.)
         val cardTypeWord = if (enchantmentToken) "enchantment creature" else "creature"
-        append("Create ")
+        if (attacking && attackingEach != null) append("For ${attackingEach.description}, c") else append("C")
+        append("reate ")
         when (val c = count) {
             is DynamicAmount.Fixed -> {
                 append(if (c.amount == 1) "a" else "${c.amount}")
@@ -160,6 +175,10 @@ data class CreateTokenEffect(
         for (ability in activatedAbilities) {
             append(if (keywordWords.isEmpty()) " with " else " and ")
             append("\"${ability.description}\"")
+        }
+        if (attacking && attackingEach != null) {
+            append(if (tapped) " that's tapped and attacking" else " that's attacking")
+            append(" that player or a planeswalker they control")
         }
     }
 

@@ -2370,6 +2370,14 @@ vocabulary; this primitive does not provide Word of Command's full mana restrict
   Hatchery) is `numericKeywords = listOf(KeywordAbility.toxic(1))`. They land on the same components a card's
   printed numeric keywords do, so the token's toxic reaches combat damage, `withKeyword(TOXIC)` and
   `KeywordValue(TOXIC)`.
+  `attackingEach: Player?` (with `attacking = true`) is "for each opponent, create … that's tapped and
+  attacking **that player or a planeswalker they control**" (Adeline, Resplendent Cathar; myriad's shape):
+  `count` tokens per player it resolves to (`Player.EachOpponent`), each attacking that player or one of
+  their planeswalkers. The effect specifies the side, so CR 508.4's free choice narrows to it; the token's
+  controller picks as the tokens enter — a `ChooseTargetsDecision` only for a side that controls a
+  planeswalker, all picks made before any token is created. A planeswalker so attacked is marked
+  attacked (CR 506.4 tracks it), and its unblocked token's damage removes loyalty. Without it, an
+  unspecified "tapped and attacking" token attacks the defending player as before.
   `sacrificeAtStep: Step?` arms a delayed trigger that sacrifices each created token at the beginning of the next
   step of that kind — the "create …, sacrifice it at the beginning of the next end step" rider (Harried Dronesmith
   passes `Step.END`; because its ability triggers at the beginning of combat on the controller's own turn, "your

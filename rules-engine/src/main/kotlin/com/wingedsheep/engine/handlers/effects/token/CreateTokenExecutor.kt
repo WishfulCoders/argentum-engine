@@ -77,11 +77,65 @@ class CreateTokenExecutor(
             ?.takeIf { it.isNotEmpty() }
             ?: listOf(context.controllerId)
 
+        // "For each opponent, create … attacking that player or a planeswalker they control":
+        // one batch per (controller, defending side), every token's defender settled first.
+        val eachSide = effect.attackingEach?.takeIf { effect.attacking }
+        if (eachSide != null) {
+            return createAttackingEach(state, effect, context, baseCount, tokenControllerIds, eachSide)
+        }
+
         var currentState = state
         val allEvents = mutableListOf<com.wingedsheep.engine.core.GameEvent>()
         val allCreatedTokens = mutableListOf<EntityId>()
         for (tokenControllerId in tokenControllerIds) {
             val result = createTokensFor(currentState, effect, context, baseCount, tokenControllerId)
+            if (result.error != null) return result
+            currentState = result.state
+            allEvents.addAll(result.events)
+            allCreatedTokens.addAll(result.updatedCollections[CREATED_TOKENS].orEmpty())
+        }
+        return EffectResult(
+            state = currentState,
+            events = allEvents,
+            updatedCollections = mapOf(CREATED_TOKENS to allCreatedTokens)
+        )
+    }
+
+    /**
+     * [CreateTokenEffect.attackingEach]: create [baseCount] tokens for each player [side] resolves
+     * to, each attacking that player or a planeswalker they control (CR 508.4). The defenders are
+     * all assigned before any token is created — pausing for the controller's pick wherever a side
+     * offers more than its player — and each batch then attacks its own assignments.
+     */
+    private fun createAttackingEach(
+        state: GameState,
+        effect: CreateTokenEffect,
+        context: EffectContext,
+        baseCount: Int,
+        tokenControllerIds: List<EntityId>,
+        side: com.wingedsheep.sdk.scripting.references.Player,
+    ): EffectResult {
+        val sides = context.resolvePlayerTargets(EffectTarget.PlayerRef(side), state)
+        val plan = EntersAttackingDefenders.plan(state, effect, context, tokenControllerIds, sides) { controllerId ->
+            com.wingedsheep.engine.core.GameLimits.cappedTokenCount(
+                TokenCreationReplacementHelper.applyCountReplacements(
+                    state, controllerId, baseCount, predicateEvaluator = amountEvaluator.predicates
+                ),
+                "tokens"
+            )
+        }
+        val batches = when (plan) {
+            is EntersAttackingDefenders.Plan.Paused -> return plan.result
+            is EntersAttackingDefenders.Plan.Ready -> plan.batches
+        }
+        var currentState = state
+        val allEvents = mutableListOf<com.wingedsheep.engine.core.GameEvent>()
+        val allCreatedTokens = mutableListOf<EntityId>()
+        for (batch in batches) {
+            val result = createTokensFor(
+                currentState, effect, context, baseCount, batch.controllerId,
+                specifiedDefenders = batch.defenders,
+            )
             if (result.error != null) return result
             currentState = result.state
             allEvents.addAll(result.events)
@@ -128,6 +182,9 @@ class CreateTokenExecutor(
      *
      * @param substituted true when these tokens are themselves the substitute of a
      *   [com.wingedsheep.sdk.scripting.ReplaceTokenCreationWithToken] — see [createSubstituteTokens].
+     * @param specifiedDefenders what each token of an attacking batch attacks, by position, when
+     *   the effect specified it ([CreateTokenEffect.attackingEach]); a null entry, or a position past
+     *   the end, enters not attacking. Null uses the unspecified default defender.
      */
     private fun createTokensFor(
         state: GameState,
@@ -135,7 +192,8 @@ class CreateTokenExecutor(
         context: EffectContext,
         baseCount: Int,
         tokenControllerId: EntityId,
-        substituted: Boolean = false
+        substituted: Boolean = false,
+        specifiedDefenders: List<EntityId?>? = null,
     ): EffectResult {
         // Apply token-count replacements (Doubling Season / Exalted Sunborn,
         // and per-N modifiers) before downstream replacements get a look.
@@ -230,6 +288,9 @@ class CreateTokenExecutor(
 
         var newState = state
         val createdTokens = mutableListOf<EntityId>()
+        // Planeswalkers a specified-defender token attacks, stamped once the batch is in play so
+        // CR 506.4 can later see a change of controller (AttackedPermanents).
+        val attackedPermanents = mutableSetOf<EntityId>()
 
         repeat(count) { indexInBatch ->
             val resolvedImageUri = resolvedImageUris[indexInBatch % resolvedImageUris.size]
@@ -270,7 +331,16 @@ class CreateTokenExecutor(
                     )
                 }
             }
-            if (effect.attacking) {
+            if (effect.attacking && specifiedDefenders != null) {
+                // The effect named this token's defender (CR 508.4) — still a legal one, since
+                // nothing has happened between the choice and this creation.
+                val defenderId = specifiedDefenders.getOrNull(indexInBatch)
+                    ?.takeIf { it in newState.turnOrder || it in newState.getBattlefield() }
+                if (defenderId != null) {
+                    components.add(AttackingComponent(defenderId, defendingPlayerId = com.wingedsheep.engine.mechanics.combat.CombatDefenders.defendingPlayerOf(newState, defenderId)))
+                    attackedPermanents.add(defenderId)
+                }
+            } else if (effect.attacking) {
                 // Token enters attacking — it joins the attack of the source creature
                 // (CR 802.2a: defender per attacking creature), falling back to the sole
                 // active opponent outside combat-derived contexts.
@@ -329,6 +399,10 @@ class CreateTokenExecutor(
                 definedTapped = effect.tapped, attacking = effect.attacking,
                 predicateEvaluator = amountEvaluator.predicates
             )
+        }
+
+        for (attacked in attackedPermanents) {
+            newState = com.wingedsheep.engine.mechanics.combat.AttackedPermanents.markAttacked(newState, attacked)
         }
 
         // Apply "enters with counters" replacement effects from other battlefield permanents

@@ -27,3 +27,22 @@ data class TokenCreationReplacementContinuation(
     val tokenCount: Int,
     val effectContext: EffectContext
 ) : AnswerContinuation
+
+/**
+ * Resume a [com.wingedsheep.sdk.scripting.effects.CreateTokenEffect] with
+ * [com.wingedsheep.sdk.scripting.effects.CreateTokenEffect.attackingEach] after the token's
+ * controller picked what one token attacks — that player or one of their planeswalkers (CR 508.4).
+ *
+ * The resumer appends the pick to [chosen] and re-runs [originalEffect], which asks for the next
+ * token's defender or, once every token has one, creates them all.
+ *
+ * @property chosen The picks made so far, in token order
+ * @property options What this pick may name (validated against the answer)
+ */
+@Serializable
+data class EntersAttackingDefenderContinuation(
+    val originalEffect: Effect,
+    val effectContext: EffectContext,
+    val chosen: List<EntityId>,
+    val options: List<EntityId>,
+) : AnswerContinuation

@@ -85,6 +85,7 @@ internal fun AnswerContinuation.objectReferences(): ObjectReferenceEnvironment? 
     is CastAnyNumberFromCollectionContinuation -> effectContext.objectReferences
     is ReplacementChoiceContinuation -> context?.objectReferences
     is TokenCreationReplacementContinuation -> effectContext.objectReferences
+    is EntersAttackingDefenderContinuation -> effectContext.objectReferences
     is ChooseGuessKindContinuation -> effectContext.objectReferences
     is GuessTopCardKindContinuation -> effectContext.objectReferences
     is GuessConditionContinuation -> effectContext.objectReferences
@@ -204,6 +205,7 @@ internal fun AnswerContinuation.withObjectReferences(refs: ObjectReferenceEnviro
     is CastAnyNumberFromCollectionContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is ReplacementChoiceContinuation -> copy(context = context?.copy(objectReferences = refs))
     is TokenCreationReplacementContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
+    is EntersAttackingDefenderContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is ChooseGuessKindContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is GuessTopCardKindContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
     is GuessConditionContinuation -> copy(effectContext = effectContext.copy(objectReferences = refs))
