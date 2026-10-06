@@ -876,6 +876,57 @@
     ]
 }
 
+// Hellrider
+{
+    "name": "Hellrider",
+    "manaCost": "{2}{R}{R}",
+    "typeLine": "Creature — Devil",
+    "oracleText": "Haste\nWhenever a creature you control attacks, this creature deals 1 damage to the player or planeswalker it's attacking.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Hellrider:1",
+                "trigger": {
+                    "type": "AttackEvent",
+                    "filter": "creature ctrl:you"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "AttackedPlayerOrPlaneswalker"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "93",
+        "rarity": "RARE",
+        "artist": "Svetlin Velinov",
+        "flavorText": "\"Behind every devil's mayhem lurks a demon's scheme.\"\n—Rem Karolus, Blade of the Inquisitors",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/e/0ec8d800-7f06-44e0-b22d-cdff0a9b153d.jpg?1783940817",
+        "rulings": [
+            {
+                "date": "2017-03-14",
+                "text": "Creatures you control may attack multiple players and/or planeswalkers. For each attacking creature, Hellrider will deal damage to the corresponding player or planeswalker."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Helvault
 {
     "name": "Helvault",
