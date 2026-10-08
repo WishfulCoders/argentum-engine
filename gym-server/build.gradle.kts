@@ -24,3 +24,8 @@ dependencies {
     testImplementation(libs.kotestAssertions)
     testImplementation(libs.kotestExtensionsSpring)
 }
+
+// The jar also carries bench mains (bench/SearchStepBench.kt, run via PropertiesLauncher); the server stays the default.
+springBoot {
+    mainClass.set("com.wingedsheep.gym.server.GymServerApplicationKt")
+}
