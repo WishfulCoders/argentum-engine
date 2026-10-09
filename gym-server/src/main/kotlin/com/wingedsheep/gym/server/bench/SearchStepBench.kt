@@ -1,5 +1,6 @@
 package com.wingedsheep.gym.server.bench
 
+import com.wingedsheep.gym.GameGymEnv
 import com.wingedsheep.gym.contract.LegalActionView
 import com.wingedsheep.gym.contract.TrainingObservation
 import com.wingedsheep.gym.server.config.GymBeansConfig
@@ -90,6 +91,10 @@ fun main(args: Array<String>) {
                         val buildMs = (System.nanoTime() - buildT0) / 1e6
                         stats.add("observe_after_step", buildMs)
                         stats.add("step_raw", stepMs - buildMs)
+                        // The legal moves alone (the part of the observation a search node does need), on the same
+                        // post-step state.
+                        val legalEnv = gameEnv(service, fork).environment
+                        stats.time("legal_actions") { legalEnv.legalActions() }
                         stats.time("restore") { service.restore(fork, handle) }
                     } catch (e: Exception) {
                         stats.count("refused:${e.javaClass.simpleName}")
@@ -115,6 +120,12 @@ fun main(args: Array<String>) {
     File(args[1]).writeText(json.encodeToString(JsonObject.serializer(), out))
     println(out)
 }
+
+private val envsField = MultiEnvService::class.java.getDeclaredField("envs").apply { isAccessible = true }
+
+/** The service keeps its envs private; the bench reads one through reflection rather than widen the service API. */
+private fun gameEnv(service: MultiEnvService, id: com.wingedsheep.gym.service.EnvId): GameGymEnv =
+    (envsField.get(service) as Map<*, *>)[id] as GameGymEnv
 
 /** A parameter-free legal move: pass half the time, else uniform over the rest. */
 private fun pick(legal: List<LegalActionView>, rng: Random): LegalActionView? {
