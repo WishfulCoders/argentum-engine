@@ -77,8 +77,19 @@ fun main(args: Array<String>) {
                 } else {
                     val before = service.status(fork).stepCount
                     try {
-                        stats.time("step") { service.step(StepRequest(fork, action.actionId)) }
+                        val stepT0 = System.nanoTime()
+                        service.step(StepRequest(fork, action.actionId))
+                        val stepMs = (System.nanoTime() - stepT0) / 1e6
+                        stats.add("step", stepMs)
                         stats.add("engine_steps", (service.status(fork).stepCount - before).toDouble())
+                        // `step` ends by rebuilding the observation (legal actions included). Building it again on
+                        // the same state prices that part, so step - observe_after_step is the rules work alone:
+                        // the step an in-JVM search pays when it skips per-node observations (docs/64 §4.4).
+                        val buildT0 = System.nanoTime()
+                        service.observe(fork)
+                        val buildMs = (System.nanoTime() - buildT0) / 1e6
+                        stats.add("observe_after_step", buildMs)
+                        stats.add("step_raw", stepMs - buildMs)
                         stats.time("restore") { service.restore(fork, handle) }
                     } catch (e: Exception) {
                         stats.count("refused:${e.javaClass.simpleName}")
