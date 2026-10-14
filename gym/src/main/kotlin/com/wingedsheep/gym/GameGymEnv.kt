@@ -57,6 +57,13 @@ class GameGymEnv(
      * original behaviour: every decision leaves the env.
      */
     private var agents: List<AgentSpec> = emptyList(),
+    /**
+     * The policy boundary's simulator and the hidden-world sampler. Each env builds its own unless a
+     * [forkForSearch] hands its parent's down: both are costly to build (an action processor and an
+     * enumerator each) and hold no state across calls beyond a single-thread recursion guard.
+     */
+    private val policySimulator: GameSimulator = GameSimulator(environment.cardRegistry),
+    private val determinizer: Determinizer = Determinizer(environment.cardRegistry),
 ) : GymEnv {
 
     @Volatile
@@ -71,8 +78,6 @@ class GameGymEnv(
 
     /** The engine's AI for each seat that needs one: every pilot, and every learner's decisions. */
     private val players = mutableMapOf<EntityId, AIPlayer>()
-    private val policySimulator = GameSimulator(environment.cardRegistry)
-    private val determinizer = Determinizer(environment.cardRegistry)
 
     /** Pilot actions and delegated learner decisions so far this episode. */
     private var autoAdvanced: Int = 0
@@ -143,6 +148,30 @@ class GameGymEnv(
             it.delegatedDecisions = delegatedDecisions
             it.playedOut = playedOut
             it.build(defaultRevealAll)
+        }
+
+    /**
+     * A [fork] for an in-process search (mtg-draft-ai docs/65 §3, E1): the same immutable state, the
+     * same action registry and the same episode counters, without building an observation, and
+     * sharing this env's simulator and sampler. Every search node holds one, and its [step] builds
+     * the child's observation as usual.
+     *
+     * The shared simulator's recursion guard is not thread-safe, so a search fork and its
+     * descendants must be stepped from one thread. [fork] keeps building its own, because the
+     * service steps forks of one env on different worker threads.
+     */
+    fun forkForSearch(): GameGymEnv =
+        GameGymEnv(
+            environment.fork(), perspectivePlayerIndex, defaultRevealAll, observationBuilder, limits,
+            agents, policySimulator, determinizer,
+        ).also {
+            it.registry = registry
+            it.truncation = truncation
+            it.lastActive = lastActive
+            it.lastProgress = lastProgress
+            it.autoAdvanced = autoAdvanced
+            it.delegatedDecisions = delegatedDecisions
+            it.playedOut = playedOut
         }
 
     override fun status(): EnvStatus = EnvStatus(
@@ -508,10 +537,19 @@ class GameGymEnv(
      * order are sampled, so pending decisions and continuations stay valid. The seats' AIs are
      * rebuilt, because their short-lived memory is of a world that no longer exists.
      */
-    fun determinize(seed: Long): ObservationResult {
+    fun determinize(seed: Long): ObservationResult = determinize(seed, perspectivePlayerIndex)
+
+    /**
+     * [determinize] from [viewerIndex]'s side: what that seat cannot see is resampled, consistent
+     * with what it can. The overload above is the perspective seat's view. A search run for any
+     * other seat (an opponent learner, mtg-draft-ai docs/65 §2.1) must name its own seat here, or
+     * it would search with the perspective seat's hidden cards in view.
+     */
+    fun determinize(seed: Long, viewerIndex: Int): ObservationResult {
         check(truncation == null) { "Env was truncated ($truncation); reset it before determinizing" }
         check(!isTerminal) { "Env is terminal; there is no hidden world left to sample" }
-        val viewer = environment.playerIds[perspectivePlayerIndex]
+        val viewer = environment.playerIds.getOrNull(viewerIndex)
+            ?: throw IllegalArgumentException("Env has no player at index $viewerIndex")
         val sampled = determinizer.sample(
             environment.state,
             viewer,
