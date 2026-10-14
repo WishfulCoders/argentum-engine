@@ -33,14 +33,23 @@ class Gate(
         fun add(key: String, n: Long = 1) { tally[key] = (tally[key] ?: 0) + n }
         val (env, opening) = engine.create(envConfig)
         var observation = opening.observation as TrainingObservation
-        val player = observation.perspectivePlayerId.value
+        // The learner is the perspective seat; in a two-learner env (Track A's G0 opponent) the other seat is the
+        // net sampled at T = 1, unsearched, and observations are the acting seat's.
+        val learnerSeat = envConfig.perspectivePlayerIndex
+        val player = env.environment.playerIds[learnerSeat].value
         val sampler = SplittableRandom(Searcher.decisionSeed(dealStream, deal.toLong(), -1))
         var searchNanos = 0L
         while (true) {
             val status = env.status()
             if (status.terminated || status.truncated) break
+            val mine = (status.actingSeat ?: learnerSeat) == learnerSeat
             val choice = try {
                 when {
+                    !mine -> {
+                        val prepared = policy.prepare(observation)
+                        val encoded = evaluator.encode(listOf(prepared)).single()
+                        policy.decide(prepared, encoded, Picker.sample(sampler))
+                    }
                     searcher != null -> {
                         val (choice, stats) = searcher.decide(
                             env, observation, Searcher.decisionSeed(dealStream, deal.toLong(), tally["decisions"] ?: 0),
@@ -64,11 +73,11 @@ class Gate(
                     }
                 }
             } catch (_: InferenceError) {
-                add("fallbacks")
+                add(if (mine) "fallbacks" else "opponent_fallbacks")
                 observation = env.playout(1).observation as TrainingObservation
                 continue
             }
-            add("decisions")
+            add(if (mine) "decisions" else "opponent_decisions")
             observation = try {
                 env.step(choice.actionId, choice.params.toActionParams()).observation as TrainingObservation
             } catch (e: Exception) {
@@ -117,7 +126,8 @@ class Gate(
 
         fun parseArm(arm: String): SearchConfig? = when {
             arm == "A0" || arm == "A0g" -> null
-            arm.startsWith("S") -> SearchConfig(sims = arm.drop(1).toInt())
+            // -De1.noise=1: docs/65 §2.2's root Gumbel noise, as self-play runs it.
+            arm.startsWith("S") -> SearchConfig(sims = arm.drop(1).toInt(), rootNoise = System.getProperty("e1.noise") == "1")
             else -> error("unknown arm $arm")
         }
     }
