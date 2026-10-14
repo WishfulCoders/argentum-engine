@@ -36,6 +36,12 @@ data class SearchConfig(
     val cVisit: Double = 50.0,
     val cScale: Double = 1.0,
     val rootNoise: Boolean = false,
+    /**
+     * Run each halving phase in rounds: one simulation per live candidate, their new leaves read by the net in one
+     * batch. Candidates' subtrees are disjoint and every node's edge sampler is seeded by its path, so the result is
+     * identical to running each candidate's simulations back to back (false), which is `search.py`'s order.
+     */
+    val batchRounds: Boolean = true,
 ) {
     init {
         require(sims >= worlds && worlds >= 1 && k >= 1) { "need sims >= worlds >= 1 and k >= 1, got $this" }
@@ -72,6 +78,8 @@ class Node(
     val seat: Int,
     /** From the root seat's side. */
     val value: Double,
+    /** Seeds this node's edge sampler: a function of the decision's seed, the world and the path to it. */
+    val seed: Long,
     val terminal: Boolean = false,
     var edges: List<Edge>? = null,
 ) {
@@ -116,9 +124,6 @@ class Searcher(
         try { return block() } finally { nanos[key] = (nanos[key] ?: 0L) + (System.nanoTime() - t0) }
     }
 
-    /** The current decision's edge sampler; reseeded per decision, so a decision's samples do not hang on earlier ones. */
-    private var rng = SplittableRandom(0)
-
     // -- the policy, as the search reads it ---------------------------------------------------------------------
 
     /** Prepare and encode [observations] in one batch; null where the policy cannot read one. */
@@ -131,7 +136,8 @@ class Searcher(
     }
 
     /** Up to k distinct complete actions sampled at temperature 1, plus pass when legal; priors renormalised. */
-    private fun sampleEdges(prepared: Prepared, encoded: Encoded): List<Edge> {
+    private fun sampleEdges(prepared: Prepared, encoded: Encoded, seed: Long): List<Edge> {
+        val rng = SplittableRandom(seed)
         val edges = LinkedHashMap<String, Edge>()
         repeat(config.k) {
             val choice = try { policy.decide(prepared, encoded, Picker.sample(rng)) } catch (_: InferenceError) { return@repeat }
@@ -181,7 +187,6 @@ class Searcher(
         }
         stats.searched = true
         stats.rootEdges = candidates.size
-        rng = SplittableRandom(mix(seed, 0x5eedL))
         // `observation_seat`: the server's acting seat, else the perspective seat.
         val rootSeat = env.status().actingSeat
             ?: observation.players.indexOfFirst { it.id == observation.perspectivePlayerId }.coerceAtLeast(0)
@@ -200,7 +205,7 @@ class Searcher(
         val roots = kept.mapIndexed { i, (world, o) ->
             val r = read[i]
             // A root's edges are the candidates, so it never samples and keeps no observation.
-            Node(world, null, null, rootSeat, r?.second?.value?.toDouble() ?: 0.0).also { root ->
+            Node(world, null, null, rootSeat, r?.second?.value?.toDouble() ?: 0.0, mix(seed, 0x5eed00L + i)).also { root ->
                 root.edges = candidates.map { (e, _) -> Edge(e.index, o.legalActions[e.index].actionId, e.params, e.prior) }
             }
         }
@@ -254,21 +259,48 @@ class Searcher(
         val phases = maxOf(1, ceil(log2(n.toDouble())).toInt())
         for (phase in 0 until phases) {
             val share = maxOf(1, config.sims / (phases * remaining.size))
-            for (a in remaining) {
-                for (s in 0 until share) {
-                    var value: Double? = null
-                    for (attempt in roots.indices) { // rotate worlds; one that refuses the move is passed over
-                        val root = roots[(visits[a] + attempt) % roots.size]
-                        value = simulate(root, rootSeat, rootPlayer, stats, root.edges!![a])
-                        if (value != null) break
+            val left = IntArray(n)
+            for (a in remaining) left[a] = share
+            fun record(a: Int, value: Double) {
+                visits[a]++
+                totals[a] += value
+                stats.simulations++
+            }
+            // One simulation of candidate a, through the first world (in its rotation) that accepts the move.
+            fun descendCandidate(a: Int): Descent {
+                left[a]--
+                for (attempt in roots.indices) {
+                    val root = roots[(visits[a] + attempt) % roots.size]
+                    val d = descend(root, rootSeat, rootPlayer, stats, root.edges!![a])
+                    if (d !== Refused) return d
+                }
+                dead += a
+                return Refused
+            }
+            if (!config.batchRounds) {
+                for (a in remaining) while (left[a] > 0 && a !in dead) {
+                    when (val d = descendCandidate(a)) {
+                        is Done -> record(a, backup(d.path, d.value))
+                        is Pending -> record(a, expand(listOf(d), rootSeat, rootPlayer, stats).single())
+                        Refused -> {}
                     }
-                    if (value == null) {
-                        dead += a
-                        break
+                }
+            } else {
+                while (true) {
+                    val active = remaining.filter { left[it] > 0 && it !in dead }
+                    if (active.isEmpty()) break
+                    val pending = ArrayList<Pair<Int, Pending>>()
+                    for (a in active) {
+                        when (val d = descendCandidate(a)) {
+                            is Done -> record(a, backup(d.path, d.value))
+                            is Pending -> pending += a to d
+                            Refused -> {}
+                        }
                     }
-                    visits[a]++
-                    totals[a] += value
-                    stats.simulations++
+                    if (pending.isNotEmpty()) {
+                        val values = expand(pending.map { it.second }, rootSeat, rootPlayer, stats)
+                        for ((i, p) in pending.withIndex()) record(p.first, values[i])
+                    }
                 }
             }
             remaining = remaining.filter { it !in dead }
@@ -289,33 +321,38 @@ class Searcher(
 
     // -- one simulation -----------------------------------------------------------------------------------------
 
-    /** One simulation from [root], through [forced] if given; its value, or null if [forced] is refused. */
-    private fun simulate(root: Node, rootSeat: Int, rootPlayer: String, stats: DecisionStats, forced: Edge?): Double? {
+    /** Where a simulation's descent ended. */
+    private sealed interface Descent
+    /** At a value already known (a terminal or a node with no live edge): back it up along [path]. */
+    private class Done(val path: List<Pair<Node, Edge>>, val value: Double) : Descent
+    /** At a new position: [edge] (the last of [path]) was stepped into [branch], whose [observation] the net reads. */
+    private class Pending(val path: List<Pair<Node, Edge>>, val branch: GameGymEnv, val observation: TrainingObservation) : Descent
+    /** The forced root edge was refused in this world. */
+    private object Refused : Descent
+
+    /**
+     * `_simulate` up to the point where the net is needed: descend from [root] (through [forced] if given), stepping
+     * one new edge. A terminal child is made here; any other new child is left [Pending] for [expand].
+     */
+    private fun descend(root: Node, rootSeat: Int, rootPlayer: String, stats: DecisionStats, forced: Edge?): Descent {
         var node = root
         val path = ArrayList<Pair<Node, Edge>>()
-        var value: Double? = null
-        while (value == null) {
-            if (node.terminal) {
-                value = node.value
-                break
-            }
+        while (true) {
+            if (node.terminal) return Done(path, node.value)
             if (node.edges == null) {
                 val p = node.prepared
                 val e = node.encoded
-                node.edges = if (p != null && e != null) timed("sample_edges") { sampleEdges(p, e) } else emptyList()
+                node.edges = if (p != null && e != null) timed("sample_edges") { sampleEdges(p, e, node.seed) } else emptyList()
                 // The observation was kept for this alone.
                 node.prepared = null
                 node.encoded = null
             }
             val edge = if (node === root && forced != null) {
-                if (forced.dead) return null
+                if (forced.dead) return Refused
                 forced
             } else {
                 val live = node.edges!!.filter { !it.dead }
-                if (live.isEmpty()) {
-                    value = node.value
-                    break
-                }
+                if (live.isEmpty()) return Done(path, node.value)
                 select(node, live, rootSeat)
             }
             val child = edge.child
@@ -331,37 +368,50 @@ class Searcher(
                 edge.dead = true
                 stats.deadEdges++
                 count("dead_edge:${e.javaClass.simpleName}:${e.message.orEmpty().take(60)}")
-                if (node === root && forced != null) return null
+                if (node === root && forced != null) return Refused
                 continue
             }
             path += node to edge
-            val made = child(branch, result.observation as TrainingObservation, rootSeat, rootPlayer, stats)
-            edge.child = made
-            value = made.value
+            val status = branch.status()
+            if (status.terminated || status.truncated) {
+                val reward = if (status.truncated) 0.0 else status.reward.firstOrNull { it.playerId.value == rootPlayer }?.value ?: 0.0
+                val terminal = Node(null, null, null, rootSeat, reward, childSeed(node, edge), terminal = true)
+                edge.child = terminal
+                return Done(path, reward)
+            }
+            return Pending(path, branch, result.observation as TrainingObservation)
         }
+    }
+
+    /** `_child` for every pending descent at once (one net batch), then the backups; each simulation's value. */
+    private fun expand(pending: List<Pending>, rootSeat: Int, rootPlayer: String, stats: DecisionStats): List<Double> {
+        val read = read(pending.map { it.observation })
+        return pending.mapIndexed { i, p ->
+            val (parent, edge) = p.path.last()
+            val seat = p.branch.status().actingSeat ?: rootSeat
+            val r = read[i]
+            val child = if (r == null) {
+                stats.leafFallbacks++
+                Node(p.branch, null, null, seat, 0.0, childSeed(parent, edge), edges = emptyList())
+            } else {
+                val value = r.second.value.toDouble()
+                Node(p.branch, r.first, r.second, seat, if (seat == rootSeat) value else -value, childSeed(parent, edge))
+            }
+            edge.child = child
+            backup(p.path, child.value)
+        }
+    }
+
+    private fun backup(path: List<Pair<Node, Edge>>, value: Double): Double {
         for ((parent, edge) in path) {
             edge.visits++
-            edge.valueSum += value!!
+            edge.valueSum += value
             parent.visits++
         }
         return value
     }
 
-    private fun child(branch: GameGymEnv, observation: TrainingObservation, rootSeat: Int, rootPlayer: String, stats: DecisionStats): Node {
-        val status = branch.status()
-        if (status.terminated || status.truncated) {
-            val reward = if (status.truncated) 0.0 else status.reward.firstOrNull { it.playerId.value == rootPlayer }?.value ?: 0.0
-            return Node(null, null, null, rootSeat, reward, terminal = true)
-        }
-        val seat = status.actingSeat ?: rootSeat
-        val read = read(listOf(observation)).single()
-        if (read == null) {
-            stats.leafFallbacks++
-            return Node(branch, null, null, seat, 0.0, edges = emptyList())
-        }
-        val value = read.second.value.toDouble()
-        return Node(branch, read.first, read.second, seat, if (seat == rootSeat) value else -value)
-    }
+    private fun childSeed(parent: Node, edge: Edge): Long = mix(parent.seed, edge.key.hashCode().toLong())
 
     private fun select(node: Node, live: List<Edge>, rootSeat: Int): Edge {
         val sign = if (node.seat == rootSeat) 1.0 else -1.0

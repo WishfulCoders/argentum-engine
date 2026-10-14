@@ -27,6 +27,8 @@ class Gate(
     private val dealStream: Long,
     private val config: SearchConfig?,
 ) {
+    private val trace = System.getProperty("e1.trace")?.let { File(it) }
+
     fun play(deal: Int, envConfig: EnvConfig, searcher: Searcher?): JsonObject {
         val t0 = System.nanoTime()
         val tally = sortedMapOf<String, Long>()
@@ -57,6 +59,18 @@ class Gate(
                         if (stats.searched) {
                             add("searched")
                             searchNanos += stats.nanos
+                        }
+                        stats.target?.let { t ->
+                            // -De1.trace=FILE: every searched decision's candidates, visits and values, to check runs equal.
+                            trace?.let { out ->
+                                synchronized(out) {
+                                    out.appendText(
+                                        "$deal ${tally["decisions"] ?: 0} chosen=${t.chosen} " + t.candidates.joinToString(" ") {
+                                            "${it.choice.key}:${it.visits}:${it.value?.let { v -> "%.6f".format(v) }}"
+                                        } + "\n",
+                                    )
+                                }
+                            }
                         }
                         add("simulations", stats.simulations.toLong())
                         if (stats.changedFromArgmax) add("changed")
@@ -127,7 +141,12 @@ class Gate(
         fun parseArm(arm: String): SearchConfig? = when {
             arm == "A0" || arm == "A0g" -> null
             // -De1.noise=1: docs/65 §2.2's root Gumbel noise, as self-play runs it.
-            arm.startsWith("S") -> SearchConfig(sims = arm.drop(1).toInt(), rootNoise = System.getProperty("e1.noise") == "1")
+            // -De1.rounds=0: each candidate's simulations back to back, unbatched (search.py's order; same result).
+            arm.startsWith("S") -> SearchConfig(
+                sims = arm.drop(1).toInt(),
+                rootNoise = System.getProperty("e1.noise") == "1",
+                batchRounds = System.getProperty("e1.rounds") != "0",
+            )
             else -> error("unknown arm $arm")
         }
     }
