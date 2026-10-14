@@ -27,6 +27,6 @@ application {
 
 tasks.withType<Test>().configureEach {
     // Parity fixtures live outside the repo (mtg-draft-ai records them); tests skip when absent.
-    for (prop in listOf("e1.parity", "e1.model")) System.getProperty(prop)?.let { systemProperty(prop, it) }
+    for (prop in listOf("e1.parity", "e1.model", "e1.deals", "argentum.ai.apprentice.dir")) System.getProperty(prop)?.let { systemProperty(prop, it) }
     maxHeapSize = "4g"
 }
