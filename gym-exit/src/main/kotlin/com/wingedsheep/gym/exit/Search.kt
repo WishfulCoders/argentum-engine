@@ -171,10 +171,13 @@ class Searcher(
 
     /**
      * Search [env]'s current decision ([observation] is what it shows the acting seat) and return the move to play
-     * there, plus what it cost. [seed] fixes the worlds, the edge samples and the root noise for this decision.
+     * there, plus what it cost. [seed] fixes the worlds, the edge samples and the root noise for this decision;
+     * [worldSeed], if given, seeds world w's determinize instead (T1's `world_seed`, [Blake2b.worldSeed]).
      * Throws [InferenceError] when the policy cannot answer the decision at all, as `policy.choose` does.
      */
-    fun decide(env: GameGymEnv, observation: TrainingObservation, seed: Long): Pair<Choice, DecisionStats> {
+    fun decide(
+        env: GameGymEnv, observation: TrainingObservation, seed: Long, worldSeed: ((Int) -> Long)? = null,
+    ): Pair<Choice, DecisionStats> {
         val stats = DecisionStats()
         val t0 = System.nanoTime()
         val prepared = policy.prepare(observation)
@@ -196,7 +199,8 @@ class Searcher(
         val worlds = timed("worlds") {
             (0 until config.worlds).map { w ->
                 val world = env.forkForSearch()
-                world to world.determinize(mix(seed, w.toLong()), rootSeat).observation as TrainingObservation
+                val worldSeed = worldSeed?.invoke(w) ?: mix(seed, w.toLong())
+                world to world.determinize(worldSeed, rootSeat).observation as TrainingObservation
             }
         }
         val kept = worlds.filter { (_, o) -> signature(o) == signature }

@@ -28,6 +28,8 @@ class Gate(
     private val config: SearchConfig?,
 ) {
     private val trace = System.getProperty("e1.trace")?.let { File(it) }
+    /** -De1.pyworlds=1: determinize with T1's world seeds (`world_seed(stream, deal, decision, w)`), as T1 did. */
+    private val pythonWorlds = System.getProperty("e1.pyworlds") == "1"
 
     fun play(deal: Int, envConfig: EnvConfig, searcher: Searcher?): JsonObject {
         val t0 = System.nanoTime()
@@ -53,8 +55,10 @@ class Gate(
                         policy.decide(prepared, encoded, Picker.sample(sampler))
                     }
                     searcher != null -> {
+                        val index = tally["decisions"] ?: 0
                         val (choice, stats) = searcher.decide(
-                            env, observation, Searcher.decisionSeed(dealStream, deal.toLong(), tally["decisions"] ?: 0),
+                            env, observation, Searcher.decisionSeed(dealStream, deal.toLong(), index),
+                            if (pythonWorlds) { w -> Blake2b.worldSeed(dealStream, deal.toLong(), index, w.toLong()) } else null,
                         )
                         if (stats.searched) {
                             add("searched")
