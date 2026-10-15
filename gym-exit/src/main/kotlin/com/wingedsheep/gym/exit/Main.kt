@@ -29,9 +29,10 @@ fun main(args: Array<String>) {
             val lanes = args.getOrNull(5)?.toInt() ?: 1
             val limit = args.getOrNull(6)?.toInt() ?: Int.MAX_VALUE
             val engine = Engine()
-            PolicyNet(File(args[2])).use { net ->
+            // -De1.infer=N inference threads on the one queue; -De1.intra=N ORT threads per run (both default 1).
+            PolicyNet(File(args[2]), intraOpThreads = System.getProperty("e1.intra")?.toInt() ?: 1).use { net ->
                 val policy = GameplayPolicy(net)
-                BatchingEvaluator(policy).use { batcher ->
+                BatchingEvaluator(policy, workers = System.getProperty("e1.infer")?.toInt() ?: 1).use { batcher ->
                     val gate = Gate(engine, policy, batcher, arm, System.getProperty("e1.stream")?.toLong() ?: 64L, Gate.parseArm(arm))
                     val t0 = System.nanoTime()
                     val threads = (0 until lanes).map { lane ->
