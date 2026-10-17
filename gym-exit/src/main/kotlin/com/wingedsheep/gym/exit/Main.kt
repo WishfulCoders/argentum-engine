@@ -10,7 +10,8 @@ import java.io.File
  *     parity FIXTURES_DIR MODEL_DIR [limit]   featurizer + net + heads against scripts/e1_record.py fixtures
  *     gate DEALS MODEL_DIR OUT ARM [lanes] [deals per lane]
  *                                             T1's deals (scripts/e1_deals.py) with one arm (A0, A0g, S<n>), lanes as
- *                                             threads over one batching queue; -De1.stream=64 is T1's deal stream
+ *                                             threads over one batching queue; -De1.stream=64 is T1's deal stream;
+ *                                             -De1.record=1 also writes exit_selfplay.py game records (OUT/games)
  */
 fun main(args: Array<String>) {
     when (args.firstOrNull()) {
@@ -33,7 +34,14 @@ fun main(args: Array<String>) {
             PolicyNet(File(args[2]), intraOpThreads = System.getProperty("e1.intra")?.toInt() ?: 1).use { net ->
                 val policy = GameplayPolicy(net)
                 BatchingEvaluator(policy, workers = System.getProperty("e1.infer")?.toInt() ?: 1).use { batcher ->
-                    val gate = Gate(engine, policy, batcher, arm, System.getProperty("e1.stream")?.toLong() ?: 64L, Gate.parseArm(arm))
+                    // -De1.record=1: also write each game as exit_selfplay.py's record, OUT/games/g<game>.json.gz
+                    // (-De1.checkpoint= names the net in it).
+                    val recordTo = if (System.getProperty("e1.record") == "1") File(args[3], "games").apply { mkdirs() } else null
+                    val gate = Gate(
+                        engine, policy, batcher, arm, System.getProperty("e1.stream")?.toLong() ?: 64L, Gate.parseArm(arm),
+                        recordTo, if (recordTo != null) Gate.readSpecs(File(args[1])) else emptyMap(),
+                        System.getProperty("e1.checkpoint") ?: args[2],
+                    )
                     val t0 = System.nanoTime()
                     val threads = (0 until lanes).map { lane ->
                         Thread({ gate.runLane(deals, File(args[3]), lane, lanes, limit) }, "lane$lane").apply { start() }
