@@ -92,6 +92,10 @@ export default defineConfig({
   // StrictMode double-render — was to deploy it. Perf work needs those numbers, not dev's.
   preview: {
     port: 5175,
+    // Hostnames a public tunnel serves the preview under (comma-separated; a leading dot matches
+    // subdomains), e.g. VITE_PREVIEW_ALLOWED_HOSTS=.trycloudflare.com — see scripts/friends-tunnel.sh.
+    // Unset keeps Vite's default of localhost only.
+    allowedHosts: process.env.VITE_PREVIEW_ALLOWED_HOSTS?.split(',').map((h) => h.trim()).filter(Boolean),
     proxy: {
       '/game': {
         target: gameServerUrl,
