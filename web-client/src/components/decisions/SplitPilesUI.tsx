@@ -281,6 +281,6 @@ function BattlefieldPileSplitUI({ decision }: { decision: SplitPilesDecision }) 
     <div className={styles.hint}>
       {(displayedPiles[activePile] ?? []).map((id) => gameState?.cards[id]?.name ?? 'Creature').join(', ') || 'Empty pile'}
     </div>
-    <button onClick={submit} disabled={decision.requiredAssignments != null && displayedPiles.reduce((sum, pile) => sum + pile.length, 0) !== decision.requiredAssignments} className={`${styles.confirmButton} ${styles.confirmButtonSmall}`}>{decision.requiredAssignments == null ? 'Assign piles at random' : 'Confirm blocks'}</button>
+    <button onClick={submit} disabled={decision.requiredAssignments != null && displayedPiles.reduce((sum, pile) => sum + pile.length, 0) !== decision.requiredAssignments} className={`${styles.confirmButton} ${styles.confirmButtonSmall}`}>{decision.requiredAssignments == null ? 'Assign Piles Randomly' : 'Confirm Blocks'}</button>
   </DraggableBanner>
 }

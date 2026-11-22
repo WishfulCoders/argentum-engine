@@ -1,0 +1,250 @@
+/* A Magic subgame (Shahrazad, CR 729): a warm, story-book gilt — distinct from the day/night
+   badge's sun and moon, and from every per-player colour. */
+.badge {
+  --subgame-hue: #e9cf94;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  cursor: help;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--subgame-hue);
+  white-space: nowrap;
+  user-select: none;
+  background: linear-gradient(150deg, rgba(58, 40, 18, 0.94) 0%, rgba(26, 17, 8, 0.96) 100%);
+  border: 1px solid rgba(233, 207, 148, 0.45);
+  box-shadow: 0 0 10px rgba(233, 207, 148, 0.22), inset 0 0 8px rgba(233, 207, 148, 0.12);
+  animation: subgame-badge-in 420ms ease-out both;
+}
+
+.badge:focus-visible {
+  outline: 2px solid var(--subgame-hue);
+  outline-offset: 2px;
+}
+
+.glyph {
+  width: 13px;
+  height: 13px;
+  filter: drop-shadow(0 0 3px rgba(233, 207, 148, 0.7));
+}
+
+.depth {
+  padding-left: 6px;
+  border-left: 1px solid rgba(233, 207, 148, 0.35);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+@keyframes subgame-badge-in {
+  from { opacity: 0; transform: translateY(-3px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- Details panel ---------------------------------------------------------------------- */
+
+.panel {
+  position: fixed;
+  z-index: 2500;
+  padding: 12px 14px;
+  border-radius: 8px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  white-space: normal;
+  cursor: default;
+  color: #ebe4d6;
+  background: linear-gradient(165deg, rgba(46, 32, 15, 0.985) 0%, rgba(16, 11, 6, 0.985) 100%);
+  border: 1px solid rgba(233, 207, 148, 0.4);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(233, 207, 148, 0.08);
+}
+
+.header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.art {
+  width: 72px;
+  flex-shrink: 0;
+  aspect-ratio: 488 / 680;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: #e9cf94;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  color: #fff6e3;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.lede {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #cfc5b2;
+}
+
+.oracle {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-left: 2px solid rgba(233, 207, 148, 0.55);
+  background: rgba(233, 207, 148, 0.06);
+  border-radius: 0 4px 4px 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  font-style: italic;
+  color: #efe6d2;
+}
+
+.waiting {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(233, 207, 148, 0.22);
+}
+
+.waitingLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: #b9a983;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lifeList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.lifeList li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.lifeList li.lost {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.playerName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff6e3;
+}
+
+.heart {
+  color: #e0736c;
+  font-size: 11px;
+}
+
+.footnote {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: #9d927c;
+}
+
+/* ---- Board frame ------------------------------------------------------------------------ */
+
+.frame {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  /* A gilt rule a few pixels in from the edge, a dark mat outside it, and a warm glow inward. */
+  box-shadow:
+    inset 0 0 0 2px rgba(233, 207, 148, 0.55),
+    inset 0 0 0 6px rgba(20, 13, 6, 0.55),
+    inset 0 0 0 7px rgba(233, 207, 148, 0.35),
+    inset 0 0 40px rgba(233, 207, 148, 0.16),
+    inset 0 0 160px rgba(233, 207, 148, 0.07);
+  animation: subgame-frame-in 700ms ease-out both;
+}
+
+/* Gilded corner brackets, so the frame reads as a frame even where the glow is faint. */
+.frame::before,
+.frame::after {
+  content: '';
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-color: rgba(233, 207, 148, 0.85);
+  border-style: solid;
+  filter: drop-shadow(0 0 4px rgba(233, 207, 148, 0.5));
+}
+
+.frame::before {
+  top: 4px;
+  left: 4px;
+  border-width: 2px 0 0 2px;
+  border-top-left-radius: 4px;
+}
+
+.frame::after {
+  right: 4px;
+  bottom: 4px;
+  border-width: 0 2px 2px 0;
+  border-bottom-right-radius: 4px;
+}
+
+.frame[data-depth='2'],
+.frame[data-depth='3'] {
+  box-shadow:
+    inset 0 0 0 2px rgba(233, 207, 148, 0.6),
+    inset 0 0 0 6px rgba(20, 13, 6, 0.55),
+    inset 0 0 0 7px rgba(233, 207, 148, 0.4),
+    inset 0 0 0 11px rgba(20, 13, 6, 0.5),
+    inset 0 0 0 12px rgba(233, 207, 148, 0.28),
+    inset 0 0 48px rgba(233, 207, 148, 0.2),
+    inset 0 0 180px rgba(233, 207, 148, 0.09);
+}
+
+@keyframes subgame-frame-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge, .frame { animation: none; }
+}

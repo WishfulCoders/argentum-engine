@@ -4,6 +4,8 @@
  */
 import { useEffect, useState } from 'react'
 import type { ParseError } from '../cardFilter'
+import { applyFix, SEARCH_KEYS } from '../query'
+import { SEARCH_EXAMPLE_GROUPS } from './searchExamples'
 import styles from '../deckbuilder.module.css'
 import type { SortMode } from './cardSort'
 
@@ -14,7 +16,9 @@ export function SearchBar({
   onSortChange,
   resultLabel,
   errors,
+  explanation,
   actionHint,
+  filterChip,
 }: {
   query: string
   onQueryChange: (next: string) => void
@@ -22,8 +26,12 @@ export function SearchBar({
   onSortChange: (m: SortMode) => void
   resultLabel: string
   errors: ParseError[]
+  /** The query in plain words (`ParseResult.explanation`), shown under the input so the reader can check how it was read. */
+  explanation?: string | null
   /** Overrides the trailing "click adds / right-click removes" hint. */
   actionHint?: React.ReactNode
+  /** A filter toggle shown beside the result count — the deckbuilder's commander-identity chip. */
+  filterChip?: React.ReactNode
 }) {
   const [helpOpen, setHelpOpen] = useState(false)
   const hasErrors = errors.length > 0
@@ -36,17 +44,20 @@ export function SearchBar({
   useEffect(() => {
     setLocalQuery((prev) => (prev === query ? prev : query))
   }, [query])
+  const setBoth = (next: string) => {
+    setLocalQuery(next)
+    onQueryChange(next)
+  }
+  const typing = localQuery.trim() !== ''
   return (
     <div className={styles.searchBar}>
       <div className={styles.searchInputWrap}>
         <input
           className={hasErrors ? styles.searchInputError : styles.searchInput}
-          placeholder='Search — try: t:creature c:r cmc<=3, o:flying, (c:u or c:b) -is:legendary'
+          // Short enough not to be cut mid-query in a narrow pane; the ? button holds the full syntax.
+          placeholder='Search by name, or try t:goblin c:r'
           value={localQuery}
-          onChange={(e) => {
-            setLocalQuery(e.target.value)
-            onQueryChange(e.target.value)
-          }}
+          onChange={(e) => setBoth(e.target.value)}
           aria-invalid={hasErrors}
           aria-describedby={hasErrors ? 'search-errors' : undefined}
         />
@@ -55,7 +66,19 @@ export function SearchBar({
             {errors.map((e, i) => (
               <li key={i}>
                 <code>{query.slice(e.span.start, e.span.end) || '·'}</code>
-                <span>{e.message}{e.suggestion ? ` ${e.suggestion}` : ''}</span>
+                <span>{e.message}</span>
+                {e.fix ? (
+                  <button
+                    type="button"
+                    className={styles.searchFix}
+                    onClick={() => setBoth(applyFix(query, e.fix!))}
+                    title="Apply this fix"
+                  >
+                    Use <code>{e.fix.text}</code>
+                  </button>
+                ) : e.suggestion ? (
+                  <span>{e.suggestion}</span>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -64,8 +87,8 @@ export function SearchBar({
       <button
         className={helpOpen ? styles.helpIconActive : styles.helpIcon}
         onClick={() => setHelpOpen((v) => !v)}
-        title="Search syntax"
-        aria-label="Show search syntax help"
+        title="Search tips"
+        aria-label="Show search tips"
         type="button"
       >
         ?
@@ -80,6 +103,7 @@ export function SearchBar({
         <option value="color">Colour</option>
         <option value="rarity">Rarity</option>
       </select>
+      {filterChip}
       <span className={styles.resultCount}>{resultLabel}</span>
       <span className={styles.cardActionHint}>
         {actionHint ?? (
@@ -88,72 +112,100 @@ export function SearchBar({
           </>
         )}
       </span>
-      {helpOpen && <SearchHelp onClose={() => setHelpOpen(false)} onInsert={(t) => onQueryChange(t)} />}
+      {typing && (
+        // Always rendered while there is a query, so the row doesn't jump in and out as the
+        // query passes through invalid states mid-keystroke; the error list covers it then.
+        <p className={styles.searchExplanation} aria-live="polite">
+          {explanation ? (
+            <>
+              <span className={styles.searchExplanationLead}>Cards where</span> {explanation}
+            </>
+          ) : null}
+        </p>
+      )}
+      {helpOpen && <SearchHelp onClose={() => setHelpOpen(false)} onInsert={(t) => setBoth(localQuery.trim() ? `${localQuery.trim()} ${t}` : t)} />}
     </div>
   )
 }
 
-export function SearchHelp({ onClose, onInsert }: { onClose: () => void; onInsert: (t: string) => void }) {
-  const examples: Array<{ syntax: string; desc: string }> = [
-    { syntax: 'lightning', desc: 'name contains "lightning"' },
-    { syntax: '!"Lightning Bolt"', desc: 'exact card name' },
-    { syntax: 'name:/^bolt/', desc: 'regex on card name (case-insensitive by default)' },
-    { syntax: 't:creature', desc: 'type line — AND of words (try t:legendary creature elf)' },
-    { syntax: 'o:flying', desc: 'oracle text contains' },
-    { syntax: 'c:r', desc: 'colour identity includes red' },
-    { syntax: 'c:azorius', desc: 'guild / shard / wedge name (azorius, bant, mardu, …)' },
-    { syntax: 'c=wu', desc: 'colours are exactly white + blue' },
-    { syntax: 'c<=rw', desc: 'colours are a subset of red / white' },
-    { syntax: 'c>=2', desc: 'colour count comparison' },
-    { syntax: 'c:colorless', desc: 'no colours' },
-    { syntax: 'mana:{2}{u}{u}', desc: 'mana cost symbols (multiset compare)' },
-    { syntax: 'mana>={r}{r}', desc: 'cost contains at least these symbols' },
-    { syntax: 'cmc:3', desc: 'mana value (also <=, >=, <, >, !=)' },
-    { syntax: 'pow>tou', desc: 'cross-field compare (power vs. toughness)' },
-    { syntax: 'pow>=4', desc: 'power (numeric only)' },
-    { syntax: 'r:rare', desc: 'rarity (common / uncommon / rare / mythic)' },
-    { syntax: 's:blb', desc: 'set code' },
-    { syntax: 'f:standard', desc: 'format legality' },
-    { syntax: 'is:legendary', desc: 'land/creature/spell/permanent/legendary/basic/dfc/vanilla/bear/historic' },
-    { syntax: 'layout:transform', desc: 'card layout (transform / mdfc / normal)' },
-    { syntax: 'kw:flying', desc: 'keyword' },
-    { syntax: '-t:creature', desc: 'negate any term (also: not t:creature)' },
-    { syntax: 't:creature or t:planeswalker', desc: 'boolean OR' },
-    { syntax: '(c:u or c:b) t:creature', desc: 'grouping with parens' },
-    { syntax: '"lord of"', desc: 'quote multi-word values' },
-  ]
+export function SearchHelp({
+  onClose,
+  onInsert,
+  intro,
+}: {
+  onClose: () => void
+  /** Called with a clicked example; the caller decides whether it replaces or extends the query. */
+  onInsert: (t: string) => void
+  /** Rendered above the cheat sheet — e.g. how this search box's modes differ. */
+  intro?: React.ReactNode
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
   return (
     <>
       <div className={styles.helpBackdrop} onClick={onClose} />
-      <div className={styles.helpPopover} role="dialog" aria-label="Search syntax">
+      <div className={styles.helpPopover} role="dialog" aria-label="Search tips">
         <div className={styles.helpHeader}>
-          <strong>Search syntax</strong>
-          <button className={styles.linkButton} onClick={onClose} type="button">
-            Close
+          <strong>Search tips</strong>
+          <button className={styles.helpClose} onClick={onClose} type="button" aria-label="Close search tips">
+            ×
           </button>
         </div>
-        <p className={styles.helpHint}>
-          Tokens combine with implicit AND. Use <code>or</code> for alternation,
-          parentheses for grouping, and <code>-</code> or <code>not</code> for negation.
-          Click an example to drop it into the search box.
+        {intro}
+        <p className={styles.helpLead}>
+          Type part of a card’s name, or use filters like <code>t:goblin</code>. Click any example to
+          add it to your search — the line under the search box always says how it was read.
         </p>
-        <ul className={styles.helpList}>
-          {examples.map((ex) => (
-            <li key={ex.syntax}>
-              <button
-                className={styles.helpExample}
-                onClick={() => {
-                  onInsert(ex.syntax)
-                  onClose()
-                }}
-                type="button"
-              >
-                <code>{ex.syntax}</code>
-              </button>
-              <span className={styles.helpDesc}>{ex.desc}</span>
-            </li>
+        <div className={styles.helpGroups}>
+          {SEARCH_EXAMPLE_GROUPS.map((group) => (
+            <section key={group.title} className={styles.helpGroup}>
+              <h4>{group.title}</h4>
+              <ul>
+                {group.examples.map((ex) => (
+                  <li key={ex.query}>
+                    <button
+                      className={styles.helpExample}
+                      onClick={() => {
+                        onInsert(ex.query)
+                        onClose()
+                      }}
+                      type="button"
+                      title={`Add ${ex.query} to your search`}
+                    >
+                      <code>{ex.query}</code>
+                    </button>
+                    <span className={styles.helpDesc}>{ex.finds}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
+        <details className={styles.helpAllKeys}>
+          <summary>All filters</summary>
+          <ul>
+            {SEARCH_KEYS.map((k) => (
+              <li key={k.aliases[0]}>
+                <code>{k.aliases[0]}:</code>
+                <span>
+                  {k.description}
+                  {k.aliases.length > 1 && (
+                    <span className={styles.helpAliases}> · also {k.aliases.slice(1).join(', ')}</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className={styles.helpHint}>
+            Numbers, colours and rarity also compare with <code>=</code> <code>&lt;</code> <code>&gt;</code>{' '}
+            <code>&lt;=</code> <code>&gt;=</code>.
+          </p>
+        </details>
       </div>
     </>
   )

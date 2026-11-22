@@ -119,6 +119,8 @@ class ScarecrowScenarioTest : ScenarioTestBase() {
                     ActivateAbility(playerId = game.player1Id, sourceId = scarecrow, abilityId = scarecrowAbilityId)
                 ).error shouldBe null
                 game.resolveStack()
+                // Player2 is active and receives priority after the resolution (CR 117.3b).
+                game.passPriority()
 
                 val before = game.getLifeTotal(1)
                 game.castSpellTargetingPlayer(1, "Lightning Bolt", 1).error shouldBe null

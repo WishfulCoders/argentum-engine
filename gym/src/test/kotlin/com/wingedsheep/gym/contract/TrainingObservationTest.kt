@@ -126,6 +126,7 @@ class TrainingObservationTest : FunSpec({
             Zone.BATTLEFIELD,
             Zone.COMMAND,
             Zone.SIDEBOARD,
+            Zone.ANTE,
         )
         // Every engine zone is classified in the contract itself, so a new one cannot be absorbed
         // by relaxing this test — it has to be named either per-player or explicitly not.
@@ -212,7 +213,6 @@ class TrainingObservationTest : FunSpec({
                 ),
             ),
             manaCostString = "{X}{R}",
-            manaCostPerExtraTarget = "{1}",
             hasXCost = true,
             minX = 1,
             maxAffordableX = 4,
@@ -225,7 +225,7 @@ class TrainingObservationTest : FunSpec({
         val action = (ObservationBuilder(env.cardRegistry).build(env.state, me, listOf(legal))
             .observation as TrainingObservation).legalActions.single()
 
-        action.manaCostPerExtraTarget shouldBe "{1}"
+        action.manaCostPerExtraTarget shouldBe null
         action.minX shouldBe 1
         action.maxAffordableX shouldBe 4
         action.xConstrainsTargetManaValue.shouldBeTrue()

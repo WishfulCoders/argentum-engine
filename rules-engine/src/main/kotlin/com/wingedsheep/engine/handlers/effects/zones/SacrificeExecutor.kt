@@ -3,11 +3,12 @@ package com.wingedsheep.engine.handlers.effects.zones
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
-import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
-import com.wingedsheep.engine.mechanics.SacrificeImmunity
+import com.wingedsheep.engine.mechanics.CompelledActionImmunity
+import com.wingedsheep.engine.mechanics.cost.SacrificeCostLegality
+import com.wingedsheep.sdk.scripting.CompelledAction
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.captureEntitySnapshots
@@ -27,7 +28,7 @@ import kotlin.reflect.KClass
  * - Scapeshift: "Sacrifice any number of lands..."
  *
  * The sacrifice is mandatory (not optional) - the player must sacrifice if they
- * have valid permanents. If they don't have enough, nothing happens.
+ * have valid permanents. If they don't have enough, they sacrifice all they have (CR 609.3).
  */
 class SacrificeExecutor(
     private val zones: ZoneTransitionService,
@@ -48,7 +49,7 @@ class SacrificeExecutor(
         // this never fires — but a per-player iteration ("each player sacrifices a permanent")
         // rebinds controllerId to each iterated player while effectControllerId stays the caster,
         // and that is exactly the case Sigarda stops.
-        if (SacrificeImmunity.appliesTo(state, controllerId, context.effectControllerId ?: controllerId, predicateEvaluator = zones.predicateEvaluator)) {
+        if (CompelledActionImmunity.appliesTo(state, controllerId, context.effectControllerId ?: controllerId, CompelledAction.SACRIFICE, predicateEvaluator = zones.predicateEvaluator)) {
             return EffectResult.success(state)
         }
 
@@ -59,7 +60,7 @@ class SacrificeExecutor(
         }
 
         // Find all valid permanents on the battlefield that the player controls
-        val validPermanents = findValidPermanents(state, effect, context)
+        val validPermanents = findValidPermanents(state, context, effect, sourceId)
 
         if (effect.any) {
             // "Sacrifice any number of..." - player chooses 0 to all
@@ -69,14 +70,14 @@ class SacrificeExecutor(
             )
         }
 
-        // Standard sacrifice: must sacrifice exactly `count` permanents
-        if (validPermanents.size < effect.count) {
-            // Not enough valid permanents - effect does nothing (per MTG rules)
-            return EffectResult.success(state)
-        }
-
-        if (validPermanents.size == effect.count) {
-            // Exactly enough - auto-sacrifice without prompting
+        // Standard sacrifice: must sacrifice exactly `count` permanents. With `count` or fewer
+        // candidates there is nothing to choose — sacrifice them all. Too few is not a reason to
+        // sacrifice none: an effect that attempts the impossible does as much as possible
+        // (CR 609.3; Barter in Blood: "If a player controls only one creature, that creature is
+        // sacrificed"). Mirrors ForceSacrificeExecutor. Cost-shaped uses ("you may sacrifice
+        // two …. If you do") never reach here short: GatedEffectExecutor.canAfford and the
+        // trigger/reflexive feasibility checks reject them while fewer than `count` exist.
+        if (validPermanents.size <= effect.count) {
             return sacrificePermanents(state, controllerId, validPermanents)
         }
 
@@ -96,14 +97,17 @@ class SacrificeExecutor(
      */
     private fun findValidPermanents(
         state: GameState,
+        context: EffectContext,
         effect: SacrificeEffect,
-        context: EffectContext
+        sourceId: EntityId? = null
     ): List<EntityId> {
-        val sourceId = context.sourceId
+        // The resolving ability's whole context, as ReflexiveTriggerEffectExecutor's feasibility
+        // check reads it — so a source-relative filter ("an Aura attached to Three Dog",
+        // `attachedToSource()`) sees its source and the two agree on what can be sacrificed.
         val matches = BattlefieldFilterUtils.findMatchingOnBattlefield(
-            state, effect.filter.youControl(), PredicateContext.fromEffectContext(context),
+            state, effect.filter.youControl(), context,
             predicateEvaluator = zones.predicateEvaluator
-        )
+        ).filter { SacrificeCostLegality.canBeSacrificed(state, it) }
         return if (effect.excludeSource && sourceId != null) {
             matches.filter { it != sourceId }
         } else {

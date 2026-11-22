@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildDraftedDeckSave, type PoolCardPrinting } from './deckLibrary'
+import {
+  buildDraftedDeckSave,
+  commandersOf,
+  mergeCommanderIntoCards,
+  stripCommanderFromCards,
+  type PoolCardPrinting,
+} from './deckLibrary'
 
 const card = (name: string, setCode?: string, collectorNumber?: string): PoolCardPrinting => ({
   name,
@@ -51,5 +57,30 @@ describe('buildDraftedDeckSave', () => {
     const { entries } = buildDraftedDeckSave([], { Plains: 3 }, pool)
 
     expect(entries).toEqual([{ name: 'Plains', count: 3, printing: { setCode: 'BLB', collectorNumber: '270' } }])
+  })
+})
+
+describe('commander merge / strip', () => {
+  const library = { 'Sol Ring': 1, Forest: 30 }
+
+  it('merges and strips both commanders of a partner pair', () => {
+    const full = mergeCommanderIntoCards(library, 'Kodama of the East Tree', 'Ishai, Ojutai Dragonspeaker')
+    expect(full).toEqual({ ...library, 'Kodama of the East Tree': 1, 'Ishai, Ojutai Dragonspeaker': 1 })
+    expect(stripCommanderFromCards(full, 'Kodama of the East Tree', 'Ishai, Ojutai Dragonspeaker')).toEqual(library)
+  })
+
+  it('keeps the single-commander behaviour, and skips missing / null commanders', () => {
+    expect(mergeCommanderIntoCards(library, 'Atraxa')).toEqual({ ...library, Atraxa: 1 })
+    expect(mergeCommanderIntoCards(library, null)).toBe(library)
+    expect(mergeCommanderIntoCards({ ...library, Atraxa: 1 }, 'Atraxa')).toEqual({ ...library, Atraxa: 1 })
+    expect(stripCommanderFromCards(library, 'Atraxa', undefined)).toBe(library)
+  })
+
+  it("reads a deck's commanders, ignoring a stray second without a first", () => {
+    expect(commandersOf({})).toEqual([])
+    expect(commandersOf({ commander: 'A' })).toEqual(['A'])
+    expect(commandersOf({ commander: 'A', secondCommander: 'B' })).toEqual(['A', 'B'])
+    expect(commandersOf({ secondCommander: 'B' })).toEqual([])
+    expect(commandersOf({ commander: 'A', secondCommander: 'A' })).toEqual(['A'])
   })
 })

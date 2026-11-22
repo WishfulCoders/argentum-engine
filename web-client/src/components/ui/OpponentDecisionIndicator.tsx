@@ -21,7 +21,11 @@ export function OpponentDecisionIndicator() {
   return (
     <div style={styles.container}>
       <div style={styles.spinner} />
-      <DecisionSourceThumbnail sourceId={opponentDecisionStatus.sourceId} />
+      <DecisionSourceThumbnail
+        sourceId={opponentDecisionStatus.sourceId}
+        fallbackName={opponentDecisionStatus.sourceName}
+        fallbackImageUri={opponentDecisionStatus.sourceImageUri}
+      />
       <div>
         <div style={styles.text}>
           {decidingName ?? opponentName ?? 'Opponent'} is {opponentDecisionStatus.displayText.toLowerCase()}

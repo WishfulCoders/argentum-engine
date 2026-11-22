@@ -40,7 +40,7 @@ class ChooseOnePerCategoryChooserTest : FunSpec({
             effect = Effects.Pipeline {
                 val lands = gather(CardSource.BattlefieldMatching(GameObjectFilter.Land))
                 destroy(
-                    chooseOnePerCategory(lands, Filters.BasicLandTypes, chooser = Chooser.Controller, purpose = "destroy")
+                    chooseOnePerCategory(lands, Filters.BasicLandTypes, chooser = Chooser.Controller, purpose = com.wingedsheep.sdk.scripting.effects.CategoryPickPurpose.DESTROY)
                 )
             }
         }

@@ -192,7 +192,7 @@ class StaticsTest : StringSpec({
     }
 
     // Delirium. The same graveyard, counted by distinct types through the facade the cards use;
-    // "permanent types" is the sibling aggregation and the same sentence.
+    // "permanent types" and "mana values" are the sibling aggregations and the same sentence.
     "delirium is the graveyard type count the facade builds" {
         fragment(
             "~ gets +1/+1 as long as there are four or more card types among cards in your graveyard."
@@ -204,6 +204,15 @@ class StaticsTest : StringSpec({
         )
         roundTrips("~ gets +1/+1 as long as there are four or more card types among cards in your graveyard.")
         roundTrips("~ gets +1/+1 as long as there are four or more permanent types among cards in your graveyard.")
+        fragment(
+            "~ gets +2/+2 as long as there are five or more mana values among cards in your graveyard."
+        ).script.staticAbilities shouldBe listOf(
+            ConditionalStaticAbility(
+                ability = ModifyStats(2, 2, GroupFilter.source()),
+                condition = SdkConditions.DistinctManaValuesInGraveyard(5),
+            )
+        )
+        roundTrips("~ gets +2/+2 as long as there are five or more mana values among cards in your graveyard.")
     }
 
     // The Doran family. Two rules and one flag: the qualifier is a clause inside the noun phrase
@@ -262,6 +271,17 @@ class StaticsTest : StringSpec({
 
     // …and its activated twin, over the same printed shape. The two are disjoint by what the quoted
     // text can be, so nothing here is left choosing.
+    "a battlefield lord sentence cannot silently drop an activated grant's recipient zone" {
+        val original = fragment("Creatures you control have \"{T}: Add {G}.\"")
+        val grant = original.script.staticAbilities.single().shouldBeInstanceOf<GrantActivatedAbility>()
+        for (zone in listOf(Zone.GRAVEYARD, Zone.HAND)) {
+            val zoned = original.copy(script = original.script.copy(
+                staticAbilities = listOf(grant.copy(recipientZone = zone))
+            ))
+            Grammar.abilityLine.printLine(zoned) shouldBe null
+        }
+    }
+
     "a quoted activated ability is granted to the attached creature" {
         val line = "Enchanted creature has \"{T}: Draw a card.\""
         fragment(line).script.staticAbilities.single().shouldBeInstanceOf<GrantActivatedAbility>()

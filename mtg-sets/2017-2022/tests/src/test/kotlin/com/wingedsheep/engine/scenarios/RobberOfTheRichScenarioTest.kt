@@ -1,126 +1,93 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.Outcome
-import com.wingedsheep.engine.support.GameTestDriver
-import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.mtg.sets.definitions.eld.cards.RobberOfTheRich
+import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 
 /**
- * Robber of the Rich (ELD #138) — {1}{R} Creature — Human Archer Rogue 2/2.
+ * Robber of the Rich (ELD #138) — "Whenever this creature attacks, if defending player has more
+ * cards in hand than you, exile the top card of their library. During any turn you attacked with a
+ * Rogue, you may cast that card and you may spend mana as though it were mana of any color to cast
+ * that spell."
  *
- *   Reach, haste
- *   Whenever this creature attacks, if defending player has more cards in hand than you, exile
- *   the top card of their library. During any turn you attacked with a Rogue, you may cast that
- *   card and you may spend mana as though it were mana of any color to cast that spell.
+ * Pins the rulings: the Rogue you attacked with needn't still be on the battlefield, the permission
+ * is closed on a turn you didn't attack with a Rogue, and the intervening-if compares hand sizes.
  */
-class RobberOfTheRichScenarioTest : FunSpec({
+class RobberOfTheRichScenarioTest : ScenarioTestBase() {
 
-    fun newDriver(): GameTestDriver {
-        val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + listOf(RobberOfTheRich))
-        driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        return driver
+    private fun board(opponentHand: Int = 2, blocker: Boolean = false): TestGame {
+        var builder = scenario()
+            .withPlayers("Player", "Opponent")
+            .withCardOnBattlefield(1, "Robber of the Rich")
+            .withLandsOnBattlefield(1, "Mountain", 2)
+            .withCardInLibrary(1, "Mountain")
+            .withCardInLibrary(1, "Mountain")
+            .withCardInLibrary(2, "Grizzly Bears")
+            .withCardInLibrary(2, "Forest")
+            .withCardInLibrary(2, "Forest")
+            .withActivePlayer(1)
+            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+        if (opponentHand > 0) builder = builder.withCardsInHand(2, "Forest", opponentHand)
+        if (blocker) builder = builder.withCardOnBattlefield(2, "Hill Giant")
+        return builder.build()
     }
 
-    /** Robber attacks the opponent; the attack trigger (if any) resolves. */
-    fun GameTestDriver.attackWithRobber(robber: EntityId) {
-        passPriorityUntil(Step.DECLARE_ATTACKERS)
-        declareAttackers(player1, listOf(robber), player2)
-        var guard = 0
-        while (state.stack.isNotEmpty() && guard++ < 10) bothPass()
+    private fun TestGame.attackWithRobber() {
+        passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
+        declareAttackers(mapOf("Robber of the Rich" to 2)).error shouldBe null
+        resolveStack()
     }
 
-    test("defending player has more cards: top card exiled, castable with any mana this turn") {
-        val driver = newDriver()
-        val me = driver.player1
-        val opp = driver.player2
-        val robber = driver.putCreatureOnBattlefield(me, "Robber of the Rich")
-        driver.putCardInHand(opp, "Forest") // opponent now has more cards in hand than me
-        val bolt = driver.putCardOnTopOfLibrary(opp, "Lightning Bolt")
+    private fun TestGame.castBears() =
+        getLegalActions(1).singleOrNull { it.description.contains("Grizzly Bears") }
 
-        driver.attackWithRobber(robber)
+    init {
+        context("Robber of the Rich") {
 
-        withClue("Lightning Bolt was exiled from the opponent's library") {
-            driver.getExileCardNames(opp) shouldBe listOf("Lightning Bolt")
-        }
+            test("exiles the top card and it can be cast with mana of any color the turn it attacked") {
+                val game = board()
+                game.attackWithRobber()
+                withClue("the opponent's top card is exiled") { game.isInExile(2, "Grizzly Bears") shouldBe true }
+                game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
+                val cast = game.castBears()
+                withClue("two Mountains pay {1}{G}") { cast?.isAffordable shouldBe true }
+                game.execute(cast!!.action).error shouldBe null
+                game.resolveStack()
+                withClue("the Bears resolve under the Robber's controller") {
+                    game.findPermanent("Grizzly Bears")
+                        ?.let { game.state.projectedState.getController(it) } shouldBe game.player1Id
+                }
+            }
 
-        // Still the combat of a turn we attacked with a Rogue: cast the Bolt with colorless mana.
-        val lifeBefore = driver.getLifeTotal(opp)
-        driver.giveColorlessMana(me, 1)
-        val exiled = driver.getExile(opp).single()
-        driver.castSpell(me, exiled, targets = listOf(opp)).outcome shouldBe Outcome.Done
-        var guard = 0
-        while (driver.state.stack.isNotEmpty() && guard++ < 10) driver.bothPass()
-        driver.getLifeTotal(opp) shouldBe lifeBefore - 3
-        driver.getExile(opp).contains(bolt) shouldBe false
-    }
+            test("the Rogue that attacked needn't survive combat") {
+                val game = board(blocker = true)
+                game.attackWithRobber()
+                game.passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
+                game.declareBlockers(mapOf("Hill Giant" to listOf("Robber of the Rich"))).error shouldBe null
+                game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
+                withClue("Robber died in combat") { game.isInGraveyard(1, "Robber of the Rich") shouldBe true }
+                withClue("you still attacked with a Rogue this turn") { game.castBears()?.isAffordable shouldBe true }
+            }
 
-    test("no trigger when defending player does not have more cards in hand") {
-        val driver = newDriver()
-        val me = driver.player1
-        val opp = driver.player2
-        val robber = driver.putCreatureOnBattlefield(me, "Robber of the Rich")
-        driver.putCardInHand(me, "Forest") // I have more cards than the opponent
-        driver.putCardOnTopOfLibrary(opp, "Lightning Bolt")
+            test("the exiled card can't be cast on a turn you didn't attack with a Rogue") {
+                val game = board()
+                game.attackWithRobber()
+                game.passUntilPhase(Phase.ENDING, Step.END)
+                game.passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                game.passUntilPhase(Phase.ENDING, Step.END)
+                game.passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                withClue("it is the Robber's controller's next turn") { game.state.activePlayerId shouldBe game.player1Id }
+                withClue("the card is still exiled") { game.isInExile(2, "Grizzly Bears") shouldBe true }
+                withClue("no Rogue has attacked yet this turn") { game.castBears() shouldBe null }
+            }
 
-        driver.attackWithRobber(robber)
-
-        driver.getExile(opp).size shouldBe 0
-    }
-
-    test("on a later turn the card is castable only after you attack with a Rogue") {
-        val driver = newDriver()
-        val me = driver.player1
-        val opp = driver.player2
-        val robber = driver.putCreatureOnBattlefield(me, "Robber of the Rich")
-        driver.putCardInHand(opp, "Forest")
-        driver.putCardOnTopOfLibrary(opp, "Lightning Bolt")
-        driver.attackWithRobber(robber)
-        val exiled = driver.getExile(opp).single()
-
-        // Through the opponent's turn to my next precombat main phase.
-        driver.passPriorityUntil(Step.END)
-        driver.bothPass()
-        driver.passPriorityUntil(Step.UPKEEP)
-        driver.activePlayer shouldBe opp
-        driver.passPriorityUntil(Step.END)
-        driver.bothPass()
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.activePlayer shouldBe me
-
-        withClue("no Rogue has attacked this turn yet") {
-            driver.giveColorlessMana(me, 1)
-            driver.castSpell(me, exiled, targets = listOf(opp)).outcome shouldNotBe Outcome.Done
-            driver.getExile(opp).contains(exiled) shouldBe true
-        }
-
-        driver.attackWithRobber(robber)
-        withClue("after attacking with a Rogue, the exiled card is castable") {
-            driver.giveColorlessMana(me, 1) // the earlier pool emptied between steps
-            driver.castSpell(me, exiled, targets = listOf(opp)).outcome shouldBe Outcome.Done
+            test("nothing is exiled unless defending player has more cards in hand") {
+                val game = board(opponentHand = 0)
+                game.attackWithRobber()
+                game.isInExile(2, "Grizzly Bears") shouldBe false
+            }
         }
     }
-
-    test("the Rogue that attacked may have left the battlefield (ruling 2019-10-04)") {
-        val driver = newDriver()
-        val me = driver.player1
-        val opp = driver.player2
-        val robber = driver.putCreatureOnBattlefield(me, "Robber of the Rich")
-        driver.putCardInHand(opp, "Forest")
-        driver.putCardOnTopOfLibrary(opp, "Lightning Bolt")
-        driver.attackWithRobber(robber)
-        val exiled = driver.getExile(opp).single()
-
-        driver.moveToGraveyard(robber)
-        driver.giveColorlessMana(me, 1)
-        driver.castSpell(me, exiled, targets = listOf(opp)).outcome shouldBe Outcome.Done
-    }
-})
+}

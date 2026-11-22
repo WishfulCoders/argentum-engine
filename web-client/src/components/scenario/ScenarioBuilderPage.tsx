@@ -13,7 +13,7 @@
  * link jumps straight into a stored replay position.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CardBrowser, useCardCatalog, type CardDragPayload } from '@/components/deckbuilder/browser'
 import type { CardSummary } from '@/components/deckbuilder/cardFilter'
 import { CardEditorModal } from './CardEditorModal'
@@ -55,7 +55,11 @@ import {
   type ScenarioSpec,
   type ScenarioZone,
 } from './types'
+import { BrandMark, PLAIN_BACKDROP, pageStyles } from '@/components/ui/PageShell'
 import styles from './ScenarioBuilder.module.css'
+
+/** A plain dark backdrop: the builder is a board full of cards, and card art behind it is noise. */
+const pageBackground = { backgroundImage: PLAIN_BACKDROP }
 
 const SPLIT_STORAGE_KEY = 'scenarioBuilder.browserWidth'
 const DEFAULT_SPLIT = 520
@@ -66,7 +70,6 @@ const MIN_BOARD = 380
 const COPY_OPTIONS = [1, 2, 3, 4, 10, 20, 40]
 
 export function ScenarioBuilderPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { catalog, setInfos, index, loading, error: catalogError } = useCardCatalog()
 
@@ -496,35 +499,41 @@ export function ScenarioBuilderPage() {
 
   if (snapshotLoading) {
     return (
-      <div className={styles.page}>
+      <div className={styles.page} style={pageBackground}>
         <div className={styles.loading}>Loading snapshot…</div>
       </div>
     )
   }
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} style={pageBackground}>
       <div className={styles.topbar}>
-        <button className={styles.linkBtn} onClick={() => navigate('/')}>← Back</button>
-        <h1 className={styles.title}>Scenario Builder</h1>
-        <button
-          className={styles.iconBtn}
-          onClick={undo}
-          disabled={!canUndo}
-          title="Undo (⌘Z)"
-          aria-label="Undo"
-        >
-          ↶
-        </button>
-        <button
-          className={styles.iconBtn}
-          onClick={redo}
-          disabled={!canRedo}
-          title="Redo (⇧⌘Z)"
-          aria-label="Redo"
-        >
-          ↷
-        </button>
+        <div className={styles.titleGroup}>
+          <Link to="/" className={pageStyles.brand} aria-label="Argentum — home">
+            <BrandMark />
+            <span className={pageStyles.brandText}>Argentum</span>
+          </Link>
+          <span className={pageStyles.crumbSep} aria-hidden>/</span>
+          <h1 className={styles.title}>Scenario Builder</h1>
+          <button
+            className={styles.iconBtn}
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (⌘Z)"
+            aria-label="Undo"
+          >
+            ↶
+          </button>
+          <button
+            className={styles.iconBtn}
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (⇧⌘Z)"
+            aria-label="Redo"
+          >
+            ↷
+          </button>
+        </div>
         <div className={styles.spacer} />
         <input
           ref={fileInputRef}
@@ -537,20 +546,22 @@ export function ScenarioBuilderPage() {
             e.target.value = ''
           }}
         />
-        <ActionButton
-          label="Load file"
-          hint="open a saved snapshot or scenario"
-          onClick={() => fileInputRef.current?.click()}
-        />
-        <ActionButton label="View JSON" hint="copy this scenario as text" onClick={handleShowJson} />
-        <ActionButton label="Share" hint="copy an editable link" onClick={() => void handleShare()} />
-        <ActionButton
-          label={starting ? 'Starting…' : 'Start'}
-          hint="play this scenario now"
-          primary
-          disabled={starting}
-          onClick={() => void handleStart()}
-        />
+        <div className={styles.actions}>
+          <ActionButton
+            label="Load file"
+            hint="open a saved snapshot or scenario"
+            onClick={() => fileInputRef.current?.click()}
+          />
+          <ActionButton label="View JSON" hint="copy this scenario as text" onClick={handleShowJson} />
+          <ActionButton label="Share" hint="copy an editable link" onClick={() => void handleShare()} />
+          <ActionButton
+            label={starting ? 'Starting…' : 'Start'}
+            hint="play this scenario now"
+            primary
+            disabled={starting}
+            onClick={() => void handleStart()}
+          />
+        </div>
       </div>
 
       {(status || errors.length > 0) && (
@@ -686,33 +697,36 @@ export function ScenarioBuilderPage() {
             >
               + Seat
             </button>
-            <div className={styles.spacer} />
-            <button
-              type="button"
-              className={styles.ghostBtn}
-              onClick={() => setCustomOpen((o) => !o)}
-              title="Paste a Scryfall card and have Assay compile it for this scenario"
-            >
-              {customOpen ? 'Hide custom cards' : `Custom cards${state.customCards.length ? ` (${state.customCards.length})` : ''}`}
-            </button>
-            <button type="button" className={styles.ghostBtn} onClick={() => setJsonOpen((o) => !o)}>
-              {jsonOpen ? 'Hide JSON' : 'Edit as JSON'}
-            </button>
-            <button
-              type="button"
-              className={styles.ghostBtn}
-              onClick={() => {
-                reset(emptyBuilderState())
-                setStatus('Board cleared.')
-              }}
-            >
-              Reset
-            </button>
+            {/* Second row: what this setup means on the left, the board tools on the right. */}
+            <span className={styles.rowBreak} aria-hidden />
             <span className={styles.modeHint}>
               {state.seats.length > 2
                 ? 'Pods of 3-4 seats always start as hotseat — you control every seat.'
                 : MODE_HINT[state.mode]}
             </span>
+            <div className={styles.boardTools}>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={() => setCustomOpen((o) => !o)}
+                title="Paste a Scryfall card and have Assay compile it for this scenario"
+              >
+                {customOpen ? 'Hide custom cards' : `Custom cards${state.customCards.length ? ` (${state.customCards.length})` : ''}`}
+              </button>
+              <button type="button" className={styles.ghostBtn} onClick={() => setJsonOpen((o) => !o)}>
+                {jsonOpen ? 'Hide JSON' : 'Edit as JSON'}
+              </button>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={() => {
+                  reset(emptyBuilderState())
+                  setStatus('Board cleared.')
+                }}
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
           <ScenarioBoard

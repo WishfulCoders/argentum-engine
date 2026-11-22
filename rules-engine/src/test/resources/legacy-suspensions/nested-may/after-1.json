@@ -243,7 +243,7 @@
                 "type": "YesNoDecision",
                 "id": "r1",
                 "playerId": "player-1",
-                "prompt": "You may you gain 1 life",
+                "prompt": "You may gain 1 life",
                 "context": {
                     "sourceId": null,
                     "sourceName": null,
@@ -372,7 +372,12 @@
                         "storedStringLists": {},
                         "storedSubtypeGroups": {}
                     },
-                    "resolutionDepth": 1
+                    "resolutionDepth": 1,
+                    "programOrigin": {
+                        "type": "com.wingedsheep.engine.core.ProgramOrigin.BuiltBy",
+                        "step": "Gated",
+                        "parent": null
+                    }
                 }
             }
         }

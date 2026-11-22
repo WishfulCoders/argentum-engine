@@ -1,10 +1,16 @@
 package com.wingedsheep.engine.mechanics.sba.player
 
+import com.wingedsheep.engine.core.EndResolutionControlContinuation
 import com.wingedsheep.engine.core.ExecutionResult
+import com.wingedsheep.engine.core.FinishResolvingAbilityContinuation
+import com.wingedsheep.engine.core.FinishResolvingSpellContinuation
 import com.wingedsheep.engine.core.GameEndReason
 import com.wingedsheep.engine.core.PlayerLeftGameEvent
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
+import com.wingedsheep.engine.mechanics.dungeon.DungeonService
+import com.wingedsheep.engine.mechanics.initiative.InitiativeService
+import com.wingedsheep.engine.mechanics.monarch.MonarchService
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.isResolving
 import com.wingedsheep.engine.mechanics.combat.CombatRemovalHelper
@@ -38,6 +44,10 @@ import com.wingedsheep.sdk.scripting.Duration
  * [PlayerLeftGameComponent]) so it remains in [GameState.turnOrder] for history and the
  * game-end SBA. The turn-order iteration helpers already skip players who have left.
  *
+ * - **CR 725.4 (the monarch)** — a monarch who leaves hands the title to the active player (or
+ *   the next player in turn order) at the same time; see [MonarchService.onPlayerLeft].
+ * - **CR 726.4 (the initiative)** — likewise for the initiative, except the successor *takes* it
+ *   and so ventures into Undercity; see [InitiativeService.onPlayerLeft].
  * - **CR 800.4f–h (a choice the leaver was mid-way through making)** — a pending decision
  *   addressed to the leaver is abandoned: the decision is cleared, the continuation frames
  *   waiting on it are dropped, and priority goes to the active player (CR 117.3b, redirected
@@ -45,9 +55,13 @@ import com.wingedsheep.sdk.scripting.Duration
  *   ability, which has just left the game with them, so the resolution simply ends; a "may
  *   pay" prompt is answered by not paying (800.4f). The one divergence is a choice another
  *   player's object asked the leaver to make (800.4g — the controller should pick a
- *   substitute chooser): that resolution ends early too. Without this the table deadlocks —
- *   only the leaver could ever answer, and every other seat's pass is refused while a
- *   decision is pending.
+ *   substitute chooser): that resolution ends early too. Ending early still performs the
+ *   resolution's final part (CR 608.2n) for an ability or a nonpermanent spell: a surviving
+ *   player's one leaves the stack and reports resolving exactly once instead of being left there
+ *   to resolve again. A permanent spell paused while it enters has no finish frame and isn't on
+ *   the stack, so it isn't finished — a known gap.
+ *   Without this the table deadlocks — only the leaver could ever answer, and every other
+ *   seat's pass is refused while a decision is pending.
  *
  * Deliberately not modelled here (documented simplifications of the deeper CR 800.4
  * sub-rules, none of which the current corpus exercises): firing the remaining players'
@@ -59,7 +73,20 @@ import com.wingedsheep.sdk.scripting.Duration
  */
 object PlayerLeavesGameProcessor {
 
-    fun process(zones: ZoneTransitionService, state: GameState, leaver: EntityId, reason: GameEndReason): ExecutionResult {
+    /**
+     * @param finishAbandonedResolution runs the frames left on the continuation stack after a
+     *   leaver's decision is abandoned, so the resolution still performs its final part (see
+     *   [abandonLeaversDecision]) — [com.wingedsheep.engine.core.EngineServices.finishAbandonedResolution].
+     *   Required, with no no-op default: dropping those frames instead would leave a surviving
+     *   player's object on the stack to resolve again.
+     */
+    fun process(
+        zones: ZoneTransitionService,
+        state: GameState,
+        leaver: EntityId,
+        reason: GameEndReason,
+        finishAbandonedResolution: (GameState) -> ExecutionResult,
+    ): ExecutionResult {
         var s = state
 
         // 1. End any effect granting the leaver control of an object (CR 800.4a). Removing
@@ -72,9 +99,11 @@ object PlayerLeavesGameProcessor {
         )
 
         // 2. Collect every object the leaver owns (all zones), plus the leaver's stack
-        //    abilities that aren't represented by a card — all of which leave the game.
+        //    abilities that aren't represented by a card — all of which leave the game. The
+        //    exception is the ante (CR 800.4n): what the leaver anted stays for the winner.
+        val leaverAnte = s.getZone(leaver, com.wingedsheep.sdk.core.Zone.ANTE).toSet()
         val ownedObjects = s.entities.keys.filter { id ->
-            id != leaver && s.getEntity(id)?.get<CardComponent>()?.ownerId == leaver
+            id != leaver && id !in leaverAnte && s.getEntity(id)?.get<CardComponent>()?.ownerId == leaver
         }
         val leaverStackAbilities = s.stack.filter { id ->
             val c = s.getEntity(id) ?: return@filter false
@@ -119,7 +148,8 @@ object PlayerLeavesGameProcessor {
                     is Duration.WhileSourceTapped,
                     is Duration.WhileSourceTappedAndAffectedPowerAtMostSource,
                     is Duration.WhileYouControlSourceAndSourceTapped,
-                    Duration.WhileSourceAttachedToAffected -> sourceLeft
+                    Duration.WhileSourceAttachedToAffected,
+                    Duration.WhileAffectedAttachedToSource -> sourceLeft
                     Duration.WhileControlledByController -> fe.controllerId == leaver
                     else -> false
                 }
@@ -128,7 +158,14 @@ object PlayerLeavesGameProcessor {
 
         // 6. A decision only the leaver could answer can never be answered now — abandon it
         //    (CR 800.4f–h; see the class KDoc for what that means for the paused resolution).
-        s = abandonLeaversDecision(s, leaver)
+        //    Finishing that resolution can itself fail or stop for a question. A rejection is an
+        //    engine error: return it as is, and the caller discards this whole leave. A question
+        //    doesn't stop the leave: CR 800.4a happens all at once, so steps 7–11 still run on the
+        //    paused state (none of them touches the continuation stack), and the result is paused
+        //    on that question at the end.
+        val abandoned = abandonLeaversDecision(s, leaver, finishAbandonedResolution)
+        if (abandoned.outcome is com.wingedsheep.engine.core.Outcome.Rejected) return abandoned
+        s = abandoned.state
 
         // 7. If the leaver (or any departed player) holds priority, hand it to the next
         //    player still in the game. withPriority performs the redirect (CR 800.4a).
@@ -142,6 +179,16 @@ object PlayerLeavesGameProcessor {
         // 8. Mark the leave processing done so the SBA loop never re-applies it.
         s = s.updateEntity(leaver) { it.with(PlayerLeftGameComponent) }
 
+        // 9. CR 725.4 — a monarch who leaves hands the title on at the same time.
+        val (afterMonarch, monarchEvents) = MonarchService.onPlayerLeft(s, leaver)
+        s = afterMonarch
+
+        // 10. CR 726.4 — so does the player who has the initiative; the successor *takes* it, so
+        // they venture into Undercity. The leaver's dungeon card leaves the game with them
+        // (CR 800.4a) without counting as completed.
+        val (afterInitiative, initiativeEvents) = InitiativeService.onPlayerLeft(s, leaver)
+        s = DungeonService.onPlayerLeft(afterInitiative, leaver)
+
         // Player control ends when its controller leaves, or when an abandoned resolution loses
         // its bottom frame. Retain only grants for living seats and still-existing stack visits.
         val expiredControl = s.resolutionControls.filter {
@@ -154,28 +201,68 @@ object PlayerLeavesGameProcessor {
             com.wingedsheep.engine.core.ResolutionControlEvent(it, com.wingedsheep.engine.core.ResolutionControlEvent.Stage.ENDED)
         }
 
-        // Leaving the game ends zone-return durations without producing a return trigger.
+        // 11. Leaving the game ends zone-return durations without producing a return trigger.
         val returns = com.wingedsheep.engine.handlers.effects.ZoneReturnService.returnDepartedSources(zones, s)
-        return ExecutionResult.success(
-            returns.state,
-            listOf(PlayerLeftGameEvent(leaver, reason, toRemove.size)) + controlEvents + returns.events
-        )
+        val events = listOf(PlayerLeftGameEvent(leaver, reason, toRemove.size)) + abandoned.events +
+            monarchEvents + initiativeEvents + controlEvents + returns.events
+        return if (abandoned.outcome is com.wingedsheep.engine.core.Outcome.Paused) {
+            ExecutionResult.propagatePause(returns.state, events)
+        } else ExecutionResult.success(returns.state, events)
     }
 
     /**
-     * Abandon a pending decision addressed to [leaver]. The decision is cleared, every
-     * continuation frame is dropped (the frames beneath the one waiting on this decision
-     * belong to the same paused resolution — or to triggers deferred behind it — and none of
-     * them can be resumed without the answer), and priority returns to the active player as
-     * it would after a completed resolution (CR 117.3b). A decision addressed to anyone else
-     * is left alone: the game is still waiting on a player who is still here.
+     * Abandon a pending decision addressed to [leaver]. The decision is cleared and the resolution
+     * waiting on it ends early: every frame that needs the answer is dropped (the frames beneath
+     * the one waiting on this decision belong to the same paused resolution, and none of them can
+     * be resumed without it), but the resolution's
+     * final part still happens. A stack object is removed from the stack as the final part of
+     * its resolution (CR 608.2n), so the frames that perform it are kept, in order, and run
+     * through [finishAbandonedResolution]:
+     *
+     * - [FinishResolvingSpellContinuation] / [FinishResolvingAbilityContinuation], for an object
+     *   that is still the captured one on the stack — a surviving player's spell or ability, which
+     *   leaves the stack and reports resolving exactly once. One that already left (with the
+     *   leaver, or moved by its own effect) didn't resolve and is dropped.
+     * - [EndResolutionControlContinuation], which ends the resolution's player-control window.
+     *
+     * Triggers that were waiting to be put on the stack after the abandoned decision
+     * ([GameState.triggersBeingPlaced] — the rest of a wave whose trigger was choosing targets)
+     * don't need the answer either: they stay where they are, so the settle boundary places the
+     * surviving players' ones in order and drops the leaver's.
+     *
+     * Dropping them instead would leave a surviving player's resolving object on the stack with
+     * nothing to finish it, so it would resolve a second time. Only abilities and nonpermanent
+     * spells have a finish frame. A permanent spell paused while it enters (an "as this enters"
+     * choice) has none and is no longer on `state.stack`, so it can't be finished here — a known
+     * gap, left as it was.
+     *
+     * Once those frames are done, priority returns to the active player as it would after a
+     * completed resolution (CR 117.3b). If finishing them stops on a question or is rejected, the
+     * result says so and priority is left alone. A decision addressed to anyone else is left
+     * alone: the game is still waiting on a player who is still here.
      */
-    private fun abandonLeaversDecision(state: GameState, leaver: EntityId): GameState {
-        val pending = state.pendingDecision ?: return state
-        if (pending.playerId != leaver) return state
-        return state
-            .copy(continuationStack = emptyList())
-            .withPriority(state.activePlayerId)
+    private fun abandonLeaversDecision(
+        state: GameState,
+        leaver: EntityId,
+        finishAbandonedResolution: (GameState) -> ExecutionResult,
+    ): ExecutionResult {
+        val pending = state.pendingDecision ?: return ExecutionResult.success(state)
+        if (pending.playerId != leaver) return ExecutionResult.success(state)
+        fun onStack(ref: com.wingedsheep.engine.state.ObjectRef) =
+            state.isCurrentObject(ref) && state.logicalZone(ref.entityId)?.zoneType == com.wingedsheep.sdk.core.Zone.STACK
+        val finalPart = state.continuationStack.filter {
+            when (it) {
+                is FinishResolvingSpellContinuation -> onStack(it.spellObject)
+                is FinishResolvingAbilityContinuation -> onStack(it.abilityObject)
+                is EndResolutionControlContinuation -> true
+                else -> false
+            }
+        }
+        val cleared = state.copy(continuationStack = finalPart)
+        val finished = if (finalPart.isEmpty()) ExecutionResult.success(cleared)
+            else finishAbandonedResolution(cleared)
+        if (finished.outcome !is com.wingedsheep.engine.core.Outcome.Done) return finished
+        return finished.copy(state = finished.state.withPriority(state.activePlayerId))
     }
 
     /**

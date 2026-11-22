@@ -57,8 +57,8 @@ class CommanderSetupTest : FunSpec({
             GameConfig(
                 format = Format.Commander(),
                 players = listOf(
-                    PlayerConfig("P1", deck, commanderCardName = "Test Hasty Prospector"),
-                    PlayerConfig("P2", deck, commanderCardName = "Test Hasty Prospector"),
+                    PlayerConfig("P1", deck, commanderCardNames = listOf("Test Hasty Prospector")),
+                    PlayerConfig("P2", deck, commanderCardNames = listOf("Test Hasty Prospector")),
                 ),
                 skipMulligans = true,
             )
@@ -104,7 +104,7 @@ class CommanderSetupTest : FunSpec({
             GameConfig(
                 format = format,
                 players = (1..4).map { seat ->
-                    PlayerConfig("P$seat", deck, commanderCardName = "Test Hasty Prospector")
+                    PlayerConfig("P$seat", deck, commanderCardNames = listOf("Test Hasty Prospector"))
                 },
                 teams = listOf(listOf(0, 1), listOf(2, 3)),
                 skipMulligans = true,
@@ -131,8 +131,8 @@ class CommanderSetupTest : FunSpec({
                 GameConfig(
                     format = Format.Commander(),
                     players = listOf(
-                        PlayerConfig("P1", deck, commanderCardName = "Test Hasty Prospector"),
-                        PlayerConfig("P2", deck, commanderCardName = null),
+                        PlayerConfig("P1", deck, commanderCardNames = listOf("Test Hasty Prospector")),
+                        PlayerConfig("P2", deck, commanderCardNames = emptyList()),
                     ),
                     skipMulligans = true,
                 )
@@ -149,8 +149,8 @@ class CommanderSetupTest : FunSpec({
                 GameConfig(
                     format = Format.Commander(),
                     players = listOf(
-                        PlayerConfig("P1", deck, commanderCardName = "Definitely Not A Real Card 12345"),
-                        PlayerConfig("P2", deck, commanderCardName = "Definitely Not A Real Card 12345"),
+                        PlayerConfig("P1", deck, commanderCardNames = listOf("Definitely Not A Real Card 12345")),
+                        PlayerConfig("P2", deck, commanderCardNames = listOf("Definitely Not A Real Card 12345")),
                     ),
                     skipMulligans = true,
                 )

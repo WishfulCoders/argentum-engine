@@ -412,7 +412,8 @@
                 "trigger": {
                     "type": "AbilityActivatedEvent",
                     "player": "Each",
-                    "requireNoTapInCost": true
+                    "tapInCost": "WITHOUT",
+                    "includeManaAbilities": true
                 },
                 "binding": "ATTACHED",
                 "effect": {
@@ -786,6 +787,126 @@
     "colorIdentityOverride": []
 }
 
+// Bronze Tablet
+{
+    "name": "Bronze Tablet",
+    "manaCost": "{6}",
+    "typeLine": "Artifact",
+    "oracleText": "Remove this card from your deck before playing if you're not playing for ante.\nThis artifact enters tapped.\n{4}, {T}: Exile this artifact and target nontoken permanent an opponent owns. That player may pay 10 life. If they do, put this card into its owner's graveyard. Otherwise, that player owns this card and you own the other exiled card.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Bronze Tablet:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{4}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": "Self",
+                            "destination": "Exile",
+                            "fromZone": "Battlefield"
+                        },
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Exile"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.MayPay",
+                                "cost": {
+                                    "type": "PayDynamicLife",
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 10
+                                    },
+                                    "payer": {
+                                        "type": "OwnerOf",
+                                        "targetDescription": "target permanent"
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "MoveToZone",
+                                "target": "Self",
+                                "destination": "Graveyard",
+                                "fromZone": "Exile"
+                            },
+                            "otherwise": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "ChangeOwnership",
+                                        "card": "Self",
+                                        "newOwner": {
+                                            "type": "PlayerRef",
+                                            "player": {
+                                                "type": "OwnerOf",
+                                                "targetDescription": "target permanent"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "ChangeOwnership",
+                                        "card": {
+                                            "type": "BoundVariable",
+                                            "name": "t0"
+                                        }
+                                    }
+                                ]
+                            },
+                            "decisionMaker": {
+                                "type": "PlayerRef",
+                                "player": {
+                                    "type": "OwnerOf",
+                                    "targetDescription": "target permanent"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "permanent nontoken own:opponent"
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped"
+        ]
+    },
+    "setCode": "ATQ",
+    "metadata": {
+        "collectorNumber": "42",
+        "rarity": "RARE",
+        "artist": "Tom Wänerstrand",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/f/6fb10552-dd47-4f8a-ac7c-8c2b61e56736.jpg?1783948364"
+    },
+    "colorIdentityOverride": []
+}
+
 // Candelabra of Tawnos
 {
     "name": "Candelabra of Tawnos",
@@ -828,7 +949,8 @@
                             "baseFilter": "land"
                         },
                         "id": "t0",
-                        "dynamicMaxCount": "XValue"
+                        "dynamicMaxCount": "XValue",
+                        "dynamicMinCount": "XValue"
                     }
                 ],
                 "descriptionOverride": "{X}, {T}: Untap X target lands."
@@ -1437,7 +1559,12 @@
                     "baseFilter": {
                         "cardPredicates": [
                             "IsArtifact",
-                            "ManaValueEqualsX"
+                            {
+                                "type": "CompareNumericProperty",
+                                "property": "MANA_VALUE",
+                                "operator": "EQ",
+                                "amount": "XValue"
+                            }
                         ]
                     }
                 },
@@ -2049,7 +2176,8 @@
                     "type": "AbilityActivatedEvent",
                     "player": "Each",
                     "sourceFilter": "artifact",
-                    "requireNoTapInCost": true
+                    "tapInCost": "WITHOUT",
+                    "includeManaAbilities": true
                 },
                 "binding": "ANY",
                 "effect": {
@@ -2924,7 +3052,8 @@
                     "type": "AbilityActivatedEvent",
                     "player": "EachOpponent",
                     "sourceFilter": "artifact",
-                    "requireNoTapInCost": true
+                    "tapInCost": "WITHOUT",
+                    "includeManaAbilities": true
                 },
                 "binding": "ANY",
                 "effect": {
@@ -4274,7 +4403,8 @@
                         ]
                     }
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -4367,9 +4497,10 @@
                 "id": "Urza's Avenger:1",
                 "cost": "CostFree",
                 "effect": {
-                    "type": "Modal",
-                    "modes": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
+                            "label": "This creature gets -1/-1 and gains banding until end of turn",
                             "effect": {
                                 "type": "Composite",
                                 "effects": [
@@ -4391,10 +4522,10 @@
                                         "target": "Self"
                                     }
                                 ]
-                            },
-                            "description": "This creature gets -1/-1 and gains banding until end of turn"
+                            }
                         },
                         {
+                            "label": "This creature gets -1/-1 and gains flying until end of turn",
                             "effect": {
                                 "type": "Composite",
                                 "effects": [
@@ -4416,10 +4547,10 @@
                                         "target": "Self"
                                     }
                                 ]
-                            },
-                            "description": "This creature gets -1/-1 and gains flying until end of turn"
+                            }
                         },
                         {
+                            "label": "This creature gets -1/-1 and gains first strike until end of turn",
                             "effect": {
                                 "type": "Composite",
                                 "effects": [
@@ -4441,10 +4572,10 @@
                                         "target": "Self"
                                     }
                                 ]
-                            },
-                            "description": "This creature gets -1/-1 and gains first strike until end of turn"
+                            }
                         },
                         {
+                            "label": "This creature gets -1/-1 and gains trample until end of turn",
                             "effect": {
                                 "type": "Composite",
                                 "effects": [
@@ -4466,11 +4597,9 @@
                                         "target": "Self"
                                     }
                                 ]
-                            },
-                            "description": "This creature gets -1/-1 and gains trample until end of turn"
+                            }
                         }
-                    ],
-                    "countsAsModalSpell": false
+                    ]
                 },
                 "descriptionOverride": "{0}: This creature gets -1/-1 and gains your choice of banding, flying, first strike, or trample until end of turn."
             }

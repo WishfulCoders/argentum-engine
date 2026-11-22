@@ -13,7 +13,7 @@ val LilianaSSpecterReprint = Printing(
     collectorNumber = "116",
     scryfallId = "70539f2d-b211-43b9-8dcc-53cac50a53b5",
     artist = "Vance Kovacs",
-    imageUri = "https://cards.scryfall.io/normal/front/7/0/70539f2d-b211-43b9-8dcc-53cac50a53b5.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/7/0/70539f2d-b211-43b9-8dcc-53cac50a53b5.jpg?1783939355",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

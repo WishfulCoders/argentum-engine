@@ -1,0 +1,30 @@
+{
+  "player1Name": "NCR Commander",
+  "player2Name": "Opponent",
+  "player1": {
+    "lifeTotal": 20,
+    "hand": ["Battle of Hoover Dam"],
+    "battlefield": [
+      { "name": "Plains", "tapped": false },
+      { "name": "Plains", "tapped": false },
+      { "name": "Plains", "tapped": false },
+      { "name": "Plains", "tapped": false }
+    ],
+    "graveyard": ["Glory Seeker", "Hill Giant"],
+    "library": ["Plains", "Plains", "Plains"]
+  },
+  "player2": {
+    "lifeTotal": 20,
+    "hand": [],
+    "battlefield": [],
+    "graveyard": [],
+    "library": ["Mountain", "Mountain", "Mountain"]
+  },
+  "phase": "POSTCOMBAT_MAIN",
+  "activePlayer": 1,
+  "priorityPlayer": 1,
+  "player1StopAtSteps": ["POSTCOMBAT_MAIN", "END"],
+  "player2StopAtSteps": [],
+  "player1OpponentStopAtSteps": [],
+  "player2OpponentStopAtSteps": []
+}

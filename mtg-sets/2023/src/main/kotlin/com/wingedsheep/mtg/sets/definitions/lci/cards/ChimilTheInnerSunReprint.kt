@@ -13,7 +13,7 @@ val ChimilTheInnerSunReprint = Printing(
     collectorNumber = "249",
     scryfallId = "27a1bfb5-ddfc-49cf-baa3-5d1958d2067a",
     artist = "Adam Paquette",
-    imageUri = "https://cards.scryfall.io/normal/front/2/7/27a1bfb5-ddfc-49cf-baa3-5d1958d2067a.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/2/7/27a1bfb5-ddfc-49cf-baa3-5d1958d2067a.jpg?1782694413",
     releaseDate = "2023-11-17",
     rarity = Rarity.MYTHIC,
 )

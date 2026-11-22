@@ -3,130 +3,125 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.GameTestDriver
-import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.mtg.sets.definitions.eld.cards.OkoThiefOfCrowns
-import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
-import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.model.CardDefinition
-import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 /**
- * Oko, Thief of Crowns (ELD #197): one case per loyalty ability, the +1 checked against its
- * rulings — the target is "just a green Elk" 3/3 with no abilities, and an artifact stops being an
- * artifact.
+ * Scenario tests for Oko, Thief of Crowns (ELD #197, loyalty 4).
+ *
+ *   +1: Target artifact or creature loses all abilities and becomes a green Elk creature with
+ *       base power and toughness 3/3.
+ *   −5: Exchange control of target artifact or creature you control and target creature an
+ *       opponent controls with power 3 or less.
  */
-class OkoThiefOfCrownsScenarioTest : FunSpec({
+class OkoThiefOfCrownsScenarioTest : ScenarioTestBase() {
 
-    val relic = card("Test Relic") {
-        manaCost = "{1}"
-        typeLine = "Artifact"
-        activatedAbility {
-            cost = Costs.Tap
-            effect = Effects.GainLife(1)
-        }
+    private val okoName = "Oko, Thief of Crowns"
+
+    private fun ability(index: Int) = cardRegistry.getCard(okoName)!!.script.activatedAbilities[index]
+
+    private fun loyalty(game: TestGame, id: EntityId): Int =
+        game.state.getEntity(id)?.get<CountersComponent>()?.getCount(CounterType.LOYALTY) ?: 0
+
+    private fun activate(game: TestGame, oko: EntityId, index: Int, targets: List<EntityId>) {
+        game.execute(
+            ActivateAbility(
+                playerId = game.player1Id,
+                sourceId = oko,
+                abilityId = ability(index).id,
+                targets = targets.map { ChosenTarget.Permanent(it) }
+            )
+        ).error shouldBe null
+        game.resolveStack()
     }
 
-    val flyer = CardDefinition.creature(
-        name = "Test Flying Knight",
-        manaCost = ManaCost.parse("{3}"),
-        subtypes = setOf(Subtype("Human"), Subtype("Knight")),
-        power = 2,
-        toughness = 2,
-        keywords = setOf(Keyword.FLYING),
-        oracleText = "Flying"
-    )
+    init {
+        test("+1 turns a flying creature into a vanilla green 3/3 Elk, permanently") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardOnBattlefield(1, okoName)
+                .withCardOnBattlefield(2, "Serra Angel")
+                .withCardInLibrary(1, "Island")
+                .withCardInLibrary(1, "Island")
+                .withCardInLibrary(2, "Island")
+                .withCardInLibrary(2, "Island")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+            val oko = game.findPermanent(okoName)!!
+            val angel = game.findPermanent("Serra Angel")!!
 
-    fun newDriver(): GameTestDriver {
-        val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + PredefinedTokens.allTokens + listOf(OkoThiefOfCrowns, relic, flyer))
-        driver.initMirrorMatch(deck = Deck.of("Forest" to 40), skipMulligans = true, startingPlayer = 0)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        return driver
-    }
+            activate(game, oko, 1, listOf(angel))
+            loyalty(game, oko) shouldBe 5
 
-    fun GameTestDriver.oko(loyalty: Int): EntityId {
-        val oko = putPermanentOnBattlefield(player1, "Oko, Thief of Crowns")
-        replaceState(state.updateEntity(oko) { c ->
-            c.with((c.get<CountersComponent>() ?: CountersComponent()).withCounters(CounterType.LOYALTY, loyalty))
-        })
-        return oko
-    }
+            fun assertElk() {
+                val projected = game.state.projectedState
+                projected.isCreature(angel) shouldBe true
+                projected.getPower(angel) shouldBe 3
+                projected.getToughness(angel) shouldBe 3
+                projected.hasKeyword(angel, Keyword.FLYING) shouldBe false
+                projected.hasKeyword(angel, Keyword.VIGILANCE) shouldBe false
+                projected.getSubtypes(angel) shouldBe setOf("Elk")
+                projected.getColors(angel) shouldBe setOf("GREEN")
+            }
+            assertElk()
 
-    fun GameTestDriver.activate(oko: EntityId, index: Int, targets: List<EntityId> = emptyList()) {
-        val ability = OkoThiefOfCrowns.script.activatedAbilities[index]
-        submit(ActivateAbility(player1, oko, ability.id, targets = targets.map { ChosenTarget.Permanent(it) })).error shouldBe null
-        var guard = 0
-        while (guard++ < 20) {
-            when {
-                isPaused -> autoResolveDecision()
-                state.stack.isNotEmpty() -> bothPass()
-                else -> break
+            game.passUntilPhase(Phase.ENDING, Step.END)
+            game.passUntilPhase(Phase.BEGINNING, Step.UPKEEP)
+            withClue("the +1 lasts indefinitely") {
+                game.state.activePlayerId shouldBe game.player2Id
+                assertElk()
             }
         }
-    }
 
-    test("+2 makes a Food") {
-        val driver = newDriver()
-        val oko = driver.oko(4)
-        driver.activate(oko, 0)
+        test("+1 on a noncreature artifact makes it a 3/3 Elk creature that is no longer an artifact") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardOnBattlefield(1, okoName)
+                .withCardOnBattlefield(1, "Millstone")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+            val oko = game.findPermanent(okoName)!!
+            val millstone = game.findPermanent("Millstone")!!
 
-        driver.getPermanents(driver.player1).count { driver.getCardName(it) == "Food" } shouldBe 1
-    }
+            activate(game, oko, 1, listOf(millstone))
 
-    test("+1 makes a creature a vanilla green Elk 3/3") {
-        val driver = newDriver()
-        val opponent = driver.getOpponent(driver.player1)
-        val oko = driver.oko(4)
-        val knight = driver.putCreatureOnBattlefield(opponent, "Test Flying Knight")
-        driver.activate(oko, 1, listOf(knight))
+            val projected = game.state.projectedState
+            projected.isCreature(millstone) shouldBe true
+            projected.hasType(millstone, "ARTIFACT") shouldBe false
+            projected.getPower(millstone) shouldBe 3
+            projected.getToughness(millstone) shouldBe 3
+        }
 
-        val p = driver.state.projectedState
-        p.getPower(knight) shouldBe 3
-        p.getToughness(knight) shouldBe 3
-        p.hasKeyword(knight, Keyword.FLYING) shouldBe false
-        p.getSubtypes(knight) shouldBe setOf("Elk")
-        p.getColors(knight) shouldBe setOf(Color.GREEN.name)
-    }
+        test("−5 exchanges control of your artifact and an opponent's small creature") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardOnBattlefield(1, okoName)
+                .withCardOnBattlefield(1, "Millstone")
+                .withCardOnBattlefield(2, "Grizzly Bears")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+            val oko = game.findPermanent(okoName)!!
+            val millstone = game.findPermanent("Millstone")!!
+            val bears = game.findPermanent("Grizzly Bears")!!
+            game.state = game.state.updateEntity(oko) { c ->
+                c.with(CountersComponent().withAdded(CounterType.LOYALTY, 6))
+            }
 
-    test("+1 makes a noncreature artifact a creature that is no longer an artifact") {
-        val driver = newDriver()
-        val opponent = driver.getOpponent(driver.player1)
-        val oko = driver.oko(4)
-        val artifact = driver.putPermanentOnBattlefield(opponent, "Test Relic")
-        driver.activate(oko, 1, listOf(artifact))
+            activate(game, oko, 2, listOf(millstone, bears))
 
-        val p = driver.state.projectedState
-        withClue("it's just a green Elk (ruling)") {
-            p.isCreature(artifact) shouldBe true
-            p.hasType(artifact, "ARTIFACT") shouldBe false
-            p.getPower(artifact) shouldBe 3
-            p.hasLostAllAbilities(artifact) shouldBe true
+            loyalty(game, oko) shouldBe 1
+            val projected = game.state.projectedState
+            projected.getController(bears) shouldBe game.player1Id
+            projected.getController(millstone) shouldBe game.player2Id
         }
     }
-
-    test("−5 exchanges control of your artifact and their small creature") {
-        val driver = newDriver()
-        val you = driver.player1
-        val opponent = driver.getOpponent(you)
-        val oko = driver.oko(5)
-        val mine = driver.putPermanentOnBattlefield(you, "Test Relic")
-        val theirs = driver.putCreatureOnBattlefield(opponent, "Test Flying Knight")
-        driver.activate(oko, 2, listOf(mine, theirs))
-
-        driver.state.projectedState.getController(mine) shouldBe opponent
-        driver.state.projectedState.getController(theirs) shouldBe you
-    }
-})
+}

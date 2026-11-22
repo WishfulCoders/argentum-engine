@@ -61,10 +61,24 @@ existing static ability fed a `DynamicAmount`.
 If a composition expresses it: **stop.** Add the recipe, go to tests, and document it in the SDK
 reference if it's reusable.
 
-## Step 3: If a new type is genuinely needed
+## Step 3: Extend the closest type; add a new one only if you must
 
-Apply the four reusability rules (target generality, duration/removal generality, parameterized
-filters/amounts, name-the-mechanic), then put it in the right place —
+Composition didn't reach. Work the order in
+[extend before you add](../../../docs/sdk-design-principles.md#extend-before-you-add): **add an axis to
+the closest existing type** (renaming or migrating it if the name no longer fits), and only then a new
+type. `SdkSurfaceBaselineTest` and `just sdk-tail` both show the neighbours to check.
+
+- **Adding an axis** — make it a value with a meaning (enum, filter, `DynamicAmount`, sealed option),
+  default it to the type's old behaviour so existing cards don't move, and prove that with an unchanged
+  card-golden re-bless (`just rebless-cards`, empty diff outside your cards).
+- **Adding a type** — its KDoc names the two closest existing types and why neither takes the axis, and
+  the same answer goes on its `[added]` line in `mtg-sdk/src/test/resources/sdk-surface-baseline.txt`.
+- **Either way, delete what you subsume.** If the new axis or type makes an older narrow type
+  expressible, migrate that type's cards and delete it in this PR — don't leave a fossil.
+
+**When a new type is genuinely needed**, apply the four reusability rules (target generality,
+duration/removal generality, parameterized filters/amounts, name-the-mechanic), then put it in the right
+place —
 [`add-card/new-sdk-types.md`](../add-card/new-sdk-types.md) has the SDK-home / engine-wiring table for
 every kind of vocabulary, plus the five layers a counter type spans.
 
@@ -131,6 +145,8 @@ every AI/MCTS node. **Cheap-looking work in a primitive multiplies.**
 - **Respect immutability without copying the world.** Use the `with`/`without` component helpers and
   `copy(…)` of the changed slice; don't rebuild whole maps. Local `mutableListOf` accumulation inside a
   pure function is fine (the SBA loop does it); leaking mutation across calls is not.
+- **Reason about the cost, don't benchmark it.** This step is a design check; don't run `just benchmark*`
+  or `just arena*` to confirm it unless the user asks for a measurement.
 - **Watch the client too.** New per-card fields on `ClientCard` or frequent `StateDeltaUpdate` churn cause
   battlefield re-renders. If the feature adds card-visible state, confirm it only changes when it
   actually changes.
@@ -139,6 +155,13 @@ every AI/MCTS node. **Cheap-looking work in a primitive multiplies.**
 
 The client is a dumb terminal (`architecture-principles.md` §4) — it renders what the server sends and
 captures intent. **Server-side feature design *is* the UX.**
+
+**Good UI/UX is a requirement, not a nice-to-have.** Players judge the game by how it feels to play, so
+a mechanic that works but is confusing, cluttered, ugly or clumsy to use is not done. The bar: a player
+who knows Magic but has never seen this feature understands what is being asked and acts without
+hesitation — clear wording, the obvious place to click, the right board context visible, consistent with
+how similar interactions already look, and visually polished. When the existing flow falls short, fix it
+in the same change rather than shipping it and noting it for later.
 
 **If the feature surfaces anything to the player** — a decision, action, prompt, keyword, icon, badge,
 label, or any client-visible state — **the UI is part of this feature, not a follow-up.** Build it in the
@@ -181,6 +204,25 @@ SDK and client tests are supporting layers; don't let them substitute for engine
 details (`ScenarioTestBase` vs `GameTestDriver`, inline test cards) and which command to run: the
 **`verify`** skill.
 
+**New UI/UX must be seen, not just typechecked.** If the feature touches the frontend, or changes what
+existing UI shows, try it yourself before the PR:
+
+1. Start this checkout's app in the background with `just ui-dev <server-port> <client-port>`, using
+   free ports so you never hit another agent's app.
+2. Set the board up. The **`generate-scenario`** skill writes the scenario; POST it to
+   `/api/dev/scenarios` and open the client with the seat token it returns.
+3. Drive every prompt and state of the new flow in a real browser, by hand or with a throwaway
+   Playwright script used only as a browser driver. Look at each screenshot as a player would:
+   layout, labels, highlighting, nothing overlapping, clipped or stale. Fix what looks off and take
+   the shots again.
+4. Put the final screenshots in the PR body (before/after when the change is subtle). Host them as
+   [`web-client/AGENTS.md`](../../../web-client/AGENTS.md) "Screenshots for UI/UX PRs" describes, never
+   committed to the feature branch. Stop the servers when you're done.
+
+**Don't write E2E specs and don't run the E2E suite** (`just e2e*`): it takes too long, and the manual
+check replaces it. If you couldn't run the app or view the images, say so in the PR instead of claiming
+a UX pass.
+
 ## Step 8: Update the docs in the same change
 
 - **[`docs/card-sdk-language-reference.md`](../../../docs/card-sdk-language-reference.md)** — every new
@@ -191,6 +233,11 @@ details (`ScenarioTestBase` vs `GameTestDriver`, inline test cards) and which co
   pattern), not for a routine primitive.
 - Any other doc the feature contradicts: `engine-server-interface.md`, `data-contracts.md`,
   `player-input.md`, `web-client-architecture.md`, `continuous-effect-dependency-system.md`.
+- **[`web-client/src/components/whatsNew/announcements.ts`](../../../web-client/src/components/whatsNew/announcements.ts)**
+  — when the feature is a new game mode or changes how players use the site (not an engine primitive,
+  fix or polish), add a `mode`/`feature` entry at the top of the "What's new" feed.
+- **[`web-client/src/help/topics.ts`](../../../web-client/src/help/topics.ts)** — the in-app Help wiki.
+  Any player-visible feature gets a topic (or fixes the topics it makes wrong) in the same change.
 
 ## Step 9: Keep Argentum Assay compiling and honest
 
@@ -198,19 +245,89 @@ details (`ScenarioTestBase` vs `GameTestDriver`, inline test cards) and which co
 text into the very SDK types you just touched, so it is a compile-time consumer of `mtg-sdk` and the
 closest thing the SDK has to an outside reader.
 
-- **You changed or renamed an existing type** (new required parameter, moved constant, reshaped effect):
-  fix the grammar rules that construct it **in this change**, and run `just assay-gate --limit 2000` so
-  the touchstone still round-trips. Skipping this breaks the `:oracle-assay` build for everyone.
-- **You added a new type**: nothing is owed here. An Assay rule is bidirectional and ships as a measured
+Adding a type and extending one owe the same here. The Assay cost of widening an existing type is
+**expected work, not a reason to add a sibling type instead** — a sibling dodges this step today and
+costs every later reader (and Assay's own grammar) a second spelling.
+
+- **You changed, widened or renamed an existing type** (new axis, new required parameter, moved
+  constant, reshaped effect, a narrow type migrated and deleted): fix the grammar rules that construct
+  it **in this change**, and run `just assay-gate --limit 2000` so the touchstone still round-trips.
+  Skipping this breaks the `:oracle-assay` build for everyone. A new axis value Assay can't read yet
+  needs no new rule — the old readings must keep compiling and round-tripping, that's all.
+- **You added a new type or a new axis value**: teaching Assay to *read* it is a separate measured
   *band* — its own probe, ranking and PR (see [`docs/oracle-assay.md`](../../../docs/oracle-assay.md)) —
-  so don't grow this PR into one. Name the new vocabulary in the PR body instead:
+  so don't grow this PR into one. In both cases name the new vocabulary in the PR body:
   `just assay-report --rank tail` is the ranked backlog of what the grammar still can't read, and new
   vocabulary is how a row on it becomes reachable.
 - **Your feature changed how existing cards behave**: run `just assay-differential` over the affected
   set. A new `DIVERGENT` row means Assay and the corpus now disagree about a card you moved — classify it
   before committing rather than leaving it for the next set sweep.
 
-## Step 10: Build, verify, commit
+## Step 10: Make sure the AI can use it
+
+A new effect, trigger, cost or keyword is invisible to the engine AI until its readers classify it.
+The AI still plays a card that uses it, but on a generic default: it can't tell whether a target is
+helped or hurt, what the card is for, or when to hold it; its draft heuristic scores the new effect at
+zero, so a card no table rates is underpicked; and its synergy reader can't see what the card feeds or
+cashes in, so an engine is played and built as a lone body. That is how a feature that works for players
+quietly makes the AI worse. **Close all three in the same change** — you know the semantics best now.
+
+Check one or two cards that exercise the feature:
+
+```bash
+just ai-card "<a card using it>|<another>"
+```
+
+(or open it in the Assay Explorer, where **AI reading** and **How the AI rates it** draw the same
+answers). Read its four answers against the cards' Oracle text:
+
+- **Understanding** (`Reading`, `Intent`, `In play`). A `✕` naming your new type, `! abilities not
+  recognised`, or an `In play` value that ignores the ability is the gap. Teach the readers:
+  `TargetPolarityAnalyzer` (does each target slot help or hurt), `CardIntentAnalyzer.tagsOf` (what it is
+  for), `CombatReach` / `ExpiringGrantWindow` (P/T and until-end-of-turn grants). A **new decision**
+  (a new `PendingDecision` shape, a new choice inside resolution) also needs `DecisionResponder` to
+  answer it sensibly rather than with its first legal option — test the choice it makes.
+- **Rating** (`Pick`). A heuristic breakdown with no term for the ability means
+  `LimitedCardRater`'s leaf scoring (`LimitedScoreFold`) scores it at zero: give it a term sized against comparable effects
+  (`docs/limited-card-ratings.md`, section 3, "The effect heuristic").
+- **Synergy** (`Synergy`). If the feature makes or rewards a resource on an existing `SynergyAxis` — a
+  new token-making or sacrifice effect, a new cost that sacrifices, a new `EventPattern` a payoff can
+  watch, a new way to put +1/+1 counters or mill yourself — teach `SynergyAxes` the feeding or rewarding
+  side, so `SynergyPresence` prices the payoff by its fuel and `CommanderSynergy` builds around it. A
+  mechanic that *is* a new resource players build around (an axis no existing one covers) gets its axis
+  only when it has both a feeder and a payoff side among real cards; say why in the PR. Trigger patterns
+  bound to the card itself or to opponents' objects stay out of `rewards`.
+
+**Then ask whether the value follows the reading.** Run the same `just ai-card` again once the readers
+know the feature, and compare it with the first run: now that the AI reads what the ability does, does
+what it thinks the card is *worth* move with it? Teaching the target, combat or timing readers changes
+only decisions: the board evaluator never sees them, so a card can be aimed and timed correctly while its
+`In play` value still prices it as a vanilla body. A permanent now read as removal, card advantage or a
+mana source whose `In play` value didn't move is the gap: carry the reading into the intent prior
+(`evaluation/BoardFeatures.kt`, via `CardIntentAnalyzer`) keyed by the effect, never the card. Do the
+same for `Pick`, but only when it comes from the effect heuristic; a Draftsim/17Lands-rated card keeps
+its table rating. When no value should move (a pure targeting or timing reading), say so and why. When
+closing the gap would be a feature of its own, name it in the PR body as `value gap: <what>`.
+
+Prove each reading with an AI test (a decision that changes, a profile or score that's pinned) — **never
+with a benchmark**: don't run `just benchmark*`, `just arena*`, `just deck-colours`, `just ai-game-logs` or
+any `*Benchmark` class for a feature, unless the user asks for a measurement. Add
+an `ai/changelog.d/<branch>.md` entry (rules in `ai/CHANGELOG.md`'s header). Don't re-bless
+`just ai-reading-baseline` for the gain: main does that after merge (`docs/ai/reading-audit.md`, "The
+ratchet").
+
+- **Don't leave a part for later.** The capability and its AI reading ship together: a reader entry for
+  the effect type you just added or widened is a few lines, and you are the one who knows its
+  semantics. "Pre-existing", "other cards share it" and "belongs to the AI reading loop" are not
+  reasons to defer. Only a part that needs a brand-new reader concept may be split out, as the next PR,
+  with the PR body saying which of understanding / rating / synergy it is and why; re-bless the baseline
+  here so `AiReadingRatchetTest` passes meanwhile.
+- **Widened an existing type?** Check one card on the old shape and one on the new — a reader matching
+  the old shape (including `SynergyAxes`) may silently stop reading it.
+- **PR body:** the same `AI: reads n/n · pick … · intent … · synergy …` line `add-card` asks for, per
+  card you checked.
+
+## Step 11: Build, verify, commit
 
 1. Run the gates via the **`verify`** skill. Fix only failures your change caused; if a pre-existing or
    other-agent test fails, report it and stop.
@@ -223,7 +340,10 @@ closest thing the SDK has to an outside reader.
 
 - A new `Effect`/`StaticAbility` whose executor converts it 1:1 into an existing `Modification` or effect
   with a literal formula → use the existing type fed a `DynamicAmount`.
-- A new optional parameter bolted onto an existing effect to cover a variation → compose instead.
+- A card-shaped Boolean bolted onto an existing type (it means something for one card, or only when
+  another field is set) → name the real axis (an enum, filter, amount or sealed option), or compose.
+- A new type beside an existing one that could have taken the axis → extend the existing one.
+- A new general primitive that leaves the narrow type it subsumes in place → migrate and delete it here.
 - Constants baked into a type (`bonusPerType = 1`, a hardcoded subtype, `count = 20` for "any number") →
   parameterize.
 - A type named for the card that motivated it.

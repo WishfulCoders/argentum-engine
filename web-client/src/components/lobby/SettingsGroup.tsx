@@ -1,4 +1,10 @@
-/** One always-visible settings group: axis controls and summary in the header, refinements below. */
+/**
+ * One always-visible settings group: axis controls in the header, refinements below.
+ *
+ * There used to be a summary line under the strip ("Standard", "1v1", "Booster Draft · ECL · 3 packs")
+ * — a holdover from when the groups collapsed. With every control on screen it only repeated the
+ * highlighted button and the rows beneath it, so the header now carries just the blocking note.
+ */
 import type { ReactNode } from 'react'
 import { HelpTip } from '@/components/help/HelpTip'
 import styles from '../ui/GameUI.module.css'
@@ -6,7 +12,6 @@ import styles from '../ui/GameUI.module.css'
 export function SettingsGroup({
   label,
   topicId,
-  summary,
   axisStrip,
   blocking,
   testId,
@@ -15,8 +20,6 @@ export function SettingsGroup({
   label: string
   /** Help topic for the *value in effect*, so `?` explains what is selected. */
   topicId: string | null
-  /** The live values inside, kept as a compact overview. */
-  summary: string
   /** The axis's buttons — always visible, never behind the chevron. */
   axisStrip?: ReactNode
   /** This group holds the reason Start is disabled. */
@@ -26,15 +29,6 @@ export function SettingsGroup({
   children?: ReactNode
 }) {
   const hasBody = Boolean(children)
-
-  const summaryLine = (
-    <>
-      <span className={styles.settingsGroupSummary}>{summary}</span>
-      {blocking && (
-        <span className={styles.settingsGroupBlockingNote} title={blocking}>! {blocking}</span>
-      )}
-    </>
-  )
 
   return (
     <div
@@ -48,7 +42,11 @@ export function SettingsGroup({
         </div>
         <div className={styles.settingsGroupMain}>
           {axisStrip}
-          <div className={styles.settingsGroupSummaryRow}>{summaryLine}</div>
+          {blocking && (
+            <div className={styles.settingsGroupSummaryRow}>
+              <span className={styles.settingsGroupBlockingNote} title={blocking}>! {blocking}</span>
+            </div>
+          )}
         </div>
       </div>
       {hasBody && <div className={styles.settingsGroupBody}>{children}</div>}

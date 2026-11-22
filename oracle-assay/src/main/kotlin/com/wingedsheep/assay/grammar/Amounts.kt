@@ -118,7 +118,7 @@ object Amounts {
      * whole battlefield — and the hand-written corpus spells it the first way
      * (`battlefield(Player.EachOpponent, …)`, Gaea's Avenger, Angry Mob, Pygmy Kavu).
      */
-    private val ROWED_CONTROLLERS = setOf(ControllerPredicate.ControlledByYou, ControllerPredicate.ControlledByOpponent)
+    private val ROWED_CONTROLLERS = setOf<ControllerPredicate>(ControllerPredicate.ControlledByYou, ControllerPredicate.ControlledByOpponent)
 
     /** The layer itself. Adding a row here reaches every family that counts. */
     val scopes: List<Scope> = listOf(
@@ -476,9 +476,15 @@ object Amounts {
                 "the number of basic land types among", Aggregation.DISTINCT_BASIC_LAND_SUBTYPES, null,
                 "you control", Player.You, "the basic land types on your battlefield",
             ),
-            // Tarmogoyf's count, and the one aggregation the corpus spells over a *zone*. Bare rather
-            // than filtered because "card types among cards" is the only noun Oracle writes it with —
-            // a filtered version would be a printed form no card uses.
+            // Star Trek's Federation ability word: "the number of creature types among non-Borg
+            // creatures you control" — `DynamicAmounts.federation()` builds exactly this aggregate.
+            battlefieldAggregate(
+                "the number of creature types among", Aggregation.DISTINCT_CREATURE_TYPES, null,
+                "you control", Player.You, "the creature types on your battlefield",
+            ),
+            // Tarmogoyf's count and All-Seeing Arbiter's — the aggregations the corpus spells over a
+            // *zone*. Bare rather than filtered because "among cards" is the only noun Oracle writes
+            // them with — a filtered version would be a printed form no card uses.
             constant(
                 "the number of card types among cards in all graveyards",
                 DynamicAmount.AggregateZone(Player.Each, Zone.GRAVEYARD, aggregation = Aggregation.DISTINCT_TYPES),
@@ -486,6 +492,10 @@ object Amounts {
             constant(
                 "the number of card types among cards in your graveyard",
                 DynamicAmount.AggregateZone(Player.You, Zone.GRAVEYARD, aggregation = Aggregation.DISTINCT_TYPES),
+            ),
+            constant(
+                "the number of different mana values among cards in your graveyard",
+                DynamicAmounts.zone(Player.You, Zone.GRAVEYARD).distinctValues(CardNumericProperty.MANA_VALUE),
             ),
             // "the number of +1/+1 counters on ~" — a tally of the source's own counters, which the SDK
             // reads as a property of an entity rather than as a count of a zone. The kind is a slot:
@@ -706,48 +716,97 @@ object Amounts {
      * "Target creature gets +X/+X until end of turn, where X is the number of Elves on the
      * battlefield." — Timberwatch Elf, and Magma Sliver's granted "+X/+0" sibling.
      *
-     * The *shape* of the modifier is the rule's parameter rather than a slot, because "+X/+X" and
-     * "+X/+0" are two printed forms in which the letter appears a different number of times;
-     * [Primitives.statModifiers] reads numerals and cannot spell either.
+     * The *shape* of the modifier is the rule's parameter rather than a slot, because "+X/+X",
+     * "+X/+0" and "+0/+X" place the letter on different axes; [Primitives.statModifiers] reads
+     * numerals and cannot spell any of them.
+     *
+     * Each shape names the axes the calculated X lands on; the absent axis is a fixed zero, not X.
      */
-    private fun pumpTargetByCount(
-        modifier: String,
-        toughness: (DynamicAmount) -> DynamicAmount,
-        name: String,
-    ): Phrase<CardScript> {
+    private enum class CountedPumpShape(
+        val modifier: String,
+        val description: String,
+    ) {
+        BOTH("+X/+X", "power and toughness"),
+        POWER("+X/+0", "power"),
+        TOUGHNESS("+0/+X", "toughness");
+
+        fun power(amount: DynamicAmount): DynamicAmount =
+            if (this == TOUGHNESS) DynamicAmount.Fixed(0) else amount
+
+        fun toughness(amount: DynamicAmount): DynamicAmount =
+            if (this == POWER) DynamicAmount.Fixed(0) else amount
+
+        fun readAmount(stats: ModifyStatsEffect): DynamicAmount =
+            if (this == TOUGHNESS) stats.toughnessModifier else stats.powerModifier
+    }
+
+    /** "Target creature gets +X/+0 until end of turn, where X is the number of artifacts you control." */
+    private fun pumpTargetByCount(shape: CountedPumpShape): Phrase<CardScript> {
         fun scriptFor(amount: DynamicAmount, filter: GameObjectFilter) = CardScript(
-            spellEffect = Effects.ModifyStats(amount, toughness(amount), Targets.bound()),
+            spellEffect = Effects.ModifyStats(
+                shape.power(amount),
+                shape.toughness(amount),
+                Targets.bound(),
+            ),
             targetRequirements = listOf(Targets.permanent(filter)),
         )
-        return phrase("target {filter} gets $modifier until end of turn, where X is {amount}", name = name) {
+
+        return phrase(
+            "target {filter} gets ${shape.modifier} until end of turn, where X is {amount}",
+            name = "pump a target's ${shape.description} by a count",
+        ) {
             slot("filter", Filters.filter)
             slot("amount", count)
-            build { scriptFor(it.value("amount"), it.value("filter")) }
+
+            build {
+                scriptFor(it.value("amount"), it.value("filter"))
+            }
+
             match { script ->
-                val stats = script.spellEffect as? ModifyStatsEffect ?: return@match null
-                val requirement = script.targetRequirements.singleOrNull() ?: return@match null
-                val filter = Targets.permanentFilter(requirement) ?: return@match null
-                if (script != scriptFor(stats.powerModifier, filter)) return@match null
-                bind("filter" to filter, "amount" to stats.powerModifier)
+                val stats = script.spellEffect as? ModifyStatsEffect
+                    ?: return@match null
+                val requirement = script.targetRequirements.singleOrNull()
+                    ?: return@match null
+                val filter = Targets.permanentFilter(requirement)
+                    ?: return@match null
+
+                val amount = shape.readAmount(stats)
+                if (script != scriptFor(amount, filter)) return@match null
+
+                bind("filter" to filter, "amount" to amount)
             }
         }
     }
 
-    /** "It gets +X/+X until end of turn, where X is the number of Clerics on the battlefield." */
-    private val pumpSelfByCount: Phrase<CardScript> = run {
-        fun scriptFor(amount: DynamicAmount) =
-            CardScript(spellEffect = Effects.ModifyStats(amount, amount, EffectTarget.Self))
-        phrase(
-            "{self} gets +X/+X until end of turn, where X is {amount}",
-            name = "the source gets a count",
+    /** "~ gets +0/+X until end of turn, where X is the number of artifacts you control." */
+    private fun pumpSelfByCount(shape: CountedPumpShape): Phrase<CardScript> {
+        fun scriptFor(amount: DynamicAmount) = CardScript(
+            spellEffect = Effects.ModifyStats(
+                shape.power(amount),
+                shape.toughness(amount),
+                EffectTarget.Self,
+            ),
+        )
+
+        return phrase(
+            "{self} gets ${shape.modifier} until end of turn, where X is {amount}",
+            name = "the source gets ${shape.description} by a count",
         ) {
             slot("self", Primitives.self)
             slot("amount", count)
-            build { scriptFor(it.value("amount")) }
+
+            build {
+                scriptFor(it.value("amount"))
+            }
+
             match { script ->
-                val stats = script.spellEffect as? ModifyStatsEffect ?: return@match null
-                if (script != scriptFor(stats.powerModifier)) return@match null
-                bind("self" to Unit, "amount" to stats.powerModifier)
+                val stats = script.spellEffect as? ModifyStatsEffect
+                    ?: return@match null
+
+                val amount = shape.readAmount(stats)
+                if (script != scriptFor(amount)) return@match null
+
+                bind("self" to Unit, "amount" to amount)
             }
         }
     }
@@ -1004,9 +1063,12 @@ object Amounts {
     }
 
     val clauses: List<Phrase<CardScript>> = listOf(
-        pumpTargetByCount("+X/+X", { it }, "pump a target by a count"),
-        pumpTargetByCount("+X/+0", { DynamicAmount.Fixed(0) }, "pump a target's power by a count"),
-        pumpSelfByCount,
+        pumpTargetByCount(CountedPumpShape.BOTH),
+        pumpTargetByCount(CountedPumpShape.POWER),
+        pumpTargetByCount(CountedPumpShape.TOUGHNESS),
+        pumpSelfByCount(CountedPumpShape.BOTH),
+        pumpSelfByCount(CountedPumpShape.POWER),
+        pumpSelfByCount(CountedPumpShape.TOUGHNESS),
         groupPumpByX("", "a group gets minus X"),
         groupPumpByX("all ", "all of a group gets minus X"),
         drawAndLoseByCount,

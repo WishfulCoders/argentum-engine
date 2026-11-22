@@ -961,6 +961,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -5679,7 +5680,8 @@
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Urza's Science Fair Project": [],
   "Urza's Sylex": [

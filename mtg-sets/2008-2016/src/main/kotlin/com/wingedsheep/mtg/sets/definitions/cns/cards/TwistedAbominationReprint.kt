@@ -13,7 +13,7 @@ val TwistedAbominationReprint = Printing(
     collectorNumber = "129",
     scryfallId = "2f395993-41d5-4947-ac76-d88a1ff6450a",
     artist = "Daren Bader",
-    imageUri = "https://cards.scryfall.io/normal/front/2/f/2f395993-41d5-4947-ac76-d88a1ff6450a.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/2/f/2f395993-41d5-4947-ac76-d88a1ff6450a.jpg?1783939352",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

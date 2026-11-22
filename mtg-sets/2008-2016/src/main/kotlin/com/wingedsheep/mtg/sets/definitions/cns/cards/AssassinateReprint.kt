@@ -13,7 +13,7 @@ val AssassinateReprint = Printing(
     collectorNumber = "113",
     scryfallId = "074dc791-96d2-4401-963a-6e2f3d72dcfc",
     artist = "Kev Walker",
-    imageUri = "https://cards.scryfall.io/normal/front/0/7/074dc791-96d2-4401-963a-6e2f3d72dcfc.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/0/7/074dc791-96d2-4401-963a-6e2f3d72dcfc.jpg?1783939356",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

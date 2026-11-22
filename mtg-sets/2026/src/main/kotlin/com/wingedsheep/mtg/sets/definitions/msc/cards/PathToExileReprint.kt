@@ -13,7 +13,7 @@ val PathToExileReprint = Printing(
     collectorNumber = "141",
     scryfallId = "95ca89ea-1200-4bb4-ae4b-af35d3ccd35b",
     artist = "Nino Is",
-    imageUri = "https://cards.scryfall.io/normal/front/9/5/95ca89ea-1200-4bb4-ae4b-af35d3ccd35b.jpg?1783903242",
+    imageUri = "https://cards.scryfall.io/normal/front/9/5/95ca89ea-1200-4bb4-ae4b-af35d3ccd35b.jpg",
     releaseDate = "2026-06-26",
     rarity = Rarity.UNCOMMON,
 )

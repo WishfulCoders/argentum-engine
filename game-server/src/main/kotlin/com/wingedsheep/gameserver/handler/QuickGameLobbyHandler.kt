@@ -14,7 +14,10 @@ import com.wingedsheep.gameserver.lobby.MomirBasicSetup
 import com.wingedsheep.gameserver.lobby.QuickGameLobby
 import com.wingedsheep.gameserver.lobby.QuickGameLobbyPlayer
 import com.wingedsheep.gameserver.lobby.QuickGameLobbyRepository
+import com.wingedsheep.gameserver.matchmaking.MatchmakingMode
+import com.wingedsheep.gameserver.matchmaking.QueueKey
 import com.wingedsheep.gameserver.protocol.ClientMessage
+import com.wingedsheep.gameserver.protocol.DeckRequestConverter
 import com.wingedsheep.gameserver.protocol.ErrorCode
 import com.wingedsheep.gameserver.protocol.ServerMessage
 import com.wingedsheep.gameserver.repository.GameRepository
@@ -63,6 +66,7 @@ class QuickGameLobbyHandler(
     private val randomDeckResolver: RandomDeckResolver,
     private val boosterGenerator: com.wingedsheep.engine.limited.BoosterGenerator,
     private val gamePlayHandler: GamePlayHandler,
+    private val rematchRecipes: com.wingedsheep.gameserver.social.RematchRecipes,
 ) {
     private val logger = LoggerFactory.getLogger(QuickGameLobbyHandler::class.java)
 
@@ -83,6 +87,7 @@ class QuickGameLobbyHandler(
             is ClientMessage.SetQuickGameLobbySetCode -> handleSetSetCode(session, message)
             is ClientMessage.SetQuickGameLobbyPublic -> handleSetPublic(session, message)
             is ClientMessage.SetQuickGameLobbyRanked -> handleSetRanked(session, message)
+            is ClientMessage.SetQuickGameLobbyAnte -> handleSetAnte(session, message)
             is ClientMessage.SetQuickGameLobbyFormat -> handleSetFormat(session, message)
             is ClientMessage.SetQuickGameAiDeck -> handleSetAiDeck(session, message)
             is ClientMessage.AddQuickGameAi -> handleAddAi(session)
@@ -109,7 +114,7 @@ class QuickGameLobbyHandler(
                 sender.sendError(session, ErrorCode.INVALID_ACTION, "AI opponent is not enabled on this server")
                 return@withLock
             }
-            if (current.twoHeadedGiant || current.players.size != 1) {
+            if (current.twoHeadedGiant || current.matchmade || current.players.size != 1) {
                 sender.sendError(session, ErrorCode.INVALID_ACTION, "The opponent seat is not available")
                 return@withLock
             }
@@ -218,6 +223,10 @@ class QuickGameLobbyHandler(
                 sender.sendError(session, ErrorCode.INVALID_ACTION, "Only the host can change the format")
                 return@withLock
             }
+            if (current.matchmade) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "A matchmade game's format is set by the queue")
+                return@withLock
+            }
             if (current.format == message.format && current.momirBasic == message.momirBasic) return@withLock
             // Momir Basic is a "custom format" entry in the same dropdown: picking it flips the
             // lobby into the deckbuilding-free Vanguard mode (mutually exclusive with a deck-format
@@ -234,7 +243,7 @@ class QuickGameLobbyHandler(
                     if (player.isAi) continue
                     val deck = player.deckList ?: continue
                     if (deck.isEmpty()) continue // Random pool — format restriction doesn't apply.
-                    val result = deckValidator.validate(deck, message.format)
+                    val result = deckValidator.validate(deck, message.format, playingForAnte = current.playingForAnte)
                     if (!result.valid) player.ready = false
                 }
                 // Same rule for the AI's hand-picked deck, except the AI has no ready flag to
@@ -270,6 +279,10 @@ class QuickGameLobbyHandler(
                 sender.sendError(session, ErrorCode.INVALID_ACTION, "Only the host can change visibility")
                 return@withLock
             }
+            if (current.matchmade) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "A matchmade game's visibility is set by the queue")
+                return@withLock
+            }
             // AI lobbies are single-player — there's no second seat to discover.
             val effective = message.isPublic && !current.vsAi
             if (current.isPublic == effective) return@withLock
@@ -292,11 +305,75 @@ class QuickGameLobbyHandler(
                 sender.sendError(session, ErrorCode.INVALID_ACTION, "Only the host can change ranked")
                 return@withLock
             }
+            if (current.matchmade) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "A matchmade game's ranked setting is set by the queue")
+                return@withLock
+            }
             // Ranked is only offered for a standard 1v1 human-vs-human lobby.
             val effective = message.ranked && current.rankedEligible
             if (current.ranked == effective) return@withLock
             current.ranked = effective
+            // Ranked games are never played for ante (CR 407).
+            if (effective && current.playingForAnte) {
+                current.playingForAnte = false
+                unreadyAnteDecks(current)
+            }
             broadcastState(current)
+        }
+    }
+
+    private fun handleSetAnte(session: WebSocketSession, message: ClientMessage.SetQuickGameLobbyAnte) {
+        val playerSession = sessionRegistry.getPlayerSession(session.id) ?: run {
+            sender.sendError(session, ErrorCode.NOT_CONNECTED, "Not connected"); return
+        }
+        val lobby = lobbyRepository.findContainingPlayer(playerSession.playerId) ?: run {
+            sender.sendError(session, ErrorCode.GAME_NOT_FOUND, "Not in a lobby"); return
+        }
+        lobbyRepository.withLock(lobby.lobbyId) { current ->
+            if (current == null) return@withLock
+            val host = current.players.firstOrNull { !it.isAi }
+            if (host?.playerId != playerSession.playerId) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "Only the host can change ante")
+                return@withLock
+            }
+            if (current.matchmade) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "A matchmade game's ante setting is set by the queue")
+                return@withLock
+            }
+            if (message.playingForAnte && current.ranked) {
+                sender.sendError(session, ErrorCode.INVALID_ACTION, "Ranked games can't be played for ante")
+                return@withLock
+            }
+            if (current.playingForAnte == message.playingForAnte) return@withLock
+            current.playingForAnte = message.playingForAnte
+            if (!message.playingForAnte) unreadyAnteDecks(current)
+            broadcastState(current)
+        }
+    }
+
+    /**
+     * Ante just went off on [lobby]: CR 407.3 bars ante cards from decks and sideboards, so any human
+     * whose submitted deck holds one is un-readied and told why — the same treatment a format change
+     * gives a deck it makes illegal. Call under the lobby lock; the caller broadcasts.
+     */
+    private fun unreadyAnteDecks(lobby: QuickGameLobby) {
+        for (player in lobby.players) {
+            if (player.isAi) continue
+            val deck = player.deckList ?: continue
+            if (deck.isEmpty()) continue // Random pool — built at game start for the lobby as it is then.
+            val anteCard = (deck.keys + player.sideboard.keys + listOfNotNull(player.companion))
+                .firstOrNull { cardRegistry.getCard(it)?.requiresAnte == true } ?: continue
+            player.ready = false
+            sessionRegistry.getAllIdentities()
+                .firstOrNull { it.playerId == player.playerId }
+                ?.webSocketSession?.takeIf { it.isOpen }
+                ?.let {
+                    sender.sendError(
+                        it,
+                        ErrorCode.INVALID_DECK,
+                        "The lobby no longer plays for ante — $anteCard can only be played in a game played for ante",
+                    )
+                }
         }
     }
 
@@ -358,6 +435,8 @@ class QuickGameLobbyHandler(
         )
         // Ranked only applies to a standard 1v1 human-vs-human lobby (not AI / Two-Headed Giant).
         lobby.ranked = message.ranked && lobby.rankedEligible
+        // Ranked games are never played for ante (CR 407); ranked wins the conflict.
+        lobby.playingForAnte = message.playingForAnte && !lobby.ranked
         lobby.players += QuickGameLobbyPlayer(
             playerId = playerSession.playerId,
             playerName = playerSession.playerName
@@ -377,6 +456,94 @@ class QuickGameLobbyHandler(
 
         logger.info("Quick game lobby ${lobby.lobbyId} created by ${playerSession.playerName} (vsAi=${message.vsAi})")
         broadcastState(lobby)
+    }
+
+    /**
+     * Seat two players the matchmaking queue paired into a fresh lobby for the queue's [key]. Returns
+     * false, creating nothing, when either player is already in a lobby.
+     *
+     * A Constructed match stays in the lobby, where each player picks a deck and readies up. Random
+     * deck and Momir Basic have nothing to pick — accepting the match was the ready check — so their
+     * game starts here and the lobby is never shown. A Random deck pair opens boosters from one random
+     * set, so both play the same sealed environment.
+     */
+    fun createMatchmadeLobby(
+        players: List<Pair<com.wingedsheep.sdk.model.EntityId, String>>,
+        key: QueueKey,
+    ): Boolean {
+        if (players.any { (id, _) -> lobbyRepository.findContainingPlayer(id) != null }) return false
+        val lobby = QuickGameLobby(
+            vsAi = false,
+            setCode = null,
+            format = key.format,
+            momirBasic = key.mode == MatchmakingMode.MOMIR_BASIC,
+        )
+        lobby.matchmade = true
+        lobby.ranked = key.ranked && lobby.rankedEligible
+        val sharedSet = if (key.mode == MatchmakingMode.RANDOM_DECK) deckGenerator.randomSetCode() else null
+        players.forEach { (id, name) ->
+            lobby.players += QuickGameLobbyPlayer(
+                playerId = id,
+                playerName = name,
+                // An empty list is "the server builds my deck" — see QuickGameLobbyPlayer.deckList.
+                deckList = if (sharedSet != null) emptyMap() else null,
+                setCode = sharedSet,
+            )
+        }
+        lobbyRepository.save(lobby)
+        players.forEach { (id, _) -> markPlayerInLobby(id, lobby.lobbyId) }
+        logger.info(
+            "Matchmade lobby ${lobby.lobbyId}: ${players.joinToString(" vs ") { it.second }} " +
+                "(${key.mode}${key.format?.let { " ${it.displayName}" } ?: ""}, ranked=${lobby.ranked})",
+        )
+        if (key.mode == MatchmakingMode.CONSTRUCTED) {
+            broadcastState(lobby)
+        } else {
+            lobbyRepository.withLock(lobby.lobbyId) { current ->
+                if (current == null || current.started) return@withLock
+                current.players.forEach { it.ready = true }
+                current.started = true
+                startGame(current)
+            }
+        }
+        return true
+    }
+
+    /**
+     * Start a rematch straight away: a fresh lobby with the finished game's settings and both seats'
+     * same deck submissions, already readied, handed to the ordinary [startGame]. Locked like a
+     * matchmade lobby so nobody else can wander in between. Returns false, creating nothing, when
+     * either player is in a lobby again.
+     */
+    fun startRematch(recipe: com.wingedsheep.gameserver.social.RematchRecipe): Boolean {
+        if (recipe.seats.any { lobbyRepository.findContainingPlayer(it.playerId) != null }) return false
+        val lobby = QuickGameLobby(vsAi = false, setCode = recipe.setCode, momirBasic = recipe.momirBasic)
+        lobby.applyFormat(recipe.format)
+        lobby.matchmade = true
+        lobby.ranked = recipe.ranked && lobby.rankedEligible
+        lobby.playingForAnte = recipe.playingForAnte && !lobby.ranked
+        recipe.seats.forEach { lobby.players += it.copy(ready = true) }
+        lobbyRepository.save(lobby)
+        recipe.seats.forEach { markPlayerInLobby(it.playerId, lobby.lobbyId) }
+        logger.info("Rematch lobby ${lobby.lobbyId}: ${recipe.seats.joinToString(" vs ") { it.playerName }}")
+        return lobbyRepository.withLock(lobby.lobbyId) { current ->
+            if (current == null || current.started) return@withLock false
+            current.started = true
+            startGame(current)
+        }
+    }
+
+    /**
+     * Quietly drop [playerId]'s vs-AI lobby — they were warming up while queued and the queue just
+     * found them a real opponent. Only ever touches a single-player lobby, so nobody else is told.
+     */
+    fun dissolvePracticeLobby(playerId: com.wingedsheep.sdk.model.EntityId) {
+        val lobby = lobbyRepository.findContainingPlayer(playerId)?.takeIf { it.vsAi } ?: return
+        lobbyRepository.withLock(lobby.lobbyId) { current ->
+            if (current == null || current.started) return@withLock
+            current.players.forEach { clearPlayerLobbyMembership(it.playerId, current.lobbyId) }
+            lobbyRepository.remove(current.lobbyId)
+        }
     }
 
     private fun handleJoin(session: WebSocketSession, message: ClientMessage.JoinQuickGameLobby) {
@@ -405,6 +572,10 @@ class QuickGameLobbyHandler(
                     sender.sendError(session, ErrorCode.INVALID_ACTION, "This is a single-player lobby")
                     return@withLock
                 }
+                if (lobby.matchmade) {
+                    sender.sendError(session, ErrorCode.INVALID_ACTION, "This lobby is a matchmade game")
+                    return@withLock
+                }
                 if (lobby.isFull) {
                     sender.sendError(session, ErrorCode.GAME_FULL, "Lobby is full")
                     return@withLock
@@ -427,7 +598,13 @@ class QuickGameLobbyHandler(
             if (current == null) return@withLock
             // Host (first non-AI player) leaving closes the lobby for everyone.
             val firstHuman = current.players.firstOrNull { !it.isAi }
-            if (firstHuman?.playerId == playerSession.playerId) {
+            if (current.matchmade) {
+                // No host to wait on a replacement opponent: the pairing is over for both.
+                logger.info("${playerSession.playerName} left matchmade lobby ${current.lobbyId}; closing")
+                current.players.forEach { clearPlayerLobbyMembership(it.playerId, current.lobbyId) }
+                broadcastClosed(current, "${playerSession.playerName} left the match")
+                lobbyRepository.remove(current.lobbyId)
+            } else if (firstHuman?.playerId == playerSession.playerId) {
                 logger.info("Host ${playerSession.playerName} left lobby ${current.lobbyId}; closing for all")
                 current.players.forEach { clearPlayerLobbyMembership(it.playerId, current.lobbyId) }
                 broadcastClosed(current, "Host left the lobby")
@@ -461,6 +638,7 @@ class QuickGameLobbyHandler(
         }
         // Empty deck = "random pool" — skip validation. The commander field, if any, is meaningless
         // without an accompanying deck list and gets dropped at the lobby layer below.
+        val companion = message.companion?.takeIf { it.isNotBlank() && message.deckList.isNotEmpty() }
         if (message.deckList.isNotEmpty()) {
             // Commander-aware path: the wire format `deckList` represents the *full* deck (matches
             // the saved-deck "merged" view the picker emits), but `Deck.cards` follows the server
@@ -468,30 +646,34 @@ class QuickGameLobbyHandler(
             // `cards`. Strip one copy here so the validator (which re-adds it) doesn't trip the
             // singleton check on the commander itself.
             val result = if (message.commander != null) {
-                val cardsWithoutCommander = stripCommanderFromCards(message.deckList, message.commander)
-                val deckCards = cardsWithoutCommander.flatMap { (name, count) -> List(count) { name } }
-                val richEntries = message.cardEntries
-                    ?.filterNot { it.name == message.commander && it.printing == message.commanderPrinting }
-                    ?.takeIf { it.isNotEmpty() }
-                val deck = if (richEntries != null) {
-                    com.wingedsheep.sdk.model.Deck.fromEntries(
-                        entries = richEntries.map { com.wingedsheep.sdk.model.CardEntry(it.name, it.printing) },
-                        commander = message.commander,
-                        commanderPrinting = message.commanderPrinting,
-                    )
-                } else {
-                    com.wingedsheep.sdk.model.Deck(
-                        cards = deckCards,
-                        commander = message.commander,
-                        commanderPrinting = message.commanderPrinting,
-                    )
-                }
-                deckValidator.validate(deck, lobby.format)
+                val deck = DeckRequestConverter.toCommanderDeck(
+                    deckList = message.deckList,
+                    cardEntries = message.cardEntries,
+                    commander = message.commander,
+                    commanderPrinting = message.commanderPrinting,
+                    secondCommander = message.secondCommander,
+                    secondCommanderPrinting = message.secondCommanderPrinting,
+                    sideboard = message.sideboard.orEmpty(),
+                    companion = companion,
+                )
+                deckValidator.validate(deck, lobby.format, playingForAnte = lobby.playingForAnte)
+            } else if (companion != null || !message.sideboard.isNullOrEmpty()) {
+                // The structured path is the one that reads a companion and its sideboard (the
+                // sideboard is checked for ante cards, CR 407.3).
+                deckValidator.validate(
+                    DeckRequestConverter.toDeck(
+                        message.deckList, message.cardEntries,
+                        sideboard = message.sideboard.orEmpty(), companion = companion,
+                    ),
+                    lobby.format,
+                    playingForAnte = lobby.playingForAnte,
+                )
             } else {
                 deckValidator.validate(
                     deckList = message.deckList,
                     format = lobby.format,
                     cardEntries = message.cardEntries,
+                    playingForAnte = lobby.playingForAnte,
                 )
             }
             if (!result.valid) {
@@ -520,6 +702,13 @@ class QuickGameLobbyHandler(
             emptyMap()
         }
 
+        // The format the client says the deck was built for, kept only when the deck is legal there —
+        // an Auto AI builds its own deck for it, so a claim the deck doesn't back is dropped.
+        val declaredFormat = message.deckFormat
+            ?.takeIf { message.deckList.isNotEmpty() }
+            ?.let { name -> DeckFormat.entries.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) } }
+            ?.takeIf { !it.isCommanderShape && deckValidator.validate(message.deckList, it).valid }
+
         lobbyRepository.withLock(lobby.lobbyId) { current ->
             if (current == null) return@withLock
             val player = current.findPlayer(playerSession.playerId) ?: return@withLock
@@ -527,9 +716,13 @@ class QuickGameLobbyHandler(
             // (which can re-emit its current value on every render) and keeps the ready flag
             // sticky as long as the player's chosen deck hasn't actually changed. The sideboard is
             // part of "the same deck" — editing only the sideboard still has to resubmit.
+            val secondCommander = message.secondCommander.takeIf { message.commander != null }
             if (player.deckList == message.deckList &&
                 player.commander == message.commander &&
-                player.sideboard == sanitizedSideboard
+                player.secondCommander == secondCommander &&
+                player.sideboard == sanitizedSideboard &&
+                player.companion == companion &&
+                player.deckFormat == declaredFormat
             ) {
                 return@withLock
             }
@@ -538,6 +731,9 @@ class QuickGameLobbyHandler(
             // For random-pool submissions the commander field is meaningless; drop it so a stale
             // commander from a prior submission doesn't leak into the game start.
             player.commander = if (message.deckList.isNotEmpty()) message.commander else null
+            player.secondCommander = if (message.deckList.isNotEmpty()) secondCommander else null
+            player.companion = companion
+            player.deckFormat = declaredFormat
             // Submitting a *new* deck un-readies the player so they have to confirm again.
             player.ready = false
             broadcastState(current)
@@ -584,13 +780,14 @@ class QuickGameLobbyHandler(
         }
     }
 
-    private fun startGame(lobby: QuickGameLobby) {
+    /** Returns false when the game could not start (the lobby was closed with the reason). */
+    private fun startGame(lobby: QuickGameLobby): Boolean {
         // The one Rules × Table conflict, read from the single statement of it.
         lobby.rulesTableConflict?.let { conflict ->
             logger.warn("Lobby ${lobby.lobbyId}: $conflict")
             broadcastClosed(lobby, conflict)
             lobbyRepository.remove(lobby.lobbyId)
-            return
+            return false
         }
 
         // Ranked play only counts when every human seat is a signed-in account (no guests). A guest may
@@ -619,6 +816,8 @@ class QuickGameLobbyHandler(
             gameSession.rankedMode = com.wingedsheep.gameserver.ranking.Ranked
                 .modeForQuickGame(lobby.rules, lobby.format, lobby.momirBasic)
         }
+        // CR 407 — ranked games are never played for ante (the handlers already keep the two apart).
+        gameSession.playingForAnte = lobby.playingForAnte && !gameSession.ranked
         // Commander rules run on the engine's Commander format; everything else falls through to
         // Standard. Brawl-specific tweaks (60 cards, alternative life total) are Phase 4 territory —
         // Phase 1 covers Commander.
@@ -631,19 +830,19 @@ class QuickGameLobbyHandler(
             gameSession.engineFormat = com.wingedsheep.sdk.core.Format.TwoHeadedGiant()
             gameSession.teams = lobby.teamAssignment()
         }
-        // Each player can pick their own set for a Random pool. For a vs-AI lobby the AI mirrors
-        // the (single) human's set so both sides play the same set. Resolve that set ONCE here —
-        // rolling a single random set when the human left the pool on "Random" — and reuse it for
-        // the human's deck and the AI's deck. Previously the human's deck and the AI's deck each
-        // rolled their own random set, so a "Random Set" pool handed them two different sets.
+        // Each player can pick their own set for a Random pool. Every seat that left it on "Any
+        // set" — and the AI on its default — shares one set, resolved ONCE here: a set a human
+        // pinned if there is one, else a single random roll. Rolling per seat handed two players on
+        // "Random deck > Any set" decks from two different sets.
         val humanPlayers = lobby.players.filter { !it.isAi }
-        val aiSetCode = lobby.setCode
-            ?: humanPlayers.firstOrNull()?.setCode
-            ?: deckGenerator.randomSetCode()
-        gameSession.quickGameSetCode = aiSetCode
+        val sharedRandomSet = lobby.pinnedRandomSetCode() ?: deckGenerator.randomSetCode()
+        gameSession.quickGameSetCode = sharedRandomSet
         // Momir Basic: both seats play the fixed 60-basic deck and the avatar flips creatures from
         // the whole card base (every set). The engine reads `eligibleCreatureNames` from this format
         // at game init and when the avatar's "{X}, Discard a card" ability resolves.
+        // Momir Basic has no deckbuilding and so no sideboard; every seat shares one generated
+        // wishboard instead, so a Learn creature or wish the avatar flips has something to fetch.
+        val momirWishboard = if (lobby.momirBasic) MomirBasicSetup.wishboard() else emptyMap()
         if (lobby.momirBasic) {
             val pool = MomirBasicSetup.allCreaturePool()
             gameSession.engineFormat = com.wingedsheep.sdk.core.Format.MomirBasic(eligibleCreatureNames = pool)
@@ -662,12 +861,9 @@ class QuickGameLobbyHandler(
         // commander.
         val humanDecks = humanPlayers.associate { lobbyPlayer ->
             // Momir Basic has no deckbuilding: the fixed 60 basics are substituted at seating time.
-            if (lobby.momirBasic) return@associate lobbyPlayer.playerId to GeneratedDeck(emptyMap())
-            // In a vs-AI lobby, share the resolved set with the single human so a random pool draws
-            // from the same set the AI got; multi-human lobbies keep each player's own set, rolling
-            // an independent random when they didn't pick one.
-            val randomFallbackSet = if (lobby.vsAi) aiSetCode else deckGenerator.randomSetCode()
-            val resolved = resolveDeck(lobbyPlayer, randomFallbackSet, lobby.format, lobby.usesCommanderRules)
+            if (lobby.momirBasic) return@associate lobbyPlayer.playerId to GeneratedDeck(emptyMap(), sideboard = momirWishboard)
+            // A seat that pinned its own sets keeps them; one on "Any set" draws from the shared set.
+            val resolved = resolveDeck(lobbyPlayer, sharedRandomSet, lobby.format, lobby.usesCommanderRules)
             lobbyPlayer.playerId to resolved.copy(
                 deckList = EasterEggDeckInjector.maybeInjectEasterEggs(
                     lobbyPlayer.playerName,
@@ -681,8 +877,17 @@ class QuickGameLobbyHandler(
         }
         val aiDeck = when {
             !lobby.vsAi -> null
-            lobby.momirBasic -> GeneratedDeck(MomirBasicSetup.fixedBasicDeck)
-            else -> randomDeckResolver.resolve(lobby.aiDeckSpec, lobby.format, aiSetCode, lobby.usesCommanderRules)
+            lobby.momirBasic -> GeneratedDeck(MomirBasicSetup.fixedBasicDeck, sideboard = momirWishboard)
+            // An Auto AI facing a submitted deck plays out of that deck's sets — a sibling starter
+            // when there is one — instead of a pool rolled from an unrelated set.
+            else -> randomDeckResolver.resolveAgainst(
+                lobby.aiDeckSpec,
+                lobby.format,
+                sharedRandomSet,
+                lobby.usesCommanderRules,
+                opponentDeck = lobby.submittedHumanDeck(),
+                opponentDeckFormat = lobby.submittedHumanDeckFormat(),
+            )
         }
 
         if (lobby.usesCommanderRules && !lobby.momirBasic) {
@@ -696,13 +901,13 @@ class QuickGameLobbyHandler(
                     "${seatWithoutCommander.playerName}'s deck has no commander designated — pick a deck with a commander to play ${lobby.format?.displayName ?: "Commander"}",
                 )
                 lobbyRepository.remove(lobby.lobbyId)
-                return
+                return false
             }
             if (aiDeck != null && aiDeck.commander == null) {
                 logger.error("Lobby ${lobby.lobbyId}: could not build a ${lobby.format?.displayName ?: "Commander"} deck for the AI seat")
                 broadcastClosed(lobby, "Could not build a Commander deck for the AI — pick one for it and try again")
                 lobbyRepository.remove(lobby.lobbyId)
-                return
+                return false
             }
         }
 
@@ -719,7 +924,7 @@ class QuickGameLobbyHandler(
                 logger.error("Lobby ${lobby.lobbyId}: lost session for ${lobbyPlayer.playerName} on game start")
                 broadcastClosed(lobby, "A player disconnected before the game started")
                 lobbyRepository.remove(lobby.lobbyId)
-                return
+                return false
             }
             // Pass the commander only under Commander rules; clear it otherwise so a stale
             // commander on a saved deck doesn't accidentally route into a Standard game. Strip
@@ -727,20 +932,25 @@ class QuickGameLobbyHandler(
             // (= library) excluding the commander, matching `Deck.cards` convention.
             val commander = humanDecks.getValue(lobbyPlayer.playerId).commander
                 ?.takeIf { lobby.usesCommanderRules }
+            // A partner pair (CR 702.124) only ever comes from a submitted deck, never a generated one.
+            val commanders = listOfNotNull(
+                commander,
+                lobbyPlayer.secondCommander?.takeIf { commander != null && commander == lobbyPlayer.commander },
+            )
             // Momir Basic ignores any submitted deck: every seat plays the same fixed 60 basics.
             val engineDeckList = when {
                 lobby.momirBasic -> MomirBasicSetup.fixedBasicDeck
-                commander != null -> stripCommanderFromCards(deckList, commander)
-                else -> deckList
+                else -> DeckRequestConverter.stripCommanders(deckList, commanders)
             }
-            // Momir Basic substitutes a fixed deck and has no sideboard; every other seat brings
-            // whatever it submitted (empty for a random pool).
-            val sideboard = if (lobby.momirBasic) emptyMap() else lobbyPlayer.sideboard
+            // The seat's cards outside the game: its submitted sideboard, the rest of a random
+            // sealed pool, a random constructed deck's wishboard, or Momir's shared wishboard.
             gameSession.addPlayer(
                 playerSession,
                 engineDeckList,
-                commanderCardName = commander,
-                sideboard = sideboard,
+                commanderCardNames = commanders,
+                sideboard = humanDecks.getValue(lobbyPlayer.playerId).sideboard,
+                // A companion comes only with a submitted deck — and Momir Basic plays a fixed one.
+                companion = if (lobby.momirBasic) null else lobbyPlayer.companion?.takeIf { lobbyPlayer.deckList?.isNotEmpty() == true },
             )
             // Persistence info so a mid-game reconnect can find the player by token.
             val token = sessionRegistry.getTokenByWsId(playerSession.webSocketSession.id)
@@ -757,7 +967,7 @@ class QuickGameLobbyHandler(
             // lives next to the lobby state that configures it, not inside AiGameManager.
             aiGameManager.createAiOpponent(
                 gameSession = gameSession,
-                setCode = aiSetCode,
+                setCode = sharedRandomSet,
                 onActionReady = { id, action, interactionEpoch ->
                     gamePlayHandler.handleAiAction(gameSession, id, action, interactionEpoch)
                 },
@@ -765,6 +975,7 @@ class QuickGameLobbyHandler(
                 onMulliganTake = { id -> gamePlayHandler.handleAiMulliganTake(gameSession, id) },
                 onBottomCards = { id, cardIds -> gamePlayHandler.handleAiBottomCards(gameSession, id, cardIds) },
                 deckOverride = aiDeck.deckList,
+                sideboard = aiDeck.sideboard,
                 // Cleared outside Commander rules so a commander on a host-picked deck can't route
                 // into a Standard game.
                 commanderCardName = aiDeck.commander?.takeIf { lobby.usesCommanderRules },
@@ -782,9 +993,12 @@ class QuickGameLobbyHandler(
 
         gamePlayHandler.startGame(gameSession)
         logger.info("Quick lobby ${lobby.lobbyId} → game ${gameSession.sessionId} started")
+        com.wingedsheep.gameserver.social.RematchRecipe.of(lobby)
+            ?.let { rematchRecipes.record(gameSession.sessionId, it) }
         // The lobby has done its job; remove it so the same player can create another later.
         lobby.players.forEach { clearPlayerLobbyMembership(it.playerId, lobby.lobbyId) }
         lobbyRepository.remove(lobby.lobbyId)
+        return true
     }
 
     /**
@@ -803,24 +1017,7 @@ class QuickGameLobbyHandler(
             return
         }
         // Send just this player the current snapshot.
-        val msg = ServerMessage.QuickGameLobbyState(
-            lobbyId = lobby.lobbyId,
-            vsAi = lobby.vsAi,
-            setCode = lobby.setCode,
-            players = lobby.players.mapIndexed { i, p -> p.toView(lobby, i) },
-            youPlayerId = playerId,
-            canStart = lobby.allReady(),
-            isPublic = lobby.isPublic,
-            format = lobby.format,
-            rules = lobby.rules.name,
-            momirBasic = lobby.momirBasic,
-            twoHeadedGiant = lobby.twoHeadedGiant,
-            maxPlayers = lobby.maxPlayers,
-            ranked = lobby.ranked,
-            rankedEligible = lobby.rankedEligible,
-            aiDeck = if (lobby.vsAi) AiDeckSpecView.of(lobby.aiDeckSpec) else null,
-        )
-        sender.send(session, msg)
+        sender.send(session, stateFor(lobby, playerId))
     }
 
     /** The signed-in account id behind a lobby seat, or null for a guest. */
@@ -841,10 +1038,10 @@ class QuickGameLobbyHandler(
             // commander shape it means a generated deck *and* its commander, so "Random" is a legal
             // Commander seat rather than one the engine refuses at init. Without a format it stays a
             // sealed pool from their own set choice, falling back to the caller's pre-resolved set
-            // (shared with the AI in a vs-AI lobby so both play the same set).
+            // (shared by every "Any set" seat and the AI, so the whole table plays one set).
             return randomDeckResolver.randomDeck(format, player.setCodes, randomFallbackSet, commanderRules)
         }
-        return GeneratedDeck(submitted)
+        return GeneratedDeck(submitted, sideboard = player.sideboard)
     }
 
     private fun broadcastState(lobby: QuickGameLobby) {
@@ -854,42 +1051,30 @@ class QuickGameLobbyHandler(
                 .getAllIdentities()
                 .firstOrNull { it.playerId == player.playerId }
                 ?.webSocketSession ?: continue
-            val msg = ServerMessage.QuickGameLobbyState(
-                lobbyId = lobby.lobbyId,
-                vsAi = lobby.vsAi,
-                setCode = lobby.setCode,
-                players = lobby.players.mapIndexed { i, p -> p.toView(lobby, i) },
-                youPlayerId = player.playerId,
-                canStart = lobby.allReady(),
-                isPublic = lobby.isPublic,
-                format = lobby.format,
-                rules = lobby.rules.name,
-                momirBasic = lobby.momirBasic,
-                twoHeadedGiant = lobby.twoHeadedGiant,
-                maxPlayers = lobby.maxPlayers,
-                ranked = lobby.ranked,
-                rankedEligible = lobby.rankedEligible,
-                aiDeck = if (lobby.vsAi) AiDeckSpecView.of(lobby.aiDeckSpec) else null,
-            )
-            sender.send(ws, msg)
+            sender.send(ws, stateFor(lobby, player.playerId))
         }
     }
 
-    /**
-     * Subtract one copy of [commander] from [deckList]. Mirrors the web-client's
-     * `stripCommanderFromCards` helper — the wire format ships the merged deck (commander
-     * counted in `deckList`), but the server's `Deck.cards` convention excludes it. Idempotent
-     * when the commander isn't present.
-     */
-    private fun stripCommanderFromCards(
-        deckList: Map<String, Int>,
-        commander: String,
-    ): Map<String, Int> {
-        val current = deckList[commander] ?: return deckList
-        val next = deckList.toMutableMap()
-        if (current <= 1) next.remove(commander) else next[commander] = current - 1
-        return next
-    }
+    private fun stateFor(lobby: QuickGameLobby, playerId: com.wingedsheep.sdk.model.EntityId) =
+        ServerMessage.QuickGameLobbyState(
+            lobbyId = lobby.lobbyId,
+            vsAi = lobby.vsAi,
+            setCode = lobby.setCode,
+            players = lobby.players.mapIndexed { i, p -> p.toView(lobby, i) },
+            youPlayerId = playerId,
+            canStart = lobby.allReady(),
+            isPublic = lobby.isPublic,
+            format = lobby.format,
+            rules = lobby.rules.name,
+            momirBasic = lobby.momirBasic,
+            twoHeadedGiant = lobby.twoHeadedGiant,
+            maxPlayers = lobby.maxPlayers,
+            ranked = lobby.ranked,
+            rankedEligible = lobby.rankedEligible,
+            aiDeck = if (lobby.vsAi) AiDeckSpecView.of(lobby.aiDeckSpec) else null,
+            matchmade = lobby.matchmade,
+            playingForAnte = lobby.playingForAnte,
+        )
 
     private fun broadcastClosed(lobby: QuickGameLobby, reason: String) {
         for (player in lobby.players) {
@@ -925,6 +1110,7 @@ class QuickGameLobbyHandler(
             deckLabel = label,
             setCode = setCode,
             setCodes = setCodes,
+            randomDeck = !lobby.momirBasic && !isAi && deckList?.isEmpty() == true,
             teamIndex = lobby.teamIndexOf(seatIndex),
         )
     }
@@ -941,11 +1127,34 @@ class QuickGameLobbyHandler(
      * What "let the server decide" resolves to, named by the axis that decides it. A lobby can run
      * Commander with no deck-legality restriction at all, and "sealed" would be a lie there.
      */
-    private fun autoAiDeckLabel(lobby: QuickGameLobby): String = when {
-        lobby.format != null -> "Auto (${lobby.format!!.displayName})"
-        lobby.usesCommanderRules -> "Auto (Commander)"
-        else -> "Auto (sealed)"
+    private fun autoAiDeckLabel(lobby: QuickGameLobby): String {
+        val shape = when {
+            lobby.format != null -> lobby.format!!.displayName
+            lobby.usesCommanderRules -> "Commander"
+            else -> "sealed"
+        }
+        // Once the human has picked a deck, Auto means "out of that deck's sets" — say which.
+        val humanDeck = lobby.submittedHumanDeck()
+        val matched = randomDeckResolver.matchingSets(humanDeck)
+        // A constructed list with no set identity is matched by format instead — name the format.
+        val tier = randomDeckResolver.matchedFormat(
+            humanDeck, lobby.submittedHumanDeckFormat(), lobby.format, lobby.usesCommanderRules,
+        )
+        return when {
+            tier != null -> "Auto (${tier.displayName})"
+            matched.isEmpty() -> "Auto ($shape)"
+            lobby.format != null || lobby.usesCommanderRules -> "Auto ($shape · ${matched.joinToString(", ")})"
+            else -> "Auto (${matched.joinToString(", ")})"
+        }
     }
+
+    /** The first human seat's submitted decklist — null while it is choosing or on Random. */
+    private fun QuickGameLobby.submittedHumanDeck(): Map<String, Int>? =
+        players.firstNotNullOfOrNull { player -> player.deckList?.takeIf { !player.isAi && it.isNotEmpty() } }
+
+    /** The format the seat behind [submittedHumanDeck] declared its deck was built for, or null. */
+    private fun QuickGameLobby.submittedHumanDeckFormat(): DeckFormat? =
+        players.firstOrNull { !it.isAi && !it.deckList.isNullOrEmpty() }?.deckFormat
 
     private fun validateAiDeck(
         spec: AiDeckSpec.Fixed,

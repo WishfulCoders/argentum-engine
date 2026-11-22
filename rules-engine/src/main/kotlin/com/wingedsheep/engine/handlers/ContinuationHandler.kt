@@ -16,7 +16,7 @@ import com.wingedsheep.engine.state.GameState
 class ContinuationHandler(
     private val services: EngineServices
 ) {
-    private val effectRunner = EffectContinuationRunner(services.effectExecutorRegistry)
+    private val effectRunner = com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter(services.effectExecutorRegistry::execute)
 
     private val registry = ContinuationResumerRegistry().apply {
         val forcedPlayResumer = ForcedPlayResumer(services)
@@ -41,6 +41,7 @@ class ContinuationHandler(
         registerModule(chainResumer)
         registerAutoResumerModule(chainResumer)
         registerModule(CreatureTypeChoiceContinuationResumer(services))
+        registerModule(VoteContinuationResumer())
         registerModule(TextReplacementContinuationResumer(services))
         registerModule(DrawReplacementContinuationResumer(services))
         registerModule(CardSpecificContinuationResumer(services))
@@ -56,9 +57,12 @@ class ContinuationHandler(
         registerModule(ModalAndCloneContinuationResumer(services))
         registerModule(RoomDoorContinuationResumer(services))
         registerModule(CastModalContinuationResumer(services))
+        registerModule(ActivationModalContinuationResumer(services))
         registerModule(ModalTriggerContinuationResumer(services))
         registerModule(TokenContinuationResumer(services))
         registerModule(RingTemptContinuationResumer(services))
+        registerModule(DungeonContinuationResumer(services))
+        registerModule(TriggerOrderContinuationResumer())
         registerModule(AmassContinuationResumer(services))
         val leylineResumer = LeylineContinuationResumer(services)
         registerModule(leylineResumer)
@@ -119,7 +123,18 @@ class ContinuationHandler(
             if (error != null) return ExecutionResult.error(state, error)
         }
         val (_, stateAfterPop) = state.popContinuation()
-        val result = registry.resume(stateAfterPop, suspension.answer, suspension.question, response, continueWithin)
+        val answer = suspension.answer
+        if (answer is GrantedEntryCopyOrderContinuation && answer.replay is AnswerReplay) {
+            // An entry-copy order asked for a resumer's entrant: answer the resumed question again.
+            val chosen = com.wingedsheep.engine.handlers.effects.copy.GrantedEntryCopy.chosenOption(answer.options, response)
+                ?: return ExecutionResult.error(state, "Expected one of the granted copies to be chosen")
+            val replayed = com.wingedsheep.engine.handlers.effects.copy.GrantedEntryCopy
+                .withAnswer(stateAfterPop, answer.entityId, chosen).restoreSuspension(answer.replay.suspension)
+            return resumeWithin(replayed, answer.replay.response, continuationFloor)
+        }
+        val resumed = registry.resume(stateAfterPop, answer, suspension.question, response, continueWithin)
+        val result = com.wingedsheep.engine.handlers.effects.copy.GrantedEntryCopy.askIfUnasked(
+            stateAfterPop, resumed.state) { AnswerReplay(suspension, response) } ?: resumed
         // Casting resumers can finish a local picker without draining enclosing work.
         // A mandatory play must then retry the card or resume the original resolution.
         val completed = if (result.outcome is Outcome.Done &&
@@ -134,6 +149,14 @@ class ContinuationHandler(
             }
         })
     }
+
+    /**
+     * Run the automatic work waiting on top of [state]'s continuation stack — for a main game
+     * resuming after its subgame (CR 729.5), whose creating spell still has to finish resolving.
+     * Stops at the first question, as after any answer.
+     */
+    fun drainAutomatic(state: GameState, events: List<GameEvent>): ExecutionResult =
+        checkForMoreContinuations(state, events)
 
     /**
      * Drain the automatic work a resumer uncovered, then report where execution ended up.

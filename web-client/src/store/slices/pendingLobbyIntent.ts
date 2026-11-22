@@ -43,8 +43,17 @@ export interface PendingLobbyIntent {
   readonly deckTab?: DeckPickerTab
   /** A saved deck to preselect, by name — resolved against the merged deck library. */
   readonly deckName?: string
+  /** A server starter deck to preselect, by name. */
+  readonly exampleName?: string
   /** Ready up / start as soon as the lobby is configured. Only honoured when nobody can join. */
   readonly autoStart?: boolean
+  /**
+   * A tournament lobby the host means to fill with AI only: start it once this many players are
+   * seated. A tournament lobby always has an invite code, so {@link autoStart} alone never starts
+   * one — this count is what says nobody else is coming, and waiting for it keeps the start from
+   * racing the AI seats, which arrive one broadcast at a time.
+   */
+  readonly startWhenSeated?: number
   /** Anything a setup couldn't restore, shown once in the lobby rather than swallowed. */
   readonly notes?: readonly string[]
 }
@@ -53,7 +62,7 @@ export interface PendingLobbyIntent {
 export type PendingCubeUpdate = Required<
   Pick<UpdateLobbySettingsMessage,
     'cubeCards' | 'cubeName' | 'cubeBasicLandSetCode' | 'packSize' | 'cubePoolPlay'>
->
+> & Pick<UpdateLobbySettingsMessage, 'cubeBoosterStyle' | 'cubeRarities'>
 
 /** The omnibus bag, minus anything the create message already carried. */
 export type PendingSettingsUpdate = Omit<UpdateLobbySettingsMessage, 'type'>
@@ -64,6 +73,11 @@ export interface PendingLobbyApply {
   readonly settings?: PendingSettingsUpdate
   /** Quick lobbies take their AI deck as its own message, after the lobby exists. */
   readonly aiDeck?: AiDeckSpec
+  /**
+   * The sets your Random deck is rolled from — a quick-lobby seat setting, so it too waits for the
+   * lobby to exist. Sent before the deck picker's empty "roll me one" submission, which is debounced.
+   */
+  readonly randomSetCodes?: readonly string[]
   /** Added last: switching `gameMode` with AI already seated is rejected outright. */
   readonly aiSeats: number
 }

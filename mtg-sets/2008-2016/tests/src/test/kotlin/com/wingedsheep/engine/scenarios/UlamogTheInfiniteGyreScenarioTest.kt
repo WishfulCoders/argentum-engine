@@ -1,74 +1,95 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.core.CastSpell
+import com.wingedsheep.engine.core.PaymentStrategy
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.roe.cards.UlamogTheInfiniteGyre
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
-import io.kotest.assertions.withClue
+import com.wingedsheep.sdk.model.Deck
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 
 /**
- * Ulamog, the Infinite Gyre (ROE #12) — {11} Legendary Creature — Eldrazi 10/10
+ * Ulamog, the Infinite Gyre (ROE #12).
  *
- *   When you cast this spell, destroy target permanent.
- *   Indestructible
- *   Annihilator 4
- *   When Ulamog is put into a graveyard from anywhere, its owner shuffles their graveyard into
- *   their library.
- *
- * The cast trigger resolves before Ulamog does; the graveyard shuffle fires from any zone, here
- * from the library (milled), and takes the whole graveyard with it — Ulamog included.
+ *  - The cast trigger destroys its target before Ulamog itself resolves.
+ *  - "When Ulamog is put into a graveyard from anywhere, its owner shuffles their graveyard into
+ *    their library" fires from the graveyard (here via the legend rule — Ulamog is indestructible)
+ *    and moves the owner's whole graveyard, Ulamog included, into the library.
  */
-class UlamogTheInfiniteGyreScenarioTest : ScenarioTestBase() {
-    init {
-        test("the cast trigger destroys the target permanent before Ulamog resolves") {
-            val game = scenario().withPlayers("P1", "P2")
-                .withCardInHand(1, "Ulamog, the Infinite Gyre")
-                .withLandsOnBattlefield(1, "Island", 11)
-                .withCardOnBattlefield(2, "Juggernaut")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
+class UlamogTheInfiniteGyreScenarioTest : FunSpec({
 
-            game.castSpell(1, "Ulamog, the Infinite Gyre").error shouldBe null
-            if (game.hasPendingDecision()) {
-                game.selectTargets(listOf(game.findPermanent("Juggernaut")!!)).error shouldBe null
-            }
-            withClue("the trigger sits above the spell") {
-                game.state.stack.size shouldBe 2
-            }
-            game.passPriority()
-            game.passPriority()
-            withClue("Juggernaut is destroyed while Ulamog is still on the stack") {
-                game.isInGraveyard(2, "Juggernaut") shouldBe true
-                game.isOnBattlefield("Ulamog, the Infinite Gyre") shouldBe false
-            }
-            game.resolveStack()
-            game.isOnBattlefield("Ulamog, the Infinite Gyre") shouldBe true
-        }
+    val name = "Ulamog, the Infinite Gyre"
 
-        test("milled from the library, Ulamog shuffles its owner's whole graveyard into the library") {
-            val game = scenario().withPlayers("P1", "P2")
-                .withCardInHand(1, "Mental Note")
-                .withLandsOnBattlefield(1, "Island", 1)
-                .withCardInLibrary(1, "Ulamog, the Infinite Gyre")
-                .withCardInLibrary(1, "Hill Giant")
-                .withCardInLibrary(1, "Grizzly Bears")
-                .withCardInGraveyard(1, "Lightning Bolt")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-
-            game.castSpell(1, "Mental Note").error shouldBe null
-            game.resolveStack()
-
-            withClue("Mental Note milled Ulamog and Hill Giant and drew Grizzly Bears") {
-                game.isInHand(1, "Grizzly Bears") shouldBe true
-            }
-            withClue("the trigger shuffled the graveyard — Ulamog, the Giant, the Bolt and Mental Note — away") {
-                game.graveyardSize(1) shouldBe 0
-                game.librarySize(1) shouldBe 4
-                game.findCardsInLibrary(1, "Ulamog, the Infinite Gyre").size shouldBe 1
-            }
-        }
+    fun createDriver(): GameTestDriver {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(UlamogTheInfiniteGyre)
+        driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver
     }
-}
+
+    fun castUlamog(driver: GameTestDriver, caster: com.wingedsheep.sdk.model.EntityId, target: com.wingedsheep.sdk.model.EntityId) {
+        val ulamog = driver.putCardInHand(caster, name)
+        driver.giveMana(caster, Color.GREEN, 11)
+        driver.submit(
+            CastSpell(playerId = caster, cardId = ulamog, paymentStrategy = PaymentStrategy.FromPool)
+        ).error shouldBe null
+        driver.submitTargetSelection(caster, listOf(target)).error shouldBe null
+    }
+
+    test("cast trigger destroys target permanent before Ulamog resolves") {
+        val driver = createDriver()
+        val caster = driver.activePlayer!!
+        val opponent = driver.getOpponent(caster)
+        val victim = driver.putCreatureOnBattlefield(opponent, "Centaur Courser")
+
+        castUlamog(driver, caster, victim)
+
+        driver.bothPass()
+        driver.getGraveyard(opponent).contains(victim) shouldBe true
+        driver.findPermanent(caster, name) shouldBe null
+
+        driver.bothPass()
+        driver.findPermanent(caster, name) shouldNotBe null
+    }
+
+    test("put into a graveyard, its owner shuffles their graveyard into their library") {
+        val driver = createDriver()
+        val caster = driver.activePlayer!!
+        val opponent = driver.getOpponent(caster)
+
+        val firstUlamog = driver.putCreatureOnBattlefield(caster, name)
+        val oldCard = driver.putCardInGraveyard(caster, "Savannah Lions")
+        val opponentGraveyardCard = driver.putCardInGraveyard(opponent, "Savannah Lions")
+        val victim = driver.putCreatureOnBattlefield(opponent, "Centaur Courser")
+
+        castUlamog(driver, caster, victim)
+        driver.bothPass() // cast trigger: destroy the Courser
+        driver.bothPass() // second Ulamog resolves -> legend rule
+
+        val secondUlamog = driver.getPermanents(caster).first {
+            driver.getCardName(it) == name && it != firstUlamog
+        }
+        driver.submitCardSelection(caster, listOf(secondUlamog)).error shouldBe null
+        driver.getGraveyard(caster).contains(firstUlamog) shouldBe true
+
+        val libraryBefore = driver.state.getLibrary(caster).size
+        val graveyardBefore = driver.getGraveyard(caster).size
+
+        // Resolve the graveyard trigger.
+        driver.bothPass()
+
+        driver.getGraveyard(caster).size shouldBe 0
+        driver.state.getLibrary(caster).size shouldBe libraryBefore + graveyardBefore
+        driver.state.getLibrary(caster).contains(firstUlamog) shouldBe true
+        driver.state.getLibrary(caster).contains(oldCard) shouldBe true
+        // Only the owner's graveyard is shuffled.
+        driver.getGraveyard(opponent).contains(opponentGraveyardCard) shouldBe true
+        driver.getGraveyard(opponent).contains(victim) shouldBe true
+    }
+})

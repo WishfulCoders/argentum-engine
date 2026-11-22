@@ -297,7 +297,8 @@ class OldManOfTheSeaScenarioTest : FunSpec({
 
         val sbaChecker = com.wingedsheep.engine.mechanics.StateBasedActionChecker(
             driver.zones,
-            cardRegistry = driver.cardRegistry
+            cardRegistry = driver.cardRegistry,
+            finishAbandonedResolution = driver.services.finishAbandonedResolution
         )
 
         // Temporary +2/+0 pump: power 2 → 4 > Old Man's 2. SBAs latch the steal off for good.
@@ -387,7 +388,8 @@ class OldManOfTheSeaScenarioTest : FunSpec({
         // Run state-based actions and verify the Warrior is no longer attacking.
         val sbaChecker = com.wingedsheep.engine.mechanics.StateBasedActionChecker(
             driver.zones,
-            cardRegistry = driver.cardRegistry
+            cardRegistry = driver.cardRegistry,
+            finishAbandonedResolution = driver.services.finishAbandonedResolution
         )
         val sbaResult = sbaChecker.checkAndApply(driver.state)
         sbaResult.outcome shouldBe Outcome.Done

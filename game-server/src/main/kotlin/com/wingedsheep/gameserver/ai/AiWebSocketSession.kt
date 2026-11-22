@@ -464,7 +464,8 @@ class AiWebSocketSession(
             packNumber = message.packNumber,
             pickNumber = message.pickNumber,
             picksRequired = message.picksPerRound,
-            passDirection = message.passDirection
+            passDirection = message.passDirection,
+            podSize = message.podSize.takeIf { it > 0 }
         )
         logger.info("AI draft pick: {}", picks.joinToString(", "))
         callback(aiPlayerId, picks)
@@ -578,6 +579,7 @@ class AiWebSocketSession(
             activePlayerId = delta.activePlayerId ?: previous.activePlayerId,
             priorityPlayerId = delta.priorityPlayerId ?: previous.priorityPlayerId,
             turnNumber = delta.turnNumber ?: previous.turnNumber,
+            roundNumber = delta.roundNumber ?: previous.roundNumber,
             isGameOver = delta.isGameOver ?: previous.isGameOver,
             winnerId = if (delta.winnerId != null) delta.winnerId else previous.winnerId,
             dayNight = delta.dayNight ?: previous.dayNight,
@@ -585,6 +587,9 @@ class AiWebSocketSession(
             gameLog = gameLog,
         )
     }
+
+    /** Whether the AI wants a window the server would auto-pass — see [AiPlayerController.wantsPriority]. */
+    fun wantsPriority(state: com.wingedsheep.engine.state.GameState): Boolean = controller.wantsPriority(state)
 
     fun shutdown() {
         open.set(false)
@@ -653,5 +658,6 @@ private fun ServerMessage.SealedCardInfo.toCardSummary() = CardSummary(
     power = power,
     toughness = toughness,
     oracleText = oracleText,
-    rulings = rulings.map { CardRuling(it.date, it.text) }
+    rulings = rulings.map { CardRuling(it.date, it.text) },
+    setCode = setCode,
 )

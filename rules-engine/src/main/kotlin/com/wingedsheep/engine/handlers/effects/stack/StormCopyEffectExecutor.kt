@@ -4,6 +4,7 @@ import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.library.KeywordActionAmountModifier
 import com.wingedsheep.engine.mechanics.stack.StackPlacement
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
@@ -35,6 +36,21 @@ class StormCopyEffectExecutor(
         if (effect.copyCount <= 0) {
             return EffectResult.success(state)
         }
+        // Storm, conspire, casualty and "copy the next spell" riders are each one copy instruction;
+        // a copy-count replacement (Twinning Staff) resizes it once, before any copy exists.
+        val resized = context.sourceId?.let { spellId ->
+            KeywordActionAmountModifier.copySpell(
+                state, context.controllerId, spellId, effect.copyCount, targetFinder.predicateEvaluator
+            )
+        } ?: effect.copyCount
+        return copy(state, if (resized == effect.copyCount) effect else effect.copy(copyCount = resized), context)
+    }
+
+    private fun copy(
+        state: GameState,
+        effect: StormCopyEffect,
+        context: EffectContext
+    ): EffectResult {
 
         // Modal source (700.2g): targets live per-mode on the original's
         // [SpellOnStackComponent], not as a flat TargetsComponent. Modes are fixed
@@ -217,7 +233,7 @@ class StormCopyEffectExecutor(
             var ordinal = currentOrdinal
             var copiesLeft = remainingCopies
 
-            val sourceSpellComp = currentState.getEntity(sourceId)?.get<SpellOnStackComponent>()
+            val sourceSpellComp = currentState.spellOrLastKnown(sourceId)?.get<SpellOnStackComponent>()
                 ?: return ExecutionResult.error(currentState, "Storm source spell not found: $sourceId")
             val sourceModeTargetsOrdered = sourceSpellComp.modeTargetsOrdered
 
@@ -328,7 +344,8 @@ class StormCopyEffectExecutor(
             tokenRiders: com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent? = null
         ): GameState {
             val hasRiders = tokenRiders != null &&
-                (tokenRiders.addedKeywords.isNotEmpty() || tokenRiders.sacrificeAtStep != null)
+                (tokenRiders.addedKeywords.isNotEmpty() || tokenRiders.sacrificeAtStep != null ||
+                    tokenRiders.startingLoyalty != null)
             if (keywordsForCopy.isEmpty() && !removeLegendary && !hasRiders) return state
             val copyId = events.asReversed()
                 .firstNotNullOfOrNull { e ->

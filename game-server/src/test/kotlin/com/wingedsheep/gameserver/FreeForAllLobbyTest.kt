@@ -41,7 +41,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["game.ai.heuristic-deckbuilding=true"],
+    properties = ["game.ai.skip-llm-deckbuilding=true"],
 )
 class FreeForAllLobbyTest : FunSpec() {
 
@@ -54,6 +54,15 @@ class FreeForAllLobbyTest : FunSpec() {
         classDiscriminator = "type"
         serializersModule = engineSerializersModule
     }
+
+    /**
+     * How long to wait for anything that generates an AI seat's deck. A premade lobby builds the
+     * deck synchronously as the seat sits down — eight boosters through the Draftsim autobuilder per
+     * AI — so a wait that covers several seats is several builds long, and on a loaded CI runner
+     * that outran 15s. `eventually` returns on the first pass, so the headroom costs a green run
+     * nothing.
+     */
+    private val aiDeckTimeout = 60.seconds
 
     private val activeClients = mutableListOf<FfaTestClient>()
     private val activeContainers = mutableListOf<org.apache.tomcat.websocket.WsWebSocketContainer>()
@@ -152,7 +161,7 @@ class FreeForAllLobbyTest : FunSpec() {
             }
 
             // ── Mid-game concede: Charlie leaves, the game continues 2-way (CR 800.4a) ──
-            charlie.send(ClientMessage.Concede)
+            charlie.send(ClientMessage.Concede())
             eventually(10.seconds) {
                 charlie.messages.any { it is ServerMessage.PlayerEliminated } shouldBe true
             }
@@ -169,7 +178,7 @@ class FreeForAllLobbyTest : FunSpec() {
             bob.messages.none { it is ServerMessage.GameOver } shouldBe true
 
             // ── Second concede ends the game; standings are the elimination order ──
-            bob.send(ClientMessage.Concede)
+            bob.send(ClientMessage.Concede())
             eventually(10.seconds) {
                 listOf(alice, bob, charlie).all { c ->
                     c.messages.any { it is ServerMessage.FreeForAllGameComplete }
@@ -308,7 +317,7 @@ class FreeForAllLobbyTest : FunSpec() {
             }
 
             repeat(3) { host.send(ClientMessage.AddAiToLobby) }
-            eventually(15.seconds) {
+            eventually(aiDeckTimeout) {
                 val players = host.latestLobbyUpdate()?.players
                 players?.size shouldBe 4
                 // Dealt at the moment they sit down: the premade start gate wants every seat to have
@@ -339,7 +348,7 @@ class FreeForAllLobbyTest : FunSpec() {
                 host.messages.any { it is ServerMessage.LobbyCreated } shouldBe true
             }
             repeat(2) { host.send(ClientMessage.AddAiToLobby) }
-            eventually(15.seconds) {
+            eventually(aiDeckTimeout) {
                 host.latestLobbyUpdate()?.players?.size shouldBe 3
             }
             // Both seats start on Auto — the rolled deck, which is what they were dealt on arrival.
@@ -374,7 +383,7 @@ class FreeForAllLobbyTest : FunSpec() {
                 playerId = untouched,
                 spec = com.wingedsheep.gameserver.lobby.AiDeckSpec.Sets(listOf("POR")),
             ))
-            eventually(15.seconds) {
+            eventually(aiDeckTimeout) {
                 val seat = host.latestLobbyUpdate()?.players?.first { it.playerId == untouched }
                 seat?.aiDeck?.kind shouldBe "sets"
                 seat?.aiDeck?.setCodes shouldBe listOf("POR")
@@ -430,11 +439,11 @@ class FreeForAllLobbyTest : FunSpec() {
             }
 
             host.send(ClientMessage.AddAiToLobby)
-            eventually(10.seconds) {
+            eventually(aiDeckTimeout) {
                 host.latestLobbyUpdate()?.players?.size shouldBe 2
             }
             val ai = host.latestLobbyUpdate()!!.players.first { it.isAi }
-            eventually(20.seconds) {
+            eventually(aiDeckTimeout) {
                 host.latestLobbyUpdate()?.players?.first { it.isAi }?.deckSubmitted shouldBe true
             }
 
@@ -471,12 +480,12 @@ class FreeForAllLobbyTest : FunSpec() {
                 host.messages.any { it is ServerMessage.LobbyCreated } shouldBe true
             }
             host.send(ClientMessage.AddAiToLobby)
-            eventually(10.seconds) {
+            eventually(aiDeckTimeout) {
                 host.latestLobbyUpdate()?.players?.size shouldBe 2
             }
 
             host.send(ClientMessage.UpdateLobbySettings(rules = "COMMANDER"))
-            eventually(20.seconds) {
+            eventually(aiDeckTimeout) {
                 host.latestLobbyUpdate()?.settings?.rules shouldBe "COMMANDER"
                 host.latestLobbyUpdate()?.players?.first { it.isAi }?.deckSubmitted shouldBe true
             }
@@ -542,7 +551,7 @@ class FreeForAllLobbyTest : FunSpec() {
             // Once the only human concedes there is nobody left for the AI-only table to serve.
             // The server finalizes it through the normal completion path instead of letting both
             // AI controllers keep playing an invisible game in the background.
-            host.send(ClientMessage.Concede)
+            host.send(ClientMessage.Concede())
             eventually(10.seconds) {
                 host.messages.any { it is ServerMessage.FreeForAllGameComplete } shouldBe true
             }
@@ -682,6 +691,8 @@ class FreeForAllLobbyTest : FunSpec() {
             // The axis is reported back on its own field, and it did not drag a deck restriction in.
             host.latestLobbyUpdate()?.settings?.rules shouldBe "COMMANDER"
             host.latestLobbyUpdate()?.settings?.deckFormat shouldBe null
+            // Commander defaults the attack rule to any opponent, not the attack-left of other pods.
+            host.latestLobbyUpdate()?.settings?.attackMode shouldBe "MULTIPLE"
 
             for (client in pod) {
                 client.send(ClientMessage.SubmitSealedDeck(
@@ -712,6 +723,9 @@ class FreeForAllLobbyTest : FunSpec() {
                 state.shouldNotBeNull()
                 state.players shouldHaveSize 4
                 state.players.all { it.life == 40 } shouldBe true
+                // A Commander pod the host didn't configure attacks any opponent (CR 802); the
+                // client state omits MULTIPLE.
+                state.attackMode shouldBe null
                 for (player in state.players) {
                     val commandZone = state.zones.firstOrNull {
                         it.zoneId.ownerId == player.playerId &&

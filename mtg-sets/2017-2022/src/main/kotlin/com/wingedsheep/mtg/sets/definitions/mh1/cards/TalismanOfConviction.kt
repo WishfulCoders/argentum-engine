@@ -1,51 +1,37 @@
 package com.wingedsheep.mtg.sets.definitions.mh1.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
-/**
- * Talisman of Conviction — Modern Horizons #230
- * {2} · Artifact · Uncommon
- *
- * {T}: Add {C}.
- * {T}: Add {R} or {W}. This artifact deals 1 damage to you.
- *
- * The Mirrodin Talisman cycle's shape (Talisman of Impulse): "Add {R} or {W}" is one mana ability
- * per colour, each adding its colour then dealing 1 damage to its controller.
- */
 val TalismanOfConviction = card("Talisman of Conviction") {
     manaCost = "{2}"
     colorIdentity = "RW"
     typeLine = "Artifact"
     oracleText = "{T}: Add {C}.\n{T}: Add {R} or {W}. This artifact deals 1 damage to you."
-
     activatedAbility {
-        cost = AbilityCost.Tap
+        cost = Costs.Tap
         effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
-
     activatedAbility {
-        cost = AbilityCost.Tap
+        cost = Costs.Tap
         effect = Effects.AddMana(Color.RED) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
-
     activatedAbility {
-        cost = AbilityCost.Tap
+        cost = Costs.Tap
         effect = Effects.AddMana(Color.WHITE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
-
     metadata {
         rarity = Rarity.UNCOMMON
         collectorNumber = "230"

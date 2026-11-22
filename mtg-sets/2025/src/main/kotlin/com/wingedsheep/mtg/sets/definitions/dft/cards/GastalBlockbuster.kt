@@ -37,7 +37,9 @@ val GastalBlockbuster = card("Gastal Blockbuster") {
                 val toSacrifice = selectTarget(
                     TargetObject(
                         filter = TargetFilter(GameObjectFilter.CreatureOrVehicle.youControl())
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose a creature or Vehicle to sacrifice"
                 )
                 run(Effects.SacrificeTarget(toSacrifice.asTarget))
             },

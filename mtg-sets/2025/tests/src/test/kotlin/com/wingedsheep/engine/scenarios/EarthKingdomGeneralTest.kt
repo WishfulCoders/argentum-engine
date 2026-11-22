@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CardsSelectedResponse
+import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -89,6 +90,8 @@ class EarthKingdomGeneralTest : FunSpec({
         driver.castSpell(player, spell, targets = listOf(creature))
         driver.bothPass()   // resolve Counter Infusion; the trigger goes on the stack
         driver.bothPass()   // resolve the trigger → may yes/no decision
+        // "You may gain …", not "You may you gain …".
+        (driver.pendingDecision as YesNoDecision).prompt shouldBe "You may gain that many life"
         driver.submitYesNo(player, true)
 
         driver.getLifeTotal(player) shouldBe 22   // 20 + 2 counters placed

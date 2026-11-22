@@ -3,6 +3,7 @@ package com.wingedsheep.engine.mechanics.stack
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.chosenOpponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.*
 import com.wingedsheep.sdk.core.Color
@@ -33,19 +34,23 @@ internal class EntersWithChoicePrompt(
         syntheticRiot: Boolean = false,
         syntheticRiotRemaining: Int = 0
     ): ExecutionResult? {
-        val chooserId = when (choice.chooser) {
-            com.wingedsheep.sdk.scripting.references.Player.AnOpponent ->
-                state.getOpponents(controllerId).firstOrNull() ?: controllerId
-            else -> controllerId
-        }
+        // A number chosen at random has no chooser; it is drawn as the permanent enters
+        // (EntersWithReplacements.applyFromDefinition), so there is nothing to ask.
+        if (choice.atRandom) return null
+        val entry = com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements
+        val chooserId = entry.entersChoiceChooser(
+            state, controllerId, choice, state.getEntity(spellId)?.chosenOpponent()
+        ) ?: return promptOpponentOfYourChoice(state, spellId, controllerId, ownerId, cardComponent, choice)
 
         return when (choice.choiceType) {
             ChoiceType.COLOR ->
                 promptColor(state, spellId, controllerId, ownerId, cardComponent, choice, chooserId)
             ChoiceType.CREATURE_TYPE ->
                 promptCreatureType(state, spellId, controllerId, ownerId, cardComponent, choice, chooserId)
+            ChoiceType.PLANESWALKER_TYPE ->
+                promptPlaneswalkerType(state, spellId, controllerId, ownerId, cardComponent, chooserId)
             ChoiceType.CREATURE_ON_BATTLEFIELD ->
-                promptCreatureYouControl(state, spellId, controllerId, ownerId, cardComponent)
+                promptCreatureYouControl(state, spellId, controllerId, ownerId, cardComponent, choice)
             ChoiceType.MODE ->
                 promptMode(
                     state, spellId, controllerId, ownerId, cardComponent, choice, chooserId,
@@ -60,6 +65,39 @@ internal class EntersWithChoicePrompt(
             ChoiceType.NUMBER ->
                 promptNumber(state, spellId, controllerId, ownerId, cardComponent, choice, chooserId)
         }
+    }
+
+    /**
+     * "An opponent of your choice" makes [choice] (Tribute, CR 702.104a) and there are several: the
+     * controller picks one first. The resumer records the pick under [ChoiceSlot.OPPONENT] and then
+     * asks [choice] of that opponent ([EntersWithChoiceSpellContinuation.forChoice]).
+     */
+    private fun promptOpponentOfYourChoice(
+        state: GameState,
+        spellId: EntityId,
+        controllerId: EntityId,
+        ownerId: EntityId,
+        cardComponent: CardComponent,
+        choice: EntersWithChoice,
+    ): ExecutionResult {
+        val opponentIds = state.getOpponents(controllerId)
+        val continuation = EntersWithChoiceSpellContinuation(
+            spellId = spellId,
+            controllerId = controllerId,
+            ownerId = ownerId,
+            choiceType = ChoiceType.OPPONENT,
+            opponentIds = opponentIds,
+            forChoice = choice.choiceType
+        )
+        return state.suspendForDecision(
+            question = { decisionId ->
+                com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements.opponentOfYourChoiceQuestion(
+                    state, decisionId, controllerId, opponentIds,
+                    DecisionContext(sourceId = spellId, sourceName = cardComponent.name, phase = DecisionPhase.RESOLUTION)
+                )
+            },
+            answer = continuation
+        )
     }
 
     private fun promptColor(
@@ -132,19 +170,52 @@ internal class EntersWithChoicePrompt(
         )
     }
 
+    private fun promptPlaneswalkerType(
+        state: GameState,
+        spellId: EntityId,
+        controllerId: EntityId,
+        ownerId: EntityId,
+        cardComponent: CardComponent,
+        chooserId: EntityId
+    ): ExecutionResult? {
+        val options = com.wingedsheep.sdk.core.Subtype.ALL_PLANESWALKER_TYPES
+        val continuation = EntersWithChoiceSpellContinuation(
+            spellId = spellId,
+            controllerId = controllerId,
+            ownerId = ownerId,
+            choiceType = ChoiceType.PLANESWALKER_TYPE,
+            planeswalkerTypes = options
+        )
+        return state.suspendForDecision(
+            question = { decisionId ->
+                ChooseOptionDecision(
+                    id = decisionId,
+                    playerId = chooserId,
+                    prompt = "Choose a planeswalker type",
+                    context = DecisionContext(
+                        sourceId = spellId,
+                        sourceName = cardComponent.name,
+                        phase = DecisionPhase.RESOLUTION
+                    ),
+                    options = options,
+                    defaultSearch = ""
+                )
+            },
+            answer = continuation
+        )
+    }
+
     private fun promptCreatureYouControl(
         state: GameState,
         spellId: EntityId,
         controllerId: EntityId,
         ownerId: EntityId,
-        cardComponent: CardComponent
+        cardComponent: CardComponent,
+        choice: EntersWithChoice
     ): ExecutionResult? {
-        val battlefieldCreatures = state.getBattlefield().filter { entityId ->
-            entityId != spellId &&
-                state.projectedState.getController(entityId) == controllerId &&
-                state.projectedState.isCreature(entityId)
-        }
-        if (battlefieldCreatures.isEmpty()) return null // No creatures — enter without choice
+        val candidates = com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements
+            .chosenPermanentCandidates(state, spellId, controllerId, choice)
+        if (candidates.isEmpty()) return null // Nothing to choose — enter without choice
         val continuation = EntersWithChoiceSpellContinuation(
             spellId = spellId,
             controllerId = controllerId,
@@ -156,22 +227,15 @@ internal class EntersWithChoicePrompt(
                 SelectCardsDecision(
                     id = decisionId,
                     playerId = controllerId,
-                    // "Another" only reads right when the entering permanent is itself a
-                    // creature (Dauntless Bodyguard). The pool already excludes the
-                    // entering object either way, so an Equipment or enchantment making
-                    // this choice (Grifter's Blade) just says "a creature you control".
-                    prompt = if (cardComponent.isCreature) {
-                        "Choose another creature you control"
-                    } else {
-                        "Choose a creature you control"
-                    },
+                    prompt = com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements
+                        .chosenPermanentPrompt(cardComponent, choice),
                     context = DecisionContext(
                         sourceId = spellId,
                         sourceName = cardComponent.name,
                         phase = DecisionPhase.RESOLUTION
                     ),
-                    options = battlefieldCreatures,
-                    minSelections = 1,
+                    options = candidates,
+                    minSelections = if (choice.mayChooseNothing) 0 else 1,
                     maxSelections = 1,
                     useTargetingUI = true
                 )
@@ -316,15 +380,14 @@ internal class EntersWithChoicePrompt(
         // (Sorcerous Spyglass / Pithing Needle) as the permanent spell resolves. The pool
         // is land names or every registered card name per [EntersWithChoice.cardNamePool];
         // the chosen name is stored durably under [ChoiceSlot.CARD_NAME] by the resumer.
-        val cardNames = cardRegistry.cardNamesIn(choice.cardNamePool).sorted()
-        if (cardNames.isEmpty()) return null
-        // "As this enters, look at an opponent's hand, then …": reveal the opponent's hand
-        // to the controller before presenting the name choice.
-        val (baseState, lookEvents) = if (choice.lookAtOpponentHand) {
-            com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements
-                .revealOpponentHandForEntersChoice(state, controllerId)
-        } else state to emptyList()
-        val prompt = choice.cardNamePool.prompt
+        val entry = com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements
+        val cardNames = entry.cardNameOptions(state, cardRegistry, controllerId, choice).sorted()
+        val nothingToName = cardNames.isEmpty() && entry.revealedNothingToName(state, controllerId, choice)
+        if (cardNames.isEmpty() && !nothingToName) return null
+        // "Look at an opponent's hand, then …" / "each opponent reveals their hand": reveal
+        // before presenting the name choice.
+        val (baseState, lookEvents) = entry.revealForCardNameChoice(state, controllerId, choice)
+        val prompt = if (nothingToName) entry.nothingToNamePrompt(choice.cardNamePool) else choice.cardNamePool.prompt
         val continuation = EntersWithChoiceSpellContinuation(
             spellId = spellId,
             controllerId = controllerId,
@@ -343,7 +406,7 @@ internal class EntersWithChoicePrompt(
                         sourceName = cardComponent.name,
                         phase = DecisionPhase.RESOLUTION
                     ),
-                    options = cardNames
+                    options = if (nothingToName) listOf(entry.NOTHING_TO_NAME_OPTION) else cardNames
                 )
             },
             answer = continuation,

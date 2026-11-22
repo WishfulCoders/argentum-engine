@@ -1,5 +1,7 @@
 package com.wingedsheep.gameserver.session
 
+import com.wingedsheep.engine.core.CastSpell
+import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.engineSerializersModule
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -7,9 +9,12 @@ import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.RevealedToComponent
 import com.wingedsheep.gameserver.ScenarioTestBase
 import com.wingedsheep.gameserver.protocol.ServerMessage
+import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldNotContain
@@ -40,6 +45,82 @@ class SeatIdentityTest : ScenarioTestBase() {
         injectStateForTesting(state, players(game))
         clearLastSentState(seat)
         return createStateUpdate(seat, emptyList()) as ServerMessage.StateUpdate
+    }
+
+    /** A full update for [seat] carrying [events], as a browser gets it on (re)connecting. */
+    private fun GameSession.fullUpdate(
+        seat: EntityId,
+        state: GameState,
+        game: TestGame,
+        events: List<GameEvent>,
+    ): ServerMessage.StateUpdate {
+        injectStateForTesting(state, players(game))
+        clearLastSentState(seat)
+        return createStateUpdate(seat, events) as ServerMessage.StateUpdate
+    }
+
+    /**
+     * Two worlds that differ only in a card P1 never sees, played to the point where P2 casts
+     * [cast] (picked from the bounced card and the drawn one). Returns every message P1 got.
+     *
+     * On P2's turn P1 Unsummons P2's [bounced], so the whole table knows it in P2's hand; then P2
+     * draws [drawn] unseen.
+     */
+    private fun messagesToViewer(
+        bounced: String,
+        drawn: String,
+        castFaceDown: Boolean,
+        cast: (bounced: EntityId, drawn: EntityId) -> EntityId,
+    ): List<ServerMessage.StateUpdate> {
+        val game = scenario()
+            .withPlayers()
+            .withCardInHand(1, "Unsummon")
+            .withLandsOnBattlefield(1, "Island", 1)
+            .withCardOnBattlefield(2, bounced)
+            .withLandsOnBattlefield(2, "Forest", 3)
+            .withCardInLibrary(2, drawn)
+            .withActivePlayer(2)
+            .withPriorityPlayer(1)
+            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+            .build()
+        val viewer = game.player1Id
+        val owner = game.player2Id
+        val bouncedId = game.findPermanent(bounced)!!
+        val drawnId = game.state.getLibrary(owner).single()
+        val session = GameSession(cardRegistry = cardRegistry)
+        val messages = mutableListOf(session.fullUpdate(viewer, game.state, game))
+
+        val unsummon = game.castSpell(1, "Unsummon", bouncedId)
+        unsummon.error shouldBe null
+        messages += session.fullUpdate(viewer, game.state, game, unsummon.events)
+        val resolved = game.resolveStack()
+        messages += session.fullUpdate(viewer, game.state, game, resolved.flatMap { it.events })
+        game.state.getHand(owner) shouldBe listOf(bouncedId)
+
+        game.state = game.state.moveToZone(drawnId, ZoneKey(owner, Zone.LIBRARY), ZoneKey(owner, Zone.HAND))
+        messages += session.fullUpdate(viewer, game.state, game)
+
+        val spell = game.execute(CastSpell(owner, cast(bouncedId, drawnId), castFaceDown = castFaceDown))
+        spell.error shouldBe null
+        game.state.stack shouldHaveSize 1
+        messages += session.fullUpdate(viewer, game.state, game, spell.events)
+        return messages
+    }
+
+    /**
+     * [messages] as JSON, each card id replaced by its order of first appearance; whether an id is
+     * an engine id or a seat name is kept, so a difference in form shows too. Each session's
+     * interaction epoch is its own, so it's left out.
+     */
+    private fun relabelled(messages: List<ServerMessage.StateUpdate>): List<String> {
+        val labels = HashMap<String, String>()
+        val id = Regex("\"(card-\\d+|h\\d+)\"")
+        return messages.map { message ->
+            id.replace(json.encodeToString(ServerMessage.serializer(), message.copy(interactionEpoch = ""))) { match ->
+                val raw = match.groupValues[1]
+                "\"" + labels.getOrPut(raw) { "${raw.takeWhile { !it.isDigit() }}#${labels.size}" } + "\""
+            }
+        }
     }
 
     private fun ServerMessage.StateUpdate.battlefieldOf(player: EntityId): List<EntityId> =
@@ -116,6 +197,26 @@ class SeatIdentityTest : ScenarioTestBase() {
             session.clearLastSentState(viewer)
             (session.createStateUpdate(viewer, emptyList(), useEngineDecisionIds = true) as ServerMessage.StateUpdate)
                 .battlefieldOf(owner).single() shouldBe bears
+        }
+
+        test("a seat can't tell the known copy of a card from another copy cast from the same hand") {
+            // The bounced Bears is cast in one world; a second Bears, drawn unseen, in the other.
+            val knownCast = messagesToViewer("Grizzly Bears", "Hill Giant", castFaceDown = false) { bounced, _ -> bounced }
+            val otherCast = messagesToViewer("Grizzly Bears", "Grizzly Bears", castFaceDown = false) { _, drawn -> drawn }
+
+            relabelled(knownCast) shouldBe relabelled(otherCast)
+            val spell = knownCast.last().state.zones.single { it.zoneId.zoneType == Zone.STACK }.cardIds.single()
+            // The known Bears reaches the stack under a name the seat hasn't been sent before.
+            knownCast.dropLast(1).forEach {
+                json.encodeToString(ServerMessage.serializer(), it) shouldNotContain "\"${spell.value}\""
+            }
+        }
+
+        test("a seat can't tell a face-down spell is the morph it saw in hand") {
+            val knownCast = messagesToViewer("Exalted Angel", "Battering Craghorn", castFaceDown = true) { bounced, _ -> bounced }
+            val otherCast = messagesToViewer("Exalted Angel", "Battering Craghorn", castFaceDown = true) { _, drawn -> drawn }
+
+            relabelled(knownCast) shouldBe relabelled(otherCast)
         }
     }
 }

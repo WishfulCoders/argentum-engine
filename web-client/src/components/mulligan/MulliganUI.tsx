@@ -69,19 +69,24 @@ function computeMulliganCardWidth(
   // Cards can take roughly 55% of the viewport height on mobile, 60% otherwise.
   const cardVerticalBudget = viewportHeight * (isMobile ? 0.55 : 0.6)
   const cardRatio = 1.4
-  const widthFromHeight = Math.floor(cardVerticalBudget / cardRatio)
+
+  // A portrait phone has the height to spare and not the width: seven cards in one row came out
+  // ~45px wide. Lay them out in two rows (4 + 3) instead, sized so a fifth never fits on the first.
+  const twoRows = isMobile && cardCount > 4 && viewportHeight > viewportWidth * 1.3
+  const perRow = twoRows ? Math.ceil(cardCount / 2) : cardCount
+  const widthFromHeight = Math.floor((twoRows ? (cardVerticalBudget - gap) / 2 : cardVerticalBudget) / cardRatio)
 
   // Target max card width scales by breakpoint
   const breakpointMax = isMobile ? 110 : isTablet ? 170 : 240
 
   // Absolute minimum so cards stay tappable, but never larger than what fits.
   // The fit width is the ceiling — clamping up to a larger "min" would force wrap.
-  const fitCeiling = calculateFittingCardWidth(cardCount, availableWidth, gap, breakpointMax, 1)
+  const fitCeiling = calculateFittingCardWidth(perRow, availableWidth, gap, breakpointMax, 1)
   const preferredMin = isMobile ? 52 : isTablet ? 72 : 96
   const minCardWidth = Math.min(preferredMin, fitCeiling)
 
   const maxCardWidth = Math.min(breakpointMax, widthFromHeight)
-  return calculateFittingCardWidth(cardCount, availableWidth, gap, maxCardWidth, minCardWidth)
+  return calculateFittingCardWidth(perRow, availableWidth, gap, maxCardWidth, minCardWidth)
 }
 
 /**
@@ -92,6 +97,9 @@ function MulliganDecision({ state, responsive }: { state: MulliganState; respons
   const mulligan = useGameStore((s) => s.mulligan)
   const tournamentState = useGameStore((s) => s.tournamentState)
   const playerId = useGameStore((s) => s.playerId)
+  // A Magic subgame (Shahrazad, CR 729) opens with a mulligan of its own — say which game this is.
+  const subgame = useGameStore((s) => s.gameState?.subgame ?? null)
+  const subgameSource = subgame?.waitingGames[subgame.waitingGames.length - 1]?.sourceName ?? null
 
   // Calculate card size that fits all 7 cards
   const gap = responsive.isMobile ? 4 : responsive.isTablet ? 6 : 10
@@ -115,7 +123,19 @@ function MulliganDecision({ state, responsive }: { state: MulliganState; respons
 
   return (
     <>
-      {tournamentInfo && (
+      {subgame && (
+        <div className={styles.subgameBanner} data-testid="mulligan-subgame-banner">
+          <p className={styles.subgameEyebrow}>
+            {subgame.depth > 1 ? `Subgame · ${subgame.depth} deep` : 'Subgame'}
+            {subgameSource ? ` · ${subgameSource}` : ''}
+          </p>
+          <p className={styles.subgameText}>
+            A separate game: your library is your deck, and the main game waits until it's over.
+          </p>
+        </div>
+      )}
+
+      {tournamentInfo && !subgame && (
         <div className={styles.tournamentBanner}>
           <p className={styles.tournamentRound}>Round {tournamentInfo.round}</p>
           <p className={styles.tournamentMatchup}>

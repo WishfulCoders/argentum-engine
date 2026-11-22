@@ -87,8 +87,8 @@ class ManaSpendingObligationsTest : FunSpec({
         val d = driver(); val p = d.activePlayer!!; val source = d.putLandOnBattlefield(p, choice.name)
         scope(d)
         // Stop the color-choice resumer at another instruction, before it closes the unpaid scope.
-        d.replaceState(d.state.pushContinuation(EffectContinuation(listOf(Effects.May(Effects.GainLife(1))),
-            EffectContext(sourceId = null, controllerId = p))))
+        d.replaceState(d.state.pushContinuation(EffectProgram.queued(listOf(Effects.May(Effects.GainLife(1))),
+            EffectContext(sourceId = null, controllerId = p), origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null))))
         d.submit(ActivateAbility(p, source, choice.script.activatedAbilities.first().id)).error shouldBe null
         val decision = d.pendingDecision as ChooseColorDecision
         d.replaceState(json.decodeFromString<GameState>(json.encodeToString(d.state)))

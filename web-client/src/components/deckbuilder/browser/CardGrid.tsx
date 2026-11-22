@@ -22,16 +22,23 @@ export function CardGrid({
   hasMore,
   onShowMore,
   compact = false,
+  large = false,
+  tileLabel,
 }: {
   cards: CardSummary[]
   /** Copies already placed, keyed by card name — rendered as a badge on the tile. */
   deckCards: Record<string, number>
   onAdd: (c: CardSummary) => void
-  onRemove: (name: string) => void
+  /** Shift/right-click. Omitted where nothing can be taken back (the card browser): right-click stays the browser's own. */
+  onRemove?: (name: string) => void
   hasMore: boolean
   onShowMore: () => void
   /** Denser tiles, for narrow side panes. */
   compact?: boolean
+  /** Bigger tiles, for a page that is only for looking at cards. */
+  large?: boolean
+  /** Accessible name for a tile's click, e.g. "Add Shock" or "Show Shock". Defaults to the card name. */
+  tileLabel?: (c: CardSummary) => string
 }) {
   const [hoverCard, setHoverCard] = useState<CardSummary | null>(null)
   const dfc = useDfcHoverFlip(
@@ -61,7 +68,7 @@ export function CardGrid({
   )
   const handleTileLeave = useCallback(() => setHoverCard(null), [])
 
-  const gridClass = compact ? styles.gridCompact : styles.grid
+  const gridClass = compact ? styles.gridCompact : large ? styles.gridLarge : styles.grid
 
   if (cards.length === 0) {
     return (
@@ -84,6 +91,7 @@ export function CardGrid({
               count={deckCards[card.name] ?? 0}
               onAdd={onAdd}
               onRemove={onRemove}
+              label={tileLabel ? tileLabel(card) : card.name}
               onHover={handleTileHover}
               onLeave={handleTileLeave}
             />
@@ -115,13 +123,15 @@ const CardTile = memo(function CardTile({
   count,
   onAdd,
   onRemove,
+  label,
   onHover,
   onLeave,
 }: {
   card: CardSummary
   count: number
   onAdd: (c: CardSummary) => void
-  onRemove: (name: string) => void
+  onRemove: ((name: string) => void) | undefined
+  label: string
   onHover: (c: CardSummary) => void
   onLeave: () => void
 }) {
@@ -147,7 +157,7 @@ const CardTile = memo(function CardTile({
   }, [])
 
   const handleClick = (e: React.MouseEvent) => {
-    if (e.shiftKey) {
+    if (e.shiftKey && onRemove) {
       onRemove(card.name)
     } else {
       onAdd(card)
@@ -155,14 +165,25 @@ const CardTile = memo(function CardTile({
   }
 
   const handleContextMenu = (e: React.MouseEvent) => {
+    if (!onRemove) return
     e.preventDefault()
     onRemove(card.name)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    onAdd(card)
   }
 
   return (
     <div
       ref={ref}
       className={styles.cardTile}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onKeyDown={handleKeyDown}
       draggable
       onDragStart={(e) => setCardDragData(e, card.name, 'catalog')}
       onClick={handleClick}

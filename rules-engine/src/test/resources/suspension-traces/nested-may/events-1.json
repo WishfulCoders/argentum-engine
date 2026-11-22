@@ -10,6 +10,6 @@
         "decisionId": "r1",
         "playerId": "player-1",
         "decisionType": "YES_NO",
-        "prompt": "You may you gain 1 life"
+        "prompt": "You may gain 1 life"
     }
 ]

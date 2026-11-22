@@ -104,6 +104,34 @@ describe('role-aware lobby guidance', () => {
     expect(view.guidance.detail).toContain('Bob')
   })
 
+  it('hosts nobody in a matchmade lobby: no settings, no invite, no AI seat', () => {
+    const view = fromQuickGameLobby(
+      {
+        ...quick([
+          {
+            playerId: 'p1', playerName: 'Alice', isAi: false, ready: false,
+            deckSelected: false, deckLabel: 'Choosing…', deckCardCount: 0, setCode: null,
+          },
+          {
+            playerId: 'p2', playerName: 'Bob', isAi: false, ready: false,
+            deckSelected: false, deckLabel: 'Choosing…', deckCardCount: 0, setCode: null,
+          },
+        ]),
+        format: 'PAUPER',
+        ranked: true,
+        matchmade: true,
+      },
+      { deckValid: false, deckTab: 'saved', aiEnabled: true },
+    )
+
+    expect(view.isHost).toBe(false)
+    expect(view.players.some((p) => p.isHost)).toBe(false)
+    expect(view.invitable).toBe(false)
+    expect(view.canAddAi).toBe(false)
+    expect(view.title).toBe('Ranked Pauper match')
+    expect(view.guidance.title).toBe('Choose your deck')
+  })
+
   it('gives a tournament guest a deck-submission instruction instead of a generic wait message', () => {
     const view = fromTournamentLobby(
       tournament({ isHost: false }),

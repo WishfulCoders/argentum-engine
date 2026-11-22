@@ -3,7 +3,7 @@
 Argentum Engine — Magic: The Gathering rules engine + online play platform in Kotlin. Pure ECS,
 immutable `GameState`, pure functional `(GameState, GameAction) -> ExecutionResult(GameState, List<GameEvent>)`.
 
-**Stack:** Kotlin / JDK 21 / Gradle / Kotest / Spring Boot; React / TypeScript / Zustand / Vite. Exact
+**Stack:** Kotlin / JDK 25 / Gradle / Kotest / Spring Boot; React / TypeScript / Zustand / Vite. Exact
 versions live in `gradle/libs.versions.toml` and `web-client/package.json` — don't trust remembered ones.
 
 This file is a map plus the gotchas that aren't discoverable from the code. Depth lives in the skills and
@@ -45,6 +45,20 @@ docs it points at; load those when the work needs them.
     expresses (declines on hand-written cards; never new SDK vocabulary) → **`just assay-loop [model]
     [focus]`** (fresh headless session per step, like `just set-loop`), or the **`assay-loop`** skill for an
     in-session `/loop`.
+  - Teaching the engine AI to read the effect types the AI card-reading audit flags, one group per PR
+    → **`just ai-reading-loop [model] [focus]`** (fresh headless session per step), or the
+    **`ai-reading-loop`** skill, which holds the step prompt.
+  - Implementing the cards popular Commander decks run, autonomously, one PR at a time →
+    **`just commander-loop [model] [top]`** (fresh headless session per step, like `just set-loop`). It
+    finishes EDHREC's top decks in the order `just commander-staples` ranks them: the most real decks made
+    playable per card added.
+  - Implementing the missing cards of a card list or decklist, autonomously →
+    **`just card-loop <list-file> [model] [--local]`** (`just card-list-status <list-file>` shows what's
+    missing). `--local` gates, reviews and commits each unit on one local branch instead of opening a PR
+    per unit, for contributors who submit a single PR once the list is done.
+  - A human asking how to contribute, or wanting their deck/set implemented → point them at
+    **`just contribute`** (guided: checks tools, takes a pasted decklist or a set, picks Claude Code or
+    Codex + model + local/PR mode, then launches the loop above). Don't run it for them — it's interactive.
   - Proving a set is *actually* finished once its backlog reads N/N, and archiving it → **`verify-set`**
     (Scryfall field verification of every compiled card, reprint and basic-land coverage, self-play pass).
     A green backlog is a claim; that skill is the proof.
@@ -63,7 +77,43 @@ docs it points at; load those when the work needs them.
   `CONTRIBUTING.md` encourages it. A card needing new engine vocabulary still gets a PR of its own.
 - **Keep [`docs/card-sdk-language-reference.md`](docs/card-sdk-language-reference.md) in sync.** Every SDK
   addition or change — effect, trigger, condition, keyword, dynamic amount, modal shape, replacement
-  effect — updates it in the *same* change. It's the canonical catalog; drift makes it useless.
+  effect — updates it in the *same* change. It's the canonical catalog; drift makes it useless. The
+  generated one-line-per-type [`docs/sdk-index.md`](docs/sdk-index.md) is regenerated with
+  `just sdk-index` (`SdkIndexTest` fails when it's stale), and a new sealed SDK type needs its line in
+  `mtg-sdk/src/test/resources/sdk-surface-baseline.txt` (`SdkSurfaceBaselineTest`) — see
+  [`sdk-design-principles.md`](docs/sdk-design-principles.md), "Extend before you add".
+- **Announce milestones in the "What's new" feed.** The PR that finishes a set (drops
+  `override val incomplete = true`, i.e. `scripts/card-status --set X` reads 100%) or ships a new game
+  mode or site-level feature adds an entry to the top of
+  [`web-client/src/components/whatsNew/announcements.ts`](web-client/src/components/whatsNew/announcements.ts)
+  in the *same* PR. A set entry needs `setCode`, a `body` that pitches what the set is like to play, and
+  `tryIf`; never change a shipped `id`. Card batches, fixes and UI polish don't go in. The file's header
+  comment has the bar.
+- **Log engine AI behaviour changes in [`ai/changelog.d/`](ai/changelog.d/README.md).** A PR that
+  changes how the engine AI plays or builds decks — a decision it makes, or the profile live players
+  face — adds its own file `ai/changelog.d/<branch-name>.md` in the *same* PR, holding one line:
+  `- #<pr> <what the AI now does differently>`. Never prepend to `ai/CHANGELOG.md` (the archive): one
+  shared list made every two parallel AI PRs conflict. For the same reason a PR doesn't re-bless
+  `ai-reading-baseline.tsv` for a coverage gain; main re-blesses it after merge. The
+  admin dashboard's **AI vs humans** screen marks each entry on its win-rate timeline and credits it
+  to the first deployed build that carried it, so an unlogged change is an improvement nobody can see
+  paying off. Refactors, perf work, tooling, per-card advisors and archetype data stay out; `ai/CHANGELOG.md`'s
+  header has the rules.
+- **Document user-facing features in the in-app Help wiki.** A new mode, screen, or change to how
+  players use the site updates [`web-client/src/help/topics.ts`](web-client/src/help/topics.ts) — the
+  single source behind `/help` and the inline `HelpTip` popovers — in the *same* PR: add a topic, or
+  correct the ones the change makes wrong, and link it from `related` on its neighbours. Audience: knows
+  Magic, new to Argentum — explain what the app does, not the rules.
+- **Try frontend changes in a real browser, and put screenshots in the PR.** Any change players can
+  see — a new or changed component, decision flow, layout, label, or an engine/server change that
+  shows up through existing UI — is checked by hand before the PR: run this checkout's app
+  (`just ui-dev <server-port> <client-port>`), set the board up with a dev scenario
+  (`generate-scenario` skill), click through the flow as a player would, and fix what looks off
+  (layout, labels, highlighting, overlap, clipping, stale state). Typechecks and unit tests don't
+  count as that check. **No E2E:** don't write Playwright specs or run `just e2e*`; Playwright as a
+  throwaway browser driver is fine. The PR body embeds screenshots of the running app (before/after
+  when the change is subtle). [`web-client/AGENTS.md`](web-client/AGENTS.md) explains how to capture
+  and host them. If you couldn't run or view the app, say so in the PR; don't claim a UX pass.
 
 ## Module layout
 
@@ -77,7 +127,7 @@ docs it points at; load those when the work needs them.
 | `mtg-sets/<era>/tests` | Card scenario tests for that era's sets | engine, sets |
 | `rules-engine` | Core MTG rules (zero server deps) | sdk |
 | `ai` | Built-in AI player + draft/deckbuild advisors | engine, sdk |
-| `mtg-search` | Scryfall-style search query language over a `SearchCard` projection | — |
+| `mtg-search` | Scryfall-style search query language over a `SearchCard` projection. Kotlin Multiplatform: the server runs it on the JVM, the web-client runs it compiled to JS (`web-client/src/generated/mtg-search/`, refreshed by `just search-js`) — never a TypeScript port | — |
 | `gym` / `gym-server` / `gym-trainer` | RL/MCTS env + HTTP transport + self-play SPI | engine, sdk |
 | `game-server` | Spring Boot orchestration, WebSocket, state masking | engine, sdk |
 | `mtgish-tooling` | Predictive coverage / auto-gen analyzer | — (scans source as text) |
@@ -139,6 +189,20 @@ These are the ones that have actually caused bugs here.
   index: `Patterns.Library`, `.Hand`, `.Group`, `.Exile`, `.CreatureType`, `.Mechanic`, `.Sideboard`.
 - **Composition before new types** — a new `Effect` + executor is the last resort, and it's `add-feature`
   territory. The bar and the reusability rules: [`docs/sdk-design-principles.md`](docs/sdk-design-principles.md).
+- **Ask what the engine AI makes of a card** — `just ai-card "<Card>|<Card>"` prints, per card, which
+  abilities its readers understand (and the effect type behind each gap), its draft pick rating and
+  where that comes from (flagging a card nothing rates, so the AI guesses from a heuristic), its board
+  value in play, what it thinks the card is for, and which synergy axes it reads the card feeding or
+  rewarding. Before a card or feature PR (`add-card` / `add-feature` Step 10) it is a gate, not a
+  report: **close the understanding, rating and synergy gaps it shows in the same PR.** Naming a gap in
+  the PR body is not closing it, and "pre-existing", "other cards share the effect" or "belongs to the
+  AI reading loop" is never a reason to defer — you know the effect's semantics now, and one reader
+  entry fixes every card on it. Only a gap that needs a brand-new reader concept may be split out, as
+  its own `add-feature` PR opened next, and the PR body says why. Loops follow the same rule (their
+  shared `LOOP_PR_PROTOCOL` runs this check before review). Use it also
+  whenever you need to explain or predict an AI decision — a misplay in an
+  `ai-game-review` or `ai-playtest` log, a strange draft pick. The Assay Explorer's card page draws the
+  reading and rating for humans.
 - **Reprints** — only a card's *earliest real printing* gets a full `card(...)`; later sets get a
   `Printing(...)` row, never a duplicate canonical. `just check-card-printing "<Card>"` is the gate.
 
@@ -146,10 +210,22 @@ These are the ones that have actually caused bugs here.
 
 `just --list` is the self-documenting index (groups: build, dev, e2e, env, ai).
 
+**Native Windows:** see [`docs/windows-development.md`](docs/windows-development.md) for observed
+PowerShell/Git Bash launcher issues, sandbox access failures, the `test-class` workaround, and
+verification caveats. If `gradle-locked` reports missing `shlock`, its semaphore is inactive;
+coordinate builds manually and never overlap test runs in the same checkout.
+
 **Always run heavy builds through `just`, never raw `./gradlew`.** Parallel agents each spawn their own
 daemons and thrash the box into watchdog timeouts; the `just` recipes limit the machine to two concurrent
 builds through a machine-global semaphore. The `verify` skill covers which gate to run for which change
 and how to read the results.
+
+**Scale verification to the change.** A simple merge/rebase conflict resolution that preserves already
+tested behavior does not require rerunning the full test suite locally. Inspect the resolved diff and
+check for leftover conflict markers; run targeted checks only if the resolution changes behavior or
+leaves a concrete concern. Updating the PR can proceed with full regression coverage left to CI.
+This exception takes precedence over the `verify` skill's default suite requirements; disclose which
+local checks ran and which were left to CI.
 
 ## Deprecated: `:mtgish-tooling`
 
@@ -166,7 +242,9 @@ Set Completion view's Assay-ready badges; for a head start on a card use `just a
 | [`build-performance-plan.md`](docs/build-performance-plan.md) | Why the card corpus and scenario suite are split into per-era modules; daemon heap and cache tuning |
 | [`sdk-design-principles.md`](docs/sdk-design-principles.md) | The bar for a new SDK type: composition, reusability, naming |
 | [`card-sdk-language-reference.md`](docs/card-sdk-language-reference.md) | Full card SDK / DSL catalog — update on any SDK change |
+| [`sdk-index.md`](docs/sdk-index.md) | Generated: every sealed SDK type, one line each, by family — grep it before adding a type |
 | [`api-guide.md`](docs/api-guide.md) | Adding cards/mechanics step-by-step |
+| [`limited-card-ratings.md`](docs/limited-card-ratings.md) | How the AI rates cards for drafting and deckbuilding: Draftsim tables, 17Lands, the effect heuristic, adding ratings |
 | [`continuous-effect-dependency-system.md`](docs/continuous-effect-dependency-system.md) | Rule 613.8 dependency resolution |
 | [`managing-complex-and-rare-abilities.md`](docs/managing-complex-and-rare-abilities.md) | Patterns for complex abilities |
 | [`engine-server-interface.md`](docs/engine-server-interface.md) | Engine ↔ API contract |

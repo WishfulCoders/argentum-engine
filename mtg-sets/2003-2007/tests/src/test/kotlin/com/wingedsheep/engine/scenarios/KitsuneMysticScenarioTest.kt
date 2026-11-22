@@ -50,6 +50,8 @@ class KitsuneMysticScenarioTest : ScenarioTestBase() {
             .build()
         game.passUntilPhase(Phase.ENDING, Step.END)
         game.resolveStack()
+        // Bob is active and receives priority after the flip resolves (CR 117.3b); he passes to Alice.
+        game.passPriority()
         return game
     }
 
@@ -151,6 +153,7 @@ class KitsuneMysticScenarioTest : ScenarioTestBase() {
                     .build()
                 game.passUntilPhase(Phase.ENDING, Step.END)
                 game.resolveStack()
+                game.passPriority() // Bob is active and receives priority after the flip (CR 117.3b)
                 val sage = game.findPermanent("Autumn-Tail, Kitsune Sage")!!
                 val fury = game.findPermanent("Breath of Fury")!!
                 val wurm = game.findPermanent("Craw Wurm")!!

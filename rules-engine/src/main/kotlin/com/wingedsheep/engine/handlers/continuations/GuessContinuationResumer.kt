@@ -39,8 +39,8 @@ class GuessContinuationResumer(
 ) : ContinuationResumerModule {
     private val conditionEvaluator = services.conditionEvaluator
 
-    private val effectRunner: EffectContinuationRunner by lazy {
-        EffectContinuationRunner(services.effectExecutorRegistry)
+    private val effectRunner: com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter by lazy {
+        com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter(services.effectExecutorRegistry::execute)
     }
 
     override fun resumers(): List<ContinuationResumer<*>> = listOf(
@@ -178,7 +178,7 @@ class GuessContinuationResumer(
         val guessedRight = actualKind != null && actualKind == guessedKind
         val branch: Effect = if (guessedRight) continuation.onGuessedRight else continuation.onGuessedWrong
 
-        val result = effectRunner.executeRemainingEffects(
+        val result = effectRunner.runBuilt(
             newState,
             listOf(branch),
             continuation.effectContext
@@ -187,6 +187,6 @@ class GuessContinuationResumer(
         if (result.outcome is Outcome.Paused) {
             return ExecutionResult.propagatePause(result.state, events + result.events)
         }
-        return checkForMore(result.state, events + result.events.toList())
+        return checkForMore(result.stateWithOutputsHandedOn(), events + result.events.toList())
     }
 }

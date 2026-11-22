@@ -4,8 +4,9 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Contact Other Plane reprint in Commander Legends: Battle for Baldur's Gate. Canonical
- * [com.wingedsheep.sdk.model.CardDefinition] lives in AFR; this file contributes only presentation data.
+ * Contact Other Plane reprint in CLB. The canonical CardDefinition lives in
+ * Adventures in the Forgotten Realms (`afr`), the card's earliest real printing;
+ * this file contributes only per-printing presentation data.
  */
 val ContactOtherPlaneReprint = Printing(
     oracleId = "a352cc67-eae8-4fa5-abba-507821c4cf47",

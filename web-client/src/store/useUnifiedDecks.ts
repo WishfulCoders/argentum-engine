@@ -15,7 +15,13 @@ import {
   listDeckDetails,
   updateDeck as apiUpdateDeck,
 } from '@/api/account'
-import { type SavedDeck, type SavedDeckEntry, useDeckLibrary } from '@/store/deckLibrary'
+import {
+  type DeckDetailsPatch,
+  type SavedDeck,
+  type SavedDeckEntry,
+  applyDeckDetails,
+  useDeckLibrary,
+} from '@/store/deckLibrary'
 import { useAuthStore } from '@/store/authStore'
 import { savedDeckToShared } from '@/store/useSaveDeck'
 
@@ -44,8 +50,16 @@ function detailToUnified(detail: DeckDetail): UnifiedDeck {
     ...(d.format ? { format: d.format } : {}),
     ...(d.commander ? { commander: d.commander } : {}),
     ...(d.commanderPrinting ? { commanderPrinting: d.commanderPrinting } : {}),
+    ...(d.commander && d.secondCommander ? { secondCommander: d.secondCommander } : {}),
+    ...(d.commander && d.secondCommander && d.secondCommanderPrinting
+      ? { secondCommanderPrinting: d.secondCommanderPrinting }
+      : {}),
     ...(entries ? { entries } : {}),
     ...(d.sideboard && Object.keys(d.sideboard).length > 0 ? { sideboard: d.sideboard } : {}),
+    ...(d.companion ? { companion: d.companion } : {}),
+    ...(d.note ? { note: d.note } : {}),
+    ...(d.coverCard ? { coverCard: d.coverCard } : {}),
+    ...(d.coverCard && d.coverImageUri ? { coverImageUri: d.coverImageUri } : {}),
     updatedAt: Date.parse(detail.updatedAt) || 0,
   }
 }
@@ -56,10 +70,13 @@ export function useUnifiedDecks() {
   const hydrate = useDeckLibrary((s) => s.hydrate)
   const hydrated = useDeckLibrary((s) => s.hydrated)
   const deleteLocal = useDeckLibrary((s) => s.deleteDeck)
-  const renameLocal = useDeckLibrary((s) => s.renameDeck)
+  const updateLocal = useDeckLibrary((s) => s.updateDetails)
 
   const [cloud, setCloud] = useState<DeckDetail[]>([])
   const [loading, setLoading] = useState(false)
+  // Whether the cloud half has answered at least once — so "no decks" can be told apart from
+  // "not loaded yet" by callers that act on an empty library (the deck picker leaves My Decks).
+  const [cloudSettled, setCloudSettled] = useState(false)
 
   useEffect(() => {
     if (!hydrated) hydrate()
@@ -68,13 +85,17 @@ export function useUnifiedDecks() {
   const reload = useCallback(() => {
     if (!isLoggedIn) {
       setCloud([])
+      setCloudSettled(true)
       return
     }
     setLoading(true)
     void listDeckDetails()
       .then(setCloud)
       .catch(() => setCloud([]))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setCloudSettled(true)
+      })
   }, [isLoggedIn])
 
   useEffect(() => {
@@ -102,17 +123,29 @@ export function useUnifiedDecks() {
     [deleteLocal],
   )
 
-  const renameDeck = useCallback(
-    async (deck: UnifiedDeck, name: string) => {
+  /**
+   * Rename the deck, or change its note or cover — the fields that don't alter what gets played.
+   * A cloud deck is updated in place (and patched locally first, so the gallery doesn't flicker
+   * back to the old value while the request is in flight).
+   */
+  const updateDetails = useCallback(
+    async (deck: UnifiedDeck, patch: DeckDetailsPatch) => {
       if (deck.cloudId != null) {
-        await apiUpdateDeck(deck.cloudId, { ...savedDeckToShared(deck), name })
+        const next = applyDeckDetails(deck, patch)
+        setCloud((prev) =>
+          prev.map((d) => (d.id === deck.cloudId ? { ...d, name: next.name, deck: savedDeckToShared(next) } : d)),
+        )
+        await apiUpdateDeck(deck.cloudId, savedDeckToShared(next))
         reload()
       } else {
-        renameLocal(deck.id, name)
+        updateLocal(deck.id, patch)
       }
     },
-    [renameLocal, reload],
+    [updateLocal, reload],
   )
 
-  return { decks, loading, reload, removeDeck, renameDeck, isLoggedIn }
+  /** True once both the browser library and (when signed in) the account's decks have loaded. */
+  const settled = hydrated && cloudSettled && !loading
+
+  return { decks, loading, settled, reload, removeDeck, updateDetails, isLoggedIn }
 }

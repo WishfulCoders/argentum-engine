@@ -491,7 +491,7 @@ class SealedTournamentReconnectionTest : FunSpec() {
                     .first().lobbyId
 
                 // Best-of-1 keeps the test's 3-round round-robin contract; the lobby default is best-of-3.
-                hostClient.send(ClientMessage.UpdateLobbySettings(gamesPerMatch = 1))
+                hostClient.send(ClientMessage.UpdateLobbySettings(gamesPerMatch = 1, bestOf = 1))
 
                 players.add(PlayerTestContext(
                     name = playerNames[0],
@@ -618,7 +618,7 @@ class SealedTournamentReconnectionTest : FunSpec() {
                 val round1Loser = matchPlayers[1]
 
                 // Loser concedes to end the game
-                round1Loser.client.send(ClientMessage.Concede)
+                round1Loser.client.send(ClientMessage.Concede())
 
                 // Wait for GameOver and RoundComplete
                 eventually(10.seconds) {
@@ -787,7 +787,7 @@ class SealedTournamentReconnectionTest : FunSpec() {
                 }
 
                 // Loser concedes
-                round2Loser.client.send(ClientMessage.Concede)
+                round2Loser.client.send(ClientMessage.Concede())
 
                 // Wait for RoundComplete for round 2 — wait for ALL players
                 eventually(10.seconds) {
@@ -865,7 +865,7 @@ class SealedTournamentReconnectionTest : FunSpec() {
                 }
 
                 // One player concedes
-                round3MatchPlayers[1].client.send(ClientMessage.Concede)
+                round3MatchPlayers[1].client.send(ClientMessage.Concede())
 
                 // Wait for tournament complete — wait for ALL players to receive it
                 eventually(10.seconds) {

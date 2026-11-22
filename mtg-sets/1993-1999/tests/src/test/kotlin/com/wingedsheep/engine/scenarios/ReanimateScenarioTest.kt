@@ -1,75 +1,63 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.state.components.identity.ControllerComponent
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.tmp.cards.Reanimate
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
-import io.kotest.assertions.withClue
+import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.model.Deck
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 
 /**
- * Scenario tests for Reanimate (TMP).
+ * Reanimate (TMP #151) — {B} Sorcery.
  *
- * Oracle: "Put target creature card from a graveyard onto the battlefield under your control. You
- * lose life equal to that card's mana value."
+ *   "Put target creature card from a graveyard onto the battlefield under your control. You lose
+ *    life equal to that card's mana value."
  *
- * The life loss reads the target's mana value after it has moved to the battlefield; these tests
- * pin that the amount survives the zone change, from either player's graveyard.
+ * Proves the two things a plain `Move` gets wrong: a card from an *opponent's* graveyard enters
+ * under the caster's control (not its owner's), and the caster loses life equal to the card's mana
+ * value.
  */
-class ReanimateScenarioTest : ScenarioTestBase() {
+class ReanimateScenarioTest : FunSpec({
 
-    init {
-        context("Reanimate") {
-            test("returns a creature from an opponent's graveyard under your control; you lose its mana value") {
-                val game = scenario()
-                    .withPlayers("Player1", "Player2")
-                    .withCardInHand(1, "Reanimate")
-                    .withLandsOnBattlefield(1, "Swamp", 1)
-                    .withCardInGraveyard(2, "Serra Angel")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val lifeBefore = game.getLifeTotal(1)
-                val opponentLifeBefore = game.getLifeTotal(2)
-
-                val cast = game.castSpellTargetingGraveyardCard(1, "Reanimate", 2, "Serra Angel")
-                withClue("Casting Reanimate should succeed: ${cast.error}") {
-                    cast.error shouldBe null
-                }
-                game.resolveStack()
-
-                val angel = game.findPermanent("Serra Angel")
-                withClue("Serra Angel should be on the battlefield under Player 1's control") {
-                    (angel != null) shouldBe true
-                    game.state.getEntity(angel!!)?.get<ControllerComponent>()?.playerId shouldBe game.player1Id
-                }
-                withClue("Player 1 loses 5 life (Serra Angel's mana value); Player 2 is unaffected") {
-                    game.getLifeTotal(1) shouldBe lifeBefore - 5
-                    game.getLifeTotal(2) shouldBe opponentLifeBefore
-                }
-            }
-
-            test("returns a creature from your own graveyard") {
-                val game = scenario()
-                    .withPlayers("Player1", "Player2")
-                    .withCardInHand(1, "Reanimate")
-                    .withLandsOnBattlefield(1, "Swamp", 1)
-                    .withCardInGraveyard(1, "Grizzly Bears")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val lifeBefore = game.getLifeTotal(1)
-
-                game.castSpellTargetingGraveyardCard(1, "Reanimate", 1, "Grizzly Bears").error shouldBe null
-                game.resolveStack()
-
-                withClue("Grizzly Bears returns and Player 1 loses 2 life") {
-                    game.isOnBattlefield("Grizzly Bears") shouldBe true
-                    game.getLifeTotal(1) shouldBe lifeBefore - 2
-                }
-            }
-        }
+    fun driver(): GameTestDriver = GameTestDriver().apply {
+        registerCards(TestCards.all + Reanimate)
+        initMirrorMatch(deck = Deck.of("Swamp" to 60), startingLife = 20)
+        passPriorityUntil(Step.PRECOMBAT_MAIN)
     }
-}
+
+    test("reanimates an opponent's creature under your control and you lose its mana value") {
+        val d = driver()
+        val me = d.activePlayer!!
+        val opp = d.getOpponent(me)
+        val force = d.putCardInGraveyard(opp, "Force of Nature") // {3}{G}{G}, mana value 5
+
+        val spell = d.putCardInHand(me, "Reanimate")
+        d.giveMana(me, Color.BLACK, 1)
+        d.castSpellWithTargets(me, spell, listOf(ChosenTarget.Card(force, opp, Zone.GRAVEYARD))).error shouldBe null
+        while (!d.isPaused && d.state.stack.isNotEmpty()) d.bothPass()
+
+        d.getPermanents(me) shouldContain force
+        d.state.projectedState.getController(force) shouldBe me
+        d.getLifeTotal(me) shouldBe 15
+        d.getLifeTotal(opp) shouldBe 20
+    }
+
+    test("reanimates from your own graveyard") {
+        val d = driver()
+        val me = d.activePlayer!!
+        val courser = d.putCardInGraveyard(me, "Centaur Courser") // {2}{G}, mana value 3
+
+        val spell = d.putCardInHand(me, "Reanimate")
+        d.giveMana(me, Color.BLACK, 1)
+        d.castSpellWithTargets(me, spell, listOf(ChosenTarget.Card(courser, me, Zone.GRAVEYARD))).error shouldBe null
+        while (!d.isPaused && d.state.stack.isNotEmpty()) d.bothPass()
+
+        d.getPermanents(me) shouldContain courser
+        d.getLifeTotal(me) shouldBe 17
+    }
+})

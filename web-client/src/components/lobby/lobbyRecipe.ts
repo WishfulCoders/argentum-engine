@@ -38,6 +38,8 @@ import type {
   AttackMode,
   AvailableSet,
   CommanderPreset,
+  CubeBoosterStyle,
+  CubeRarity,
   DeckFormat,
   GameRules,
   QuickGameLobbyStateMessage,
@@ -58,6 +60,7 @@ import {
 } from './modeMatrix'
 import type { UnifiedLobbyView } from './lobbyViewModel'
 import { NO_PICK_TIME_LIMIT } from './pickTime'
+import { DEFAULT_JUMPSTART_SET } from './jumpstartSets'
 
 /**
  * Bumped when the stored shape changes incompatibly. Unknown versions are **dropped on read, never
@@ -78,16 +81,21 @@ export interface RecipeSettings {
   readonly pickTimeSeconds?: number
   readonly picksPerRound?: number
   readonly gamesPerMatch?: number
+  /** Games per match: 1, or 3 for a best-of-three. */
+  readonly bestOf?: number
   readonly deckFormat?: DeckFormat | null
   readonly rules?: GameRules
   readonly deckSizeMin?: number
   readonly allowDuplicates?: boolean
+  readonly limitedCopyLimit?: boolean
   readonly commanderPreset?: CommanderPreset
   readonly attackMode?: AttackMode
   readonly randomTeams?: boolean
   readonly aiAssistEnabled?: boolean
   readonly isPublic?: boolean
   readonly ranked?: boolean
+  /** Play for ante (CR 407). Never true alongside `ranked` — ranked forces ante off. */
+  readonly playingForAnte?: boolean
   readonly cube?: RecipeCube
 }
 
@@ -104,15 +112,28 @@ export interface RecipeCube {
   readonly basicLandSetCode: string
   readonly packSize: number
   readonly poolPlay: boolean
+  /** How the cube becomes packs. Absent on recipes saved before booster styles = `SHUFFLED`. */
+  readonly boosterStyle?: CubeBoosterStyle
+  /** Card name → explicit rarity, for the cube's overridden entries. */
+  readonly rarities?: Readonly<Record<string, CubeRarity>>
 }
 
 /** What this seat brings. A reference, never a card list — see the module comment. */
 export type RecipeDeck =
   /** Momir, or a pool built inside the event. Nothing to pick. */
   | { readonly kind: 'NONE' }
-  /** The deck picker's Random tab, whose empty list is the server's "roll me one" signal. */
-  | { readonly kind: 'RANDOM' }
+  /**
+   * The deck picker's Random tab, whose empty list is the server's "roll me one" signal. `setCodes`
+   * pins the sets it is rolled from (the tab's own set choice); absent or empty = any set.
+   */
+  | { readonly kind: 'RANDOM'; readonly setCodes?: readonly string[] }
   | { readonly kind: 'SAVED'; readonly name: string }
+  /**
+   * A server starter deck (`/api/decks/examples`), by name — the same portable-key rule as a saved
+   * deck. It is what lets someone with no decks of their own pick one on the launch panel and go
+   * straight into a game, instead of meeting an empty "My Decks" in the lobby.
+   */
+  | { readonly kind: 'EXAMPLE'; readonly name: string }
 
 /** What the AI opponent plays. Quick vs-AI lobbies only; mirrors the server's `AiDeckSpec`. */
 export type RecipeAiDeck =
@@ -141,9 +162,11 @@ export interface LobbyRecipe {
 /* ── From the wizard ────────────────────────────────────────────────────── */
 
 /**
- * The recipe a fresh wizard selection describes: the three answers and nothing else.
+ * The recipe a fresh wizard selection describes.
  *
- * Every settings field is absent, which means the lobby opens on the server's defaults for that
+ * Jump In selects the newest Jumpstart set's published packs ([DEFAULT_JUMPSTART_SET]) and one
+ * game per matchup. Other modes leave settings
+ * absent, which means the lobby opens on the server's defaults for that
  * shape — no sets, six packs, 45 seconds. That is the honest starting point, and notably *not* what
  * the old launch path did: it sent `['ECL']`, so every draft lobby created from the wizard opened
  * on a set nobody had chosen.
@@ -153,7 +176,7 @@ export function recipeFromSelection(selection: Selection): LobbyRecipe {
   return {
     v: RECIPE_VERSION,
     selection,
-    settings: {},
+    settings: cards.kind === 'JUMP_IN' ? { setCodes: [DEFAULT_JUMPSTART_SET], useJumpstart: true, gamesPerMatch: 1, bestOf: 1 } : {},
     deck: deckForCards(cards),
     aiSeats: roster === 'SOLO' && lobbyNeedsAiSeats(selection)
       ? defaultSoloAiSeats(cards, shape)
@@ -169,6 +192,7 @@ function deckForCards(cards: CardsAxis): RecipeDeck {
   switch (cards.kind) {
     case 'MOMIR': return { kind: 'NONE' }
     case 'RANDOM': return { kind: 'RANDOM' }
+    case 'JUMP_IN':
     case 'SEALED':
     case 'DRAFT': return { kind: 'NONE' }
     case 'BRING_A_DECK': return { kind: 'NONE' }
@@ -227,16 +251,19 @@ export function recipeFromLobby(
         pickTimeSeconds: s.pickTimeSeconds,
         picksPerRound: s.picksPerRound,
         gamesPerMatch: s.gamesPerMatch,
+        ...(s.bestOf !== undefined ? { bestOf: s.bestOf } : {}),
         deckFormat: s.deckFormat ?? null,
         rules: view.axes.rules,
         deckSizeMin: s.deckSizeMin,
         allowDuplicates: s.allowDuplicates,
+        limitedCopyLimit: s.limitedCopyLimit ?? false,
         commanderPreset: s.commanderPreset,
         attackMode: s.attackMode,
         randomTeams: s.randomTeams,
         aiAssistEnabled: s.aiAssistEnabled,
         isPublic: s.isPublic,
         ranked: s.ranked ?? false,
+        playingForAnte: view.ante.on,
         ...(cube ? { cube } : {}),
       }
     : {
@@ -244,6 +271,7 @@ export function recipeFromLobby(
         rules: view.axes.rules,
         isPublic: view.isPublic,
         ranked: view.ranked.on,
+        playingForAnte: view.ante.on,
       }
 
   if (s?.cubeName && !cube) {
@@ -310,7 +338,7 @@ export function validateRecipe(
 
   const notes: string[] = []
   const settings = trimSettings(candidate.settings, ctx.availableSets, notes)
-  const deck = validDeck(candidate.deck)
+  const deck = validDeck(candidate.deck, ctx.availableSets, notes)
   const aiDeck = validAiDeck(candidate.aiDeck)
 
   return {
@@ -358,12 +386,25 @@ function isCardsAxis(raw: unknown): raw is CardsAxis {
   }
 }
 
-function validDeck(raw: unknown): RecipeDeck {
+function validDeck(raw: unknown, availableSets: readonly AvailableSet[], notes: string[]): RecipeDeck {
   if (typeof raw !== 'object' || raw === null) return { kind: 'NONE' }
-  const { kind, name } = raw as { kind?: string; name?: unknown }
-  if (kind === 'RANDOM') return { kind: 'RANDOM' }
-  if (kind === 'SAVED' && typeof name === 'string' && name.trim() !== '') {
-    return { kind: 'SAVED', name }
+  const { kind, name, setCodes } = raw as { kind?: string; name?: unknown; setCodes?: unknown }
+  if (kind === 'RANDOM') {
+    const stored = Array.isArray(setCodes)
+      ? setCodes.filter((c): c is string => typeof c === 'string' && c.trim() !== '')
+      : []
+    // Same rule as `trimSettings`: an empty catalogue hasn't arrived yet, so trust the stored list.
+    const codes = availableSets.length > 0
+      ? stored.filter((c) => availableSets.some((s) => s.code === c))
+      : stored
+    const dropped = stored.filter((c) => !codes.includes(c))
+    if (dropped.length > 0) {
+      notes.push(`${dropped.join(', ')} ${dropped.length === 1 ? 'is' : 'are'} not on this server, so your random deck can come from any set.`)
+    }
+    return codes.length > 0 ? { kind: 'RANDOM', setCodes: codes } : { kind: 'RANDOM' }
+  }
+  if ((kind === 'SAVED' || kind === 'EXAMPLE') && typeof name === 'string' && name.trim() !== '') {
+    return { kind, name }
   }
   return { kind: 'NONE' }
 }
@@ -415,6 +456,7 @@ function trimSettings(
   }
   if (raw.picksPerRound !== undefined) out.picksPerRound = clampInt(raw.picksPerRound, 1, 2, 1)
   if (raw.gamesPerMatch !== undefined) out.gamesPerMatch = clampInt(raw.gamesPerMatch, 1, 5, 1)
+  if (raw.bestOf !== undefined) out.bestOf = clampInt(raw.bestOf, 1, 3, 1) >= 3 ? 3 : 1
   if (raw.deckSizeMin !== undefined) out.deckSizeMin = clampInt(raw.deckSizeMin, 40, 100, 60)
   if (typeof raw.useJumpstart === 'boolean') out.useJumpstart = raw.useJumpstart
   if (typeof raw.chaosBoosters === 'boolean') out.chaosBoosters = raw.chaosBoosters
@@ -426,10 +468,12 @@ function trimSettings(
     )
   }
   if (typeof raw.allowDuplicates === 'boolean') out.allowDuplicates = raw.allowDuplicates
+  if (typeof raw.limitedCopyLimit === 'boolean') out.limitedCopyLimit = raw.limitedCopyLimit
   if (typeof raw.randomTeams === 'boolean') out.randomTeams = raw.randomTeams
   if (typeof raw.aiAssistEnabled === 'boolean') out.aiAssistEnabled = raw.aiAssistEnabled
   if (typeof raw.isPublic === 'boolean') out.isPublic = raw.isPublic
   if (typeof raw.ranked === 'boolean') out.ranked = raw.ranked
+  if (typeof raw.playingForAnte === 'boolean') out.playingForAnte = raw.playingForAnte
   if (raw.rules === 'STANDARD' || raw.rules === 'COMMANDER') out.rules = raw.rules
   if (raw.attackMode === 'MULTIPLE' || raw.attackMode === 'LEFT' || raw.attackMode === 'RIGHT') {
     out.attackMode = raw.attackMode
@@ -495,7 +539,13 @@ function settingsTail(recipe: LobbyRecipe, availableSets: readonly AvailableSet[
   if (packs !== undefined && needsPacks(recipe.selection.cards)) {
     tail.push(`${packs} ${recipe.selection.cards.kind === 'DRAFT' ? 'packs' : 'boosters'}`)
   }
-  if (recipe.deck.kind === 'SAVED') tail.push(recipe.deck.name)
+  if (recipe.deck.kind === 'SAVED' || recipe.deck.kind === 'EXAMPLE') tail.push(recipe.deck.name)
+  if (recipe.deck.kind === 'RANDOM' && recipe.deck.setCodes && recipe.deck.setCodes.length > 0) {
+    tail.push(`Random deck from ${recipe.deck.setCodes
+      .map((c) => availableSets.find((a) => a.code === c)?.name ?? c)
+      .join(' + ')}`)
+  }
+  if (s.playingForAnte && !s.ranked) tail.push('For ante')
   return tail
 }
 

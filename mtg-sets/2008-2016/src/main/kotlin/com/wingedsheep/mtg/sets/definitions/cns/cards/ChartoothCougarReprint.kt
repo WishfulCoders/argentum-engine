@@ -13,7 +13,7 @@ val ChartoothCougarReprint = Printing(
     collectorNumber = "139",
     scryfallId = "bedabf2f-21c2-4d82-918f-b55207e792a9",
     artist = "Chase Stone",
-    imageUri = "https://cards.scryfall.io/normal/front/b/e/bedabf2f-21c2-4d82-918f-b55207e792a9.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/e/bedabf2f-21c2-4d82-918f-b55207e792a9.jpg?1783939351",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

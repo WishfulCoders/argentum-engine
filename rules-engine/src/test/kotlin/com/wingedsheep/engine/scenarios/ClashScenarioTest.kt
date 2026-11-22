@@ -195,20 +195,8 @@ class ClashScenarioTest : FunSpec({
         }
     }
 
-    /**
-     * Cast a clash spell from [player]'s hand and pass so it starts resolving.
-     *
-     * The priority nudge is a harness accommodation, not part of the mechanic: `SubmitDecisionHandler`
-     * hands priority to whoever answered the *last* decision of a resolution, and a clash always ends
-     * on the opponent's top-or-bottom choice — so after one clash resolves the opponent is holding
-     * priority and [player] cannot cast anything. Passing it back (the stack is empty, so a single
-     * pass is just the baton moving on) puts a second clash in the same test on the same footing as
-     * the first.
-     */
+    /** Cast a clash spell from [player]'s hand and pass so it starts resolving. */
     fun GameTestDriver.castClash(player: EntityId, cardName: String) {
-        if (stackSize == 0 && priorityPlayer != null && priorityPlayer != player) {
-            passPriority(priorityPlayer!!)
-        }
         val cardId = putCardInHand(player, cardName)
         castSpell(player, cardId)
         bothPass()

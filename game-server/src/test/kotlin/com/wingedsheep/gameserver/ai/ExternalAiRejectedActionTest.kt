@@ -57,6 +57,7 @@ class ExternalAiRejectedActionTest : FunSpec({
             matchResultSink = mockk(relaxed = true),
             rankedResultSink = mockk(relaxed = true),
             deckProfiler = mockk(relaxed = true),
+            anteSpoilsSink = mockk(relaxed = true),
         )
 
         try {

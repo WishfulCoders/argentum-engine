@@ -1,119 +1,123 @@
 /**
- * Public facade for the deckbuilder query language.
+ * The card search language — Argentum's Scryfall-style queries — for the web-client.
  *
- * The deckbuilder calls `parseQuery(text)` once per text change. The result
- * carries both a `predicate` (used to filter the in-memory catalog) and an
- * `errors` array (rendered as inline diagnostics in the search bar).
+ * There is one implementation and it is not here: it is the Kotlin `:mtg-search` module, which the
+ * server runs on the JVM and which `just search-js` compiles to `src/generated/mtg-search/`. This
+ * file only adapts that module to the deckbuilder's types, so every search box filters exactly as
+ * the server would — and still locally, on every keystroke, with no round trip.
  *
- * The grammar is documented in `parser.ts` and the supported keys in
- * `matchers.ts` (single source of truth — the help panel reads from
- * `ALL_KEYS`).
+ * To change what a query means (a new key, an operator, an error message), edit
+ * `mtg-search/src/commonMain` and run `just search-js`. The tests beside this file run against the
+ * compiled module, so they double as the browser-side check of the Kotlin.
  */
-import type { AtomNode, CardPredicate, Node, ParseResult } from './types'
+import * as search from '@/generated/mtg-search/mtg-search.mjs'
 import type { CardSummary, PrintedNamePrinting } from '../cardFilter'
-import { nameTest } from './matchers'
-import { parse } from './parser'
-import { compile } from './evaluate'
 
-export type { CardPredicate, ParseError, ParseResult, AtomNode, Node, Op, Span } from './types'
-export { isAdvancedQuery } from './parser'
-export { ALL_KEYS, MATCHERS } from './matchers'
+export type CardPredicate = (card: CardSummary) => boolean
 
-const ALWAYS: CardPredicate = () => true
+export interface Span {
+  /** Inclusive 0-based offset into the original query. */
+  start: number
+  /** Exclusive end offset. */
+  end: number
+}
+
+/** Replacing `span` of the query with `text` applies the error's suggestion. */
+export interface QueryFix {
+  span: Span
+  text: string
+}
+
+export interface ParseError {
+  message: string
+  span: Span
+  /** "Did you mean …?" */
+  suggestion?: string
+  /** The suggestion as an edit the search bar can apply in one click. */
+  fix?: QueryFix
+}
+
+export interface ParseResult {
+  predicate: CardPredicate
+  errors: ParseError[]
+  /** `true` for a blank query, which matches every card. */
+  empty: boolean
+  /**
+   * The query in plain words (`name contains "bolt" and power ≥ 4`), or null when it is blank or
+   * has errors. Shown under the search bar so the reader can check how their query was read.
+   */
+  explanation: string | null
+  /** Uses `or`, the `not` keyword, or parentheses — beyond what the filter chips round-trip. */
+  advanced: boolean
+  /** The set an `s:CODE` term pins every result to (uppercased), for showing that set's reprint art. */
+  setFilter: string | null
+  /**
+   * The printing a card was matched by through its *printed* name ("ademi" → the Through the
+   * Omenpaths printing of Spectacular Spider-Man), or null. Null itself when the query has no
+   * name term, so callers can skip the scan.
+   */
+  printedNameMatch: ((card: CardSummary) => PrintedNamePrinting | null) | null
+}
 
 export function parseQuery(query: string): ParseResult {
-  const trimmed = query.trim()
-  if (!trimmed) {
-    return { predicate: ALWAYS, errors: [], warnings: [], ast: null }
-  }
-  const { ast, errors: parseErrors } = parse(query)
-  const { predicate, errors: compileErrors } = compile(ast)
+  const compiled = search.compileQuery(query)
   return {
-    predicate,
-    errors: [...parseErrors, ...compileErrors],
-    warnings: [],
-    ast,
+    predicate: (card) => compiled.matches(card),
+    errors: compiled.errors.map(toParseError),
+    empty: compiled.isEmpty,
+    explanation: compiled.explanation ?? null,
+    advanced: compiled.isAdvanced,
+    setFilter: compiled.setFilter ?? null,
+    printedNameMatch: compiled.constrainsName
+      ? (card) => {
+          const printed = card.printedNamePrintings
+          if (!printed || printed.length === 0) return null
+          const name = compiled.matchedPrintedName(card)
+          return name == null ? null : (printed.find((p) => p.name === name) ?? null)
+        }
+      : null,
   }
 }
 
 /**
- * Extract the dominant set filter from a parsed query, if any. Returns the uppercased
- * set code when the query contains a positive `s:CODE` (or `set:CODE`) atom inside an
- * AND-only branch — i.e. the filter unambiguously narrows the result set to one set.
- *
- * Returns `null` for queries with no set filter, with a regex value, or with `or`/`not`
- * in scope (where the filter wouldn't necessarily apply to every match — silently
- * swapping art under those would be misleading).
- *
- * This is the seam the deckbuilder uses to decide when to display a card via its
- * reprint art instead of the catalog default.
+ * How [query] splits at the top: the spans of its top-level AND terms (`t:goblin`, a bracketed
+ * group, a negation), and whether a new term appended to it would AND with all of it — false when
+ * `or` sits at the top. The filter panel's chips work on these.
  */
-export function extractSetFilter(ast: Node | null): string | null {
-  if (!ast) return null
-  const stack: Array<{ node: Node; underAnd: boolean }> = [{ node: ast, underAnd: true }]
-  while (stack.length > 0) {
-    const { node, underAnd } = stack.pop()!
-    if (!underAnd) continue
-    if (node.kind === 'atom') {
-      if (
-        !node.regex &&
-        (node.key === 's' || node.key === 'set') &&
-        (node.op === ':' || node.op === '=')
-      ) {
-        const v = node.value.trim().toUpperCase()
-        if (v) return v
-      }
-    } else if (node.kind === 'and') {
-      for (const child of node.children) stack.push({ node: child, underAnd: true })
-    }
-    // `or` / `not` branches are intentionally ignored — they break the "every result
-    // is from this set" invariant the art override relies on.
-  }
-  return null
+export function queryStructure(query: string): { isConjunction: boolean; terms: Span[] } {
+  const compiled = search.compileQuery(query)
+  const flat = compiled.topLevelTermSpans
+  const terms: Span[] = []
+  for (let i = 0; i + 1 < flat.length; i += 2) terms.push({ start: flat[i]!, end: flat[i + 1]! })
+  return { isConjunction: compiled.isConjunction, terms }
 }
 
-/**
- * Build a lookup for the printing a query matched by its *printed* name. Returns, per card, the
- * printing whose printed name satisfies the query's name atoms (bareword, `name:`, `!exact`) —
- * but only when the oracle name does not, so `ademi` shows the Through the Omenpaths art while
- * `spectacular` keeps the default. Null when the query has no name atom.
- *
- * `and` needs every name constraint, `or` any of them — so a pasted decklist
- * (`!"Leyline Weaver" or !"Cut Down"`) picks art per card. An `or` with a branch that names
- * nothing, and anything under `not`, leave the name unconstrained and never pick art.
- */
-export function printedNameMatcher(
-  ast: Node | null,
-): ((card: CardSummary) => PrintedNamePrinting | null) | null {
-  const test = ast ? nameConstraint(ast) : null
-  if (!test) return null
-  return (card) => {
-    const printed = card.printedNamePrintings
-    if (!printed || printed.length === 0 || test(card.name)) return null
-    return printed.find((p) => test(p.name)) ?? null
-  }
+/** See {@link ParseResult.advanced}; cheaper when only this is needed. */
+export function isAdvancedQuery(query: string): boolean {
+  return search.isAdvancedQuery(query)
 }
 
-/** The name test a node imposes, or null when it doesn't constrain the name. */
-function nameConstraint(node: Node): ((s: string) => boolean) | null {
-  switch (node.kind) {
-    case 'atom':
-      return isNameAtom(node) ? nameTest(node) : null
-    case 'not':
-      return null
-    case 'and': {
-      const tests = node.children.map(nameConstraint).filter((t): t is (s: string) => boolean => t !== null)
-      return tests.length === 0 ? null : (s) => tests.every((t) => t(s))
-    }
-    case 'or': {
-      const tests = node.children.map(nameConstraint)
-      if (tests.some((t) => t === null)) return null
-      return (s) => tests.some((t) => t!(s))
-    }
-  }
+export interface SearchKey {
+  aliases: string[]
+  ops: string[]
+  description: string
 }
 
-function isNameAtom(atom: AtomNode): boolean {
-  if (atom.key === null) return true
-  return (atom.key === 'name' || atom.key === 'n') && (atom.op === ':' || atom.op === '=')
+/** Every filter key the language understands, straight from the matcher registry. */
+export const SEARCH_KEYS: readonly SearchKey[] = search.searchKeys().map((k) => ({
+  aliases: [...k.aliases],
+  ops: [...k.ops],
+  description: k.description,
+}))
+
+/** Apply an error's one-click fix to the query it was reported against. */
+export function applyFix(query: string, fix: QueryFix): string {
+  return query.slice(0, fix.span.start) + fix.text + query.slice(fix.span.end)
+}
+
+function toParseError(e: search.QueryError): ParseError {
+  const out: ParseError = { message: e.message, span: { start: e.start, end: e.end } }
+  if (e.suggestion != null) out.suggestion = e.suggestion
+  if (e.fix != null) out.fix = { span: { start: e.fix.start, end: e.fix.end }, text: e.fix.text }
+  return out
 }

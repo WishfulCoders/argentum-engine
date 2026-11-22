@@ -1,8 +1,9 @@
+import { CounterAllocationControls } from './CounterAllocationControls'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import { useHasLegalActions } from '@/store/selectors.ts'
 import type { ClientCard, EntityId, LegalActionInfo } from '@/types'
-import { Color, ColorSymbols, CounterType, Keyword } from '@/types/enums'
+import { Color, ColorSymbols, CounterType } from '@/types/enums'
 import { isBattle } from '@/utils/combatTargets'
 import { getCardImageUrl, getScryfallFallbackUrl, faceDownImageUrl } from '@/utils/cardImages.ts'
 import { useInteraction } from '@/hooks/useInteraction.ts'
@@ -72,6 +73,9 @@ import { getRemainingCostAfterConvoke, parseManaCost, pickConvokeColor, totalMan
 
 /** Shared empty list for cards that can never be played from where they are — see GameCardImpl. */
 const NO_LEGAL_ACTIONS: readonly LegalActionInfo[] = Object.freeze([])
+
+/** A chip inside the bottom-right stat cluster: the cluster's column lays it out, not its own corner offsets. */
+const STAT_CLUSTER_ITEM: React.CSSProperties = { position: 'static', top: undefined, right: undefined, bottom: undefined, left: undefined }
 
 /** Soft halo colors for the chosen-color gem, keyed by MTG color (see grantedColors). */
 const COLOR_GLOW: Record<Color, string> = {
@@ -255,7 +259,6 @@ function GameCardImpl({
   const isSelected = useGameStore((state) => state.selectedCardId === card.id)
   // The interaction in progress (targeting, combat, decisions, payment selections), reduced to what
   // it means for this card — see useCardInteractionState. Hotseat's "which row is ours" is folded in.
-  const cardHasBanding = card.keywords.includes(Keyword.BANDING)
   const {
     isInTargetingMode, isValidTarget, isSelectedTarget, isBeingCast, costIfSacrificed,
     hasPendingDecision, isChooseTargetsDecision, isValidDecisionTarget, isManaPaymentWindow,
@@ -276,7 +279,6 @@ function GameCardImpl({
     cardId: card.id,
     isCreature: card.cardTypes.includes('CREATURE'),
     isOpponentCard,
-    hasBanding: cardHasBanding,
   })
   // `legalActions` is a fresh array on every server update, so subscribing to it re-renders this
   // card whenever *anything* happens anywhere — and on a full board that is most of the cost of
@@ -414,6 +416,12 @@ function GameCardImpl({
     return `${defense} — protected by ${nameOf(card.protectorId)}, controlled by ${nameOf(card.controllerId)}`
   })
   const needsLandscapeContainer = Math.abs(totalRotateDeg) % 180 === 90
+  // The bottom-right stat cluster's anchor counter-rotates, so on screen the cluster sits at the
+  // corner the card's printed bottom-right turned into; this slides it to the side that faces into
+  // the card from there (bottom-left when tapped, top-left upside-down, top-right at 270°).
+  const quarterTurns = (((totalRotateDeg / 90) % 4) + 4) % 4
+  const statClusterShift = ['', 'translate(100%, 0)', 'translate(100%, 100%)', 'translate(0, 100%)'][quarterTurns] || undefined
+  const statClusterOnLeft = quarterTurns === 1 || quarterTurns === 2
   // Emerge (CR 702.119a): while the sacrifice is being picked, the server has priced *every*
   // candidate — the reduction is that creature's mana value off the generic part of the emerge cost.
   // Showing each candidate's resulting cost on the card itself (`costIfSacrificed`) makes the choice
@@ -460,8 +468,8 @@ function GameCardImpl({
   const bandColor = isBanded ? bandColorFor(bandIndex) : null
 
   // `isBandDropTarget`: while one of your attackers is being dragged, this card is a legal band
-  // drop target iff it's a valid attacker (other than the dragged one) and at least one of (drag
-  // source, this card) has BANDING. Used to highlight the drop target.
+  // drop target iff it's a valid attacker (other than the dragged one) and the band the drop would
+  // make is legal (CR 702.22c: banding, or "bands with other"). Used to highlight the drop target.
   //
   // `isBystanderAttacker` (multiplayer): an attacker in this combat that is attacking a *different*
   // defender — you can't block it (CR 509.1b), so render it dimmed while you declare blocks.
@@ -513,6 +521,8 @@ function GameCardImpl({
            (action.type === 'CycleCard' && action.cardId === card.id) ||
            (action.type === 'TypecycleCard' && action.cardId === card.id) ||
            (action.type === 'PlotCard' && action.cardId === card.id) ||
+           (action.type === 'ForetellCard' && action.cardId === card.id) ||
+           (action.type === 'PutCompanionIntoHand' && action.cardId === card.id) ||
            (action.type === 'SuspendCardFromHand' && action.cardId === card.id)
   }), [legalActions, card.id])
   const playableAction = playableActions[0]
@@ -573,7 +583,7 @@ function GameCardImpl({
       if (!isSelectedAsAttacker) {
         store.toggleAttacker(card.id) // Select it immediately so the arrow shows
       }
-      store.startDraggingAttacker(card.id, cardHasBanding)
+      store.startDraggingAttacker(card.id)
       return
     }
 
@@ -588,7 +598,7 @@ function GameCardImpl({
       dragStartPos.current = { x: clientX, y: clientY }
       useGameStore.getState().startDraggingCard(card.id)
     }
-  }, [isInAttackerMode, isSelectedAsAttacker, isValidAttacker, cardHasBanding, isInBlockerMode, isValidBlocker, canDragToPlay, canDragToReorder, card.id])
+  }, [isInAttackerMode, isSelectedAsAttacker, isValidAttacker, isInBlockerMode, isValidBlocker, canDragToPlay, canDragToReorder, card.id])
 
   // Handle mouse/touch up - drop blocker on attacker
   const handlePointerUp = useCallback(() => {
@@ -1418,39 +1428,6 @@ function GameCardImpl({
         </>
       )}
 
-      {/* A token that copies a real card (Dance of Many, Clone-style tokens) carries that card's
-          full image, so nothing about it reads as a token — the generated frame above only kicks in
-          for the art-crop tokens. This chip is the marker for that case: it matters at a glance,
-          because a token that leaves the battlefield ceases to exist. Counter-rotated so it stays
-          upright on a tapped permanent, like the untap lock. */}
-      {!faceDown && card.isToken && !card.imageUri?.includes('/art_crop/') && (
-        <div
-          aria-label="Token"
-          title="Token — it ceases to exist if it leaves the battlefield"
-          style={{
-            position: 'absolute',
-            top: 3,
-            left: 3,
-            padding: '0 4px',
-            borderRadius: 3,
-            transform: totalRotateDeg ? `rotate(${-totalRotateDeg}deg)` : undefined,
-            transition: counterRotateTransition,
-            transformOrigin: 'top left',
-            background: 'rgba(0, 0, 0, 0.78)',
-            border: '1px solid rgba(255, 255, 255, 0.55)',
-            color: '#f0f0f0',
-            fontSize: Math.max(responsive.badges.smallLabelFontSize - 1, 6),
-            fontWeight: 700,
-            letterSpacing: 0.5,
-            lineHeight: 1.5,
-            zIndex: 7,
-            pointerEvents: 'none',
-          }}
-        >
-          TOKEN
-        </div>
-      )}
-
       {/* Tapped indicator */}
       {isTapped && (
         <div style={styles.tappedOverlay} />
@@ -1508,128 +1485,129 @@ function GameCardImpl({
         <div style={styles.untapLockedOverlay} />
       )}
 
-      {/* Ring-bearer badge (CR 701.54) — a prominent golden Ring marker pinned to the top-left of
-          the creature a player designated as their Ring-bearer. Gold fill + glow makes the bearer
-          unmistakable at a glance across the battlefield, using the mana-font
-          `ms-ability-ring-bearer` (One Ring) glyph. */}
-      {battlefield && !faceDown && card.isRingBearer && (
-        <div
-          aria-label="Ring-bearer"
-          title="Ring-bearer"
-          style={{
+      {/* Bottom-right stat cluster — P/T (or a planeswalker's loyalty) with the stat-changing counters
+          stacked above it. It stays upright when the permanent taps, like every other in-card chip,
+          but it can't simply counter-rotate in place: a pill that is wider than tall would poke out
+          of the card and onto the +1/+1 chip. So the cluster hangs off a zero-size anchor pinned at
+          the card's bottom-right corner; the anchor counter-rotates (net rotation zero on screen),
+          and the content slides to whichever side of the anchor faces into the card — on a tapped
+          card that corner is the visual bottom-left, where the badge already sat sideways. The
+          corner it leaves is the one the won't-untap lock and charge chips turn into when tapped,
+          so nothing new collides, and both legs ride the card's own turn curve. */}
+      {battlefield && (
+        (card.power !== null && card.toughness !== null) ||
+        (getLoyaltyCounters(card) > 0 && (card.power === null || card.power === undefined)) ||
+        hasStatCounters(card) ||
+        getPlagueCounters(card) > 0
+      ) && (
+        <div style={{
+          position: 'absolute',
+          right: 4,
+          bottom: 4,
+          width: 0,
+          height: 0,
+          zIndex: 5,
+          pointerEvents: 'none',
+          transform: totalRotateDeg ? `rotate(${-totalRotateDeg}deg)` : undefined,
+          transition: counterRotateTransition,
+        }}>
+          <div style={{
             position: 'absolute',
-            top: 3,
-            left: 3,
-            width: responsive.badges.ptFontSize * 1.7,
-            height: responsive.badges.ptFontSize * 1.7,
+            right: 0,
+            bottom: 0,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle at 35% 30%, #3a2c00 0%, #1a1206 80%)',
-            border: '1px solid rgba(212, 175, 55, 0.85)',
-            boxShadow: '0 0 6px 1px rgba(212, 175, 55, 0.65), inset 0 1px 1px rgba(0, 0, 0, 0.5)',
-            zIndex: 7,
-            pointerEvents: 'none',
-          }}
-        >
-          <i
-            className="ms ms-ability-ring-bearer"
-            style={{
-              fontSize: responsive.badges.ptFontSize * 1.1,
-              color: '#f2d472',
-              lineHeight: 1,
-              display: 'block',
-              filter: 'drop-shadow(0 0 2px rgba(212, 175, 55, 0.85))',
-            }}
-          />
-        </div>
-      )}
-
-      {/* Chosen-color gem — when an attached "choose a color" aura (e.g. Shimmerwilds Growth's
-          "Enchanted land is the chosen color") has made this permanent a color, the aura sits
-          hidden behind the host, so paint the chosen color(s) as mana pip(s) on the host itself.
-          A soft colored halo makes the granted color readable at a glance even on an
-          otherwise-colorless land. */}
-      {battlefield && !faceDown && card.grantedColors && card.grantedColors.length > 0 && (
-        <div
-          aria-label={`Chosen color: ${card.grantedColors.map((c) => c.toLowerCase()).join(', ')}`}
-          title={`Chosen color: ${card.grantedColors
-            .map((c) => c.charAt(0) + c.slice(1).toLowerCase())
-            .join(', ')}`}
-          style={{
-            position: 'absolute',
-            top: 3,
-            // Slide clear of the ring-bearer marker on the rare creature that has both.
-            left: card.isRingBearer ? 3 + responsive.badges.ptFontSize * 2 : 3,
-            display: 'flex',
-            alignItems: 'center',
+            flexDirection: 'column',
+            alignItems: statClusterOnLeft ? 'flex-start' : 'flex-end',
             gap: 2,
-            padding: '2px 4px',
-            borderRadius: 999,
-            background: 'radial-gradient(circle at 35% 30%, rgba(34, 34, 42, 0.92) 0%, rgba(10, 10, 14, 0.92) 90%)',
-            border: '1px solid rgba(255, 255, 255, 0.28)',
-            boxShadow: card.grantedColors
-              .map((c) => `0 0 6px 1px ${COLOR_GLOW[c]}`)
-              .join(', '),
-            zIndex: 7,
-            pointerEvents: 'none',
-          }}
-        >
-          {card.grantedColors.map((c) => (
-            <ManaSymbol key={c} symbol={ColorSymbols[c]} size={responsive.badges.ptFontSize * 1.25} />
-          ))}
-        </div>
-      )}
+            // The anchor is zero-wide, so shrink-to-fit would squeeze every chip to min-content.
+            width: 'max-content',
+            transform: statClusterShift,
+            transition: counterRotateTransition,
+          }}>
+            {/* Plague counter badge */}
+            {battlefield && getPlagueCounters(card) > 0 && (
+              <div style={{
+                ...styles.plagueCounterBadge,
+                ...STAT_CLUSTER_ITEM,
+                fontSize: responsive.badges.counterTextFontSize,
+                padding: responsive.badges.badgePadding,
+              }}>
+                <i className={`ms ms-${counterManaClass.PLAGUE}`} style={{ fontSize: responsive.badges.counterIconFontSize }} />
+                <span style={{ fontWeight: 700 }}>
+                  {getPlagueCounters(card)}
+                </span>
+              </div>
+            )}
 
-      {/* P/T overlay for creatures on battlefield (server sends 2/2 for face-down creatures) */}
-      {battlefield && card.power !== null && card.toughness !== null && (
-        <div style={{
-          ...styles.ptOverlay,
-          backgroundColor: faceDown
-            ? 'rgba(0, 0, 0, 0.7)'
-            : getPTColor(card.power, card.toughness, card.basePower, card.baseToughness) !== 'white'
-              ? 'rgba(0, 0, 0, 0.85)'
-              : 'rgba(0, 0, 0, 0.7)',
-        }}>
-          <span style={{
-            color: faceDown ? 'white' : getPTColor(card.power, card.toughness, card.basePower, card.baseToughness),
-            fontWeight: 700,
-            fontSize: responsive.badges.ptFontSize,
-          }}>
-            {card.power}/
-          </span>
-          <span style={{
-            color: faceDown
-              ? (card.damage != null && card.damage > 0 ? '#ff4444' : 'white')
-              : card.damage != null && card.damage > 0
-                ? '#ff4444'
-                : getPTColor(card.power, card.toughness, card.basePower, card.baseToughness),
-            fontWeight: 700,
-            fontSize: responsive.badges.ptFontSize,
-          }}>
-            {card.damage != null && card.damage > 0
-              ? card.toughness - card.damage
-              : card.toughness}
-          </span>
-        </div>
-      )}
+            {/* Counter badge for creatures with +1/+1 or -1/-1 counters */}
+            {battlefield && hasStatCounters(card) && (
+              <div style={{
+                ...styles.counterBadge,
+                ...STAT_CLUSTER_ITEM,
+                fontSize: responsive.badges.counterTextFontSize,
+                padding: responsive.badges.badgePadding,
+              }}>
+                <i className={`ms ms-${getCounterStatModifier(card) >= 0 ? counterManaClass.PLUS_ONE_PLUS_ONE : counterManaClass.MINUS_ONE_MINUS_ONE}`} style={{ fontSize: responsive.badges.counterIconFontSize }} />
+                <span style={styles.counterBadgeText}>
+                  {getCounterStatModifier(card) >= 0 ? '+' : ''}{getCounterStatModifier(card)}
+                </span>
+              </div>
+            )}
 
-      {/* Loyalty counter badge for planeswalkers */}
-      {battlefield && getLoyaltyCounters(card) > 0 && (card.power === null || card.power === undefined) && (
-        <div style={{
-          ...styles.ptOverlay,
-          backgroundColor: 'rgba(60, 60, 60, 0.9)',
-          border: '1px solid rgba(200, 160, 60, 0.6)',
-        }}>
-          <i className={`ms ms-${counterManaClass.LOYALTY}`} style={{ fontSize: responsive.badges.counterIconFontSize, color: '#e0c060', marginRight: 2 }} />
-          <span style={{
-            color: '#e0c060',
-            fontWeight: 700,
-            fontSize: responsive.badges.ptFontSize,
-          }}>
-            {getLoyaltyCounters(card)}
-          </span>
+            {/* P/T overlay for creatures on battlefield (server sends 2/2 for face-down creatures) */}
+            {battlefield && card.power !== null && card.toughness !== null && (
+              <div style={{
+                ...styles.ptOverlay,
+                ...STAT_CLUSTER_ITEM,
+                backgroundColor: faceDown
+                  ? 'rgba(0, 0, 0, 0.7)'
+                  : getPTColor(card.power, card.toughness, card.basePower, card.baseToughness) !== 'white'
+                    ? 'rgba(0, 0, 0, 0.85)'
+                    : 'rgba(0, 0, 0, 0.7)',
+              }}>
+                <span style={{
+                  color: faceDown ? 'white' : getPTColor(card.power, card.toughness, card.basePower, card.baseToughness),
+                  fontWeight: 700,
+                  fontSize: responsive.badges.ptFontSize,
+                }}>
+                  {card.power}/
+                </span>
+                <span style={{
+                  color: faceDown
+                    ? (card.damage != null && card.damage > 0 ? '#ff4444' : 'white')
+                    : card.damage != null && card.damage > 0
+                      ? '#ff4444'
+                      : getPTColor(card.power, card.toughness, card.basePower, card.baseToughness),
+                  fontWeight: 700,
+                  fontSize: responsive.badges.ptFontSize,
+                }}>
+                  {card.damage != null && card.damage > 0
+                    ? card.toughness - card.damage
+                    : card.toughness}
+                </span>
+              </div>
+            )}
+
+            {/* Loyalty counter badge for planeswalkers */}
+            {battlefield && getLoyaltyCounters(card) > 0 && (card.power === null || card.power === undefined) && (
+              <div style={{
+                ...styles.ptOverlay,
+                ...STAT_CLUSTER_ITEM,
+                backgroundColor: 'rgba(60, 60, 60, 0.9)',
+                border: '1px solid rgba(200, 160, 60, 0.6)',
+              }}>
+                <i className={`ms ms-${counterManaClass.LOYALTY}`} style={{ fontSize: responsive.badges.counterIconFontSize, color: '#e0c060', marginRight: 2 }} />
+                <span style={{
+                  color: '#e0c060',
+                  fontWeight: 700,
+                  fontSize: responsive.badges.ptFontSize,
+                }}>
+                  {getLoyaltyCounters(card)}
+                </span>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 
@@ -1759,28 +1737,6 @@ function GameCardImpl({
         </div>
       )}
 
-      {/* Plot (CR 718): card sitting face-up in exile, castable for free on a later turn */}
-      {card.isPlotted && (
-        <div style={styles.plottedBadge} title="Plotted (CR 718) — cast it for free on a later turn">
-          Plotted
-        </div>
-      )}
-
-      {/* Prepared (Secrets of Strixhaven): a copy of this creature's prepare spell waits castable in exile */}
-      {card.isPrepared && (
-        <div style={styles.preparedBadge} title="Prepared (Secrets of Strixhaven) — cast a copy of its spell from exile; doing so unprepares it">
-          Prepared
-        </div>
-      )}
-
-      {/* Prepared spell copy (Secrets of Strixhaven): the castable exile copy shown as a ghost card in
-          hand. Same lavender badge as the creature's "Prepared" cue so the link is obvious. */}
-      {card.isPreparedSpell && (
-        <div style={styles.preparedBadge} title="Prepared spell (Secrets of Strixhaven) — a copy from your prepared creature; casting it unprepares that creature">
-          ✦ Prepared
-        </div>
-      )}
-
       {/* Warp (CR 702.185, Edge of Eternities): a permanent cast for its warp cost — exiled at the next
           end step, then recastable from exile. Cosmic spinning ring + shimmering badge sell the warp. */}
       {battlefield && card.isWarped && !faceDown && (
@@ -1824,17 +1780,12 @@ function GameCardImpl({
         </div>
       )}
 
-      {/* Counter badge for creatures with +1/+1 or -1/-1 counters */}
-      {battlefield && hasStatCounters(card) && (
-        <div style={{
-          ...styles.counterBadge,
-          fontSize: responsive.badges.counterTextFontSize,
-          padding: responsive.badges.badgePadding,
-        }}>
-          <i className={`ms ms-${getCounterStatModifier(card) >= 0 ? counterManaClass.PLUS_ONE_PLUS_ONE : counterManaClass.MINUS_ONE_MINUS_ONE}`} style={{ fontSize: responsive.badges.counterIconFontSize }} />
-          <span style={styles.counterBadgeText}>
-            {getCounterStatModifier(card) >= 0 ? '+' : ''}{getCounterStatModifier(card)}
-          </span>
+      {/* Blitz (CR 702.152, Streets of New Capenna): a permanent whose blitz cost was paid — hasty,
+          draws a card when it dies, sacrificed at the beginning of the next end step. */}
+      {battlefield && card.isBlitzed && !faceDown && (
+        <div style={styles.blitzedBadge} title="Blitzed (Streets of New Capenna) — has haste and &quot;when this dies, draw a card&quot;; sacrificed at the beginning of the next end step">
+          <span aria-hidden="true">⚡</span>
+          Blitzed
         </div>
       )}
 
@@ -1848,20 +1799,6 @@ function GameCardImpl({
           <i className={`ms ms-${counterManaClass.GOLD}`} style={{ fontSize: responsive.badges.counterIconFontSize }} />
           <span style={{ fontWeight: 700 }}>
             {getGoldCounters(card)}
-          </span>
-        </div>
-      )}
-
-      {/* Plague counter badge */}
-      {battlefield && getPlagueCounters(card) > 0 && (
-        <div style={{
-          ...styles.plagueCounterBadge,
-          fontSize: responsive.badges.counterTextFontSize,
-          padding: responsive.badges.badgePadding,
-        }}>
-          <i className={`ms ms-${counterManaClass.PLAGUE}`} style={{ fontSize: responsive.badges.counterIconFontSize }} />
-          <span style={{ fontWeight: 700 }}>
-            {getPlagueCounters(card)}
           </span>
         </div>
       )}
@@ -2388,15 +2325,140 @@ function GameCardImpl({
         )
       })()}
 
-      {/* Keyword ability icons (shown for face-up cards, and for face-down cards with granted keywords) */}
-      {battlefield && !hideKeywordIcons && (card.keywords.length > 0 || (card.abilityFlags && card.abilityFlags.length > 0) || (card.protections && card.protections.length > 0) || (card.hexproofFromColors && card.hexproofFromColors.length > 0) || card.isSuspected || card.isSolved || card.isRenowned || card.isMonstrous) && (
-        <KeywordIcons keywords={card.keywords} abilityFlags={card.abilityFlags ?? []} protections={card.protections ?? []} hexproofFromColors={card.hexproofFromColors ?? []} hexproofFromMonocolored={card.hexproofFromMonocolored ?? false} hexproofFromMulticolored={card.hexproofFromMulticolored ?? false} isSuspected={card.isSuspected ?? false} isSolved={card.isSolved ?? false} isRenowned={card.isRenowned ?? false} isMonstrous={card.isMonstrous ?? false} {...(() => {
-          // The ring-bearer marker and the "Prepared" badge both pin to the top-left corner; push the
-          // keyword icons down past whichever is showing so they aren't hidden beneath the badge.
-          const topOffset = (card.isRingBearer && !faceDown ? 3 + responsive.badges.ptFontSize * 1.7 + 3 : 0) + (card.isPrepared ? 22 : 0)
-          return topOffset > 0 ? { topOffset } : {}
-        })()} size={responsive.badges.keywordIconSize} />
-      )}
+      {/* Top-left corner stack. Every marker that wants this corner — the token chip, the
+          ring-bearer, the chosen-color gem, the copy-of label, Plotted/Prepared, and the keyword
+          icons — flows through one column instead of being pinned to the same `top/left` and
+          painted over each other. Identity markers share the first row; the keyword column
+          follows underneath, so any combination stacks cleanly. */}
+      {(() => {
+        const showToken = !faceDown && card.isToken && !card.imageUri?.includes('/art_crop/')
+        const showRingBearer = battlefield && !faceDown && card.isRingBearer
+        const showGrantedColors = battlefield && !faceDown && !!card.grantedColors && card.grantedColors.length > 0
+        const showCopyOf = !faceDown && !!card.copyOf
+        const showKeywords = battlefield && !hideKeywordIcons && (card.keywords.length > 0 || (card.abilityFlags && card.abilityFlags.length > 0) || (card.protections && card.protections.length > 0) || (card.hexproofFromColors && card.hexproofFromColors.length > 0) || card.isSuspected || card.isSolved || card.isRenowned || card.isMonstrous)
+        const showHeaderRow = showToken || showRingBearer || showGrantedColors
+        if (!showHeaderRow && !showCopyOf && !card.isPlotted && !card.isPrepared && !card.isPreparedSpell && !showKeywords) return null
+        const markerSize = responsive.badges.ptFontSize * 1.7
+        return (
+          <div style={{ ...styles.cornerStack, top: responsive.badges.badgeInset, left: responsive.badges.badgeInset }}>
+            {showHeaderRow && (
+              <div style={styles.cornerStackRow}>
+                {/* A token's full-card image (a real token print, or a copy of a real card — Dance
+                    of Many, Clone-style tokens) doesn't read as a token at battlefield size; the
+                    generated frame only kicks in for art-crop tokens. This chip is the marker: it
+                    matters at a glance, because a token that leaves the battlefield ceases to exist. */}
+                {showToken && (
+                  <div
+                    aria-label="Token"
+                    title="Token — it ceases to exist if it leaves the battlefield"
+                    style={{
+                      ...styles.tokenChip,
+                      fontSize: Math.max(responsive.badges.smallLabelFontSize - 1, 6),
+                    }}
+                  >
+                    Token
+                  </div>
+                )}
+
+                {/* Ring-bearer badge (CR 701.54) — a golden Ring marker on the creature a player
+                    designated as their Ring-bearer, using the mana-font `ms-ability-ring-bearer`
+                    (One Ring) glyph. */}
+                {showRingBearer && (
+                  <div
+                    aria-label="Ring-bearer"
+                    title="Ring-bearer"
+                    style={{ ...styles.ringBearerMarker, width: markerSize, height: markerSize }}
+                  >
+                    <i
+                      className="ms ms-ability-ring-bearer"
+                      style={{
+                        fontSize: responsive.badges.ptFontSize * 1.1,
+                        color: '#f2d472',
+                        lineHeight: 1,
+                        display: 'block',
+                        filter: 'drop-shadow(0 0 2px rgba(212, 175, 55, 0.85))',
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Chosen-color gem — when an attached "choose a color" aura (e.g. Shimmerwilds
+                    Growth's "Enchanted land is the chosen color") has made this permanent a color,
+                    the aura sits hidden behind the host, so paint the chosen color(s) as mana pip(s)
+                    on the host itself, with a halo in that color. */}
+                {showGrantedColors && card.grantedColors && (
+                  <div
+                    aria-label={`Chosen color: ${card.grantedColors.map((c) => c.toLowerCase()).join(', ')}`}
+                    title={`Chosen color: ${card.grantedColors
+                      .map((c) => c.charAt(0) + c.slice(1).toLowerCase())
+                      .join(', ')}`}
+                    style={{
+                      ...styles.grantedColorGem,
+                      boxShadow: card.grantedColors.map((c) => `0 0 6px 1px ${COLOR_GLOW[c]}`).join(', '),
+                    }}
+                  >
+                    {card.grantedColors.map((c) => (
+                      <ManaSymbol key={c} symbol={ColorSymbols[c]} size={responsive.badges.ptFontSize * 1.25} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Copy indicator (e.g., Clever Impersonator copying Wind Drake). Hovering it previews
+                the *original* card (the printed identity), not the copy's current characteristics. */}
+            {showCopyOf && (
+              <div
+                onMouseEnter={(e) => {
+                  e.stopPropagation()
+                  useGameStore.getState().hoverCard(null)
+                  setCopyBadgeHoverPos({ x: e.clientX, y: e.clientY })
+                }}
+                onMouseMove={(e) => {
+                  e.stopPropagation()
+                  setCopyBadgeHoverPos({ x: e.clientX, y: e.clientY })
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation()
+                  setCopyBadgeHoverPos(null)
+                  // Restore the regular card preview as the cursor moves back onto the card body.
+                  useGameStore.getState().hoverCard(card.id, { x: e.clientX, y: e.clientY })
+                }}
+                style={{ ...styles.copyOfBadge, fontSize: responsive.badges.smallLabelFontSize }}
+              >
+                {card.copyOf}
+              </div>
+            )}
+
+            {/* Plot (CR 718): card sitting face-up in exile, castable for free on a later turn */}
+            {card.isPlotted && (
+              <div style={styles.plottedBadge} title="Plotted (CR 718) — cast it for free on a later turn">
+                Plotted
+              </div>
+            )}
+
+            {/* Prepared (Secrets of Strixhaven): a copy of this creature's prepare spell waits castable in exile */}
+            {card.isPrepared && (
+              <div style={styles.preparedBadge} title="Prepared (Secrets of Strixhaven) — cast a copy of its spell from exile; doing so unprepares it">
+                Prepared
+              </div>
+            )}
+
+            {/* Prepared spell copy (Secrets of Strixhaven): the castable exile copy shown as a ghost
+                card in hand. Same lavender badge as the creature's "Prepared" cue so the link is obvious. */}
+            {card.isPreparedSpell && (
+              <div style={styles.preparedBadge} title="Prepared spell (Secrets of Strixhaven) — a copy from your prepared creature; casting it unprepares that creature">
+                ✦ Prepared
+              </div>
+            )}
+
+            {/* Keyword ability icons (face-up cards, and face-down cards with granted keywords) */}
+            {showKeywords && (
+              <KeywordIcons keywords={card.keywords} abilityFlags={card.abilityFlags ?? []} protections={card.protections ?? []} hexproofFromColors={card.hexproofFromColors ?? []} hexproofFromMonocolored={card.hexproofFromMonocolored ?? false} hexproofFromMulticolored={card.hexproofFromMulticolored ?? false} isSuspected={card.isSuspected ?? false} isSolved={card.isSolved ?? false} isRenowned={card.isRenowned ?? false} isMonstrous={card.isMonstrous ?? false} size={responsive.badges.keywordIconSize} />
+            )}
+          </div>
+        )
+      })()}
 
       {/* Revealed face-down eye icon (e.g., peeked via Spy Network) */}
       {faceDown && card.revealedName && (
@@ -2418,8 +2480,8 @@ function GameCardImpl({
         </div>
       )}
 
-      {/* Chosen creature type / color / mode / card name / card type badge (e.g., Doom Cannon, Riptide Replicator, Outpost Siege, Petrified Hamlet, Arachne) */}
-      {!faceDown && (card.chosenCreatureType ?? card.chosenColor ?? card.chosenMode ?? card.chosenCardName ?? card.chosenCardType) && (
+      {/* Chosen creature type / color / mode / card name / card type / number badge (e.g., Doom Cannon, Riptide Replicator, Outpost Siege, Petrified Hamlet, Arachne, Haktos) */}
+      {!faceDown && (card.chosenCreatureType ?? card.chosenColor ?? card.chosenMode ?? card.chosenCardName ?? card.chosenCardType ?? card.chosenNumber) != null && (
         <div style={{
           position: 'absolute',
           bottom: card.power != null ? 22 : 4,
@@ -2434,7 +2496,8 @@ function GameCardImpl({
           pointerEvents: 'none',
           zIndex: 5,
         }}>
-          {[card.chosenColor, card.chosenCreatureType, card.chosenMode, card.chosenCardName, card.chosenCardType].filter(Boolean).join(' ')}
+          {[card.chosenColor, card.chosenCreatureType, card.chosenMode, card.chosenCardName, card.chosenCardType,
+            card.chosenNumber != null ? `Number ${card.chosenNumber}` : null].filter(Boolean).join(' ')}
         </div>
       )}
 
@@ -2505,51 +2568,12 @@ function GameCardImpl({
         </div>
       )}
 
-      {/* Copy indicator badge (e.g., Clever Impersonator copying Wind Drake).
-          Hovering the badge previews the *original* card (the printed identity),
-          not the copy's current characteristics. */}
-      {!faceDown && card.copyOf && (
-        <div
-          onMouseEnter={(e) => {
-            e.stopPropagation()
-            useGameStore.getState().hoverCard(null)
-            setCopyBadgeHoverPos({ x: e.clientX, y: e.clientY })
-          }}
-          onMouseMove={(e) => {
-            e.stopPropagation()
-            setCopyBadgeHoverPos({ x: e.clientX, y: e.clientY })
-          }}
-          onMouseLeave={(e) => {
-            e.stopPropagation()
-            setCopyBadgeHoverPos(null)
-            // Restore the regular card preview as the cursor moves back onto the card body.
-            useGameStore.getState().hoverCard(card.id, { x: e.clientX, y: e.clientY })
-          }}
-          style={{
-            position: 'absolute',
-            top: 4,
-            left: 4,
-            backgroundColor: 'rgba(40, 40, 80, 0.9)',
-            color: '#a0b0e0',
-            fontSize: responsive.badges.smallLabelFontSize,
-            padding: '1px 4px',
-            borderRadius: 3,
-            border: '1px solid rgba(100, 120, 200, 0.6)',
-            whiteSpace: 'nowrap',
-            cursor: 'help',
-            zIndex: 5,
-          }}
-        >
-          {card.copyOf}
-        </div>
-      )}
-
       {/* Original-card preview. HoverCardPreview portals itself to <body>, so it escapes the
           card's overflow:hidden / transform containing block (tapped cards rotate). */}
       {!faceDown && card.copyOf && copyBadgeHoverPos && (
         <HoverCardPreview
           name={card.copyOf}
-          imageUri={null}
+          imageUri={card.copyOfImageUri ?? null}
           pos={copyBadgeHoverPos}
         />
       )}
@@ -3075,6 +3099,9 @@ function GameCardImpl({
         {nonLegendaryChip}
         {grantedLegendaryChip}
         {cardElement}
+        {/* Allocation controls stay outside the clipped, rotating card. Narrow cards get a
+            compact count above two full-size buttons, which can extend beyond the art. */}
+        <CounterAllocationControls cardId={card.id} cardName={card.name} cardWidth={width} />
       </div>
       </RenderProfiler>
     )

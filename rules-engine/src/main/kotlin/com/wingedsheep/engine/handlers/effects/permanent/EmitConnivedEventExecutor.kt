@@ -6,6 +6,7 @@ import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.sdk.scripting.effects.EmitConnivedEventEffect
 import kotlin.reflect.KClass
 
@@ -26,14 +27,18 @@ class EmitConnivedEventExecutor : EffectExecutor<EmitConnivedEventEffect> {
     ): EffectResult {
         val connivingId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.success(state)
-        val sourceName = context.sourceId?.let { state.getEntity(it)?.get<CardComponent>()?.name }
+        val source = context.sourceId?.let { state.getEntity(it) }
+        // A convoker that left before it connived (CR 701.50b) is matched by its last-known
+        // information, which the resolving spell froze as it left.
+        val lastKnown = source?.get<SpellOnStackComponent>()?.convokedLastKnown?.get(connivingId)
         return EffectResult.success(
             state,
             listOf(
                 PermanentConnivedEvent(
                     connivingPermanentId = connivingId,
                     controllerId = context.controllerId,
-                    sourceName = sourceName
+                    sourceName = source?.get<CardComponent>()?.name,
+                    lastKnown = lastKnown
                 )
             )
         )

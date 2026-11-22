@@ -1,6 +1,12 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.TargetReselectedEvent
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.state.FACE_DOWN_DISPLAY_NAME
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
+import com.wingedsheep.engine.view.ClientEvent
+import com.wingedsheep.engine.view.ClientEventTransformer
+import com.wingedsheep.engine.view.Visibility
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.TargetsComponent
@@ -13,6 +19,7 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldNotContain
 import com.wingedsheep.engine.core.Outcome
 
 /**
@@ -150,5 +157,98 @@ class GripOfChaosTest : FunSpec({
         }
 
         driver.events.any { it is TargetReselectedEvent } shouldBe false
+    }
+    // Issue #3414: the reselection asks TargetFinder for the legal targets, so the requirement's
+    // filter and the targeting restrictions apply. Each board below leaves exactly one legal
+    // target; the old candidate lists offered several, so a fresh RNG seed per run would have
+    // strayed within a few runs.
+
+    /** Cast [spellName] at [target], then resolve only the Grip trigger above it. */
+    fun castAndResolveGrip(driver: GameTestDriver, caster: EntityId, spellName: String, color: Color,
+                           mana: Int, target: EntityId) {
+        driver.giveMana(caster, color, mana)
+        val spell = driver.putCardInHand(caster, spellName)
+        driver.castSpellWithTargets(caster, spell, listOf(ChosenTarget.Permanent(target)))
+        driver.passPriority(driver.state.priorityPlayerId!!)
+        driver.passPriority(driver.state.priorityPlayerId!!)
+    }
+
+    test("reselection honours the requirement's filter — Press the Enemy never picks the caster's own permanents") {
+        repeat(20) {
+            val driver = createDriver()
+            driver.initMirrorMatch(deck = Deck.of("Island" to 40), startingLife = 20)
+            val activePlayer = driver.activePlayer!!
+            val opponent = driver.getOpponent(activePlayer)
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+            driver.putCreatureOnBattlefield(activePlayer, "Grip of Chaos")
+            driver.putCreatureOnBattlefield(activePlayer, "Grizzly Bears")
+            driver.putLandOnBattlefield(activePlayer, "Island")
+            driver.putLandOnBattlefield(opponent, "Island")
+            val seeker = driver.putCreatureOnBattlefield(opponent, "Glory Seeker")
+
+            // "Target spell or nonland permanent an opponent controls": the Glory Seeker is the
+            // only one — not a land, not the caster's own permanents, not Press the Enemy itself.
+            castAndResolveGrip(driver, activePlayer, "Press the Enemy", Color.BLUE, 4, seeker)
+
+            singleTargetOfTopSpell(driver) shouldBe seeker
+            driver.events.any { it is TargetReselectedEvent } shouldBe false
+        }
+    }
+
+    test("reselection honours hexproof — a hexproof creature an opponent controls is never picked") {
+        repeat(20) {
+            val driver = createDriver()
+            driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
+            val activePlayer = driver.activePlayer!!
+            val opponent = driver.getOpponent(activePlayer)
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+            driver.putCreatureOnBattlefield(activePlayer, "Grip of Chaos")
+            val seeker = driver.putCreatureOnBattlefield(opponent, "Glory Seeker")
+            driver.putCreatureOnBattlefield(opponent, "Gladecover Scout")
+
+            castAndResolveGrip(driver, activePlayer, "Giant Growth", Color.GREEN, 1, seeker)
+
+            singleTargetOfTopSpell(driver) shouldBe seeker
+            driver.events.any { it is TargetReselectedEvent } shouldBe false
+        }
+    }
+
+    test("reselecting onto a face-down creature doesn't name it to a player who can't look at it") {
+        var reselected = false
+        repeat(40) {
+            if (reselected) return@repeat
+            val driver = createDriver()
+            driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
+            val activePlayer = driver.activePlayer!!
+            val opponent = driver.getOpponent(activePlayer)
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+            driver.putCreatureOnBattlefield(activePlayer, "Grip of Chaos")
+            val seeker = driver.putCreatureOnBattlefield(opponent, "Glory Seeker")
+            val hidden = driver.putCreatureOnBattlefield(opponent, "Savannah Lions")
+            driver.replaceState(driver.state.updateEntity(hidden) { it.with(FaceDownComponent) })
+
+            castAndResolveGrip(driver, activePlayer, "Giant Growth", Color.GREEN, 1, seeker)
+            if (singleTargetOfTopSpell(driver) != hidden) return@repeat
+            reselected = true
+
+            val visibility = Visibility(
+                driver.cardRegistry,
+                conditionEvaluator = PredicateEvaluator(cardRegistry = driver.cardRegistry).conditions
+            )
+            val event = driver.events.filterIsInstance<TargetReselectedEvent>().single()
+            val seen = ClientEventTransformer.transform(listOf(event), activePlayer, driver.state, visibility)
+                .single() as ClientEvent.TargetReselected
+            seen.newTargetName shouldBe FACE_DOWN_DISPLAY_NAME
+            seen.description shouldNotContain "Savannah Lions"
+
+            // CR 708.5: its controller may look at it.
+            val seenByController = ClientEventTransformer.transform(listOf(event), opponent, driver.state, visibility)
+                .single() as ClientEvent.TargetReselected
+            seenByController.newTargetName shouldBe "Savannah Lions"
+        }
+        reselected shouldBe true
     }
 })

@@ -160,14 +160,25 @@ class CopyExceptionsTest : FunSpec({
         result.colors shouldBe setOf(Color.GREEN, Color.RED)
     }
 
-    test("P/T overrides are conjured even when the copied object had none") {
+    test("P/T overrides are conjured when the copied object had none but the copy is a creature") {
         val result = CopyExceptionApplier.apply(
             plainArtifact(),
-            CopyExceptions(powerOverride = 4, toughnessOverride = 4),
+            CopyExceptions(addedCardTypes = setOf(CardType.CREATURE), powerOverride = 4, toughnessOverride = 4),
         )
         val stats = result.baseStats.shouldNotBeNull()
         stats.power shouldBe CharacteristicValue.Fixed(4)
         stats.toughness shouldBe CharacteristicValue.Fixed(4)
+    }
+
+    test("P/T overrides give nothing to a noncreature copy with no printed P/T (CR 208.3)") {
+        // Mindlink Mech's ruling: copying a crewing animated land "except it's 4/3, it's a Vehicle
+        // artifact" leaves it without P/T, so the crew effect makes it a 0/0.
+        val result = CopyExceptionApplier.apply(
+            plainArtifact(),
+            CopyExceptions(addedSubtypes = setOf(Subtype.VEHICLE), powerOverride = 4, toughnessOverride = 3),
+        )
+        result.baseStats shouldBe null
+        result.typeLine.subtypes shouldBe setOf(Subtype.VEHICLE)
     }
 
     test("a half-specified P/T override keeps the copied value on the other half") {
@@ -417,4 +428,52 @@ class CopyExceptionsTest : FunSpec({
         ).clauses() shouldBe listOf("it's 1/1", "it has toxic 1")
     }
 
+
+    // Moritte of the Frost: "… and, if it's a creature, it … has changeling."
+    val ifCreatureChangeling = CopyExceptions(
+        addedSupertypes = setOf(Supertype.SNOW),
+        conditional = listOf(CopyExceptions.IfCardType(CardType.CREATURE,
+            CopyExceptions(addedKeywords = setOf(Keyword.CHANGELING)))),
+    )
+
+    test("a conditional clause applies when the copy has its card type") {
+        val copy = CopyExceptionApplier.apply(legendaryArtifactBear(), ifCreatureChangeling)
+        copy.baseKeywords shouldBe setOf(Keyword.TRAMPLE, Keyword.CHANGELING)
+        copy.typeLine.supertypes shouldBe setOf(Supertype.LEGENDARY, Supertype.SNOW)
+    }
+
+    test("a conditional clause is skipped when the copy lacks its card type; the unconditional part still applies") {
+        val copy = CopyExceptionApplier.apply(plainArtifact(), ifCreatureChangeling)
+        copy.baseKeywords shouldBe emptySet()
+        copy.typeLine.supertypes shouldBe setOf(Supertype.SNOW)
+    }
+
+    test("a conditional clause tests the copy as the other exceptions made it, not the copied object") {
+        val animated = CopyExceptions(
+            addedCardTypes = setOf(CardType.CREATURE), powerOverride = 1, toughnessOverride = 1,
+            conditional = ifCreatureChangeling.conditional,
+        )
+        CopyExceptionApplier.apply(plainArtifact(), animated).baseKeywords shouldBe setOf(Keyword.CHANGELING)
+        val stripped = CopyExceptions(overrideCardTypes = setOf(CardType.ARTIFACT),
+            conditional = ifCreatureChangeling.conditional)
+        CopyExceptionApplier.apply(legendaryArtifactBear(), stripped).baseKeywords shouldBe setOf(Keyword.TRAMPLE)
+    }
+
+    test("a conditional clause tests each flip half on its own type line") {
+        val flipped = plainArtifact().copy(flipSide = legendaryArtifactBear())
+        val copy = CopyExceptionApplier.apply(flipped, ifCreatureChangeling)
+        copy.baseKeywords shouldBe emptySet()
+        copy.flipSide.shouldNotBeNull().baseKeywords shouldBe setOf(Keyword.TRAMPLE, Keyword.CHANGELING)
+        copy.flipSide.typeLine.supertypes shouldBe setOf(Supertype.LEGENDARY, Supertype.SNOW)
+    }
+
+    test("conditional clauses merge, render and predict the type line") {
+        val types = CopyExceptions(conditional = listOf(CopyExceptions.IfCardType(CardType.CREATURE,
+            CopyExceptions(addedSubtypes = setOf(Subtype.BEAR)))))
+        CopyExceptionApplier.typeLine(legendaryArtifactBear().typeLine.copy(subtypes = emptySet()), types)
+            .subtypes shouldBe setOf(Subtype.BEAR)
+        CopyExceptionApplier.typeLine(plainArtifact().typeLine, types).subtypes shouldBe emptySet()
+        types.over(ifCreatureChangeling).conditional.size shouldBe 2
+        ifCreatureChangeling.clauses() shouldBe listOf("it's snow", "if it's a creature, it has changeling")
+    }
 })

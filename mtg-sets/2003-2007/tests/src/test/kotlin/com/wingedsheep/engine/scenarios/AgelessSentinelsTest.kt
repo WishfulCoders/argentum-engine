@@ -62,12 +62,8 @@ class AgelessSentinelsTest : FunSpec({
         val attackingCreature = driver.putCreatureOnBattlefield(attacker, "Grizzly Bears")
         driver.removeSummoningSickness(attackingCreature)
 
-        // Pass to opponent's turn
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        // If it's not the attacker's turn, pass another turn
-        if (driver.activePlayer != attacker) {
-            driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        }
+        // Pass to the attacker's turn
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, attacker)
 
         driver.declareAttackers(attacker, listOf(attackingCreature), defender)
         driver.bothPass()
@@ -118,11 +114,8 @@ class AgelessSentinelsTest : FunSpec({
         val attackingCreature = driver.putCreatureOnBattlefield(attacker, "Grizzly Bears")
         driver.removeSummoningSickness(attackingCreature)
 
-        // Pass to attacker's turn
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        if (driver.activePlayer != attacker) {
-            driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        }
+        // Pass to the attacker's turn
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, attacker)
 
         driver.declareAttackers(attacker, listOf(attackingCreature), defender)
         driver.bothPass()
@@ -132,10 +125,7 @@ class AgelessSentinelsTest : FunSpec({
         driver.bothPass() // resolve trigger
 
         // Advance to next turn (defender's turn)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        if (driver.activePlayer != defender) {
-            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        }
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, defender)
 
         // The effects should still be active (permanent duration)
         val projected = StateProjector().project(driver.state)

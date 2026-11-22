@@ -55,7 +55,10 @@ class TeamVsTeamTest : FunSpec({
     fun registry(): CardRegistry = CardRegistry().also { it.register(TestCards.all) }
     val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
-    fun checker() = StateBasedActionChecker(zones, cardRegistry = registry())
+    fun checker() = StateBasedActionChecker(
+        zones, cardRegistry = registry(),
+        finishAbandonedResolution = com.wingedsheep.engine.core.EngineServices(registry()).finishAbandonedResolution,
+    )
 
     fun boot(
         format: Format = Format.TeamVsTeam(),

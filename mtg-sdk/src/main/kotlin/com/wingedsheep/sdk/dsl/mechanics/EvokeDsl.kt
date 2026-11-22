@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * 601.2b/601.2f–h), and the permanent is sacrificed when it enters (CR 702.74a).
  */
 fun CardBuilder.evokeWith(vararg additionalCosts: AdditionalCost, mana: String = "{0}") {
-    require(additionalCosts.isNotEmpty()) { "evokeWith needs a non-mana cost; use `evoke = \"{cost}\"` for mana-only evoke" }
+    require(additionalCosts.size == 1) { "evokeWith takes exactly one non-mana cost (KeywordAbility.Evoke carries one); use `evoke = \"{cost}\"` for mana-only evoke" }
     require(evoke == null) { "A card has one evoke cost: set either `evoke` or `evokeWith`, not both" }
-    keywordAbilityList.add(KeywordAbility.Evoke(ManaCost.parse(mana), additionalCosts.toList()))
+    keywordAbilityList.add(KeywordAbility.Evoke(ManaCost.parse(mana), additionalCosts.single()))
 }

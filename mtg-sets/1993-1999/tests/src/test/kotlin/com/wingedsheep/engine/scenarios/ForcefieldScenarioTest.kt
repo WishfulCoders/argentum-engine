@@ -1,5 +1,8 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.view.ClientGameState
+import com.wingedsheep.engine.view.asPriorityAction
+import com.wingedsheep.engine.legalactions.MeaningfulActionFilter
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.handlers.effects.DamageUtils
@@ -69,6 +72,21 @@ class ForcefieldScenarioTest : ScenarioTestBase() {
             finish(game)
             game.getLifeTotal(1) shouldBe 17
         }
+        test("activation is flagged inert until an unblocked creature exists, so it is not a stop") {
+            val game = board()
+            fun forcefield() = game.getLegalActions(1).single {
+                (it.action as? ActivateAbility)?.sourceId == game.findPermanent("Forcefield")
+            }
+            game.declareAttackers(mapOf("Hill Giant" to 1)).error shouldBe null
+            game.passPriority().error shouldBe null
+            forcefield().inertReason shouldBe "No unblocked creature to choose yet"
+            MeaningfulActionFilter.isMeaningful(forcefield().asPriorityAction()) shouldBe false
+            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
+            game.declareNoBlockers().error shouldBe null
+            if (game.state.priorityPlayerId != game.player1Id) game.passPriority().error shouldBe null
+            forcefield().inertReason shouldBe null
+            MeaningfulActionFilter.isMeaningful(forcefield().asPriorityAction()) shouldBe true
+        }
         test("blocked trampler is not an eligible source even after its blocker dies") {
             val game = board("Craw Wurm", blocker = true)
             // Trample is given using the ordinary card script machinery.
@@ -129,18 +147,21 @@ class ForcefieldScenarioTest : ScenarioTestBase() {
             game.state = result.state
             finish(game); game.getLifeTotal(1) shouldBe 19
         }
-        test("face-down chosen source badge hides its printed identity for every viewer") {
+        test("face-down chosen source badge names it only to the player who may look under it") {
             val game = board(); val giant = game.findPermanent("Hill Giant")!!
             game.state = game.state.updateEntity(giant) { it.with(FaceDownComponent) }
             unblocked(game); activate(game); choose(game)
-            val views = listOf(game.getClientState(1), game.getClientState(2),
+            fun badgeOf(view: ClientGameState) = view.players.single { it.playerId == game.player1Id }.activeEffects
+                .single { it.effectId.startsWith("prevent_next_damage_leaving_amount") }
+            val hiddenViews = listOf(game.getClientState(1),
                 stateTransformer.transform(game.state, game.player1Id, isSpectator = true))
-            for (view in views) {
-                val badge = view.players.single { it.playerId == game.player1Id }.activeEffects
-                    .single { it.effectId.startsWith("prevent_next_damage_leaving_amount") }
+            for (view in hiddenViews) {
+                val badge = badgeOf(view)
                 badge.name shouldBe "Leave 1 from Face-down creature"
                 badge.description!!.contains("Hill Giant") shouldBe false
             }
+            // CR 708.5: the face-down creature's controller may look at it.
+            badgeOf(game.getClientState(2)).name shouldBe "Leave 1 from Hill Giant"
             finish(game); game.getLifeTotal(1) shouldBe 19
         }
     }

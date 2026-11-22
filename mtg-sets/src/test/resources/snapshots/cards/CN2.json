@@ -1,3 +1,219 @@
+// Domesticated Hydra
+{
+    "name": "Domesticated Hydra",
+    "manaCost": "{2}{G}{G}",
+    "typeLine": "Creature — Hydra",
+    "oracleText": "{X}{G}{G}{G}: Monstrosity X. (If this creature isn't monstrous, put X +1/+1 counters on it and it becomes monstrous.)\nAs long as this creature is monstrous, it has trample.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Domesticated Hydra:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{X}{G}{G}{G}"
+                    }
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Not",
+                            "condition": {
+                                "type": "EntityMatches",
+                                "entity": "Self",
+                                "filter": {
+                                    "statePredicates": [
+                                        "IsMonstrous"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "AddDynamicCounters",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "amount": "XValue",
+                                "target": "Self"
+                            },
+                            {
+                                "type": "BecomeMonstrous",
+                                "x": "XValue"
+                            }
+                        ]
+                    },
+                    "descriptionOverride": "Monstrosity X. (If this creature isn't monstrous, put X +1/+1 counters on it and it becomes monstrous.)"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantKeyword",
+                    "keyword": "TRAMPLE",
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "EntityMatches",
+                    "entity": "Self",
+                    "filter": {
+                        "statePredicates": [
+                            "IsMonstrous"
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "63",
+        "rarity": "UNCOMMON",
+        "artist": "Mathias Kollros",
+        "flavorText": "\"Sit. Fetch. Devastate.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/3/23be85ac-2d9c-4261-aa55-4421e4a35d8b.jpg?1783937345"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Grenzo, Havoc Raiser
+{
+    "name": "Grenzo, Havoc Raiser",
+    "manaCost": "{R}{R}",
+    "typeLine": "Legendary Creature — Goblin Rogue",
+    "oracleText": "Whenever a creature you control deals combat damage to a player, choose one —\n• Goad target creature that player controls.\n• Exile the top card of that player's library. Until end of turn, you may cast that card and you may spend mana as though it were mana of any color to cast that spell.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Grenzo, Havoc Raiser:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    },
+                    "sourceFilter": "creature ctrl:you"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Modal",
+                    "modes": [
+                        {
+                            "effect": {
+                                "type": "Goad",
+                                "target": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                }
+                            },
+                            "targetRequirements": [
+                                {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": {
+                                            "cardPredicates": [
+                                                "IsCreature"
+                                            ],
+                                            "controllerPredicate": {
+                                                "type": "ControlledByReferencedPlayer",
+                                                "target": {
+                                                    "type": "PlayerRef",
+                                                    "player": "TriggeringPlayer"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "id": "t0"
+                                }
+                            ],
+                            "description": "Goad target creature that player controls"
+                        },
+                        {
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "TopOfLibrary",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            },
+                                            "player": "TriggeringPlayer"
+                                        },
+                                        "storeAs": "gathered0"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "gathered0",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Exile",
+                                            "player": "TriggeringPlayer"
+                                        }
+                                    },
+                                    {
+                                        "type": "GrantMayPlayFromExile",
+                                        "from": "gathered0",
+                                        "withAnyManaColor": true,
+                                        "nonLandOnly": true
+                                    }
+                                ]
+                            },
+                            "description": "Exile the top card of that player's library. Until end of turn, you may cast it, spending mana as though it were mana of any color"
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever a creature you control deals combat damage to a player, choose one — goad target creature that player controls; or exile the top card of that player's library, and until end of turn you may cast it, spending mana as though it were mana of any color."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "54",
+        "rarity": "RARE",
+        "artist": "Svetlin Velinov",
+        "flavorText": "\"You burn. I'll pillage.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/7/075cd558-2557-409a-8244-2de65664be53.jpg?1783937349",
+        "rulings": [
+            {
+                "date": "2016-08-23",
+                "text": "If you exile a land card this way, you can't play it."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "Casting the exiled card follows the normal rules for casting that card. You must pay its costs, and you must follow all applicable timing rules. For example, if you exile a creature card this way, you must wait until your main phase to cast it."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "If you don't cast the card, it will remain in exile."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Leovold, Emissary of Trest
 {
     "name": "Leovold, Emissary of Trest",
@@ -16,8 +232,7 @@
                     "type": "BecomesTargetEvent",
                     "targetFilter": "permanent ctrl:you",
                     "byOpponent": true,
-                    "includePlayerTargets": true,
-                    "targetPlayer": "You"
+                    "playerTargets": "You"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -34,7 +249,7 @@
             }
         ],
         "staticAbilities": [
-            "RestrictDrawsPerTurn"
+            "RestrictCardsDrawnPerTurn"
         ]
     },
     "metadata": {
@@ -70,6 +285,98 @@
         "BLACK",
         "GREEN",
         "BLUE"
+    ]
+}
+
+// Queen Marchesa
+{
+    "name": "Queen Marchesa",
+    "manaCost": "{1}{R}{W}{B}",
+    "typeLine": "Legendary Creature — Human Assassin",
+    "oracleText": "Deathtouch, haste\nWhen Queen Marchesa enters, you become the monarch.\nAt the beginning of your upkeep, if an opponent is the monarch, create a 1/1 black Assassin creature token with deathtouch and haste.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "DEATHTOUCH",
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Queen Marchesa:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "TakeDesignation",
+                    "designation": "MONARCH"
+                }
+            },
+            {
+                "id": "Queen Marchesa:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "BLACK"
+                    ],
+                    "creatureTypes": [
+                        "Assassin"
+                    ],
+                    "keywords": [
+                        "DEATHTOUCH",
+                        "HASTE"
+                    ]
+                },
+                "interveningIf": {
+                    "type": "PlayerHasDesignation",
+                    "player": "AnOpponent",
+                    "designation": "MONARCH"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "78",
+        "rarity": "RARE",
+        "artist": "Kieran Yanner",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/3/03f4341c-088b-4f35-b82b-3d98d8a93de4.jpg?1783937339",
+        "rulings": [
+            {
+                "date": "2016-08-23",
+                "text": "The last ability of Queen Marchesa checks to see if an opponent is the monarch as your upkeep begins. If no opponent is the monarch, Queen Marchesa's ability won't trigger at all. Queen Marchesa's ability will also check to see if an opponent is the monarch as it tries to resolve. If no opponent is the monarch at that time, Queen Marchesa's ability will have no effect."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "The game starts with no monarch. Once an effect makes one player the monarch, the game will have exactly one monarch from that point forward."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "Being the monarch carries two inherent triggered abilities. \"At the beginning of the monarch's end step, that player draws a card\" and \"Whenever a creature deals combat damage to the monarch, its controller becomes the monarch.\""
+            },
+            {
+                "date": "2016-08-23",
+                "text": "Abilities that trigger whenever you \"become the monarch\" trigger only if you aren't already the monarch. For example, if you are already the monarch as Custodi Lich enters the battlefield, its last ability won't trigger."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "If the triggered ability that causes the monarch to draw a card goes on the stack, and a different player becomes the monarch before that ability resolves, the first player will still draw the card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "RED",
+        "WHITE"
     ]
 }
 
@@ -117,7 +424,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a creature card with toughness 2 or less to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -151,5 +460,342 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Selvala's Stampede
+{
+    "name": "Selvala's Stampede",
+    "manaCost": "{4}{G}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Council's dilemma — Starting with you, each player votes for wild or free. Reveal cards from the top of your library until you reveal a creature card for each wild vote. Put those creature cards onto the battlefield, then shuffle the rest into your library. You may put a permanent card from your hand onto the battlefield for each free vote.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "Vote",
+                    "choices": [
+                        "wild",
+                        "free"
+                    ],
+                    "voteCounts": {
+                        "votes0": "wild",
+                        "votes1": "free"
+                    }
+                },
+                {
+                    "type": "GatherUntilMatch",
+                    "filter": "creature",
+                    "storeMatch": "matched2",
+                    "storeRevealed": "revealed2",
+                    "count": {
+                        "type": "VariableReference",
+                        "variableName": "votes0"
+                    }
+                },
+                {
+                    "type": "RevealCollection",
+                    "from": "revealed2"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "matched2",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
+                    }
+                },
+                "ShuffleLibrary",
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand",
+                        "filter": "permanent"
+                    },
+                    "storeAs": "gathered6"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered6",
+                    "selection": {
+                        "type": "ChooseUpTo",
+                        "count": {
+                            "type": "VariableReference",
+                            "variableName": "votes1"
+                        }
+                    },
+                    "storeSelected": "selected7",
+                    "prompt": "Put a permanent card from your hand onto the battlefield for each free vote"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "selected7",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "71",
+        "rarity": "RARE",
+        "artist": "Svetlin Velinov",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/5/85d6e48e-3d26-4915-9739-25edbd80bdf1.jpg?1783937340",
+        "rulings": [
+            {
+                "date": "2016-08-23",
+                "text": "You must vote for one of the available options. You can't abstain."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "The creature cards revealed for the wild votes all enter the battlefield at the same time, followed by the permanent cards put onto the battlefield from your hand for the free votes."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "Because the votes are made in turn order, each player will know the votes of players who voted beforehand."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Selvala, Heart of the Wilds
+{
+    "name": "Selvala, Heart of the Wilds",
+    "manaCost": "{1}{G}{G}",
+    "typeLine": "Legendary Creature — Elf Scout",
+    "oracleText": "Whenever another creature enters, its controller may draw a card if its power is greater than each other creature's power.\n{G}, {T}: Add X mana in any combination of colors, where X is the greatest power among creatures you control.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Selvala, Heart of the Wilds:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature",
+                    "to": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Compare",
+                            "left": {
+                                "type": "AggregateBattlefield",
+                                "player": "Each",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsCreature",
+                                        {
+                                            "type": "CompareNumericProperty",
+                                            "property": "POWER",
+                                            "operator": "GTE",
+                                            "amount": {
+                                                "type": "EntityProperty",
+                                                "entity": "TriggeringEntity",
+                                                "numericProperty": "Power"
+                                            }
+                                        }
+                                    ],
+                                    "statePredicates": [
+                                        {
+                                            "type": "StateNot",
+                                            "predicate": "IsTriggeringEntity"
+                                        }
+                                    ]
+                                }
+                            },
+                            "operator": "EQ",
+                            "right": {
+                                "type": "Fixed",
+                                "amount": 0
+                            }
+                        }
+                    },
+                    "then": {
+                        "type": "Gated",
+                        "gate": "Gate.MayDecide",
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": "ControllerOfTriggeringEntity"
+                        },
+                        "decisionMaker": "ControllerOfTriggeringEntity"
+                    }
+                },
+                "descriptionOverride": "Whenever another creature enters, its controller may draw a card if its power is greater than each other creature's power."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Selvala, Heart of the Wilds:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{G}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "AddDynamicMana",
+                    "amountSource": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "creature",
+                        "aggregation": "MAX",
+                        "property": "POWER"
+                    },
+                    "allowedColors": [
+                        "WHITE",
+                        "BLUE",
+                        "BLACK",
+                        "RED",
+                        "GREEN"
+                    ]
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "Add X mana in any combination of colors, where X is the greatest power among creatures you control."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "70",
+        "rarity": "MYTHIC",
+        "artist": "Tyler Jacobson",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/9/99a3e619-fbdb-406c-9f21-eb582cb878c0.jpg?1783937342",
+        "rulings": [
+            {
+                "date": "2016-08-23",
+                "text": "Selvala's last ability is a mana ability. It doesn't use the stack and can't be responded to. If the greatest power among creatures you control is 0 or less at that time, no mana is added."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "The new creature's power is compared to the power of each other creature on the battlefield as the first ability resolves. If another creature has the same or higher power than the new creature's power, no one may draw a card."
+            },
+            {
+                "date": "2016-08-23",
+                "text": "If the new creature isn't on the battlefield as the first ability resolves, use its power when it left the battlefield to determine whether its controller may draw a card. Note that effects that reduced its power before it left the battlefield will apply."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Sinuous Vermin
+{
+    "name": "Sinuous Vermin",
+    "manaCost": "{1}{B}",
+    "typeLine": "Creature — Rat Horror",
+    "oracleText": "{3}{B}{B}: Monstrosity 3. (If this creature isn't monstrous, put three +1/+1 counters on it and it becomes monstrous.)\nAs long as this creature is monstrous, it has menace. (It can't be blocked except by two or more creatures.)",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Sinuous Vermin:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{3}{B}{B}"
+                    }
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Not",
+                            "condition": {
+                                "type": "EntityMatches",
+                                "entity": "Self",
+                                "filter": {
+                                    "statePredicates": [
+                                        "IsMonstrous"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "AddDynamicCounters",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                },
+                                "target": "Self"
+                            },
+                            "BecomeMonstrous"
+                        ]
+                    },
+                    "descriptionOverride": "Monstrosity 3. (If this creature isn't monstrous, put 3 +1/+1 counters on it and it becomes monstrous.)"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantKeyword",
+                    "keyword": "MENACE",
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "EntityMatches",
+                    "entity": "Self",
+                    "filter": {
+                        "statePredicates": [
+                            "IsMonstrous"
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "46",
+        "artist": "Jason Kang",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/5/e50f5505-fcbb-4a84-bcf6-950362d83201.jpg?1783937351",
+        "rulings": [
+            {
+                "date": "2016-08-23",
+                "text": "Once Sinuous Vermin has been legally blocked by one creature, activating the monstrosity ability to give it menace won’t change or undo that block."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }

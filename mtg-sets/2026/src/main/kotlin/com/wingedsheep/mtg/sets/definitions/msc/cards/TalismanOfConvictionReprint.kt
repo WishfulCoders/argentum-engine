@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Talisman of Conviction reprint in Marvel Super Heroes Commander. Canonical CardDefinition lives in its earliest set.
+ * Talisman of Conviction reprint in MSC. Canonical CardDefinition lives in its earliest set.
  */
 val TalismanOfConvictionReprint = Printing(
     oracleId = "6c326439-5620-4ec6-a56a-fe9c3d5d2a46",

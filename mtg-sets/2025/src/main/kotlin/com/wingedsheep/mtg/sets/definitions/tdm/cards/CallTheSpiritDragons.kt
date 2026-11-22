@@ -63,7 +63,9 @@ val CallTheSpiritDragons = card("Call the Spirit Dragons") {
                 val dragon = selectTarget(
                     TargetObject(filter = TargetFilter(
                             GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON).withColor(color)
-                        ))
+                        )),
+                    nonTargeting = true,
+                    prompt = "Choose a ${color.name.lowercase()} Dragon you control to get a +1/+1 counter"
                 )
                 run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, dragon.asTarget))
                 dragon

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CharacteristicValue
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantDynamicStats
+import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.values.Aggregation
 import com.wingedsheep.sdk.scripting.values.CardNumericProperty
@@ -94,6 +95,15 @@ class AmountsTest : StringSpec({
         roundTrips("~'s power is equal to the number of colors among permanents you control.")
         roundTrips("~'s power is equal to the greatest power among creatures you control.")
         roundTrips("~'s power is equal to the number of basic land types among lands you control.")
+        dynamic("~'s power is equal to the number of different mana values among cards in your graveyard.") shouldBe
+            DynamicAmount.AggregateZone(
+                Player.You,
+                Zone.GRAVEYARD,
+                GameObjectFilter.Any,
+                Aggregation.DISTINCT_VALUES,
+                CardNumericProperty.MANA_VALUE,
+            )
+        roundTrips("~'s power is equal to the number of different mana values among cards in your graveyard.")
     }
 
     "the multiplier is a layer, and only the word English has" {
@@ -260,5 +270,75 @@ class AmountsTest : StringSpec({
     "the collective count and the superlative are different values of the same words" {
         fragment("~ gets +1/+1 for each creature on the battlefield.") shouldNotBe
             fragment("~ enters with X +1/+1 counters on it, where X is the greatest number of creatures a player controls.")
+    }
+
+    "calculated stat modifiers cover both recipients and all three shapes" {
+        val amount = "the number of artifacts you control"
+
+        listOf("+X/+X", "+X/+0", "+0/+X").forEach { modifier ->
+            roundTrips(
+                "Target creature gets $modifier until end of turn, where X is $amount."
+            )
+            roundTrips(
+                "~ gets $modifier until end of turn, where X is $amount."
+            )
+        }
+    }
+
+    "power-only calculated boosts leave toughness unchanged" {
+        val stats = fragment(
+            "~ gets +X/+0 until end of turn, " +
+                "where X is the number of artifacts you control."
+        ).script.spellEffect.shouldBeInstanceOf<ModifyStatsEffect>()
+
+        stats.powerModifier shouldBe
+            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Artifact)
+        stats.toughnessModifier shouldBe DynamicAmount.Fixed(0)
+    }
+
+    "toughness-only calculated boosts leave power unchanged" {
+        val stats = fragment(
+            "Target creature gets +0/+X until end of turn, " +
+                "where X is the number of artifacts you control."
+        ).script.spellEffect.shouldBeInstanceOf<ModifyStatsEffect>()
+
+        stats.powerModifier shouldBe DynamicAmount.Fixed(0)
+        stats.toughnessModifier shouldBe
+            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Artifact)
+    }
+
+    "calculated modifiers compose with activated and triggered abilities" {
+        roundTrips(
+            "{1}{R}: ~ gets +X/+0 until end of turn, " +
+                "where X is the number of artifacts you control."
+        )
+
+        val triggered =
+            "When ~ enters, it gets +0/+X until end of turn, " +
+                "where X is the number of creatures you control."
+
+        val canonical =
+            "When ~ enters, ~ gets +0/+X until end of turn, " +
+                "where X is the number of creatures you control."
+
+        // Both spellings represent the same model.
+        fragment(triggered) shouldBe fragment(canonical)
+
+        // The source name is the canonical printed spelling.
+        Grammar.abilityLine.printLine(fragment(triggered)) shouldBe canonical
+    }
+
+    "calculated power and toughness boosts are different models" {
+        val amount = "the number of artifacts you control"
+
+        fragment("~ gets +X/+0 until end of turn, where X is $amount.") shouldNotBe
+            fragment("~ gets +0/+X until end of turn, where X is $amount.")
+    }
+
+    "calculated boosts distinguish the source from a target" {
+        val amount = "the number of artifacts you control"
+
+        fragment("~ gets +X/+0 until end of turn, where X is $amount.") shouldNotBe
+            fragment("Target creature gets +X/+0 until end of turn, where X is $amount.")
     }
 })

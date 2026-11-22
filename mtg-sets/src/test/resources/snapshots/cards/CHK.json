@@ -809,7 +809,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a Demon card to put into your hand",
+                                    "selectedLabel": "Put into your hand"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -975,7 +977,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         }
                     ]
@@ -3064,7 +3069,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for an Arcane card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -3700,7 +3707,7 @@
             {
                 "id": "Forbidden Orchard:2",
                 "trigger": {
-                    "type": "LandTappedForMana",
+                    "type": "PermanentTappedForMana",
                     "player": "You"
                 },
                 "effect": {
@@ -4244,7 +4251,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an Equipment artifact card to put onto the battlefield",
+                                "selectedLabel": "Put onto the battlefield"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4585,7 +4594,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 3
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                }
                             }
                         }
                     ]
@@ -4722,7 +4734,10 @@
                     "effects": [
                         {
                             "type": "GatherCards",
-                            "source": "Self",
+                            "source": {
+                                "type": "Entity",
+                                "entity": "Self"
+                            },
                             "storeAs": "gathered0"
                         },
                         {
@@ -5227,7 +5242,12 @@
                             "baseFilter": {
                                 "cardPredicates": [
                                     "IsArtifact",
-                                    "ManaValueEqualsX"
+                                    {
+                                        "type": "CompareNumericProperty",
+                                        "property": "MANA_VALUE",
+                                        "operator": "EQ",
+                                        "amount": "XValue"
+                                    }
                                 ]
                             }
                         },
@@ -6718,7 +6738,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -8450,7 +8472,8 @@
                     },
                     "revealed": true
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -8862,7 +8885,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 1
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
                     }
                 },
                 "effect": {
@@ -11165,7 +11191,12 @@
                                 "filter": {
                                     "cardPredicates": [
                                         "IsNonland",
-                                        "ManaValueEqualsX"
+                                        {
+                                            "type": "CompareNumericProperty",
+                                            "property": "MANA_VALUE",
+                                            "operator": "EQ",
+                                            "amount": "XValue"
+                                        }
                                     ]
                                 }
                             },
@@ -11182,7 +11213,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a nonland card with mana value exactly X to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -11396,7 +11429,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 5
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 5
+                                }
                             }
                         }
                     ]
@@ -11640,7 +11676,7 @@
             },
             {
                 "type": "TransformPermanent",
-                "setSubtypes": [
+                "setCreatureSubtypes": [
                     "Demon",
                     "Spirit"
                 ]
@@ -12185,7 +12221,11 @@
                             "name": "t0"
                         },
                         "destination": "Battlefield",
-                        "addCounterType": "PLUS_ONE_PLUS_ONE"
+                        "entryCounters": [
+                            {
+                                "counterType": "PLUS_ONE_PLUS_ONE"
+                            }
+                        ]
                     }
                 }
             ]
@@ -12500,7 +12540,10 @@
                             },
                             {
                                 "type": "GatherCards",
-                                "source": "Self",
+                                "source": {
+                                    "type": "Entity",
+                                    "entity": "Self"
+                                },
                                 "storeAs": "gathered2"
                             },
                             {
@@ -12740,7 +12783,8 @@
                                 "type": "BoundVariable",
                                 "name": "t0"
                             }
-                        }
+                        },
+                        "description": "Tap target permanent"
                     },
                     {
                         "effect": {
@@ -12750,7 +12794,8 @@
                                 "name": "t0"
                             },
                             "tap": false
-                        }
+                        },
+                        "description": "Untap target permanent"
                     }
                 ],
                 "countsAsModalSpell": false
@@ -13636,7 +13681,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -14482,7 +14529,9 @@
                     }
                 },
                 "effect": {
-                    "type": "SkipNextUntapStep",
+                    "type": "SkipStepOrPhaseEffect",
+                    "part": "UNTAP_STEP",
+                    "duration": "NEXT",
                     "target": {
                         "type": "PlayerRef",
                         "player": "TriggeringPlayer"
@@ -14708,7 +14757,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a card named The Unspeakable to put onto the battlefield",
+                                    "selectedLabel": "Put onto the battlefield"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -16291,7 +16342,8 @@
                                         "type": "BoundVariable",
                                         "name": "t0"
                                     }
-                                }
+                                },
+                                "description": "Tap target creature"
                             },
                             {
                                 "effect": {
@@ -16301,7 +16353,8 @@
                                         "name": "t0"
                                     },
                                     "tap": false
-                                }
+                                },
+                                "description": "Untap target creature"
                             }
                         ],
                         "countsAsModalSpell": false
@@ -16961,7 +17014,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a creature legendary card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -17266,7 +17321,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         }
                     ]
@@ -18030,7 +18088,9 @@
                     "type": "Composite",
                     "effects": [
                         {
-                            "type": "SkipNextUntapStep",
+                            "type": "SkipStepOrPhaseEffect",
+                            "part": "UNTAP_STEP",
+                            "duration": "NEXT",
                             "target": {
                                 "type": "BoundVariable",
                                 "name": "t0"

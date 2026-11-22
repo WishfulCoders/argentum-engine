@@ -11,5 +11,9 @@ package com.wingedsheep.gym.contract
  * what matters.
  */
 object SchemaHash {
-    const val CURRENT: String = "argentum-gym-contract@v1.8-structured-decisions"
+    // Fork v1.8 (`structuredPayload`) merged with upstream's v1.8 (`costChoices`, the deciding seat's
+    // candidateIds / candidateInfo / targetRequirements / modes, FLIP_ONTO_BATTLEFIELD and
+    // ORDER_TRIGGERS kinds) and the ANTE per-player zone appended to TRAINING_OBSERVATION_ZONE_ORDER.
+    // A new name because neither side's v1.8 describes this shape (each player now has 8 zones).
+    const val CURRENT: String = "argentum-gym-contract@v1.8-structured-decisions+cost-choices-ante"
 }

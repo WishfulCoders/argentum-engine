@@ -14,14 +14,19 @@ import com.wingedsheep.engine.view.ClientAttacker
 import com.wingedsheep.engine.view.ClientBlocker
 import com.wingedsheep.engine.view.ClientCombatState
 import com.wingedsheep.engine.view.ClientCombatTarget
+import com.wingedsheep.engine.view.Visibility
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.model.EntityId
 
 /** Projects the combat in progress — attackers, blockers, damage assignment — for the client. */
-internal class CombatProjector {
+internal class CombatProjector(private val visibility: Visibility) {
 
-    /** The combat state, or null outside the combat phase or when nothing is attacking. */
-    fun project(state: GameState): ClientCombatState? {
+    /**
+     * The combat state as [viewingPlayerId] sees it, or null outside the combat phase or when
+     * nothing is attacking. A face-down attacker or blocker is named only to a viewer who may look
+     * under it.
+     */
+    fun project(state: GameState, viewingPlayerId: EntityId, isSpectator: Boolean = false): ClientCombatState? {
         // Check if we're in a combat step
         if (state.step.phase != Phase.COMBAT) {
             return null
@@ -39,6 +44,7 @@ internal class CombatProjector {
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
+            val creatureName = visibility.cardNameFor(state, entityId, viewingPlayerId, isSpectator) ?: cardComponent.name
 
             val attackingComponent = container.get<AttackingComponent>()
             if (attackingComponent != null) {
@@ -59,7 +65,7 @@ internal class CombatProjector {
                 attackers.add(
                     ClientAttacker(
                         creatureId = entityId,
-                        creatureName = cardComponent.name,
+                        creatureName = creatureName,
                         attackingTarget = when {
                             state.turnOrder.contains(attackingComponent.defenderId) ->
                                 ClientCombatTarget.Player(attackingComponent.defenderId)
@@ -68,6 +74,7 @@ internal class CombatProjector {
                             else -> ClientCombatTarget.Planeswalker(attackingComponent.defenderId)
                         },
                         blockedBy = blockedComponent?.blockerIds ?: emptyList(),
+                        isBlocked = blockedComponent != null,
                         mustBeBlockedByAll = entityId in mustBeBlockedCreatures,
                         bandId = attackingComponent.bandId,
                         damageAssignmentOrder = damageOrderComponent?.orderedBlockers,
@@ -82,7 +89,7 @@ internal class CombatProjector {
                     blockers.add(
                         ClientBlocker(
                             creatureId = entityId,
-                            creatureName = cardComponent.name,
+                            creatureName = creatureName,
                             blockingAttacker = attackerId
                         )
                     )

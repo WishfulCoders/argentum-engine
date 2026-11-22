@@ -10,6 +10,7 @@ import type {
   EntityId,
   TargetingState,
 } from '../types'
+import { compatibleSelectionPool } from '@/utils/selectionGroups'
 import { costInfoForPhase } from './pipelinePhases'
 
 export interface TargetingSliceState {
@@ -31,19 +32,23 @@ export const createTargetingSlice: SliceCreator<TargetingSlice> = (set, get) => 
   targetingState: null,
 
   startTargeting: (targetingState) => {
-    set({ targetingState })
+    set({ targetingState: { ...targetingState, selectionPool: targetingState.selectionPool ?? targetingState.validTargets,
+      validTargets: compatibleSelectionPool(targetingState.selectionPool ?? targetingState.validTargets,
+        targetingState.selectionGroups, targetingState.selectedTargets, targetingState.exclusiveGroups, targetingState.distinctCategories) } })
   },
 
   addTarget: (targetId) => {
     set((state) => {
       if (!state.targetingState) return state
       const { selectedTargets, maxTargets } = state.targetingState
-      if (selectedTargets.includes(targetId)) return state
+      if (selectedTargets.includes(targetId) || !state.targetingState.validTargets.includes(targetId)) return state
       if (selectedTargets.length < maxTargets) {
         return {
           targetingState: {
             ...state.targetingState,
             selectedTargets: [...selectedTargets, targetId],
+            validTargets: compatibleSelectionPool(state.targetingState.selectionPool ?? state.targetingState.validTargets,
+              state.targetingState.selectionGroups, [...selectedTargets, targetId], state.targetingState.exclusiveGroups, state.targetingState.distinctCategories),
             warning: null,
           },
         }
@@ -76,6 +81,8 @@ export const createTargetingSlice: SliceCreator<TargetingSlice> = (set, get) => 
         targetingState: {
           ...state.targetingState,
           selectedTargets: newTargets,
+          validTargets: compatibleSelectionPool(state.targetingState.selectionPool ?? state.targetingState.validTargets,
+            state.targetingState.selectionGroups, newTargets, state.targetingState.exclusiveGroups, state.targetingState.distinctCategories),
           warning: null,
         },
       }
@@ -141,15 +148,21 @@ export const createTargetingSlice: SliceCreator<TargetingSlice> = (set, get) => 
           // instance, so an earlier pick stays legal here (Seeds of Strength) unless the
           // requirement says "another target".
           const alreadySelected = allSelected.flat()
+          const choices = nextReq.validTargetsByPrefix
+            ? nextReq.validTargetsByPrefix[alreadySelected.join(',')] ?? []
+            : nextReq.validTargets
           const filteredValidTargets = nextReq.mustDifferFromEarlier
-            ? nextReq.validTargets.filter((t) => !alreadySelected.includes(t))
-            : [...nextReq.validTargets]
+            ? choices.filter((t) => !alreadySelected.includes(t))
+            : [...choices]
           startTargeting({
             action: pipelineState.accumulatedAction,
             validTargets: filteredValidTargets,
             selectedTargets: [],
             minTargets: nextReq.minTargets,
             maxTargets: nextReq.maxTargets,
+            selectionGroups: nextReq.selectionGroups ?? null,
+            exclusiveGroups: nextReq.exclusiveGroups ?? null,
+            distinctCategories: nextReq.distinctCategories ?? null,
             currentRequirementIndex: nextIndex,
             allSelectedTargets: allSelected,
             targetRequirements: targetingState.targetRequirements,
@@ -161,6 +174,7 @@ export const createTargetingSlice: SliceCreator<TargetingSlice> = (set, get) => 
             ...(targetingState.requiresDamageDistribution
               ? { requiresDamageDistribution: true }
               : {}),
+            ...(targetingState.sourceCardName ? { sourceCardName: targetingState.sourceCardName } : {}),
             // Snapshot the outgoing requirement so goBackTargeting can restore it.
             previousRequirementStates: [
               ...(targetingState.previousRequirementStates ?? []),

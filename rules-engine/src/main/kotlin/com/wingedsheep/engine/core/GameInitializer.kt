@@ -34,11 +34,14 @@ data class PlayerConfig(
     val startingLife: Int = 20,
     val playerId: EntityId? = null,
     /**
-     * Name of the card in [deck] that should be designated this player's commander. Required when
-     * [GameConfig.format] is [Format.Commander]. Phase 1 supports a single commander; partner /
-     * Background pairings are Phase 4 territory.
+     * Names of the cards designated this player's commanders — one, or two for a partner pair
+     * (CR 702.124). Required (non-empty) when [GameConfig.format] uses commanders. Each begins the
+     * game in the command zone (CR 903.6, 702.124b), honouring [Deck.commanderPrintingOf]. Whether
+     * a pair is legal is deck construction's question (the server's deck validator asks
+     * [com.wingedsheep.sdk.model.CommanderEligibility.pairingError]); setup only refuses more than
+     * two (CR 702.124g) or the same card twice.
      */
-    val commanderCardName: String? = null,
+    val commanderCardNames: List<String> = emptyList(),
 )
 
 /**
@@ -101,8 +104,23 @@ data class GameConfig(
      * before seats were mixed, whose RNG stream didn't include those shuffles.
      */
     val shuffledTeamSeats: Boolean = true,
-    /** Owner chooses simultaneous graveyard arrivals, independent of hidden deck contents. */
-    val preserveGraveyardOrder: Boolean = true,
+    /**
+     * Whether an owner orders several cards entering their graveyard at once (otherwise they keep
+     * arrival order silently). Null — the default — derives it from the game's cards: on exactly
+     * when some card in any deck, sideboard or command zone reads graveyard order
+     * ([com.wingedsheep.sdk.model.CardDefinition.readsGraveyardOrder], Nether Shadow), since
+     * otherwise every order is the same game. An explicit value forces it, which is how a replay
+     * reproduces the setting its game was recorded with.
+     */
+    val preserveGraveyardOrder: Boolean? = null,
+    /**
+     * Play this game for ante (CR 407): after turn order is set and libraries are shuffled, each
+     * player antes one random card of their deck before anyone draws (407.2). Off by default —
+     * ante is an optional variation, and the cards that read "Remove this card from your deck
+     * before playing if you're not playing for ante" are only legal when it is on (407.3); the
+     * server's deck validation enforces that, not the engine.
+     */
+    val playingForAnte: Boolean = false,
 )
 
 /**
@@ -173,7 +191,7 @@ class GameInitializer(
         // is recorded on the result so the game is reproducible later. This clock read is the one
         // sanctioned non-determinism boundary — once seeded, the engine is a pure function again.
         val resolvedSeed: Long = config.seed ?: System.nanoTime()
-        var state = GameState(preserveGraveyardOrder = config.preserveGraveyardOrder, format = config.format, attackMode = config.attackMode, rng = GameRng.seeded(resolvedSeed))
+        var state = GameState(format = config.format, attackMode = config.attackMode, rng = GameRng.seeded(resolvedSeed))
         var idRng = GameRng.seeded(resolvedSeed).split().first
         val playerIds = mutableListOf<EntityId>()
 
@@ -183,13 +201,31 @@ class GameInitializer(
         // and routed to Zone.COMMAND.
         if (config.format.usesCommanders) {
             for (playerConfig in config.players) {
-                val name = playerConfig.commanderCardName
-                require(!name.isNullOrBlank()) {
-                    "Commander format requires PlayerConfig.commanderCardName for player '${playerConfig.name}'"
+                val names = playerConfig.commanderCardNames
+                require(names.isNotEmpty() && names.none { it.isBlank() }) {
+                    "Commander format requires PlayerConfig.commanderCardNames for player '${playerConfig.name}'"
                 }
-                // Make sure the registry can resolve the commander before we touch any state —
+                // No partner ability can give a player more than two commanders (CR 702.124g).
+                require(names.size <= 2 && names.toSet().size == names.size) {
+                    "Player '${playerConfig.name}' designated $names — a deck has one commander or two distinct partners"
+                }
+                // Make sure the registry can resolve the commanders before we touch any state —
                 // we'd rather fail here than mid-init with a half-built game.
-                cardRegistry.requireCard(name)
+                names.forEach { cardRegistry.requireCard(it) }
+            }
+        }
+
+        // A revealed companion (CR 103.2b) is one of the deck's own sideboard cards with a companion
+        // ability. Whether the starting deck meets its condition is deck construction's question
+        // (the server's deck validator asks CompanionEligibility); setup only refuses a companion
+        // it couldn't place.
+        for (playerConfig in config.players) {
+            val companion = playerConfig.deck.companion ?: continue
+            require(playerConfig.deck.sideboard.any { it.name == companion }) {
+                "Player '${playerConfig.name}' named $companion as their companion, but it isn't on their sideboard"
+            }
+            require(com.wingedsheep.sdk.model.CompanionEligibility.hasCompanion(cardRegistry.requireCard(companion))) {
+                "Player '${playerConfig.name}' named $companion as their companion, but it has no companion ability"
             }
         }
 
@@ -314,7 +350,8 @@ class GameInitializer(
             turnOrder = shuffledOrder,
             activePlayerId = shuffledOrder.first(),
             priorityPlayerId = shuffledOrder.first(),
-            turnNumber = 1  // First turn is turn 1, not turn 0
+            turnNumber = 1,  // First turn is turn 1, not turn 0
+            roundNumber = 1
         )
         // The very first turn of the game doesn't go through TurnManager.startTurn
         // (it's set up directly here), so seed the active player's
@@ -327,23 +364,24 @@ class GameInitializer(
 
         // 3. Instantiate cards and place in libraries (or command zone for commanders).
         // Commander setup runs first so a CommanderRegistryComponent is attached to the player
-        // entity before the rest of the deck flows into the library. Phase 1 supports a single
-        // commander per player; CommanderRegistryComponent is a list so Partner / Background
-        // (Phase 4) can append without a schema change.
+        // entity before the rest of the deck flows into the library. A partner pair puts both
+        // commanders in the command zone, each with its own CommanderComponent — so its own tax
+        // and its own commander-damage tally (CR 702.124d).
+        val definitionsInGame = mutableMapOf<String, com.wingedsheep.sdk.model.CardDefinition>()
         for ((index, playerConfig) in config.players.withIndex()) {
             val playerId = playerIds[index]
 
-            val commanderName: String? = when {
-                config.format.usesCommanders -> playerConfig.commanderCardName
-                else -> null
-            }
+            val commanderNames: List<String> =
+                if (config.format.usesCommanders) playerConfig.commanderCardNames else emptyList()
             val commanderEntityIds = mutableListOf<EntityId>()
 
-            if (commanderName != null) {
+            for (commanderName in commanderNames) {
                 val cardDef = cardRegistry.requireCard(commanderName)
+                definitionsInGame[cardDef.name] = cardDef
                 val (cardId, stateWithId) = state.newEntity()
                 state = stateWithId
-                val cardContainer = createCardEntity(cardDef, playerId, playerConfig.deck.commanderPrinting).with(
+                val printing = playerConfig.deck.commanderPrintingOf(commanderName)
+                val cardContainer = createCardEntity(cardDef, playerId, printing).with(
                     com.wingedsheep.engine.state.components.identity.CommanderComponent(ownerId = playerId)
                 )
                 state = state.withEntity(cardId, cardContainer)
@@ -353,9 +391,10 @@ class GameInitializer(
 
             // Momir Basic: place this player's Vanguard avatar in the command zone. It never enters
             // the battlefield or stack — it grants its activated ability from the command zone (CR
-            // for Vanguard avatars), surfaced by CommandZoneAbilityEnumerator.
+            // for Vanguard avatars), surfaced by ZoneActivatedAbilityEnumerator(Zone.COMMAND).
             (config.format as? Format.MomirBasic)?.let { momir ->
                 val avatarDef = cardRegistry.requireCard(momir.avatarCardName)
+                definitionsInGame[avatarDef.name] = avatarDef
                 val (avatarId, stateWithAvatar) = state.newEntity()
                 state = stateWithAvatar
                 val avatarContainer = createCardEntity(avatarDef, playerId).with(
@@ -395,9 +434,22 @@ class GameInitializer(
             for ((entry, cardId) in entries.zip(idOrder)) {
                 val (cardEntry, zone) = entry
                 val cardDef = cardRegistry.requireCard(cardEntry.name)
+                definitionsInGame[cardDef.name] = cardDef
                 val cardContainer = createCardEntity(cardDef, playerId, cardEntry.printing)
                 state = state.withEntity(cardId, cardContainer)
                 state = state.addToZone(ZoneKey(playerId, zone), cardId)
+            }
+
+            // The revealed companion (CR 103.2b, 702.139a): the first sideboard copy of the named
+            // card. It stays outside the game — in the sideboard — but revealed, which the player's
+            // CompanionComponent records and Visibility honours.
+            playerConfig.deck.companion?.let { companionName ->
+                val companionId = state.getZone(ZoneKey(playerId, Zone.SIDEBOARD)).first { id ->
+                    state.getEntity(id)?.get<CardComponent>()?.name == companionName
+                }
+                state = state.updateEntity(playerId) { c ->
+                    c.with(com.wingedsheep.engine.state.components.player.CompanionComponent(companionId))
+                }
             }
 
             if (commanderEntityIds.isNotEmpty()) {
@@ -409,10 +461,38 @@ class GameInitializer(
             }
         }
 
+        // Graveyard order is only worth a prompt when some card in the game reads it.
+        state = state.copy(preserveGraveyardOrder = config.preserveGraveyardOrder
+            ?: definitionsInGame.values.any { it.readsGraveyardOrder })
+
         // 4. Shuffle libraries
         for (playerId in playerIds) {
             state = shuffleLibrary(state, playerId)
             events.add(LibraryShuffledEvent(playerId, ShuffleCause.GAME_SETUP))
+        }
+
+        // 4b. Ante (CR 407.2): "after determining which player goes first but before players draw
+        // any cards", each player puts one random card from their deck into the ante. Turn order is
+        // already set, so ante in turn order. A random pick from the freshly shuffled library — not
+        // just its top card — keeps the RNG stream honest to the rule's wording.
+        if (config.playingForAnte) {
+            state = state.copy(playingForAnte = true)
+            for (playerId in state.turnOrder) {
+                val libraryKey = ZoneKey(playerId, Zone.LIBRARY)
+                val library = state.getZone(libraryKey)
+                if (library.isEmpty()) continue
+                val (cardId, rolled) = state.nextRandom { pick(library) }
+                state = rolled.moveToZone(cardId, libraryKey, ZoneKey(playerId, Zone.ANTE))
+                events.add(
+                    ZoneChangeEvent(
+                        entityId = cardId,
+                        entityName = state.getEntity(cardId)?.get<CardComponent>()?.name ?: "",
+                        fromZone = Zone.LIBRARY,
+                        toZone = Zone.ANTE,
+                        ownerId = playerId,
+                    )
+                )
+            }
         }
 
         // 5. Draw initial hands

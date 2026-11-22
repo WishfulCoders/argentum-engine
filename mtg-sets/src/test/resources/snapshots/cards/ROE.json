@@ -258,6 +258,47 @@
     "colorIdentityOverride": []
 }
 
+// Awakening Zone
+{
+    "name": "Awakening Zone",
+    "manaCost": "{2}{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "At the beginning of your upkeep, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\"",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Awakening Zone:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "CreatePredefinedToken",
+                        "tokenType": "Eldrazi Spawn",
+                        "imageUri": "https://cards.scryfall.io/normal/front/e/0/e0e3826c-3c85-4910-bd6c-04894ea328d0.jpg?1783941948"
+                    },
+                    "descriptionOverride": "At the beginning of your upkeep, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\""
+                },
+                "descriptionOverride": "At the beginning of your upkeep, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\""
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "176",
+        "rarity": "RARE",
+        "artist": "Johann Bodin",
+        "flavorText": "The ground erupted in time with the hedron's thrum, a dirge of the last days.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/8/080dbd69-95a8-4fed-bbaf-875a8a34a2c9.jpg?1783941967"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Bala Ged Scorpion
 {
     "name": "Bala Ged Scorpion",
@@ -591,6 +632,55 @@
     ]
 }
 
+// Consuming Vapors
+{
+    "name": "Consuming Vapors",
+    "manaCost": "{3}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target player sacrifices a creature of their choice. You gain life equal to that creature's toughness.\nRebound (If you cast this spell from your hand, exile it as it resolves. At the beginning of your next upkeep, you may cast this card from exile without paying its mana cost.)",
+    "keywords": [
+        "REBOUND"
+    ],
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ForceSacrifice",
+                    "filter": "creature",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "EntityProperty",
+                        "entity": "SacrificedAsCost",
+                        "numericProperty": "Toughness"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetPlayer",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "101",
+        "rarity": "RARE",
+        "artist": "Trevor Claxton",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/0/008de17e-aa79-4d4c-ab66-d516eca49e42.jpg?1783941987"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Daggerback Basilisk
 {
     "name": "Daggerback Basilisk",
@@ -808,6 +898,75 @@
         "artist": "Izzy",
         "flavorText": "\"That would have brought shame to you as a mage. Tell you what—I'll keep your secret.\"\n—Noyan Dar, Tazeem lullmage",
         "imageUri": "https://cards.scryfall.io/normal/front/2/e/2efecdd9-bd3a-4b79-92da-6485589d5bde.jpg?1783941998"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Domestication
+{
+    "name": "Domestication",
+    "manaCost": "{2}{U}{U}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nYou control enchanted creature.\nAt the beginning of your end step, if enchanted creature's power is 4 or greater, sacrifice this Aura.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Domestication:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "SacrificeTarget",
+                    "target": "Self"
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": "EnchantedCreature",
+                        "numericProperty": "Power"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            "ControlEnchantedPermanent"
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "61",
+        "rarity": "UNCOMMON",
+        "artist": "Jesper Ejsing",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/1/e1f15831-8dfd-4232-875c-efa6744c9a12.jpg?1783941998",
+        "rulings": [
+            {
+                "date": "2010-06-15",
+                "text": "Domestication's triggered ability has an \"intervening 'if' clause.\" That means (1) the ability triggers only if the enchanted creature's power is 4 or greater as your end step begins, and (2) the ability does nothing if the enchanted creature's power is 3 or less by the time it resolves."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "Domestication can target, and can enchant, a creature with power 4 or greater. The enchanted creature's power is checked only when the triggered ability triggers and resolves."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "If an effect changes the enchanted creature's power until end of turn, it will still have the modified power during your end step."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "BLUE"
@@ -1064,7 +1223,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -1752,6 +1913,114 @@
     ]
 }
 
+// Kozilek, Butcher of Truth
+{
+    "name": "Kozilek, Butcher of Truth",
+    "manaCost": "{10}",
+    "typeLine": "Legendary Creature — Eldrazi",
+    "oracleText": "When you cast this spell, draw four cards.\nAnnihilator 4 (Whenever this creature attacks, defending player sacrifices four permanents of their choice.)\nWhen Kozilek is put into a graveyard from anywhere, its owner shuffles their graveyard into their library.",
+    "creatureStats": {
+        "power": 12,
+        "toughness": 12
+    },
+    "keywords": [
+        "ANNIHILATOR"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Numeric",
+            "keyword": "ANNIHILATOR",
+            "n": 4
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Kozilek, Butcher of Truth:1",
+                "trigger": "CastThisSpellEvent",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                },
+                "descriptionOverride": "When you cast this spell, draw four cards."
+            },
+            {
+                "id": "Kozilek, Butcher of Truth:2",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "ForceSacrifice",
+                    "filter": "permanent",
+                    "count": 4,
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "DefendingPlayer"
+                    }
+                },
+                "descriptionOverride": "Annihilator 4"
+            },
+            {
+                "id": "Kozilek, Butcher of Truth:3",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Graveyard",
+                                "player": "OwnerOfSource"
+                            },
+                            "storeAs": "graveyardCards"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "graveyardCards",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "player": "OwnerOfSource",
+                                "placement": "Shuffled"
+                            }
+                        }
+                    ]
+                },
+                "activeZones": [
+                    "Graveyard"
+                ],
+                "descriptionOverride": "When Kozilek is put into a graveyard from anywhere, its owner shuffles their graveyard into their library."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "6",
+        "rarity": "MYTHIC",
+        "artist": "Michael Komarck",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/6/067fac91-2483-4678-b86a-2c54a3a480cf.jpg?1783942013",
+        "rulings": [
+            {
+                "date": "2018-12-07",
+                "text": "Kozilek's first ability triggers as you cast it, and that ability resolves before the spell itself. It resolves even if the spell is countered."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "Annihilator abilities trigger and resolve during the declare attackers step. The defending player chooses and sacrifices the required number of permanents before they declare blockers. Any creatures sacrificed this way won't be able to block."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "If a creature with annihilator is attacking a planeswalker, and the defending player chooses to sacrifice that planeswalker, the attacking creature continues to attack. It may be blocked. If it isn't blocked, it simply won't deal combat damage to anything."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Lagac Lizard
 {
     "name": "Lagac Lizard",
@@ -1915,6 +2184,49 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Linvala, Keeper of Silence
+{
+    "name": "Linvala, Keeper of Silence",
+    "manaCost": "{2}{W}{W}",
+    "typeLine": "Legendary Creature — Angel",
+    "oracleText": "Flying\nActivated abilities of creatures your opponents control can't be activated.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "PreventActivatedAbilities",
+                "filter": "creature ctrl:opponent"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "33",
+        "rarity": "MYTHIC",
+        "artist": "Igor Kieryluk",
+        "flavorText": "Those who seek to disturb the harmony of life will see their instruments taken from them.",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/2/82b80a09-7e75-4091-a60e-04aff79339a3.jpg?1783942005",
+        "rulings": [
+            {
+                "date": "2017-03-14",
+                "text": "No abilities of creatures your opponents control can be activated, including mana abilities."
+            },
+            {
+                "date": "2017-03-14",
+                "text": "Linvala's last ability affects only creatures on the battlefield. Activated abilities that work in other zones (such as bloodrush or unearth) can still be activated. Triggered abilities (starting with \"when,\" \"whenever,\" or \"at\") are unaffected."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -2159,6 +2471,61 @@
     ]
 }
 
+// Mnemonic Wall
+{
+    "name": "Mnemonic Wall",
+    "manaCost": "{4}{U}",
+    "typeLine": "Creature — Wall",
+    "oracleText": "Defender\nWhen this creature enters, you may return target instant or sorcery card from your graveyard to your hand.",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 4
+    },
+    "keywords": [
+        "DEFENDER"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mnemonic Wall:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
+                        "destination": "Hand"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "instant|sorcery own:you",
+                        "zone": "Graveyard"
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "78",
+        "artist": "Vance Kovacs",
+        "flavorText": "\"I'd build an entire fortress of them if I could.\"\n—Mzali, Lighthouse archmage",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/f/ffaebb4a-cb9b-4ac8-b661-3e63d9d984f4.jpg?1783941994"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Nema Siltlurker
 {
     "name": "Nema Siltlurker",
@@ -2342,7 +2709,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -2397,7 +2766,10 @@
                         "name": "t0"
                     },
                     "destination": "Library",
-                    "positionFromTop": 1
+                    "positionFromTop": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
                 }
             ]
         },
@@ -2485,6 +2857,79 @@
         "imageUri": "https://cards.scryfall.io/normal/front/3/f/3fdd84b5-fd93-483e-a131-028d04d9dea7.jpg?1783942012"
     },
     "colorIdentityOverride": []
+}
+
+// Pawn of Ulamog
+{
+    "name": "Pawn of Ulamog",
+    "manaCost": "{1}{B}{B}",
+    "typeLine": "Creature — Vampire Shaman",
+    "oracleText": "Whenever this creature or another nontoken creature you control dies, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\"",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Pawn of Ulamog:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "CreatePredefinedToken",
+                        "tokenType": "Eldrazi Spawn"
+                    },
+                    "descriptionOverride": "Whenever this creature or another nontoken creature you control dies, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\""
+                },
+                "descriptionOverride": "Whenever this creature or another nontoken creature you control dies, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\""
+            },
+            {
+                "id": "Pawn of Ulamog:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature nontoken ctrl:you",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "CreatePredefinedToken",
+                        "tokenType": "Eldrazi Spawn"
+                    },
+                    "descriptionOverride": "Whenever this creature or another nontoken creature you control dies, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\""
+                },
+                "descriptionOverride": "Whenever this creature or another nontoken creature you control dies, you may create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\""
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "122",
+        "rarity": "UNCOMMON",
+        "artist": "Daarken",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/5/85f4d77d-e0de-48fe-899b-5718cee779e2.jpg?1783941982",
+        "rulings": [
+            {
+                "date": "2010-06-15",
+                "text": "If you control more than one Pawn of Ulamog and a nontoken creature you control is put into a graveyard, each of those Pawns' abilities will trigger. You may put up to that many Eldrazi Spawn tokens onto the battlefield."
+            },
+            {
+                "date": "2010-06-15",
+                "text": "If multiple nontoken creatures you control (possibly including Pawn of Ulamog itself) are put into their owners' graveyards at the same time, Pawn of Ulamog's triggered ability will trigger that many times."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
 }
 
 // Pelakka Wurm
@@ -2797,8 +3242,7 @@
                         "amount": 1
                     },
                     "target": "AttackedBy"
-                },
-                "descriptionOverride": "Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking."
+                }
             }
         ]
     },
@@ -2806,25 +3250,7 @@
         "collectorNumber": "161",
         "artist": "Matt Cavotta",
         "flavorText": "Goblins in the first wave of a fire raid always bemoan the aim of everyone else.",
-        "imageUri": "https://cards.scryfall.io/normal/front/9/c/9c2d1a48-efde-4134-95f0-b23f6cf85259.jpg?1783941971",
-        "rulings": [
-            {
-                "date": "2023-09-01",
-                "text": "Raid Bombardment's ability won't do anything when a creature you control with power 2 or less attacks a battle."
-            },
-            {
-                "date": "2018-12-07",
-                "text": "The power of the attacking creature is checked only when the ability triggers. Once it triggers, Raid Bombardment will deal 1 damage to the appropriate player or planeswalker even if the creature's power changes before the ability resolves."
-            },
-            {
-                "date": "2018-12-07",
-                "text": "If you attack with multiple creatures with power 2 or less, Raid Bombardment's ability triggers for each of them separately."
-            },
-            {
-                "date": "2018-12-07",
-                "text": "If the attacking creature leaves the battlefield before Raid Bombardment's triggered ability resolves, Raid Bombardment deals 1 damage to the player or planeswalker that creature was attacking before it left the battlefield."
-            }
-        ]
+        "imageUri": "https://cards.scryfall.io/normal/front/9/c/9c2d1a48-efde-4134-95f0-b23f6cf85259.jpg?1783941971"
     },
     "colorIdentityOverride": [
         "RED"
@@ -2866,6 +3292,77 @@
         "imageUri": "https://cards.scryfall.io/normal/front/4/3/437a91e7-f98e-4ed8-9ab7-f4db62979f5b.jpg?1783941955"
     },
     "colorIdentityOverride": []
+}
+
+// Repel the Darkness
+{
+    "name": "Repel the Darkness",
+    "manaCost": "{2}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Tap up to two target creatures.\nDraw a card.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ForEach",
+                    "space": "IterationSpace.Targets",
+                    "body": {
+                        "type": "TapUntap",
+                        "target": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        }
+                    }
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "count": 2,
+                "optional": true,
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "42",
+        "artist": "Scott Chou",
+        "flavorText": "A boon to those who cannot see in the dark. A bane to those who live in it.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/0/90fa47c3-3209-4e01-920a-aed2184520c2.jpg?1783942003",
+        "rulings": [
+            {
+                "date": "2018-12-07",
+                "text": "You may target zero, one, or two creatures. The creatures don't need to be untapped."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If you target zero creatures, all that happens is you draw a card."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If you target one creature and that target is illegal as Repel the Darkness resolves, the spell doesn't resolve. You don't draw a card."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If you target two creatures and they're both illegal as Repel the Darkness resolves, the spell doesn't resolve; you don't draw a card. If just one target is illegal, the spell does resolve; the remaining legal target becomes tapped (if it's untapped at that time) and you draw a card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
 }
 
 // Runed Servitor
@@ -3438,7 +3935,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an Aura card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -3468,6 +3967,50 @@
     "colorIdentityOverride": [
         "WHITE"
     ]
+}
+
+// Training Grounds
+{
+    "name": "Training Grounds",
+    "manaCost": "{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "Activated abilities of creatures you control cost {2} less to activate. This effect can't reduce the mana in that cost to less than one mana.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ReduceActivatedAbilityCost",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "manaFloor": 1
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "91",
+        "rarity": "RARE",
+        "artist": "James Ryman",
+        "flavorText": "\"Under the master's eye, skills are honed sharper and spells cut deeper.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/2/e2cf16f8-6e69-46b3-8453-1d1a2a5670e2.jpg?1783941990",
+        "rulings": [
+            {
+                "date": "2025-10-02",
+                "text": "Training Grounds affects only creatures you control on the battlefield. The costs of activated abilities that work in other zones (such as cycling or unearth) won't be reduced."
+            },
+            {
+                "date": "2025-10-02",
+                "text": "If an activated ability of a creature you control costs no generic mana to activate (for example, if it costs {R}{R}, it costs {0}, or it costs only nonmana actions such as {T} or \"Sacrifice a creature\"), Training Grounds simply won't affect it. In particular, it won't increase the cost to include a mana payment of {1}."
+            },
+            {
+                "date": "2025-10-02",
+                "text": "Training Grounds can reduce the part of an activation cost represented by generic mana symbols down to nothing, as long as it still costs at least one mana. For example, if an activation cost is {2}{G}, you'd have to pay only {G}. If an activation cost is {2}, though, you'd still have to pay {1}."
+            }
+        ]
+    }
 }
 
 // Ulamog, the Infinite Gyre
@@ -3541,7 +4084,8 @@
                             "type": "GatherCards",
                             "source": {
                                 "type": "FromZone",
-                                "zone": "Graveyard"
+                                "zone": "Graveyard",
+                                "player": "OwnerOfSource"
                             },
                             "storeAs": "graveyardCards"
                         },
@@ -3551,6 +4095,7 @@
                             "destination": {
                                 "type": "ToZone",
                                 "zone": "Library",
+                                "player": "OwnerOfSource",
                                 "placement": "Shuffled"
                             }
                         }
@@ -3576,10 +4121,6 @@
             {
                 "date": "2010-06-15",
                 "text": "Annihilator abilities trigger and resolve during the declare attackers step. The defending player chooses and sacrifices the required number of permanents before they declare blockers. Any creatures sacrificed this way won't be able to block."
-            },
-            {
-                "date": "2010-06-15",
-                "text": "If a creature with annihilator is attacking a planeswalker, and the defending player chooses to sacrifice that planeswalker, the attacking creature continues to attack. It may be blocked. If it isn't blocked, it simply won't deal combat damage to anything."
             }
         ]
     },
@@ -3758,6 +4299,72 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Wrap in Flames
+{
+    "name": "Wrap in Flames",
+    "manaCost": "{3}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Wrap in Flames deals 1 damage to each of up to three target creatures. Those creatures can't block this turn.",
+    "script": {
+        "spellEffect": {
+            "type": "ForEach",
+            "space": "IterationSpace.Targets",
+            "body": {
+                "type": "Composite",
+                "effects": [
+                    {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "target": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        }
+                    },
+                    {
+                        "type": "CantBlockTargetCreatures",
+                        "target": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        }
+                    }
+                ]
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "count": 3,
+                "optional": true,
+                "filter": {
+                    "baseFilter": "creature"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "173",
+        "artist": "Véronique Meignaud",
+        "flavorText": "\"Our pyromancer's flames may not have killed them, but they bought us the time we needed.\"\n—*The War Diaries*",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/a/babdaf80-f9a3-42cb-9df6-10878301f335.jpg?1783941968",
+        "rulings": [
+            {
+                "date": "2020-01-24",
+                "text": "The \"can't block\" effect applies to each of the targeted creatures—and to only those creatures—even if Wrap in Flames deals no damage to one or more of them (due to a prevention effect, for example) or if Wrap in Flames deals damage to a different creature (due to a redirection effect)."
+            },
+            {
+                "date": "2020-01-24",
+                "text": "If any of the targeted creatures is an illegal target by the time Wrap in Flames resolves, it won't be dealt damage and will be able to block. The other targeted creatures will still be affected."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 

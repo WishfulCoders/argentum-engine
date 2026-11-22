@@ -54,28 +54,36 @@ data class BlockedComponent(
 ) : Component
 
 /**
- * Marks a creature that blocked, or was blocked by, a legendary creature at some point during
- * the current turn. Stamped at block-declaration time (capturing the partner's legendary status
- * at the moment of the pairing, so it survives that legendary creature leaving or losing
- * legendary-ness), and cleared at end-of-turn cleanup. Backs
- * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.BlockedOrWasBlockedByLegendaryThisTurn]
- * (You Cannot Pass!, LTR).
- */
-@Serializable
-data object BlockedOrWasBlockedByLegendaryThisTurnComponent : Component
-
-/**
- * The creatures this creature blocked, or was blocked by, at any point during the current turn.
- * Stamped on **both** creatures of each blocking pair at block-declaration time and cleared at
- * end-of-turn cleanup, so the history survives the pairing ending (a partner dying, removal from
- * combat, the combat phase ending) and a second combat in the same turn adds to it. Backs
- * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.BlockedOrWasBlockedByEntityThisTurn]
- * (Gaze of the Gorgon).
+ * The creatures this creature blocked ([blockedIds]) and was blocked by ([blockedByIds]) at any
+ * point during the current turn. Stamped on **both** creatures of each blocking pair at
+ * block-declaration time — the blocker records the attacker in [blockedIds], the attacker records
+ * the blocker in [blockedByIds] — and cleared at end-of-turn cleanup, so the history survives the
+ * pairing ending (a partner dying, removal from combat, the combat phase ending) and a second
+ * combat in the same turn adds to it. Backs
+ * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.BlockPairedWithEntityThisTurn]
+ * (Gaze of the Gorgon, Glyph of Doom).
+ *
+ * [controllerWhenBlockedBy] maps each blocker in [blockedByIds] to the player who controlled this
+ * creature the last time that blocker blocked it — overwritten on every new block, so it answers
+ * "the player who controlled that creature the last time it became blocked by that Wall" (Glyph of
+ * Reincarnation, via `CaptureControllersEffect.asLastBlockedBy`) even after control has changed.
+ *
+ * [partnerSnapshots] freezes each partner's characteristics at the moment of each pairing, so
+ * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.BlockPairedWithMatchingThisTurn] asks
+ * "blocked or was blocked by a legendary creature / a Zombie" of the partner as it was then —
+ * after it has left the battlefield (an embalmed token included) or stopped matching
+ * (You Cannot Pass!, Time to Reflect).
  */
 @Serializable
 data class CombatPartnersThisTurnComponent(
-    val partnerIds: Set<EntityId>
-) : Component
+    val blockedIds: Set<EntityId> = emptySet(),
+    val blockedByIds: Set<EntityId> = emptySet(),
+    val controllerWhenBlockedBy: Map<EntityId, EntityId> = emptyMap(),
+    val partnerSnapshots: List<com.wingedsheep.engine.state.components.stack.EntitySnapshot> = emptyList()
+) : Component {
+    /** Every creature this one was paired with in a block this turn, either way round. */
+    val partnerIds: Set<EntityId> get() = blockedIds + blockedByIds
+}
 
 /**
  * Marks a creature that was declared as an attacker at least once during the current combat
@@ -87,6 +95,44 @@ data class CombatPartnersThisTurnComponent(
  */
 @Serializable
 data object AttackedThisCombatComponent : Component
+
+/**
+ * How many combat phases this turn this creature has been declared as an attacker in (CR 508.1) —
+ * incremented once per declaration, so a creature that attacks in the natural combat and again in
+ * an added one reads 2. Unlike [AttackedThisCombatComponent] it survives the end of combat, and
+ * unlike the player-level `PlayerAttackersThisTurnComponent` set it is a count kept on the object
+ * itself, scoped like `DamageDealtThisTurnComponent` to a [turnNumber] and an object incarnation
+ * ([attackerObject]): a creature that changed zones is a new object that hasn't attacked
+ * (CR 400.7), and a stale tally from an earlier turn reads 0. It is also stripped when the creature
+ * leaves the battlefield and cleared at end-of-turn cleanup. A creature put onto the battlefield
+ * attacking was never declared and is never stamped. Backs
+ * [com.wingedsheep.sdk.scripting.values.EntityNumericProperty.TimesAttackedThisTurn]
+ * (Moraug, Fury of Akoum).
+ *
+ * [attackedPlayerIds] are the players this creature was declared attacking directly this turn,
+ * unioned across combats — a planeswalker or battle defender adds nobody. Backs
+ * [com.wingedsheep.sdk.scripting.conditions.SourceAttackedPlayerThisTurn] (Angel of Destiny).
+ * When the creature leaves the battlefield the component is re-attached to the card as last known
+ * information (CR 608.2h) for abilities that outlive it, and dropped on its next zone change.
+ */
+@Serializable
+data class TimesAttackedThisTurnComponent(
+    val turnNumber: Int,
+    val count: Int,
+    val attackerObject: com.wingedsheep.engine.state.ObjectRef?,
+    val attackedPlayerIds: Set<EntityId> = emptySet()
+) : Component {
+    private fun describes(turn: Int, current: com.wingedsheep.engine.state.ObjectRef?): Boolean =
+        turnNumber == turn && attackerObject == current
+
+    /** This tally's count if it still describes [current] on [turn], else 0. */
+    fun countFor(turn: Int, current: com.wingedsheep.engine.state.ObjectRef?): Int =
+        if (describes(turn, current)) count else 0
+
+    /** The players attacked directly if this tally still describes [current] on [turn], else none. */
+    fun attackedPlayersFor(turn: Int, current: com.wingedsheep.engine.state.ObjectRef?): Set<EntityId> =
+        if (describes(turn, current)) attackedPlayerIds else emptySet()
+}
 
 /**
  * Marks a creature that was declared as a blocker at least once during the current combat
@@ -252,6 +298,74 @@ data class MustAttackPlayerComponent(
 data object MustAttackThisTurnComponent : Component
 
 /**
+ * The defenders a directed must-attack mark names: players by entity, planeswalkers (or any other
+ * permanent) as the rules object they were when named. A planeswalker that leaves the battlefield
+ * and comes back is a new object (CR 400.7) the mark no longer names, though its entity is reused.
+ */
+@Serializable
+data class NamedAttackDefenders(
+    val playerIds: Set<EntityId> = emptySet(),
+    val permanents: Set<com.wingedsheep.engine.state.ObjectRef> = emptySet()
+) {
+    fun isEmpty(): Boolean = playerIds.isEmpty() && permanents.isEmpty()
+
+    operator fun plus(other: NamedAttackDefenders) =
+        NamedAttackDefenders(playerIds + other.playerIds, permanents + other.permanents)
+
+    /** The defenders still named: every player, and each permanent that is still the same object. */
+    fun current(state: com.wingedsheep.engine.state.GameState): Set<EntityId> =
+        if (permanents.isEmpty()) playerIds
+        else playerIds + permanents.filter(state::isCurrentObject).map { it.entityId }
+}
+
+/**
+ * Marks a creature that attacks a **named defender** this turn if able — a player (encore's token
+ * copies, "attacks that opponent this turn if able", CR 702.141a) or a planeswalker (Gideon,
+ * Battle-Forged, once its controller's next turn begins — see [MustAttackNextTurnComponent]), put
+ * there by a [com.wingedsheep.sdk.scripting.effects.MarkMustAttackEffect] with a `defender`.
+ *
+ * Unlike [MustAttackThisTurnComponent] the requirement is directed: it binds the creature only
+ * while it could attack one of [defenders] at no cost (CR 508.1d), and then only an attack on
+ * that defender — not a named player's planeswalker or battle — obeys it. `DirectedAttackRequirements`
+ * reads it alongside the Public Enemy static. Removed at end of turn during cleanup.
+ */
+@Serializable
+data class MustAttackDefendersThisTurnComponent(val defenders: NamedAttackDefenders) : Component
+
+/**
+ * Marks a creature that attacks during its controller's next turn if able —
+ * [com.wingedsheep.sdk.scripting.effects.MustAttackWindow.ControllersNextTurn] (Gideon,
+ * Battle-Forged). It waits, inert, until a turn begins whose active player controls the creature;
+ * once that turn's untap step is done (phasing included), `TurnManager` turns it into this turn's
+ * marks — [MustAttackThisTurnComponent] when [anyDefender], [MustAttackDefendersThisTurnComponent]
+ * for [defenders] — which cleanup removes. Reading the controller only then is what makes the
+ * requirement follow a change of control to the new controller's next turn, and what makes a mark
+ * landing during the controller's own turn wait for the following one.
+ *
+ * @property anyDefender some mark requires the creature to attack, whichever defender.
+ * @property defenders the players and planeswalkers directed marks name.
+ */
+@Serializable
+data class MustAttackNextTurnComponent(
+    val anyDefender: Boolean = false,
+    val defenders: NamedAttackDefenders = NamedAttackDefenders()
+) : Component
+
+/**
+ * Marks a creature that attacks during its controller's next combat phase if able (Sizzling
+ * Soloist) — [com.wingedsheep.sdk.scripting.effects.MustAttackWindow.ControllersNextCombat].
+ * Enforced like [MustAttackThisTurnComponent] while its controller declares attackers, and
+ * removed as that player's combat phase ends (`CombatManager.endCombat`), whether or not the
+ * creature could attack; it survives turn boundaries until then.
+ *
+ * @property waitsOutCurrentCombat set when the mark lands during a combat phase of the
+ *   creature's controller whose attackers are already declared: that combat isn't "next", so
+ *   its end only clears this flag.
+ */
+@Serializable
+data class MustAttackNextCombatComponent(val waitsOutCurrentCombat: Boolean = false) : Component
+
+/**
  * Marker component letting a creature attack this turn as though it didn't have defender.
  *
  * Added by [com.wingedsheep.sdk.scripting.effects.CanAttackDespiteDefenderThisTurnEffect] (e.g. Krotiq
@@ -278,35 +392,30 @@ data object PlayerAttackedThisTurnComponent : Component
  *
  * [battleAttackerIds] is the subset declared as attacking a **battle** (CR 508.1) in any combat
  * this turn — backs `StatePredicate.AttackedABattleThisTurn` (War Historian).
+ *
+ * [declaredAs] freezes each attacker's projected characteristics at the moment it was declared,
+ * one snapshot per declaration (a creature that attacks in two combats has two). "You attacked
+ * with a Rogue this turn" asks what the creature was when it attacked, not what it is now: the
+ * answer holds after the Rogue dies, its token ceases to exist, or the effect that made it a
+ * Rogue ends (Robber of the Rich, Deepway Navigator rulings). Backs
+ * `PlayerAttackedWithCreaturesThisTurn`.
  */
 @Serializable
 data class PlayerAttackersThisTurnComponent(
     val attackerIds: Set<EntityId>,
-    val battleAttackerIds: Set<EntityId> = emptySet()
+    val battleAttackerIds: Set<EntityId> = emptySet(),
+    val declaredAs: List<com.wingedsheep.engine.state.components.stack.EntitySnapshot> = emptyList()
 ) : Component
 
 /**
- * The [PlayerAttackersThisTurnComponent] set as it stood at the end of this player's **own most
- * recent turn** — "creatures that attacked during your last turn".
- *
- * Rolled over in the cleanup step of that player's turn, immediately before the this-turn set is
- * cleared, and *only* on their own turn: cleanup runs at the end of every turn, so rolling
- * unconditionally would let an intervening opponent's turn (during which this player declared no
- * attackers) blank the record and make "your last turn" mean "the previous turn in the game".
- *
- * Backs `StatePredicate.AttackedLastTurn` — Goblin Rock Sled and Tangle Kelp's "doesn't untap
- * during your untap step if it attacked during your last turn". Note the untap step it gates runs
- * *before* that turn's cleanup, so the record read there is genuinely the previous turn's.
- */
-/**
  * The creatures this player declared as attackers in the **current combat** (CR 508.1) — the
- * per-combat sibling of [PlayerAttackersThisTurnComponent]. Being a record of *declarations*, it
- * still names a creature that has since died or been removed from combat, and never names one put
- * onto the battlefield attacking (CR 508.4). Stamped at declaration on every member of the
- * attacking team and cleared when the combat phase ends (CR 511.3,
- * [com.wingedsheep.engine.mechanics.combat.CombatManager.endCombat]). Backs
- * [com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat] (Kytheon, Hero of
- * Akros).
+ * per-combat slice of [PlayerAttackersThisTurnComponent]. Kept on the player, not the creatures, so
+ * an attacker that has since died, been exiled or been removed from combat still counts (unlike
+ * the per-object [AttackedThisCombatComponent], which leaves with the object). Creatures put onto
+ * the battlefield attacking were never declared and are never added. Stamped by
+ * `AttackPhaseManager` alongside the this-turn record and cleared when the combat phase ends
+ * (`CombatManager.endCombat`). Backs `TurnTracker.CREATURES_ATTACKED_THIS_COMBAT` (Kytheon, Hero of
+ * Akros: "if Kytheon and at least two other creatures attacked this combat").
  */
 @Serializable
 data class PlayerAttackersThisCombatComponent(
@@ -347,22 +456,29 @@ data class MustAttackDefenderComponent(
         requirements.filter { it.activeOnTurn == turnNumber }
 }
 
+/**
+ * The [PlayerAttackersThisTurnComponent] set as it stood at the end of this player's **own most
+ * recent turn** — "creatures that attacked during your last turn".
+ *
+ * Rolled over in the cleanup step of that player's turn, immediately before the this-turn set is
+ * cleared, and *only* on their own turn: cleanup runs at the end of every turn, so rolling
+ * unconditionally would let an intervening opponent's turn (during which this player declared no
+ * attackers) blank the record and make "your last turn" mean "the previous turn in the game".
+ *
+ * Backs `StatePredicate.AttackedLastTurn` — Goblin Rock Sled and Tangle Kelp's "doesn't untap
+ * during your untap step if it attacked during your last turn". Note the untap step it gates runs
+ * *before* that turn's cleanup, so the record read there is genuinely the previous turn's.
+ */
 @Serializable
 data class PlayerAttackersLastTurnComponent(
     val attackerIds: Set<EntityId>
 ) : Component
 
 /**
- * Records which players this player has "attacked" this turn (CR 508.6): the set of
- * defending players against whom they declared one or more attackers. A creature's
- * defending player is the player it's attacking, or the controller of the planeswalker /
- * protector of the battle it's attacking (CR 508.5), so attacking an opponent's
- * planeswalker counts as having attacked that opponent.
- *
- * Stamped on the attacking player in [com.wingedsheep.engine.mechanics.combat.AttackPhaseManager]
- * at declare-attackers time (union across all combat phases this turn). Cleared at end of
- * turn during cleanup. Read by the `PlayerAttackedPlayerThisTurn` condition (Faramir, Prince
- * of Ithilien: "you draw a card if they didn't attack you that turn").
+ * Players directly attacked by this player's declared creatures this turn. Attacking a
+ * planeswalker or battle does not attack its controller or protector. Unioned across combats
+ * at declaration and retained even if creatures or opponents leave; cleared during cleanup.
+ * Read by `PlayerAttackedPlayerThisTurn` and `TurnTracker.OPPONENTS_ATTACKED`.
  */
 @Serializable
 data class PlayerAttackedPlayersThisTurnComponent(
@@ -395,3 +511,10 @@ data class GoadedComponent(
 /** Object identities that have blocked this attacker during the current combat, even after departure. */
 @Serializable
 data class BlockersThisCombatComponent(val blockers: Set<com.wingedsheep.engine.state.ObjectRef>) : Component
+
+/** Provisional per-player choices; no creature is blocking until the combined declaration is legal. */
+@Serializable
+data class TeamBlockerChoicesComponent(
+    val choices: Map<EntityId, Map<EntityId, List<EntityId>>> = emptyMap(),
+    val error: String? = null,
+) : Component

@@ -8,6 +8,7 @@ import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.mechanics.mana.ManaPool
+import com.wingedsheep.engine.mechanics.mana.SpellPaymentContext
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.mechanics.mana.ManaSource
 import com.wingedsheep.engine.registry.CardRegistry
@@ -23,6 +24,9 @@ import com.wingedsheep.sdk.model.EntityId
  * their mana sources for the remainder, and deduct [cost] from their pool. Auto-tapped sources
  * emit [TappedEvent]s. Insufficient mana is a recoverable [EffectResult.error] — callers that
  * pre-gate affordability (e.g. `Gate.MayPay`) only hit it on genuinely degenerate input.
+ *
+ * The payment is judged against [SpellPaymentContext.forResolutionCost]: restricted mana pays it
+ * only when its restriction admits a cost of these symbols ("costs that contain {C}").
  */
 fun payManaCostFromPool(
     state: GameState,
@@ -44,11 +48,14 @@ fun payManaCostFromPool(
         manaPoolComponent.red,
         manaPoolComponent.green,
         manaPoolComponent.colorless,
+        restrictedMana = manaPoolComponent.restrictedMana,
         snowMana = manaPoolComponent.snowMana,
+        manaUnits = manaPoolComponent.manaUnits,
         snowColorless = manaPoolComponent.snowColorless
     ).withSpendingColors(state, player)
 
-    val partialResult = manaPool.payPartial(cost)
+    val paymentContext = SpellPaymentContext.forResolutionCost(cost)
+    val partialResult = manaPool.payPartial(cost, paymentContext)
     val remainingCost = partialResult.remainingCost
     var currentPool = manaPool
     var currentState = state
@@ -56,19 +63,24 @@ fun payManaCostFromPool(
 
     if (!remainingCost.isEmpty()) {
         val manaSolver = ManaSolver(cardRegistry, predicateEvaluator = predicateEvaluator)
-        val solution = manaSolver.solve(currentState, player, remainingCost)
+        val solution = manaSolver.solve(currentState, player, remainingCost, spellContext = paymentContext)
             ?: return EffectResult.error(state, "Cannot pay mana cost")
 
         for (source in solution.sources) {
-            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, player)
+            val production = solution.manaProduced[source.entityId]
+            val (tappedState, tapEvents) = tapForMana(
+                currentState, source.entityId, player,
+                production?.producedColors.orEmpty(),
+                producedAmount = production?.total ?: 1,
+            )
                 .let { (tapped, tapEvents) ->
                     // The mana ability's life cost (Mana Confluence's printed "Pay 1 life", Thran
                     // Portal's tax). Only a life-costing source needs the zone service (for a
                     // life-payment replacement), so it is built only then.
                     val ability = ManaAbilityLifeCost.activatedManaAbility(
-                        cardRegistry, tapped, source.entityId, solution.manaProduced[source.entityId]
+                        cardRegistry, tapped, source.entityId, solution.manaProduced[source.entityId], player, predicateEvaluator
                     )
-                    if (tapEvents.isEmpty() || ManaAbilityLifeCost.total(tapped, source.entityId, ability) <= 0) tapped to tapEvents
+                    if (tapEvents.isEmpty() || ManaAbilityLifeCost.total(tapped, source.entityId, ability, player, predicateEvaluator) <= 0) tapped to tapEvents
                     else ManaAbilityLifeCost.pay(ZoneTransitionService(cardRegistry, predicateEvaluator), tapped, source.entityId, player, ability)
                         .let { (paid, lifeEvents) -> paid to (tapEvents + lifeEvents) }
                 }
@@ -81,7 +93,7 @@ fun payManaCostFromPool(
         }
     }
 
-    val newPool = currentPool.pay(cost)
+    val newPool = currentPool.pay(cost, paymentContext)
         ?: return EffectResult.error(state, "Cannot pay mana cost after auto-tap")
 
     currentState = currentState.updateEntity(player) { container ->
@@ -93,7 +105,9 @@ fun payManaCostFromPool(
                 red = newPool.red,
                 green = newPool.green,
                 colorless = newPool.colorless,
+                restrictedMana = newPool.restrictedMana,
                 snowMana = newPool.snowMana,
+                manaUnits = newPool.manaUnits,
                 snowColorless = newPool.snowColorless
             )
         )
@@ -134,13 +148,16 @@ fun canAutoPayManaCost(
         manaPoolComponent.red,
         manaPoolComponent.green,
         manaPoolComponent.colorless,
+        restrictedMana = manaPoolComponent.restrictedMana,
         snowMana = manaPoolComponent.snowMana,
+        manaUnits = manaPoolComponent.manaUnits,
         snowColorless = manaPoolComponent.snowColorless
     ).withSpendingColors(state, player)
 
-    val remainingCost = manaPool.payPartial(cost).remainingCost
+    val paymentContext = SpellPaymentContext.forResolutionCost(cost)
+    val remainingCost = manaPool.payPartial(cost, paymentContext).remainingCost
     if (remainingCost.isEmpty()) return true
 
     return ManaSolver(cardRegistry, predicateEvaluator = predicateEvaluator)
-        .solve(state, player, remainingCost, precomputedSources = precomputedSources) != null
+        .solve(state, player, remainingCost, precomputedSources = precomputedSources, spellContext = paymentContext) != null
 }

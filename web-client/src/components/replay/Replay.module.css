@@ -1,0 +1,380 @@
+/*
+ * Replay surfaces in the play hub's language: the playback toolbar (glass strip above the
+ * spectator board, amber transport), the in-app list of finished games, and the `/replay/:gameId`
+ * route's loading and error states.
+ */
+
+/* ── Playback ──────────────────────────────────────────────────────────── */
+
+.container {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a12;
+}
+
+.toolbar {
+  position: relative;
+  z-index: 1600;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 9px 14px;
+  background: rgba(12, 14, 22, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.brand {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #f1f3f9;
+  cursor: pointer;
+}
+.brand:hover { background: rgba(255, 255, 255, 0.08); }
+.brand:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.back {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px 0 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: #c9cfdc;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.back:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+.transport { flex: none; display: flex; align-items: center; gap: 4px; }
+
+.iconButton,
+.playButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.iconButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #d5dae6;
+}
+.iconButton:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.iconButton:disabled { opacity: 0.35; cursor: default; }
+.playButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f2b45c;
+  color: #1d1405;
+  box-shadow: 0 4px 14px rgba(242, 180, 92, 0.25);
+}
+.playButton:hover { background: #f7c67f; }
+
+.scrubberWrap {
+  flex: 1 1 200px;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scrubber {
+  --progress: 0%;
+  flex: 1;
+  min-width: 60px;
+  height: 6px;
+  margin: 0;
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(90deg, #f2b45c var(--progress), rgba(255, 255, 255, 0.14) var(--progress));
+  cursor: pointer;
+}
+.scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #f2b45c;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+.scrubber::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #f2b45c;
+}
+
+.stepCounter {
+  flex: none;
+  min-width: 52px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #eef0f6;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.stepTotal { color: #8f98ac; }
+
+.identity {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Overlapping faces; empty (and gap-free) when no seat has a portrait. */
+.faces {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+.faces:empty { display: none; }
+.faces > * + * { margin-left: -6px; }
+
+.info {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8f98ac;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.winner { color: #f2b45c; text-transform: none; letter-spacing: 0.02em; }
+.matchup {
+  font-size: 14px;
+  font-weight: 500;
+  color: #eef0f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 180, 92, 0.45);
+  background: rgba(60, 44, 12, 0.6);
+  color: #f6d398;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.actions {
+  flex: none;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action,
+.actionPrimary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+.action { border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05); color: #d5dae6; }
+.action:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.actionPrimary { border: 1px solid rgba(242, 180, 92, 0.55); background: rgba(242, 180, 92, 0.16); color: #f8d7a4; }
+.actionPrimary:hover { background: rgba(242, 180, 92, 0.28); color: #fff; }
+
+.back:focus-visible,
+.iconButton:focus-visible,
+.playButton:focus-visible,
+.scrubber:focus-visible,
+.action:focus-visible,
+.actionPrimary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.board {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Phones: back + transport + counter on the first line, the scrubber full width under them, the
+   matchup last. The share/export actions are hidden here (desktop tooling). */
+@media (max-width: 639px) {
+  .toolbar { gap: 8px 8px; padding: 8px 10px; }
+  .back { padding: 0 8px; }
+  .backLabel { display: none; }
+  .brand { width: 32px; }
+  .identity { order: 1; flex: 1 1 0; justify-content: flex-end; }
+  .info { max-width: none; text-align: right; }
+  .scrubberWrap { order: 2; flex: 1 0 100%; }
+  .badge { order: 3; }
+}
+
+/* ── Finished-games list ───────────────────────────────────────────────── */
+
+.listScroll {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+}
+
+.listHeader {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.listHeading { flex: 1 1 260px; min-width: 0; }
+.listActions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.listTopBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.group { display: flex; flex-direction: column; gap: 8px; }
+.groupTitle {
+  margin: 4px 2px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9aa3b8;
+}
+
+.rows { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 12px 12px 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: background 0.12s, border-color 0.12s;
+}
+.row:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(242, 180, 92, 0.35); }
+
+.rowMain { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.players {
+  font-size: 15px;
+  font-weight: 600;
+  color: #eef0f6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vs { color: #8f98ac; font-weight: 400; margin: 0 6px; }
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 13px;
+  color: #9aa3b8;
+}
+.metaWinner { color: #f2c97a; }
+.round {
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d5dae6;
+  font-size: 12px;
+}
+
+.watch { min-width: 96px; }
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.55);
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  color: #fecaca;
+  font-size: 14px;
+}
+
+.emptyTitle { margin: 0 0 4px; font-size: 16px; font-weight: 600; color: #eef0f6; }
+
+/* ── Route states ──────────────────────────────────────────────────────── */
+
+.stateCenter {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 0 12vh;
+}
+
+.stateCard {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.stateTitle { margin: 0; font-family: var(--font-display); font-size: 24px; font-weight: 600; color: #f4f5f9; }
+.stateText { margin: 0; font-size: 14px; line-height: 1.5; color: #c3c9d7; }
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.14);
+  border-top-color: #f2b45c;
+  animation: replay-spin 0.9s linear infinite;
+}
+@keyframes replay-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .row { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .watch { width: 100%; }
+  .players { white-space: normal; }
+}

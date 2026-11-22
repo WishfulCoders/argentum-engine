@@ -69,6 +69,13 @@ export function command(playerId: EntityId): ZoneId {
 }
 
 /**
+ * Create an ante zone for a player (CR 407) — the cards that player has wagered.
+ */
+export function ante(playerId: EntityId): ZoneId {
+  return { zoneType: ZoneType.ANTE, ownerId: playerId }
+}
+
+/**
  * Create a library zone for a player.
  */
 export function library(playerId: EntityId): ZoneId {
@@ -87,6 +94,14 @@ export function hand(playerId: EntityId): ZoneId {
  */
 export function graveyard(playerId: EntityId): ZoneId {
   return { zoneType: ZoneType.GRAVEYARD, ownerId: playerId }
+}
+
+/**
+ * Create a sideboard zone for a player — the cards they own outside the game (CR 400.11a). Only
+ * its owner ever receives its contents.
+ */
+export function sideboard(playerId: EntityId): ZoneId {
+  return { zoneType: ZoneType.SIDEBOARD, ownerId: playerId }
 }
 
 /**

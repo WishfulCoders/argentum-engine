@@ -1,5 +1,8 @@
 package com.wingedsheep.engine.legalactions.enumerators
 
+import com.wingedsheep.engine.mechanics.cost.SacrificeCostAssignment
+import com.wingedsheep.engine.state.LifePaymentPurpose
+
 import com.wingedsheep.engine.legalactions.surfacedRequirements
 import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -22,7 +25,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
 
 /**
  * Enumerates activated abilities on cards in a non-battlefield [zone] the player owns —
- * one instance per zone (registered for [Zone.GRAVEYARD] and [Zone.HAND]).
+ * one instance per zone (registered for [Zone.GRAVEYARD], [Zone.HAND], [Zone.COMMAND] and [Zone.EXILE]).
  *
  * The abilities surfaced are those whose `activateFromZone` matches this enumerator's [zone]:
  * - **Graveyard** — Undead Gladiator ({1}{B}, Discard a card: Return this from your graveyard…),
@@ -30,14 +33,31 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * - **Hand** — the "discard this card from hand" activated abilities such as Steel Wrecking Ball
  *   ({1}{R}, Discard this card: Destroy target artifact) and Stegron the Dinosaur Man, plus
  *   Urban Retreat's "{2}, Return a tapped creature you control: put this onto the battlefield".
+ * - **Command zone** — the Momir Basic avatar, Derevi's "put Derevi onto the battlefield from the
+ *   command zone", and commander ninjutsu (a `ReturnToHand` cost, like hand ninjutsu).
+ * - **Exile** — a printed exile-zone ability (Torrent Elemental's "{3}{B/G}{B/G}: Put this card
+ *   from exile onto the battlefield tapped"), or one a resolving effect granted to one exiled card
+ *   (Q, Stacking the Deck's "Exile a card from your hand: Create a copy of this card. You may cast
+ *   the copy. Activate only if this card is exiled."). The grant ends as the card leaves exile
+ *   (CR 400.7). A card exiled face down has no printed abilities (CR 406.3a).
  *
- * Handles cost checking for Mana, Discard, DiscardSelf, ExileSelf, Blight, and Composite (with
+ * Handles cost checking for Mana, Discard, DiscardSelf, ExileSelf, Blight, Sacrifice (one or several
+ * atoms, jointly — [SacrificeCostAssignment]), and Composite (with
  * ReturnToHand), plus target requirements and X/auto-tap info.
  * [com.wingedsheep.engine.handlers.actions.ability.ActivateAbilityHandler] already accepts any
  * non-battlefield `activateFromZone` generically (owner + zone-membership check), so no handler
  * change is needed.
  */
-class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predicateEvaluator: PredicateEvaluator) : ActionEnumerator {
+class ZoneActivatedAbilityEnumerator(
+    private val zone: Zone,
+    private val predicateEvaluator: PredicateEvaluator,
+    /**
+     * Surface only mana abilities — the CR 605.3a payment-window surface
+     * ([com.wingedsheep.engine.legalactions.LegalActionEnumerator.enumerateManaAbilities]), where
+     * a hand mana ability (Simian Spirit Guide) is as activatable as a land.
+     */
+    private val manaOnly: Boolean = false,
+) : ActionEnumerator {
 
     override fun enumerate(context: EnumerationContext): List<LegalAction> {
         val result = mutableListOf<LegalAction>()
@@ -45,6 +65,8 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
         val playerId = context.playerId
 
         val zoneCards = state.getZone(playerId, zone)
+        if (zoneCards.isEmpty()) return emptyList()
+        val hasStaticGrants = context.castPermissionUtils.hasStaticActivatedAbilityGrantsInZone(state, zone)
         for (entityId in zoneCards) {
             val container = state.getEntity(entityId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
@@ -56,14 +78,30 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
             val grantedZoneAbilities = state.grantedActivatedAbilities
                 .filter { it.entityId == entityId && it.ability.activateFromZone == zone }
                 .map { it.ability }
-            val printedZoneAbilities = context.cardRegistry.getCard(cardComponent.name)
+            // A card exiled face down has no characteristics (CR 406.3a), so its printed
+            // exile-zone ability (Torrent Elemental's "put this card from exile onto the
+            // battlefield") isn't there to activate. Abilities an effect grants it still are.
+            val printedZoneAbilities = if (hasNoPrintedAbilities(state, entityId)) emptyList()
+            else context.cardRegistry.getCard(cardComponent.name)
                 ?.script?.activatedAbilities
                 ?.filter { it.activateFromZone == zone }
                 .orEmpty()
-            val zoneAbilities = printedZoneAbilities + grantedZoneAbilities
+            val staticZoneAbilities = if (hasStaticGrants) context.castPermissionUtils
+                .getStaticGrantedActivatedAbilities(entityId, state)
+                .filter { it.activateFromZone == zone } else emptyList()
+            val zoneAbilities = (printedZoneAbilities + grantedZoneAbilities + staticZoneAbilities)
+                .distinctBy { it.id }
             if (zoneAbilities.isEmpty()) continue
 
             for (ability in zoneAbilities) {
+                if (manaOnly && !ability.isManaAbility) continue
+                if (ability.effect is com.wingedsheep.sdk.scripting.effects.ModalEffect) {
+                    val picker = com.wingedsheep.engine.handlers.actions.ability.ActivationModalChoices(
+                        com.wingedsheep.engine.handlers.TargetFinder(context.predicateEvaluator), context.conditionEvaluator)
+                    if (picker.validate(state, ActivateAbility(playerId, entityId, ability.id), ability.effect) != null) continue
+                }
+
+
                 // "Activate only as a sorcery" — Renew and similar zone-activated abilities are
                 // gated to sorcery timing. Mirrors ActivatedAbilityEnumerator's battlefield check
                 // so the action is never offered at instant speed (where the handler would reject
@@ -94,12 +132,24 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                 // ("costs {1} less to activate for each legendary creature you control", activated
                 // by discarding it from hand) is hidden from the menu whenever the player can
                 // afford only the reduced price.
-                val effectiveCost = AbilityCostReduction.apply(
-                    context.castPermissionUtils
-                        .applyDefinedXValue(ability.cost, ability, state, entityId, playerId),
-                    ability, state, entityId, playerId, context.targetUtils,
-                    predicateEvaluator = predicateEvaluator
+                // Then the board's statics, as the activation handler's totaller applies them —
+                // an "abilities you activate" reduction (Zirda) reaches a hand or graveyard card.
+                // A cost naming the card's own mana cost (a granted scavenge, Young Deathclaws) is
+                // lowered to that card's printed cost; one left un-lowered has no mana cost to pay.
+                val effectiveCost = context.castPermissionUtils.applyActivatedAbilityCostReduction(
+                    AbilityCostReduction.apply(
+                        context.castPermissionUtils.applyDefinedXValue(
+                            context.castPermissionUtils.lowerReferencedManaCost(state, entityId, ability.cost),
+                            ability, state, entityId, playerId
+                        ),
+                        ability, state, entityId, playerId, context.targetUtils,
+                        predicateEvaluator = predicateEvaluator
+                    ),
+                    state, entityId, playerId, ability.onceOnlyKind, ability.isManaAbility,
+                    chosenTargetIds = if (ability.targetRequirements.isEmpty()) emptyList() else null,
+                    abilityKeyword = ability.keyword,
                 )
+                if (effectiveCost.containsUnpayableOwnManaCost()) continue
                 val displayDescription = AbilityCostReduction.describe(ability, effectiveCost)
 
                 var costCanBePaid = true
@@ -113,6 +163,13 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                 )
 
                 if (!com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment.canAffordAbility(state, playerId, effectiveCost)) continue
+
+                // Sacrifice atoms ("Sacrifice a Swamp and a Forest: Return Jarad from your graveyard")
+                // are unpayable without enough permanents — and, with several atoms, without one
+                // disjoint assignment (a lone Swamp Forest dual pays one atom, not both). The engine
+                // asks which permanents when the bare action arrives, so there's no payload to build.
+                val sacrificeGroups = SacrificeCostAssignment.groups(state, effectiveCost, playerId, entityId, context.predicateEvaluator)
+                if (sacrificeGroups.isNotEmpty() && !SacrificeCostAssignment.hasDisjointAssignment(sacrificeGroups)) continue
 
                 when (effectiveCost) {
                     is AbilityCost.Atom -> when (val atom = effectiveCost.atom) {
@@ -130,11 +187,15 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                     is AbilityCost.Blight -> {
                         blightCost = effectiveCost
                         blightCreatures = context.projected.getBattlefieldControlledBy(playerId)
-                            .filter { context.projected.isCreature(it) && context.projected.canReceiveCounters(it) }
+                            .filter { context.projected.isCreature(it) && context.projected.canReceiveCounters(it, com.wingedsheep.sdk.core.CounterType.MINUS_ONE_MINUS_ONE) }
                         if (blightCreatures.isEmpty()) costCanBePaid = false
                     }
                     is AbilityCost.Composite -> {
-                        for (subCost in effectiveCost.costs) {
+                        // Cheap structural checks (an unblocked attacker to return for ninjutsu, a
+                        // card to discard) before the mana solve, so a hand full of ninjutsu cards
+                        // outside combat costs no solver run per priority pass.
+                        val cheapFirst = effectiveCost.costs.sortedBy { (it as? AbilityCost.Atom)?.atom is CostAtom.Mana }
+                        for (subCost in cheapFirst) {
                             when (subCost) {
                                 is AbilityCost.Atom -> when (val atom = subCost.atom) {
                                     is CostAtom.Mana -> {
@@ -160,12 +221,13 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                                     // Other atoms — engine validates at payment.
                                     else -> {}
                                 }
-                                // Self-removal costs are always payable — the card is in [zone].
-                                is AbilityCost.ExileSelf, is AbilityCost.DiscardSelf -> {}
+                                // Costs paid with the card itself are always payable — the card is in [zone].
+                                is AbilityCost.ExileSelf, is AbilityCost.DiscardSelf,
+                                is AbilityCost.PutSelfIntoLibrary, is AbilityCost.RevealSelf -> {}
                                 is AbilityCost.Blight -> {
                                     blightCost = subCost
                                     blightCreatures = context.projected.getBattlefieldControlledBy(playerId)
-                                        .filter { context.projected.isCreature(it) && context.projected.canReceiveCounters(it) }
+                                        .filter { context.projected.isCreature(it) && context.projected.canReceiveCounters(it, com.wingedsheep.sdk.core.CounterType.MINUS_ONE_MINUS_ONE) }
                                     if (blightCreatures.isEmpty()) {
                                         costCanBePaid = false; break
                                     }
@@ -221,7 +283,8 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                 val abilityHasXCost = abilityManaCost?.hasX == true || context.costUtils.hasPlayerChosenNonManaX(effectiveCost)
                 val abilityMaxAffordableX: Int? = if (abilityHasXCost) {
                     context.costUtils.calculateMaxAffordableX(state, playerId, effectiveCost, abilityManaCost,
-                        precomputedSources = context.availableManaSources, sourceId = entityId)
+                        precomputedSources = context.availableManaSources, sourceId = entityId,
+                        lifePurpose = LifePaymentPurpose.activating(ability.isManaAbility))
                 } else null
 
                 // Compute auto-tap preview for UI highlighting (skipped in ACTIONS_ONLY mode)
@@ -254,7 +317,9 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                                 hasXCost = abilityHasXCost,
                                 maxAffordableX = abilityMaxAffordableX,
                                 autoTapPreview = abilityAutoTapPreview,
-                                manaCostString = zoneManaCostString
+                                manaCostString = zoneManaCostString,
+                                isManaAbility = ability.isManaAbility,
+                                sourceZone = zone.name
                             )
                         )
                     } else {
@@ -269,11 +334,18 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                                 minTargets = firstReq.effectiveMinCount,
                                 targetDescription = firstReq.description,
                                 targetRequirements = targetInfos.surfacedRequirements(),
+                                xConstrainsTargetManaValue = targetInfos.size == 1 && firstInfo.xConstrainsManaValue,
+                                xConstrainsTargetManaValueExactly = targetInfos.size == 1 && firstInfo.xConstrainsManaValueExactly,
+                                xConstrainsTargetPower = targetInfos.size == 1 && firstInfo.xConstrainsPower,
+                                xConstrainsTargetCount = targetInfos.size == 1 && firstInfo.xConstrainsCount,
+                                xConstrainsTargetCountExactly = targetInfos.size == 1 && firstInfo.xConstrainsCountExactly,
                                 additionalCostInfo = costInfo,
                                 hasXCost = abilityHasXCost,
                                 maxAffordableX = abilityMaxAffordableX,
                                 autoTapPreview = abilityAutoTapPreview,
-                                manaCostString = zoneManaCostString
+                                manaCostString = zoneManaCostString,
+                                isManaAbility = ability.isManaAbility,
+                                sourceZone = zone.name
                             )
                         )
                     }
@@ -287,7 +359,9 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
                             hasXCost = abilityHasXCost,
                             maxAffordableX = abilityMaxAffordableX,
                             autoTapPreview = abilityAutoTapPreview,
-                            manaCostString = zoneManaCostString
+                            manaCostString = zoneManaCostString,
+                            isManaAbility = ability.isManaAbility,
+                            sourceZone = zone.name
                         )
                     )
                 }
@@ -296,6 +370,9 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
 
         return result
     }
+
+    private fun hasNoPrintedAbilities(state: com.wingedsheep.engine.state.GameState, entityId: EntityId): Boolean =
+        zone == Zone.EXILE && com.wingedsheep.engine.state.isFaceDownInExile(state, entityId)
 
     /**
      * Whether [playerId] has enough cards to pay an exile-from-zone cost of the ability on
@@ -314,4 +391,10 @@ class ZoneActivatedAbilityEnumerator(private val zone: Zone, private val predica
         atom.anyPlayersZone, atom.singleZone, atom.count,
         excludeSelfId = if (atom.excludeSelf) sourceId else null,
     ).size >= atom.count
+}
+
+private fun AbilityCost.containsUnpayableOwnManaCost(): Boolean = when (this) {
+    is AbilityCost.OwnManaCost -> true
+    is AbilityCost.Composite -> costs.any { it.containsUnpayableOwnManaCost() }
+    else -> false
 }

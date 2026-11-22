@@ -28,9 +28,10 @@ class StateDeltaTest : FunSpec({
     test("every mutable snapshot field is carried by the delta") {
         // Fields a delta carries in another shape: cards as added/updated/removed, zones as the
         // changed ones, the log as its new entries. The viewer never changes on a connection,
-        // and the attack mode is fixed for the whole game; clients retain both from the snapshot.
+        // and the attack mode and whether the game is played for ante are fixed for the whole game;
+        // clients retain them from the snapshot.
         val carriedAs = mapOf("cards" to "addedCards", "zones" to "updatedZones", "gameLog" to "newLogEntries")
-        val fixed = setOf("viewingPlayerId", "attackMode")
+        val fixed = setOf("viewingPlayerId", "attackMode", "playingForAnte")
         val deltaFields = StateDelta.serializer().descriptor.elementNames.toSet()
 
         ClientGameState.serializer().descriptor.elementNames

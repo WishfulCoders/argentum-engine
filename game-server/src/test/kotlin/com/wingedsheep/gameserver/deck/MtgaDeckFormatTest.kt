@@ -187,4 +187,45 @@ class MtgaDeckFormatTest : FunSpec({
         val text = MtgaDeckFormat.serialize(deck)
         text shouldBe "Deck\n20 Mountain\n"
     }
+
+    test("two cards under Commander become a partner pair (CR 702.124)") {
+        val text = """
+            Deck
+            1 Sol Ring
+
+            Commanders
+            1 Kodama of the East Tree (BLC) 227
+            1 Ishai, Ojutai Dragonspeaker
+        """.trimIndent()
+
+        val deck = MtgaDeckFormat.parse(text, DeckFormat.COMMANDER)
+        deck.commander shouldBe "Kodama of the East Tree"
+        deck.secondCommander shouldBe "Ishai, Ojutai Dragonspeaker"
+        deck.commanders shouldBe listOf("Kodama of the East Tree", "Ishai, Ojutai Dragonspeaker")
+        deck.cards shouldBe listOf("Sol Ring")
+    }
+
+    test("a third commander line goes back into the deck — no deck has more than two") {
+        val text = """
+            Commander
+            1 First Legend
+            1 Second Legend
+            1 Third Legend
+        """.trimIndent()
+
+        val deck = MtgaDeckFormat.parse(text, DeckFormat.COMMANDER)
+        deck.commanders shouldBe listOf("First Legend", "Second Legend")
+        deck.cards shouldBe listOf("Third Legend")
+    }
+
+    test("serialize round-trips a partner pair") {
+        val deck = Deck(
+            cards = listOf("Sol Ring"),
+            commander = "Kodama of the East Tree",
+            secondCommander = "Ishai, Ojutai Dragonspeaker",
+        )
+        val parsed = MtgaDeckFormat.parse(MtgaDeckFormat.serialize(deck), DeckFormat.COMMANDER)
+        parsed.commanders shouldBe deck.commanders
+        parsed.cards shouldBe deck.cards
+    }
 })

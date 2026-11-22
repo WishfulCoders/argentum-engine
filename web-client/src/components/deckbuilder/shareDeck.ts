@@ -27,7 +27,10 @@
  *
  * ```
  *  rec 0  meta       :  "2"  US  deckName  US  format
- *  rec 1  commander  :  ""  |  name  |  name US setCode US collector     (name kept verbatim — see below)
+ *  rec 1  commander  :  cmd  [ GS cmd ]                                 (a partner pair adds a second, GS-split)
+ *                       cmd = name  |  name US setCode US collector         (name kept verbatim — see below)
+ *                       Empty when the deck has no commander. A single commander never contains GS,
+ *                       so links made before partner pairs decode unchanged.
  *  rec 2  compact    :  group  GS  group  GS …
  *                       group = setCode  US  token  token …
  *                       token = <collector>[:count]   (":count" only when count > 1)
@@ -74,6 +77,13 @@ export interface SharedDeck {
   commander?: string
   /** Optional pinned printing for the commander. */
   commanderPrinting?: PrintingRef
+  /**
+   * Optional second commander — the partner of [commander] (Partner, Partner with, Choose a
+   * Background, Doctor's companion; CR 702.124). Only meaningful when `commander` is set.
+   */
+  secondCommander?: string
+  /** Optional pinned printing for the second commander. */
+  secondCommanderPrinting?: PrintingRef
   /** Optional sparse per-card printing pins, keyed by card name. */
   printings?: Record<string, PrintingRef>
   /**
@@ -84,6 +94,19 @@ export interface SharedDeck {
    * shared by link arrives without its sideboard.
    */
   sideboard?: Record<string, number>
+  /**
+   * Optional companion (CR 702.139) — the sideboard card the deck reveals. Unlike the rest of the
+   * sideboard the share code does carry it (a fourth field on the header record, which older
+   * decoders ignore); a decoded companion comes back with one copy on `sideboard`.
+   */
+  companion?: string
+  /**
+   * Optional owner's note and chosen cover art. Carried by the account save (stored verbatim);
+   * the share-link codec has no field for them and drops them — a shared deck is the list.
+   */
+  note?: string
+  coverCard?: string
+  coverImageUri?: string
 }
 
 /**
@@ -232,14 +255,24 @@ export async function encodeSharedDeck(
     groups.push(set + US + tokens.join(' '))
   }
 
+  const commanderField = (name: string, printing: PrintingRef | undefined): string =>
+    printing
+      ? [sanitize(name), printing.setCode, printing.collectorNumber].join(US)
+      : sanitize(name)
   const commanderRec = deck.commander
-    ? deck.commanderPrinting
-      ? [sanitize(deck.commander), deck.commanderPrinting.setCode, deck.commanderPrinting.collectorNumber].join(US)
-      : sanitize(deck.commander)
+    ? [
+        commanderField(deck.commander, deck.commanderPrinting),
+        ...(deck.secondCommander ? [commanderField(deck.secondCommander, deck.secondCommanderPrinting)] : []),
+      ].join(GS)
     : ''
 
   const records = [
-    [V2_TAG, sanitize(deck.name), sanitize(deck.format ?? '')].join(US),
+    [
+      V2_TAG,
+      sanitize(deck.name),
+      sanitize(deck.format ?? ''),
+      ...(deck.companion ? [sanitize(deck.companion)] : []),
+    ].join(US),
     commanderRec,
     groups.join(GS),
     ...overflow,
@@ -347,19 +380,31 @@ function decodeV2(text: string, resolveName: ResolveName): SharedDeck | null {
   const out: SharedDeck = { name: meta[1] ?? '', cards }
   if (Object.keys(printings).length > 0) out.printings = printings
   if (meta[2]) out.format = meta[2]
+  if (meta[3]) {
+    out.companion = meta[3]
+    out.sideboard = { [meta[3]]: 1 }
+  }
 
-  // rec 1: commander — name verbatim, optional pinned printing.
-  const cmd = (records[1] ?? '').split(US)
+  // rec 1: commander(s) — name verbatim, optional pinned printing; a partner pair is GS-split.
+  const [first, second] = (records[1] ?? '').split(GS)
+  const cmd = (first ?? '').split(US)
   if (cmd[0]) {
     out.commander = cmd[0]
     if (cmd.length >= 3 && cmd[1] && cmd[2]) {
       out.commanderPrinting = { setCode: cmd[1], collectorNumber: cmd[2] }
     }
+    const cmd2 = (second ?? '').split(US)
+    if (cmd2[0] && cmd2[0] !== cmd[0]) {
+      out.secondCommander = cmd2[0]
+      if (cmd2.length >= 3 && cmd2[1] && cmd2[2]) {
+        out.secondCommanderPrinting = { setCode: cmd2[1], collectorNumber: cmd2[2] }
+      }
+    }
   }
   return out
 }
 
-// Legacy v1: `{ v:1, n, f?, c?, cp?, d:[ [name,count] | [name,count,set,coll] ] }`. Name-keyed,
+// Legacy v1: `{ v:1, n, f?, c?, cp?, c2?, cp2?, d:[ [name,count] | [name,count,set,coll] ] }`. Name-keyed,
 // so it decodes without the catalog resolver — kept so links shared before v2 still open.
 function decodeV1(text: string): SharedDeck | null {
   let raw: unknown
@@ -390,6 +435,12 @@ function decodeV1(text: string): SharedDeck | null {
   if (typeof raw.c === 'string') out.commander = raw.c
   if (Array.isArray(raw.cp) && typeof raw.cp[0] === 'string' && typeof raw.cp[1] === 'string') {
     out.commanderPrinting = { setCode: raw.cp[0], collectorNumber: raw.cp[1] }
+  }
+  if (out.commander && typeof raw.c2 === 'string' && raw.c2 && raw.c2 !== out.commander) {
+    out.secondCommander = raw.c2
+    if (Array.isArray(raw.cp2) && typeof raw.cp2[0] === 'string' && typeof raw.cp2[1] === 'string') {
+      out.secondCommanderPrinting = { setCode: raw.cp2[0], collectorNumber: raw.cp2[1] }
+    }
   }
   return out
 }

@@ -60,3 +60,38 @@ and the targeting prompt is derived from the requirement. The only edits were th
 binding name `"target"` → `"t0"` (requirement `id` and the `BoundVariable` reading it) and the
 recorded prompt `"target"` → `"target artifact or enchantment"` (Naturalize's derived wording).
 No action or event payload changed, and no gameplay was rerun.
+
+Edited on 2026-10-08 when the battlefield-exit `EntitySnapshot` gained `copiableCard` (the
+departed permanent's copiable values, read by a token copy of a triggering creature that has
+left — CR 608.2h). The one snapshot in these traces — Naturalize's Sol Ring in
+`free-cast-target/after-3.json` — now carries Sol Ring's `CardComponent` there, exactly the
+component the card keeps in the graveyard (it was no copy). No action or event payload changed,
+and no gameplay was rerun.
+
+Edited on 2026-10-16 when the battlefield-exit `EntitySnapshot` gained `colors` (the departed
+permanent's projected colors, read by a color count of a permanent that has left — CR 608.2h).
+The one snapshot in these traces — Naturalize's Sol Ring in `free-cast-target/after-3.json` —
+now carries `"colors": []`, Sol Ring being colorless. No action or event payload changed, and no
+gameplay was rerun.
+
+Representation-refreshed on 2026-10-17 when the effect interpreter's `EffectProgram` replaced
+`EffectContinuation` as the frame that holds the rest of a composite. The frozen `state.json`
+files are unchanged: `nested-may` and `repeat-while` still hold the retired frame, which the
+current reader converts on load to `EffectProgram(root = Composite(remainingEffects),
+origin = null, cursor = [Start], effectContext)`, so the remaining effects run from the first.
+`SuspensionTraceTest` now checks the re-encoded initial state against that conversion. Only two
+files changed. In `nested-may/after-1.json` and `repeat-while/after-1.json`, the one waiting frame
+(the converted `GainLife 3` and `GainLife 5` tails) changed from the old shape to the new one. In
+`nested-may/after-1.json`, the inner "may" frame's context also gained
+`programOrigin = BuiltBy("Gated", null)`: the registry now labels every leaf it runs with its
+step, and its parent is null because the outer frame was captured before labels existed. The
+expected states were re-derived by replaying the unchanged `actions.json`. Apart from those
+frames, every replayed state is what the engine before the change produces from the same input,
+every replayed event list is identical to it, and `events-N.json` is unchanged. No action or
+event payload changed.
+
+Prompt-text refresh on 2026-10-20 when consent-gate prompts stopped repeating their subject: the
+`nested-may` inner yes/no now reads "You may gain 1 life" (was "You may you gain 1 life"). The only
+edit was that `prompt` string in `after-1.json` and `events-1.json`, the engine's own output for the
+recorded question. `state.json` and `creation-events.json` keep the originally captured question
+text, and no state, action, or other event payload changed.

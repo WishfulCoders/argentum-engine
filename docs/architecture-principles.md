@@ -544,6 +544,24 @@ separate from the effect context's permission to follow its own moves. Triggers 
 nested choices are deferred beneath this finalizer, even when the finalizer is unchanged by the
 latest response. Their placement and target choices happen after the spell leaves the stack.
 
+A resolving triggered or activated ability follows the same lifecycle (CR 608.2n): it stays on the
+stack, below anything its effect puts there, until its effect and every nested decision finish. When
+the effect itself starts a subgame without pausing first, the ability stays on the stack while the
+subgame is played out and finishes once the main game resumes, as a spell does; the
+resolution-control window, though, already ends as the subgame starts. A subgame started after the
+resolution paused is not yet supported, for spells and abilities alike: the frames drained after the
+answer don't stop at the pending subgame, so the object finishes before the subgame is played.
+`FinishResolvingAbilityContinuation` captures the ability object and its resolved events
+(`AbilityResolvedEvent`, plus `SagaChapterResolvedEvent` for a Saga chapter); it removes the ability
+and reports those events exactly once, inline when nothing paused and as an automatic frame after
+the last answer otherwise. Like the spell finalizer it acts only on the captured object while it is
+still on the stack: an ability that left mid-resolution didn't resolve and reports nothing. When a
+player leaves the game while a resolution waits on their answer, the frames needing the answer are
+dropped but both finalizers and the resolution-control end frame still run, so a surviving player's
+ability or nonpermanent spell finishes once instead of resolving again. A permanent spell paused
+while it enters has no finish frame and is no longer on the stack, so that path can't finish it;
+this is a known gap.
+
 Insertion is a movement/creation operation, not a reconstruction API. An already-present destination
 member is idempotent; insertion while still present in its origin is rejected. Pure permutations
 use `reorderZone`. Fresh constructor fixtures and legacy JSON without identity fields initialize
@@ -561,6 +579,15 @@ same-zone reordering produce no transition outcome. Last-known characteristics r
 actionable references: invalidating a live object does not erase the event's last-known information.
 These fields are internal engine data; client event mapping continues to expose the existing game
 log shape.
+
+A meld departure emits the host's ordinary zone event and the partner's card-arrival event, marked
+`meldedPermanent` with the departed host's object reference. `isBattlefieldDeparture` excludes that
+additional arrival from permanent death/leave detection. Both movement outcomes share the departed
+object and identify separate destination objects. Resolution movement permissions preserve that
+one-to-many relationship, including across serialized continuations; zone-return durations record
+both destination visits independently. Card-arrival trackers read each front face, while death
+trackers read the one departed permanent.
+
 
 Graveyards store cards oldest first. `GraveyardOrdering` finishes each atomic effect, SBA pass,
 or action-cost batch: it preserves earlier cards and asks each owner to order simultaneous arrivals,
@@ -664,15 +691,108 @@ data class Suspension(
 ```
 
 `GameState.pendingDecision` is derived from the top suspension. An answer payload cannot be
-pushed independently, and automatic work such as `EffectContinuation` carries no routing ID:
+pushed independently, and automatic work such as `EffectProgram` carries no routing ID:
 its position under a suspension supplies its relationship. `ContinuationHandler.resume` checks
 the response against that suspension's question, pops the pair, and dispatches its answer payload.
+
+#### Effect programs
+
+An effect tree runs as an `EffectProgram`: a copy of the root `Effect`, an origin label, a cursor
+into the root, and the `EffectContext` the node at the cursor runs in. `EffectProgramInterpreter`
+walks `CompositeEffect` sequences itself, so a nested composite is a position in its root rather
+than a frame of its own; every other node is a leaf it runs through the executor registry. Before
+every leaf, the last one included, the interpreter pushes the program beneath it with the cursor
+**at that leaf**: the cursor always names the node in progress, not the next one. If the leaf
+pauses, the frame waits beneath the leaf's own frames. Resumers hand the leaf's outputs to "the
+frame beneath" (`exposeCollectionsToNextFrame`), which merges them into a program frame with
+`mergeOutputs`, the same merge `foldResult` applies to a step that finished synchronously. Once the leaf's frames drain, the automatic resumer advances past the cursor and
+carries on. A failed leaf is skipped, or abandons the rest of its composite when that composite has
+`stopOnError`.
+
+**Pausing never changes the outcome.** The cursor is a zipper: each step holds what its open node
+needs to finish exactly as a run that never paused would. A composite's step stores its entry
+context as an exact delta from its parent's entry: the values the siblings before it stored, the
+snapshots and object-move permits they appended, and the depth step. The root's step stores what
+the program was entered with. On resume, each entry is rebuilt from those deltas and the frame's
+current context.
+
+```kotlin
+data class EffectProgram(
+    val root: Effect,               // always a copy, so resuming needs only the frame
+    val origin: ProgramOrigin?,     // a label; null only for converted frames, which publish the old way
+    val cursor: ProgramCursor,      // List<CursorStep>
+    val effectContext: EffectContext,
+) : AutomaticContinuation
+
+sealed interface CursorStep {
+    data object Start : CursorStep                                   // not started
+    data class Child(val index: Int, val delta: EntryDelta) : CursorStep    // open composite at child index
+}
+data class EntryDelta(val outputs: PipelineOutputs, val depth: Int)  // entry = parent entry ⊕ delta
+```
+
+Leaving a composite goes through one function on both paths. The parent gets the composite's entry
+context, folded with what the composite stored: new pipeline keys, appended snapshots, the
+object-move permits the composite gained (from its leaves' events, or handed to the frame while it
+was paused), and an authorisation of the events of this run. A value that shadows an outer key stays
+inside. `stopOnError` is read
+from the composite in the root. An abandoned composite stores no values, but it still hands on the
+permits it gained, and a failed leaf's moves are authorised into the context: the moves happened,
+so they stay followable whether or not a pause came between.
+
+**The invariant the deltas rest on.** Inside a program a context only ever grows: pipeline values
+are added or replaced by merges, snapshot and permit lists are only appended to, and no step
+removes anything. That is what makes `PipelineOutputs.between(parent, child)` an exact delta and
+lets a paused cursor rebuild every entry. A new node kind or merge that shrinks a context (drops a
+key, filters a list) breaks resumption silently; it must instead open a scope whose exit restores
+the parent. The interpreter checks the other half of the contract at run time: the frame it pops
+after a leaf must be the one it pushed beneath that leaf, so an executor that leaves a frame behind
+fails the program instead of eating another frame. A finished program publishes the same outputs, computed against
+the root step's entry, whether it returns them synchronously to its caller or, after a pause,
+hands them to the frame beneath. Those outputs are a `PipelineOutputs`: every pipeline kind, the
+snapshots and the permits, merged by one function, `mergeOutputs`. Programs and gates pass the
+whole of it: `foldResult` for a step that finished, a finished program publishing to the frame
+beneath, and the gate resumer forwarding a branch's result (with the permits its events authorise,
+as `foldResult` would). A resumer that runs a tree or a step to completion hands the frame beneath
+all of that step's outputs (`EffectResult.stateWithOutputsHandedOn`), the same thing the inner
+program would have published had something in it paused. A leaf resumer answering a question hands
+over what the answer produces (a selection's collections, a draw-up-to count). A step that finishes
+without pausing returns its values in its result; a value it writes into "the frame beneath"
+instead is taken from the program's frame when the interpreter pops it. String lists have one producer, a
+creature-type choice writing into the program frame beneath it. Programs carry them out of scopes
+like any other kind. `ForEachCapturedController` runs each controller's sub-effects as a program
+and returns their outputs, so its paused and unpaused paths agree. `DoAction` still has two return
+conventions until it moves into the interpreter. Each nested composite runs one resolution depth deeper, as the
+registry's recursion made it before programs existed. Twin tests (`EffectProgramPauseTwinTest`)
+run each shape with and without the selection pause and require the same game.
+
+**Origins, and how to read the cursor.** `Resolving(stackObject)` means the root is that resolving
+spell's or ability's own effect, and the cursor is an absolute path into it. `AbilityResolver` and
+`NonPermanentSpellResolver` set it through `EffectContext.programOrigin`. `BuiltBy(step, parent)`
+means another step started the root, and the cursor is a local path into that root. Such a step
+may be a leaf that hasn't moved into the interpreter yet (a gate or a loop running its subtree), an
+executor queueing effects it built (secret-choice branches, a token batch's finisher), or an engine
+path that runs a card's tree outside a stack resolution: a mana ability, a permanent's entry
+(`OnEnterRun`), a replacement effect, a special action, turning a permanent face up. One root is synthetic: a multi-player life gain that
+a replacement pauses queues its remaining per-player gains as a program over all of them, with
+the cursor at the gain in progress. The registry
+hands every leaf call the label `BuiltBy(<the leaf's step>, <caller's origin>)`, so a program the
+leaf starts or queues takes that label as it is. Step names come from one helper, the SDK serial
+name or else the class name. A queued program's root is `CompositeEffect(effects)` with the cursor
+at `Start`. Gates, loops and other control nodes are still leaves; the pilot plan in
+[`plans/derived-continuations.md`](plans/derived-continuations.md) moves them into the interpreter
+one at a time, as new `CursorStep` kinds.
 
 Creating a question and propagating a pause are separate operations.
 `ExecutionResult.propagatePause` carries an already installed suspension through enclosing
 execution without allocating or emitting another request. Mana-ability execution temporarily
 moves the complete payment suspension into an automatic reopen frame; restoration refreshes
 its menu while preserving the original identity and answer.
+
+Snapshots saved while the rest of a composite was an `EffectContinuation` ("run these next")
+still load: `LegacyEffectContinuationLift` converts each to an `EffectProgram` over
+`CompositeEffect(remainingEffects)` (`stopOnError = false`, as the old runner behaved), with no
+origin and the cursor at `Start`, so the remaining effects run from the first in the frame's context.
 
 Snapshots store the structural representation. `LegacyGameStateSerializer` reads the previous
 format by pairing the active question with its matching top answer and saved mana questions with
@@ -831,6 +951,15 @@ reads, which then apply the policy above, and `resolveTarget` for actions, which
 object that has changed zones since the ability captured it (CR 400.7) — the source (`Self`), the
 triggering object, or the object a `ForEach` loop is visiting (`IterationEntity`).
 
+Battlefield entry events carry an internal `simultaneousEntryGroup` when a shared mover places several
+cards in one instruction; token-creation executors stamp the same boundary for multiple tokens.
+The group is an opaque game-local routing token, shared by those arrivals
+and distinct from any later instruction. Token groups are allocated before execution and ride the
+existing pipeline context through replacement decisions and remaining-copy continuations; an
+as-enters answer retains the group on its eventual entry event. Trigger detection uses it to let a source entering alongside
+other permanents observe them and bind its new battlefield object, without treating the concatenated
+events of a whole composite resolution as one simultaneous entry. Single-card moves need no group.
+
 ### 2.6 Strategy-Based Registries
 
 **Principle:** Action handling and effect execution are fully decoupled from the core engine loop.
@@ -918,8 +1047,36 @@ replacement effects are data (not callbacks), the engine can inspect which repla
 ordering when multiple replacement effects compete (the affected player chooses per Rule 616.1), and
 serialize the state even when a replacement choice is pending.
 
-Life-gain replacements that execute effects use the existing replacement-result queue where damage
-arithmetic cannot suspend. A life-gain instruction drains its result before the next instruction;
+Damage uses a shared transaction boundary, `DamageReplacementChain`, for combat and spell/ability
+instructions. It proposes a complete simultaneous batch, applies one replacement at a time, and
+rechecks all remaining candidates. Competing effects ask the affected player through the ordinary
+option decision. A pending answer stores a serializable choice sequence and the original instruction;
+replaying it never commits partial damage, shield consumption or replacement results. The complete
+transaction returns final damage instances, replacement events and aggregated prevention life gain
+for the ordinary damage-marking code. Damage-to-counter and damage-to-mill results are deferred until
+all surviving damage has been marked, so their future counters and graveyards do not change another
+instance's replacement choices. Chosen face-up replacements are the exception: they reveal the object
+before the next question, with a small original-entity journal preventing repeated turn-up events
+and preserving the announced damage amount on replay. An instance with no candidates is only
+provisionally complete: a later reveal requeues it with its applied identities intact, so newly visible
+global replacements see the whole surviving event. Candidates are cached until a replacement changes
+the event or resource state; ordinary damage with no candidates skips cross-instance choice scans.
+Peer instances are inspected lazily only when a finite shield needs a shared-resource label.
+Redirection retains applied identities. A departed source carries its object reference and frozen
+`EntitySnapshot` through replay, replacement matching, protection and final damage application;
+a later incarnation of the same entity cannot supply its controller, colors or damage keywords.
+When simultaneous sources share a finite resource or competing noncommuting replacements, the
+player can choose which source to modify next. Finite shields, counter-based prevention and limited
+redirection share an exact-total allocation sequence: bounded number decisions divide the resource
+across eligible incoming sources before any other replacement runs. Their remaining capacities are
+reserved once across the whole event, including across pauses. Whole-event replacements retain a
+separate batch scope: unbounded continuous redirection moves all eligible sources together, and
+counter-removal prevention removes the aggregate counters and queues its rider once per recipient.
+Each transformed source retains its own already-applied identities, so a multiplier used before the
+batch redirect cannot apply again afterward. The replacement text determines this event granularity
+(CR 700.1), rather than the number of internal damage instances.
+
+Life-gain replacements that execute effects use the existing replacement-result queue. A life-gain instruction drains its result before the next instruction;
 combat drains results at the settle boundary before state-based actions. The queue isolates later
 results on an automatic continuation while a result asks questions. A replacement-chain boundary
 keeps already-applied identities in scope across nested draws and suspended effects, then restores
@@ -1065,7 +1222,7 @@ affected, live in [`GameLimits`](../rules-engine/src/main/kotlin/com/wingedsheep
   the JVM call stack overflows. `RepeatDynamicTimesEffect` additionally clamps its body count
   (`MAX_REPEAT_ITERATIONS`) since it materializes one body per iteration.
 
-Each cap `System.err`-logs when it actually bites (mirroring the SBA loop's 104.4c draw bail-out)
+Each cap `System.err`-logs when it actually bites (mirroring the SBA loop's 104.4b draw bail-out)
 so a degenerate card/combo stays debuggable. These are backstops, not game rules.
 
 ### 2.9 Turn Structure and Priority
@@ -1096,6 +1253,11 @@ that instance resolves, after target validation. Simultaneous identical optional
 separate targets, priority windows and resolution choices; no put-on-stack consent batch removes
 those choices. The server/client use the ordinary target decision followed by a resolution yes/no.
 
+Choosing a mandatory target never answers the consent question, even when the effect is a single
+"you may tap target permanent". Targets are public before the response window; the controller can
+choose whether to act only after responses resolve. A target requirement with "up to" still permits
+zero targets independently of any consent gate.
+
 **Priority and the "both players pass" rule.** `GameState` tracks priority with two fields:
 
 ```kotlin
@@ -1122,7 +1284,9 @@ behavior:
 
 - **UNTAP:** Untap all permanents, remove summoning sickness. No priority — recursively advances.
 - **DRAW:** Draw a card, check draw replacement effects, then run state-based actions.
-- **DECLARE_ATTACKERS / DECLARE_BLOCKERS:** Skip entirely if no valid attackers/blockers exist.
+- **DECLARE_ATTACKERS:** Always happens, with priority (CR 508.2). With no creature able to attack,
+  the empty declaration is made as the turn-based action instead of asking the active player.
+- **DECLARE_BLOCKERS / COMBAT_DAMAGE:** Skipped when no creature is attacking (CR 508.8).
 - **COMBAT_DAMAGE:** Apply all combat damage simultaneously, then run state-based actions.
 - **CLEANUP:** Discard to hand size, remove damage, expire end-of-turn effects. Normally no
   priority — but if SBAs or triggers occur during cleanup, a new cleanup step begins with priority.
@@ -1167,6 +1331,14 @@ contexts:
 `ManaCost` parses string notation into a list of `ManaSymbol` variants — `Colored(color)`,
 `Generic(amount)`, `Hybrid(color1, color2)`, `Phyrexian(color)`, `X`, and `Colorless`. This
 structured representation enables the solver to reason about payment options without string parsing.
+
+**Optional life-funded cost modifiers.** `ModifySpellCost.optionalLifePayment` rides the existing
+additional-cost pipeline. A cast records each elected projected static instance in
+`CastSpell.optionalCostPayments`; validation checks the actual spell face, source and life budget.
+Enumeration uses an immutable `CostCalculator` carrying the same declarations, with the mana solver
+reserving their life budget. Identical instances are offered by count rather than by permutation.
+The totaller applies the discount after additional mana costs, and a mana-action continuation retains
+both its mana total and its non-mana obligations if the granting source departs during payment.
 
 **Tier 2: Mana Solving (Engine).** The `ManaSolver` determines whether a player *can* pay a cost
 and *which sources to tap*. This is a constraint satisfaction problem, not a simple subtraction:
@@ -1349,6 +1521,24 @@ whole production, including restricted entries, and separate triggered tap bonus
 tagging. Non-tapping and zero-output activations do not fire tap bonuses. This accounting boundary
 does not prove that future activations can pay a forced card play; forward planning and recovery remain
 separate work.
+
+#### Attack-declaration cost choices
+
+Attack declaration validates the proposed group, taps non-vigilant attackers, collects enlist
+choices, and then pays attack costs before marking the declaration as attacking. Choices use the
+existing battlefield card selector. No player receives priority between these stages.
+
+A tax question carries only the component changes made by declaration taps, tagged with a routing
+ID. The settler tags their queued triggers with the same ID. Cancelling restores those component
+changes on their original objects and removes only those triggers; independent mana actions remain.
+The checkpoint never retains another game state or hidden hands/libraries, so it cannot pin the
+entire hidden world during AI determinization. `AttackDeclarationCancelledEvent` reports rollback
+without emitting false untap triggers. Enlist uses the tap atom and separate enlist/linked-trigger events.
+
+Enlist instances are read from projection. The engine's `Modification.GrantStaticAbility` retains
+point-of-use static abilities in a list through layer-six ordering, including copied token text.
+Ability removal clears this list; a later resolved grant restores only its own instance. Printed
+instances remain dependent on their source's abilities, while resolved grants are independent.
 
 ### 2.11 Copy Effects
 

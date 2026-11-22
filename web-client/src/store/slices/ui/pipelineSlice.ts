@@ -8,7 +8,7 @@
  */
 import type { SliceCreator, ActionPipelineState, PhaseResult } from '../types'
 import type { ActivateAbilityAction, CastSpellAction, EntityId, GameAction, LegalActionInfo } from '@/types'
-import { castAnnouncedX, computePhases, mergeResult, enterPhase } from './pipelinePhases'
+import { castAnnouncedX, computePhases, mergeResult, enterPhase, dropXCountPickerAtZero } from './pipelinePhases'
 import type { PipelineStoreMethods } from './pipelinePhases'
 import {
   parseManaCost as parseManaCostUtil,
@@ -263,6 +263,10 @@ export const createPipelineSlice: SliceCreator<PipelineSlice> = (set, get) => ({
       nextPhases = [{ type: 'costPayment' }, ...nextPhases]
     }
 
+    if (result.type === 'xSelection') {
+      nextPhases = dropXCountPickerAtZero(nextPhases, actionInfo, result.xValue)
+    }
+
     // Dynamic phase injection: a non-mana escalate cost (CR 702.120a) is owed once per mode
     // chosen beyond the first, so how much there is to pay — and whether anything is owed at
     // all — is only known once the modal panel has confirmed its picks.
@@ -274,26 +278,41 @@ export const createPipelineSlice: SliceCreator<PipelineSlice> = (set, get) => ({
       nextPhases = [{ type: 'escalateCost' }, ...nextPhases]
     }
 
-    // Dynamic phase injection: damage distribution after targeting with >1 targets. An
-    // X-divided total ("X damage divided …") divides the X announced earlier in this cast — the
-    // chosen {X} or the life paid for a "pay X life" cost — not the unbound-X placeholder.
-    const totalToDistribute =
-      actionInfo.damageTotalIsX && mergedAction.type === 'CastSpell'
+    // Dynamic phase injection: damage distribution after targeting with >1 targets. A division
+    // scoped to one target requirement (Magma Opus) is among that requirement's targets only.
+    const dividedTargets =
+      result.type === 'targeting'
+        ? targetsOfGroup(result.selectedTargets, result.targetGroupCounts, actionInfo.distributionTargetGroup)
+        : []
+    // A total that reads the announced X — a spell's mana-paid {X} (Shatterskull Smashing) or an
+    // activation's X cost (Huatli, Warrior Poet's −X) — is priced by the server per X; look up the
+    // X the xSelection phase already put on the action.
+    const chosenX =
+      mergedAction.type === 'CastSpell' || mergedAction.type === 'ActivateAbility' ? mergedAction.xValue : undefined
+    // A total that is the X itself ("X damage divided …") divides the X announced earlier in this
+    // cast — the chosen {X} or the life paid for a "pay X life" cost (Fire Covenant) — not the
+    // unbound-X placeholder in totalDamageToDistribute.
+    const totalToDivide = actionInfo.totalDamageByX
+      ? actionInfo.totalDamageByX[chosenX ?? 0]
+      : actionInfo.damageTotalIsX && mergedAction.type === 'CastSpell'
         ? castAnnouncedX(mergedAction)
         : actionInfo.totalDamageToDistribute
     if (
       result.type === 'targeting' &&
       actionInfo.requiresDamageDistribution &&
-      totalToDistribute &&
-      result.selectedTargets.length > 1
+      totalToDivide &&
+      dividedTargets.length > 1
     ) {
-      // Spells read "Cast <name>", activated abilities "Activate <name>: …" — strip either verb so
-      // the modal header names the source (Chandra, Flameshaper's −4 divides damage the same way
+      // The modal header names the source. An activated ability's description is its rules text
+      // (Huatli, Warrior Poet's −X), so name the permanent it is activated from; a spell reads
+      // "Cast <name>", so strip the verb (Chandra, Flameshaper's −4 divides damage the same way
       // Arc Lightning does).
-      const cardName = actionInfo.description.replace(/^(Cast|Activate) /, '')
+      const sourceName =
+        mergedAction.type === 'ActivateAbility' ? gameState.cards[mergedAction.sourceId]?.name : undefined
+      const cardName = sourceName ?? actionInfo.description.replace(/^(Cast|Activate) /, '')
       const minPerTarget = actionInfo.minDamagePerTarget ?? 1
       const initialDistribution: Record<string, number> = {}
-      for (const targetId of result.selectedTargets) {
+      for (const targetId of dividedTargets) {
         initialDistribution[targetId] = minPerTarget
       }
 
@@ -310,9 +329,10 @@ export const createPipelineSlice: SliceCreator<PipelineSlice> = (set, get) => ({
         actionInfo,
         action: mergedAction as CastSpellAction | ActivateAbilityAction,
         cardName,
-        targetIds: [...result.selectedTargets],
-        totalDamage: totalToDistribute,
+        targetIds: [...dividedTargets],
+        totalDamage: totalToDivide,
         minPerTarget,
+        ...(actionInfo.distributionUnit ? { unit: actionInfo.distributionUnit } : {}),
         distribution: initialDistribution,
       })
       return
@@ -361,4 +381,19 @@ function getStoreMethods(get: () => import('../types').GameStore): PipelineStore
     startTargeting: state.startTargeting,
     startDamageDistribution: state.startDamageDistribution,
   }
+}
+
+/**
+ * The targets a division is among: the slice of requirement [group]'s targets when the server
+ * scoped it to one ([LegalActionInfo.distributionTargetGroup]), else every chosen target.
+ */
+function targetsOfGroup(
+  selected: readonly EntityId[],
+  groupCounts: readonly number[] | undefined,
+  group: number | null | undefined,
+): EntityId[] {
+  // The server encodes an unscoped division as an explicit null.
+  if (group == null || groupCounts == null) return [...selected]
+  const start = groupCounts.slice(0, group).reduce((sum, n) => sum + n, 0)
+  return selected.slice(start, start + (groupCounts[group] ?? 0))
 }

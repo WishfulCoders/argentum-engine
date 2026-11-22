@@ -3,6 +3,7 @@ package com.wingedsheep.gameserver.handler
 import com.wingedsheep.gameserver.ai.AiGameManager
 import com.wingedsheep.gameserver.config.GameProperties
 import com.wingedsheep.gameserver.lobby.TournamentLobby
+import com.wingedsheep.gameserver.protocol.DeckRequestConverter
 import com.wingedsheep.gameserver.protocol.ErrorCode
 import com.wingedsheep.gameserver.protocol.ServerMessage
 import com.wingedsheep.gameserver.repository.GameRepository
@@ -10,6 +11,7 @@ import com.wingedsheep.gameserver.session.GameSession
 import com.wingedsheep.gameserver.session.PlayerIdentity
 import com.wingedsheep.gameserver.session.PlayerSession
 import com.wingedsheep.gameserver.tournament.AiMatchSimulator
+import com.wingedsheep.gameserver.tournament.GameReport
 import com.wingedsheep.gameserver.tournament.TournamentManager
 import com.wingedsheep.gameserver.tournament.TournamentMatch
 import com.wingedsheep.gameserver.tournament.TournamentRound
@@ -126,8 +128,14 @@ class TournamentMatchHandler(
         val lock = ctx.roundLocks.computeIfAbsent(lobbyId) { Any() }
         synchronized(lock) {
             val tournament = ctx.lobbyRepository.findTournamentById(lobbyId) ?: return
-            tournament.reportMatchResult(gameSessionId, winnerId, winnerLifeRemaining)
+            val report = tournament.reportMatchResult(gameSessionId, winnerId, winnerLifeRemaining)
             ctx.lobbyRepository.saveTournament(lobbyId, tournament)
+
+            if (report is GameReport.NextGame) {
+                val lobby = ctx.lobbyRepository.findLobbyById(lobbyId) ?: return
+                beginBetweenGames(lobby, tournament, report.match)
+                return
+            }
 
             val resultRound = tournament.getRoundForMatch(gameSessionId)
             val match = resultRound?.matches?.find { it.gameSessionId == gameSessionId }
@@ -186,8 +194,16 @@ class TournamentMatchHandler(
         val lock = ctx.roundLocks.computeIfAbsent(lobbyId) { Any() }
         synchronized(lock) {
             val tournament = ctx.lobbyRepository.findTournamentById(lobbyId) ?: return
+            // A best-of-three abandoned between its games has no running game to end it, so the
+            // opponent sitting on the sideboarding screen hears about the forfeit from here.
+            val forfeitedBetweenGames = tournament.underwayMatchFor(playerId)?.takeIf { it.isBetweenGames }
             tournament.recordAbandon(playerId)
             ctx.lobbyRepository.saveTournament(lobbyId, tournament)
+            if (forfeitedBetweenGames != null) {
+                tournament.roundOf(forfeitedBetweenGames)?.let { round ->
+                    announceMatchComplete(lobbyId, round, forfeitedBetweenGames)
+                }
+            }
 
             // Drop the departed player's ready flag. Nothing else clears it now that a round boundary
             // doesn't, and a leaver left in the set inflates the lobby's "n/m ready" for good.
@@ -686,7 +702,8 @@ class TournamentMatchHandler(
         lobby: TournamentLobby,
         tournament: TournamentManager,
         round: TournamentRound,
-        match: TournamentMatch
+        match: TournamentMatch,
+        startingPlayerId: EntityId? = null,
     ): Boolean {
         // A BYE has no game to start; [TournamentManager.startableMatches] already filters them out.
         val player2Id = match.player2Id ?: return false
@@ -712,8 +729,10 @@ class TournamentMatchHandler(
             return false
         }
 
-        val submittedDeck1 = lobby.getSubmittedDeck(match.player1Id)
-        val submittedDeck2 = lobby.getSubmittedDeck(player2Id)
+        // A seat that sideboarded between the games of this match plays that deck; otherwise its
+        // registered one. Game 1 of every match starts from the registered deck.
+        val submittedDeck1 = matchDeck(lobby, match, match.player1Id)
+        val submittedDeck2 = matchDeck(lobby, match, player2Id)
         if (submittedDeck1 == null || submittedDeck2 == null) {
             // Transient — an AI seat whose deck build hasn't landed yet, most likely. Deliberately not
             // forfeited: the next sweep starts the match once the deck arrives.
@@ -758,8 +777,11 @@ class TournamentMatchHandler(
             logger.warn("Tournament ${lobby.lobbyId}: cannot start Commander match — missing commander for $missing")
             return false
         }
-        val unpinnedDeck1 = if (commander1 != null) stripCommanderFromCards(deck1WithEgg, commander1) else deck1WithEgg
-        val unpinnedDeck2 = if (commander2 != null) stripCommanderFromCards(deck2WithEgg, commander2) else deck2WithEgg
+        // A partner pair (CR 702.124) seats both commanders; the second only rides beside a first.
+        val commanders1 = listOfNotNull(commander1, player1State.secondCommander?.takeIf { commander1 != null })
+        val commanders2 = listOfNotNull(commander2, player2State.secondCommander?.takeIf { commander2 != null })
+        val unpinnedDeck1 = DeckRequestConverter.stripCommanders(deck1WithEgg, commanders1)
+        val unpinnedDeck2 = DeckRequestConverter.stripCommanders(deck2WithEgg, commanders2)
         val deck1 = BoosterGenerator.withCardArt(unpinnedDeck1, deckPrintings1)
         val deck2 = BoosterGenerator.withCardArt(unpinnedDeck2, deckPrintings2)
 
@@ -791,21 +813,27 @@ class TournamentMatchHandler(
             gameSession.rankedMode = com.wingedsheep.gameserver.ranking.Ranked
                 .modeForTournament(lobby.rules, lobby.format)
         }
+        // CR 407 — the lobby handlers keep this off whenever the lobby is ranked.
+        gameSession.playingForAnte = lobby.playingForAnte && !lobby.ranked
         val ps1 = player1State.identity.toPlayerSession()
         val ps2 = player2State.identity.toPlayerSession()
 
         gameSession.addPlayer(
-            ps1, deck1, commanderCardName = commander1,
+            ps1, deck1, commanderCardNames = commanders1,
             sideboard = BoosterGenerator.withCardArt(
-                lobby.getSubmittedSideboard(match.player1Id), deckPrintings1,
+                lobby.sideboardFor(match.player1Id, submittedDeck1), deckPrintings1,
             ),
+            companion = matchCompanion(lobby, match.player1Id, submittedDeck1),
         )
         gameSession.addPlayer(
-            ps2, deck2, commanderCardName = commander2,
+            ps2, deck2, commanderCardNames = commanders2,
             sideboard = BoosterGenerator.withCardArt(
-                lobby.getSubmittedSideboard(match.player2Id), deckPrintings2,
+                lobby.sideboardFor(player2Id, submittedDeck2), deckPrintings2,
             ),
+            companion = matchCompanion(lobby, player2Id, submittedDeck2),
         )
+        // CR 103.1: in games 2+ of a match the loser of the previous game chose who goes first.
+        gameSession.startingPlayerId = startingPlayerId
 
         // Carry isAi / aiModelOverride from each identity so a server restart can rehydrate and
         // re-wire an AI seat. Omitting these persisted the AI as isAi=false, so on recovery it was
@@ -822,7 +850,9 @@ class TournamentMatchHandler(
         gameRepository.save(gameSession)
         gameRepository.linkToLobby(gameSession.sessionId, lobby.lobbyId)
         match.gameSessionId = gameSession.sessionId
+        match.sideboardReady.clear()
         ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
+        val gameNumber = match.gamesPlayed + 1
 
         ctx.cleanUpSpectatingState(player1State.identity)
         ctx.cleanUpSpectatingState(player2State.identity)
@@ -844,7 +874,11 @@ class TournamentMatchHandler(
                 lobbyId = lobby.lobbyId,
                 round = round.roundNumber,
                 gameSessionId = gameSession.sessionId,
-                opponentName = player2State.identity.playerName
+                opponentName = player2State.identity.playerName,
+                gameNumber = gameNumber,
+                bestOf = tournament.bestOf,
+                yourGameWins = match.player1GameWins,
+                opponentGameWins = match.player2GameWins,
             ))
         }
         if (ws2 != null && ws2.isOpen) {
@@ -852,7 +886,11 @@ class TournamentMatchHandler(
                 lobbyId = lobby.lobbyId,
                 round = round.roundNumber,
                 gameSessionId = gameSession.sessionId,
-                opponentName = player1State.identity.playerName
+                opponentName = player1State.identity.playerName,
+                gameNumber = gameNumber,
+                bestOf = tournament.bestOf,
+                yourGameWins = match.player2GameWins,
+                opponentGameWins = match.player1GameWins,
             ))
         }
 
@@ -861,7 +899,7 @@ class TournamentMatchHandler(
                 aiGameManager.wireAiForGame(
                     gameSession = gameSession,
                     aiPlayerId = ps.playerId,
-                    deckList = lobby.getSubmittedDeck(ps.playerId),
+                    deckList = matchDeck(lobby, match, ps.playerId),
                     onActionReady = { aiPlayerId, action, interactionEpoch ->
                         gamePlayHandler.handleAiAction(gameSession, aiPlayerId, action, interactionEpoch)
                     },
@@ -892,9 +930,189 @@ class TournamentMatchHandler(
         }
 
         gamePlayHandler.startGame(gameSession)
+        // Remember who went first: after a drawn game, that player chooses again (CR 103.1).
+        match.currentStarterId = gameSession.actualStartingPlayerId ?: startingPlayerId
+        ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
 
         spectatingHandler.broadcastActiveMatchesToWaitingPlayers(lobby.lobbyId)
         return true
+    }
+
+    // =========================================================================
+    // Best-of-three: between games (CR 100.4 sideboarding, CR 103.1 play/draw)
+    // =========================================================================
+
+    /** The deck [playerId] plays in [match]'s next game: sideboarded for this match, else registered. */
+    private fun matchDeck(lobby: TournamentLobby, match: TournamentMatch, playerId: EntityId): Map<String, Int>? =
+        match.matchDecks[playerId] ?: lobby.getSubmittedDeck(playerId)
+
+    /** The revealed companion, unless the seat sideboarded it into the deck itself (CR 702.139). */
+    private fun matchCompanion(lobby: TournamentLobby, playerId: EntityId, deck: Map<String, Int>): String? =
+        lobby.getSubmittedCompanion(playerId)?.takeUnless { (deck[it] ?: 0) > 0 }
+
+    /**
+     * A game of a best-of-three ended without deciding the match. Open the sideboarding step: drop
+     * any match deck the game made illegal (a card lost to ante), ready the AI seats — they keep
+     * their deck and an AI that chooses always plays first — tell both seats where the match stands,
+     * and start the next game straight away when nobody needs to decide anything. Assumes the
+     * per-lobby round lock is held.
+     */
+    private fun beginBetweenGames(lobby: TournamentLobby, tournament: TournamentManager, match: TournamentMatch) {
+        val seats = listOfNotNull(match.player1Id, match.player2Id)
+        for (seat in seats) {
+            val deck = match.matchDecks[seat] ?: continue
+            if (lobby.matchDeckError(seat, deck) != null) match.matchDecks.remove(seat)
+        }
+        for (seat in seats) {
+            if (!isAiSeat(lobby, seat)) continue
+            match.sideboardReady.add(seat)
+            if (match.playDrawChooserId == seat) match.nextStarterId = seat
+        }
+        logger.info(
+            "Tournament {}: game {} of match {} vs {} done ({}-{}); players sideboarding",
+            lobby.lobbyId, match.gamesPlayed,
+            lobby.players[match.player1Id]?.identity?.playerName,
+            match.player2Id?.let { lobby.players[it]?.identity?.playerName },
+            match.player1GameWins, match.player2GameWins,
+        )
+        ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
+        recordTournamentProgress(lobby.lobbyId)
+        spectatingHandler.broadcastActiveMatchesToWaitingPlayers(lobby.lobbyId)
+
+        if (!startNextGameIfReady(lobby, tournament, match)) sendBetweenGames(lobby, tournament, match)
+    }
+
+    /**
+     * Between games: play [deck] for the rest of the match and mark the seat ready. The loser of the
+     * last game also says who takes the first turn ([playFirst], defaulting to play).
+     */
+    fun handleSubmitMatchDeck(session: WebSocketSession, deck: Map<String, Int>, playFirst: Boolean?) {
+        val (identity, lobby) = ctx.getIdentityAndLobby(session) ?: return
+        val lock = ctx.roundLocks.computeIfAbsent(lobby.lobbyId) { Any() }
+        synchronized(lock) {
+            val tournament = ctx.lobbyRepository.findTournamentById(lobby.lobbyId) ?: return
+            val playerId = identity.playerId
+            val match = tournament.underwayMatchFor(playerId)?.takeIf { it.isBetweenGames }
+            if (match == null) {
+                ctx.sender.sendError(session, ErrorCode.INVALID_ACTION, "There is no game to get ready for")
+                return
+            }
+
+            if (lobby.allowsSideboarding) {
+                val error = lobby.matchDeckError(playerId, deck)
+                if (error != null) {
+                    ctx.sender.sendError(session, ErrorCode.INVALID_DECK, error)
+                    return
+                }
+                val cleaned = deck.filterValues { it > 0 }
+                if (cleaned == lobby.getSubmittedDeck(playerId)) match.matchDecks.remove(playerId)
+                else match.matchDecks[playerId] = cleaned
+            }
+            if (match.playDrawChooserId == playerId) {
+                match.nextStarterId = if (playFirst == false) match.otherSeat(playerId) else playerId
+            }
+            match.sideboardReady.add(playerId)
+            ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
+
+            if (!startNextGameIfReady(lobby, tournament, match)) sendBetweenGames(lobby, tournament, match)
+        }
+    }
+
+    /** Between games: take back a ready to keep sideboarding (and, for the chooser, to re-choose). */
+    fun handleEditMatchDeck(session: WebSocketSession) {
+        val (identity, lobby) = ctx.getIdentityAndLobby(session) ?: return
+        val lock = ctx.roundLocks.computeIfAbsent(lobby.lobbyId) { Any() }
+        synchronized(lock) {
+            val tournament = ctx.lobbyRepository.findTournamentById(lobby.lobbyId) ?: return
+            val playerId = identity.playerId
+            val match = tournament.underwayMatchFor(playerId)?.takeIf { it.isBetweenGames } ?: return
+            if (!match.sideboardReady.remove(playerId)) return
+            if (match.playDrawChooserId == playerId) match.nextStarterId = null
+            ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
+            sendBetweenGames(lobby, tournament, match)
+        }
+    }
+
+    /** Start [match]'s next game once both seats are ready; true when it started. */
+    private fun startNextGameIfReady(lobby: TournamentLobby, tournament: TournamentManager, match: TournamentMatch): Boolean {
+        val seats = listOfNotNull(match.player1Id, match.player2Id)
+        if (seats.size < 2 || !seats.all { it in match.sideboardReady }) return false
+        val round = tournament.roundOf(match) ?: return false
+        val starter = match.nextStarterId ?: match.playDrawChooserId
+        logger.info("Tournament {}: starting game {} of round {} match", lobby.lobbyId, match.gamesPlayed + 1, round.roundNumber)
+        return startSingleMatch(lobby, tournament, round, match, startingPlayerId = starter)
+    }
+
+    private fun isAiSeat(lobby: TournamentLobby, playerId: EntityId): Boolean =
+        aiGameManager.isAiPlayer(playerId) || lobby.players[playerId]?.identity?.isAi == true
+
+    /** Send each human seat of [match] its between-games snapshot. */
+    private fun sendBetweenGames(lobby: TournamentLobby, tournament: TournamentManager, match: TournamentMatch) {
+        for (seat in listOfNotNull(match.player1Id, match.player2Id)) {
+            if (isAiSeat(lobby, seat)) continue
+            val ws = lobby.players[seat]?.identity?.webSocketSession ?: continue
+            if (!ws.isOpen) continue
+            buildBetweenGames(lobby, tournament, match, seat)?.let { ctx.sender.send(ws, it) }
+        }
+    }
+
+    /**
+     * [playerId]'s view of [match] between two of its games, or null when the match isn't there.
+     * Card details ride along for every name the screen can show, so the client needs nothing else.
+     */
+    fun buildBetweenGames(
+        lobby: TournamentLobby,
+        tournament: TournamentManager,
+        match: TournamentMatch,
+        playerId: EntityId,
+    ): ServerMessage.BetweenGames? {
+        if (!match.isBetweenGames) return null
+        val opponentId = match.otherSeat(playerId) ?: return null
+        val playerState = lobby.players[playerId] ?: return null
+        val registered = lobby.getSubmittedDeck(playerId) ?: return null
+        val deck = matchDeck(lobby, match, playerId) ?: registered
+        val canSideboard = lobby.allowsSideboarding
+        val sideboard = if (canSideboard) lobby.sideboardingWallFor(playerId, deck) else emptyMap()
+        val isLimited = lobby.format != com.wingedsheep.gameserver.lobby.TournamentFormat.PREMADE_DECKS
+
+        val lastGameResult = when (match.lastGameWinnerId) {
+            null -> "DRAW"
+            playerId -> "WIN"
+            else -> "LOSS"
+        }
+
+        val basics = if (canSideboard && isLimited) {
+            lobby.basicLands.values.toList()
+        } else emptyList()
+        val known = (playerState.cardPool + lobby.basicLands.values).associateBy { it.name }
+        val cards = (deck.keys + sideboard.keys + registered.keys).distinct().mapNotNull { name ->
+            (known[name] ?: known[name.substringBefore('#')] ?: cardRegistry.getCard(name.substringBefore('#')))
+                ?.let { ConnectionHandler.cardToSealedCardInfo(it).copy(name = name) }
+        }
+
+        val starter = match.nextStarterId
+        return ServerMessage.BetweenGames(
+            lobbyId = lobby.lobbyId,
+            round = tournament.roundOf(match)?.roundNumber ?: 0,
+            opponentName = lobby.players[opponentId]?.identity?.playerName ?: "Opponent",
+            bestOf = tournament.bestOf,
+            nextGameNumber = match.gamesPlayed + 1,
+            yourGameWins = match.gameWinsOf(playerId),
+            opponentGameWins = match.gameWinsOf(opponentId),
+            drawnGames = match.gamesDrawn,
+            lastGameResult = lastGameResult,
+            canSideboard = canSideboard,
+            deck = deck,
+            sideboard = sideboard,
+            registeredDeck = registered,
+            cards = cards,
+            basicLands = basics.map { ConnectionHandler.cardToSealedCardInfo(it) },
+            minDeckSize = 40,
+            youChoosePlayDraw = match.playDrawChooserId == playerId,
+            startingPlayer = starter?.let { if (it == playerId) "YOU" else "OPPONENT" },
+            youAreReady = playerId in match.sideboardReady,
+            opponentReady = opponentId in match.sideboardReady,
+        )
     }
 
     fun ensureTournamentCreated(lobby: TournamentLobby): TournamentManager {
@@ -909,7 +1127,7 @@ class TournamentMatchHandler(
                 .map { ps -> ps.identity.playerId to ps.identity.playerName }
                 .sortedBy { it.first.value }
 
-            val tournament = TournamentManager(lobby.lobbyId, players, lobby.gamesPerMatch)
+            val tournament = TournamentManager(lobby.lobbyId, players, lobby.gamesPerMatch, lobby.bestOf)
             ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
             recordTournamentStarted(lobby)
 
@@ -964,6 +1182,11 @@ class TournamentMatchHandler(
                 totalConnectedPlayers = connectedIds.size
             ))
         }
+
+        // Back on the sideboarding screen if they left between the games of a best-of-three.
+        tournament.underwayMatchFor(identity.playerId)?.takeIf { it.isBetweenGames }?.let { match ->
+            buildBetweenGames(lobby, tournament, match, identity.playerId)?.let { ctx.sender.send(ws, it) }
+        }
     }
 
     fun startTournament(lobby: TournamentLobby) {
@@ -974,7 +1197,7 @@ class TournamentMatchHandler(
             .map { ps -> ps.identity.playerId to ps.identity.playerName }
             .sortedBy { it.first.value }
 
-        val tournament = TournamentManager(lobby.lobbyId, players, lobby.gamesPerMatch)
+        val tournament = TournamentManager(lobby.lobbyId, players, lobby.gamesPerMatch, lobby.bestOf)
         ctx.lobbyRepository.saveTournament(lobby.lobbyId, tournament)
         recordTournamentStarted(lobby)
 
@@ -1190,6 +1413,8 @@ class TournamentMatchHandler(
                     wins = rs.standing.wins,
                     losses = rs.standing.losses,
                     draws = rs.standing.draws,
+                    forfeitWins = rs.standing.forfeitWins,
+                    forfeitLosses = rs.standing.forfeitLosses,
                 )
             },
         )
@@ -1233,20 +1458,5 @@ class TournamentMatchHandler(
                 },
             )
         )
-    }
-
-    /**
-     * Subtract one copy of [commander] from [deckList]. The wire format and lobby state both
-     * keep the commander counted in the deck list; the engine's `Deck.cards` excludes it.
-     * Mirrors QuickGameLobbyHandler.stripCommanderFromCards.
-     */
-    private fun stripCommanderFromCards(
-        deckList: Map<String, Int>,
-        commander: String,
-    ): Map<String, Int> {
-        val current = deckList[commander] ?: return deckList
-        val next = deckList.toMutableMap()
-        if (current <= 1) next.remove(commander) else next[commander] = current - 1
-        return next
     }
 }

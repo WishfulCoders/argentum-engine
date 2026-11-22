@@ -37,6 +37,7 @@ class ConnectionHandler(
     private val authSupport: ObjectProvider<AuthSupport>,
     private val magicLinkService: ObjectProvider<MagicLinkService>,
     private val friendPresenceBroadcaster: ObjectProvider<FriendPresenceBroadcaster>,
+    private val restartNotice: com.wingedsheep.gameserver.session.ServerRestartNotice,
 ) {
     private val logger = LoggerFactory.getLogger(ConnectionHandler::class.java)
 
@@ -55,9 +56,9 @@ class ConnectionHandler(
     private fun linkAccount(identity: PlayerIdentity, authToken: String?) {
         val userId = resolveAccountUserId(authToken) ?: return
         identity.userId = userId
-        magicLinkService.ifAvailable?.findUser(userId)?.displayName
-            ?.takeIf { it.isNotBlank() }
-            ?.let { identity.playerName = it }
+        val user = magicLinkService.ifAvailable?.findUser(userId) ?: return
+        user.displayName.takeIf { it.isNotBlank() }?.let { identity.playerName = it }
+        identity.avatar = user.avatar
     }
 
     /** Tell a signed-in identity's friends that its visible-online state changed (no-op for guests). */
@@ -120,7 +121,8 @@ class ConnectionHandler(
         val playerSession = PlayerSession(
             webSocketSession = session,
             playerId = playerId,
-            playerName = identity.playerName
+            playerName = identity.playerName,
+            avatar = identity.avatar,
         )
 
         sessionRegistry.register(identity, session, playerSession)
@@ -217,7 +219,8 @@ class ConnectionHandler(
             webSocketSession = session,
             playerId = identity.playerId,
             playerName = identity.playerName,
-            currentGameSessionId = identity.currentGameSessionId
+            currentGameSessionId = identity.currentGameSessionId,
+            avatar = identity.avatar,
         )
         sessionRegistry.setPlayerSession(session.id, playerSession)
 
@@ -253,7 +256,13 @@ class ConnectionHandler(
             context = context,
             contextId = contextId,
             aiEnabled = aiGameManager.isEnabled,
-            availableSets = buildAvailableSetsList()
+            availableSets = buildAvailableSetsList(),
+            players = if (context == "game") {
+                // The account may have been linked on this very connect, so note its avatar first.
+                gameRepository.findById(contextId!!)
+                    ?.apply { rememberAvatar(playerSession) }
+                    ?.seatInfos(identity.playerId).orEmpty()
+            } else emptyList(),
         ))
         broadcastOnlinePlayersCount()
         broadcastFriendPresence(identity)
@@ -317,6 +326,10 @@ class ConnectionHandler(
     }
 
     fun handleDisconnect(session: WebSocketSession) {
+        // A restart closes every socket at once. Those players are coming back to the same games
+        // once the server is up, so don't start abandonment timers or tell opponents they left.
+        if (restartNotice.isShuttingDown) return
+
         val (token, playerSession) = sessionRegistry.removeByWsId(session.id)
 
         if (token != null) {
@@ -451,7 +464,9 @@ class ConnectionHandler(
                         if (!lobby.players.containsKey(identity.playerId)) {
                             handleAbandonCallback?.invoke(lobbyId, identity.playerId)
                         }
-                        if (lobby.playerCount == 0) {
+                        // Only AI seats left while still gathering players: nobody can start it.
+                        if (lobby.playerCount == 0 || lobby.isAbandonedByHumans) {
+                            lobby.vacateSeats().forEach { sessionRegistry.removeIdentity(it.token) }
                             tournamentResultSink.recordAbandoned(lobbyId)
                             lobbyRepository.removeLobby(lobbyId)
                             lobbyRepository.removeTournament(lobbyId)
@@ -733,7 +748,9 @@ class ConnectionHandler(
                 layout = card.layout.name,
                 isLandscape = card.isLandscapePrint,
                 cmc = card.cmc,
-                keywords = card.keywords.map { it.name }.sorted()
+                keywords = card.keywords.map { it.name }.sorted(),
+                canBeCommander = com.wingedsheep.sdk.model.CommanderEligibility.isLegalCommander(card),
+                partnerAbilities = com.wingedsheep.sdk.model.CommanderEligibility.partnerKinds(card).map { it.description },
             )
         }
     }

@@ -59,7 +59,9 @@ val SorinImperiousBloodlord = card("Sorin, Imperious Bloodlord") {
                 val vampireToSacrifice = selectTarget(
                     TargetObject(
                         filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Vampire").youControl())
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose a Vampire to sacrifice"
                 )
                 run(Effects.SacrificeTarget(vampireToSacrifice.asTarget))
             },

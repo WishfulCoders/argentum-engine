@@ -15,10 +15,13 @@ object ForgottenRealmsSet : MtgSet {
     override val code = "AFR"
     override val displayName = "Adventures in the Forgotten Realms"
     override val releaseDate = "2021-07-23"
-    override val incomplete = true
 
     override val cards: List<CardDefinition> by lazy {
         CardDiscovery.findIn(CARDS_PACKAGE)
+    }
+
+    override val basicLands: List<CardDefinition> by lazy {
+        CardDiscovery.findBasicLandsIn(CARDS_PACKAGE, code)
     }
 
     override val printings: List<Printing> by lazy {

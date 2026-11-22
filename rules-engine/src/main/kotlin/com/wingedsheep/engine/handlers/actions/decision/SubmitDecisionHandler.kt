@@ -39,10 +39,16 @@ class SubmitDecisionHandler(
         val pending = state.pendingDecision
             ?: return ExecutionResult.error(state, "No pending decision")
 
+        val privateSource = pending.context.sourceIsPrivate
         val submittedEvent = DecisionSubmittedEvent(
             pending.id,
             action.playerId,
-            description = buildDecisionDescription(state, pending, action.response)
+            // A secret answer stays out of the shared log until it is revealed, and a private
+            // question's answer never enters it: the line alone would say the question was asked.
+            description = if ((state.peekContinuation() as? Suspension)?.answer is SecretChoiceContinuation ||
+                state.pendingQuestionIsPrivate) null
+                else buildDecisionDescription(state, pending, action.response, nameSource = !privateSource),
+            privateSourceName = pending.context.sourceName?.takeIf { privateSource },
         )
 
         // ContinuationHandler consumes the question and answer together by popping its suspension,
@@ -56,14 +62,47 @@ class SubmitDecisionHandler(
 
         // The answer finished the work that asked it. If that work carried the game into another
         // step (an untap or cleanup choice, the last opening-hand leyline), the step machine has
-        // already handed priority to the active player. Otherwise the answering player gets it.
-        // After a resolution that is not always CR 117.3b's active player; see the open bug on
-        // priority landing on the last decision's answerer.
+        // already handed priority to the active player. If it was a stack object's resolution —
+        // whose bottom frame was waiting beneath the question — the active player receives
+        // priority (CR 117.3b), whoever answered last. If it put a triggered ability on the stack
+        // (its order, mode, target or cost), the answer is neutral: the player who would have
+        // received priority before the trigger paused still receives it (CR 117.5). Otherwise the
+        // work was the answering player's own announcement or special action, and they keep
+        // priority (CR 117.3c).
         val finishedInStep = result.state.turnNumber == state.turnNumber && result.state.step == state.step
         val answer = (state.continuationStack.lastOrNull() as? Suspension)?.answer
         val finishedBlockerPiles = answer is BlockerPilesContinuation || answer is BlockerPileRestrictionChoiceContinuation
-        val settled = if (finishedInStep && !finishedBlockerPiles) result.state.withPriority(action.playerId) else result.state
+        val finishedResolution = state.continuationStack.any { it is EndResolutionControlContinuation }
+        val finishedDrawStepDraw = answer.isDrawStepDraw() || state.continuationStack.any {
+            it is DrawStepTeamDrawsContinuation || it is DrawStepOtherDrawsContinuation ||
+                (it is DrawReplacementRemainingDrawsContinuation && it.isDrawStep)
+        }
+        val recipient = when {
+            finishedResolution -> result.state.activePlayerId ?: action.playerId
+            // A question asked inside the draw step's turn-based draws (a miracle reveal, an
+            // optional draw replacement) — even one a non-active player answers, drawing through
+            // "You draw a card during each opponent's draw step" — leaves priority with the active
+            // player once those draws are dealt with (CR 117.3a).
+            finishedDrawStepDraw -> result.state.activePlayerId ?: action.playerId
+            answer.placesTrigger() -> state.priorityPlayerId ?: result.state.activePlayerId ?: action.playerId
+            else -> action.playerId
+        }
+        val settled = if (finishedInStep && !finishedBlockerPiles) result.state.withPriority(recipient) else result.state
         return ExecutionResult.success(settled, events)
+    }
+
+    /** The answer is an optional replacement of one of the draw step's draws (CR 504.1 and its followers). */
+    private fun AnswerContinuation?.isDrawStepDraw(): Boolean =
+        this is StaticDrawReplacementContinuation && isDrawStep
+
+    /** The answer belongs to putting a triggered ability on the stack (CR 603.3), not to an announcement. */
+    private fun AnswerContinuation?.placesTrigger(): Boolean = when (this) {
+        is TriggerOrderContinuation,
+        is TriggeredAbilityContinuation,
+        is TriggerModalModeSelectionContinuation,
+        is TriggerModalTargetSelectionContinuation,
+        is TriggerOpponentChooserContinuation -> true
+        else -> false
     }
 
     /**
@@ -72,9 +111,10 @@ class SubmitDecisionHandler(
     private fun buildDecisionDescription(
         state: GameState,
         pending: PendingDecision,
-        response: DecisionResponse
+        response: DecisionResponse,
+        nameSource: Boolean,
     ): String? {
-        val sourceName = pending.context.sourceName
+        val sourceName = pending.context.sourceName?.takeIf { nameSource }
         val sourcePrefix = sourceName?.let { "($it) " } ?: ""
 
         return when {

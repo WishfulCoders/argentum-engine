@@ -288,10 +288,7 @@ class TinybonesBaubleBurglarScenarioTest : FunSpec({
 
         // …but "During your turn" closes the permission on the opponent's turn, so even an instant
         // (which timing alone would allow) offers no cast action.
-        repeat(60) {
-            if (driver.pendingDecision != null) driver.autoResolveDecision() else driver.bothPass()
-            if (driver.state.activePlayerId == opponent && driver.state.step == Step.PRECOMBAT_MAIN) return@repeat
-        }
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, opponent)
         driver.state.activePlayerId shouldBe opponent
         driver.castActionsFor(me, stashedInstant).isEmpty().shouldBeTrue()
     }

@@ -1,176 +1,258 @@
 /**
- * Match intro animation styles.
- * Full-screen VS overlay shown before mulligan.
+ * Match intro: the one moment the card art gets the whole screen. The background art is shown
+ * full-bleed at near-full brightness with a slow Ken Burns push; the matchup sits compact in a glass
+ * band low on the screen, so the art dominates and the names still read.
  */
 
-/* =========================================================================
- * Backdrop
- * ========================================================================= */
 .backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: var(--z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0);
-  transition: background-color 0.2s ease;
+  overflow: hidden;
+  background: #07080d;
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
 
-.backdropVisible {
-  background-color: rgba(0, 0, 0, 0.92);
-}
+.backdropVisible { opacity: 1; }
 
 .backdropFadeOut {
-  background-color: rgba(0, 0, 0, 0);
-  transition: background-color 0.5s ease;
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
+/* The art itself, slowly pushing in for the length of the intro. */
+.art {
+  position: absolute;
+  inset: 0;
+  background: center center / cover no-repeat;
+  transform: scale(1.02);
+  animation: kenBurns 4.2s ease-out forwards;
+  will-change: transform;
+}
+
+@keyframes kenBurns {
+  from { transform: scale(1.02); }
+  to { transform: scale(1.1) translate3d(0, -1%, 0); }
+}
+
+/* Only enough shade for the band to sit on: a soft vignette and a darker foot. */
+.shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 40%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%),
+    linear-gradient(180deg, rgba(6, 7, 12, 0) 55%, rgba(6, 7, 12, 0.7) 100%);
 }
 
 /* =========================================================================
- * Content layout
+ * Matchup band
  * ========================================================================= */
-.content {
+.band {
+  position: absolute;
+  left: 50%;
+  bottom: max(9vh, 40px);
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  column-gap: 48px;
-  width: 100%;
-  max-width: 900px;
-  padding: 0 var(--space-6);
+  column-gap: 28px;
+  width: min(980px, calc(100vw - 32px));
+  padding: 18px 30px;
+  box-sizing: border-box;
+  border-radius: 18px;
+  background: rgba(10, 12, 20, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
-@media (max-width: 639px) {
-  .content {
-    grid-template-columns: 1fr;
-    row-gap: 24px;
-    padding: 0 var(--space-4);
-  }
+.bandVisible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
-/* =========================================================================
- * Player panels
- * ========================================================================= */
-.playerPanel {
+.bandFadeOut {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.side {
   min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  opacity: 0;
-  transform: translateX(-60px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  gap: 16px;
 }
+.sideText { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 
-.opponentPanel {
-  transform: translateX(60px);
+.sidePlayer { justify-content: flex-end; text-align: right; }
+.sidePlayer .sideText { align-items: flex-end; }
+.sideOpponent { justify-content: flex-start; text-align: left; }
+.sideOpponent .sideText { align-items: flex-start; }
+
+/* The seat's portrait: a gold-ringed medallion that rises out of the top of the band, so the face is
+   the first thing read while the band itself stays slim over the art. A thin dark gap between the
+   picture and the ring keeps the gold from bleeding into bright art. */
+.portrait,
+.portraitSeat {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #3a3f52, #1d2029);
+  color: #eef0f6;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
-
-.playerPanelVisible {
-  opacity: 1;
-  transform: translateX(0);
+.portrait {
+  width: 128px;
+  height: 128px;
+  /* Overhang the band's top edge; the negative margin keeps the row (and the band) as tall as the
+     names need, rather than as tall as the portrait. */
+  margin: -64px 0 -4px;
+  font-size: 46px;
+  box-shadow:
+    0 0 0 3px rgba(10, 12, 20, 0.9),
+    0 0 0 5px rgba(242, 180, 92, 0.9),
+    0 0 26px 4px rgba(242, 180, 92, 0.18),
+    0 16px 36px rgba(0, 0, 0, 0.6);
 }
-
-.playerPanelFadeOut {
-  opacity: 0;
-  transition: opacity 0.4s ease;
+/* A pod's opponents: a row of smaller medallions that rise out of the band like the 1v1 portraits,
+   each name centred beneath. --seat shrinks as the table fills so five still fit half the band. */
+.pod {
+  --seat: 96px;
+  min-width: 0;
+  display: flex;
+  gap: 18px;
+  /* Lift the row by half a medallion so the faces overhang the band's top edge. */
+  margin-top: calc(var(--seat) / -2);
 }
+.pod[data-count='3'] { --seat: 84px; gap: 16px; }
+.pod[data-count='4'] { --seat: 72px; gap: 12px; }
+.pod[data-count='5'] { --seat: 62px; gap: 10px; }
 
-@media (max-width: 639px) {
-  .playerPanel {
-    transform: translateX(-40px);
-  }
-  .opponentPanel {
-    transform: translateX(40px);
-  }
-}
-
-/* =========================================================================
- * Player name
- * ========================================================================= */
-.playerName {
-  font-size: 36px;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-  text-align: center;
-  margin: 0;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
-  max-width: 420px;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  hyphens: auto;
-  line-height: 1.15;
-}
-
-@media (max-width: 639px) {
-  .playerName {
-    font-size: 24px;
-    max-width: 280px;
-  }
-}
-
-/* =========================================================================
- * Player record (W-L)
- * ========================================================================= */
-.playerRecord {
-  font-size: var(--font-lg);
-  color: var(--text-muted);
-  margin: 0;
-  font-weight: var(--font-weight-medium);
-}
-
-/* =========================================================================
- * VS badge
- * ========================================================================= */
-.vsContainer {
+.podSeat {
+  min-width: 0;
+  /* Equal columns, so the medallions sit evenly whatever the names' lengths. */
+  flex: 0 1 calc(var(--seat) + 28px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  opacity: 0;
-  transform: scale(0.5);
-  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  gap: 8px;
+}
+.portraitSeat {
+  width: var(--seat);
+  height: var(--seat);
+  font-size: calc(var(--seat) * 0.38);
+  box-shadow:
+    0 0 0 2.5px rgba(10, 12, 20, 0.9),
+    0 0 0 4px rgba(242, 180, 92, 0.85),
+    0 12px 28px rgba(0, 0, 0, 0.55);
+}
+.podName {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f4f5f9;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.vsContainerVisible {
-  opacity: 1;
-  transform: scale(1);
+.playerName {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f4f5f9;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
-.vsContainerFadeOut {
-  opacity: 0;
-  transition: opacity 0.4s ease;
+.playerRecord {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #9aa3b8;
+}
+
+.vs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .vsText {
-  font-size: 56px;
-  font-weight: var(--font-weight-bold);
-  background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: none;
-  filter: drop-shadow(0 2px 8px rgba(255, 200, 0, 0.4));
   margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 30px;
+  font-weight: 600;
   line-height: 1;
+  color: #f2b45c;
+  text-shadow: 0 0 18px rgba(242, 180, 92, 0.4);
+}
+
+.roundLabel {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c9a46a;
+  white-space: nowrap;
 }
 
 @media (max-width: 639px) {
-  .vsText {
-    font-size: 40px;
+  .band {
+    /* One column as wide as the longer row, centred, so both rows share a left edge. */
+    grid-template-columns: minmax(0, max-content);
+    justify-content: center;
+    row-gap: 6px;
+    padding: 14px 18px;
+    bottom: max(7vh, 28px);
   }
+  /* Stacked on a phone: both rows read portrait-then-name, aligned on one edge. */
+  .sidePlayer, .sideOpponent { justify-content: flex-start; text-align: left; }
+  .sidePlayer .sideText, .sideOpponent .sideText { align-items: flex-start; }
+  .vs { flex-direction: row; gap: 8px; justify-content: center; width: 52px; }
+  /* Stacked rows have no band edge to rise out of: a plain, still-generous medallion. */
+  .portrait { width: 72px; height: 72px; margin: 0; font-size: 32px; }
+  /* Reversed so the portrait leads; flex-end is the left edge in a reversed row. */
+  .sideOpponent { flex-direction: row-reverse; justify-content: flex-end; }
+  .playerName { font-size: 21px; }
+  /* Stacked: the pod is its own row with no band edge to rise out of, wrapping if it must. */
+  /* Stacked: the pod is its own row with no band edge to rise out of — one line of equal columns,
+     sized so a full table of five still fits a phone. */
+  .pod {
+    --seat: 56px;
+    --col: calc(var(--seat) + 20px);
+    margin-top: 4px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, var(--col));
+    gap: 10px;
+  }
+  .pod[data-count='3'] { --seat: 52px; gap: 8px; }
+  .pod[data-count='4'] { --seat: 48px; --col: calc(var(--seat) + 16px); gap: 6px; }
+  .pod[data-count='5'] { --seat: 42px; --col: calc(var(--seat) + 16px); gap: 6px; }
+  .podName { font-size: 13px; }
+  .vsText { font-size: 22px; }
 }
 
-/* =========================================================================
- * Round label
- * ========================================================================= */
-.roundLabel {
-  font-size: var(--font-md);
-  color: var(--text-muted);
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: var(--font-weight-semibold);
+@media (prefers-reduced-motion: reduce) {
+  .art { animation: none; transform: none; }
+  .band { transform: translate(-50%, 0); transition: opacity 0.3s ease; }
 }

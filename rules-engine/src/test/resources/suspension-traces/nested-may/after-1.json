@@ -86,16 +86,27 @@
     ],
     "continuationStack": [
         {
-            "type": "com.wingedsheep.engine.core.EffectContinuation",
-            "remainingEffects": [
-                {
-                    "type": "GainLife",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 3
+            "type": "com.wingedsheep.engine.core.EffectProgram",
+            "root": {
+                "type": "Composite",
+                "effects": [
+                    {
+                        "type": "GainLife",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
                     }
-                }
-            ],
+                ]
+            },
+            "origin": null,
+            "cursor": {
+                "steps": [
+                    {
+                        "type": "com.wingedsheep.engine.core.CursorStep.Start"
+                    }
+                ]
+            },
             "effectContext": {
                 "sourceId": null,
                 "controllerId": "player-1"
@@ -107,7 +118,7 @@
                 "type": "YesNoDecision",
                 "id": "r1",
                 "playerId": "player-1",
-                "prompt": "You may you gain 1 life",
+                "prompt": "You may gain 1 life",
                 "context": {}
             },
             "answer": {
@@ -131,7 +142,12 @@
                     "objectReferences": {
                         "captured": true
                     },
-                    "resolutionDepth": 1
+                    "resolutionDepth": 1,
+                    "programOrigin": {
+                        "type": "com.wingedsheep.engine.core.ProgramOrigin.BuiltBy",
+                        "step": "Gated",
+                        "parent": null
+                    }
                 }
             }
         }

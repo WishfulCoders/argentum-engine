@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.TapSymbolInCost
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * artifacts and rewarding the enchantment's controller with life instead of dealing damage:
  *  - tap half: `Triggers.<subject>.becomesTapped(reason, firstTimeEachTurn)` over `Artifact.opponentControls()` ("an artifact an
  *    opponent controls becomes tapped").
- *  - ability half: `Triggers.<player>.activatesAbility(of, withoutTapInCost = true)` with [Player.EachOpponent] and NO
+ *  - ability half: `Triggers.<player>.activatesAbility(of, tapInCost = TapSymbolInCost.WITHOUT, includeManaAbilities = true)` with [Player.EachOpponent] and NO
  *    controller restriction on the artifact — oracle only requires that "an opponent activates
  *    an artifact's ability", so an opponent activating an any-player ability of an artifact
  *    you control (e.g. Armageddon Clock) also triggers it.
@@ -39,7 +40,7 @@ val Powerleech = card("Powerleech") {
     }
 
     triggeredAbility {
-        trigger = Triggers.anOpponent.activatesAbility(of = GameObjectFilter.Artifact, withoutTapInCost = true)
+        trigger = Triggers.anOpponent.activatesAbility(of = GameObjectFilter.Artifact, tapInCost = TapSymbolInCost.WITHOUT, includeManaAbilities = true)
         effect = Effects.GainLife(1)
     }
 

@@ -102,12 +102,13 @@ class PreventDamageToPlayersOnlyScenarioTest : FunSpec({
         driver.castSpellWithTargets(caster, wardCard, listOf(ChosenTarget.Permanent(pingerId))).error shouldBe null
         driver.bothPass()
         shields(driver) shouldBe 1
-        driver.passPriority(caster)
         return Setup(driver, caster, opponent, pingerId)
     }
 
     fun Setup.ping(target: ChosenTarget) {
         val ping = driver.cardRegistry.requireCard("Test Pinger").activatedAbilities.single()
+        // After each resolution the active player (the caster) has priority (CR 117.3b).
+        driver.passPriority(caster)
         driver.submit(ActivateAbility(playerId = opponent, sourceId = pingerId, abilityId = ping.id, targets = listOf(target)))
             .error shouldBe null
         driver.bothPass()

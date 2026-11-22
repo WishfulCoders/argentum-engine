@@ -13,7 +13,7 @@ val RespiteReprint = Printing(
     collectorNumber = "176",
     scryfallId = "d9b5c747-43d6-4c5f-9ca3-feaf004a88cb",
     artist = "Rebecca Guay",
-    imageUri = "https://cards.scryfall.io/normal/front/d/9/d9b5c747-43d6-4c5f-9ca3-feaf004a88cb.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/9/d9b5c747-43d6-4c5f-9ca3-feaf004a88cb.jpg?1783939342",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

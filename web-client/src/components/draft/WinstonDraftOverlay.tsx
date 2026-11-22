@@ -8,6 +8,8 @@ import { HoverCardPreview } from '../ui/HoverCardPreview'
 import { useDfcHoverFlip } from '../ui/useDfcHoverFlip'
 import { SetSynergiesButton } from './SetSynergiesOverlay'
 import { RarityBadge } from './RarityBadge'
+import ls from './limitedScreen.module.css'
+import { ChatButton } from '@/components/messages/ChatButton'
 
 /**
  * Winston Draft overlay for 2-player Winston Draft mode.
@@ -34,7 +36,8 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
 
   const [hoveredCard, setHoveredCard] = useState<SealedCardInfo | null>(null)
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
-  const [showPickedCards, setShowPickedCards] = useState(!responsive.isMobile)
+  // Phones only: whether the picked-cards pool replaces the piles. Desktop always shows both.
+  const [showPickedCards, setShowPickedCards] = useState(false)
   const [viewingOpponent, setViewingOpponent] = useState(false)
 
   // Pick animation state
@@ -125,46 +128,24 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
   }, [winstonState.pickedCards])
 
   const isMobile = responsive.isMobile
+  // A phone on its side is wide but short: the phone-sized piles keep Take / Skip within reach.
+  const compactPiles = isMobile || responsive.viewportHeight < 500
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-      display: 'flex', flexDirection: 'column',
-      overflow: 'hidden', zIndex: 100,
-      fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
-    }}>
+    <div className={ls.screen} style={{ zIndex: 100 }}>
       {/* Header */}
-      <div style={{
-        padding: isMobile ? '8px 12px' : '10px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(0,0,0,0.3)',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #e94560, #c23152)',
-            padding: '4px 12px', borderRadius: 4,
-            fontWeight: 700, fontSize: 13, letterSpacing: '0.05em',
-            textTransform: 'uppercase', color: '#fff',
-          }}>
-            Winston Draft
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            {settings.setNames.join(' + ')}
-          </span>
+      <div className={ls.header}>
+        <div className={ls.headerGroup}>
+          <h2 className={ls.title}>
+            Winston Draft <span className={ls.titleSub}>· {settings.setNames.join(' + ')}</span>
+          </h2>
           <SetSynergiesButton setCodes={settings.setCodes} cardPool={winstonState.pickedCards} />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className={ls.headerGroup}>
           {/* Timer */}
-          <div style={{
-            background: timerWarning ? 'rgba(233,69,96,0.3)' : 'rgba(255,255,255,0.1)',
-            padding: '4px 12px', borderRadius: 4,
-            fontWeight: 600, fontSize: 14,
-            color: timerWarning ? '#e94560' : 'rgba(255,255,255,0.7)',
-            fontVariantNumeric: 'tabular-nums',
+          <div className={ls.pill} style={{
+            ...(timerWarning ? { background: 'rgba(233,69,96,0.3)', borderColor: 'rgba(233,69,96,0.5)', color: '#ffd0d8' } : {}),
             animation: timerWarning ? 'pulse 1s infinite' : undefined,
           }}
           title={winstonState.timeRemaining === null ? 'No time limit — take as long as you like' : undefined}>
@@ -172,60 +153,28 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
           </div>
 
           {/* Deck remaining */}
-          <div style={{
-            color: 'rgba(255,255,255,0.5)', fontSize: 13,
-          }}>
-            Deck: {winstonState.mainDeckRemaining}
-          </div>
+          <span className={ls.pill} title="Cards left in the main deck">Deck {winstonState.mainDeckRemaining}</span>
 
           {/* Picked count */}
-          <div style={{
-            color: 'rgba(255,255,255,0.5)', fontSize: 13,
-          }}>
-            Picked: {winstonState.pickedCards.length}
-          </div>
+          {/* On phones the Pool button carries the count. */}
+          {!isMobile && <span className={ls.pill} title="Cards you've picked">Picked {winstonState.pickedCards.length}</span>}
 
           {isMobile && (
-            <button
-              onClick={() => setShowPickedCards((v) => !v)}
-              style={{
-                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4,
-                padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: 12,
-              }}
-            >
+            <button type="button" className={ls.button} onClick={() => setShowPickedCards((v) => !v)}>
               {showPickedCards ? 'Piles' : `Pool (${winstonState.pickedCards.length})`}
             </button>
           )}
 
           {isHost ? (
-            <button
-              onClick={stopLobby}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e74c3c' }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c0392b' }}
-              style={{
-                backgroundColor: '#c0392b', color: 'white',
-                padding: '4px 14px', fontSize: 13,
-                border: 'none', borderRadius: 6, cursor: 'pointer',
-                transition: 'background-color 0.15s',
-              }}
-            >
+            <button type="button" onClick={stopLobby} className={ls.leave}>
               Stop Draft
             </button>
           ) : (
-            <button
-              onClick={leaveLobby}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e74c3c' }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c0392b' }}
-              style={{
-                backgroundColor: '#c0392b', color: 'white',
-                padding: '4px 14px', fontSize: 13,
-                border: 'none', borderRadius: 6, cursor: 'pointer',
-                transition: 'background-color 0.15s',
-              }}
-            >
+            <button type="button" onClick={leaveLobby} className={ls.leave}>
               Leave
             </button>
           )}
+          <ChatButton className={`${ls.button} ${ls.iconButton}`} />
         </div>
       </div>
 
@@ -240,7 +189,7 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
             {/* Turn indicator */}
             <div style={{
               textAlign: 'center', marginBottom: 16,
-              color: winstonState.isYourTurn ? '#4ade80' : 'rgba(255,255,255,0.5)',
+              color: winstonState.isYourTurn ? '#f2b45c' : 'rgba(255,255,255,0.5)',
               fontSize: 16, fontWeight: 600,
             }}>
               {winstonState.isYourTurn
@@ -291,7 +240,7 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                   ? 'Opponent'
                   : winstonState.activePlayerName}
                 <span style={{ marginLeft: 6, opacity: 0.7 }}>
-                  — {winstonState.totalPickedByOpponent} cards
+                  — {winstonState.totalPickedByOpponent} {winstonState.totalPickedByOpponent === 1 ? 'card' : 'cards'}
                 </span>
                 {winstonState.knownOpponentCards.length > 0 && (
                   <span style={{ marginLeft: 4, opacity: 0.6 }}>
@@ -323,26 +272,26 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                     <div style={{
                       fontSize: 12, fontWeight: 600, textTransform: 'uppercase',
                       letterSpacing: '0.08em', marginBottom: 8,
-                      color: isExaminable ? '#4ade80' : 'rgba(255,255,255,0.5)',
+                      color: isExaminable ? '#f2b45c' : 'rgba(255,255,255,0.5)',
                     }}>
                       Pile {pileIndex + 1}
                     </div>
 
                     {/* Pile visualization */}
                     <div style={{
-                      width: isMobile ? 100 : 140,
-                      height: isMobile ? 140 : 196,
+                      width: compactPiles ? 100 : 140,
+                      height: compactPiles ? 140 : 196,
                       borderRadius: 8,
                       border: isExaminable
-                        ? '2px solid #4ade80'
+                        ? '2px solid #f2b45c'
                         : '2px solid rgba(255,255,255,0.15)',
                       background: pileSize === 0
                         ? 'rgba(255,255,255,0.03)'
-                        : 'linear-gradient(135deg, #2a2a4a 0%, #1a1a3a 100%)',
+                        : 'linear-gradient(135deg, #2a2f3d 0%, #161922 100%)',
                       display: 'flex', flexDirection: 'column',
                       alignItems: 'center', justifyContent: 'center',
                       position: 'relative',
-                      boxShadow: isExaminable ? '0 0 20px rgba(74,222,128,0.2)' : undefined,
+                      boxShadow: isExaminable ? '0 0 20px rgba(242,180,92,0.2)' : undefined,
                       transition: 'all 0.2s',
                     }}>
                       {pileSize === 0 ? (
@@ -360,7 +309,7 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                               right: 4 - i * 1,
                               bottom: 4 - i * 2,
                               borderRadius: 4,
-                              background: `linear-gradient(135deg, ${i === Math.min(pileSize, 5) - 1 ? '#4a3a7a' : '#3a2a6a'} 0%, ${i === Math.min(pileSize, 5) - 1 ? '#2a1a5a' : '#1a0a4a'} 100%)`,
+                              background: `linear-gradient(135deg, ${i === Math.min(pileSize, 5) - 1 ? '#3b4256' : '#2c3142'} 0%, ${i === Math.min(pileSize, 5) - 1 ? '#1f2330' : '#171a24'} 100%)`,
                               border: '1px solid rgba(255,255,255,0.1)',
                             }} />
                           ))}
@@ -368,7 +317,7 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                           <div style={{
                             position: 'relative', zIndex: 1,
                             fontSize: 28, fontWeight: 700,
-                            color: isExaminable ? '#4ade80' : 'rgba(255,255,255,0.7)',
+                            color: isExaminable ? '#f2b45c' : 'rgba(255,255,255,0.7)',
                           }}>
                             {pileSize}
                           </div>
@@ -386,7 +335,7 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                     {isExaminable && (
                       <div style={{
                         marginTop: 8, fontSize: 11,
-                        color: '#4ade80', fontWeight: 600,
+                        color: '#f2b45c', fontWeight: 600,
                       }}>
                         Examining
                       </div>
@@ -398,12 +347,7 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
 
             {/* Current pile contents (if examining) */}
             {winstonState.isYourTurn && winstonState.currentPileCards && winstonState.currentPileCards.length > 0 && (
-              <div style={{
-                background: 'rgba(0,0,0,0.3)',
-                borderRadius: 8,
-                padding: 16,
-                marginBottom: 16,
-              }}>
+              <div className={ls.panel} style={{ padding: 16, marginBottom: 16 }}>
                 <div style={{
                   fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)',
                   marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -433,31 +377,17 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                 marginBottom: 16,
               }}>
                 <button
+                  type="button"
                   onClick={winstonTakePile}
                   disabled={winstonState.pileSizes[winstonState.currentPileIndex] === 0}
-                  style={{
-                    background: 'linear-gradient(135deg, #4ade80, #22c55e)',
-                    border: 'none', borderRadius: 6,
-                    padding: '10px 24px',
-                    color: '#000', fontWeight: 700, fontSize: 14,
-                    cursor: winstonState.pileSizes[winstonState.currentPileIndex] === 0 ? 'not-allowed' : 'pointer',
-                    opacity: winstonState.pileSizes[winstonState.currentPileIndex] === 0 ? 0.3 : 1,
-                    textTransform: 'uppercase', letterSpacing: '0.05em',
-                  }}
+                  className={`${ls.primary} ${ls.large}`}
                 >
                   Take Pile {winstonState.currentPileIndex + 1}
                 </button>
                 <button
+                  type="button"
                   onClick={winstonSkipPile}
-                  style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: 6,
-                    padding: '10px 24px',
-                    color: '#fff', fontWeight: 600, fontSize: 14,
-                    cursor: 'pointer',
-                    textTransform: 'uppercase', letterSpacing: '0.05em',
-                  }}
+                  className={`${ls.button} ${ls.large}`}
                 >
                   {winstonState.currentPileIndex === 2
                     ? 'Skip (Blind Pick)'
@@ -471,24 +401,25 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
 
         {/* Right: Picked cards sidebar */}
         {(!isMobile || showPickedCards) && (
-          <div style={{
+          <div className={ls.rail} style={{
             width: isMobile ? '100%' : 280,
-            borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(0,0,0,0.2)',
+            borderLeft: isMobile ? 'none' : undefined,
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
           }}>
             {/* Sidebar header with stats */}
             <div style={{
-              padding: '10px 14px',
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              padding: '12px 14px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
             }}>
+              {/* Same heading as the booster draft's pool rail. */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: 8,
               }}>
-                <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: 13 }}>
-                  Picked Cards ({winstonState.pickedCards.length})
+                <span style={{ color: '#ccc', fontWeight: 600, fontSize: 14 }}>Card Pool</span>
+                <span style={{ color: '#4fc3f7', fontWeight: 600, fontSize: 13 }}>
+                  {winstonState.pickedCards.length} {winstonState.pickedCards.length === 1 ? 'card' : 'cards'}
                 </span>
               </div>
 
@@ -648,8 +579,8 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
             <div style={{
               fontSize: 14, fontWeight: 700, textTransform: 'uppercase',
               letterSpacing: '0.1em',
-              color: '#4ade80',
-              textShadow: '0 0 20px rgba(74,222,128,0.5)',
+              color: '#f2b45c',
+              textShadow: '0 0 20px rgba(242,180,92,0.5)',
             }}>
               {pickAnimation.cards.length === 1 ? 'Card Picked' : `${pickAnimation.cards.length} Cards Picked`}
             </div>
@@ -663,8 +594,8 @@ function WinstonDrafter({ winstonState, settings }: { winstonState: WinstonDraft
                     width: isMobile ? 130 : 180,
                     borderRadius: 8,
                     overflow: 'hidden',
-                    boxShadow: '0 0 30px rgba(74,222,128,0.4), 0 8px 32px rgba(0,0,0,0.6)',
-                    border: '2px solid rgba(74,222,128,0.6)',
+                    boxShadow: '0 0 30px rgba(242,180,92,0.4), 0 8px 32px rgba(0,0,0,0.6)',
+                    border: '2px solid rgba(242,180,92,0.6)',
                     animation: 'pickCardAppear 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                     animationDelay: `${i * 80}ms`,
                     opacity: 0,

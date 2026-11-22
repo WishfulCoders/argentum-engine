@@ -10,35 +10,42 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Talisman of Hierarchy
- * {2}
- * Artifact
+ * Talisman of Hierarchy — Modern Horizons #233 (canonical printing)
+ * {2} · Artifact
+ *
  * {T}: Add {C}.
  * {T}: Add {W} or {B}. This artifact deals 1 damage to you.
+ *
+ * The Mirrodin Talisman shape: the coloured line is one mana ability per colour, each carrying the
+ * 1 damage.
  */
 val TalismanOfHierarchy = card("Talisman of Hierarchy") {
     manaCost = "{2}"
     colorIdentity = "WB"
     typeLine = "Artifact"
     oracleText = "{T}: Add {C}.\n{T}: Add {W} or {B}. This artifact deals 1 damage to you."
+
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
+
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddMana(Color.WHITE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
+
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddMana(Color.BLACK) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
+
     metadata {
         rarity = Rarity.UNCOMMON
         collectorNumber = "233"

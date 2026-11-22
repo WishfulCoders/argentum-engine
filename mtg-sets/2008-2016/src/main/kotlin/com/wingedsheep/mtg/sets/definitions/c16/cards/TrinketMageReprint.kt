@@ -13,7 +13,7 @@ val TrinketMageReprint = Printing(
     collectorNumber = "102",
     scryfallId = "d644b4df-7c59-4617-89d8-7333e863db31",
     artist = "Scott Chou",
-    imageUri = "https://cards.scryfall.io/normal/front/d/6/d644b4df-7c59-4617-89d8-7333e863db31.jpg?1783937070",
+    imageUri = "https://cards.scryfall.io/normal/front/d/6/d644b4df-7c59-4617-89d8-7333e863db31.jpg",
     releaseDate = "2016-11-11",
     rarity = Rarity.COMMON,
 )

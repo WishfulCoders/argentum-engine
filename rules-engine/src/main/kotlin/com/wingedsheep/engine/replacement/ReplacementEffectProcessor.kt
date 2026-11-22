@@ -63,10 +63,13 @@ sealed interface ProcessorResult {
  * - CR 616.1: Player choice between competing same-group effects
  * - CR 616.1f: Repeated application until no more effects match
  *
- * This processor is fully domain-agnostic. Each [PendingGameEvent] subtype
+ * The processor is domain-agnostic. Each [PendingGameEvent] subtype
  * implements [PendingGameEvent.matches] (event-pattern matching) and
  * [PendingGameEvent.applyReplacement] (outcome production), so the processor
- * never needs to know about draw, damage, life, or any other domain.
+ * never needs to know about draw, damage, life, or any other domain — the one
+ * exception is a pattern's filter over [PendingGameEvent.referencedEntityId]
+ * (`DrawEvent.cyclingOf`), checked in [matchesEvent] because only the processor
+ * holds a predicate evaluator.
  *
  * ## Source scanning
  * [gatherReplacements] scans four sources:
@@ -148,7 +151,7 @@ class ReplacementEffectProcessor(
 
         // 4. If only one mandatory match, apply it directly
         if (mandatory.size == 1) {
-            return applySingle(state, mandatory[0], event, alreadyApplied)
+            return applySingle(state, mandatory[0], event, alreadyApplied, context?.programOrigin)
         }
 
         // 5. Multiple mandatory matches — group by priority order (CR 616.1a-e)
@@ -163,14 +166,14 @@ class ReplacementEffectProcessor(
                 // player chooses which to apply. Skip the prompt when the choice is unobservable.
                 val first = groupEffects.first()
                 if (isChoiceUnobservable(groupEffects, first, event, state)) {
-                    return applySingle(state, first, event, alreadyApplied)
+                    return applySingle(state, first, event, alreadyApplied, context?.programOrigin)
                 }
                 // The order is observable — the player must choose (CR 616.1).
                 return presentChoice(state, event, groupEffects, alreadyApplied, context)
             }
 
             // Single effect — auto-apply
-            return applySingle(state, groupEffects.first(), event, alreadyApplied)
+            return applySingle(state, groupEffects.first(), event, alreadyApplied, context?.programOrigin)
         }
 
         // Unreachable: mandatory was non-empty, so at least one group matched.
@@ -225,7 +228,9 @@ class ReplacementEffectProcessor(
         state: GameState,
         gathered: GatheredReplacement,
         event: PendingGameEvent,
-        alreadyApplied: Set<ReplacementEffectIdentity>
+        alreadyApplied: Set<ReplacementEffectIdentity>,
+        /** The origin of the program whose instruction the event came from, when there is one. */
+        parentOrigin: com.wingedsheep.engine.core.ProgramOrigin? = null,
     ): ProcessorResult {
         val outcome = createOutcome(gathered.effect, event, state)
 
@@ -233,14 +238,19 @@ class ReplacementEffectProcessor(
         // otherwise use the affected player as the controller so the replacement
         // effect (e.g. DrawCardsEffect from Phial of Galadriel) resolves against
         // the player the event affects, not whoever announced the draw.
+        // A replacement's effect is a program of its own, labelled with the replacement.
+        val replacementOrigin = com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter
+            .startedBy(gathered.effect::class, parentOrigin)
         val execContext = when (val identity = gathered.identity) {
             is ReplacementEffectIdentity.FloatingIdentity -> {
                 buildContextFromShield(state, identity.floatingId, gathered.sourceControllerId)
+                    ?.copy(programOrigin = replacementOrigin)
             }
             else -> EffectContext(
                 controllerId = if (event is PendingGameEvent.LifeGainPending && gathered.effect is com.wingedsheep.sdk.scripting.ReplaceLifeGainWith)
                     gathered.sourceControllerId else event.affectedPlayerId,
                 triggeringPlayerId = event.affectedPlayerId,
+                triggeringEntityId = event.referencedEntityId,
                 sourceId = gathered.sourceEntityId(state),
                 objectReferences = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(captured = true,
                     origin = gathered.sourceEntityId(state)?.let(state::objectRef),
@@ -249,7 +259,8 @@ class ReplacementEffectProcessor(
                     // stops the same identity applying twice to one event, so this is unique
                     // without a random token — and reproduces on re-execution.
                     resolutionKey = "replacement:${gathered.identity}:" +
-                        "${gathered.sourceEntityId(state)?.let(state::objectRef)?.generation}")
+                        "${gathered.sourceEntityId(state)?.let(state::objectRef)?.generation}"),
+                programOrigin = replacementOrigin,
             )
         }
 
@@ -378,7 +389,7 @@ class ReplacementEffectProcessor(
             gathered, state.copy(activeReplacementChain = alreadyApplied), context
         )
             ?: // Event doesn't support optional prompts — treat as mandatory
-            return applySingle(state, gathered, event, alreadyApplied)
+            return applySingle(state, gathered, event, alreadyApplied, context?.programOrigin)
 
         val pause = state.suspendForDecision(promptResult.question, promptResult.continuation)
         return ProcessorResult.Paused(pause.state, pause.events)
@@ -422,8 +433,7 @@ class ReplacementEffectProcessor(
         // 1. Battlefield permanents with ReplacementEffectSourceComponent
         for (entityId in battlefieldSet) {
             val container = state.getEntity(entityId) ?: continue
-            val replacementSource = container.get<ReplacementEffectSourceComponent>() ?: continue
-            if (event is PendingGameEvent.LifeGainPending && (state.projectedState.hasLostAllAbilities(entityId) || state.projectedState.isFaceDown(entityId))) continue
+            val replacementSource = state.activeReplacementSource(entityId) ?: continue
             // Projected, not base: control change is a layer-2 effect (see EffectApplicator's
             // ChangeController branch), so a stolen permanent's ControllerComponent still names
             // its original controller. A `Player.You` replacement has to follow the permanent.
@@ -564,7 +574,8 @@ class ReplacementEffectProcessor(
      *
      * Delegates event-pattern matching to [PendingGameEvent.matches], then
      * evaluates the effect's [ReplacementEffect.restrictions] against the
-     * current state. This method is fully domain-agnostic.
+     * current state, plus a pattern's filter over the event's referenced object
+     * (`DrawEvent.cyclingOf`), which needs the predicate evaluator only this class holds.
      */
     private fun matchesEvent(
         effect: ReplacementEffect,
@@ -577,6 +588,18 @@ class ReplacementEffectProcessor(
         // Delegate to the polymorphic event match
         if (!event.matches(effect.appliesTo, sourceControllerId, state, context)) {
             return false
+        }
+
+        // "If a cycling ability of a <filter> card would cause you to draw" — the event matched the
+        // cause; the cycled card (now in a graveyard or exile) must also match the filter.
+        val cyclingOf = (effect.appliesTo as? com.wingedsheep.sdk.scripting.EventPattern.DrawEvent)?.cyclingOf
+        if (cyclingOf != null) {
+            val cycledCardId = event.referencedEntityId ?: return false
+            val matchesCycled = conditionEvaluator.predicates.matches(
+                state, state.projectedState, cycledCardId, cyclingOf,
+                com.wingedsheep.engine.handlers.PredicateContext(controllerId = sourceControllerId, sourceId = sourceId)
+            )
+            if (!matchesCycled) return false
         }
 
         // Evaluate the effect's restrictions (CR 614 — extra conditions).

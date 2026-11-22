@@ -72,6 +72,6 @@ object PlayerCounterPayment {
         if (amount == 0) return state to emptyList()
         val counters = state.getEntity(payer)!!.get<CountersComponent>()!!
         return state.updateEntity(payer) { it.with(counters.withRemoved(type, amount)) } to
-            listOf(CountersRemovedEvent(payer, type, amount, ""))
+            listOf(CountersRemovedEvent(payer, type, amount, "", removedBy = payer))
     }
 }

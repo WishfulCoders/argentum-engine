@@ -71,6 +71,7 @@ data class GameObjectFilter(
      */
     val indefiniteArticle: String
         get() {
+            if (basicLandWithSubtypes()) return "a"
             val typeWord = orderedCardPredicates().firstOrNull()?.description?.trim()
                 ?: if (anyOf.isNotEmpty()) return anyOf.first().indefiniteArticle
                 else description.trim()
@@ -79,40 +80,170 @@ data class GameObjectFilter(
         }
 
     /**
-     * Card predicates in rendering order: subtypes ahead of the card type, because Magic templates
-     * them that way — "Wolf creature", "Equipment artifact", never "creature Wolf". A stable
+     * Card predicates in rendering order: type negations and color adjectives first, then subtypes, then the card
+     * type, because Magic templates them that way — "white permanent", "green Elf creature",
+     * "Frog, Rabbit, or Squirrel creature", never "permanent white" or "creature Wolf". A stable
      * partition, so every other pairing keeps its original insertion order.
      */
     private fun orderedCardPredicates(): List<CardPredicate> {
-        val (subtypes, rest) = cardPredicates.partition { it is CardPredicate.HasSubtype }
-        return subtypes + rest
+        // Card-type negations (nonartifact / nonland / noncreature / nonenchantment) lead, as
+        // Oracle templates them: "nonartifact creature", never "creature nonartifact".
+        val (negations, rest0) = cardPredicates.partition { it.isTypeNegation() }
+        val (colors, others) = rest0.partition { it.isColorAdjective() }
+        val (subtypes, rest) = others.partition {
+            it is CardPredicate.HasSubtype || it is CardPredicate.HasAnyOfSubtypes
+        }
+        return negations + colors + subtypes + rest
     }
 
-    private fun buildDescription(): String = buildString {
-        controllerPredicate?.let {
-            if (it.description.isNotEmpty()) {
-                append(it.description)
+    /** "Not this card type" predicates — adjectives ahead of the noun ("nonland permanent"). */
+    private fun CardPredicate.isTypeNegation(): Boolean =
+        this == CardPredicate.IsNonartifact || this == CardPredicate.IsNonland ||
+            this == CardPredicate.IsNoncreature || this == CardPredicate.IsNonenchantment
+
+    /** One-word color predicates that read as an adjective ahead of the noun ("nonblack", "multicolored"). */
+    private fun CardPredicate.isColorAdjective(): Boolean =
+        this is CardPredicate.HasColor || this is CardPredicate.NotColor ||
+            this == CardPredicate.IsColorless || this == CardPredicate.IsMulticolored ||
+            this == CardPredicate.IsMonocolored
+
+    /**
+     * A basic land narrowed by land type reads the way Oracle prints it — "basic Island, Swamp, or
+     * Mountain", not "basic land Island, Swamp, or Mountain": the subtype names the land on its own.
+     */
+    private fun basicLandWithSubtypes(): Boolean =
+        CardPredicate.IsBasicLand in cardPredicates &&
+            cardPredicates.any { it is CardPredicate.HasSubtype || it is CardPredicate.HasAnyOfSubtypes }
+
+    /** The type words — "basic Island, Swamp, or Mountain", "Wolf creature", "artifact or enchantment". */
+    private fun typeWords(): String = buildString {
+        if (basicLandWithSubtypes()) {
+            val (subtypes, rest) = cardPredicates
+                .filter { it != CardPredicate.IsBasicLand }
+                .partition { it is CardPredicate.HasSubtype || it is CardPredicate.HasAnyOfSubtypes }
+            append("basic ")
+            (subtypes + rest).forEach { predicate ->
+                append(predicate.description)
                 append(" ")
             }
-        }
-        statePredicates.forEach { predicate ->
-            append(predicate.description)
-            append(" ")
-        }
-        orderedCardPredicates().forEach { predicate ->
-            append(predicate.description)
-            append(" ")
+        } else {
+            orderedCardPredicates().forEach { predicate ->
+                append(predicate.description)
+                append(" ")
+            }
         }
         if (anyOf.isNotEmpty()) {
             append(anyOf.joinToString(" or ") { it.description })
         }
-    }.trim().ifEmpty { "card" }
+    }.trim()
+
+    /**
+     * State predicates split by where English puts them: a one-word adjective ("tapped",
+     * "attacking", "face-down") goes ahead of the noun, a clause ("entered the battlefield this
+     * turn", "with counters") after it — "creature that entered the battlefield this turn", never
+     * "entered the battlefield this turn creature". With no type words there is no noun to trail,
+     * so every predicate leads, as before.
+     */
+    private fun splitStatePredicates(): Pair<List<String>, List<String>> {
+        if (typeWords().isEmpty()) return statePredicates.map { it.description } to emptyList()
+        val (lead, trail) = statePredicates.partition { it.isAdjective() }
+        return lead.map { it.description } to trail.map { it.trailingClause() }
+    }
+
+    private fun StatePredicate.isAdjective(): Boolean = when (this) {
+        is StatePredicate.Or -> predicates.all { it.isAdjective() }
+        is StatePredicate.And -> predicates.all { it.isAdjective() }
+        is StatePredicate.Not -> predicate.isAdjective()
+        else -> ' ' !in description.trim()
+    }
+
+    /** A trailing predicate led by a finite verb takes a relative "that": "creature that attacked this turn". */
+    private fun StatePredicate.trailingClause(): String {
+        val text = description.trim()
+        val first = text.substringBefore(' ')
+        val finiteVerb = first in TRAILING_FINITE_VERBS || (first == "dealt" && " by " !in text)
+        return if (finiteVerb) "that $text" else text
+    }
+
+    private fun buildDescription(): String {
+        val (lead, trail) = splitStatePredicates()
+        val controller = controllerPredicate?.description?.takeIf { it.isNotEmpty() }
+        return (listOfNotNull(controller) + lead + typeWords() + trail)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .trim()
+            .ifEmpty { "card" }
+    }
+
+    /**
+     * This filter as a plural noun phrase over permanents, the controller after the noun as Oracle
+     * prints it: "creatures you control", "artifacts an opponent controls".
+     */
+    val pluralPermanentDescription: String
+        get() {
+            val controller = controllerPredicate?.description?.takeIf { it.isNotEmpty() }
+                ?: return permanentNounPhrase(plural = true)
+            return copy(controllerPredicate = null).permanentNounPhrase(plural = true, scope = controller)
+        }
+
+    /**
+     * This filter as a singular noun phrase over permanents, the controller after the noun as Oracle
+     * prints it: "artifact you control", "nonland permanent an opponent controls". Pair it with
+     * [indefiniteArticle] for "choose an artifact you control".
+     */
+    val singularPermanentDescription: String
+        get() {
+            val controller = controllerPredicate?.description?.takeIf { it.isNotEmpty() }
+                ?: return permanentNounPhrase(plural = false)
+            return copy(controllerPredicate = null).permanentNounPhrase(plural = false, scope = controller)
+        }
+
+    /**
+     * This filter as a noun phrase over permanents, with the controller [scope] placed where Oracle
+     * puts it — after the noun, ahead of any trailing clause: "Frog, Rabbit, Raccoon, or Squirrel
+     * creature**s** you control that entered the battlefield this turn". A filter with no type words
+     * names a "permanent". Used where a battlefield collection is described in running text.
+     */
+    internal fun permanentNounPhrase(plural: Boolean, scope: String? = null): String {
+        val (lead, trail) = splitStatePredicates()
+        val controller = controllerPredicate?.description?.takeIf { it.isNotEmpty() }
+        val types = typeWords()
+        // "nontoken" / "token" alone is an adjective, not a noun: "nontoken permanents", not "nontokens".
+        val adjectiveOnly = anyOf.isEmpty() && cardPredicates.isNotEmpty() &&
+            cardPredicates.all { it == CardPredicate.IsToken || it == CardPredicate.IsNontoken }
+        val noun = when {
+            types.isEmpty() -> if (plural) "permanents" else "permanent"
+            adjectiveOnly -> if (plural) "$types permanents" else "$types permanent"
+            !plural -> types
+            anyOf.isNotEmpty() -> "$types permanents"
+            else -> pluralizeLastWord(types)
+        }
+        return (listOfNotNull(controller) + lead + noun + listOfNotNull(scope) + trail)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+    }
+
+    private fun pluralizeLastWord(words: String): String {
+        val last = words.substringAfterLast(' ')
+        val plural = when {
+            last.equals("Equipment", ignoreCase = true) -> last
+            last.endsWith("s") -> last
+            last.endsWith("y") && last.length > 1 && last[last.length - 2] !in "aeiou" -> last.dropLast(1) + "ies"
+            else -> last + "s"
+        }
+        return words.dropLast(last.length) + plural
+    }
 
     // =============================================================================
     // Pre-built Common Filters
     // =============================================================================
 
     companion object {
+        /** First words of state-predicate descriptions that are finite verbs and so need a "that". */
+        private val TRAILING_FINITE_VERBS = setOf(
+            "entered", "was", "attacked", "blocked", "became", "couldn't", "has", "had",
+        )
+
         /** Match any object */
         val Any = GameObjectFilter()
 
@@ -148,8 +279,16 @@ data class GameObjectFilter(
         val Battle = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsBattle))
         val Instant = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsInstant))
         val Sorcery = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsSorcery))
+        val Kindred = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsKindred))
         val Permanent = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsPermanent))
         val Nonland = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsNonland))
+        /** An instant, a sorcery or any other card that isn't a permanent card (CR 110.4a's complement). */
+        val Nonpermanent = GameObjectFilter(cardPredicates = listOf(CardPredicate.Not(CardPredicate.IsPermanent)))
+        /**
+         * "The chosen permanent" — the permanent the source chose as it entered
+         * ([CardPredicate.ChosenBySource]); no type word, so it reads as just that.
+         */
+        val ChosenBySource = GameObjectFilter(cardPredicates = listOf(CardPredicate.ChosenBySource))
         val NonlandPermanent = GameObjectFilter(
             cardPredicates = listOf(CardPredicate.IsNonland, CardPredicate.IsPermanent)
         )

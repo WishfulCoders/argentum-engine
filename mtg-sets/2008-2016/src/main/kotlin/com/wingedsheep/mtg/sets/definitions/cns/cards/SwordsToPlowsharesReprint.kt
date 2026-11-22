@@ -13,7 +13,7 @@ val SwordsToPlowsharesReprint = Printing(
     collectorNumber = "84",
     scryfallId = "be0bda98-e3f7-4a9e-b05d-5f8529e762ab",
     artist = "Terese Nielsen",
-    imageUri = "https://cards.scryfall.io/normal/front/b/e/be0bda98-e3f7-4a9e-b05d-5f8529e762ab.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/e/be0bda98-e3f7-4a9e-b05d-5f8529e762ab.jpg?1783939362",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

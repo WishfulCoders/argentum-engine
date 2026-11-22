@@ -39,7 +39,8 @@ class EmailService(
         Thread(runnable, "magic-link-mailer").apply { isDaemon = true }
     }
 
-    private val canSend: Boolean get() = mailUsername.isNotBlank() && mailSender.ifAvailable != null
+    /** Whether a magic link actually leaves this server; false means it is only logged. */
+    val canSend: Boolean get() = mailUsername.isNotBlank() && mailSender.ifAvailable != null
 
     fun sendMagicLink(toEmail: String, link: String) {
         if (!canSend) {

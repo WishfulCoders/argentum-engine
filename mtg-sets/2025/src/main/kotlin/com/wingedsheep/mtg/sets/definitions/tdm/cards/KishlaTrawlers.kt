@@ -33,7 +33,11 @@ val KishlaTrawlers = card("Kishla Trawlers") {
         trigger = Triggers.self.enters()
         effect = Effects.ReflexiveTrigger(
             action = Effects.Pipeline {
-                val exiledCreature = selectTarget(TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+                val exiledCreature = selectTarget(
+                    TargetObject(filter = TargetFilter.CreatureInYourGraveyard),
+                    nonTargeting = true,
+                    prompt = "Choose a creature card in your graveyard to exile"
+                )
                 run(Effects.Exile(exiledCreature.asTarget))
             },
             optional = true,

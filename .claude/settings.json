@@ -1,6 +1,6 @@
 {
   "enabledPlugins": {
-    "kotlin-lsp@claude-plugins-official": true
+    "kotlin-lsp@claude-plugins-official": false
   },
   "permissions": {
     "allow": [

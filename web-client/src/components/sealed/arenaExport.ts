@@ -26,6 +26,8 @@ export interface ArenaExportInput {
   readonly landCounts: Readonly<Record<string, number>>
   /** Designated commander name (commander formats only); it lives in [deck] too. */
   readonly commander: string | null
+  /** The second commander of a partner pair (CR 702.124); also in [deck]. Ignored without [commander]. */
+  readonly secondCommander?: string | null
 }
 
 /** Format one Arena line: `count Name (SET) Collector`, or `count Name` without a printing. */
@@ -49,6 +51,9 @@ function tally(names: readonly string[]): Map<string, number> {
  */
 export function buildArenaDeckList(input: ArenaExportInput): string {
   const { deck, cardPool, basicLands, landCounts, commander } = input
+  const commanders = commander
+    ? [commander, ...(input.secondCommander && input.secondCommander !== commander ? [input.secondCommander] : [])]
+    : []
 
   // First printing seen per name wins — pool cards of the same name share a printing.
   const printingByName = new Map<string, SealedCardInfo>()
@@ -64,18 +69,20 @@ export function buildArenaDeckList(input: ArenaExportInput): string {
   const rawDeckCounts = tally(deck)
 
   const deckCounts = tally(deck)
-  // The commander lives in the command zone, not the maindeck (CR 903.6) — pull one
-  // copy out of the maindeck tally so it isn't double-listed.
-  if (commander) {
-    const remaining = (deckCounts.get(commander) ?? 0) - 1
-    if (remaining > 0) deckCounts.set(commander, remaining)
-    else deckCounts.delete(commander)
+  // The commander(s) live in the command zone, not the maindeck (CR 903.6) — pull one
+  // copy of each out of the maindeck tally so it isn't double-listed.
+  for (const name of commanders) {
+    const remaining = (deckCounts.get(name) ?? 0) - 1
+    if (remaining > 0) deckCounts.set(name, remaining)
+    else deckCounts.delete(name)
   }
 
   const sections: string[] = []
 
-  if (commander) {
-    sections.push(['Commander', formatLine(1, commander, printingByName.get(commander))].join('\n'))
+  if (commanders.length > 0) {
+    sections.push(
+      ['Commander', ...commanders.map((name) => formatLine(1, name, printingByName.get(name)))].join('\n'),
+    )
   }
 
   const mainLines: string[] = []
@@ -92,7 +99,7 @@ export function buildArenaDeckList(input: ArenaExportInput): string {
   // a sideboard card). Names absent from the deck list keep their full pool count.
   const sideLines: string[] = []
   for (const name of [...poolCounts.keys()].sort((a, b) => a.localeCompare(b))) {
-    const used = name === commander ? poolCounts.get(name)! : rawDeckCounts.get(name) ?? 0
+    const used = commanders.includes(name) ? poolCounts.get(name)! : rawDeckCounts.get(name) ?? 0
     const leftover = poolCounts.get(name)! - used
     if (leftover > 0) sideLines.push(formatLine(leftover, name, printingByName.get(name)))
   }

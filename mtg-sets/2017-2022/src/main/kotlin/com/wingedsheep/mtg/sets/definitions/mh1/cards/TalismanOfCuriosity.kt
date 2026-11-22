@@ -10,14 +10,14 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Talisman of Curiosity
- * {2}
- * Artifact
+ * Talisman of Curiosity — Modern Horizons #232 (canonical printing)
+ * {2} · Artifact
+ *
  * {T}: Add {C}.
  * {T}: Add {G} or {U}. This artifact deals 1 damage to you.
  *
- * The Modern Horizons Talisman, built like its Mirrodin cycle: the "{G} or {U}" line is two mana
- * abilities, each adding its color and then having the Talisman deal 1 damage to its controller.
+ * The Mirrodin Talisman shape: the coloured line is one mana ability per colour, each carrying the
+ * 1 damage.
  */
 val TalismanOfCuriosity = card("Talisman of Curiosity") {
     manaCost = "{2}"

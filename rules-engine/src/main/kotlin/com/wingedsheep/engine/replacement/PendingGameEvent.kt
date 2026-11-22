@@ -39,6 +39,13 @@ sealed interface PendingGameEvent {
     val affectedPlayerId: EntityId
 
     /**
+     * The object this event is *about* beyond its affected player, which a replacement's effect
+     * reaches as `EffectTarget.TriggeringEntity` — "the cycled card" of a draw a cycling ability
+     * causes (`EventPattern.DrawEvent.cyclingOf`). Null for events with no such object.
+     */
+    val referencedEntityId: EntityId? get() = null
+
+    /**
      * Check whether the given [pattern] describes this event.
      *
      * @param pattern The [EventPattern] from a replacement effect's `appliesTo`
@@ -129,7 +136,8 @@ sealed interface PendingGameEvent {
                     state.getEntity(it)?.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()?.targetId
                 } == playerId
                 Player.You -> playerId == sourceControllerId
-                Player.Each, Player.Any, Player.ActivePlayerFirst -> true
+                Player.Each, Player.Any, Player.ActivePlayerFirst, Player.EachStartingWithYou,
+                Player.EachStartingWithNextOpponent -> true
                 Player.EachOpponent, Player.AnOpponent, Player.TargetOpponent -> state.isOpponentOf(playerId, sourceControllerId)
                 else -> context?.copy(controllerId = sourceControllerId)?.resolvePlayerTargets(
                     com.wingedsheep.sdk.scripting.targets.EffectTarget.PlayerRef(gain.player), state)?.contains(playerId) == true
@@ -160,9 +168,12 @@ sealed interface PendingGameEvent {
         val count: Int,
         val remainingDraws: Int = 0,
         val isDrawStep: Boolean = false,
-        val drawnCardsSoFar: List<EntityId> = emptyList()
+        val drawnCardsSoFar: List<EntityId> = emptyList(),
+        /** The card whose cycling ability caused this draw (CR 702.29a), or null for any other draw. */
+        val cycledCardId: EntityId? = null
     ) : PendingGameEvent {
         override val affectedPlayerId: EntityId get() = playerId
+        override val referencedEntityId: EntityId? get() = cycledCardId
 
         /** Total draws remaining including this one (derived from remainingDraws + 1). */
         val drawsLeft: Int get() = remainingDraws + 1
@@ -174,28 +185,15 @@ sealed interface PendingGameEvent {
             context: EffectContext?
         ): Boolean {
             val drawEvent = pattern as? EventPattern.DrawEvent ?: return false
-            if (drawEvent.exceptFirstInDrawStep && isFirstDrawOfOwnDrawStep(state)) return false
+            if (drawEvent.firstInDrawStep != DrawStepFirstCard.INCLUDED) {
+                val isFirst = state.nextDrawIsFirstInOwnDrawStep(playerId)
+                val wanted = drawEvent.firstInDrawStep == DrawStepFirstCard.ONLY
+                if (isFirst != wanted) return false
+            }
+            // The cycled card's own filter is checked by the processor, which owns the predicate
+            // evaluator; here only the cause: a cycling-scoped pattern never matches another draw.
+            if (drawEvent.cyclingOf != null && cycledCardId == null) return false
             return matchesPlayerFilter(drawEvent.player, playerId, sourceControllerId, state)
-        }
-
-        /**
-         * "Except the first one they draw in each of their draw steps" (Hullbreacher, Bard, King of
-         * Dale; Orcish Bowmasters' trigger twin in `TriggerMatcher.drawTriggerFiringCount`). True iff
-         * it is the drawing player's own draw step (CR 504) and they haven't yet drawn a card in it:
-         * their cards-drawn-this-turn count still equals the snapshot taken as the step began
-         * ([GameState.drawStepStartDrawCountByPlayer]).
-         *
-         * That is normally the turn-based draw of CR 504.1, but not necessarily — if that draw was
-         * skipped or *replaced* (a replaced draw never happened, CR 614.6), the next card actually
-         * drawn in the step is the first one. Draws in any other step, in another player's draw
-         * step, and the second and later draws of the step are never exempt, whichever instruction
-         * they come from (an opponent's Brainstorm in their upkeep is three non-exempt draws).
-         */
-        private fun isFirstDrawOfOwnDrawStep(state: GameState): Boolean {
-            if (state.step != com.wingedsheep.sdk.core.Step.DRAW || !state.isActiveTurnFor(playerId)) return false
-            val drawn = state.getEntity(playerId)
-                ?.get<com.wingedsheep.engine.state.components.player.CardsDrawnThisTurnComponent>()?.count ?: 0
-            return drawn == (state.drawStepStartDrawCountByPlayer[playerId] ?: 0)
         }
 
         /**
@@ -221,7 +219,8 @@ sealed interface PendingGameEvent {
                     isDrawStep = isDrawStep,
                     // Part of an instruction that was announced before the per-card
                     // loop started — re-announcing would apply ModifyDrawAmount twice.
-                    announcementApplied = true
+                    announcementApplied = true,
+                    cycledCardId = cycledCardId
                 )
             }
             return null
@@ -274,7 +273,8 @@ sealed interface PendingGameEvent {
                 isDrawStep = isDrawStep,
                 drawnCardsSoFar = drawnCardsSoFar,
                 declinedIdentity = gathered.identity,
-                alreadyApplied = state.activeReplacementChain ?: emptySet()
+                alreadyApplied = state.activeReplacementChain ?: emptySet(),
+                cycledCardId = cycledCardId
             )
 
             return OptionalPromptResult(
@@ -299,9 +299,12 @@ sealed interface PendingGameEvent {
     data class DrawAmountPending(
         val playerId: EntityId,
         val totalCount: Int,
-        val isDrawStep: Boolean = false
+        val isDrawStep: Boolean = false,
+        /** The card whose cycling ability announced this draw, carried to the per-card draws. */
+        val cycledCardId: EntityId? = null
     ) : PendingGameEvent {
         override val affectedPlayerId: EntityId get() = playerId
+        override val referencedEntityId: EntityId? get() = cycledCardId
 
         override fun matches(
             pattern: EventPattern,
@@ -339,7 +342,8 @@ sealed interface PendingGameEvent {
                 drawingPlayerId = playerId,
                 remainingDraws = totalCount,
                 isDrawStep = isDrawStep,
-                announcementApplied = true
+                announcementApplied = true,
+                cycledCardId = cycledCardId
             )
         }
     }
@@ -364,6 +368,7 @@ private fun matchesPlayerFilter(
 ): Boolean {
     return when (player) {
         Player.EachDefendingPlayer -> affectedPlayerId in com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
+        Player.EachAttackedPlayer -> affectedPlayerId in com.wingedsheep.engine.mechanics.combat.CombatDefenders.attackedPlayersInApnapOrder(state)
         Player.Each, Player.Any -> true
         Player.You -> affectedPlayerId == sourceControllerId
         Player.EachOpponent, Player.AnOpponent -> affectedPlayerId in state.getOpponents(sourceControllerId)

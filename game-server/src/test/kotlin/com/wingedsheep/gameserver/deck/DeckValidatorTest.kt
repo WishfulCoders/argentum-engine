@@ -12,6 +12,8 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Supertype
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.KeywordAbility
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
@@ -61,6 +63,46 @@ class DeckValidatorTest : FunSpec({
             subtypes = setOf(Subtype("Test")),
             startingLoyalty = 3,
             oracleText = "Test Walker With Override can be your commander.",
+        ))
+
+        // Two-commander fixtures (CR 702.124): one pair per partner ability, each half a
+        // different color so the combined identity is observable.
+        fun legend(name: String, cost: String, partner: KeywordAbility?, subtypes: Set<Subtype> = setOf(Subtype("Human"))) =
+            CardDefinition.creature(
+                name = name,
+                manaCost = ManaCost.parse(cost),
+                subtypes = subtypes,
+                power = 2,
+                toughness = 2,
+                supertypes = setOf(Supertype.LEGENDARY),
+            ).copy(keywordAbilities = listOfNotNull(partner))
+        register(legend("Test Green Partner", "{1}{G}", KeywordAbility.partner()))
+        register(legend("Test Red Partner", "{1}{R}", KeywordAbility.partner()))
+        register(legend("Test Green Friend", "{1}{G}", KeywordAbility.partnerNamed("Friends forever")))
+        register(legend("Test Red Friend", "{1}{R}", KeywordAbility.partnerNamed("Friends forever")))
+        register(legend("Test Green Pir", "{1}{G}", KeywordAbility.partnerWith("Test Red Toothy")))
+        register(legend("Test Red Toothy", "{1}{R}", KeywordAbility.partnerWith("Test Green Pir")))
+        register(legend("Test Green Chooser", "{1}{G}", KeywordAbility.chooseABackground()))
+        register(CardDefinition.enchantment(
+            name = "Test Red Background",
+            manaCost = ManaCost.parse("{1}{R}"),
+            subtypes = setOf(Subtype.BACKGROUND),
+            supertypes = setOf(Supertype.LEGENDARY),
+        ))
+        register(legend("Test Green Companion", "{1}{G}", KeywordAbility.doctorsCompanion()))
+        register(legend("Test Red Doctor", "{1}{R}", null, subtypes = setOf(Subtype("Time Lord"), Subtype.DOCTOR)))
+
+        // An ante card (CR 407.3). Scryfall marks real ante cards banned everywhere, so this one is
+        // "legal" only in Pauper — the ante tests below check that the ban doesn't bite in an ante game.
+        register(CardDefinition.creature(
+            name = "Test Ante Bear",
+            manaCost = ManaCost.parse("{1}{G}"),
+            subtypes = setOf(Subtype("Bear")),
+            power = 2,
+            toughness = 2,
+        ).copy(
+            oracleText = "Remove Test Ante Bear from your deck before playing if you're not playing for ante.",
+            legalFormats = setOf(DeckFormat.PAUPER),
         ))
     }
     val validator = DeckValidator(registry)
@@ -412,5 +454,128 @@ class DeckValidatorTest : FunSpec({
             cardEntries = entries,
         )
         result.errors.none { it.code == "INVALID_PRINTING" } shouldBe true
+    }
+
+    // =========================================================================
+    // Two commanders — the partner abilities (CR 702.124)
+    // =========================================================================
+
+    /** A two-commander deck: 98 [extras]-then-Forests in the library plus both commanders = 100. */
+    fun pairDeckOf(first: String, second: String, extras: List<String> = emptyList()): Deck =
+        Deck(cards = extras + List(98 - extras.size) { "Forest" }, commander = first, secondCommander = second)
+
+    fun codes(deck: Deck) = validator.validate(deck, DeckFormat.COMMANDER).errors.map { it.code }
+
+    test("each partner ability admits its own pair, with both commanders counting toward 100") {
+        for ((first, second) in listOf(
+            "Test Green Partner" to "Test Red Partner",
+            "Test Green Friend" to "Test Red Friend",
+            "Test Green Pir" to "Test Red Toothy",
+            "Test Green Chooser" to "Test Red Background",
+            "Test Green Companion" to "Test Red Doctor",
+        )) {
+            val result = validator.validate(pairDeckOf(first, second, extras = listOf("Mountain")), DeckFormat.COMMANDER)
+            withClue("$first + $second: ${result.errors}") {
+                result.valid shouldBe true
+                result.totalCards shouldBe 100
+            }
+        }
+    }
+
+    test("a pair whose partner abilities don't match raises INVALID_COMMANDER_PAIR (702.124f)") {
+        for ((first, second) in listOf(
+            // Different partner abilities never combine.
+            "Test Green Partner" to "Test Red Friend",
+            "Test Green Friend" to "Test Red Toothy",
+            // Partner with names a specific card.
+            "Test Green Pir" to "Test Red Partner",
+            // Choose a Background needs a Background; a Background needs choose a Background.
+            "Test Green Chooser" to "Test Red Partner",
+            "Test Green Partner" to "Test Red Background",
+            // Doctor's companion needs a Time Lord Doctor; the Doctor has no partner of its own.
+            "Test Green Companion" to "Test Red Partner",
+            "Test Green Partner" to "Test Red Doctor",
+            // A commander without any partner ability can't take a second.
+            "Test Mono-Green Commander" to "Test Red Partner",
+        )) {
+            withClue("$first + $second") {
+                codes(pairDeckOf(first, second)) shouldContain "INVALID_COMMANDER_PAIR"
+            }
+        }
+    }
+
+    test("a Background alone is not a commander") {
+        val result = validator.validate(commanderDeckOf("Test Red Background", extras = listOf("Mountain")), DeckFormat.COMMANDER)
+        result.errors.map { it.code } shouldContain "INVALID_COMMANDER"
+        result.errors.first { it.code == "INVALID_COMMANDER" }.message shouldContainString "Choose a Background"
+    }
+
+    test("color identity is the union of both commanders' (702.124c)") {
+        // A red card and a green card both fit a red + green pair…
+        codes(pairDeckOf("Test Green Partner", "Test Red Partner", extras = listOf("Test Red Goblin", "Test Green Bear")))
+            .none { it == "COLOR_IDENTITY_VIOLATION" } shouldBe true
+        // …but a red card is off-identity for the green commander alone.
+        codes(commanderDeckOf("Test Green Partner", extras = listOf("Test Red Goblin")))
+            .shouldContain("COLOR_IDENTITY_VIOLATION")
+        // And a white card is off-identity for the pair.
+        codes(pairDeckOf("Test Green Partner", "Test Red Partner", extras = listOf("Plains")))
+            .shouldContain("COLOR_IDENTITY_VIOLATION")
+    }
+
+    test("a pair's deck is 100 cards including both commanders (702.124b)") {
+        // 99 library cards + 2 commanders = 101.
+        val tooMany = Deck(cards = List(99) { "Forest" }, commander = "Test Green Partner", secondCommander = "Test Red Partner")
+        codes(tooMany) shouldContain "TOO_MANY_CARDS"
+    }
+
+    test("the second commander listed again in the library trips the singleton cap") {
+        codes(pairDeckOf("Test Green Partner", "Test Red Partner", extras = listOf("Test Red Partner")))
+            .shouldContain("TOO_MANY_COPIES")
+    }
+
+    test("an ante card is recognised from its Oracle text (CR 407.3)") {
+        registry.getCard("Test Ante Bear")!!.requiresAnte shouldBe true
+        registry.getCard("Test Green Bear")!!.requiresAnte shouldBe false
+    }
+
+    test("an ante card in the deck is REQUIRES_ANTE when not playing for ante") {
+        val result = validator.validate(mapOf("Test Ante Bear" to 1, "Forest" to 39))
+        result.valid shouldBe false
+        val issue = result.errors.single { it.code == "REQUIRES_ANTE" }
+        issue.cardName shouldBe "Test Ante Bear"
+        issue.message shouldContainString "played for ante"
+    }
+
+    test("an ante card is legal when playing for ante, even in a format that bans it") {
+        val deck = mapOf("Test Ante Bear" to 1, "Forest" to 59)
+        validator.validate(deck, playingForAnte = true).valid shouldBe true
+        val vintage = validator.validate(deck, DeckFormat.VINTAGE, playingForAnte = true)
+        withClue(vintage.errors) { vintage.valid shouldBe true }
+        // Without ante the only complaint is the ante one, not a second NOT_LEGAL_IN_FORMAT.
+        validator.validate(deck, DeckFormat.VINTAGE).errors.map { it.code } shouldBe listOf("REQUIRES_ANTE")
+    }
+
+    test("an ante card in the sideboard is REQUIRES_ANTE when not playing for ante") {
+        val deck = Deck(
+            cards = List(40) { "Forest" },
+            sideboard = listOf(com.wingedsheep.sdk.model.CardEntry("Test Ante Bear")),
+        )
+        validator.validate(deck).errors.map { it.code } shouldBe listOf("REQUIRES_ANTE")
+        validator.validate(deck, playingForAnte = true).valid shouldBe true
+    }
+
+    test("Commander-draft validation applies the same pairing rules against the pool") {
+        val pool = listOf("Test Green Chooser", "Test Red Background", "Test Green Bear")
+            .map { registry.getCard(it)!! }
+        val legal = Deck(
+            cards = listOf("Test Green Bear") + List(57) { "Forest" },
+            commander = "Test Green Chooser",
+            secondCommander = "Test Red Background",
+        )
+        validator.validateCommanderLimited(legal, pool).valid shouldBe true
+
+        val illegal = legal.copy(secondCommander = "Test Red Partner")
+        validator.validateCommanderLimited(illegal, pool + registry.getCard("Test Red Partner")!!)
+            .errors.map { it.code } shouldContain "INVALID_COMMANDER_PAIR"
     }
 })

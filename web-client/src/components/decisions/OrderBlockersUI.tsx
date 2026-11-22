@@ -319,9 +319,9 @@ export function OrderBlockersUI({ decision, responsive }: OrderBlockersUIProps) 
           style={{
             padding: responsive.isMobile ? '10px 24px' : '12px 36px',
             fontSize: responsive.fontSize.large,
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
+            backgroundColor: 'var(--chrome-bg)',
+            color: 'var(--chrome-text)',
+            border: '1px solid var(--chrome-border)',
             borderRadius: 8,
             cursor: 'pointer',
             fontWeight: 600,

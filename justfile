@@ -5,15 +5,15 @@
 default:
     @just --list
 
-# Build the entire project
+# Build the project, excluding deprecated mtgish tests (explicit coverage commands still run them)
 [group: 'build']
 build:
-    scripts/gradle-locked build
+    scripts/gradle-locked build -x :mtgish-tooling:test
 
-# Run all tesats
+# Run all tests except deprecated mtgish tests
 [group: 'build']
 test:
-    scripts/gradle-locked test
+    scripts/gradle-locked test -x :mtgish-tooling:test
 
 # Card scenarios now live in the per-era `:mtg-sets:<era>:tests` modules, which `:mtg-sets:scenarioTest`
 # fans out to, so both are run here — same coverage as before the split.
@@ -57,10 +57,31 @@ where QUERY:
 test-class CLASS *ARGS:
     scripts/test-class "{{CLASS}}" {{ARGS}}
 
-# Re-bless per-set card snapshot goldens after an intentional change (review the diff: only your cards should move)
+# The agent loops' pre-PR gate: only the tests the branch's diff can break (CI runs the full suite)
+# Run the narrow diff-based gate; --plan prints what it would run
+[group: 'build']
+loop-gate *ARGS:
+    scripts/loop-gate {{ARGS}}
+
+# Re-bless per-set card snapshot goldens after an intentional change (a loop passes --rebless to loop-gate instead) (review the diff: only your cards should move)
 [group: 'build']
 rebless-cards:
     scripts/gradle-locked :mtg-sets:test --tests "*CardDefinitionSnapshotTest" -DupdateSnapshots=true
+
+# Regenerate docs/sdk-index.md — one line per sealed SDK type (name, fields, first KDoc sentence),
+# grouped by family. SdkIndexTest fails when the checked-in index is stale.
+[group: 'build']
+sdk-index:
+    scripts/gradle-locked :mtg-sdk:test --tests "*SdkIndexTest" -DupdateSdkIndex=true --rerun
+
+# Fossil candidates are rarely-used types whose fields fit inside a same-family type, and engine lines
+# that lower one SDK type 1:1 into another — heuristics to read, not verdicts. Read it in a set-loop's
+# finishing PR; more than about one net new type per loop PR is a review flag.
+# THE SDK TAIL — share of each sealed SDK family used by only 1–2 cards, plus fossil candidates
+[group: 'build']
+sdk-tail:
+    scripts/gradle-locked :mtg-sdk:test --tests "*SdkTailReport" -DsdkTail=true --rerun
+    @cat mtg-sdk/build/reports/sdk-tail.md
 
 # List every token our cards create that has no set-scoped art, so it renders with generic
 # stand-in art. Writes backlog/token-art-gaps.md with a suggested image path and a paste-ready
@@ -101,12 +122,115 @@ benchmark-throughput GAMES="20" SET="BLB":
 # Play two AI agents head-to-head over paired-swap games and report a win rate with a confidence
 # interval (e.g., just arena v0 blb-advisors 1000). Agents: v0, current, production, blb-advisors,
 # ons-advisors, v0-blind. 1000 games is the merge gate; 300 is directional; 100 is a smoke test.
-# Results land in benchmarks/arena/. How to read one: docs/ai/measurement.md.
+# Results land in benchmarks/arena/, appended pair by pair as they finish — a killed run keeps
+# them (`just arena-report DIR`). One game is capped at ARENA_GAME_TIMEOUT_SEC of wall clock
+# (default 600, 0 = off); a capped game is a `timeout` draw and is not reproducible from its seed.
+# How to read one: docs/ai/measurement.md.
 [group: 'ai']
 arena A B GAMES="300" SET="BLB" SEED="20260727" ARTIFACT_DIR="":
     scripts/gradle-locked :ai:test --tests "*.ArenaBenchmark" -Dbenchmark=true -Darena=true \
         -DarenaA={{A}} -DarenaB={{B}} -DarenaGames={{GAMES}} -DarenaSet={{SET}} -DarenaSeed={{SEED}} \
+        -DarenaGameTimeoutSec=${ARENA_GAME_TIMEOUT_SEC:-600} \
         -Dargentum.ai.apprentice.dir={{ARTIFACT_DIR}}
+
+# Deck strength of the synergy-aware sealed build: from each seeded pool, the Draftsim build with the
+# pool's synergy reading vs the same build without it, played LIVE vs LIVE with seats swapped. Pools
+# whose two builds come out identical are skipped (they can't differ). e.g. just arena-synergy-decks 200 BLB
+[group: 'ai']
+arena-synergy-decks GAMES="200" SET="BLB" SEED="20260727":
+    scripts/gradle-locked :ai:test --tests "*.SynergyDeckBenchmark" -Dbenchmark=true -DarenaSynergyDecks=true \
+        -DarenaGames={{GAMES}} -DarenaSet={{SET}} -DarenaSeed={{SEED}} \
+        -DarenaGameTimeoutSec=${ARENA_GAME_TIMEOUT_SEC:-600}
+
+# How many colours the AI's limited builds run: PODS eight-seat AI drafts and PODS*8 sealed pools of
+# SET, built by the AI's deckbuilder, read for identity / main / splash colour counts. No games played.
+# e.g. just deck-colours 10 FRA
+[group: 'ai']
+deck-colours PODS="10" SET="FRA" SEED="20261102":
+    scripts/gradle-locked :ai:test --tests "*.DeckColourBenchmark" -Dbenchmark=true -DdeckColours=true \
+        -DdeckColourPods={{PODS}} -DdeckColourSet={{SET}} -DdeckColourSeed={{SEED}}
+
+# Rebuild the summary of an arena or arena-pod run from its results directory (or results.csv) —
+# the way to read a run that was killed or never finished. A partial report says PARTIAL up top.
+[group: 'ai']
+arena-report DIR:
+    scripts/gradle-locked :ai:test --tests "*.ArenaBenchmark" -Dbenchmark=true \
+        -DarenaReport="$(cd "{{invocation_directory()}}" && realpath "{{DIR}}")"
+
+# Play AI-vs-AI games with sealed decks from random sets (a different set per seat) and write one
+# readable log per game — board, hand, every action, and what was on offer when the AI passed.
+# For reading where the AI misplays; logs land in ai/build/game-logs/. AGENT defaults to `live`
+# (AiProfile.LIVE, what real players face), so the logs don't resurface misplays it already fixes.
+# SEATS > 2 plays a Free-for-All game, e.g. `just ai-game-logs 1 20261013 live 4`. ATTACK picks its
+# attack rule (case-insensitive): LEFT (default — the FFA lobby's non-Commander rule, CR 803.1a), RIGHT
+# (CR 803.1b), or MULTIPLE / ALL (attack any opponent, CR 802), e.g. `just ai-game-logs 1 20261013 live 4 all`.
+[group: 'ai']
+ai-game-logs GAMES="24" SEED="20261009" AGENT="live" SEATS="2" ATTACK="LEFT":
+    rm -rf ai/build/game-logs
+    scripts/gradle-locked :ai:test --tests "*.GameLogBenchmark" -Dbenchmark=true -DgameLog=true \
+        -DgameLogGames={{GAMES}} -DgameLogSeed={{SEED}} -DgameLogAgent={{AGENT}} -DgameLogSeats={{SEATS}} \
+        -DgameLogAttackMode={{ATTACK}} -DgameLogDir={{justfile_directory()}}/ai/build/game-logs
+
+# DIR comes from `scripts/fetch-ai-games --out DIR` (needs WINGEDSHEEP_ADMIN_PASSWORD). Logs use the
+# `ai-game-logs` format with full information and the AI seats marked; a replay current code no
+# longer reproduces is cut at the divergence and flagged at the top. See the `ai-game-review` skill.
+# Re-simulate the server replays in DIR into readable <gameId>.log files beside them
+[group: 'ai']
+ai-replay-logs DIR:
+    scripts/gradle-locked :game-server:test --tests "*.ReplayLogExport" -Dbenchmark=true -DreplayLog=true \
+        -DreplayLogDir="$(cd "{{DIR}}" && pwd)"
+
+# Which cards can't the AI read? Runs the AI's static card readers (target polarity, card intent,
+# combat reach, end-of-turn timing, escalate pickers) over every card in the corpus and groups what
+# they miss by SDK effect type. Writes ai/build/reports/ai-reading-audit/{report.md,summary.tsv,cards.tsv}.
+# How to read it: docs/ai/reading-audit.md.
+[group: 'ai']
+ai-reading-audit:
+    scripts/gradle-locked :ai:test --tests "*.AiReadingAuditBenchmark" -Dbenchmark=true -DaiReadingAudit=true \
+        -DaiReadingAuditDir={{justfile_directory()}}/ai/build/reports/ai-reading-audit
+
+# How the engine AI covers specific cards: what its readers understand, its draft pick rating and
+# where that comes from (flags a card no table rates, so the AI guesses from the effect heuristic),
+# its board value in play, and what it thinks the card is for. Separate names with "|":
+#   just ai-card "Serra Angel|Icy Manipulator"
+[group: 'ai']
+ai-card NAMES:
+    scripts/gradle-locked :ai:test --tests "*.AiCardReport" --rerun -q -DaiCard="{{NAMES}}" \
+        -DaiCardOut={{justfile_directory()}}/ai/build/reports/ai-card.txt
+    @cat {{justfile_directory()}}/ai/build/reports/ai-card.txt
+
+# Re-bless the AI card-reading ratchet's baseline (ai/src/test/resources/ai-reading-baseline.tsv) to
+# record a card that brings an effect type the AI can't read yet. Coverage gains need no re-bless in a
+# PR: the ai-reading-baseline workflow locks them in on main after merge.
+# AiReadingRatchetTest (in :ai:test) fails when it is behind; docs/ai/reading-audit.md, "The ratchet".
+[group: 'ai']
+ai-reading-baseline:
+    scripts/gradle-locked :ai:test --tests "*.AiReadingRatchetTest" --rerun \
+        -DaiReadingBaseline={{justfile_directory()}}/ai/src/test/resources/ai-reading-baseline.tsv
+
+# Refresh the vendored Draftsim pick-rating tables (ai/src/main/resources/draftai/) from Draftsim's
+# current draft-app bundle. MODE=check diffs without writing; MODE=write regenerates. BUNDLE takes a
+# saved index-*.js or HAR instead of fetching https://draftsim.com/draft/. First-party tables are
+# never written — see scripts/draftsim/README.md.
+[group: 'ai']
+draftsim-refresh MODE="check" BUNDLE="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
+    bundle="{{BUNDLE}}"
+    if [ -z "$bundle" ]; then
+        js="$(curl -fsSL https://draftsim.com/draft/ | grep -oE '/draft-app/dist/assets/index-[A-Za-z0-9_-]+\.js' | head -1)"
+        [ -n "$js" ] || { echo "no index-*.js on https://draftsim.com/draft/ -- page layout changed?" >&2; exit 1; }
+        bundle="$work/$(basename "$js")"
+        curl -fsSL -o "$bundle" "https://draftsim.com$js"
+    fi
+    python3 -I scripts/draftsim/extract_from_bundle.py "$bundle" "$work/extract"
+    case "{{MODE}}" in
+        check) python3 -I scripts/draftsim/import_draftsim_sets.py "$work/extract" --check ;;
+        write) python3 -I scripts/draftsim/import_draftsim_sets.py "$work/extract" ;;
+        *) echo "MODE must be check or write" >&2; exit 2 ;;
+    esac
 
 # ECL apprentice promotion ladder. Artifacts are installed outside the repository and selected with
 # -Dargentum.ai.apprentice.dir; missing or invalid files safely use the production evaluator.
@@ -159,7 +283,7 @@ arena-puzzles-compare:
 arena-pod TABLE A B GAMES="300" SET="BLB" SEED="20260727":
     scripts/gradle-locked :ai:test --tests "*.ArenaBenchmark" -Dbenchmark=true -DarenaPod=true \
         -DarenaTable={{TABLE}} -DarenaA={{A}} -DarenaB={{B}} -DarenaGames={{GAMES}} \
-        -DarenaSet={{SET}} -DarenaSeed={{SEED}}
+        -DarenaSet={{SET}} -DarenaSeed={{SEED}} -DarenaGameTimeoutSec=${ARENA_GAME_TIMEOUT_SEC:-600}
 
 # Run every agent in ai/src/test/resources/arena/gauntlet.json against every other and print the
 # full pairwise matrix plus Bradley-Terry Elo. The matrix is the deliverable — MTG agents are
@@ -167,7 +291,8 @@ arena-pod TABLE A B GAMES="300" SET="BLB" SEED="20260727":
 [group: 'ai']
 arena-gauntlet GAMES="200" SET="BLB" SEED="20260727":
     scripts/gradle-locked :ai:test --tests "*.ArenaBenchmark" -Dbenchmark=true -DarenaGauntlet=true \
-        -DarenaGames={{GAMES}} -DarenaSet={{SET}} -DarenaSeed={{SEED}}
+        -DarenaGames={{GAMES}} -DarenaSet={{SET}} -DarenaSeed={{SEED}} \
+        -DarenaGameTimeoutSec=${ARENA_GAME_TIMEOUT_SEC:-600}
 
 # Play the same agent against itself at 100 / 1000 / 3000 ms of decision budget. Strength must be
 # MONOTONE in the budget; if it isn't, the search is generating noise and the fix is a better leaf
@@ -201,32 +326,87 @@ install-gradle-init:
 prune-worktrees DAYS="7" *ARGS:
     scripts/prune-worktree-builds.sh --days {{DAYS}} {{ARGS}}
 
+# Removes a worktree only when it has been idle for --hours (1), its HEAD is in origin/main or a merged PR, it has no
+# uncommitted or untracked change, and no running java/gradle process references it. Branches stay.
+#   just remove-merged-worktrees            # what would go, and why the rest stay
+#   just remove-merged-worktrees --apply           # remove them (idle 1h+; --hours N to widen)
+# Remove worktrees whose work already landed (DRY RUN unless --apply)
+[group: 'env']
+remove-merged-worktrees *ARGS:
+    scripts/remove-merged-worktrees.sh {{ARGS}}
+
 # `org.gradle.daemon.idletimeout` covers only the Gradle daemon; the Kotlin compile daemon is a
-# separate 6g JVM that outlives it, and a handful of hours-old idle ones is what pushes the box
-# into swap and makes the next compile OOM. Never touches kotlin-lsp.
+# separate 6g JVM that outlives it. Reaps idle, orphaned (worktree deleted) and sick (GC-thrashing)
+# daemons; scripts/gradle-locked runs it automatically. Never touches kotlin-lsp.
 #   just kill-daemons                    # what would be reaped, 60-minute threshold
 #   just kill-daemons 30 --apply         # kill anything idle for 30m+
-# Reap idle Kotlin/Gradle compile daemons (DRY RUN unless --apply)
+# Reap idle, orphaned or GC-thrashing Kotlin/Gradle daemons (DRY RUN unless --apply)
 [group: 'env']
 kill-daemons MIN_AGE="60" *ARGS:
     scripts/kill-stale-daemons.sh --min-age {{MIN_AGE}} {{ARGS}}
 
-# Format and check code
+# Format and check code, excluding deprecated mtgish tests
 [group: 'build']
 check:
-    ./gradlew check
+    scripts/gradle-locked check -x :mtgish-tooling:test
+
+# What every agent loop is doing now, its last result, and its open PR (--all for older loops)
+[group: 'ai']
+loops *ARGS:
+    scripts/loop-status {{ARGS}}
+
+# Live dashboard for a running loop (set code, commander or assay); s = stop after the current job
+[group: 'ai']
+loop-watch NAME:
+    scripts/loop-tui --name "{{NAME}}"
 
 # Waits out subscription usage limits; stop with `touch .claude/loop-runs/<code>.stop`.
 # Implement a set: set-loop ecl sonnet|opus|astra|codex:<model-id>|pick; no args shows help
 [group: 'ai']
-set-loop CODE="" MODEL="":
-    scripts/set-loop "{{CODE}}" "{{MODEL}}"
+set-loop CODE="" MODEL="" PRIORITY="":
+    scripts/set-loop "{{CODE}}" "{{MODEL}}" "{{PRIORITY}}"
+
+# Waits out subscription usage limits; stop with `touch .claude/loop-runs/commander.stop`.
+# Make EDHREC's top Commander decks playable, one deck at a time: commander-loop [model] [top]
+[group: 'ai']
+commander-loop MODEL="" TOP="":
+    scripts/commander-loop "{{MODEL}}" "{{TOP}}"
+
+# Guided setup: check tools, pick a set or paste a decklist, pick Claude Code/Codex + model, and go
+[group: 'ai']
+contribute:
+    scripts/contribute
+
+# Waits out subscription usage limits; stop with `touch .claude/loop-runs/cards-<list>.stop`.
+# --local: test + commit each unit on one local branch (no PRs) so you open a single PR at the end.
+# Implement the missing cards of a card list or decklist: card-loop <list-file> [model] [--local]
+[group: 'ai']
+[no-cd]
+card-loop *ARGS:
+    {{justfile_directory()}}/scripts/card-loop {{ARGS}}
+
+# Which cards of a card list or decklist are implemented and which are missing: card-list-status <list-file>
+[group: 'build']
+[no-cd]
+card-list-status *ARGS:
+    {{justfile_directory()}}/scripts/card-list-status {{ARGS}}
+
+# Rank the cards EDHREC's top Commander decks run that we lack, in deck-completion order
+[group: 'build']
+commander-staples *ARGS:
+    scripts/commander-staples {{ARGS}}
 
 # Waits out subscription usage limits; stop with `touch .claude/loop-runs/assay.stop`.
 # Widen Assay's grammar, one band per PR, over text the engine already expresses: assay-loop [model] [focus]
 [group: 'ai']
 assay-loop MODEL="" FOCUS="":
     scripts/assay-loop "{{MODEL}}" "{{FOCUS}}"
+
+# Waits out subscription usage limits; stop with `touch .claude/loop-runs/ai-reading.stop`.
+# Teach the AI to read the effect types `ai-reading-audit` flags, one group per PR: ai-reading-loop [model] [focus]
+[group: 'ai']
+ai-reading-loop MODEL="" FOCUS="":
+    scripts/ai-reading-loop "{{MODEL}}" "{{FOCUS}}"
 
 # Report implemented vs missing cards for a set (e.g., just card-status --set BLB --list)
 [group: 'build']
@@ -506,6 +686,29 @@ dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants
     trap 'kill "$server_pid" "$client_pid" 2>/dev/null || true; wait "$server_pid" "$client_pid" 2>/dev/null || true' EXIT INT TERM
     wait "$server_pid" "$client_pid"
 
+# Accounts need Postgres: a container on port 5433, created on first use and kept between runs. No
+# mail is configured, so the login modal offers "Sign in now" instead of emailing a link.
+#
+# Start the game server with accounts on (login, profile, stats, friends)
+[group: 'dev']
+server-accounts PORT="8080":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -f .env ]; then set -a; . ./.env; set +a; fi
+    db=argentum-accounts-db
+    if ! docker container inspect "$db" >/dev/null 2>&1; then
+      docker run -d --name "$db" -e POSTGRES_DB=argentum -e POSTGRES_USER=argentum \
+        -e POSTGRES_PASSWORD=argentum -p 5433:5432 -v argentum_accounts_db:/var/lib/postgresql/data \
+        postgres:16-alpine >/dev/null
+    else
+      docker start "$db" >/dev/null
+    fi
+    until docker exec "$db" pg_isready -U argentum >/dev/null 2>&1; do sleep 1; done
+    ACCOUNTS_ENABLED=true ACCOUNTS_AUTOCONFIG_EXCLUDE= \
+      ACCOUNTS_DB_URL=jdbc:postgresql://localhost:5433/argentum ACCOUNTS_DB_USER=argentum ACCOUNTS_DB_PASSWORD=argentum \
+      MAIL_USERNAME= GAME_DEV_ENDPOINTS_ENABLED=true \
+      ./gradlew :game-server:bootRun --args="--spring.profiles.active=local --server.port={{PORT}}"
+
 # Start the game server and web client together
 [group: 'dev']
 dev:
@@ -514,6 +717,20 @@ dev:
     just server &
     server_pid=$!
     just client &
+    client_pid=$!
+    trap 'kill "$server_pid" "$client_pid" 2>/dev/null || true; wait "$server_pid" "$client_pid" 2>/dev/null || true' EXIT INT TERM
+    wait "$server_pid" "$client_pid"
+
+# This worktree's server (dev endpoints on) and client on their own ports, for a manual UI check
+# alongside other checkouts. Occupied ports fail rather than silently showing another checkout's app.
+[group: 'dev']
+ui-dev SERVER_PORT CLIENT_PORT:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    GAME_DEV_ENDPOINTS_ENABLED=true scripts/gradle-locked :game-server:bootRun \
+      --args='--spring.profiles.active=local --server.port={{SERVER_PORT}}' &
+    server_pid=$!
+    (cd web-client && GAME_SERVER_URL=http://localhost:{{SERVER_PORT}} npm run dev -- --port {{CLIENT_PORT}} --strictPort) &
     client_pid=$!
     trap 'kill "$server_pid" "$client_pid" 2>/dev/null || true; wait "$server_pid" "$client_pid" 2>/dev/null || true' EXIT INT TERM
     wait "$server_pid" "$client_pid"
@@ -557,6 +774,12 @@ client-build:
 [group: 'dev']
 client-typecheck:
     cd web-client && npm run typecheck
+
+# Recompile the card search language (:mtg-search) to JavaScript into web-client/src/generated/mtg-search.
+# The web-client runs that copy, so commit it with any change to mtg-search; `:mtg-search:test` fails when stale.
+[group: 'build']
+search-js:
+    scripts/gradle-locked :mtg-search:syncWebClientSearch
 
 # Initialize local environment (copy .env.example to .env)
 [group: 'env']
@@ -690,7 +913,7 @@ e2e-trace TRACE:
 # Watch an AI vs AI match in a headed browser. Params (all optional):
 #   MODEL1, MODEL2   — LLM model ids; pass "" "" for built-in engine AIs (no LLM calls)
 #   SETS             — set code or comma-separated list, e.g. "BLB" or "ONS,LGN,SCG"
-#   HEURISTIC        — "true" (fast heuristic deck build) or "false" (LLM deck build)
+#   SKIP_LLM_DECK    — "true" (fast Draftsim deck build) or "false" (LLM deck build)
 #   PROFILE          — "true" enables React render profiler; report prints at the end
 # Examples:
 #   just watch-ai-match                                      # default BLB match with LLMs
@@ -699,9 +922,9 @@ e2e-trace TRACE:
 #   just watch-ai-match "" "" "ONS,LGN,SCG"                  # engine-vs-engine Onslaught block
 #   just watch-ai-match "" "" "BLB" "true" "true"            # engine-vs-engine BLB with profiler
 [group: 'e2e']
-[doc("AI vs AI match in a headed browser — params: MODEL1 MODEL2 SETS HEURISTIC PROFILE (pass \"\" \"\" for engine-vs-engine)")]
-watch-ai-match MODEL1="z-ai/glm-5.1" MODEL2="qwen/qwen3.6-plus" SETS="BLB" HEURISTIC="true" PROFILE="false":
-    cd e2e-scenarios && AI_MATCH=true AI_MODEL_P1={{MODEL1}} AI_MODEL_P2={{MODEL2}} AI_HEURISTIC_DECK={{HEURISTIC}} AI_SET_CODES={{SETS}} PROFILE={{PROFILE}} SKIP_WEB_SERVER=true npx playwright test tests/general/ai-match --headed
+[doc("AI vs AI match in a headed browser — params: MODEL1 MODEL2 SETS SKIP_LLM_DECK PROFILE (pass \"\" \"\" for engine-vs-engine)")]
+watch-ai-match MODEL1="z-ai/glm-5.1" MODEL2="qwen/qwen3.6-plus" SETS="BLB" SKIP_LLM_DECK="true" PROFILE="false":
+    cd e2e-scenarios && AI_MATCH=true AI_MODEL_P1={{MODEL1}} AI_MODEL_P2={{MODEL2}} AI_SKIP_LLM_DECK={{SKIP_LLM_DECK}} AI_SET_CODES={{SETS}} PROFILE={{PROFILE}} SKIP_WEB_SERVER=true npx playwright test tests/general/ai-match --headed
 
 # Watch an engine-vs-engine AI match using two fixed pre-built decks. Sealed pool +
 # deckbuilding are skipped entirely. Each deck JSON is a `{ "Card Name": count }` object;

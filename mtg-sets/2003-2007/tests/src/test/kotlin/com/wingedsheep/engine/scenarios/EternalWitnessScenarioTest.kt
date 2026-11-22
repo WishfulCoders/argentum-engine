@@ -46,9 +46,9 @@ class EternalWitnessScenarioTest : FunSpec({
         d.giveMana(d.player1, Color.GREEN, 3)
         d.castSpell(d.player1, card).outcome shouldBe Outcome.Done
         d.bothPass() // resolve the creature; its enters trigger goes on the stack and wants a target
-        // Announce the target when the trigger is stacked; answer consent when it resolves.
-        // for, so accept it here and leave the target decision pending for the caller. A trigger
-        // with no legal target never asks (CR 603.3d), which is what the third test relies on.
+        // The target prompt is left pending for the caller; the "you may" is answered separately
+        // as the trigger resolves. A trigger with no legal target never asks (CR 603.3d), which is
+        // what the third test relies on.
     }
 
     test("the enters trigger returns a card from your own graveyard") {

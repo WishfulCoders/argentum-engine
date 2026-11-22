@@ -38,6 +38,38 @@ export function HelpTopicView({
             </ul>
           )
         }
+        if (block.kind === 'ol') {
+          return (
+            <ol key={i} className={`${styles.topicList} ${styles.topicSteps}`}>
+              {block.items.map((item, j) => <li key={j}>{withCode(item)}</li>)}
+            </ol>
+          )
+        }
+        if (block.kind === 'h') return <h4 key={i} className={styles.topicSubhead}>{block.text}</h4>
+        if (block.kind === 'tip') {
+          return (
+            <p key={i} className={styles.topicTip}>
+              <span className={styles.topicTipLabel}>Tip</span>
+              {withCode(block.text)}
+            </p>
+          )
+        }
+        if (block.kind === 'table') {
+          return (
+            <div key={i} className={styles.shortcutTableWrap}>
+              <table className={`${styles.shortcutTable} ${styles.factTable}`}>
+                <thead>
+                  <tr>{block.head.map((h) => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, j) => (
+                    <tr key={j}>{row.map((cell, k) => <td key={k}>{withCode(cell)}</td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
         return <ShortcutTable key={i} />
       })}
 

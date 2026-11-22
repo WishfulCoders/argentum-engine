@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.MustAttackPlayerComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -231,9 +232,9 @@ class TauntEffectTest : FunSpec({
         // Advance to declare attackers
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
 
-        // Should be able to declare no attackers (creature is tapped)
-        val noAttackResult = driver.declareAttackers(opponent, emptyMap())
-        noAttackResult.outcome shouldBe Outcome.Done
+        // No attackers is a legal declaration (creature is tapped), so the engine made it
+        driver.activePlayer shouldBe opponent
+        driver.state.getEntity(opponent)?.has<AttackersDeclaredThisCombatComponent>() shouldBe true
     }
 
     test("creatures with summoning sickness do not need to attack") {
@@ -263,9 +264,9 @@ class TauntEffectTest : FunSpec({
         // Advance to declare attackers
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
 
-        // Should be able to declare no attackers (creature has summoning sickness)
-        val noAttackResult = driver.declareAttackers(opponent, emptyMap())
-        noAttackResult.outcome shouldBe Outcome.Done
+        // No attackers is a legal declaration (creature has summoning sickness), so the engine made it
+        driver.activePlayer shouldBe opponent
+        driver.state.getEntity(opponent)?.has<AttackersDeclaredThisCombatComponent>() shouldBe true
     }
 
     test("multiple creatures must all attack") {

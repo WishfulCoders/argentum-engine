@@ -13,7 +13,7 @@ val ChargingRhinoReprint = Printing(
     collectorNumber = "159",
     scryfallId = "855e32b4-3a08-4e50-864f-8c13e00c6ee9",
     artist = "Daren Bader",
-    imageUri = "https://cards.scryfall.io/normal/front/8/5/855e32b4-3a08-4e50-864f-8c13e00c6ee9.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/8/5/855e32b4-3a08-4e50-864f-8c13e00c6ee9.jpg?1783939346",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

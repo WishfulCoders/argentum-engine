@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { useGameStore } from '@/store/gameStore.ts'
 import type { EntityId, ClientPlayerEffect, ClientCommanderDamage } from '@/types'
 import { useResponsiveContext, getEffectIcon } from '../board/shared'
@@ -7,6 +8,11 @@ import { HoverCardPreview } from '../../ui/HoverCardPreview'
 import { AbilityText } from '../../ui/ManaSymbols'
 import { TheRingBadge } from './TheRingBadge'
 import { isLoneTargetRequirement } from '@/utils/targeting.ts'
+import { EmoteBubble } from '../../tableTalk/EmoteBubble'
+import { EmotePicker } from '../../tableTalk/EmotePicker'
+import { AvatarArt, hasAvatarArt } from '../../profile/AvatarArt'
+import { useInteraction } from '@/hooks/useInteraction.ts'
+import type { LegalActionInfo } from '@/types'
 
 /**
  * Life total display - interactive when in targeting mode or when a pending decision requires player targeting.
@@ -19,6 +25,8 @@ export function LifeDisplay({
   spectatorMode = false,
   poisonCounters = 0,
   energyCounters = 0,
+  radCounters = 0,
+  experienceCounters = 0,
   commanderDamage,
   seatColor,
   isAlly = false,
@@ -35,6 +43,9 @@ export function LifeDisplay({
   poisonCounters?: number
   /** Current energy counter total (Kaladesh block onward, CR 107.14). No badge when 0. */
   energyCounters?: number
+  radCounters?: number
+  /** Current experience counter total (CR 122.1 — a counter on a player). No badge when 0. */
+  experienceCounters?: number
   commanderDamage?: readonly ClientCommanderDamage[]
   /** Current hand size — paired with [maxHandSize] to show the hand-limit badge when it changed. */
   handSize?: number | undefined
@@ -66,6 +77,7 @@ export function LifeDisplay({
   const responsive = useResponsiveContext()
   const targetingState = useGameStore((state) => state.targetingState)
   const pendingDecision = useGameStore((state) => state.pendingDecision)
+  const avatarId = useGameStore((state) => state.avatarByPlayerId[playerId])
   const addTarget = useGameStore((state) => state.addTarget)
   const removeTarget = useGameStore((state) => state.removeTarget)
   const submitTargetsDecision = useGameStore((state) => state.submitTargetsDecision)
@@ -171,7 +183,7 @@ export function LifeDisplay({
     }
   }
 
-  const size = responsive.isMobile ? 36 : responsive.isTablet ? 42 : responsive.isShortDesktop ? 40 : 48
+  const size = responsive.isMobile || responsive.viewportHeight < 560 ? 36 : responsive.isTablet ? 42 : responsive.isShortDesktop ? 40 : 48
 
   // Dynamic styling based on targeting state. In multiplayer a seatColor is supplied for *both*
   // roles (it's the player's seat identity, the same color others see), so it takes precedence
@@ -220,7 +232,10 @@ export function LifeDisplay({
   // (otherwise the name itself already carries the same information) and when
   // not spectating (there's no "you" in spectator mode). A team name already says
   // "yours" or "theirs", so it replaces the tag rather than doubling it.
+  const roleText = isPlayer ? 'You' : isAlly ? 'Ally' : 'Opponent'
+  // …nor when the custom name *is* the role ("Opponent" over an OPPONENT tag says it twice).
   const showRoleTag = !spectatorMode && !!playerName && !teamName
+    && playerName.trim().toLowerCase() !== roleText.toLowerCase()
   // Seat-tinted in multiplayer (SEAT_COLORS are 6-digit hex, so appending an alpha byte gives the
   // translucent variants the tag uses). A supplied seatColor wins for both roles; otherwise fall
   // back to the fixed 2-player blue (player) / orange (opponent).
@@ -236,6 +251,12 @@ export function LifeDisplay({
   // instead, and drop the role tag (left/right position already says who's
   // who).
   const compactName = responsive.isMobile
+  // A seat with an account portrait shows it as a hero medallion: a little larger than the plain orb,
+  // the face left uncovered, and the life total on a plate across its lower rim. A team orb speaks
+  // for two seats (2HG shared life), so it shows none.
+  const portrait = !teamName && hasAvatarArt(avatarId)
+  const compactHud = responsive.isMobile || responsive.viewportHeight < 560
+  const orbSize = portrait ? size + (compactHud ? 6 : 14) : size
 
   const nameLabel = (
     <div
@@ -249,7 +270,9 @@ export function LifeDisplay({
     >
       <span
         style={{
-          maxWidth: 220,
+          // A tablet has room for the orbs and the step strip but not two 220px names beside them —
+          // a long opponent name ran off the left edge at 768px.
+          maxWidth: responsive.isTablet ? 120 : 220,
           fontSize: 12,
           fontWeight: 700,
           letterSpacing: '0.5px',
@@ -277,14 +300,17 @@ export function LifeDisplay({
             lineHeight: '12px',
           }}
         >
-          {isPlayer ? 'You' : isAlly ? 'Ally' : 'Opponent'}
+          {roleText}
         </span>
       )}
     </div>
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isDistributeTarget ? 4 : 0 }}>
+    // The compact name under the orb can be wider than the orb; on a phone the HUD column beside the
+    // step strip is barely wider than the orb, so let the name run toward the screen edge's side of
+    // the orb — the opponent's to the left, ours to the right — instead of centring it off-screen.
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: compactName ? (isPlayer ? 'flex-start' : 'flex-end') : 'center', gap: isDistributeTarget ? 4 : 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* Name on outer side: left of opponent's orb, right of player's orb */}
         {!isPlayer && !compactName && nameLabel}
@@ -295,9 +321,11 @@ export function LifeDisplay({
           onClick={handleClick}
           style={{
             ...styles.lifeDisplay,
-            width: size,
-            height: size,
+            width: orbSize,
+            height: orbSize,
             fontSize: responsive.fontSize.large,
+            // Room under the medallion for the life plate that hangs off its rim.
+            marginBottom: portrait ? (compactHud ? 7 : 10) : 0,
             backgroundColor: bgColor,
             borderColor: borderColor,
             cursor,
@@ -306,20 +334,59 @@ export function LifeDisplay({
             position: 'relative',
           }}
         >
-          <span
-            style={
-              life <= 5
-                ? { color: '#ff4444' }
-                : {
-                    color: '#ffffff',
-                    // Glow tinted by seat identity in multiplayer; falls back to the fixed
-                    // blue (player) / orange (opponent) 2-player glow.
-                    textShadow: `0 0 6px ${seatColor ? `${seatColor}8C` : isPlayer ? 'rgba(80, 170, 240, 0.55)' : 'rgba(255, 130, 40, 0.55)'}, 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 1px rgba(0, 0, 0, 0.9)`,
-                  }
-            }
-          >
-            {life}
-          </span>
+          {portrait ? (
+            <>
+              <AvatarArt avatar={avatarId} />
+              <span
+                data-life-plate
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: compactHud ? -8 : -11,
+                  transform: 'translateX(-50%)',
+                  minWidth: compactHud ? 24 : 30,
+                  height: compactHud ? 16 : 21,
+                  padding: compactHud ? '0 5px' : '0 7px',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 999,
+                  // The plate wears the orb's ring colour, so targeting and seat identity read on it too.
+                  border: `1.5px solid ${borderColor}`,
+                  background: 'linear-gradient(180deg, rgba(22, 26, 38, 0.97), rgba(8, 10, 16, 0.97))',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.6)',
+                  fontSize: compactHud ? 11 : 15,
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                  letterSpacing: '0.2px',
+                  color: life <= 5 ? '#ff5a5a' : '#ffffff',
+                  textShadow: '0 1px 1px rgba(0, 0, 0, 0.8)',
+                }}
+              >
+                {life}
+              </span>
+            </>
+          ) : (
+            <span
+              style={
+                life <= 5
+                  ? { position: 'relative', color: '#ff4444', textShadow: '0 1px 3px rgba(0, 0, 0, 0.9)' }
+                  : {
+                      position: 'relative',
+                      color: '#ffffff',
+                      // Glow tinted by seat identity in multiplayer; falls back to the fixed
+                      // blue (player) / orange (opponent) 2-player glow.
+                      textShadow: `0 0 6px ${seatColor ? `${seatColor}8C` : isPlayer ? 'rgba(80, 170, 240, 0.55)' : 'rgba(255, 130, 40, 0.55)'}, 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 1px rgba(0, 0, 0, 0.9)`,
+                    }
+              }
+            >
+              {life}
+            </span>
+          )}
+
+          {/* The seat's last emote, over the orb: above yours (bottom of the screen), below theirs. */}
+          <EmoteBubble playerId={playerId} placement={isPlayer ? 'above' : 'below'} />
 
           {/* Damage allocation badge */}
           {isDistributeTarget && distributeAllocated > 0 && (
@@ -345,6 +412,8 @@ export function LifeDisplay({
           )}
         </div>
         {isPlayer && !compactName && nameLabel}
+        {/* Emotes are sent from beside your own orb; spectators have nothing to say. */}
+        {isPlayer && !spectatorMode && <EmotePicker />}
       </div>
 
       {compactName && (
@@ -355,7 +424,7 @@ export function LifeDisplay({
             maxWidth: 64,
             fontSize: 9,
             fontWeight: 700,
-            letterSpacing: '0.4px',
+            letterSpacing: 0,
             color: seatColor ?? (isPlayer ? '#4a9aea' : '#ff9e46'),
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -449,6 +518,12 @@ export function LifeDisplay({
           POISON {poisonCounters}/10
         </div>
       )}
+      {radCounters > 0 && (
+        <div title="Radiation: at this player's precombat main phase, they mill this many cards. Each nonland costs 1 life and removes a rad counter."
+          style={{ marginTop: 4, color: '#a3e635', fontSize: 11, fontWeight: 800 }}>
+          ☢ {radCounters} RAD
+        </div>
+      )}
       {energyCounters > 0 && (
         <div
           title={`${energyCounters} energy counter${energyCounters === 1 ? '' : 's'}`}
@@ -468,6 +543,27 @@ export function LifeDisplay({
           }}
         >
           ⚡ {energyCounters}
+        </div>
+      )}
+      {experienceCounters > 0 && (
+        <div
+          title={`${experienceCounters} experience counter${experienceCounters === 1 ? '' : 's'}`}
+          style={{
+            marginTop: 4,
+            minHeight: 18,
+            padding: '2px 7px',
+            borderRadius: 4,
+            border: '1px solid rgba(147, 197, 253, 0.55)',
+            backgroundColor: 'rgba(10, 25, 48, 0.92)',
+            color: '#bfdbfe',
+            fontSize: 11,
+            fontWeight: 800,
+            lineHeight: '14px',
+            fontVariantNumeric: 'tabular-nums',
+            boxShadow: '0 0 10px rgba(147, 197, 253, 0.25)',
+          }}
+        >
+          XP {experienceCounters}
         </div>
       )}
       <MaxHandSizeBadge handSize={handSize} maxHandSize={effectiveMaxHandSize} />
@@ -597,6 +693,16 @@ export function CommanderDamageBadges({ entries }: { entries: readonly ClientCom
   )
 }
 
+const EFFECT_TOOLTIP_MAX_WIDTH = 320
+
+/** Under the badge, centred on it, but never past either edge of the viewport. */
+function effectTooltipPosition(anchor: DOMRect): React.CSSProperties {
+  const half = EFFECT_TOOLTIP_MAX_WIDTH / 2 + 8
+  const centre = anchor.left + anchor.width / 2
+  const left = Math.min(Math.max(centre, half), window.innerWidth - half)
+  return { left, top: anchor.bottom + 4, maxWidth: EFFECT_TOOLTIP_MAX_WIDTH }
+}
+
 /**
  * Active effects badges - shows status effects on a player.
  */
@@ -604,6 +710,18 @@ export function ActiveEffectsBadges({ effects }: { effects: readonly ClientPlaye
   const responsive = useResponsiveContext()
   const [hoveredEffect, setHoveredEffect] = React.useState<string | null>(null)
   const [hoverPos, setHoverPos] = React.useState<{ x: number; y: number } | null>(null)
+  // The hovered badge's box: its tooltip is portalled to the body (the center HUD row clips its
+  // overflow) and placed under the badge, kept on screen.
+  const [hoverAnchor, setHoverAnchor] = React.useState<DOMRect | null>(null)
+  // An emblem with abilities of its own (Karn, Living Legacy's) is activated from its badge: the
+  // server's legal actions name the emblem as their source.
+  const legalActions = useGameStore((state) => state.legalActions)
+  const { executeAction } = useInteraction()
+  const [menuFor, setMenuFor] = React.useState<string | null>(null)
+  const actionsFor = (effect: ClientPlayerEffect): LegalActionInfo[] =>
+    effect.sourceId
+      ? legalActions.filter((a) => a.action.type === 'ActivateAbility' && a.action.sourceId === effect.sourceId)
+      : []
 
   if (!effects || effects.length === 0) return null
 
@@ -618,17 +736,30 @@ export function ActiveEffectsBadges({ effects }: { effects: readonly ClientPlaye
         // The Ring (CR 701.54) gets a dedicated gilded badge instead of the generic chip.
         effect.effectId === 'the_ring' ? (
           <TheRingBadge key={effect.effectId} effect={effect} />
-        ) : (
+        ) : (() => {
+        const actions = actionsFor(effect)
+        const activatable = actions.length > 0
+        return (
         <div
           key={effect.effectId}
           style={{
             ...styles.effectBadge,
             padding: responsive.isMobile ? '2px 6px' : '4px 8px',
             fontSize: responsive.fontSize.small,
+            ...(activatable ? styles.effectBadgeActivatable : {}),
           }}
+          {...(activatable ? {
+            role: 'button',
+            title: actions.length === 1 ? actions[0]!.description : 'Activate an ability',
+            onClick: () => {
+              if (actions.length === 1) executeAction(actions[0]!)
+              else setMenuFor(menuFor === effect.effectId ? null : effect.effectId)
+            },
+          } : {})}
           onMouseEnter={(e) => {
             setHoveredEffect(effect.effectId)
             setHoverPos({ x: e.clientX, y: e.clientY })
+            setHoverAnchor(e.currentTarget.getBoundingClientRect())
           }}
           onMouseMove={(e) => {
             if (effect.imageUri) setHoverPos({ x: e.clientX, y: e.clientY })
@@ -636,17 +767,38 @@ export function ActiveEffectsBadges({ effects }: { effects: readonly ClientPlaye
           onMouseLeave={() => {
             setHoveredEffect(null)
             setHoverPos(null)
+            setHoverAnchor(null)
           }}
         >
           {effect.icon && <span style={styles.effectBadgeIcon}>{getEffectIcon(effect.icon)}</span>}
           <span style={styles.effectBadgeName}>{effect.name}</span>
-          {hoveredEffect === effect.effectId && effect.description && !effect.imageUri && (
-            <div style={styles.effectTooltip}>
+          {hoveredEffect === effect.effectId && effect.description && !effect.imageUri && menuFor !== effect.effectId &&
+            hoverAnchor && createPortal(
+            <div style={{ ...styles.effectTooltip, ...effectTooltipPosition(hoverAnchor) }}>
               <AbilityText text={effect.description} size={13} />
+            </div>,
+            document.body,
+          )}
+          {menuFor === effect.effectId && activatable && (
+            <div style={styles.effectAbilityMenu}>
+              {actions.map((actionInfo, i) => (
+                <button
+                  key={i}
+                  style={styles.effectAbilityMenuButton}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setMenuFor(null)
+                    executeAction(actionInfo)
+                  }}
+                >
+                  <AbilityText text={actionInfo.description} size={13} />
+                </button>
+              ))}
             </div>
           )}
         </div>
         )
+        })()
       ))}
       {showCardPreview && (
         <HoverCardPreview

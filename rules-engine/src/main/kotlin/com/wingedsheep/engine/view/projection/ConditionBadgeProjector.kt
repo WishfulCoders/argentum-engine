@@ -6,6 +6,7 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.view.ClientCardEffect
 import com.wingedsheep.engine.view.ClientDeliriumInfo
 import com.wingedsheep.engine.view.ClientThresholdInfo
@@ -78,6 +79,8 @@ internal class ConditionBadgeProjector(
         entityId: EntityId
     ): List<ClientCardEffect> {
         val container = state.getEntity(entityId) ?: return emptyList()
+        // A face-down permanent has no abilities (CR 708.2a); its card's would also name it.
+        if (container.has<FaceDownComponent>()) return emptyList()
         val cardComponent = container.get<CardComponent>() ?: return emptyList()
         val cardDef = cardRegistry.getCard(cardComponent) ?: return emptyList()
         val controllerId = container.get<ControllerComponent>()?.playerId ?: return emptyList()

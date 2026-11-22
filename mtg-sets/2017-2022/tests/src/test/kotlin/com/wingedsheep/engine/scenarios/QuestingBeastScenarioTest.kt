@@ -1,7 +1,9 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.ChooseTargetsDecision
+import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.mtg.sets.definitions.plc.cards.ProdigalPyromancer
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import io.kotest.assertions.withClue
@@ -11,73 +13,97 @@ import io.kotest.matchers.shouldNotBe
 /**
  * Questing Beast (ELD #171).
  *
- * - Can't be blocked by a creature with power 2 or less.
- * - Its combat damage to an opponent is dealt again to target planeswalker *that player* controls
- *   (the damaged opponent — `controlledByTriggeringPlayer()`).
- * - Combat damage from creatures you control ignores prevention, protection's included.
+ * The line worth pinning is "**Combat** damage that would be dealt by creatures you control can't
+ * be prevented": it shuts off Fog for your attackers, but a creature's *noncombat* damage (Prodigal
+ * Pyromancer's ping) stays preventable — the pattern's damage type scopes the shutoff, not just its
+ * source.
  */
 class QuestingBeastScenarioTest : ScenarioTestBase() {
 
-    /** Resolve the stack, answering a target prompt with the opponent's planeswalker. */
-    private fun TestGame.resolveTargeting(name: String) {
-        var guard = 0
-        while ((state.stack.isNotEmpty() || state.pendingDecision != null) && guard++ < 20) {
-            if (state.pendingDecision is ChooseTargetsDecision) selectTargets(listOf(findPermanent(name)!!))
-            else if (state.pendingDecision == null) passPriority()
-            else error("unexpected decision ${state.pendingDecision}")
-        }
+    private fun board(opponentSpell: String, withJace: Boolean = false, blocker: String? = null): TestGame {
+        var b = scenario()
+            .withPlayers("Player", "Opponent")
+            .withCardOnBattlefield(1, "Questing Beast")
+            .withCardOnBattlefield(1, "Prodigal Pyromancer")
+            .withCardInHand(2, opponentSpell)
+            .withLandsOnBattlefield(2, "Forest", 3)
+            .withCardInLibrary(1, "Forest")
+            .withActivePlayer(1)
+            .withPriorityPlayer(2)
+            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+        repeat(10) { b = b.withCardInLibrary(2, "Forest") }
+        if (withJace) b = b.withCardOnBattlefield(2, "Jace Beleren")
+        if (blocker != null) b = b.withCardOnBattlefield(2, blocker)
+        return b.build()
+    }
+
+    private fun TestGame.opponentCasts(spell: String) {
+        castSpell(2, spell).error shouldBe null
+        resolveStack()
+    }
+
+    private fun TestGame.attackWithBeast() {
+        passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
+        declareAttackers(mapOf("Questing Beast" to 2)).error shouldBe null
+        passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
     }
 
     init {
-        test("a power-2 creature can't block it") {
-            val game = scenario()
-                .withPlayers("Player", "Opponent")
-                .withCardOnBattlefield(1, "Questing Beast", summoningSickness = false)
-                .withCardOnBattlefield(2, "Grizzly Bears")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            game.declareAttackers(mapOf("Questing Beast" to 2)).error shouldBe null
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
-            game.declareBlockers(mapOf("Grizzly Bears" to listOf("Questing Beast"))).error shouldNotBe null
-        }
+        context("Questing Beast") {
 
-        test("combat damage to the opponent is dealt again to a planeswalker that player controls") {
-            val game = scenario()
-                .withPlayers("Player", "Opponent")
-                .withCardOnBattlefield(1, "Questing Beast")
-                .withCardOnBattlefield(2, "Ajani Goldmane")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            withClue("haste") { game.declareAttackers(mapOf("Questing Beast" to 2)).error shouldBe null }
-            game.passUntilPhase(Phase.COMBAT, Step.COMBAT_DAMAGE)
-            game.resolveTargeting("Ajani Goldmane")
-
-            game.getLifeTotal(2) shouldBe 16
-            withClue("4 more to the planeswalker: Ajani Goldmane (loyalty 4) dies") {
-                game.isOnBattlefield("Ajani Goldmane") shouldBe false
+            test("Fog can't prevent its combat damage, and that much damage hits the opponent's planeswalker") {
+                val game = board("Fog", withJace = true)
+                game.opponentCasts("Fog")
+                game.attackWithBeast()
+                game.declareNoBlockers().error shouldBe null
+                game.passUntilPhase(Phase.COMBAT, Step.COMBAT_DAMAGE)
+                if (game.hasPendingDecision()) {
+                    game.selectTargets(listOf(game.findPermanent("Jace Beleren")!!)).error shouldBe null
+                }
+                game.resolveStack()
+                withClue("Fog prevented nothing: the opponent took 4") { game.getLifeTotal(2) shouldBe 16 }
+                withClue("the trigger dealt 4 to Jace Beleren (loyalty 3)") {
+                    game.isInGraveyard(2, "Jace Beleren") shouldBe true
+                }
             }
-        }
 
-        test("another creature you control's combat damage gets through protection") {
-            val game = scenario()
-                .withPlayers("Player", "Opponent")
-                .withCardOnBattlefield(1, "Questing Beast")
-                .withCardOnBattlefield(1, "Goblin Piker", summoningSickness = false)
-                .withCardOnBattlefield(2, "Disciple of Law")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            game.declareAttackers(mapOf("Goblin Piker" to 2)).error shouldBe null
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
-            game.declareBlockers(mapOf("Disciple of Law" to listOf("Goblin Piker"))).error shouldBe null
-            game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
-            withClue("protection from red couldn't prevent the Piker's combat damage") {
-                game.isOnBattlefield("Disciple of Law") shouldBe false
+            test("a creature's noncombat damage stays preventable") {
+                val game = board("Thwart the Enemy")
+                game.opponentCasts("Thwart the Enemy")
+                val pyromancer = game.findPermanent("Prodigal Pyromancer")!!
+                game.execute(
+                    ActivateAbility(
+                        game.player1Id, pyromancer, ProdigalPyromancer.activatedAbilities.single().id,
+                        listOf(ChosenTarget.Player(game.player2Id))
+                    )
+                ).error shouldBe null
+                game.resolveStack()
+                withClue("Thwart the Enemy prevented the Pyromancer's ping") { game.getLifeTotal(2) shouldBe 20 }
+
+                game.attackWithBeast()
+                game.declareNoBlockers().error shouldBe null
+                game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
+                withClue("but not the Beast's combat damage") { game.getLifeTotal(2) shouldBe 16 }
+            }
+
+            test("Angel of Suffering can't prevent its combat damage: the opponent mills and still loses life") {
+                val game = board("Fog", blocker = "Angel of Suffering")
+                game.passPriority()
+                val libraryBefore = game.librarySize(2)
+                game.attackWithBeast()
+                game.declareNoBlockers().error shouldBe null
+                game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
+                withClue("the replacement still mills twice the damage") {
+                    game.librarySize(2) shouldBe libraryBefore - 8
+                }
+                withClue("but the damage isn't prevented") { game.getLifeTotal(2) shouldBe 16 }
+            }
+
+            test("can't be blocked by creatures with power 2 or less") {
+                val game = board("Fog", blocker = "Grizzly Bears")
+                game.passPriority()
+                game.attackWithBeast()
+                game.declareBlockers(mapOf("Grizzly Bears" to listOf("Questing Beast"))).error shouldNotBe null
             }
         }
     }

@@ -61,6 +61,8 @@ class SpellQuellerScenarioTest : FunSpec({
         driver.bothPass() // resolve its enters trigger
         driver.submitTargetSelection(me, listOf(bears))
         driver.bothPass()
+        // The opponent is active and receives priority after the trigger resolves (CR 117.3b).
+        driver.passPriority(opp)
 
         return Triple(driver, me, opp).also {
             withClue("the quelled spell is exiled, not countered, and never resolved") {

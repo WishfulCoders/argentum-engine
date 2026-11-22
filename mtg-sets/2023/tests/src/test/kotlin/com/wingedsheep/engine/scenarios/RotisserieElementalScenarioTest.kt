@@ -117,7 +117,8 @@ class RotisserieElementalScenarioTest : FunSpec({
         driver.skewerCount(elemental) shouldBe 1
 
         // Cycle back round to our next combat and connect again.
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.passPriorityUntil(Step.END)
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, me)
         driver.declareAttackers(me, listOf(elemental), opponent)
         driver.passPriorityUntil(Step.COMBAT_DAMAGE)
         driver.resolveStack()

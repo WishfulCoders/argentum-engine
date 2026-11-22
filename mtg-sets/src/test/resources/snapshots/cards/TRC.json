@@ -1,3 +1,56 @@
+// Christine Chapel, Combat Medic
+{
+    "name": "Christine Chapel, Combat Medic",
+    "manaCost": "{3}{G}",
+    "typeLine": "Legendary Creature — Human Doctor",
+    "oracleText": "Strange new worlds — When Christine Chapel enters, you gain life equal to the number of differently named lands you control.\nWhenever you gain life, put two +1/+1 counters on Christine Chapel.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Christine Chapel, Combat Medic:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land",
+                        "aggregation": "DISTINCT_NAMES"
+                    }
+                }
+            },
+            {
+                "id": "Christine Chapel, Combat Medic:2",
+                "trigger": "LifeGainEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 2,
+                    "target": "Self"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "78",
+        "rarity": "RARE",
+        "artist": "Pauline Voss",
+        "flavorText": "",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/2/f2efcab5-3aad-4edd-87d1-289978e8855e.jpg?1786395991"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Defense Force Aggressor
 {
     "name": "Defense Force Aggressor",
@@ -15,6 +68,306 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Direct Hit
+{
+    "name": "Direct Hit",
+    "manaCost": "{2}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Direct Hit deals 5 damage to target creature.",
+    "script": {
+        "spellEffect": {
+            "type": "DealDamage",
+            "amount": {
+                "type": "Fixed",
+                "amount": 5
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "162",
+        "artist": "David Szabo",
+        "flavorText": "Beware a Klingon with a short temper and a big grudge.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/7/97388288-9254-4fa8-bcae-c2e2a55ef92b.jpg?1785981126"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Exocomp
+{
+    "name": "Exocomp",
+    "manaCost": "{2}{U}",
+    "typeLine": "Artifact Creature — Construct",
+    "oracleText": "Flying (This creature can't be blocked except by creatures with flying or reach.)",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 1
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "metadata": {
+        "collectorNumber": "145",
+        "artist": "Pierre Raveneau",
+        "flavorText": "Their ability to replicate new circuits as they learn inadvertently bootstrapped exocomps into sentience in the 2360s.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/6/46012ec9-9605-44fe-84a9-6aab0738737f.jpg?1785981040"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Gorn Captain
+{
+    "name": "Gorn Captain",
+    "manaCost": "{3}{G}",
+    "typeLine": "Creature — Gorn Soldier",
+    "oracleText": "Trample (This creature can deal excess combat damage to the player it's attacking.)",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 3
+    },
+    "keywords": [
+        "TRAMPLE"
+    ],
+    "metadata": {
+        "collectorNumber": "172",
+        "artist": "Jason Pastrana",
+        "flavorText": "\"I weary of the chase. Wait for me. I shall be merciful and quick.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/6/061dc7da-c803-49eb-b50a-a0801f09b5c0.jpg?1785981152"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Kirk, Enterprising Captain
+{
+    "name": "Kirk, Enterprising Captain",
+    "manaCost": "{3}{R}",
+    "typeLine": "Legendary Creature — Human Officer",
+    "oracleText": "Menace (This creature can't be blocked except by two or more creatures.)\nWhenever Kirk attacks while creatures you control have total power 8 or greater, exile the top card of your library. You may play that card this turn.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 3
+    },
+    "keywords": [
+        "MENACE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Kirk, Enterprising Captain:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Exile"
+                            }
+                        },
+                        {
+                            "type": "GrantMayPlayFromExile",
+                            "from": "gathered0"
+                        }
+                    ]
+                },
+                "triggerRestriction": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "creature",
+                        "aggregation": "SUM",
+                        "property": "POWER"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 8
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "198",
+        "rarity": "MYTHIC",
+        "artist": "Nathaniel Himawan",
+        "flavorText": "\"Risk is our business.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/1/e1d339e1-3433-4630-965e-1841e46b40a4.jpg?1784036716"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Klingon Strike Force
+{
+    "name": "Klingon Strike Force",
+    "manaCost": "{3}{R}{R}",
+    "typeLine": "Creature — Klingon Warrior",
+    "oracleText": "Trample (This creature can deal excess combat damage to the player it's attacking.)\nHaste (This creature can attack and {T} as soon as it comes under your control.)\nWhen this creature dies, it deals 2 damage to each opponent.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 5
+    },
+    "keywords": [
+        "TRAMPLE",
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Klingon Strike Force:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "199",
+        "rarity": "RARE",
+        "artist": "Fahmi Fauzi",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/c/bc121e37-b01c-4cf3-bd41-19a1cb21caa5.jpg?1784036722"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Kolinahr Priest
+{
+    "name": "Kolinahr Priest",
+    "manaCost": "{2}{U}",
+    "typeLine": "Creature — Vulcan Monk",
+    "oracleText": "Flash (You may cast this spell any time you could cast an instant.)",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH"
+    ],
+    "metadata": {
+        "collectorNumber": "146",
+        "artist": "Andrey Kuzinskiy",
+        "flavorText": "\"What thee are about to see comes down from the time of the beginning without change. This is the Vulcan heart; this is the Vulcan soul. This is our way.\"\n—T'Pau",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/1/0167486d-ed77-4612-a385-25251b544a14.jpg?1785981062"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Mek'leth Berserker
+{
+    "name": "Mek'leth Berserker",
+    "manaCost": "{3}{R}",
+    "typeLine": "Creature — Klingon Berserker",
+    "oracleText": "Menace (This creature can't be blocked except by two or more creatures.)",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 3
+    },
+    "keywords": [
+        "MENACE"
+    ],
+    "metadata": {
+        "collectorNumber": "166",
+        "artist": "Johann Bodin",
+        "flavorText": "\"We Klingons have a reputation for ruthlessness. You will find that it is deserved.\"\n—Commander Kor, military governor of Organia",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/f/4f503eb1-d95d-4c72-bc58-a7b9e9f92eb6.jpg"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Spock, Logical Choice
+{
+    "name": "Spock, Logical Choice",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Legendary Creature — Vulcan Human Scientist",
+    "oracleText": "Vigilance (Attacking doesn't cause this creature to tap.)\n{T}: Draw a card.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 5
+    },
+    "keywords": [
+        "VIGILANCE"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Spock, Logical Choice:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "descriptionOverride": "{T}: Draw a card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "194",
+        "rarity": "MYTHIC",
+        "artist": "Bastien Jez",
+        "flavorText": "\"In critical moments, men sometimes see exactly what they wish to see.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5a741052-e92d-4e9c-8cfa-3b5ed1f432f5.jpg?1784065332"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -38,6 +391,30 @@
     ]
 }
 
+// Talarian Hook Spider
+{
+    "name": "Talarian Hook Spider",
+    "manaCost": "{1}{G}",
+    "typeLine": "Creature — Spider",
+    "oracleText": "Reach (This creature can block creatures with flying.)",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "REACH"
+    ],
+    "metadata": {
+        "collectorNumber": "175",
+        "artist": "Zoltan Boros",
+        "flavorText": "\"Well, I had a choice. Do I walk away and let the emitter blow itself to hell? Or do I crawl in the Jefferies tube with twenty hook spiders?\"\n—Chief Miles O'Brien",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/4/f49df857-5488-455e-8ac1-b000f600eda7.jpg?1785981165"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Warship Flight Crew
 {
     "name": "Warship Flight Crew",
@@ -55,5 +432,30 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Worf, Chief Tactical Officer
+{
+    "name": "Worf, Chief Tactical Officer",
+    "manaCost": "{2}{W}",
+    "typeLine": "Legendary Creature — Klingon Warrior Officer",
+    "oracleText": "Vigilance (Attacking doesn't cause this creature to tap.)",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 3
+    },
+    "keywords": [
+        "VIGILANCE"
+    ],
+    "metadata": {
+        "collectorNumber": "141",
+        "rarity": "UNCOMMON",
+        "artist": "Ariel Orea",
+        "flavorText": "\"The true test of a warrior is not without. It is within.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/e/ced54aa6-c8ee-451f-91cd-967fe766ec13.jpg?1786005790"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }

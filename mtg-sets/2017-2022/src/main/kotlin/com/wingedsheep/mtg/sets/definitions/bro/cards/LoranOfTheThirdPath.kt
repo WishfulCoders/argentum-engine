@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * Loran of the Third Path
- * {2}{W}
- * Legendary Creature — Human Artificer
- * 2/1
+ * Loran of the Third Path — The Brothers' War #12
+ * {2}{W} · Legendary Creature — Human Artificer · 2/1
  *
  * Vigilance
  * When Loran enters, destroy up to one target artifact or enchantment.
@@ -25,21 +23,24 @@ val LoranOfTheThirdPath = card("Loran of the Third Path") {
     typeLine = "Legendary Creature — Human Artificer"
     power = 2
     toughness = 1
-    oracleText = "Vigilance\nWhen Loran enters, destroy up to one target artifact or enchantment.\n" +
+    oracleText = "Vigilance\n" +
+        "When Loran enters, destroy up to one target artifact or enchantment.\n" +
         "{T}: You and target opponent each draw a card."
 
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
         trigger = Triggers.self.enters()
-        val permanent = target(TargetFilter.ArtifactOrEnchantment, optional = true)
-        effect = Effects.Destroy(permanent)
+        val t = target(TargetFilter.ArtifactOrEnchantment, optional = true)
+        effect = Effects.Destroy(t)
+        description = "When Loran enters, destroy up to one target artifact or enchantment."
     }
 
     activatedAbility {
         cost = Costs.Tap
         val opponent = target(Targets.Opponent)
         effect = Effects.DrawCards(1) then Effects.DrawCards(1, opponent)
+        description = "{T}: You and target opponent each draw a card."
     }
 
     metadata {

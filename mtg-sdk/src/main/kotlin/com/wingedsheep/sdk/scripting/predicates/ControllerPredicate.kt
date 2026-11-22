@@ -1,6 +1,7 @@
 package com.wingedsheep.sdk.scripting.predicates
 
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.references.Player
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -159,6 +160,21 @@ sealed interface ControllerPredicate {
     @Serializable
     data object OwnedByTriggeringPlayer : ControllerPredicate {
         override val description: String = "that player owns"
+    }
+
+    /**
+     * Owned by the player referenced by [target] — the owner sibling of
+     * [ControlledByReferencedPlayer]. `PlayerRef(Player.OwnerOfSource)` is "with the same owner as
+     * this": a mutating creature spell targets "a non-Human creature with the same owner as this
+     * spell" (CR 702.140a), which is not [OwnedByYou] once someone casts a card they don't own.
+     * Matches the card's immutable `ownerId`, so it works in every zone.
+     */
+    @SerialName("OwnedByReferencedPlayer")
+    @Serializable
+    data class OwnedByReferencedPlayer(val target: EffectTarget) : ControllerPredicate {
+        override val description: String =
+            if (target == EffectTarget.PlayerRef(Player.OwnerOfSource)) "with the same owner"
+            else "${target.description} owns"
     }
 
     // =============================================================================

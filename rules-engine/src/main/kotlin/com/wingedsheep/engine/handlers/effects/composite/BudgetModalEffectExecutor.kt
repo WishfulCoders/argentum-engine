@@ -49,6 +49,7 @@ class BudgetModalEffectExecutor(
         ) }
 
         val continuation = BudgetModalContinuation(
+            programOrigin = context.programOrigin,
             resolvingTriggeredAbility = context.resolvingTriggeredAbility,
             controllerId = context.controllerId,
             sourceId = context.sourceId,

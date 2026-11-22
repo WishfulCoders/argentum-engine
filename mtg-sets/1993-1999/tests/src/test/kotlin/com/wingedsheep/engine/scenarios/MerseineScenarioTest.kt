@@ -67,6 +67,15 @@ class MerseineScenarioTest : FunSpec({
 
         driver.passPriority(alice)
         driver.giveMana(bob, Color.GREEN, 2)
+
+        // The offer is what the client renders: Bob must see it on Alice's Aura, priced at the
+        // trapped creature's cost rather than skipped as an unsupported cost shape.
+        val offer = driver.legalActions(bob).singleOrNull {
+            (it.action as? ActivateAbility)?.sourceId == merseine
+        }
+        withClue("Bob is offered Merseine's ability") { offer shouldNotBe null }
+        offer!!.manaCostString shouldBe "{G}{G}"
+
         driver.submitSuccess(
             ActivateAbility(playerId = bob, sourceId = merseine, abilityId = abilityId)
         )
@@ -90,6 +99,9 @@ class MerseineScenarioTest : FunSpec({
         attach(driver, merseine, warrior)
 
         driver.giveMana(alice, Color.GREEN, 2)
+        withClue("Alice is not offered the ability on someone else's creature") {
+            driver.legalActions(alice).none { (it.action as? ActivateAbility)?.sourceId == merseine } shouldBe true
+        }
         driver.submit(
             ActivateAbility(playerId = alice, sourceId = merseine, abilityId = abilityId)
         ).outcome shouldNotBe Outcome.Done

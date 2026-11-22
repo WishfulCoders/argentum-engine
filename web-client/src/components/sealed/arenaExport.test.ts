@@ -107,6 +107,35 @@ describe('buildArenaDeckList', () => {
     )
   })
 
+  it('lists both commanders of a partner pair under Commander', () => {
+    const input: ArenaExportInput = {
+      ...base,
+      deck: ['Kodama of the East Tree', 'Ishai, Ojutai Dragonspeaker', 'Sol Ring'],
+      cardPool: [
+        card('Kodama of the East Tree', 'c16', '40'),
+        card('Ishai, Ojutai Dragonspeaker', 'c16', '41'),
+        card('Sol Ring', 'cmr', '472'),
+      ],
+      commander: 'Kodama of the East Tree',
+      secondCommander: 'Ishai, Ojutai Dragonspeaker',
+    }
+    const text = buildArenaDeckList(input)
+    expect(text).toBe(
+      [
+        'Commander',
+        '1 Kodama of the East Tree (C16) 40',
+        '1 Ishai, Ojutai Dragonspeaker (C16) 41',
+        '',
+        'Deck',
+        '1 Sol Ring (CMR) 472',
+      ].join('\n')
+    )
+    expect(parseArenaDeckList(text).commander.map((e) => e.name)).toEqual([
+      'Kodama of the East Tree',
+      'Ishai, Ojutai Dragonspeaker',
+    ])
+  })
+
   it('returns empty string when there is nothing to export', () => {
     expect(buildArenaDeckList(base)).toBe('')
   })

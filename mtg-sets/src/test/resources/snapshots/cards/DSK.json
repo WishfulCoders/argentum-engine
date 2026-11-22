@@ -31,8 +31,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -1254,8 +1265,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -1304,7 +1326,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another creature or enchantment to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -1859,7 +1883,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a Room card that doesn't have the same name as a Room you control to put into your hand",
+                                    "selectedLabel": "Put into your hand"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -2126,7 +2152,9 @@
                         "type": "MayCastWithoutPayingManaCost",
                         "controllerOnly": true,
                         "oncePerTurn": true,
-                        "fromExileOnly": true
+                        "fromZones": [
+                            "Exile"
+                        ]
                     }
                 ]
             }
@@ -3136,7 +3164,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card to put into your graveyard",
+                                "selectedLabel": "Put into your graveyard"
                             },
                             {
                                 "type": "MoveCollection",
@@ -3579,7 +3609,9 @@
                                 "amount": 1
                             }
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for a card to put into your hand",
+                        "selectedLabel": "Put into your hand"
                     },
                     {
                         "type": "MoveCollection",
@@ -3616,7 +3648,9 @@
                                 "amount": 1
                             }
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for a Demon card to put into your hand",
+                        "selectedLabel": "Put into your hand"
                     },
                     {
                         "type": "MoveCollection",
@@ -3897,7 +3931,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another enchantment or creature to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -4103,7 +4139,8 @@
                                     }
                                 ],
                                 "controllerPredicate": "ControlledByYou"
-                            }
+                            },
+                            "attackedPlayer": "Each"
                         },
                         "binding": "ANY",
                         "effect": {
@@ -4986,8 +5023,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -8240,7 +8288,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -8262,7 +8313,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -8284,7 +8338,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -9057,8 +9114,8 @@
                 }
             },
             {
-                "type": "ModifyUnlockCost",
-                "target": "YouUnlock",
+                "type": "ModifySpecialActionCost",
+                "action": "UNLOCK_DOOR",
                 "modification": {
                     "type": "ReduceGeneric",
                     "amount": 1
@@ -9470,6 +9527,47 @@
     "script": {
         "activatedAbilities": [
             {
+                "id": "ninjutsu_{1}{U}{B}",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}{U}{B}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomReturnToHand",
+                                "filter": {
+                                    "cardPredicates": [
+                                        "IsCreature"
+                                    ],
+                                    "statePredicates": [
+                                        "IsAttacking",
+                                        "IsUnblocked"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": "Self",
+                    "destination": "Battlefield",
+                    "placement": "TappedAndAttacking",
+                    "fromZone": "Hand",
+                    "attackDefender": "RETURNED_ATTACKER"
+                },
+                "activateFromZone": "Hand",
+                "descriptionOverride": "Ninjutsu {1}{U}{B} ({1}{U}{B}, Return an unblocked attacker you control to hand: Put this card onto the battlefield from your hand tapped and attacking.)",
+                "keyword": "NINJUTSU"
+            },
+            {
                 "id": "Kaito, Bane of Nightmares:1",
                 "cost": {
                     "type": "CostLoyalty",
@@ -9772,7 +9870,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -9806,30 +9906,29 @@
                     ]
                 },
                 "effect": {
-                    "type": "Modal",
-                    "modes": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
+                            "label": "Lock a door",
                             "effect": {
                                 "type": "LockDoor",
                                 "target": {
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
-                            },
-                            "description": "Lock a door"
+                            }
                         },
                         {
+                            "label": "Unlock a door",
                             "effect": {
                                 "type": "UnlockDoor",
                                 "target": {
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
-                            },
-                            "description": "Unlock a door"
+                            }
                         }
-                    ],
-                    "countsAsModalSpell": false
+                    ]
                 },
                 "targetRequirements": [
                     {
@@ -10081,8 +10180,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -10288,7 +10398,7 @@
                 "modifier": 1
             }
         ],
-        "mayStartOnBattlefield": true
+        "beginOnBattlefield": {}
     },
     "metadata": {
         "collectorNumber": "18",
@@ -10314,7 +10424,7 @@
                 "cost": "{W}{U}{B}{R}{G}"
             }
         ],
-        "mayStartOnBattlefield": true
+        "beginOnBattlefield": {}
     },
     "metadata": {
         "collectorNumber": "188",
@@ -10369,7 +10479,7 @@
                 "triggerRestriction": "TriggeringSpellHasSingleTarget"
             }
         ],
-        "mayStartOnBattlefield": true
+        "beginOnBattlefield": {}
     },
     "metadata": {
         "collectorNumber": "143",
@@ -10423,7 +10533,7 @@
                 "choiceType": "CREATURE_TYPE"
             }
         ],
-        "mayStartOnBattlefield": true
+        "beginOnBattlefield": {}
     },
     "metadata": {
         "collectorNumber": "63",
@@ -10846,30 +10956,29 @@
                 "id": "Marina Vendrell:2",
                 "cost": "CostTap",
                 "effect": {
-                    "type": "Modal",
-                    "modes": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
+                            "label": "Lock a door",
                             "effect": {
                                 "type": "LockDoor",
                                 "target": {
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
-                            },
-                            "description": "Lock a door"
+                            }
                         },
                         {
+                            "label": "Unlock a door",
                             "effect": {
                                 "type": "UnlockDoor",
                                 "target": {
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
-                            },
-                            "description": "Unlock a door"
+                            }
                         }
-                    ],
-                    "countsAsModalSpell": false
+                    ]
                 },
                 "targetRequirements": [
                     {
@@ -11036,7 +11145,7 @@
                     ],
                     "controllerPredicate": "ControlledByYou"
                 },
-                "includeManaAbilities": true
+                "abilities": "ALL"
             }
         ]
     },
@@ -11253,7 +11362,10 @@
                         "type": "PayAtom",
                         "atom": {
                             "type": "AtomPayLife",
-                            "amount": 3
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 3
+                            }
                         }
                     },
                     "suffer": {
@@ -11600,7 +11712,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                    "selectedLabel": "Put onto the battlefield tapped"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -11865,8 +11979,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -12028,8 +12153,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -12197,7 +12333,10 @@
                         "effects": [
                             {
                                 "type": "GatherCards",
-                                "source": "TriggeringEntity",
+                                "source": {
+                                    "type": "Entity",
+                                    "entity": "TriggeringEntity"
+                                },
                                 "storeAs": "gathered0"
                             },
                             {
@@ -14151,8 +14290,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -14597,8 +14747,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -14755,8 +14916,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -15598,11 +15770,7 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "DealDamage",
-                    "amount": {
-                        "type": "TurnTracking",
-                        "player": "You",
-                        "tracker": "PERMANENTS_SACRIFICED"
-                    },
+                    "amount": "PermanentsSacrificedThisTurn",
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
@@ -15614,11 +15782,7 @@
                 },
                 "interveningIf": {
                     "type": "Compare",
-                    "left": {
-                        "type": "TurnTracking",
-                        "player": "You",
-                        "tracker": "PERMANENTS_SACRIFICED"
-                    },
+                    "left": "PermanentsSacrificedThisTurn",
                     "operator": "GTE",
                     "right": {
                         "type": "Fixed",
@@ -15795,7 +15959,8 @@
                                 "zone": "Battlefield"
                             }
                         },
-                        "ShuffleLibrary"
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
                     ]
                 },
                 "timing": "SorcerySpeed",
@@ -16426,7 +16591,8 @@
                                     "type": "Fixed",
                                     "amount": 1
                                 }
-                            }
+                            },
+                            "description": "Draw a card"
                         },
                         {
                             "effect": {
@@ -16740,7 +16906,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -17260,8 +17428,19 @@
             {
                 "type": "EntersTapped",
                 "unlessCondition": {
-                    "type": "APlayerLifeAtMost",
-                    "threshold": 13
+                    "type": "Compare",
+                    "left": {
+                        "type": "LeastAmongPlayers",
+                        "inner": {
+                            "type": "LifeTotal",
+                            "player": "You"
+                        }
+                    },
+                    "operator": "LTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 13
+                    }
                 }
             }
         ]
@@ -18168,7 +18347,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -18736,7 +18917,8 @@
                             },
                             "id": "t0"
                         }
-                    ]
+                    ],
+                    "description": "Counter target spell"
                 },
                 {
                     "effect": {
@@ -19047,9 +19229,16 @@
                     "Graveyard"
                 ],
                 "condition": {
-                    "type": "CreatureWithSubtypeDiedThisTurn",
-                    "subtype": "Zombie",
-                    "present": false
+                    "type": "CreatureDiedThisTurnMatching",
+                    "filter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "NotSubtype",
+                                "subtype": "Zombie"
+                            }
+                        ]
+                    }
                 }
             }
         ],
@@ -19868,6 +20057,9 @@
                             "type": "TargetObject",
                             "filter": {
                                 "baseFilter": {
+                                    "statePredicates": [
+                                        "HasSingleTarget"
+                                    ],
                                     "anyOf": [
                                         {},
                                         {
@@ -19880,7 +20072,8 @@
                                 "zone": "Stack"
                             }
                         }
-                    ]
+                    ],
+                    "description": "Change the target of target spell or ability with a single target"
                 },
                 {
                     "effect": {
@@ -20737,8 +20930,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 1
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
                                 }
                             },
                             "then": {
@@ -20751,8 +20953,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 2
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
                                 }
                             },
                             "then": {
@@ -20802,8 +21013,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -20861,8 +21081,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 1
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
                                 }
                             },
                             "then": {
@@ -20875,8 +21104,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 2
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
                                 }
                             },
                             "then": {
@@ -20926,8 +21164,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {

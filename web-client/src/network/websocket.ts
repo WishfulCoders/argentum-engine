@@ -7,11 +7,18 @@ export interface WebSocketConfig {
   onMessage: (message: ServerMessage) => void
   onStatusChange: (status: ConnectionStatus) => void
   onError: (error: Event) => void
+  /** Fired when the socket closes on its own (not via [GameWebSocket.disconnect]), with the close code. */
+  onClose?: (code: number) => void
+  /** Whether a tab return should ask the server for a state resync (i.e. a game is on screen). */
+  shouldResyncOnVisible?: () => boolean
   reconnectDelay?: number
 }
 
 /** Reconnect backoff is capped here; the client never stops retrying on its own. */
 const MAX_RECONNECT_DELAY_MS = 30_000
+
+/** WebSocket close code the server sends when it shuts down to restart (RFC 6455 "Service Restart"). */
+export const CLOSE_SERVICE_RESTART = 1012
 
 /** How long after a ping probe before a silent server means the socket is half-open. */
 const LIVENESS_TIMEOUT_MS = 5_000
@@ -21,7 +28,8 @@ const LIVENESS_TIMEOUT_MS = 5_000
  *
  * Handles:
  * - Connection lifecycle
- * - Automatic reconnection (exponential backoff capped at 30s, retries indefinitely)
+ * - Automatic reconnection (exponential backoff capped at 30s, retries indefinitely; a flat short
+ *   interval while the server is restarting)
  * - Message serialization/deserialization
  * - Connection status tracking
  * - Tab visibility / network-online recovery: reconnects a dead socket immediately and
@@ -47,6 +55,12 @@ export class GameWebSocket {
   private lastMessageAt = 0
   /** Pending liveness verdict after a ping probe. */
   private livenessTimeout: ReturnType<typeof setTimeout> | null = null
+  /**
+   * When set, reconnect on this flat interval instead of the exponential backoff. Used while the
+   * server restarts: we know it is coming back shortly, and a 30s backoff cap would leave the
+   * player waiting half a minute after it already had.
+   */
+  private fixedRetryMs: number | null = null
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -113,6 +127,23 @@ export class GameWebSocket {
     this.reconnectCount = 0
     this.discardSocket()
     this.connect()
+  }
+
+  /** Switch between a flat reconnect interval (`ms`) and the normal exponential backoff (`null`). */
+  setFixedRetryInterval(ms: number | null): void {
+    if (this.fixedRetryMs === ms) return
+    this.fixedRetryMs = ms
+    // A retry already waiting on a long backoff should not outlast the new, shorter interval.
+    if (ms !== null && this.reconnectTimeout) {
+      this.cancelReconnect()
+      this.scheduleReconnect()
+    }
+  }
+
+  /** Reconnect right now, skipping whatever wait is pending (the player pressed "Try now"). */
+  retryNow(): void {
+    if (this.isConnected()) return
+    this.forceReconnect('player asked to retry')
   }
 
   /**
@@ -189,6 +220,8 @@ export class GameWebSocket {
       this.config.onStatusChange('disconnected')
 
       if (!this.isIntentionallyClosed) {
+        // Before scheduling: a restart close switches the retry pacing.
+        this.config.onClose?.(event.code)
         this.scheduleReconnect()
       }
     }
@@ -242,8 +275,10 @@ export class GameWebSocket {
         this.forceReconnect('tab became visible while disconnected')
         return
       }
-      console.log('[WebSocket] Tab became visible, requesting resync')
-      this.requestResync()
+      if (this.config.shouldResyncOnVisible?.() ?? true) {
+        console.log('[WebSocket] Tab became visible, requesting resync')
+        this.requestResync()
+      }
       this.startLivenessCheck()
     }
     this.onlineHandler = () => {
@@ -293,7 +328,8 @@ export class GameWebSocket {
 
     const delay = this.config.reconnectDelay ?? 1000
     this.reconnectCount++
-    const backoffDelay = Math.min(delay * Math.pow(2, this.reconnectCount - 1), MAX_RECONNECT_DELAY_MS)
+    const backoffDelay = this.fixedRetryMs ??
+      Math.min(delay * Math.pow(2, this.reconnectCount - 1), MAX_RECONNECT_DELAY_MS)
 
     console.log(`Reconnecting in ${backoffDelay}ms (attempt ${this.reconnectCount})`)
 

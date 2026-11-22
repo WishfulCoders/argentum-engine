@@ -25,10 +25,12 @@ class MeaningfulActionFilterTest : FunSpec({
         validAttackers: List<EntityId>? = null,
         validBlockers: List<EntityId>? = null,
         unfillableRequirement: Boolean = false,
+        minTargets: Int = 1,
     ) = object : PriorityAction {
         override val actionType = type
         override val requiresTargets = requiresTargets
         override val validTargets = validTargets
+        override val minTargets = minTargets
         override val validAttackers = validAttackers
         override val validBlockers = validBlockers
         override val isManaAbility = manaAbility
@@ -62,6 +64,14 @@ class MeaningfulActionFilterTest : FunSpec({
         ) shouldBe true
     }
 
+    test("an up-to-N spell with no legal target is still a candidate — it is cast choosing none") {
+        // Tam's Resistance ("put a +1/+1 counter on up to one target creature … Empower Jace 4")
+        // on a board with no creatures: castable, and its empower is the whole point.
+        MeaningfulActionFilter.isMeaningful(
+            action("CastSpell", requiresTargets = true, validTargets = emptyList(), minTargets = 0)
+        ) shouldBe true
+    }
+
     test("a multi-requirement spell with an unfillable mandatory slot is not a candidate") {
         // The shape the flat `validTargets` field cannot see: "destroy target creature and target
         // artifact" with a legal creature but no artifact on the board. `validTargets` mirrors
@@ -74,8 +84,13 @@ class MeaningfulActionFilterTest : FunSpec({
         ) shouldBe false
     }
 
-    test("an unaffordable cast, cycle or crew is not a candidate") {
-        listOf("CastSpell", "CastWithFlashback", "CycleCard", "ForetellCard", "CrewVehicle").forEach { type ->
+    test("an unaffordable cast, ability, cycle, crew, suspend or saddle is not a candidate") {
+        // An activated ability the player can't pay for ("{2}: +1/+0" with no untapped mana) is
+        // enumerated greyed out for the client, but must not stop auto-pass (issue #3672).
+        listOf(
+            "CastSpell", "CastWithFlashback", "ActivateAbility", "CycleCard", "ForetellCard",
+            "CrewVehicle", "SuspendCardFromHand", "SaddleMount",
+        ).forEach { type ->
             MeaningfulActionFilter.isMeaningful(action(type, affordable = false)) shouldBe false
             MeaningfulActionFilter.isMeaningful(action(type, affordable = true)) shouldBe true
         }

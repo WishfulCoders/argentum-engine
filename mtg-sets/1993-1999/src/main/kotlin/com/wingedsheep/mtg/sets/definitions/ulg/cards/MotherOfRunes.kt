@@ -7,13 +7,12 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * Mother of Runes — Urza's Legacy #14
- * {W} · Creature — Human Cleric · 1/1
+ * Mother of Runes — Urza's Legacy #14 (canonical printing)
+ * {W} · Creature — Human Cleric 1/1
  *
  * {T}: Target creature you control gains protection from the color of your choice until end of turn.
  *
- * The color is chosen as the ability resolves, not on activation — [Effects.ChooseColorThen] asks
- * then, the same shape as Armored Guardian. The {T} cost means summoning sickness applies.
+ * The color is chosen on resolution (Armored Guardian's shape).
  */
 val MotherOfRunes = card("Mother of Runes") {
     manaCost = "{W}"

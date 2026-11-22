@@ -27,6 +27,7 @@ data class PersistentGameSession(
     val lobbyId: String?,
     val sideboards: Map<String, List<String>> = emptyMap(),  // playerId.value -> sideboard card names
     val seatNames: Map<String, PersistentSeatNames> = emptyMap(),  // playerId.value -> that seat's card names
+    val isScenario: Boolean = false,  // GameSession.isScenario — no replay, no stats
 )
 
 /**
@@ -43,7 +44,7 @@ data class PersistentSeatNames(
 )
 
 @Serializable
-data class PersistentSighting(val zone: Zone, val zoneOpen: Boolean)
+data class PersistentSighting(val zone: Zone, val zoneOpen: Boolean, val seen: Boolean = true)
 
 /**
  * Persistent player info - contains only the data needed to restore a player's session.

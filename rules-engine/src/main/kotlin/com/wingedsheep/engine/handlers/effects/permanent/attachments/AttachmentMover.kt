@@ -2,6 +2,11 @@ package com.wingedsheep.engine.handlers.effects.permanent.attachments
 
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.PermanentAttachedEvent
+import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.mechanics.layers.Layer
+import com.wingedsheep.engine.mechanics.layers.LayerTimestamps
+import com.wingedsheep.engine.mechanics.layers.SerializableModification
+import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
@@ -10,13 +15,12 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
-import com.wingedsheep.engine.state.components.battlefield.ReconfiguredComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EquipmentAttachRestriction
 
 /**
@@ -32,7 +36,8 @@ object AttachmentMover {
      * (CR 702.16c); an Aura that is also a creature can't enchant anything and can't enchant itself
      * (CR 303.4d). An Equipment can only equip a creature (CR 301.5), not while it is itself a
      * creature without reconfigure (CR 301.5c), not a creature with protection from one of its
-     * colors (CR 702.16d), and not one its own [EquipmentAttachRestriction] rules out. Anything else
+     * colors (CR 702.16d), and not one its own [EquipmentAttachRestriction] rules out. A Fortification
+     * can only fortify a land, and not while it is itself a creature (CR 301.6). Anything else
      * can't be attached at all (CR 701.3b). Reads the projected state so layer-4 type and control
      * changes are seen.
      */
@@ -57,13 +62,60 @@ object AttachmentMover {
                     state, projected, predicateEvaluator, cardRegistry, attachmentId, card, hostId, controllerId
                 )
             }
-            card.typeLine.isEquipment ->
+            projected.hasSubtype(attachmentId, "Equipment") ->
                 projected.isCreature(hostId) &&
                     !(projected.isCreature(attachmentId) && !projected.hasKeyword(attachmentId, Keyword.RECONFIGURE)) &&
                     !EnchantRestriction.hostProtectedFromAttachment(
-                        state, projected, cardRegistry, attachmentId, card, hostId
+                        state, projected, attachmentId, card, hostId
                     ) &&
                     equipRestrictionAllows(state, predicateEvaluator, cardRegistry, attachmentId, hostId)
+            // CR 301.6: a Fortification can be attached only to a land, and one that's also a
+            // creature can't fortify a land; otherwise rules 301.5a–f apply as for Equipment.
+            projected.hasSubtype(attachmentId, "Fortification") ->
+                projected.hasType(hostId, "LAND") &&
+                    !projected.isCreature(attachmentId) &&
+                    !EnchantRestriction.hostProtectedFromAttachment(
+                        state, projected, attachmentId, card, hostId
+                    )
+            else -> false
+        }
+    }
+
+    /**
+     * Whether the Aura, Equipment or Fortification *card* [cardId] could be attached to [hostId] as
+     * it is put onto the battlefield — "put … onto the battlefield attached to it", or "an Aura or
+     * Equipment card that could be attached to it". The card isn't on the battlefield yet, so its
+     * own characteristics are its card's, and "you" in its restrictions is [controllerId], the
+     * player who would control it. An Aura asks [EnchantRestriction.couldAttach]; an Equipment needs
+     * a creature host (CR 301.5) and can't be a creature card itself (CR 301.5c); a Fortification
+     * needs a land host and can't be a creature card (CR 301.6); and neither can enter attached to a
+     * permanent with protection from it (CR 702.16c/d) or one its own [EquipmentAttachRestriction]
+     * rules out. Anything else can't be attached. Doesn't ask whether [hostId] is on the
+     * battlefield — callers that move the card check that themselves.
+     */
+    fun couldAttachCard(
+        state: GameState,
+        predicateEvaluator: PredicateEvaluator,
+        cardRegistry: CardRegistry,
+        cardId: EntityId,
+        card: CardComponent,
+        hostId: EntityId,
+        controllerId: EntityId
+    ): Boolean {
+        if (cardId == hostId) return false
+        val projected = state.projectedState
+        val typeLine = card.typeLine
+        return when {
+            typeLine.isAura -> !typeLine.isCreature && EnchantRestriction.couldAttach(
+                state, projected, predicateEvaluator, cardRegistry, cardId, card, hostId, controllerId
+            )
+            typeLine.isEquipment ->
+                projected.isCreature(hostId) && !typeLine.isCreature &&
+                    !EnchantRestriction.hostProtectedFromAttachment(state, projected, cardId, card, hostId) &&
+                    equipRestrictionAllows(state, predicateEvaluator, cardRegistry, cardId, hostId, controllerId)
+            typeLine.isFortification ->
+                projected.hasType(hostId, "LAND") && !typeLine.isCreature &&
+                    !EnchantRestriction.hostProtectedFromAttachment(state, projected, cardId, card, hostId)
             else -> false
         }
     }
@@ -73,15 +125,17 @@ object AttachmentMover {
      * ([EquipmentAttachRestriction]) admit [hostId]. True when it has none — including when it is
      * face down or has lost all abilities, since the restriction is a static ability of the Equipment.
      * The host is matched on the projected state with the Equipment as predicate source and its
-     * controller as "you". Shared by [canAttach], the equip ability's resolution and the CR 704.5n
-     * state-based action, so the three can't disagree about a host.
+     * controller as "you" — or [controllerId], for an Equipment card that isn't on the battlefield
+     * yet ([couldAttachCard]). Shared by [canAttach], [couldAttachCard], the equip ability's
+     * resolution and the CR 704.5n state-based action, so they can't disagree about a host.
      */
     fun equipRestrictionAllows(
         state: GameState,
         predicateEvaluator: PredicateEvaluator,
         cardRegistry: CardRegistry,
         equipmentId: EntityId,
-        hostId: EntityId
+        hostId: EntityId,
+        controllerId: EntityId? = null
     ): Boolean {
         val container = state.getEntity(equipmentId) ?: return true
         if (container.has<FaceDownComponent>()) return true
@@ -92,8 +146,8 @@ object AttachmentMover {
             ?.filterIsInstance<EquipmentAttachRestriction>()
             .orEmpty()
         if (restrictions.isEmpty()) return true
-        val controllerId = projected.getController(equipmentId) ?: return false
-        val context = PredicateContext(controllerId = controllerId, sourceId = equipmentId)
+        val you = projected.getController(equipmentId) ?: controllerId ?: return false
+        val context = PredicateContext(controllerId = you, sourceId = equipmentId)
         return restrictions.all { predicateEvaluator.matches(state, projected, hostId, it.filter, context) }
     }
 
@@ -127,12 +181,19 @@ object AttachmentMover {
             }
         }
 
+        // Read before the attach: whether this is an Equipment with reconfigure going onto a creature.
+        val reconfigures = reconfiguresOnto(state, attachmentId, hostId)
+
         newState = newState.updateEntity(attachmentId) { it.with(AttachedToComponent(hostId)) }
+        // CR 613.7e — an Aura or Equipment gets a new timestamp each time it becomes attached.
+        newState = LayerTimestamps.renew(newState, attachmentId)
         newState = newState.updateEntity(hostId) { container ->
             val existing = container.get<AttachmentsComponent>()?.attachedIds ?: emptyList()
             container.with(AttachmentsComponent(existing + attachmentId))
         }
-        newState = stampReconfigure(newState, attachmentId, hostId)
+        if (reconfigures) {
+            newState = stopBeingACreatureWhileAttached(newState, attachmentId, hostId, fallbackControllerId)
+        }
 
         val container = newState.getEntity(attachmentId)
         events += PermanentAttachedEvent(
@@ -145,27 +206,43 @@ object AttachmentMover {
     }
 
     /**
-     * CR 702.151b: "Attaching an Equipment with reconfigure to another creature causes the
-     * Equipment to stop being a creature until it becomes unattached from that creature." Called
-     * by [attach] for every attachment, so the reconfigure ability, Brass Squire-style attach
-     * effects and an Equipment entering the battlefield attached all start the effect. It reads the
-     * *projected* Equipment subtype, reconfigure keyword and host creature type as they are at the
-     * moment of attachment and records a [ReconfiguredComponent] with a fresh layer timestamp;
-     * [com.wingedsheep.engine.mechanics.layers.StateProjector] applies it. Any other attachment
-     * clears a stale record, so the effect never survives onto a host it wasn't created for.
+     * Whether attaching [attachmentId] to [hostId] is attaching an Equipment with reconfigure to a
+     * creature — the event CR 702.151b keys off. Any attach counts, not just the reconfigure ability
+     * (ruling: Brass Squire attaching it works the same way). Reads the projected state, so a granted
+     * or lost reconfigure and a host that has stopped being a creature are both seen.
      */
-    private fun stampReconfigure(state: GameState, attachmentId: EntityId, hostId: EntityId): GameState {
+    private fun reconfiguresOnto(state: GameState, attachmentId: EntityId, hostId: EntityId): Boolean {
         val projected = state.projectedState
-        val starts = attachmentId != hostId &&
-            projected.hasSubtype(attachmentId, Subtype.EQUIPMENT.value) &&
+        return attachmentId != hostId &&
+            projected.hasSubtype(attachmentId, "Equipment") &&
             projected.hasKeyword(attachmentId, Keyword.RECONFIGURE) &&
             projected.isCreature(hostId)
-        return if (starts) {
-            state.updateEntity(attachmentId) { it.with(ReconfiguredComponent(hostId, state.timestamp)) }.tick()
-        } else if (state.getEntity(attachmentId)?.has<ReconfiguredComponent>() == true) {
-            state.updateEntity(attachmentId) { it.without<ReconfiguredComponent>() }
-        } else {
-            state
-        }
+    }
+
+    /**
+     * CR 702.151b: "Attaching an Equipment with reconfigure to another creature causes the Equipment
+     * to stop being a creature until it becomes unattached from that creature." A layer-4 floating
+     * effect created by the attaching itself — not a static ability of the Equipment — so it keeps
+     * applying if the Equipment loses its abilities while attached (ruling). Its source is the host
+     * and its duration [Duration.WhileAffectedAttachedToSource], so it ends the moment the Equipment
+     * comes off that creature, however that happens. Losing the creature type takes the Equipment's
+     * creature subtypes with it (CR 205.1a; handled by the projector).
+     */
+    private fun stopBeingACreatureWhileAttached(
+        state: GameState,
+        attachmentId: EntityId,
+        hostId: EntityId,
+        fallbackControllerId: EntityId
+    ): GameState {
+        val ticked = state.tick()
+        val controllerId = state.projectedState.getController(attachmentId) ?: fallbackControllerId
+        return ticked.addFloatingEffect(
+            layer = Layer.TYPE,
+            modification = SerializableModification.RemoveType("CREATURE"),
+            affectedEntities = setOf(attachmentId),
+            duration = Duration.WhileAffectedAttachedToSource,
+            context = EffectContext(sourceId = hostId, controllerId = controllerId),
+            timestamp = ticked.timestamp
+        )
     }
 }

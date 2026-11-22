@@ -133,7 +133,7 @@
                 "id": "Adrenaline Jockey:2",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
-                    "requireExhaust": true
+                    "onceOnlyKind": "EXHAUST"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -354,7 +354,7 @@
                 "id": "Afterburner Expert:2",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
-                    "requireExhaust": true
+                    "onceOnlyKind": "EXHAUST"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -1534,7 +1534,7 @@
                     "type": "Fixed",
                     "amount": 2
                 },
-                "exhaustOnly": true
+                "onceOnlyKind": "EXHAUST"
             }
         ]
     },
@@ -1983,7 +1983,9 @@
                                         "amount": 2
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to two artifact or creature or enchantment cards with mana value 1 or less to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -2765,7 +2767,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mount or Vehicle card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -3129,7 +3133,8 @@
                         },
                         "descriptionOverride": "Whenever an artifact you control enters, this emblem deals 3 damage to any target."
                     },
-                    "descriptionOverride": "Whenever an artifact you control enters, this emblem deals 3 damage to any target."
+                    "descriptionOverride": "Whenever an artifact you control enters, this emblem deals 3 damage to any target.",
+                    "emblem": true
                 },
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true
@@ -3432,7 +3437,11 @@
                             },
                             "destination": "Battlefield",
                             "controllerOverride": "Controller",
-                            "addCounterType": "FINALITY"
+                            "entryCounters": [
+                                {
+                                    "counterType": "FINALITY"
+                                }
+                            ]
                         },
                         {
                             "type": "GrantKeyword",
@@ -5614,49 +5623,163 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "Composite",
-                    "effects": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
-                            "type": "GatherCards",
-                            "source": {
-                                "type": "FromMultipleZones",
-                                "zones": [
-                                    "Library",
-                                    "Graveyard"
-                                ],
-                                "filter": {
-                                    "cardPredicates": [
-                                        "IsCreature",
-                                        "HasNoAbilities"
-                                    ]
-                                }
-                            },
-                            "storeAs": "searchable",
-                            "search": true
+                            "label": "Search your library",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromMultipleZones",
+                                            "zones": [
+                                                "Library"
+                                            ],
+                                            "filter": {
+                                                "cardPredicates": [
+                                                    "IsCreature",
+                                                    "HasNoAbilities"
+                                                ]
+                                            }
+                                        },
+                                        "storeAs": "searchable",
+                                        "search": true
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "searchable",
+                                        "selection": {
+                                            "type": "ChooseUpTo",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library for a creature card has no abilities to put into your hand",
+                                        "selectedLabel": "Put into your hand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "found",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    "ShuffleLibrary",
+                                    "EmitLibrarySearchedEvent"
+                                ]
+                            }
                         },
                         {
-                            "type": "SelectFromCollection",
-                            "from": "searchable",
-                            "selection": {
-                                "type": "ChooseUpTo",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                }
-                            },
-                            "storeSelected": "found"
+                            "label": "Search your graveyard",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromMultipleZones",
+                                            "zones": [
+                                                "Graveyard"
+                                            ],
+                                            "filter": {
+                                                "cardPredicates": [
+                                                    "IsCreature",
+                                                    "HasNoAbilities"
+                                                ]
+                                            }
+                                        },
+                                        "storeAs": "searchable"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "searchable",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "found",
+                                        "prompt": "Search your graveyard for a creature card has no abilities to put into your hand",
+                                        "selectedLabel": "Put into your hand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "found",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    }
+                                ]
+                            }
                         },
                         {
-                            "type": "MoveCollection",
-                            "from": "found",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Hand"
-                            },
-                            "revealed": true
+                            "label": "Search your library and graveyard",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromMultipleZones",
+                                            "zones": [
+                                                "Library",
+                                                "Graveyard"
+                                            ],
+                                            "filter": {
+                                                "cardPredicates": [
+                                                    "IsCreature",
+                                                    "HasNoAbilities"
+                                                ]
+                                            }
+                                        },
+                                        "storeAs": "searchable",
+                                        "search": true
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "searchable",
+                                        "selection": {
+                                            "type": "ChooseUpTo",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library and/or graveyard for a creature card has no abilities to put into your hand",
+                                        "selectedLabel": "Put into your hand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "found",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    "ShuffleLibrary",
+                                    "EmitLibrarySearchedEvent"
+                                ]
+                            }
                         },
-                        "ShuffleLibrary",
-                        "EmitLibrarySearchedEvent"
+                        {
+                            "label": "Don't search",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": []
+                            }
+                        }
                     ]
                 }
             }
@@ -6333,7 +6456,9 @@
                                         "baseFilter": "creature|Vehicle ctrl:you"
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose a creature or Vehicle to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -6887,7 +7012,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Plains land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -7457,7 +7584,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a nonland permanent card with mana value 3 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -7705,7 +7834,8 @@
                                     "zone": "Library",
                                     "filter": "artifact"
                                 },
-                                "storeAs": "gathered0"
+                                "storeAs": "gathered0",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
@@ -8263,7 +8393,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -8414,7 +8546,7 @@
                             "imageUri": "https://cards.scryfall.io/normal/front/7/0/7072dea6-0d99-47fa-a83d-c8607e6a4bbd.jpg?1783907679"
                         },
                         {
-                            "type": "MarkMustAttackThisTurn",
+                            "type": "MarkMustAttack",
                             "target": {
                                 "type": "PipelineTarget",
                                 "collectionName": "createdTokens"
@@ -9826,7 +9958,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -9872,7 +10006,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -10205,7 +10341,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -10421,7 +10559,8 @@
                     },
                     "then": {
                         "type": "CopyTargetSpell",
-                        "target": "TriggeringEntity"
+                        "target": "TriggeringEntity",
+                        "mayChooseNewTargets": false
                     }
                 },
                 "triggerRestriction": {
@@ -10433,7 +10572,7 @@
                         "amount": 4
                     }
                 },
-                "descriptionOverride": "Max speed — you casts a artifact spell, you may pay {1}. If you do, copy target spell."
+                "descriptionOverride": "Max speed — you casts a artifact spell, you may pay {1}. If you do, copy that spell."
             }
         ]
     },
@@ -10923,13 +11062,15 @@
                                     "type": "Fixed",
                                     "amount": 1
                                 }
-                            }
+                            },
+                            "description": "Draw a card"
                         },
                         {
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Treasure"
-                            }
+                            },
+                            "description": "Create a Treasure token"
                         },
                         {
                             "effect": {
@@ -10942,7 +11083,8 @@
                                     "type": "PlayerRef",
                                     "player": "EachOpponent"
                                 }
-                            }
+                            },
+                            "description": "Each opponent loses 3 life"
                         }
                     ],
                     "excludeModesChosenThisTurn": true,
@@ -12099,7 +12241,7 @@
                     "trigger": {
                         "event": {
                             "type": "AbilityActivatedEvent",
-                            "requireExhaust": true,
+                            "onceOnlyKind": "EXHAUST",
                             "excludeManaAbilities": true
                         },
                         "binding": "ANY"
@@ -12258,7 +12400,9 @@
                                 "type": "ChooseUpTo",
                                 "count": "Speed"
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for basic land cards (up to your speed) to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -13038,7 +13182,7 @@
                 "id": "Rangers' Aetherhive:1",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
-                    "requireExhaust": true
+                    "onceOnlyKind": "EXHAUST"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -13096,7 +13240,7 @@
                 "id": "Rangers' Refueler:1",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
-                    "requireExhaust": true
+                    "onceOnlyKind": "EXHAUST"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -13494,7 +13638,8 @@
                                 "zone": "Library",
                                 "filter": "artifact"
                             },
-                            "storeAs": "gathered0"
+                            "storeAs": "gathered0",
+                            "search": true
                         },
                         {
                             "type": "FilterCollection",
@@ -13753,7 +13898,10 @@
                         "name": "t0"
                     },
                     "destination": "Library",
-                    "positionFromTop": 2
+                    "positionFromTop": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
@@ -14966,7 +15114,7 @@
                 "powerBonus": 2,
                 "toughnessBonus": 2,
                 "filter": {
-                    "baseFilter": "creature|artifact ctrl:you",
+                    "baseFilter": "artifact creature ctrl:you",
                     "excludeSelf": true
                 }
             }
@@ -16910,7 +17058,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         }
                     ]
@@ -17275,9 +17426,13 @@
                 "interveningIf": {
                     "type": "Compare",
                     "left": {
-                        "type": "AggregateBattlefield",
-                        "player": "EachOpponent",
-                        "filter": "land"
+                        "type": "GreatestAmongPlayers",
+                        "players": "EachOpponent",
+                        "inner": {
+                            "type": "AggregateBattlefield",
+                            "player": "You",
+                            "filter": "land"
+                        }
                     },
                     "operator": "GT",
                     "right": {
@@ -17395,7 +17550,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an artifact card with mana value 4 or greater with mana value 5 or less to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -18387,7 +18544,12 @@
                                         "IsEnchantment"
                                     ]
                                 },
-                                "ManaValueEqualsX"
+                                {
+                                    "type": "CompareNumericProperty",
+                                    "property": "MANA_VALUE",
+                                    "operator": "EQ",
+                                    "amount": "XValue"
+                                }
                             ]
                         }
                     },
@@ -18432,7 +18594,10 @@
                             "type": "AdditionalAtom",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         },
                         {

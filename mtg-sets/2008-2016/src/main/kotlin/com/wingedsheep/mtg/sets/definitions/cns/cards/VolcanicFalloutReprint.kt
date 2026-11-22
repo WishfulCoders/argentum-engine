@@ -13,7 +13,7 @@ val VolcanicFalloutReprint = Printing(
     collectorNumber = "157",
     scryfallId = "0c123961-7107-4f29-97ad-48bd8db7b24d",
     artist = "Zoltan Boros & Gabor Szikszai",
-    imageUri = "https://cards.scryfall.io/normal/front/0/c/0c123961-7107-4f29-97ad-48bd8db7b24d.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/0/c/0c123961-7107-4f29-97ad-48bd8db7b24d.jpg?1783939346",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

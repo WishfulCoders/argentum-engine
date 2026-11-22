@@ -20,9 +20,9 @@ import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.ChooseReplacementDecision
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.ColorChosenResponse
+import com.wingedsheep.engine.core.CrewVehicle
 import com.wingedsheep.engine.core.CombatResolutionDecision
 import com.wingedsheep.engine.core.Concede
-import com.wingedsheep.engine.core.CrewVehicle
 import com.wingedsheep.engine.core.CycleCard
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
@@ -37,10 +37,12 @@ import com.wingedsheep.engine.core.OptionChosenResponse
 import com.wingedsheep.engine.core.OrderObjectsDecision
 import com.wingedsheep.engine.core.OrderBlockers
 import com.wingedsheep.engine.core.PassPriority
+import com.wingedsheep.engine.core.OrderTriggersDecision
 import com.wingedsheep.engine.core.PendingDecision
 import com.wingedsheep.engine.core.ReorderLibraryDecision
 import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.PlotCard
+import com.wingedsheep.engine.core.PutCompanionIntoHand
 import com.wingedsheep.engine.core.SaddleMount
 import com.wingedsheep.engine.core.SearchLibraryDecision
 import com.wingedsheep.engine.core.SelectCardsDecision
@@ -54,6 +56,9 @@ import com.wingedsheep.engine.core.TypecycleCard
 import com.wingedsheep.engine.core.UnlockRoomDoor
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.core.YesNoResponse
+import com.wingedsheep.engine.handlers.costs.CollectEvidenceResolver
+import com.wingedsheep.engine.handlers.costs.GraveyardTotalExileResolver
+import com.wingedsheep.engine.legalactions.AdditionalCostData
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
@@ -141,7 +146,7 @@ class ObservationBuilder(
         val canSeePlay = state.pendingDecision?.let { revealAll || perspectivePlayerId == it.playerId ||
             perspectivePlayerId == state.actorFor(it.playerId) } ?: false
         val pendingDecisionView = pendingDecisionAndRegistry?.first?.let {
-            if (canSeePlay) it else it.copy(subjectEntityId = null)
+            if (canSeePlay) withChoices(it, state.pendingDecision!!) else it.copy(subjectEntityId = null).withoutChoices()
         }
         val decisionRegistry = pendingDecisionAndRegistry?.second ?: ActionRegistry.EMPTY
 
@@ -169,7 +174,9 @@ class ObservationBuilder(
         val obs = TrainingObservation(
             schemaHash = schemaHash,
             perspectivePlayerId = perspectivePlayerId,
-            agentToAct = state.pendingDecision?.playerId ?: state.priorityPlayerId,
+            agentToAct = state.pendingDecision?.playerId
+                ?: com.wingedsheep.engine.handlers.MulliganHandler.nextOpeningHandDecider(state)
+                ?: state.priorityPlayerId,
             turnNumber = state.turnNumber,
             phase = state.phase,
             step = state.step,
@@ -452,7 +459,9 @@ class ObservationBuilder(
             sourceEntityId = sourceEntityId(la.action),
             targetEntityIds = la.validTargets ?: emptyList(),
             manaCost = la.manaCostString,
-            manaCostPerExtraTarget = la.manaCostPerExtraTarget,
+            // Upstream dropped LegalAction.manaCostPerExtraTarget in the 2026-11-22 merge; the field stays in
+            // the contract (nullable) so the schema does not move, and is now always null.
+            manaCostPerExtraTarget = null,
             hasXCost = la.hasXCost,
             maxAffordableX = la.maxAffordableX,
             minX = la.minX,
@@ -494,7 +503,8 @@ class ObservationBuilder(
             validBlockerAssignments = la.validBlockerAssignments.orEmpty(),
             blockerMaxBlockCounts = la.blockerMaxBlockCounts.orEmpty(),
             mandatoryBlockerAssignments = la.mandatoryBlockerAssignments.orEmpty(),
-            isDecisionOption = false
+            isDecisionOption = false,
+            costChoices = costChoiceViews(la)
         )
     }
 
@@ -508,6 +518,7 @@ class ObservationBuilder(
         is SuspendCardFromHand -> action.cardId
         is TypecycleCard -> action.cardId
         is PlayLand -> action.cardId
+        is PutCompanionIntoHand -> action.cardId
         is CrewVehicle -> action.vehicleId
         is SaddleMount -> action.mountId
         is TurnFaceUp -> action.sourceId
@@ -523,6 +534,85 @@ class ObservationBuilder(
         is BottomCards,
         is TakePlayerAction,
         is Concede -> null
+    }
+
+    /**
+     * The cost choices [la] needs completed through `ActionParams`, flattened from the engine's
+     * [AdditionalCostData] (and its `alsoRequired` parts) plus crew / saddle costs.
+     *
+     * Keyed on [AdditionalCostData.costType], not on which candidate list is populated: the same
+     * list feeds different payment channels and bounds depending on the cost ("sacrifice any number"
+     * pays through `variableCostPermanents`, a cost-reduction sacrifice may pick none). The mapping
+     * mirrors the web client's. Cost types `ActionParams` can't carry (casualty, conspire, behold,
+     * reveal, blight, counter removal, …) are left out rather than advertised under a field the
+     * engine wouldn't read.
+     */
+    private fun costChoiceViews(la: LegalAction): List<CostChoiceView> = buildList {
+        fun addFrom(info: AdditionalCostData) {
+            costChoiceView(info)?.let(::add)
+            info.alsoRequired.forEach(::addFrom)
+        }
+        la.additionalCostInfo?.let(::addFrom)
+        val crewLike = la.tapForPowerCreatures.orEmpty()
+        val param = when (la.action) {
+            is CrewVehicle -> "crew"
+            is SaddleMount -> "saddle"
+            else -> null
+        }
+        if (la.tapForPower && param != null && crewLike.isNotEmpty()) {
+            add(
+                CostChoiceView(
+                    param = param,
+                    description = la.description,
+                    candidates = crewLike.map { it.entityId },
+                    min = 1,
+                    max = crewLike.size,
+                    contribution = crewLike.associate { it.entityId to it.power },
+                    minTotal = la.tapForPowerRequired ?: 0
+                )
+            )
+        }
+    }
+
+    private fun costChoiceView(info: AdditionalCostData): CostChoiceView? {
+        val d = info.description
+        return when (info.costType) {
+            "SacrificePermanent", "SacrificeSelf" -> info.validSacrificeTargets.takeIf { it.isNotEmpty() }
+                ?.let { CostChoiceView("sacrifice", d, it, info.sacrificeCount, info.sacrificeCount) }
+            "SacrificeForCostReduction" -> info.validSacrificeTargets.takeIf { it.isNotEmpty() }
+                ?.let { CostChoiceView("sacrifice", d, it, 0, it.size) }
+            "SacrificeVariable" -> info.validSacrificeTargets.takeIf { it.isNotEmpty() }
+                ?.let { CostChoiceView("variablePermanents", d, it, info.sacrificeCount, it.size) }
+            // tapCount 0 is the "tap X" sentinel: the count is the chosen X, not known here.
+            "TapPermanents" -> info.validTapTargets.takeIf { it.isNotEmpty() }?.let {
+                if (info.tapCount == 0) CostChoiceView("tap", d, it, 0, it.size)
+                else CostChoiceView("tap", d, it, info.tapCount, info.tapCount)
+            }
+            "TapForCostReduction" -> info.validTapTargets.takeIf { it.isNotEmpty() }
+                ?.let { CostChoiceView("tap", d, it, 0, it.size) }
+            "TapForTotalPower" -> info.tapForPowerCreatures.takeIf { it.isNotEmpty() }?.let { creatures ->
+                CostChoiceView(
+                    "variablePermanents", d, creatures.map { it.entityId }, 0, creatures.size,
+                    contribution = creatures.associate { it.entityId to it.power },
+                    minTotal = info.tapForPowerRequired
+                )
+            }
+            "DiscardCard" -> info.validDiscardTargets.takeIf { it.isNotEmpty() }
+                ?.let { CostChoiceView("discard", d, it, info.discardCount, info.discardCount) }
+            "BouncePermanent" -> info.validBounceTargets.takeIf { it.isNotEmpty() }
+                ?.let { CostChoiceView("bounce", d, it, info.bounceCount, info.bounceCount) }
+            "ExileFromGraveyard", "ExileFromHand", CollectEvidenceResolver.COST_TYPE, GraveyardTotalExileResolver.COST_TYPE ->
+                info.validExileTargets.takeIf { it.isNotEmpty() }?.let {
+                    CostChoiceView(
+                        "exile", d, it, info.exileMinCount, info.exileMaxCount,
+                        contribution = info.exileCardWeights, minTotal = info.exileMinTotalWeight
+                    )
+                }
+            "Craft" -> info.validCraftMaterials.takeIf { it.isNotEmpty() }?.let {
+                CostChoiceView("exile", d, it, info.craftMinCount, info.craftMaxCount ?: it.size)
+            }
+            else -> null
+        }
     }
 
     // =========================================================================
@@ -557,8 +647,9 @@ class ObservationBuilder(
 
         return when (decision) {
             is YesNoDecision -> {
-                val responses = listOf(
-                    YesNoResponse(decision.id, true),
+                // "No" alone when "yes" is impossible (#3340): asked anyway, forced.
+                val responses = listOfNotNull(
+                    YesNoResponse(decision.id, true).takeIf { decision.yesAvailable },
                     YesNoResponse(decision.id, false)
                 )
                 val view = decisionView(PendingDecisionKind.YES_NO, baseShape, structured = false)
@@ -651,6 +742,10 @@ class ObservationBuilder(
                         ActionRegistry.EMPTY
                 }
             }
+            // A continuous aim and release strength: no discrete action space to fold it into.
+            is com.wingedsheep.engine.core.FlipOntoBattlefieldDecision ->
+                decisionView(PendingDecisionKind.FLIP_ONTO_BATTLEFIELD, baseShape, structured = true) to
+                    ActionRegistry.EMPTY
             is BudgetModalDecision -> {
                 val shape = DecisionShape(budget = decision.budget)
                 decisionView(PendingDecisionKind.BUDGET_MODAL, shape, structured = true) to
@@ -666,6 +761,9 @@ class ObservationBuilder(
             }
             is OrderObjectsDecision ->
                 decisionView(PendingDecisionKind.ORDER_OBJECTS, baseShape, structured = true) to
+                    ActionRegistry.EMPTY
+            is OrderTriggersDecision ->
+                decisionView(PendingDecisionKind.ORDER_TRIGGERS, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is SplitPilesDecision ->
                 decisionView(PendingDecisionKind.SPLIT_PILES, baseShape, structured = true) to
@@ -692,6 +790,42 @@ class ObservationBuilder(
                     ActionRegistry.EMPTY
         }
     }
+
+    /**
+     * Attach the legal options of a decision the folded action-ID space can't express, so an
+     * out-of-process trainer can build a valid structured `DecisionResponse` without guessing ids.
+     * Only called for the deciding seat; other seats get [PendingDecisionView.withoutChoices].
+     */
+    private fun withChoices(view: PendingDecisionView, decision: PendingDecision): PendingDecisionView =
+        when (decision) {
+            is ChooseTargetsDecision -> view.copy(
+                targetRequirements = decision.targetRequirements.map { req ->
+                    TargetRequirementView(
+                        index = req.index,
+                        description = req.description,
+                        minTargets = req.minTargets,
+                        maxTargets = req.maxTargets,
+                        targetEntityIds = decision.legalTargets[req.index].orEmpty()
+                    )
+                }
+            )
+            is SelectCardsDecision -> view.copy(
+                candidateIds = decision.options - decision.nonSelectableOptions.toSet(),
+                candidateInfo = decision.cardInfo.orEmpty()
+            )
+            is SearchLibraryDecision -> view.copy(candidateIds = decision.options, candidateInfo = decision.cards)
+            is ChooseModeDecision -> view.copy(
+                modes = decision.modes.map { DecisionModeView(it.index, it.text, it.available) }
+            )
+            is DistributeDecision -> view.copy(candidateIds = decision.targets)
+            is OrderObjectsDecision -> view.copy(candidateIds = decision.objects, candidateInfo = decision.cardInfo.orEmpty())
+            is ReorderLibraryDecision -> view.copy(candidateIds = decision.cards, candidateInfo = decision.cardInfo)
+            is SplitPilesDecision -> view.copy(candidateIds = decision.cards, candidateInfo = decision.cardInfo.orEmpty())
+            is AssignDamageDecision -> view.copy(
+                candidateIds = decision.orderedTargets + listOfNotNull(decision.defenderId.takeIf { decision.hasTrample })
+            )
+            else -> view
+        }
 
     private fun baseView(
         decision: PendingDecision,

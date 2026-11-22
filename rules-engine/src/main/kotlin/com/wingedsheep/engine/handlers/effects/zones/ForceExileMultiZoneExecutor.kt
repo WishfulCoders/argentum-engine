@@ -37,7 +37,7 @@ class ForceExileMultiZoneExecutor(
         effect: ForceExileMultiZoneEffect,
         context: EffectContext
     ): EffectResult {
-        val playerId = context.resolvePlayerTarget(effect.target)
+        val playerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid player for force exile multi-zone")
 
         val count = amountEvaluator.evaluate(state, effect.count, context)

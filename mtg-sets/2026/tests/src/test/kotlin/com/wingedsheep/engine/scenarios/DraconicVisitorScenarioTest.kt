@@ -20,9 +20,9 @@ import io.kotest.matchers.shouldBe
  *
  * Pins each artifact-token path the replacement reads — a predefined Treasure, an artifact
  * creature token (Thopter), and a token copy made an artifact by its copy exception (Molten
- * Duplication, whose end-step sacrifice rider must not follow the Dragon) — plus the two scopes
+ * Duplication, whose end-step sacrifice rider follows the Dragon, per the ruling) — plus the two scopes
  * that must stay untouched: non-artifact tokens, and artifact tokens created under an opponent's
- * control.
+ * control — and a Visitor that has lost all abilities (Infinite Coursework), which replaces nothing.
  */
 class DraconicVisitorScenarioTest : ScenarioTestBase() {
 
@@ -90,7 +90,7 @@ class DraconicVisitorScenarioTest : ScenarioTestBase() {
             game.dragonTokens().size shouldBe 1
         }
 
-        test("a token copy made an artifact becomes a Dragon, without the copy's sacrifice rider") {
+        test("a token copy made an artifact becomes a Dragon, which keeps the copy's sacrifice rider") {
             val game = base()
                 .withCardOnBattlefield(1, "Draconic Visitor")
                 .withCardOnBattlefield(1, "Grizzly Bears")
@@ -105,8 +105,8 @@ class DraconicVisitorScenarioTest : ScenarioTestBase() {
             game.dragonTokens().size shouldBe 1
 
             game.passUntilPhase(Phase.ENDING, Step.CLEANUP)
-            withClue("the end-step sacrifice belonged to the copy that was never created") {
-                game.dragonTokens().size shouldBe 1
+            withClue("\"Sacrifice it at the beginning of the next end step\" still applies to the Dragon") {
+                game.dragonTokens().size shouldBe 0
             }
         }
 
@@ -123,6 +123,27 @@ class DraconicVisitorScenarioTest : ScenarioTestBase() {
             game.state.getBattlefield().count { id ->
                 game.state.getEntity(id)?.has<TokenComponent>() == true
             } shouldBe 2
+        }
+
+        test("a Visitor that has lost all abilities replaces nothing") {
+            val game = base()
+                .withCardOnBattlefield(1, "Draconic Visitor")
+                .withCardInHand(1, "Infinite Coursework")
+                .withCardInHand(1, "Brazen Freebooter")
+                .withLandsOnBattlefield(1, "Island", 3)
+                .withLandsOnBattlefield(1, "Mountain", 4)
+                .build()
+            val visitor = game.findPermanent("Draconic Visitor")!!
+
+            game.castAndResolve(1, "Infinite Coursework", visitor)
+            withClue("Infinite Coursework stripped the Visitor's abilities") {
+                game.state.projectedState.hasLostAllAbilities(visitor) shouldBe true
+            }
+
+            game.castAndResolve(1, "Brazen Freebooter")
+
+            game.tokens("Treasure").size shouldBe 1
+            game.dragonTokens().size shouldBe 0
         }
 
         test("an opponent's Visitor doesn't replace your artifact tokens") {

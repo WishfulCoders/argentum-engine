@@ -22,19 +22,6 @@ sealed interface AwaitsCostOutcome : AutomaticContinuation {
 }
 
 /**
- * A resolving permanent spell whose entry is replaced by
- * [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid] (Mox Diamond): once the cost is settled, a
- * paid cost lets the remaining entry run, an unpaid one puts the card into its owner's graveyard.
- */
-@Serializable
-data class SpellEntryCostContinuation(
-    val spellId: EntityId,
-    override val paid: Boolean? = null,
-) : AwaitsCostOutcome {
-    override fun settled(paid: Boolean): AwaitsCostOutcome = copy(paid = paid)
-}
-
-/**
  * An effect putting [entityId] onto the battlefield (a reanimation, Show and Tell, a library
  * search) whose entry is replaced by [com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid]. Once the
  * cost is settled, the outcome is recorded on [context] and [effect] is replayed — the same

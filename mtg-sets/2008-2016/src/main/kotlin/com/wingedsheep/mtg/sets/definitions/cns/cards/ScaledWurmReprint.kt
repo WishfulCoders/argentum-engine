@@ -13,7 +13,7 @@ val ScaledWurmReprint = Printing(
     collectorNumber = "178",
     scryfallId = "bd17b2c1-c3dd-4f6f-a44c-dc81c6bc1c94",
     artist = "Wayne England",
-    imageUri = "https://cards.scryfall.io/normal/front/b/d/bd17b2c1-c3dd-4f6f-a44c-dc81c6bc1c94.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/d/bd17b2c1-c3dd-4f6f-a44c-dc81c6bc1c94.jpg?1783939341",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

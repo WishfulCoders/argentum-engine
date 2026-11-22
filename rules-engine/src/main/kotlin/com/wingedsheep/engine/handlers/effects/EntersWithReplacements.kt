@@ -1,6 +1,9 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.state.components.battlefield.chosenOpponent
 import com.wingedsheep.engine.core.CountersAddedEvent
+import com.wingedsheep.engine.state.components.stack.AdditionalEntryCounters
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.KeywordGrantedEvent
 import com.wingedsheep.engine.handlers.EffectContext
@@ -12,20 +15,29 @@ import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
+import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.ReplacementEffectSourceComponent
+import com.wingedsheep.engine.state.components.battlefield.withCastChoice
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.RIOT_MODE_COUNTER
+import com.wingedsheep.sdk.dsl.RIOT_MODE_HASTE
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.EntersWithCounters
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.EntersWithKeywords
 import com.wingedsheep.sdk.scripting.Fading
 import com.wingedsheep.sdk.scripting.Vanishing
+import com.wingedsheep.sdk.scripting.conditions.SourceChosenModeIs
 
 /**
  * Applies "enters with …" replacement effects (CR 614.1c) — counters
@@ -70,9 +82,15 @@ object EntersWithReplacements {
                 val counterType = com.wingedsheep.sdk.core.CounterType.PLUS_ONE_PLUS_ONE
                 val count = ReplacementEffectUtils.applyCounterPlacementModifiers(
                     state, entityId, counterType, 1, placerId = controllerId,
-                    predicateEvaluator = predicateEvaluator
+                    predicateEvaluator = predicateEvaluator, byEffect = true
                 )
-                if (count <= 0) return state to events
+                // "If a creature entering the battlefield has riot but can't have a +1/+1 counter put
+                // onto it, it gains haste" (Rhythm of the Wild ruling, 2019-01-25).
+                if (count <= 0) {
+                    return applyGrantedRiotBranch(
+                        state, entityId, controllerId, com.wingedsheep.sdk.dsl.RIOT_MODE_HASTE, entityName, predicateEvaluator
+                    )
+                }
                 val current = state.getEntity(entityId)?.get<CountersComponent>() ?: CountersComponent()
                 var newState = state.updateEntity(entityId) { c -> c.with(current.withAdded(counterType, count)) }
                 val (afterMark, firstThisTurn, firstOfTypeThisTurn) = DamageUtils.recordCounterPlacement(
@@ -121,29 +139,59 @@ object EntersWithReplacements {
         cardRegistry: CardRegistry,
         xValue: Int? = null,
         predicateEvaluator: PredicateEvaluator,
-        preEntryZone: ZoneKey? = null
+        preEntryZone: ZoneKey? = null,
+        suppliedCounters: Map<CounterType, Int>? = null,
+        replacementSourceState: GameState? = null
     ): Pair<GameState, List<GameEvent>> {
         val container = state.getEntity(enteringEntityId) ?: return state to emptyList()
         val cardComponent = container.get<CardComponent>() ?: return state to emptyList()
         val cardDef = cardRegistry.getCard(cardComponent) ?: return state to emptyList()
 
-        var newState = state
+        var newState = prospectiveEntryView(state, enteringEntityId, replacementSourceState)
         val events = mutableListOf<GameEvent>()
+        val counterTotals = suppliedCounters?.toMutableMap()
 
-        val (ownState, ownEvents) = applyFromDefinition(
+        // Its own "enters with" replacements are gone if a battlefield static strips its abilities
+        // as it would exist there (Humility, Blood Sun — CR 614.12).
+        val ownLost = EntryCharacteristics.wouldLoseAllAbilities(state, enteringEntityId, enteringControllerId, cardRegistry, predicateEvaluator)
+        val (ownState, ownEvents) = if (ownLost || suppliedCounters != null && container.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>()) {
+            newState to emptyList<GameEvent>()
+        } else applyFromDefinition(
             newState, enteringEntityId, cardDef, enteringControllerId, xValue,
-            predicateEvaluator = predicateEvaluator, preEntryZone = preEntryZone
+            predicateEvaluator = predicateEvaluator, preEntryZone = preEntryZone, counterTotals = counterTotals
         )
         newState = ownState
         events.addAll(ownEvents)
 
         val (globalState, globalEvents) = applyGlobal(
             newState, enteringEntityId, enteringControllerId, cardRegistry,
-            predicateEvaluator = predicateEvaluator, preEntryZone = preEntryZone
+            predicateEvaluator = predicateEvaluator, preEntryZone = preEntryZone,
+            counterTotals = counterTotals, replacementSourceState = replacementSourceState
         )
         newState = globalState
         events.addAll(globalEvents)
 
+        // Evaluation excludes other simultaneous entrants; preserve the actual moved zones.
+        if (replacementSourceState != null) newState = newState.copy(zones = state.zones)
+        if (counterTotals != null) {
+            for ((kind, amount) in counterTotals) {
+                val (placed, placementEvents) = placeEntryCounters(
+                    newState, enteringEntityId, kind, amount, enteringControllerId, cardComponent.name,
+                    predicateEvaluator, replacementSourceState)
+                newState = placed
+                events.addAll(placementEvents)
+                if (kind == CounterType.PLUS_ONE_PLUS_ONE && placementEvents.isEmpty() &&
+                    cardDef.script.replacementEffects.filterIsInstance<EntersWithCounters>().any { isPrintedRiotCounter(cardDef, it) }) {
+                    newState = fallBackToRiotHaste(newState, enteringEntityId)
+                }
+            }
+        }
+        // "This creature enters prepared" (CR 722.3a) — a token copy of a preparation creature too.
+        // After the zone restore above: becoming prepared puts the prepare-spell copy into exile.
+        if (!container.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>()) {
+            newState = com.wingedsheep.engine.mechanics.stack.PreparationLogic
+                .enterPreparedIfKeyworded(newState, enteringEntityId, cardDef, enteringControllerId)
+        }
         return newState to events
     }
 
@@ -161,7 +209,8 @@ object EntersWithReplacements {
         xValue: Int? = null,
         totalManaSpent: Int = 0,
         predicateEvaluator: PredicateEvaluator,
-        preEntryZone: ZoneKey? = null
+        preEntryZone: ZoneKey? = null,
+        counterTotals: MutableMap<CounterType, Int>? = null
     ): Pair<GameState, List<GameEvent>> {
         var newState = state
         val events = mutableListOf<GameEvent>()
@@ -185,6 +234,15 @@ object EntersWithReplacements {
             // [applyGlobal] sweeps so no entry path can fire it against the source itself.
             if (Zone.BATTLEFIELD !in effect.activeZones) continue
             when (effect) {
+                // "Choose a number at random" (Haktos the Unscarred): no player decides, so no entry
+                // path prompts for it — the number is drawn here, on the path every entry shares,
+                // and recorded where a chosen number would be.
+                is EntersWithChoice -> if (effect.atRandom) {
+                    val (offset, advanced) = newState.nextRandom { nextInt(effect.maxValue - effect.minValue + 1) }
+                    newState = advanced.updateEntity(entityId) {
+                        it.withCastChoice(ChoiceSlot.CHOSEN_NUMBER, ChoiceValue.NumberChoice(effect.minValue + offset))
+                    }
+                }
                 is EntersWithCounters -> {
                     // Skip "other only" effects when applying to self (Metallic Mimic's "each other
                     // creature you control … enters with an additional +1/+1 counter" must not
@@ -197,12 +255,30 @@ object EntersWithReplacements {
                         )
                         if (!predicateEvaluator.conditions.evaluate(newState, effect.condition!!, condContext)) continue
                     }
+                    // CR 122.6a — who puts them on: the controller, or (Tribute, CR 702.104a) the
+                    // opponent who chose to pay — the same opponent an `AnOpponent` entry choice asked:
+                    // the one the controller picked (recorded under ChoiceSlot.OPPONENT) when there
+                    // were several, else the only one.
+                    val placerId = when (effect.placedBy) {
+                        Player.AnOpponent -> newState.getEntity(entityId)?.chosenOpponent()
+                            ?: newState.getOpponents(controllerId).firstOrNull() ?: controllerId
+                        else -> controllerId
+                    }
+                    // Supplied-counter totals are the controller's placement; another placer's
+                    // counters are a placement of their own.
+                    if (counterTotals != null && placerId == controllerId) {
+                        counterTotals[effect.counterType] = (counterTotals[effect.counterType] ?: 0) + effect.count
+                        continue
+                    }
                     val (afterCounters, counterEvents) = placeEntryCounters(
                         newState, entityId, effect.counterType, effect.count, controllerId, entityName,
-                        predicateEvaluator = predicateEvaluator
+                        predicateEvaluator = predicateEvaluator, placerId = placerId
                     )
                     newState = afterCounters
                     events.addAll(counterEvents)
+                    if (counterEvents.isEmpty() && isPrintedRiotCounter(cardDef, effect)) {
+                        newState = fallBackToRiotHaste(newState, entityId)
+                    }
                 }
                 is EntersWithDynamicCounters -> {
                     // Skip "other only" effects when applying to self (e.g., Gev)
@@ -216,6 +292,10 @@ object EntersWithReplacements {
                     val count = predicateEvaluator.amounts.evaluate(
                         preEntryView(newState, entityId, preEntryZone), effect.count, context
                     )
+                    if (counterTotals != null) {
+                        counterTotals[effect.counterType] = (counterTotals[effect.counterType] ?: 0) + count
+                        continue
+                    }
                     val (afterCounters, counterEvents) = placeEntryCounters(
                         newState, entityId, effect.counterType, count, controllerId, entityName,
                         predicateEvaluator = predicateEvaluator
@@ -242,13 +322,50 @@ object EntersWithReplacements {
     }
 
     /**
+     * Whether [effect] is the counter half of the printed `riot()` composition on [cardDef] — the
+     * self-only +1/+1 [EntersWithCounters] gated on the riot `counter` mode.
+     */
+    private fun isPrintedRiotCounter(cardDef: CardDefinition, effect: EntersWithCounters): Boolean =
+        Keyword.RIOT in cardDef.keywords &&
+            effect.condition == SourceChosenModeIs(RIOT_MODE_COUNTER)
+
+    /**
+     * Riot (CR 702.136a): "You may have this permanent enter with an additional +1/+1 counter on it.
+     * If you don't, it gains haste." When the counter was chosen but couldn't be placed, the
+     * permanent didn't enter with it, so it gains haste (Rhythm of the Wild's ruling). Re-recording
+     * the chosen mode as `haste` lets the printed mode-gated haste static grant it — the same
+     * outcome as choosing haste.
+     */
+    private fun fallBackToRiotHaste(state: GameState, entityId: EntityId): GameState =
+        state.updateEntity(entityId) { c ->
+            c.withCastChoice(ChoiceSlot.MODE, ChoiceValue.TextChoice(RIOT_MODE_HASTE))
+        }
+
+    /**
+     * Counters put on a permanent spell while it's on the stack — "that creature enters with an
+     * additional +1/+1 counter on it" (Runadi, Behemoth Caller; Jade Orb of Dragonkind) — aren't
+     * placed on the stack object. They're owed to the permanent the spell becomes and placed as it
+     * enters (CR 122.6), which is when counter-placement replacements such as Hardened Scales see
+     * them. Returns the updated state, or null when [entityId] isn't a spell on the stack. Nothing
+     * is announced now; the entry placement emits the [CountersAddedEvent].
+     */
+    fun oweToSpell(state: GameState, entityId: EntityId, counterType: CounterType, count: Int): GameState? {
+        if (entityId !in state.stack) return null
+        val spell = state.getEntity(entityId)?.get<SpellOnStackComponent>() ?: return null
+        if (count <= 0) return state
+        return state.updateEntity(entityId) { c ->
+            c.with(spell.copy(additionalEntryCounters = spell.additionalEntryCounters + AdditionalEntryCounters(counterType, count)))
+        }
+    }
+
+    /**
      * Place [count] counters of [counterType] on [entityId] as it enters (CR 614.1c), honouring
      * counter-placement modifiers (Hardened Scales, Solemnity) and recording the placement for
      * "put a counter on a permanent this turn" trackers.
      *
      * Shared by the enters-with replacement branches above and by the copy path
      * ([com.wingedsheep.engine.handlers.continuations.ModalAndCloneContinuationResumer]), where
-     * `EntersAsCopy.additionalCounters` carries the "except it enters with N additional +1/+1
+     * `EntersAsCopy.entersWithCounters` carries the "except it enters with N additional +1/+1
      * counters on it" rider — the copy replaces the permanent's own text, so those counters can't
      * come from a self-targeted [EntersWithCounters]. A non-positive [count] is a no-op.
      */
@@ -259,30 +376,96 @@ object EntersWithReplacements {
         count: Int,
         controllerId: EntityId,
         entityName: String,
-        predicateEvaluator: PredicateEvaluator
+        predicateEvaluator: PredicateEvaluator,
+        replacementSourceState: GameState? = null,
+        placerId: EntityId = controllerId,
     ): Pair<GameState, List<GameEvent>> {
-        if (count <= 0) return state to emptyList()
+        val prospective = prospectiveEntryView(state, entityId, replacementSourceState)
+        if (count <= 0 || !prospective.projectedState.canReceiveCounters(entityId)) return state to emptyList()
         val modifiedCount = ReplacementEffectUtils.applyCounterPlacementModifiers(
-            state, entityId, counterType, count, placerId = controllerId,
-            predicateEvaluator = predicateEvaluator
+            prospective, entityId, counterType, count, placerId = placerId,
+            predicateEvaluator = predicateEvaluator, replacementSourceState = replacementSourceState, byEffect = true
         )
+        // A modifier can cut the placement to nothing; then no counter was put on it (no event).
+        if (modifiedCount <= 0) return state to emptyList()
         val current = state.getEntity(entityId)?.get<CountersComponent>() ?: CountersComponent()
         var newState = state.updateEntity(entityId) { c ->
             c.with(current.withAdded(counterType, modifiedCount))
         }
-        // CR 122.6a — the entering object's controller is the one putting these counters on, so the
-        // marker records both axes and a "you've put +1/+1 counters on it this turn" filter (Kid
-        // Loki) sees a creature that *entered* with them.
+        // CR 122.6a — the entering object's controller is usually the one putting these counters on
+        // ([placerId] says otherwise for Tribute), so the marker records both axes and a "you've put
+        // +1/+1 counters on it this turn" filter (Kid Loki) sees a creature that *entered* with them.
         val (afterMark, firstThisTurn, firstOfTypeThisTurn) = DamageUtils.recordCounterPlacement(
-            newState, entityId, counterType, byController = true
+            newState, entityId, counterType, byController = placerId == controllerId, entering = true
         )
         newState = afterMark
         return newState to listOf(
             CountersAddedEvent(
                 entityId, counterType, modifiedCount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn,
-                placedBy = controllerId
+                placedBy = placerId
             )
         )
+    }
+
+    /**
+     * The counters, by kind, an `EntersAsCopy.entersWithCounters` rider puts on [entityId], which
+     * entered as a copy of [copiedId]: none when the rider's `ifCopiedMatches` filter doesn't match the
+     * copied object (read against [controllerId] — "if you control that creature") or its
+     * `ifEntrantMatches` filter doesn't match the entrant itself, as the copy has made it. A rider
+     * with a counter type gives its count of that kind; one without mirrors the copied object —
+     * its count per counter, for every kind the copied object has right now (Dominion Saboteur).
+     * Shared by the cast, direct-entry and effect-entry copy paths.
+     */
+    fun copyEntryCounters(
+        state: GameState,
+        rider: com.wingedsheep.sdk.scripting.CopyEntryCounters,
+        entityId: EntityId,
+        copiedId: EntityId?,
+        controllerId: EntityId,
+        xValue: Int?,
+        predicateEvaluator: PredicateEvaluator,
+    ): Map<CounterType, Int> {
+        val perUnit = copyEntryCounterCount(state, rider, entityId, copiedId, controllerId, xValue, predicateEvaluator)
+        if (perUnit <= 0) return emptyMap()
+        val kind = rider.counterType ?: run {
+            val copied = copiedId?.let { state.getEntity(it)?.get<CountersComponent>() } ?: return emptyMap()
+            return copied.counters.filterValues { it > 0 }
+                .mapValues { (_, n) -> (n.toLong() * perUnit).coerceAtMost(com.wingedsheep.engine.core.GameLimits.MAX_QUANTITY.toLong()).toInt() }
+        }
+        return mapOf(kind to perUnit)
+    }
+
+    private fun copyEntryCounterCount(
+        state: GameState,
+        rider: com.wingedsheep.sdk.scripting.CopyEntryCounters,
+        entityId: EntityId,
+        copiedId: EntityId?,
+        controllerId: EntityId,
+        xValue: Int?,
+        predicateEvaluator: PredicateEvaluator,
+    ): Int {
+        rider.ifCopiedMatches?.let { filter ->
+            if (copiedId == null) return 0
+            val context = com.wingedsheep.engine.handlers.PredicateContext(controllerId = controllerId, sourceId = entityId)
+            if (!predicateEvaluator.matches(state, state.projectedState, copiedId, filter, context)) return 0
+        }
+        rider.ifEntrantMatches?.let { filter ->
+            val context = com.wingedsheep.engine.handlers.PredicateContext(controllerId = controllerId, sourceId = entityId)
+            if (!predicateEvaluator.matches(state, state.projectedState, entityId, filter, context)) return 0
+        }
+        val context = com.wingedsheep.engine.handlers.EffectContext(
+            sourceId = entityId, controllerId = controllerId, xValue = xValue)
+        return predicateEvaluator.amounts.evaluate(state, rider.count, context)
+    }
+
+    /** The current entrant's own prospective statics plus only pre-event battlefield sources. */
+    fun prospectiveEntryView(state: GameState, entityId: EntityId, beforeEntry: GameState?): GameState {
+        if (beforeEntry == null) return state
+        val priorPermanents = beforeEntry.getBattlefield().toSet()
+        return state.copy(zones = state.zones.mapValues { (zone, ids) ->
+            if (zone.zoneType == Zone.BATTLEFIELD) ids.filter { it == entityId || it in priorPermanents }
+            else ids
+        })
     }
 
     /**
@@ -317,17 +500,20 @@ object EntersWithReplacements {
         enteringControllerId: EntityId,
         cardRegistry: CardRegistry? = null,
         predicateEvaluator: PredicateEvaluator,
-        preEntryZone: ZoneKey? = null
+        preEntryZone: ZoneKey? = null,
+        counterTotals: MutableMap<CounterType, Int>? = null,
+        replacementSourceState: GameState? = null
     ): Pair<GameState, List<GameEvent>> {
         var newState = state
         val events = mutableListOf<GameEvent>()
         val entityName = newState.getEntity(enteringEntityId)?.get<CardComponent>()?.name ?: ""
 
         val sources = mutableListOf<GlobalReplacementSource>()
-        for (sourceId in newState.getBattlefield()) {
+        val sourceState = replacementSourceState ?: newState
+        for (sourceId in sourceState.getBattlefield()) {
             if (sourceId == enteringEntityId) continue
-            val container = newState.getEntity(sourceId) ?: continue
-            val replacementComponent = container.get<ReplacementEffectSourceComponent>() ?: continue
+            val container = sourceState.getEntity(sourceId) ?: continue
+            val replacementComponent = sourceState.activeReplacementSource(sourceId) ?: continue
             val sourceControllerId = container.get<ControllerComponent>()?.playerId ?: continue
             val effects = replacementComponent.replacementEffects
                 .filter { Zone.BATTLEFIELD in it.activeZones }
@@ -335,10 +521,10 @@ object EntersWithReplacements {
             sources.add(GlobalReplacementSource(sourceId, sourceControllerId, effects))
         }
         if (cardRegistry != null) {
-            for (playerId in newState.turnOrder) {
-                for (sourceId in newState.getGraveyard(playerId)) {
+            for (playerId in sourceState.turnOrder) {
+                for (sourceId in sourceState.getGraveyard(playerId)) {
                     if (sourceId == enteringEntityId) continue
-                    val cardComponent = newState.getEntity(sourceId)?.get<CardComponent>() ?: continue
+                    val cardComponent = sourceState.getEntity(sourceId)?.get<CardComponent>() ?: continue
                     val cardDef = cardRegistry.getCard(cardComponent) ?: continue
                     val effects = cardDef.script.replacementEffects
                         .filter { Zone.GRAVEYARD in it.activeZones }
@@ -349,10 +535,17 @@ object EntersWithReplacements {
                 }
             }
         }
+        // Durational grants ("the next time one or more enchantment creatures you control enter
+        // this turn, each enters with two additional +1/+1 counters" — Storyweave) stand on their
+        // own once granted: "you" is the granting player and the anchor may be long gone.
+        for ((index, grant) in sourceState.grantedReplacementEffects.withIndex()) {
+            sources.add(GlobalReplacementSource(grant.entityId, grant.controllerId, listOf(grant.replacement), grantIndex = index))
+        }
 
-        for ((sourceId, sourceControllerId, effects) in sources) {
+        for (source in sources) {
+            val (sourceId, sourceControllerId, effects) = source
             for (effect in effects) {
-                when (effect) {
+                val applied = when (effect) {
                     is EntersWithCounters -> {
                         if (effect.selfOnly) continue
                         if (!matchesEnterFilter(effect.appliesTo, enteringEntityId, sourceId, sourceControllerId, newState, predicateEvaluator = predicateEvaluator)) continue
@@ -370,9 +563,14 @@ object EntersWithReplacements {
                             if (!predicateEvaluator.conditions.evaluate(newState, effect.condition!!, condContext)) continue
                         }
                         val counterType = effect.counterType
+                        if (counterTotals != null) {
+                            counterTotals[counterType] = (counterTotals[counterType] ?: 0) + effect.count
+                            newState = spendGrant(newState, source)
+                            continue
+                        }
                         val modifiedCount = ReplacementEffectUtils.applyCounterPlacementModifiers(
                             newState, enteringEntityId, counterType, effect.count, placerId = enteringControllerId,
-                            predicateEvaluator = predicateEvaluator
+                            predicateEvaluator = predicateEvaluator, byEffect = true
                         )
                         val current = newState.getEntity(enteringEntityId)?.get<CountersComponent>() ?: CountersComponent()
                         newState = newState.updateEntity(enteringEntityId) { c ->
@@ -383,6 +581,7 @@ object EntersWithReplacements {
                         )
                         newState = afterMark
                         events.add(CountersAddedEvent(enteringEntityId, counterType, modifiedCount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = enteringControllerId))
+                        true
                     }
                     is EntersWithDynamicCounters -> {
                         if (!effect.otherOnly) continue
@@ -396,18 +595,26 @@ object EntersWithReplacements {
                         // to cast IT") read the entering creature's own cast, not the source's.
                         // controllerId stays the source's controller so player-scoped counts (Gev's
                         // TurnTracking(Player.You)) keep reading the source controller's trackers.
+                        // The replacement's source (a grant's anchor) is exposed as granterId, so a
+                        // count that names it ("equal to Arwen's toughness") reads GrantingSource.
                         val context = EffectContext(
                             sourceId = enteringEntityId,
                             controllerId = sourceControllerId,
                             affectedEntityId = enteringEntityId,
+                            granterId = sourceId,
                         )
                         val count = predicateEvaluator.amounts.evaluate(
                             preEntryView(newState, enteringEntityId, preEntryZone), effect.count, context
                         )
                         if (count > 0) {
+                            if (counterTotals != null) {
+                                counterTotals[counterType] = (counterTotals[counterType] ?: 0) + count
+                                newState = spendGrant(newState, source)
+                                continue
+                            }
                             val modifiedCount = ReplacementEffectUtils.applyCounterPlacementModifiers(
                                 newState, enteringEntityId, counterType, count, placerId = enteringControllerId,
-                                predicateEvaluator = predicateEvaluator
+                                predicateEvaluator = predicateEvaluator, byEffect = true
                             )
                             val current = newState.getEntity(enteringEntityId)?.get<CountersComponent>() ?: CountersComponent()
                             newState = newState.updateEntity(enteringEntityId) { c ->
@@ -419,6 +626,7 @@ object EntersWithReplacements {
                             newState = afterMark
                             events.add(CountersAddedEvent(enteringEntityId, counterType, modifiedCount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = enteringControllerId))
                         }
+                        count > 0
                     }
                     is EntersWithKeywords -> {
                         if (effect.selfOnly) continue
@@ -442,12 +650,30 @@ object EntersWithReplacements {
                         val (grantState, grantEvents) = grantKeywords(newState, effect, enteringEntityId, entityName, grantContext)
                         newState = grantState
                         events.addAll(grantEvents)
+                        true
                     }
-                    else -> { /* Other replacement effects handled elsewhere */ }
+                    else -> false /* Other replacement effects handled elsewhere */
                 }
+                if (applied) newState = spendGrant(newState, source)
             }
         }
         return newState to events
+    }
+
+    /**
+     * Mark a one-shot ([Duration.NextUse]) grant as spent once it has modified an entry. It keeps
+     * applying to the objects entering simultaneously with this one and is purged at the next
+     * event boundary ([com.wingedsheep.engine.replacement.ActiveReplacements.purgeSpent]).
+     */
+    private fun spendGrant(state: GameState, source: GlobalReplacementSource): GameState {
+        val index = source.grantIndex ?: return state
+        val grant = state.grantedReplacementEffects.getOrNull(index) ?: return state
+        if (grant.duration !is Duration.NextUse || grant.spent || grant.replacement !in source.effects) return state
+        return state.copy(
+            grantedReplacementEffects = state.grantedReplacementEffects.toMutableList().also {
+                it[index] = grant.copy(spent = true)
+            }
+        )
     }
 
     /**
@@ -462,6 +688,8 @@ object EntersWithReplacements {
         val sourceId: EntityId,
         val sourceControllerId: EntityId,
         val effects: List<com.wingedsheep.sdk.scripting.ReplacementEffect>,
+        /** Index into [GameState.grantedReplacementEffects] when this source is a durational grant. */
+        val grantIndex: Int? = null,
     )
 
     /**
@@ -551,34 +779,39 @@ object EntersWithReplacements {
      * Apply a graveyard-cast entry rider (The Tomb of Aclazotz) to a permanent that just resolved
      * onto the battlefield after being cast from the graveyard under a rider-bearing
      * [com.wingedsheep.sdk.scripting.MayCastFromGraveyard] grant (frozen at cast time on the stack
-     * spell as [com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent]):
+     * spell as [com.wingedsheep.engine.state.components.stack.CastThisWayEntryRiderComponent]):
      *  - it enters with one [counter] counter (CR 614.1c), emitting a [CountersAddedEvent] so the
      *    finality death-replacement (ZoneMovementUtils) and counter watchers see it; and
      *  - it gains [addedSubtype] "in addition to its other types" via a floating [Layer.TYPE]
      *    modification with [Duration.Permanent] — floating effects targeting an entity are removed
      *    when it leaves the battlefield, giving exactly the "…while on the battlefield" persistence.
-     * The subtype is applied only to creatures (CR 205.1b). Returns the new state and the events.
+     * The subtype is applied only to creatures (CR 205.1b).
+     *  - it gains [grantedAbility] (Serra Paragon's exile-and-gain-life trigger) as a
+     *    [Duration.Permanent] granted triggered ability. Object grants are dropped when the permanent
+     *    leaves the battlefield (CR 400.7), after its own leaves-the-battlefield triggers are seen,
+     *    so the ability lasts exactly as long as the permanent — granter gone or not.
+     * Lands played from the graveyard under the same grant take this path too (`PlayLandHandler`).
+     * Returns the new state and the events.
      */
     fun applyCastFromGraveyardRider(
         state: GameState,
         entityId: EntityId,
         controllerId: EntityId,
         counter: CounterType?,
-        addedSubtype: String?
+        addedSubtype: String?,
+        grantedAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
+        predicateEvaluator: PredicateEvaluator
     ): Pair<GameState, List<GameEvent>> {
         var newState = state
         val events = mutableListOf<GameEvent>()
         if (counter != null) {
+            // An entry counter like any other — the placement replacements see it (CR 122.6).
             val name = newState.getEntity(entityId)?.get<CardComponent>()?.name ?: ""
-            newState = newState.updateEntity(entityId) { c ->
-                val current = c.get<CountersComponent>() ?: CountersComponent()
-                c.with(current.withAdded(counter, 1))
-            }
-            val (afterMark, firstThisTurn, firstOfTypeThisTurn) = DamageUtils.recordCounterPlacement(
-                newState, entityId, counter, byController = true
+            val (placed, placedEvents) = placeEntryCounters(
+                newState, entityId, counter, 1, controllerId, name, predicateEvaluator
             )
-            newState = afterMark
-            events.add(CountersAddedEvent(entityId, counter, 1, name, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = controllerId))
+            newState = placed
+            events.addAll(placedEvents)
         }
         // Gate on the entering permanent's *base* type — the projected state isn't recomputed yet at
         // this ETB point, so it wouldn't yet see the just-resolved permanent as a creature.
@@ -591,6 +824,17 @@ object EntersWithReplacements {
                 affectedEntities = setOf(entityId),
                 duration = Duration.Permanent,
                 context = EffectContext(sourceId = entityId, controllerId = controllerId)
+            )
+        }
+        if (grantedAbility != null) {
+            newState = newState.copy(
+                grantedTriggeredAbilities = newState.grantedTriggeredAbilities +
+                    com.wingedsheep.engine.event.GrantedTriggeredAbility(
+                        entityId = entityId,
+                        ability = grantedAbility,
+                        duration = Duration.Permanent,
+                        sourceId = entityId
+                    )
             )
         }
         return newState to events

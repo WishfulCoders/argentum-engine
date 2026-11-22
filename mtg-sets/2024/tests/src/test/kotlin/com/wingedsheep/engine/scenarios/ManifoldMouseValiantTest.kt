@@ -46,11 +46,11 @@ class ManifoldMouseValiantTest : FunSpec({
     test("Two Manifold Mouse triggers, first targets Nettle Guard — Valiant fires") {
         // Reproduces the bug from the Offspring token copy variant: when the original
         // Manifold Mouse and a token copy both have begin-combat triggers, the first
-        // trigger pauses for target selection, queuing the second as PendingTriggersContinuation.
+        // trigger pauses for target selection, leaving the second in triggersBeingPlaced.
         //
         // After the user picks Nettle Guard as the first trigger's target,
-        // putTriggeredAbility emits a BecomesTargetEvent. The PendingTriggersContinuation
-        // auto-resumer immediately runs and pauses on the second trigger's target prompt.
+        // putTriggeredAbility emits a BecomesTargetEvent. The rest of the wave is placed
+        // straight away and pauses on the second trigger's target prompt.
         // Because the chain re-paused, SubmitDecisionHandler's success-path trigger detection
         // (line 108) never ran — and the auto-resumer never ran detectTriggers on the events.
         // Result: Valiant was lost and Nettle Guard stayed 3/1 even after the chain unpaused.

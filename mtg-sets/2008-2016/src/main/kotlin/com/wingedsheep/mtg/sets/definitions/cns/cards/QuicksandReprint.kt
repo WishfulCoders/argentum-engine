@@ -13,7 +13,7 @@ val QuicksandReprint = Printing(
     collectorNumber = "209",
     scryfallId = "6ac1cd61-26f6-49f4-a521-74abec506acc",
     artist = "Matt Stewart",
-    imageUri = "https://cards.scryfall.io/normal/front/6/a/6ac1cd61-26f6-49f4-a521-74abec506acc.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/6/a/6ac1cd61-26f6-49f4-a521-74abec506acc.jpg?1783939334",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

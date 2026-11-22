@@ -12,8 +12,8 @@ val FranticSearchReprint = Printing(
     setCode = "C20",
     collectorNumber = "111",
     scryfallId = "5b87a025-ab29-4375-9338-536636051640",
-    artist = "Mitchell Malloy",
-    imageUri = "https://cards.scryfall.io/normal/front/5/b/5b87a025-ab29-4375-9338-536636051640.jpg?1783931188",
+    artist = null,
+    imageUri = "https://cards.scryfall.io/normal/front/5/b/5b87a025-ab29-4375-9338-536636051640.jpg",
     releaseDate = "2020-04-17",
     rarity = Rarity.COMMON,
 )

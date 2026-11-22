@@ -13,7 +13,7 @@ val EchoingCourageReprint = Printing(
     collectorNumber = "161",
     scryfallId = "d005fe70-5d6a-4878-a805-0b5d01379581",
     artist = "Greg Staples",
-    imageUri = "https://cards.scryfall.io/normal/front/d/0/d005fe70-5d6a-4878-a805-0b5d01379581.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/0/d005fe70-5d6a-4878-a805-0b5d01379581.jpg?1783939346",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

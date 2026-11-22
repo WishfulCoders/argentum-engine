@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.state.components.battlefield.LinkedExileComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
@@ -10,49 +11,47 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
- * Skyclave Apparition (ZNR #39) — {1}{W}{W} Creature — Kor Spirit 2/2.
- *
- * When this creature enters, exile up to one target nonland, nontoken permanent you don't control
- * with mana value 4 or less.
- * When this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion
- * creature token, where X is the mana value of the exiled card.
- *
- * Pins: the exiled card stays exiled when the Apparition leaves (no return), and the leaves
- * trigger hands the exiled card's owner an X/X blue Illusion sized by its mana value.
+ * Skyclave Apparition — the ETB exiles a *target permanent* linked to the Apparition, and the
+ * LTB reads that linked card back for the Illusion's size (its mana value) and controller (its
+ * owner — even when someone else controlled the permanent it was exiled from).
  */
 class SkyclaveApparitionScenarioTest : ScenarioTestBase() {
 
     init {
         context("Skyclave Apparition") {
 
-            test("exiles a mana value 4 permanent; leaving gives its owner a 4/4 blue Illusion") {
-                val game = scenario()
-                    .withPlayers("Player1", "Opponent")
-                    .withCardInHand(1, "Skyclave Apparition")
-                    .withCardInHand(1, "End Hostilities") // {3}{W}{W} wipe to kill the Apparition
-                    .withLandsOnBattlefield(1, "Plains", 8)
-                    .withCardOnBattlefield(2, "Hill Giant") // {3}{R} → mana value 4
-                    .withCardInLibrary(1, "Plains")
-                    .withCardInLibrary(2, "Plains")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
+            fun setup() = scenario()
+                .withPlayers("Player1", "Opponent")
+                .withCardInHand(1, "Skyclave Apparition")
+                .withCardInHand(1, "End Hostilities")
+                .withLandsOnBattlefield(1, "Plains", 8)
+                .withCardOnBattlefield(2, "Hill Giant") // {3}{R} -> mana value 4
+                .withCardInLibrary(1, "Plains")
+                .withCardInLibrary(2, "Plains")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
 
-                val giant = game.findPermanent("Hill Giant")!!
-                game.castSpell(1, "Skyclave Apparition").error shouldBe null
-                game.resolveStack() // Apparition enters → ETB asks for its target
-                game.selectTargets(listOf(giant)).error shouldBe null
+            test("exiles the target, then gives its owner an X/X blue Illusion when the Apparition leaves") {
+                val game = setup()
+                val giantId = game.findPermanent("Hill Giant")!!
+
+                game.castSpell(1, "Skyclave Apparition")
+                game.resolveStack()
+                game.selectTargets(listOf(giantId))
                 game.resolveStack()
 
                 game.isOnBattlefield("Hill Giant") shouldBe false
-                game.isInExile(2, "Hill Giant") shouldBe true
+                game.state.getExile(game.player2Id).contains(giantId) shouldBe true
+                val apparitionId = game.findPermanent("Skyclave Apparition")!!
+                game.state.getEntity(apparitionId)?.get<LinkedExileComponent>()?.exiledIds shouldBe listOf(giantId)
 
                 game.castSpell(1, "End Hostilities").error shouldBe null
                 game.resolveStack()
 
                 game.isOnBattlefield("Skyclave Apparition") shouldBe false
-                // Never returned.
-                game.isInExile(2, "Hill Giant") shouldBe true
+                // The exiled card stays in exile.
+                game.state.getExile(game.player2Id).contains(giantId) shouldBe true
 
                 val tokenId = game.findPermanent("Illusion Token")
                 tokenId.shouldNotBeNull()
@@ -64,25 +63,45 @@ class SkyclaveApparitionScenarioTest : ScenarioTestBase() {
                 token.get<ControllerComponent>()?.playerId shouldBe game.player2Id
             }
 
-            test("with nothing exiled, leaving creates no token") {
+            test("a stolen permanent's Illusion goes to its owner, not the player who controlled it") {
                 val game = scenario()
                     .withPlayers("Player1", "Opponent")
                     .withCardInHand(1, "Skyclave Apparition")
                     .withCardInHand(1, "End Hostilities")
                     .withLandsOnBattlefield(1, "Plains", 8)
-                    .withCardOnBattlefield(2, "Serra Angel") // mana value 5 — not a legal target
+                    .withCardOnBattlefield(1, "Hill Giant")
                     .withCardInLibrary(1, "Plains")
                     .withCardInLibrary(2, "Plains")
                     .withActivePlayer(1)
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
+                val giantId = game.findPermanent("Hill Giant")!!
+                // Player1 owns the Giant; the opponent has stolen it.
+                game.state = game.state.updateEntity(giantId) { it.with(ControllerComponent(game.player2Id)) }
 
-                game.castSpell(1, "Skyclave Apparition").error shouldBe null
+                game.castSpell(1, "Skyclave Apparition")
                 game.resolveStack()
-                if (game.hasPendingDecision()) game.skipTargets()
+                game.selectTargets(listOf(giantId))
+                game.resolveStack()
+                game.state.getExile(game.player1Id).contains(giantId) shouldBe true
+
+                game.castSpell(1, "End Hostilities").error shouldBe null
                 game.resolveStack()
 
-                game.isOnBattlefield("Serra Angel") shouldBe true
+                val tokenId = game.findPermanent("Illusion Token")
+                tokenId.shouldNotBeNull()
+                game.state.getEntity(tokenId)!!.get<ControllerComponent>()?.playerId shouldBe game.player1Id
+            }
+
+            test("choosing no target exiles nothing and makes no token") {
+                val game = setup()
+
+                game.castSpell(1, "Skyclave Apparition")
+                game.resolveStack()
+                game.selectTargets(emptyList())
+                game.resolveStack()
+
+                game.isOnBattlefield("Hill Giant") shouldBe true
 
                 game.castSpell(1, "End Hostilities").error shouldBe null
                 game.resolveStack()

@@ -13,7 +13,7 @@ val BedevilReprint = Printing(
     collectorNumber = "331",
     scryfallId = "c0c8694d-e8fe-42d0-8c00-78b1505541e2",
     artist = "Seb McKinnon",
-    imageUri = "https://cards.scryfall.io/normal/front/c/0/c0c8694d-e8fe-42d0-8c00-78b1505541e2.jpg?1783923233",
+    imageUri = "https://cards.scryfall.io/normal/front/c/0/c0c8694d-e8fe-42d0-8c00-78b1505541e2.jpg",
     releaseDate = "2022-04-29",
     rarity = Rarity.RARE,
 )

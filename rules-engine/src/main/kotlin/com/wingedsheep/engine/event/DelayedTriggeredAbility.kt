@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
+import com.wingedsheep.sdk.scripting.effects.DelayedTriggerStepScope
 import com.wingedsheep.sdk.scripting.effects.Effect
 import kotlinx.serialization.Serializable
 
@@ -41,6 +42,14 @@ data class DelayedTriggeredAbility(
      */
     val watchedEntityId: EntityId? = null,
     /**
+     * The identity of [watchedEntityId]'s object when this event-based trigger was created. "When
+     * *that* creature dies" follows that object only (CR 400.7): once it changes zones it is a new
+     * object, so a later departure of the same entity id does not match, and the cleanup step
+     * drops the trigger once the object is no longer current. Null for player-scoped watchers and
+     * for objects created without identity bookkeeping.
+     */
+    val watchedObject: com.wingedsheep.engine.state.ObjectRef? = null,
+    /**
      * For event-based delayed triggers: scopes the trigger to events whose *recipient*
      * (the damaged/targeted entity) matches this id. Whereas [watchedEntityId] narrows by the
      * event's source, this narrows by the event's recipient — e.g. "whenever a creature you
@@ -51,6 +60,15 @@ data class DelayedTriggeredAbility(
     /** For event-based delayed triggers: the expiry rule. */
     val expiry: DelayedTriggerExpiry? = null,
     /**
+     * For [DelayedTriggerExpiry.EndOfPlayersNextTurn]: the player whose next turn ends the trigger,
+     * resolved at creation, and the first turn number that may be that turn (`turnNumber + 1` at
+     * creation, so the current turn never counts). The trigger is removed at the cleanup of the
+     * first turn at or after [expiresAfterTurn] that [expiryPlayerId] takes — the same floor plus
+     * active-player guard `Duration.EndOfYourNextTurn` uses. Null for every other expiry.
+     */
+    val expiryPlayerId: EntityId? = null,
+    val expiresAfterTurn: Int? = null,
+    /**
      * For event-based delayed triggers: when true this is a one-shot — it is removed the
      * first time it fires ("when you next … this turn"). When false it persists, firing on
      * every matching event until [expiry] removes it.
@@ -58,6 +76,11 @@ data class DelayedTriggeredAbility(
     val fireOnce: Boolean = false,
     /** Whether a step-based delayed trigger remains resident after each matching step. */
     val repeatAtEachMatchingStep: Boolean = false,
+    /**
+     * Which step beginnings match [fireAtStep]: that step exactly, or any main phase ("your next
+     * main phase"). Baked from [com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect.stepScope].
+     */
+    val stepScope: DelayedTriggerStepScope = DelayedTriggerStepScope.STEP,
     /** If set, this trigger won't fire before this turn number. Used for "your next end step" effects. */
     val notBeforeTurn: Int? = null,
     /**
@@ -99,6 +122,13 @@ data class DelayedTriggeredAbility(
      * to exist — is dropped when the trigger fires ([carriedPipelineFor]).
      */
     val carriedCollections: Map<String, List<com.wingedsheep.engine.handlers.CapturedObjectBinding>> = emptyMap(),
+    /**
+     * Copiable values of departed objects the delayed effect copies, frozen when it was scheduled
+     * ("when this dies, … create a token that's a copy of it at the beginning of the next end step"
+     * — Ochre Jelly): a token that died has ceased to exist by the time this fires (CR 704.5d).
+     * Handed to the firing trigger as [TriggerContext.capturedEntitySnapshots].
+     */
+    val capturedEntitySnapshots: List<com.wingedsheep.engine.state.components.stack.EntitySnapshot> = emptyList(),
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     /**
      * Further steps that fire this step-based trigger — it fires at whichever of [fireAtStep] or
@@ -123,17 +153,17 @@ fun DelayedTriggeredAbility.carriedPipelineFor(state: com.wingedsheep.engine.sta
 }
 
 /**
- * Whether this step-based delayed trigger fires as [step] begins in [state]: it names that step (or
+ * Whether this step-based delayed trigger fires as [step] begins in [state]: it names that step
+ * under its [DelayedTriggeredAbility.stepScope] ("your next main phase" as ANY_MAIN_PHASE), or
  * lists it among [DelayedTriggeredAbility.alsoFireAtSteps] — a one-shot "whichever comes first"
  * trigger such as "your next main phase", CR 603.7, matches the first of them to begin and is
- * consumed there), its "whose turn" gate admits the active turn ("your next end step" is the team's
+ * consumed there —; its "whose turn" gate admits the active turn ("your next end step" is the team's
  * in a shared team turn, CR 805.4 — the non-representative head is never `activePlayerId`), and its
  * turn floor has passed. Event-based delayed triggers ([DelayedTriggeredAbility.trigger] set) never
- * fire on a step. The one predicate both [TriggerDetector.detectDelayedTriggers] and the cleanup
- * step's CR 514.3a check read.
+ * fire on a step. Read by [TriggerDetector.detectDelayedTriggers].
  */
 fun DelayedTriggeredAbility.firesAtStepBeginning(state: com.wingedsheep.engine.state.GameState, step: Step): Boolean =
     trigger == null &&
-        (fireAtStep == step || step in alsoFireAtSteps) &&
+        (fireAtStep?.let { stepScope.matches(it, step) } == true || step in alsoFireAtSteps) &&
         (fireOnPlayerId == null || state.isActiveTurnFor(fireOnPlayerId)) &&
         (notBeforeTurn == null || state.turnNumber >= notBeforeTurn)

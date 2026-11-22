@@ -18,6 +18,7 @@ import type { ScenarioCreateResponse } from '@/components/scenario/types'
 import { MissionHand, MiniHand, frameVar } from '@/components/learn/MissionHand'
 import { CardImage } from '@/components/learn/CardImage'
 import { useLessonCards, usePreloadLessonCards } from '@/components/learn/useLessonCards'
+import { PageShell } from '@/components/ui/PageShell'
 import styles from '@/components/learn/learn.module.css'
 
 const NAME_KEY = 'argentum-player-name'
@@ -35,38 +36,31 @@ function storedName(): string {
 export function LearnPage() {
   const { missionId } = useParams<{ missionId?: string }>()
   const mission = missionById(missionId)
-  return <div className={styles.root}>{mission ? <Brief mission={mission} /> : <CourseHome />}</div>
+  return (
+    <div className={styles.root}>
+      <PageShell title="Learn to play" actions={<ProgressPips current={mission?.id} />}>
+        {mission ? <Brief mission={mission} /> : <CourseHome />}
+      </PageShell>
+    </div>
+  )
 }
 
-function TopBar({ current }: { current?: MissionId }) {
-  const navigate = useNavigate()
+/** One pip per mission in the top bar, gold once complete; the current brief's is ringed. */
+function ProgressPips({ current }: { current?: MissionId | undefined }) {
   const completed = useLearnProgress((s) => s.completed)
   return (
-    <div className={styles.topBar}>
-      <div className={styles.topBarInner}>
-        <button type="button" className={styles.topBarLink} onClick={() => navigate('/')}>
-          ← Menu
-        </button>
-        {current && (
-          <Link to={learnHref()} className={styles.topBarLink}>
-            All missions
-          </Link>
-        )}
-        <span className={styles.topBarEyebrow}>Learn to play</span>
-        <div className={styles.pips} aria-label={`${completed.length} of ${MISSIONS.length} missions complete`}>
-          {MISSIONS.map((m) => (
-            <span
-              key={m.id}
-              className={[
-                styles.pip,
-                completed.includes(m.id) ? styles.pipDone : '',
-                m.id === current ? styles.pipCurrent : '',
-              ].join(' ')}
-              title={`${m.number}. ${m.title}`}
-            />
-          ))}
-        </div>
-      </div>
+    <div className={styles.pips} aria-label={`${completed.length} of ${MISSIONS.length} missions complete`}>
+      {MISSIONS.map((m) => (
+        <span
+          key={m.id}
+          className={[
+            styles.pip,
+            completed.includes(m.id) ? styles.pipDone : '',
+            m.id === current ? styles.pipCurrent : '',
+          ].join(' ')}
+          title={`${m.number}. ${m.title}`}
+        />
+      ))}
     </div>
   )
 }
@@ -92,9 +86,7 @@ function CourseHome() {
   usePreloadLessonCards(MISSIONS.flatMap((m) => m.openingCards.map((c) => c.name)))
 
   return (
-    <>
-      <TopBar />
-      <main className={styles.home}>
+    <div className={styles.home}>
         <p className={styles.eyebrow}>Never played Magic?</p>
         <h1 className={styles.headline}>
           Learn it
@@ -150,8 +142,7 @@ function CourseHome() {
             </button>
           </div>
         )}
-      </main>
-    </>
+    </div>
   )
 }
 
@@ -211,9 +202,10 @@ function Brief({ mission }: { mission: Mission }) {
   const playCount = plays[mission.id] ?? 0
 
   return (
-    <>
-      <TopBar current={mission.id} />
-      <main className={styles.brief}>
+    <div className={styles.brief}>
+        <Link to={learnHref()} className={styles.backLink}>
+          ← All missions
+        </Link>
         <header className={styles.briefHeader} style={{ ['--frame' as string]: frameVar(mission.frame) }}>
           <div className={styles.lessonKicker}>
             <span className={styles.lessonSwatch} aria-hidden="true" />
@@ -280,7 +272,6 @@ function Brief({ mission }: { mission: Mission }) {
         </div>
 
         <MiniHand current={mission.id} completed={completed} />
-      </main>
-    </>
+    </div>
   )
 }

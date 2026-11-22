@@ -108,6 +108,25 @@
     "PREDH",
     "VINTAGE"
   ],
+  "Jace's Machinations": [
+    "ALCHEMY",
+    "BRAWL",
+    "COMMANDER",
+    "COMPETITIVEBRAWL",
+    "DUEL",
+    "FUTURE",
+    "GLADIATOR",
+    "HISTORIC",
+    "LEGACY",
+    "MODERN",
+    "OATHBREAKER",
+    "PIONEER",
+    "STANDARD",
+    "STANDARDBRAWL",
+    "TIMELESS",
+    "TLR",
+    "VINTAGE"
+  ],
   "Jace's Mindseeker": [
     "COMMANDER",
     "DUEL",
@@ -2056,6 +2075,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

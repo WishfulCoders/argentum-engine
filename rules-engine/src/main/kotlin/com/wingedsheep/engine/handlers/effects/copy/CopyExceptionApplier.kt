@@ -2,6 +2,7 @@ package com.wingedsheep.engine.handlers.effects.copy
 
 import com.wingedsheep.engine.core.CardEntityFactory
 import com.wingedsheep.engine.state.ComponentContainer
+import com.wingedsheep.engine.state.components.identity.copiableNumericKeywords
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.NumericKeywordValuesComponent
 import com.wingedsheep.engine.state.components.identity.ToxicComponent
@@ -58,8 +59,16 @@ object CopyExceptionApplier {
      * the whole type line (CR 205.1a), so it replaces the copied types *and* supersedes an addition
      * on the same axis — an "in addition to its other types" clause (CR 205.1b) and a replacing one
      * can't both be printed on the same characteristic.
+     *
+     * [CopyExceptions.conditional] clauses are then folded in, each tested against the type line
+     * built so far ("if it's a creature" asks about the copy, not the copied object).
      */
-    fun typeLine(base: TypeLine, exceptions: CopyExceptions): TypeLine = base.copy(
+    fun typeLine(base: TypeLine, exceptions: CopyExceptions): TypeLine =
+        exceptions.conditional.fold(flatTypeLine(base, exceptions)) { line, clause ->
+            if (clause.cardType in line.cardTypes) flatTypeLine(line, clause.exceptions) else line
+        }
+
+    private fun flatTypeLine(base: TypeLine, exceptions: CopyExceptions): TypeLine = base.copy(
         supertypes = base.supertypes + exceptions.addedSupertypes - exceptions.removedSupertypes,
         cardTypes = exceptions.overrideCardTypes ?: (base.cardTypes + exceptions.addedCardTypes),
         subtypes = exceptions.overrideSubtypes ?: (base.subtypes + exceptions.addedSubtypes),
@@ -72,19 +81,28 @@ object CopyExceptionApplier {
      * marker, revert markers).
      *
      * A no-op fast path when the exceptions are empty, so a plain copy allocates nothing.
+     *
+     * [CopyExceptions.conditional] clauses apply afterwards, in order, each only when the copy built
+     * so far has the clause's card type — a flip side is tested on its own type line.
      */
     fun apply(
         base: CardComponent,
         exceptions: CopyExceptions,
         resolvingTrigger: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
         copierColors: Set<com.wingedsheep.sdk.core.Color> = emptySet(),
+        copierStats: CreatureStats? = null,
     ): CardComponent {
         if (exceptions.isEmpty) return base
+        if (exceptions.conditional.isNotEmpty()) {
+            val flat = apply(base, exceptions.copy(conditional = emptyList()), resolvingTrigger, copierColors, copierStats)
+            return exceptions.conditional.fold(flat) { copy, clause -> applyIf(copy, clause, copierColors, copierStats) }
+        }
         val addedTriggers = exceptions.addedTriggeredAbilities +
             if (exceptions.retainResolvingTriggeredAbility && resolvingTrigger != null) listOf(resolvingTrigger)
             else emptyList()
+        val typeLine = typeLine(base.typeLine, exceptions)
         return base.copy(
-            flipSide = base.flipSide?.let { apply(it, exceptions, resolvingTrigger, copierColors) },
+            flipSide = base.flipSide?.let { apply(it, exceptions, resolvingTrigger, copierColors, copierStats) },
             copyNumericKeywords = base.copyNumericKeywords + exceptions.addedNumericKeywords,
             name = exceptions.nameOverride ?: base.name,
             // Each instance gets its own identity, including two copies of a once-per-turn
@@ -99,8 +117,11 @@ object CopyExceptionApplier {
                     "copy_act:${base.copyActivatedAbilities.size + index}:${ability.id.value}"
                 ))
             },
-            typeLine = typeLine(base.typeLine, exceptions),
-            baseStats = baseStats(base.baseStats, exceptions),
+            typeLine = typeLine,
+            // "Its power and toughness are equal to this creature's" keeps the copier's own base
+            // P/T — a prototyped copier's included (CR 718.3b). No copier (a minted token): unchanged.
+            baseStats = if (exceptions.retainPowerToughness && copierStats != null) copierStats
+                else baseStats(base.baseStats, typeLine, exceptions),
             // Color is already derived from the indicator/CDA in the stored characteristics.
             // A color exception also omits the copied color-defining keyword (CR 707.9d).
             baseKeywords = (if (exceptions.retainColors || exceptions.overrideColors != null ||
@@ -111,7 +132,20 @@ object CopyExceptionApplier {
             // "…and it has no mana cost" (Embalm / Eternalize, CR 702.128a) — mana value 0, and
             // that 0 is itself a copiable value.
             manaCost = if (exceptions.noManaCost) ManaCost.ZERO else base.manaCost,
+            startingLoyaltyOverride = exceptions.startingLoyalty ?: base.startingLoyaltyOverride,
         )
+    }
+
+    private fun applyIf(
+        copy: CardComponent,
+        clause: CopyExceptions.IfCardType,
+        copierColors: Set<com.wingedsheep.sdk.core.Color>,
+        copierStats: CreatureStats?,
+    ): CardComponent {
+        val face = if (clause.cardType in copy.typeLine.cardTypes)
+            apply(copy.copy(flipSide = null), clause.exceptions, copierColors = copierColors, copierStats = copierStats)
+        else copy.copy(flipSide = null)
+        return face.copy(flipSide = copy.flipSide?.let { applyIf(it, clause, copierColors, copierStats) })
     }
 
     /**
@@ -133,22 +167,7 @@ object CopyExceptionApplier {
         exceptions: CopyExceptions,
         registry: com.wingedsheep.engine.registry.CardRegistry? = null,
     ): ComponentContainer {
-        val numeric = buildList {
-            if (!source.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>()) {
-                val upright = source.get<com.wingedsheep.engine.state.components.identity.FlippedComponent>()?.unflippedCard
-                if (upright != null) {
-                    addAll(registry?.getCard(upright.cardDefinitionId)?.keywordAbilities
-                        ?.filterIsInstance<KeywordAbility.Numeric>().orEmpty())
-                    addAll(upright.copyNumericKeywords)
-                } else {
-                    source.get<ToxicComponent>()?.let { add(KeywordAbility.Numeric(Keyword.TOXIC, it.amount)) }
-                    source.get<NumericKeywordValuesComponent>()?.values?.forEach { (keyword, n) ->
-                        add(KeywordAbility.Numeric(keyword, n))
-                    }
-                }
-            }
-            addAll(exceptions.addedNumericKeywords)
-        }
+        val numeric = source.copiableNumericKeywords(registry) + exceptions.addedNumericKeywords
         return CardEntityFactory.applyNumericKeywords(
             copy.without<ToxicComponent>().without<NumericKeywordValuesComponent>(),
             numeric,
@@ -160,11 +179,18 @@ object CopyExceptionApplier {
      * stats when the copied object had none: Absorbing Man copying a land becomes "a legendary 4/4
      * Human Villain creature in addition to its other types", so the 4/4 has to come from nowhere.
      * A half-specified override keeps the copied value on the other half.
+     *
+     * It creates them only when the copy's [typeLine] (other exceptions applied) is a creature:
+     * a copy effect can't give a P/T to a permanent whose copiable values have neither a creature
+     * type nor a printed P/T (CR 208.3). Mindlink Mech copying a crewing animated land ("except
+     * it's 4/3, it's a Vehicle artifact") is a noncreature with no P/T, so the crew effect that
+     * makes it a creature leaves it 0/0 — the card's own ruling.
      */
-    private fun baseStats(base: CreatureStats?, exceptions: CopyExceptions): CreatureStats? {
+    private fun baseStats(base: CreatureStats?, typeLine: TypeLine, exceptions: CopyExceptions): CreatureStats? {
         val power = exceptions.powerOverride
         val toughness = exceptions.toughnessOverride
         if (power == null && toughness == null) return base
+        if (base == null && !typeLine.isCreature) return null
         return CreatureStats(
             power = power?.let { CharacteristicValue.Fixed(it) }
                 ?: base?.power

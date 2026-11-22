@@ -6,7 +6,7 @@
 
 ## Commander
 
-- [ ] 1 Ms. Bumbleflower
+- [x] 1 Ms. Bumbleflower
 
 ## Creatures (26)
 
@@ -15,7 +15,7 @@
 - [ ] 1 Body of Knowledge
 - [ ] 1 Chasm Skulker
 - [ ] 1 Coiling Oracle
-- [ ] 1 Faeburrow Elder
+- [x] 1 Faeburrow Elder
 - [x] 1 Forgotten Ancient
 - [ ] 1 Jolly Gerbils
 - [ ] 1 Jolrael, Mwonvuli Recluse
@@ -24,7 +24,7 @@
 - [x] 1 Loran of the Third Path
 - [ ] 1 Managorger Hydra
 - [ ] 1 Mangara, the Diplomat
-- [ ] 1 Mr. Foxglove
+- [x] 1 Mr. Foxglove
 - [ ] 1 Octomancer
 - [ ] 1 Psychosis Crawler
 - [ ] 1 Realm-Cloaked Giant // Cast Off
@@ -45,7 +45,7 @@
 
 - [ ] 1 An Offer You Can't Refuse
 - [ ] 1 Broken Wings
-- [ ] 1 Generous Gift
+- [x] 1 Generous Gift
 - [ ] 1 Illusionist's Gambit
 - [ ] 1 Intellectual Offering
 - [ ] 1 Long River's Pull
@@ -84,7 +84,7 @@
 - [ ] 1 Martial Impetus
 - [ ] 1 Rites of Flourishing
 - [x] 1 Simic Ascendancy
-- [ ] 1 Tenuous Truce
+- [x] 1 Tenuous Truce
 - [ ] 1 Wizard Class
 
 ## Lands (38)

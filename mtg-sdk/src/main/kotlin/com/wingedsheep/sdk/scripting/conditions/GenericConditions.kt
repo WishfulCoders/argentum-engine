@@ -4,7 +4,10 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.text.TextReplacer
+import com.wingedsheep.sdk.scripting.values.Aggregation
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
+import com.wingedsheep.sdk.scripting.values.TurnTracker
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -13,21 +16,26 @@ import kotlinx.serialization.Serializable
 // =============================================================================
 
 /**
- * Condition: "the player who triggered this ability is [player]".
+ * Condition: "[subject] is [player]" — two resolved player references name the same player.
  *
- * Compares the triggering player (the one carried in the trigger context — e.g. the player who
- * lost the game, gained life, cast the spell) against another resolved player reference. Used to
- * narrow a broad "whenever a player does X" trigger to a specific player without a bespoke event
- * filter: Shinryu, Transcendent Rival gates "When the chosen player loses the game, you win the
- * game" as `triggerRestriction = TriggeringPlayerIs(Player.ChosenOpponent)`. Both sides resolve via
- * the engine's shared player resolver, so any [Player] reference works on the right-hand side.
+ * The default [subject] is the triggering player (the one carried in the trigger context — e.g.
+ * the player who lost the game, gained life, cast the spell), which narrows a broad "whenever a
+ * player does X" trigger to a specific player without a bespoke event filter: Shinryu,
+ * Transcendent Rival gates "When the chosen player loses the game, you win the game" as
+ * `triggerRestriction = PlayerIs(player = Player.ChosenOpponent)`. Inside a per-player loop
+ * `Player.You` is the visited player, so `Not(PlayerIs(Player.You, Player.DefendingPlayer))` is
+ * "each opponent other than defending player" (myriad, CR 702.116a) and
+ * `Not(PlayerIs(player = Player.You))` skips the triggering player (Zenith Chronicler). Both
+ * sides resolve via the engine's shared player resolver, so any single-player [Player] reference
+ * works on either side; an unresolvable side makes the condition false.
  */
-@SerialName("TriggeringPlayerIs")
+@SerialName("PlayerIs")
 @Serializable
-data class TriggeringPlayerIs(
-    val player: Player
+data class PlayerIs(
+    val subject: Player = Player.TriggeringPlayer,
+    val player: Player,
 ) : Condition {
-    override val description: String = "if the triggering player is ${player.description}"
+    override val description: String = "if ${subject.description} is ${player.description}"
 }
 
 /**
@@ -50,7 +58,7 @@ data class CollectionContainsMatch(
 }
 
 /**
- * Condition: "if two cards in the named collection share a card type".
+ * Condition: "if two cards in the named collection share a card type" (or, with [all], every card).
  *
  * True when at least two distinct cards in the stored pipeline [collection] have a card type
  * (artifact, battle, creature, enchantment, instant, kindred, land, planeswalker, sorcery — CR
@@ -63,13 +71,20 @@ data class CollectionContainsMatch(
  * [collection], inside both an [com.wingedsheep.sdk.dsl.Effects.If] (for the
  * "draw a card") and a [com.wingedsheep.sdk.scripting.effects.RepeatCondition.WhileCondition] (for
  * the "repeat this process").
+ *
+ * With [all] set, the condition instead asks whether **every** card in the collection has one card
+ * type in common (the intersection of their card types is non-empty) — "if all cards exiled with
+ * this Saga share a card type" (All Good Things...). A single card trivially qualifies; an empty
+ * collection is false (there is no card type for nothing to share).
  */
 @SerialName("CollectionSharesCardType")
 @Serializable
 data class CollectionSharesCardType(
-    val collection: String
+    val collection: String,
+    val all: Boolean = false,
 ) : Condition {
-    override val description: String = "if two of those cards share a card type"
+    override val description: String =
+        if (all) "if all of those cards share a card type" else "if two of those cards share a card type"
     override fun applyTextReplacement(replacer: TextReplacer): Condition = this
 }
 
@@ -180,7 +195,36 @@ data class Compare(
     val operator: ComparisonOperator,
     val right: DynamicAmount
 ) : Condition {
-    override val description: String = "${left.description} is ${operator.phrase} ${right.description}"
+    override val description: String =
+        nthResolutionDescription() ?: lifeGainedDescription() ?: "${left.description} is ${operator.phrase} ${right.description}"
+
+    /** Oracle's own wording for `Conditions.YouGainedLifeThisTurn[AtLeast]` (Infusion). */
+    private fun lifeGainedDescription(): String? {
+        val tracked = left as? DynamicAmount.TurnTracking
+        val n = (right as? DynamicAmount.Fixed)?.amount
+        if (tracked?.tracker != TurnTracker.LIFE_GAINED || operator != ComparisonOperator.GTE || n == null || n < 1) {
+            return null
+        }
+        val who = tracked.player.description
+        return if (n == 1) "$who gained life this turn" else "$who gained $n or more life this turn"
+    }
+
+    /** Oracle's own wording for `Conditions.SourceAbilityResolvedNTimes(n)` (Harvestrite Host). */
+    private fun nthResolutionDescription(): String? {
+        val property = (left as? DynamicAmount.EntityProperty)?.numericProperty
+        val n = (right as? DynamicAmount.Fixed)?.amount
+        if (property != EntityNumericProperty.AbilityResolutionsThisTurn || operator != ComparisonOperator.EQ ||
+            n == null || n < 1
+        ) return null
+        val ordinal = when (n) {
+            1 -> "first"
+            2 -> "second"
+            3 -> "third"
+            else -> "$n" + if (n % 100 in 11..13) "th" else when (n % 10) { 1 -> "st"; 2 -> "nd"; 3 -> "rd"; else -> "th" }
+        }
+        return "if this is the $ordinal time this ability has resolved this turn"
+    }
+
     override fun applyTextReplacement(replacer: TextReplacer): Condition {
         val newLeft = left.applyTextReplacement(replacer)
         val newRight = right.applyTextReplacement(replacer)
@@ -189,48 +233,62 @@ data class Compare(
 }
 
 /**
- * True when [player] has the most life, or is tied for the most life, among all players
- * (their life total ≥ every player's). The "most life" comparison that a binary [Compare] can't
- * express (it would need the max over every player). Resolve [player] to the controller
- * (`Player.You`), the attacked player (`Player.DefendingPlayer`), the triggering player, etc.
+ * True when [player] has the most of [amount] among the players still in the game — the
+ * "max over every player" comparison a binary [Compare] can't express.
  *
- * Preacher of the Schism: "Whenever this creature attacks the player with the most life or tied for
- * most life, …" (`triggerRestriction = PlayerHasMostLife(Player.DefendingPlayer)`) and "Whenever this
- * creature attacks while you have the most life or are tied for most life, …"
- * (`PlayerHasMostLife(Player.You)`).
+ * [amount] is measured **once per player**, with [Player.You] inside it rebound to the player
+ * being measured — the same rebinding [com.wingedsheep.sdk.scripting.values.DynamicAmount.GreatestAmongPlayers]
+ * and `ForEachPlayer` do. Write it from that player's own side: `LifeTotal(Player.You)`,
+ * `Count(Player.You, Zone.HAND)`, a battlefield count of `Player.You`'s permanents (read from
+ * projected state, so animated lands and lost types are honoured).
+ *
+ * [includeTies] is the axis between the two printed wordings:
+ * - `true` — "has the most life **or is tied for** most life": no other player has strictly more.
+ *   Preacher of the Schism (`PlayerHasMost(Player.DefendingPlayer, LifeTotal(You))`), No
+ *   Witnesses ("each player who controls the most creatures"), The Black Gate's candidate.
+ * - `false` — "has more cards in hand **than each other player**": strictly more than every
+ *   other player, so a tie for the top fails. Battle Angels of Tyr reads the damaged player's
+ *   hand, lands and life this way. Alone in the game, a player trivially has more than each
+ *   other player.
+ *
+ * Write [amount] from the measured player's side only: an outward reference inside it
+ * (`Player.EachOpponent`, `Player.TargetPlayer`) measures the same set for every player, so the
+ * comparison is meaningless.
+ *
+ * "Strictly more than each other player" is why this is one condition rather than [Compare] over
+ * [com.wingedsheep.sdk.scripting.values.DynamicAmount.GreatestAmongPlayers]: that maximum can't
+ * leave the measured player out. The tied form shares the type so both wordings read one way.
  */
-@SerialName("PlayerHasMostLife")
+@SerialName("PlayerHasMost")
 @Serializable
-data class PlayerHasMostLife(val player: Player) : Condition {
-    override val description: String =
-        "if ${player.description} has the most life or is tied for most life"
-}
-
-/**
- * True when [player] controls the most permanents matching [filter], or is tied for the most,
- * among all players (their count ≥ every player's). The board-count sibling of
- * [PlayerHasMostLife] — the same shape a binary [Compare] can't express, since it needs the max
- * over every player rather than a fixed threshold.
- *
- * Counts are read from the projected battlefield, so type-changing continuous effects (an animated
- * land, a creature that lost its types) are honored.
- *
- * No Witnesses: "Each player who controls the most creatures investigates" — a per-player loop
- * whose body is gated on `PlayerControlsMostPermanents(Player.You, GameObjectFilter.Creature)`,
- * which inside the loop asks about the iterated player. Ties are included, exactly as printed.
- */
-@SerialName("PlayerControlsMostPermanents")
-@Serializable
-data class PlayerControlsMostPermanents(
+data class PlayerHasMost(
     val player: Player,
-    val filter: GameObjectFilter = GameObjectFilter.Creature,
+    val amount: DynamicAmount,
+    val includeTies: Boolean = true,
 ) : Condition {
-    override val description: String =
-        "if ${player.description} controls the most ${filter.description} or is tied for the most"
+    override val description: String = run {
+        // "has the most life" / "controls more lands": the printed verb + noun for the amounts the
+        // wording takes, falling back to the amount's own phrase for anything else.
+        val (verb, noun) = when (amount) {
+            DynamicAmount.YourLifeTotal -> "has" to "life"
+            is DynamicAmount.LifeTotal -> "has" to "life"
+            is DynamicAmount.Count -> when (amount.zone) {
+                Zone.BATTLEFIELD -> "controls" to DynamicAmount.pluralize(amount.filter.description)
+                else -> "has" to "${DynamicAmount.pluralize(amount.filter.description)} in ${amount.zone.name.lowercase()}"
+            }
+            is DynamicAmount.AggregateBattlefield ->
+                if (amount.aggregation == Aggregation.COUNT && amount.property == null && amount.counterType == null) {
+                    "controls" to DynamicAmount.pluralize(amount.filter.description)
+                } else "has" to "of ${amount.description}"
+            else -> "has" to "of ${amount.description}"
+        }
+        if (includeTies) "if ${player.description} $verb the most $noun or is tied for the most"
+        else "if ${player.description} $verb more $noun than each other player"
+    }
 
     override fun applyTextReplacement(replacer: TextReplacer): Condition {
-        val newFilter = filter.applyTextReplacement(replacer)
-        return if (newFilter !== filter) copy(filter = newFilter) else this
+        val newAmount = amount.applyTextReplacement(replacer)
+        return if (newAmount !== amount) copy(amount = newAmount) else this
     }
 }
 
@@ -319,40 +377,6 @@ data class NumberMatches(
  * Exists(Player.You, Zone.HAND, negate = true)
  * ```
  */
-/**
- * Condition: some player in the game has [threshold] or less life.
- *
- * Existential quantifier over all players in turn order — distinct from
- * [Compare] of `DynamicAmount.LifeTotal(player)`, which resolves to a single
- * player's life and can't express "any player" / "some player" cleanly. The
- * engine iterates `state.turnOrder` and returns true as soon as one player's
- * life total is at most [threshold].
- *
- * Used by cards like Razortrap Gorge ("this land enters tapped unless a
- * player has 13 or less life").
- *
- * @property threshold The maximum life total at which the condition is true.
- */
-@SerialName("APlayerLifeAtMost")
-@Serializable
-data class APlayerLifeAtMost(val threshold: Int) : Condition {
-    override val description: String = "a player has $threshold or less life"
-}
-
-/** Condition: every player in the game has [threshold] or less life. */
-@SerialName("EachPlayerLifeAtMost")
-@Serializable
-data class EachPlayerLifeAtMost(val threshold: Int) : Condition {
-    override val description: String = "each player has $threshold or less life"
-}
-
-/** Condition: at least one opponent of the ability's controller has [threshold] or less life. */
-@SerialName("AnOpponentLifeAtMost")
-@Serializable
-data class AnOpponentLifeAtMost(val threshold: Int) : Condition {
-    override val description: String = "an opponent has $threshold or less life"
-}
-
 @SerialName("Exists")
 @Serializable
 data class Exists(
@@ -363,7 +387,7 @@ data class Exists(
     /** When true, exclude the source entity from the search (for "another" wording). */
     val excludeSelf: Boolean = false
 ) : Condition {
-    override val description: String = buildString {
+    override val description: String = youControlDescription() ?: buildString {
         if (negate) {
             append("if there are no ")
             if (excludeSelf) append("other ")
@@ -377,8 +401,27 @@ data class Exists(
         }
         append(player.possessive)
         append(" ")
-        append(zone.displayName.removePrefix("a ").removePrefix("the "))
+        append(zone.noun)
     }
+
+    /**
+     * A battlefield check on your own permanents reads the way Oracle prints it — "if you control a
+     * white permanent", "if you control no other creatures" — rather than "if a permanent is in your
+     * battlefield". Null for every other shape, which keeps the generic zone wording.
+     */
+    private fun youControlDescription(): String? {
+        if (zone != Zone.BATTLEFIELD || filter.controllerPredicate != null) return null
+        if (player != Player.You && player != Player.ControllerOfSource) return null
+        return when {
+            negate -> "if you control no " + (if (excludeSelf) "other " else "") +
+                filter.permanentNounPhrase(plural = true)
+            excludeSelf -> "if you control another " + filter.permanentNounPhrase(plural = false)
+            else -> filter.permanentNounPhrase(plural = false).let { noun ->
+                "if you control ${if (noun.first().lowercaseChar() in "aeiou") "an" else "a"} $noun"
+            }
+        }
+    }
+
     override fun applyTextReplacement(replacer: TextReplacer): Condition {
         val newFilter = filter.applyTextReplacement(replacer)
         return if (newFilter !== filter) copy(filter = newFilter) else this

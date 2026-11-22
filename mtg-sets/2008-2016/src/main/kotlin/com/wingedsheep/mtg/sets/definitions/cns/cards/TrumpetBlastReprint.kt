@@ -13,7 +13,7 @@ val TrumpetBlastReprint = Printing(
     collectorNumber = "154",
     scryfallId = "a76124f5-adf7-41a6-8fb8-f4b4ca9863de",
     artist = "Carl Critchlow",
-    imageUri = "https://cards.scryfall.io/normal/front/a/7/a76124f5-adf7-41a6-8fb8-f4b4ca9863de.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/a/7/a76124f5-adf7-41a6-8fb8-f4b4ca9863de.jpg?1783939348",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

@@ -13,7 +13,7 @@ val StifleReprint = Printing(
     collectorNumber = "108",
     scryfallId = "616d1b20-61c1-4d39-a9b5-ad9fd61699e4",
     artist = "Eric Fortune",
-    imageUri = "https://cards.scryfall.io/normal/front/6/1/616d1b20-61c1-4d39-a9b5-ad9fd61699e4.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/6/1/616d1b20-61c1-4d39-a9b5-ad9fd61699e4.jpg?1783939358",
     releaseDate = "2014-06-06",
     rarity = Rarity.RARE,
 )

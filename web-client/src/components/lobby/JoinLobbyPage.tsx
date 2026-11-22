@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGameStore } from '@/store/gameStore.ts'
 import { useConnectName } from '@/store/useConnectName'
+import { EntryCard } from './EntryCard'
 
 /**
  * Entry point for the `/join/:lobbyId` deep link — the target of a lobby's QR code / share link.
@@ -79,105 +80,13 @@ export function JoinLobbyPage() {
   const showNameEntry = !errorMessage && connectionStatus === 'disconnected' && !connectName && !nameResolving
 
   return (
-    <div style={pageStyles.container}>
-      <div style={pageStyles.card}>
-        <h1 style={pageStyles.title}>Argentum Engine</h1>
-
-        {errorMessage && <p style={pageStyles.error}>{errorMessage}</p>}
-
-        {showNameEntry && (
-          <div style={pageStyles.form}>
-            <label style={pageStyles.label}>Enter your name to join the lobby</label>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleConnect() }}
-              placeholder="Your name"
-              autoFocus
-              maxLength={20}
-              style={pageStyles.input}
-            />
-            <button
-              onClick={handleConnect}
-              disabled={!playerName.trim()}
-              style={{ ...pageStyles.button, opacity: playerName.trim() ? 1 : 0.5 }}
-            >
-              Join Lobby
-            </button>
-          </div>
-        )}
-
-        {!showNameEntry && !errorMessage && (
-          <div style={pageStyles.loading}>
-            <div style={pageStyles.spinner} />
-            <p style={pageStyles.loadingText}>
-              {joining ? 'Joining lobby...' : 'Connecting...'}
-            </p>
-            <style>{`@keyframes join-spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-        )}
-      </div>
-    </div>
+    <EntryCard
+      kicker="You're invited"
+      title="Join a game"
+      code={lobbyId}
+      error={errorMessage}
+      nameEntry={showNameEntry ? { value: playerName, onChange: setPlayerName, onSubmit: handleConnect, submitLabel: 'Join lobby' } : undefined}
+      progressText={joining ? 'Joining lobby…' : 'Connecting…'}
+    />
   )
-}
-
-const pageStyles: Record<string, React.CSSProperties> = {
-  container: {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0a0a0f',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  },
-  card: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: '40px 48px',
-    maxWidth: 420,
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 24,
-    border: '1px solid #2a2a3e',
-  },
-  title: { margin: 0, fontSize: 28, color: '#e0e0e0', fontWeight: 600 },
-  error: { color: '#ff6b6b', fontSize: 14, margin: 0, textAlign: 'center' },
-  form: { width: '100%', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' },
-  label: { color: '#888', fontSize: 14 },
-  input: {
-    width: '100%',
-    padding: '10px 14px',
-    fontSize: 16,
-    backgroundColor: '#12121e',
-    color: '#e0e0e0',
-    border: '1px solid #3a3a4e',
-    borderRadius: 6,
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
-  button: {
-    width: '100%',
-    padding: '12px 24px',
-    fontSize: 16,
-    fontWeight: 600,
-    backgroundColor: '#9b59b6',
-    color: 'white',
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-  },
-  loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
-  spinner: {
-    width: 32,
-    height: 32,
-    border: '3px solid #333',
-    borderTopColor: '#888',
-    borderRadius: '50%',
-    animation: 'join-spin 1s linear infinite',
-  },
-  loadingText: { color: '#888', fontSize: 14, margin: 0 },
 }

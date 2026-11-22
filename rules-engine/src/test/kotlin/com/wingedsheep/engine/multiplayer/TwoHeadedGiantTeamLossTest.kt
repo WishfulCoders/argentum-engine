@@ -47,7 +47,10 @@ class TwoHeadedGiantTeamLossTest : FunSpec({
     fun registry(): CardRegistry = CardRegistry().also { it.register(TestCards.all) }
     val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
-    fun checker() = StateBasedActionChecker(zones, cardRegistry = registry())
+    fun checker() = StateBasedActionChecker(
+        zones, cardRegistry = registry(),
+        finishAbandonedResolution = com.wingedsheep.engine.core.EngineServices(registry()).finishAbandonedResolution,
+    )
 
     fun boot(format: Format = Format.TwoHeadedGiant(), playerCount: Int = 4): Pair<GameState, List<EntityId>> {
         val result = GameInitializer(registry()).initializeGame(

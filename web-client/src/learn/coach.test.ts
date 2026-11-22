@@ -23,7 +23,7 @@ const base: CoachView = {
   blockersLeft: 0,
   theirCreatures: 0,
   conceded: false,
-  passLabel: 'Pass to Attackers',
+  passLabel: 'To Attackers',
   hasHover: true,
   isGameOver: false,
   won: null,
@@ -149,9 +149,9 @@ describe('coachTip', () => {
   })
 
   it('names the real button wherever a tip says to press it', () => {
-    expect(coachTip(base).body).toMatch(/Press Pass to Attackers,/)
-    expect(coachTip({ ...base, step: 'POSTCOMBAT_MAIN', passLabel: 'End Turn' }).body).toMatch(/^Press End Turn\./)
-    expect(coachTip({ ...base, passLabel: 'End Turn' }, { 'pass-to-combat': { title: 'Hit {pass}.', body: 'x' } }).title).toBe('Hit End Turn.')
+    expect(coachTip(base).body).toMatch(/Press “To Attackers”,/)
+    expect(coachTip({ ...base, step: 'POSTCOMBAT_MAIN', passLabel: 'End Turn' }).body).toMatch(/^Press “End Turn”\./)
+    expect(coachTip({ ...base, passLabel: 'End Turn' }, { 'pass-to-combat': { title: 'Hit {pass}.', body: 'x' } }).title).toBe('Hit “End Turn”.')
   })
 
   it('names the gesture this device has', () => {
@@ -160,7 +160,7 @@ describe('coachTip', () => {
     expect(mouse.body).toMatch(/click it and choose Play/)
     expect(touch.body).toMatch(/tap it and choose Play/)
     expect(wordTip('{read} to read it. {click} it. {pass}!', { passLabel: 'Resolve', hasHover: true })).toBe(
-      'Hover a card to read it. Click it. Resolve!',
+      'Hover a card to read it. Click it. “Resolve”!',
     )
     expect(wordTip('{read} to read it. {click} it.', { passLabel: 'x', hasHover: false })).toBe(
       'Press and hold a card to read it. Tap it.',

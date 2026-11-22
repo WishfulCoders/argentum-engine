@@ -43,6 +43,7 @@ class DrakeHatcherScenarioTest : FunSpec({
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
 
         val hatcher = driver.putCreatureOnBattlefield(player, "Drake Hatcher")
+        driver.removeSummoningSickness(hatcher)
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
         driver.declareAttackers(player, listOf(hatcher), opponent)

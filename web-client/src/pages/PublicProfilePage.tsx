@@ -8,13 +8,15 @@
  * relationship is derived entirely from the already-loaded friends store (friends / outgoing /
  * incoming lists are all keyed by account id, which equals this profile's userId), so no extra
  * request or endpoint is needed — sending or accepting reuses the same store actions as the friends
- * page.
+ * page. A Message button opens the conversation with them (a message request if you aren't friends).
  */
 import { useEffect, useState } from 'react'
-import type React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { type PublicProfile, ProfileNotFoundError, fetchPublicProfile } from '@/api/account'
 import { StatsDashboard } from '@/components/profile/StatsDashboard'
+import { useStatsFilterParam } from '@/components/stats/StatsFilterBar'
+import { AccountPage, Avatar, MessageCard, accountStyles as a } from '@/components/profile/accountUi'
+import { pageStyles as p } from '@/components/ui/PageShell'
 import { useAuthStore } from '@/store/authStore'
 import { useFriendsStore } from '@/store/friendsStore'
 
@@ -23,12 +25,18 @@ export function PublicProfilePage() {
   const { userId } = useParams<{ userId: string }>()
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'notfound' | 'error'>('loading')
+  const [filter, setFilter] = useStatsFilterParam()
+
+  // A new profile starts from a loading state; a new filter keeps the page up and swaps the numbers.
+  useEffect(() => {
+    setState('loading')
+    setProfile(null)
+  }, [userId])
 
   useEffect(() => {
     if (!userId) return
     let live = true
-    setState('loading')
-    fetchPublicProfile(userId)
+    fetchPublicProfile(userId, filter)
       .then((p) => {
         if (!live) return
         setProfile(p)
@@ -41,7 +49,7 @@ export function PublicProfilePage() {
     return () => {
       live = false
     }
-  }, [userId])
+  }, [userId, filter])
 
   // Friend control — only meaningful for a signed-in viewer looking at someone else's profile.
   const authUser = useAuthStore((s) => s.user)
@@ -101,125 +109,83 @@ export function PublicProfilePage() {
     }
   }
 
+  const title = state === 'ready' && profile ? profile.displayName : 'Player'
+
   return (
-    <div style={styles.wrap}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <button type="button" style={styles.link} onClick={() => navigate(-1)}>
-            ← Back
+    <AccountPage title={title} width="wide" plain>
+      {state === 'loading' && (
+        <MessageCard center>
+          <span className={a.spinner} aria-hidden />
+          <p className={a.muted}>Loading profile…</p>
+        </MessageCard>
+      )}
+      {(state === 'notfound' || state === 'error') && (
+        <MessageCard>
+          <h1 className={p.h1}>{state === 'notfound' ? 'Player not found' : 'Couldn’t load profile'}</h1>
+          <p className={a.muted}>
+            {state === 'notfound'
+              ? 'This profile doesn’t exist or is no longer available.'
+              : 'Something went wrong fetching this player’s stats.'}
+          </p>
+          <button type="button" className={p.button} onClick={() => navigate(-1)}>
+            ← Go back
           </button>
-          <button type="button" style={styles.link} onClick={() => navigate('/')}>
-            Home
-          </button>
-        </div>
-
-        {state === 'loading' && <p style={styles.muted}>Loading…</p>}
-        {state === 'notfound' && (
-          <>
-            <h1 style={styles.title}>Player not found</h1>
-            <p style={styles.muted}>This profile doesn’t exist or is no longer available.</p>
-          </>
-        )}
-        {state === 'error' && (
-          <>
-            <h1 style={styles.title}>Couldn’t load profile</h1>
-            <p style={styles.muted}>Something went wrong fetching this player’s stats.</p>
-          </>
-        )}
-        {state === 'ready' && profile && (
-          <>
-            <h1 style={styles.title}>{profile.displayName}</h1>
-            <p style={styles.muted}>Player profile</p>
-            {canBefriend && (
-              <div style={styles.friendRow}>
-                {isFriend ? (
-                  <span style={styles.friendBadge}>✓ Friends</span>
-                ) : incomingRequest ? (
-                  <button
-                    type="button"
-                    style={styles.primary}
-                    disabled={friendBusy}
-                    onClick={() => void acceptFriend()}
-                  >
-                    {friendBusy ? 'Accepting…' : 'Accept friend request'}
-                  </button>
-                ) : outgoingPending ? (
-                  <span style={styles.pending}>Friend request sent</span>
-                ) : (
-                  <button
-                    type="button"
-                    style={styles.primary}
-                    disabled={friendBusy}
-                    onClick={() => void addFriend()}
-                  >
-                    {friendBusy ? 'Sending…' : '+ Add friend'}
-                  </button>
-                )}
-                {friendError && <span style={styles.friendError}>{friendError}</span>}
+        </MessageCard>
+      )}
+      {state === 'ready' && profile && (
+        <>
+          <section className={p.panel}>
+            <div className={a.identity}>
+              <Avatar name={profile.displayName} avatar={profile.avatar} />
+              <div className={a.identityText}>
+                <h1 className={p.h1}>{profile.displayName}</h1>
+                <p className={a.muted}>
+                  {isOwnProfile ? 'This is how others see your profile' : 'Player profile'}
+                  {profile.stats.games > 0 && ` · ${profile.stats.games} game${profile.stats.games === 1 ? '' : 's'} played`}
+                </p>
               </div>
-            )}
-            <StatsDashboard
-              stats={profile.stats}
-              ratings={profile.ratings}
-              ratingHistory={profile.ratingHistory}
-              colors={profile.colors}
-              cardTypes={profile.cardTypes}
-              curve={profile.curve}
-              creatureTypes={profile.creatureTypes}
-              modes={profile.modes}
-              sets={profile.sets}
-              topCards={profile.topCards}
-              opponents={profile.opponents}
-              tournaments={profile.tournaments}
-              recentGames={profile.recentGames}
-            />
-          </>
-        )}
-      </div>
-    </div>
+              {canBefriend && (
+                <div className={a.identityActions}>
+                  <button type="button" className={p.button} onClick={() => navigate(`/messages/${userId}`)}>
+                    Message
+                  </button>
+                  {isFriend ? (
+                    <span className={a.badgeFriends}>✓ Friends</span>
+                  ) : incomingRequest ? (
+                    <button type="button" className={p.buttonPrimary} disabled={friendBusy} onClick={() => void acceptFriend()}>
+                      {friendBusy ? 'Accepting…' : 'Accept friend request'}
+                    </button>
+                  ) : outgoingPending ? (
+                    <span className={a.badgePending}>Friend request sent</span>
+                  ) : (
+                    <button type="button" className={p.buttonPrimary} disabled={friendBusy} onClick={() => void addFriend()}>
+                      {friendBusy ? 'Sending…' : '+ Add friend'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {friendError && <p className={a.error} style={{ marginTop: 10 }}>{friendError}</p>}
+          </section>
+          <StatsDashboard
+            stats={profile.stats}
+            ratings={profile.ratings}
+            ratingHistory={profile.ratingHistory}
+            colors={profile.colors}
+            cardTypes={profile.cardTypes}
+            curve={profile.curve}
+            creatureTypes={profile.creatureTypes}
+            modes={profile.modes}
+            sets={profile.sets}
+            topCards={profile.topCards}
+            opponents={profile.opponents}
+            tournaments={profile.tournaments}
+            recentGames={profile.recentGames}
+            filter={filter}
+            onFilterChange={setFilter}
+          />
+        </>
+      )}
+    </AccountPage>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { height: '100vh', overflowY: 'auto', backgroundColor: '#0a0a15', padding: '32px 16px' },
-  container: { maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 },
-  header: { display: 'flex', justifyContent: 'space-between' },
-  link: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 14, padding: 0 },
-  title: { margin: '4px 0 0', color: '#fff', fontSize: 28 },
-  muted: { margin: 0, color: '#888', fontSize: 14 },
-  friendRow: { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 2 },
-  primary: {
-    alignSelf: 'flex-start',
-    padding: '9px 16px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: 'pointer',
-  },
-  friendBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '7px 14px',
-    borderRadius: 8,
-    border: '1px solid #2f5540',
-    backgroundColor: 'rgba(91,209,110,0.10)',
-    color: '#5bd16e',
-    fontWeight: 600,
-    fontSize: 14,
-  },
-  pending: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '7px 14px',
-    borderRadius: 8,
-    border: '1px solid #2a2a3e',
-    backgroundColor: '#14141f',
-    color: '#888',
-    fontSize: 14,
-  },
-  friendError: { color: '#ff6b6b', fontSize: 13 },
 }

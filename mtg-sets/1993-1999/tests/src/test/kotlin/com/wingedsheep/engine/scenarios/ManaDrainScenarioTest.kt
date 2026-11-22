@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
@@ -8,8 +8,11 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.leg.cards.ManaDrain
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -17,94 +20,81 @@ import io.kotest.matchers.shouldBe
  * Mana Drain (LEG #65): "Counter target spell. At the beginning of your next main phase, add an
  * amount of {C} equal to that spell's mana value."
  *
- * Exercises the "next main phase" delayed trigger: on an opponent's turn the mana comes in your next
- * precombat main phase; cast during your own precombat main phase it comes in that turn's
- * postcombat main phase (2020-11-10 ruling). The amount is the countered spell's mana value, read
- * before the spell leaves the stack.
+ * Pins the two halves of "your next main phase" from the 2020-11-10 ruling: cast on an opponent's
+ * turn it pays out in your precombat main phase; cast in your own precombat main phase it pays out
+ * that same turn's postcombat main phase, not next turn's.
  */
 class ManaDrainScenarioTest : FunSpec({
 
-    fun newDriver(startingPlayer: Int): GameTestDriver {
-        val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + listOf(ManaDrain))
-        driver.initMirrorMatch(deck = Deck.of("Grizzly Bears" to 40), startingLife = 20, startingPlayer = startingPlayer)
-        return driver
+    /** Costs {5}: a mana value distinct from Mana Drain's own 2 and from zero. */
+    val boulder = card("Drained Boulder") { manaCost = "{5}"; typeLine = "Artifact"; oracleText = "" }
+
+    // Built during spec construction: `TestCards.all` scans the whole card corpus.
+    val cards = TestCards.all + listOf(ManaDrain, boulder)
+
+    fun driver(): GameTestDriver {
+        val d = GameTestDriver()
+        d.registerCards(cards)
+        d.initMirrorMatch(deck = Deck.of("Island" to 40), skipMulligans = true, startingPlayer = 0)
+        d.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return d
     }
 
-    fun GameTestDriver.colorless(player: EntityId) = state.getEntity(player)?.get<ManaPoolComponent>()?.colorless ?: 0
+    fun GameTestDriver.colorlessInPool(player: EntityId): Int =
+        state.getEntity(player)?.get<ManaPoolComponent>()?.colorless ?: 0
 
-    fun GameTestDriver.advanceTo(player: EntityId, step: Step) {
-        var guard = 0
-        while (!(state.activePlayerId == player && state.step == step) && guard++ < 400) {
-            if (state.pendingDecision != null) autoResolveDecision()
-            else {
-                autoSubmitCombatDeclarationIfNeeded()
-                state.priorityPlayerId?.let { passPriority(it) }
-            }
+    fun GameTestDriver.drain(caster: EntityId, spell: EntityId) {
+        val drain = putCardInHand(caster, "Mana Drain")
+        giveMana(caster, Color.BLUE, 2)
+        castSpellWithTargets(caster, drain, listOf(ChosenTarget.Spell(spell))).error shouldBe null
+        bothPass().error shouldBe null
+        withClue("the target is countered") {
+            state.getZone(ZoneKey(getOpponent(caster), Zone.GRAVEYARD)).contains(spell) shouldBe true
         }
-        check(state.activePlayerId == player && state.step == step) { "did not reach $step" }
+        withClue("the payoff waits for a main phase — nothing is added while Mana Drain resolves") {
+            colorlessInPool(caster) shouldBe 0
+        }
     }
 
-    fun GameTestDriver.drain(me: EntityId, spell: EntityId) {
-        val drain = putCardInHand(me, "Mana Drain")
-        giveMana(me, Color.BLUE, 2)
-        castSpellWithTargets(me, drain, listOf(ChosenTarget.Spell(spell))).outcome shouldBe Outcome.Done
+    test("cast on an opponent's turn, it adds {C} equal to the mana value in your next precombat main phase") {
+        val d = driver()
+        val boulderCard = d.putCardInHand(d.player1, "Drained Boulder")
+        d.giveColorlessMana(d.player1, 5)
+        d.castSpell(d.player1, boulderCard).error shouldBe null
+        d.passPriority(d.player1).error shouldBe null
+        d.drain(d.player2, boulderCard)
+
+        withClue("the opponent's postcombat main phase is not the Drain controller's main phase") {
+            d.passPriorityUntil(Step.END)
+            d.state.delayedTriggers.size shouldBe 1
+        }
+        d.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        d.state.activePlayerId shouldBe d.player2
+        d.bothPass().error shouldBe null
+
+        withClue("{C} equal to the countered spell's mana value — 5, not Mana Drain's own 2") {
+            d.colorlessInPool(d.player2) shouldBe 5
+        }
     }
 
-    test("countering on the opponent's turn adds {C} equal to its mana value in my next precombat main") {
-        val driver = newDriver(startingPlayer = 1)
-        val opp = driver.activePlayer!!
-        val me = driver.getOpponent(opp)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+    test("cast in your precombat main phase, it pays out in that turn's postcombat main phase") {
+        val d = driver()
+        // Player 1 passes in their main phase; player 2 casts an instant into it, and player 1 drains it.
+        d.passPriority(d.player1).error shouldBe null
+        val inspiration = d.putCardInHand(d.player2, "Inspiration")
+        d.giveMana(d.player2, Color.BLUE, 4)
+        d.castSpellWithTargets(d.player2, inspiration, listOf(ChosenTarget.Player(d.player2))).error shouldBe null
+        d.passPriority(d.player2).error shouldBe null
+        d.drain(d.player1, inspiration)
+        d.currentStep shouldBe Step.PRECOMBAT_MAIN
 
-        val bears = driver.putCardInHand(opp, "Grizzly Bears")
-        driver.giveMana(opp, Color.GREEN, 2)
-        driver.castSpell(opp, bears).outcome shouldBe Outcome.Done
-        driver.passPriority(opp)
-        driver.drain(me, bears)
-        driver.bothPass()
-        driver.stackSize shouldBe 0
-        driver.assertInGraveyard(opp, "Grizzly Bears")
+        d.passPriorityUntil(Step.POSTCOMBAT_MAIN)
+        d.state.activePlayerId shouldBe d.player1
+        d.bothPass().error shouldBe null
 
-        // Not on the opponent's postcombat main phase — it is *my* next main phase.
-        driver.advanceTo(opp, Step.POSTCOMBAT_MAIN)
-        driver.stackSize shouldBe 0
-
-        driver.advanceTo(me, Step.PRECOMBAT_MAIN)
-        driver.stackSize shouldBe 1
-        driver.bothPass()
-        driver.colorless(me) shouldBe 2
-    }
-
-    test("cast during my precombat main phase, the mana comes in this turn's postcombat main phase") {
-        val driver = newDriver(startingPlayer = 0)
-        val me = driver.activePlayer!!
-        val opp = driver.getOpponent(me)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-
-        // I cast a creature; the opponent responds with Lightning Bolt; I Mana Drain the Bolt.
-        val myBears = driver.putCardInHand(me, "Grizzly Bears")
-        driver.giveMana(me, Color.GREEN, 2)
-        driver.castSpell(me, myBears).outcome shouldBe Outcome.Done
-        driver.passPriority(me)
-        val bolt = driver.putCardInHand(opp, "Lightning Bolt")
-        driver.giveMana(opp, Color.RED, 1)
-        driver.castSpell(opp, bolt, listOf(me)).outcome shouldBe Outcome.Done
-        driver.passPriority(opp)
-        driver.drain(me, bolt)
-        driver.bothPass() // Mana Drain resolves: Bolt countered, delayed trigger scheduled
-        driver.bothPass() // Grizzly Bears resolves
-        driver.stackSize shouldBe 0
-        driver.getLifeTotal(me) shouldBe 20
-
-        driver.advanceTo(me, Step.POSTCOMBAT_MAIN)
-        driver.stackSize shouldBe 1
-        driver.bothPass()
-        driver.colorless(me) shouldBe 1
-
-        // One-shot: nothing more at my next precombat main phase.
-        driver.advanceTo(me, Step.PRECOMBAT_MAIN)
-        driver.stackSize shouldBe 0
-        driver.state.delayedTriggers.size shouldBe 0
+        withClue("Inspiration's mana value of 4, in the same turn's postcombat main phase") {
+            d.colorlessInPool(d.player1) shouldBe 4
+        }
+        d.state.delayedTriggers shouldBe emptyList()
     }
 })

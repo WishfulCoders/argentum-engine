@@ -1,0 +1,216 @@
+/*
+ * The full-screen moments around a game — game over, waiting for the opponent's mulligan, the
+ * error toast — in the landing screen's language: a glass card over a dimmed, blurred board,
+ * the display serif for the headline, amber for the one primary action.
+ */
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: radial-gradient(ellipse at center, rgba(6, 7, 12, 0.55) 0%, rgba(6, 7, 12, 0.82) 100%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.scrimFixed { position: fixed; z-index: 1000; }
+/* The game-over result: above every in-game animation layer, not just the board. */
+.scrimResult { z-index: var(--z-game-result); }
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(460px, 100%);
+  padding: 30px 28px 26px;
+  box-sizing: border-box;
+  border-radius: 20px;
+  background: rgba(10, 12, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  animation: rise 0.3s ease-out;
+}
+
+.card[data-result='win'] { border-color: rgba(242, 180, 92, 0.45); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 60px rgba(242, 180, 92, 0.12); }
+.card[data-result='lose'] { border-color: rgba(240, 138, 138, 0.3); }
+
+.eyebrow {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8f98ac;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1.05;
+  color: #f4f5f9;
+}
+
+.card[data-result='win'] .title { color: #f6c27a; text-shadow: 0 0 28px rgba(242, 180, 92, 0.35); }
+.card[data-result='lose'] .title { color: #f3a6a6; }
+.card[data-result='draw'] .title { color: #e3e6ee; }
+
+.reason {
+  margin: 0 0 8px;
+  max-width: 34ch;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #c3c9d7;
+}
+
+/* A best-of-three's standing under the game result: "Match 1–0 · Game 2 next". */
+.matchLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #dfe3ec;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.secondaryRow {
+  display: flex;
+  gap: 8px;
+}
+
+.secondaryRow:empty { display: none; }
+.secondaryRow > * { flex: 1 1 0; min-width: 0; }
+
+.primary,
+.secondary {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.primary {
+  min-height: 50px;
+  border: none;
+  background: #f2b45c;
+  color: #1d1405;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
+}
+.primary:hover { background: #f7c67f; }
+
+.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #eef0f6;
+}
+.secondary:hover { background: rgba(255, 255, 255, 0.14); }
+
+.primary:focus-visible,
+.secondary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* ── Waiting for the opponent's mulligan ──────────────────────────────── */
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: #f2b45c;
+  animation: spin 0.9s linear infinite;
+}
+
+.waitTitle {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  color: #f4f5f9;
+}
+
+.waitText { margin: 0; font-size: 14px; color: #b4bccd; }
+
+/* ── Error toast ───────────────────────────────────────────────────────── */
+
+.toast {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 2000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 10px 10px 16px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: rgba(60, 14, 18, 0.88);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color: #fde2e2;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.toastClose {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.toastClose:hover { background: rgba(255, 255, 255, 0.12); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+  .card { padding: 24px 18px 18px; border-radius: 18px; }
+  .title { font-size: 38px; }
+  .secondaryRow { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim, .card { animation: none; }
+}

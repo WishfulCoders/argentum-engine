@@ -756,6 +756,25 @@
     "manaCost": "{5}{B}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Destroy target creature.\n• Return target creature card from your graveyard to the battlefield.\nEntwine—Sacrifice three lands. (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "additionalCost": {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomSacrifice",
+                    "filter": "land",
+                    "count": 3
+                }
+            },
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -806,10 +825,35 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalCostPerExtraMode": {
-                "type": "AtomSacrifice",
-                "filter": "land",
-                "count": 3
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
             }
         }
     },
@@ -830,6 +874,18 @@
     "manaCost": "{2}{W}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Tap two target creatures.\n• Creatures don't untap during target player's next untap step.\nEntwine {1} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{1}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -864,7 +920,11 @@
                             "type": "BoundVariable",
                             "name": "t0"
                         },
-                        "affectsLands": false
+                        "permanents": {
+                            "cardPredicates": [
+                                "IsCreature"
+                            ]
+                        }
                     },
                     "targetRequirements": [
                         {
@@ -877,7 +937,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{1}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -2367,7 +2456,7 @@
             {
                 "type": "PreventActivatedAbilities",
                 "filter": "artifact|creature",
-                "nonManaAbilitiesOnly": true
+                "abilities": "NON_MANA"
             }
         ]
     },
@@ -2687,6 +2776,18 @@
     "manaCost": "{U}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Tap target permanent.\n• Untap target permanent.\nEntwine {1} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{1}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -2733,7 +2834,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{1}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -3311,7 +3441,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for an artifact card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -3451,8 +3583,9 @@
                         {
                             "label": "Draw step",
                             "effect": {
-                                "type": "SkipStepOrPhaseThisTurn",
+                                "type": "SkipStepOrPhaseEffect",
                                 "part": "DRAW_STEP",
+                                "duration": "THIS_TURN",
                                 "target": {
                                     "type": "PlayerRef",
                                     "player": "TriggeringPlayer"
@@ -3462,8 +3595,9 @@
                         {
                             "label": "Main phase",
                             "effect": {
-                                "type": "SkipStepOrPhaseThisTurn",
+                                "type": "SkipStepOrPhaseEffect",
                                 "part": "MAIN_PHASE",
+                                "duration": "THIS_TURN",
                                 "target": {
                                     "type": "PlayerRef",
                                     "player": "TriggeringPlayer"
@@ -3473,8 +3607,9 @@
                         {
                             "label": "Combat phase",
                             "effect": {
-                                "type": "SkipStepOrPhaseThisTurn",
+                                "type": "SkipStepOrPhaseEffect",
                                 "part": "COMBAT_PHASE",
+                                "duration": "THIS_TURN",
                                 "target": {
                                     "type": "PlayerRef",
                                     "player": "TriggeringPlayer"
@@ -3898,7 +4033,7 @@
                     "permanent": "TriggeringEntity",
                     "newController": {
                         "type": "PlayerRef",
-                        "player": "ControllerOfTargetingSource"
+                        "player": "ControllerOfCause"
                     }
                 },
                 "descriptionOverride": "Whenever enchanted creature becomes the target of a spell or ability, that spell or ability's controller gains control of that creature."
@@ -4665,6 +4800,18 @@
     "manaCost": "{3}{R}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Until end of turn, you gain control of target creature and it gains haste.\n• Sacrifice a creature. Grab the Reins deals damage equal to that creature's power to any target.\nEntwine {2}{R} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{2}{R}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -4735,7 +4882,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{2}{R}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -5278,6 +5454,18 @@
     "manaCost": "{2}{R}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Creatures target player controls attack this turn if able.\n• Creatures you control gain first strike until end of turn.\nEntwine {2} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{2}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -5292,7 +5480,7 @@
                             }
                         },
                         "body": {
-                            "type": "MarkMustAttackThisTurn",
+                            "type": "MarkMustAttack",
                             "target": "IterationEntity"
                         }
                     },
@@ -5324,7 +5512,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{2}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -5736,6 +5953,18 @@
     "manaCost": "{2}{G}",
     "typeLine": "Sorcery",
     "oracleText": "Choose one —\n• Search your library for up to two basic land cards, reveal them, put them into your hand, then shuffle.\n• You may play up to two additional lands this turn.\nEntwine {2}{G} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{2}{G}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -5764,7 +5993,9 @@
                                         "amount": 2
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to two basic land cards to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -5784,14 +6015,46 @@
                 {
                     "effect": {
                         "type": "PlayAdditionalLands",
-                        "count": 2
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
                     },
                     "description": "You may play up to two additional lands this turn"
                 }
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{2}{G}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -8921,7 +9184,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 3
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
                     }
                 },
                 "effect": {
@@ -9505,6 +9771,18 @@
     "manaCost": "{5}{G}",
     "typeLine": "Sorcery",
     "oracleText": "Choose one —\n• Create a 5/5 green Beast creature token.\n• Create five 1/1 green Insect creature tokens.\nEntwine {G}{G}{G} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{G}{G}{G}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -9521,7 +9799,8 @@
                             "Beast"
                         ],
                         "imageUri": "https://cards.scryfall.io/normal/front/4/4/44675b6a-ea5a-44f1-9f2c-3725cdfcc814.jpg?1783934353"
-                    }
+                    },
+                    "description": "Create a 5/5 green Beast creature token"
                 },
                 {
                     "effect": {
@@ -9545,7 +9824,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{G}{G}{G}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -10052,6 +10360,18 @@
     "manaCost": "{2}{B}{B}{B}",
     "typeLine": "Sorcery",
     "oracleText": "Choose one —\n• You draw five cards and you lose 5 life.\n• Create an X/X black Demon creature token with flying, where X is the number of cards in your hand.\nEntwine {4} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{4}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -10109,7 +10429,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{4}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -10834,6 +11183,18 @@
     "manaCost": "{1}{W}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Creatures you control get +1/+1 until end of turn.\n• Untap all creatures you control.\nEntwine {1}{W} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{1}{W}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -10882,7 +11243,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{1}{W}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -12274,6 +12664,25 @@
     "manaCost": "{4}{W}{W}",
     "typeLine": "Sorcery",
     "oracleText": "Choose one —\n• Destroy all creatures with power 2 or less.\n• Destroy all creatures with power 3 or greater.\nEntwine—Sacrifice two lands. (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "additionalCost": {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomSacrifice",
+                    "filter": "land",
+                    "count": 2
+                }
+            },
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -12331,10 +12740,35 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalCostPerExtraMode": {
-                "type": "AtomSacrifice",
-                "filter": "land",
-                "count": 2
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
             }
         }
     },
@@ -12467,7 +12901,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -12942,7 +13378,10 @@
         "replacementEffects": [
             {
                 "type": "PreventDamage",
-                "amount": 1,
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 1
+                },
                 "appliesTo": {
                     "type": "DamageEvent",
                     "recipient": {
@@ -13412,7 +13851,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a land card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -13565,7 +14006,12 @@
                                                 "type": "HasSubtype",
                                                 "subtype": "Equipment"
                                             },
-                                            "ManaValueAtMostX"
+                                            {
+                                                "type": "CompareNumericProperty",
+                                                "property": "MANA_VALUE",
+                                                "operator": "LTE",
+                                                "amount": "XValue"
+                                            }
                                         ]
                                     }
                                 },
@@ -13582,7 +14028,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an Equipment artifact card with mana value at most X to put onto the battlefield",
+                                "selectedLabel": "Put onto the battlefield"
                             },
                             {
                                 "type": "MoveCollection",
@@ -14335,6 +14783,18 @@
     "manaCost": "{5}{U}{U}",
     "typeLine": "Sorcery",
     "oracleText": "Choose one —\n• Each player shuffles their hand and graveyard into their library.\n• Each player draws seven cards.\nEntwine {2} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{2}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -14394,7 +14854,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{2}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -14758,6 +15247,18 @@
     "manaCost": "{5}{G}{G}",
     "typeLine": "Sorcery",
     "oracleText": "Choose one —\n• Search your library for up to two creature cards, reveal them, put them into your hand, then shuffle.\n• Put up to two creature cards from your hand onto the battlefield.\nEntwine {2} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{2}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -14786,7 +15287,9 @@
                                         "amount": 2
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to two creature cards to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -14844,7 +15347,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{2}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -15908,6 +16440,18 @@
     "manaCost": "{2}{B}",
     "typeLine": "Instant",
     "oracleText": "Choose one —\n• Regenerate each creature you control.\n• Wail of the Nim deals 1 damage to each creature and each player.\nEntwine {B} (Choose both if you pay the entwine cost.)",
+    "keywords": [
+        "ENTWINE"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Kicker",
+            "manaCost": "{B}",
+            "displayPrefix": "Entwine",
+            "keyword": "ENTWINE",
+            "declaredSlot": "ENTWINED"
+        }
+    ],
     "script": {
         "spellEffect": {
             "type": "Modal",
@@ -15971,7 +16515,36 @@
             ],
             "chooseCount": 2,
             "minChooseCount": 1,
-            "additionalManaCostPerExtraMode": "{B}"
+            "dynamicChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            },
+            "dynamicMinChooseCount": {
+                "type": "Conditional",
+                "condition": {
+                    "type": "CastChoiceMade",
+                    "slot": "ENTWINED"
+                },
+                "ifTrue": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
+                "ifFalse": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
         }
     },
     "metadata": {
@@ -16005,7 +16578,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 1
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
                     }
                 },
                 "effect": {

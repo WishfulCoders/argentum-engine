@@ -13,7 +13,7 @@ val MomentOfHeroismReprint = Printing(
     collectorNumber = "74",
     scryfallId = "49217b63-0604-4351-b6de-add0e3e1dbc9",
     artist = "Christopher Moeller",
-    imageUri = "https://cards.scryfall.io/normal/front/4/9/49217b63-0604-4351-b6de-add0e3e1dbc9.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/4/9/49217b63-0604-4351-b6de-add0e3e1dbc9.jpg?1783939365",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

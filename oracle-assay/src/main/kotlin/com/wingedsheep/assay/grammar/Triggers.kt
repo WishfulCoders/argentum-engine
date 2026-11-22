@@ -8,6 +8,7 @@ import com.wingedsheep.assay.syntax.oneOf
 import com.wingedsheep.assay.syntax.phrase
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.DrawStepFirstCard
 import com.wingedsheep.sdk.scripting.events.DamageType
 import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
@@ -529,7 +530,7 @@ object Triggers {
      * `Player.TriggeringPlayer`.
      *
      * Orcish Bowmasters' "except the first one they draw in each of their draw steps" is the
-     * event's `exceptFirstInDrawStep` flag — the turn-based draw of CR 504.1 — and is its own row
+     * event's `firstInDrawStep = EXCLUDED` scope — the turn-based draw of CR 504.1 — and is its own row
      * rather than a suffix slot, because only the opponent's surface prints it ("they", "their").
      */
     private val everyDrawPrefixes: List<Prefix> = listOf(
@@ -538,7 +539,7 @@ object Triggers {
         triggerRule("whenever a player draws a card", SdkTriggers.player(Player.Each).draws()),
         triggerRule(
             "whenever an opponent draws a card except the first one they draw in each of their draw steps",
-            SdkTriggers.player(Player.EachOpponent).draws(exceptFirstInDrawStep = true),
+            SdkTriggers.player(Player.EachOpponent).draws(DrawStepFirstCard.EXCLUDED),
         ),
     )
 
@@ -589,15 +590,19 @@ object Triggers {
      *
      * **Attacks.** "Whenever one or more Merfolk you control attack" is `YouAttackEvent`, and the
      * family is left out rather than half-read for two reasons that would each cost more than the
-     * rows are worth: 8 of its lines print "attack **a player**", which is a narrowing
-     * (`AttackPredicate.DefenderIsPlayer` exists only on the per-creature `AttackEvent`) that the
-     * batch event cannot carry — so the two English sentences would collapse to one model — and the
+     * rows are worth: 8 of its lines print "attack **a player**", a per-attacked-player narrowing
+     * (`YouAttackEvent.attackedPlayer`, `Triggers.you.attacksAPlayer`) that a reading must keep
+     * apart from the once-per-declaration form — so the two English sentences don't collapse — and the
      * corpus writes the attacker filter's card type three different ways. A probe over the family's
      * declined lines puts the payoff at 6 readable lines out of 48; the rest are blocked on "that
      * many" and "them" regardless.
      *
      * `OneOrMoreDealCombatDamageToPlayerEvent` carries two readings, "to a player" and "to a
-     * player or battle" (its `orBattle` flag); each row reads back only its own.
+     * player or battle" (its `orBattle` flag); each row reads back only its own. Its
+     * `toOneOrMorePlayers` axis ("to one or more players"), its `toOpponents` axis ("to an opponent")
+     * and `OneOrMoreDealCombatDamageToYouEvent`'s
+     * `perSourceController` axis have no row yet, so the readers refuse them rather than print the
+     * once-per-player / once-per-batch sentence over a model that means something else.
      */
     private data class Scope(val words: String, val predicate: ControllerPredicate?)
 
@@ -725,7 +730,7 @@ object Triggers {
                 "whenever one or more {filter} you control deal combat damage to a player or battle",
                 "whenever one or more creatures you control deal combat damage to a player or battle",
                 Filters.pluralSubject,
-                { (it as? EventPattern.OneOrMoreDealCombatDamageToPlayerEvent)?.takeIf { e -> e.orBattle }?.sourceFilter },
+                { (it as? EventPattern.OneOrMoreDealCombatDamageToPlayerEvent)?.takeIf { e -> e.orBattle && !e.toOneOrMorePlayers }?.sourceFilter },
             ) {
                 SdkTriggers.oneOrMore(it).dealCombatDamageToAPlayerOrBattle()
             },
@@ -733,7 +738,7 @@ object Triggers {
                 "whenever one or more {filter} you control deal combat damage to a player",
                 "whenever one or more creatures you control deal combat damage to a player",
                 Filters.pluralSubject,
-                { (it as? EventPattern.OneOrMoreDealCombatDamageToPlayerEvent)?.takeUnless { e -> e.orBattle }?.sourceFilter },
+                { (it as? EventPattern.OneOrMoreDealCombatDamageToPlayerEvent)?.takeUnless { e -> e.orBattle || e.toOneOrMorePlayers || e.toOpponents }?.sourceFilter },
             ) {
                 SdkTriggers.oneOrMore(it).dealCombatDamageToAPlayer()
             },
@@ -741,7 +746,7 @@ object Triggers {
                 "whenever one or more {filter} deal combat damage to you",
                 "whenever one or more creatures deal combat damage to you",
                 Filters.pluralSubject,
-                { (it as? EventPattern.OneOrMoreDealCombatDamageToYouEvent)?.sourceFilter },
+                { (it as? EventPattern.OneOrMoreDealCombatDamageToYouEvent)?.takeUnless { e -> e.perSourceController }?.sourceFilter },
             ) { SdkTriggers.oneOrMore(it).dealCombatDamageToYou() },
             batchRule(
                 "whenever one or more {filter} leave your graveyard",
@@ -754,7 +759,7 @@ object Triggers {
                 "whenever one or more cards are put into your graveyard from anywhere",
                 Filters.pluralCards,
                 // The first-time-each-turn variant is a different sentence; this row doesn't read it.
-                { (it as? EventPattern.CardsPutIntoYourGraveyardEvent)?.takeUnless { e -> e.firstTimeEachTurn }?.filter },
+                { (it as? EventPattern.CardsPutIntoGraveyardEvent)?.takeUnless { e -> e.firstTimeEachTurn || e.player != Player.You }?.filter },
             ) { SdkTriggers.oneOrMore(it).putIntoYourGraveyard() },
             // The library variant publishes only two fixed vals rather than a function of the
             // filter, so this row writes the `TriggerSpec` the way the two hand-written cards do.
@@ -875,6 +880,8 @@ object Triggers {
         ),
         triggerRule("when ${Normalizer.SELF} leaves the battlefield", SdkTriggers.self.leaves()),
         triggerRule("whenever ${Normalizer.SELF} attacks", SdkTriggers.self.attacks()),
+        triggerRule("whenever you attack", SdkTriggers.you.attacks()),
+        triggerRule("whenever you attack a player", SdkTriggers.you.attacksAPlayer()),
         triggerRule("whenever ${Normalizer.SELF} blocks", SdkTriggers.self.blocks()),
         triggerRule("whenever ${Normalizer.SELF} becomes blocked", SdkTriggers.self.becomesBlocked()),
         // "Whenever this creature becomes tapped, …" — Fallowsage, Veteran of the Depths, Chrome
@@ -943,6 +950,10 @@ object Triggers {
             spec = { SdkTriggers.self.dealsDamage(Recipient.Object(it)) },
         ),
         triggerRule("whenever ${Normalizer.SELF} is dealt damage", SdkTriggers.self.isDealtDamage()),
+        triggerRule(
+            "whenever ${Normalizer.SELF} is dealt combat damage",
+            SdkTriggers.self.isDealtDamage(damageType = DamageType.Combat),
+        ),
     ) + attachedDamagePrefixes() + listOf(
         // Valiant, and one row rather than a shape over `BecomesTargetEvent`'s six flags: the SDK
         // publishes the whole configuration as `Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)`, which is the lowering this file's

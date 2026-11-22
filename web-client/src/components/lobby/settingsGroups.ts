@@ -39,21 +39,8 @@
  *   written into `GameUI.module.css` after an earlier attempt at a scrolling settings panel produced
  *   three competing scrollbars.
  */
-import type { LobbyState } from '@/store/slices/types'
-import {
-  COMMANDER_PRESETS,
-  cardsKindTopicId,
-  cardsLabel,
-  effectiveCommanderPreset,
-  eventLabel,
-  eventTopicId,
-  rulesLabel,
-  rulesTopicId,
-  tableLabel,
-  tableTopicId,
-} from './axes'
+import { cardsKindTopicId, eventTopicId, rulesTopicId, tableTopicId } from './axes'
 import type { UnifiedLobbyView } from './lobbyViewModel'
-import { pickTimeChip } from './pickTime'
 
 export type GroupId = 'CARDS' | 'RULES' | 'TABLE' | 'EVENT' | 'LOBBY'
 
@@ -80,85 +67,6 @@ export function groupTopicId(id: GroupId, view: UnifiedLobbyView): string | null
     case 'EVENT': return eventTopicId(view.axes.event)
     case 'LOBBY': return null
   }
-}
-
-/**
- * Compact live values for a group — "ECL + BLB · 6 packs · 45s". These remain useful as an
- * overview even though the controls are always visible.
- */
-export function groupSummary(id: GroupId, view: UnifiedLobbyView, lobbyState: LobbyState | null): string {
-  const s = lobbyState?.settings
-  const parts: string[] = []
-
-  switch (id) {
-    case 'CARDS': {
-      if (s?.jumpstartActive) return 'Jumpstart · two themed packs · 40 cards'
-      parts.push(cardsLabel(view.axes.cards))
-      if (s) {
-        if (s.cubeName) parts.push(`${s.cubeName} (${s.cubeCardCount ?? 0})`)
-        else if (s.setCodes.length > 0) parts.push(s.setNames.join(' + ') || s.setCodes.join(' + '))
-        else if (s.format !== 'PREMADE_DECKS') parts.push('no sets yet')
-        if (usesBoosters(s.format)) parts.push(`${s.boosterCount} ${countsPacks(s.format) ? 'packs' : 'boosters'}`)
-        if (isAnyDraft(s.format)) parts.push(pickTimeChip(s.pickTimeSeconds))
-        if (s.picksPerRound === 2) parts.push('pick 2')
-        if (s.bannedCardNames.length > 0) parts.push(`${s.bannedCardNames.length} banned`)
-      }
-      break
-    }
-    case 'RULES': {
-      parts.push(rulesLabel(view.axes.rules))
-      if (s && view.axes.rules === 'COMMANDER' && s.format !== 'PREMADE_DECKS') {
-        parts.push(`${COMMANDER_PRESETS[effectiveCommanderPreset(s.commanderPreset, s.gameMode)].life} life`)
-        parts.push(`min ${s.deckSizeMin}`)
-        parts.push(s.allowDuplicates ? 'duplicates OK' : 'singleton')
-      }
-      break
-    }
-    case 'TABLE': {
-      parts.push(tableLabel(view.axes.table))
-      if (s?.gameMode === 'FREE_FOR_ALL') {
-        parts.push(attackLabel(s.attackMode))
-      }
-      if (view.teams.mode !== 'NONE') {
-        parts.push(view.teams.mode === 'RANDOM' ? 'random teams' : 'chosen teams')
-      }
-      break
-    }
-    case 'EVENT': {
-      parts.push(eventLabel(view.axes.event))
-      const games = s?.gamesPerMatch ?? 1
-      if (view.axes.event === 'ROUND_ROBIN' && games > 1) parts.push(`${games} games per matchup`)
-      if (view.ranked.available) parts.push(view.ranked.on ? 'ranked' : 'casual')
-      break
-    }
-    case 'LOBBY': {
-      if (view.invitable) parts.push(view.isPublic ? 'public' : 'private')
-      if (s) parts.push(`AI assist ${s.aiAssistEnabled ? 'on' : 'off'}`)
-      break
-    }
-  }
-  return parts.join(' · ')
-}
-
-function attackLabel(mode: LobbyState['settings']['attackMode'] | undefined): string {
-  switch (mode ?? 'LEFT') {
-    case 'LEFT': return 'attack left'
-    case 'RIGHT': return 'attack right'
-    default: return 'attack any'
-  }
-}
-
-function isAnyDraft(format: string): boolean {
-  return format === 'DRAFT' || format === 'WINSTON_DRAFT' || format === 'GRID_DRAFT' ||
-    format === 'COMMANDER_DRAFT'
-}
-
-function countsPacks(format: string): boolean {
-  return format === 'DRAFT' || format === 'COMMANDER_DRAFT'
-}
-
-function usesBoosters(format: string): boolean {
-  return format !== 'PREMADE_DECKS' && format !== 'GRID_DRAFT'
 }
 
 /**

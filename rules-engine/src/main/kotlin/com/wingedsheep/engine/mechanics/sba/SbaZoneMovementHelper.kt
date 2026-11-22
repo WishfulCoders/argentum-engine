@@ -63,10 +63,7 @@ object SbaZoneMovementHelper {
             ?: return ExecutionResult.success(state)
 
         // Check for ExileOnDeath replacement effect
-        val exileOnDeathIndex = state.floatingEffects.indexOfFirst { effect ->
-            effect.effect.modification is SerializableModification.ExileOnDeath &&
-                entityId in effect.effect.affectedEntities
-        }
+        val exileOnDeathIndex = ZoneMovementUtils.exileOnDeathMarkIndex(state, entityId)
         val exileInstead = exileOnDeathIndex != -1
 
         // Check for RedirectZoneChange replacement effects. Battlefield-sourced shields are read
@@ -192,7 +189,8 @@ object SbaZoneMovementHelper {
             val (updatedState, extraEvents) = ZoneMovementUtils.applyReplacementAdditionalEffect(
                 zones,
                 newState, redirectResult.additionalEffect, redirectResult.effectControllerId, entityId,
-                sourceId = redirectResult.effectSourceId
+                sourceId = redirectResult.effectSourceId,
+                riderTiming = redirectResult.riderTiming
             )
             newState = updatedState
             events.addAll(extraEvents)

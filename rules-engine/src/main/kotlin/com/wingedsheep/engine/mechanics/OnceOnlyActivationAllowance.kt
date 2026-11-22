@@ -15,8 +15,8 @@ import com.wingedsheep.sdk.scripting.OnceOnlyAbilityKind
 
 /**
  * How many times a player may activate a keyword-prefixed "Activate this ability only once" ability
- * — exhaust (CR 702.177) and power-up (CR 702.193) — given the
- * [ExtraOnceOnlyActivations] permissions currently on their battlefield.
+ * — exhaust (CR 702.177) and power-up (CR 702.193) — or a boast ability (CR 702.142, once *each
+ * turn*) given the [ExtraOnceOnlyActivations] permissions currently on their battlefield.
  *
  * Lives here rather than in `CastPermissionUtils` because three activation-legality paths need the
  * same answer and must not drift: the legal-action enumerators, `ActivateAbilityHandler`, and
@@ -105,13 +105,30 @@ object OnceOnlyActivationAllowance {
             ?.activationCount(ability.id)
             ?: 0
         if (timesActivated == 0) return true
-        val kind = when {
-            ability.isExhaust -> OnceOnlyAbilityKind.EXHAUST
-            ability.isPowerUp -> OnceOnlyAbilityKind.POWER_UP
-            else -> return false
-        }
+        val kind = ability.onceOnlyKind?.takeIf { it != OnceOnlyAbilityKind.BOAST } ?: return false
         val extra = extraActivationsFor(state, playerId, kind, cardRegistry, conditionEvaluator)
             ?: return true
         return timesActivated < 1 + extra
+    }
+
+    /**
+     * Whether [playerId] may activate the boast [ability] again this turn, having already activated
+     * it [timesThisTurn] times — the per-turn twin of [mayActivate], for the
+     * [com.wingedsheep.sdk.scripting.ActivationRestriction.OncePerTurn] boast installs. Any other
+     * ability gets the plain once-each-turn answer.
+     */
+    fun mayActivateThisTurn(
+        state: GameState,
+        playerId: EntityId,
+        timesThisTurn: Int,
+        ability: ActivatedAbility,
+        cardRegistry: CardRegistry,
+        conditionEvaluator: ConditionEvaluator
+    ): Boolean {
+        if (timesThisTurn == 0) return true
+        if (!ability.isBoast) return false
+        val extra = extraActivationsFor(state, playerId, OnceOnlyAbilityKind.BOAST, cardRegistry, conditionEvaluator)
+            ?: return true
+        return timesThisTurn < 1 + extra
     }
 }

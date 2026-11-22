@@ -3,6 +3,8 @@ import { SpectatorContext } from '../../contexts/SpectatorContext'
 import { GameBoard } from '../game/GameBoard'
 import { CombatArrows } from '../combat/CombatArrows'
 import { DecisionSourceThumbnail } from '../ui/DecisionSourceThumbnail'
+import { SeatPortrait, useHasSeatPortrait } from '../game/SeatPortrait'
+import { SpectatorGameOverBanner } from './SpectatorGameOverBanner'
 import type { SpectatorDecisionStatus } from '@/types'
 
 // ============================================================================
@@ -36,6 +38,10 @@ import type { SpectatorDecisionStatus } from '@/types'
 
 /** Height of the spectator header bar in pixels */
 const HEADER_HEIGHT = 55
+
+/** The HUD orbs' 1v1 colours — the board puts player 1 at the bottom (blue) and player 2 on top (orange). */
+const PLAYER_RING = 'rgba(74, 154, 234, 0.8)'
+const OPPONENT_RING = 'rgba(255, 158, 70, 0.85)'
 
 /**
  * SpectatorGameBoard - Wrapper component for spectating a game.
@@ -94,6 +100,7 @@ export function SpectatorGameBoard() {
         <SpectatorHeader
           player1Name={spectatingState.player1Name}
           player2Name={spectatingState.player2Name}
+          seatIds={isMultiPod ? players.map((p) => p.playerId) : [spectatingState.player1Id, spectatingState.player2Id]}
           onBack={stopSpectating}
           {...(isMultiPod
             ? {
@@ -104,16 +111,27 @@ export function SpectatorGameBoard() {
         />
         <div style={styles.gameBoardContainer}>
           <GameBoard spectatorMode topOffset={HEADER_HEIGHT} />
+          {/* The game ended: the final board stays up under the result until the spectator
+              leaves (or the banner's countdown takes them back to the overview). */}
+          {spectatingState.gameOver && (
+            <SpectatorGameOverBanner
+              key={spectatingState.gameSessionId}
+              gameOver={spectatingState.gameOver}
+              seats={players}
+              onBack={stopSpectating}
+            />
+          )}
         </div>
         {/* Decision indicator for spectators */}
-        {spectatingState.decisionStatus && (
+        {spectatingState.decisionStatus && !spectatingState.gameOver && (
           <SpectatorDecisionIndicator
             decisionStatus={spectatingState.decisionStatus}
           />
         )}
       </div>
-      {/* Combat arrows rendered at top level to ensure visibility above all containers */}
-      <CombatArrows />
+      {/* Combat arrows rendered at top level to ensure visibility above all containers. Once the
+          game is over they would draw across the result banner, and the fight they show is done. */}
+      {!spectatingState.gameOver && <CombatArrows />}
     </SpectatorContext.Provider>
   )
 }
@@ -157,12 +175,15 @@ function SpectatorLoadingView({
 function SpectatorHeader({
   player1Name,
   player2Name,
+  seatIds,
   onBack,
   matchupOverride,
   seatSwitcher,
 }: {
   player1Name: string
   player2Name: string
+  /** The seats in matchup order: their portraits flank "A vs B" (a pod's lead the roster). */
+  seatIds: readonly (string | null)[]
   onBack: () => void
   /** Multiplayer pods: full roster text instead of "A vs B". */
   matchupOverride?: string
@@ -174,11 +195,25 @@ function SpectatorHeader({
       <button onClick={onBack} style={styles.backButton}>
         Back to Overview
       </button>
+      {/* 1v1: each player's face on their side of "A vs B", like a fight card. A pod's faces
+          overlap ahead of the roster line instead. Seats without a portrait drop out. */}
       <div style={styles.headerCenter}>
-        <div style={styles.spectatingLabel}>Spectating</div>
-        <div style={styles.matchupText}>
-          {matchupOverride ?? `${player1Name} vs ${player2Name}`}
+        {matchupOverride ? (
+          <span style={styles.headerFaces}>
+            {seatIds.map((id, i) => (
+              <SeatPortrait key={id ?? i} playerId={id} size={34} ringColor="#0a0a12" ringWidth={2} style={{ marginLeft: i === 0 ? 0 : -9, zIndex: seatIds.length - i }} />
+            ))}
+          </span>
+        ) : (
+          <SeatPortrait playerId={seatIds[0]} size={36} ringColor={PLAYER_RING} ringWidth={2} />
+        )}
+        <div style={styles.headerTitle}>
+          <div style={styles.spectatingLabel}>Spectating</div>
+          <div style={styles.matchupText}>
+            {matchupOverride ?? `${player1Name} vs ${player2Name}`}
+          </div>
         </div>
+        {!matchupOverride && <SeatPortrait playerId={seatIds[1]} size={36} ringColor={OPPONENT_RING} ringWidth={2} />}
       </div>
       {seatSwitcher ? (
         <button
@@ -205,10 +240,24 @@ function SpectatorDecisionIndicator({
 }: {
   decisionStatus: SpectatorDecisionStatus
 }) {
+  // The deciding player's face, with the spinner as a ring around it — "who is thinking" at a
+  // glance. No portrait: the plain spinner.
+  const hasPortrait = useHasSeatPortrait(decisionStatus.playerId)
   return (
     <div style={styles.decisionIndicator}>
-      <div style={styles.decisionSpinner} />
-      <DecisionSourceThumbnail sourceId={decisionStatus.sourceId} />
+      {hasPortrait ? (
+        <span style={styles.decisionFace}>
+          <SeatPortrait playerId={decisionStatus.playerId} size={30} ringColor="transparent" ringWidth={0} />
+          <span aria-hidden style={styles.decisionFaceRing} />
+        </span>
+      ) : (
+        <div style={styles.decisionSpinner} />
+      )}
+      <DecisionSourceThumbnail
+        sourceId={decisionStatus.sourceId}
+        fallbackName={decisionStatus.sourceName}
+        fallbackImageUri={decisionStatus.sourceImageUri}
+      />
       <div>
         <div style={styles.decisionText}>
           {decisionStatus.playerName} is {decisionStatus.displayText.toLowerCase()}
@@ -247,43 +296,70 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     padding: '10px 16px',
-    borderBottom: '1px solid #1a1a25',
-    backgroundColor: '#0d0d15',
+    gap: 12,
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(10, 12, 20, 0.92)',
+    backdropFilter: 'var(--chrome-blur)',
+    WebkitBackdropFilter: 'var(--chrome-blur)',
     flexShrink: 0,
     zIndex: 1600,
   },
 
   headerCenter: {
-    textAlign: 'center',
     flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+  },
+
+  headerTitle: {
+    textAlign: 'center',
+    minWidth: 0,
+  },
+
+  headerFaces: {
+    display: 'flex',
+    alignItems: 'center',
+    flexShrink: 0,
   },
 
   spectatingLabel: {
-    color: '#888',
-    fontSize: 12,
+    color: '#f2b45c',
+    fontSize: 11,
+    fontWeight: 600,
     textTransform: 'uppercase',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.12em',
   },
 
   matchupText: {
-    color: '#aaa',
-    fontSize: 14,
-    marginTop: 4,
+    color: '#eef0f6',
+    fontFamily: 'var(--font-display)',
+    fontSize: 17,
+    fontWeight: 600,
+    marginTop: 2,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
 
+  // Balances the back button so the matchup stays centred — but not at a phone's expense.
   headerSpacer: {
-    width: 120,
+    width: 'min(120px, 12vw)',
+    flexShrink: 0,
   },
 
   // Back button used in header and loading view
   backButton: {
     padding: '8px 16px',
     fontSize: 13,
-    backgroundColor: 'transparent',
-    color: '#888',
-    border: '1px solid #333',
-    borderRadius: 6,
+    backgroundColor: 'var(--chrome-bg)',
+    color: 'var(--chrome-text)',
+    border: '1px solid var(--chrome-border)',
+    borderRadius: 'var(--chrome-radius)',
     cursor: 'pointer',
+    flexShrink: 0,
   },
 
   // Container for the GameBoard
@@ -306,20 +382,22 @@ const styles: Record<string, React.CSSProperties> = {
 
   loadingTitle: {
     margin: '16px 0 8px 0',
-    fontSize: 20,
+    fontFamily: 'var(--font-display)',
+    fontSize: 24,
+    fontWeight: 600,
   },
 
   loadingSubtitle: {
-    color: '#666',
+    color: '#9aa3b8',
     margin: 0,
     fontSize: 14,
   },
 
   spinner: {
-    width: 40,
-    height: 40,
-    border: '3px solid #333',
-    borderTopColor: '#888',
+    width: 34,
+    height: 34,
+    border: '3px solid rgba(255, 255, 255, 0.12)',
+    borderTopColor: '#f2b45c',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
@@ -330,10 +408,13 @@ const styles: Record<string, React.CSSProperties> = {
     top: 80,
     left: '50%',
     transform: 'translateX(-50%)',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    border: '1px solid #ffc107',
-    borderRadius: 8,
-    padding: '10px 20px',
+    backgroundColor: 'var(--chrome-panel-bg)',
+    border: '1px solid rgba(242, 180, 92, 0.5)',
+    borderRadius: 12,
+    backdropFilter: 'var(--chrome-blur)',
+    WebkitBackdropFilter: 'var(--chrome-blur)',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+    padding: '10px 18px',
     display: 'flex',
     alignItems: 'center',
     gap: 12,
@@ -344,19 +425,35 @@ const styles: Record<string, React.CSSProperties> = {
   decisionSpinner: {
     width: 16,
     height: 16,
-    border: '2px solid #333',
-    borderTopColor: '#ffc107',
+    border: '2px solid rgba(255, 255, 255, 0.12)',
+    borderTopColor: '#f2b45c',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
 
+  decisionFace: {
+    position: 'relative',
+    display: 'inline-flex',
+    flexShrink: 0,
+  },
+
+  decisionFaceRing: {
+    position: 'absolute',
+    inset: -4,
+    borderRadius: '50%',
+    border: '2px solid rgba(255, 255, 255, 0.12)',
+    borderTopColor: '#f2b45c',
+    borderRightColor: '#f2b45c',
+    animation: 'spin 1.2s linear infinite',
+  },
+
   decisionText: {
-    color: '#ffc107',
+    color: '#f6c27a',
     fontWeight: 500,
   },
 
   decisionSourceText: {
-    color: '#888',
+    color: '#9aa3b8',
     fontSize: '0.85em',
   },
 }

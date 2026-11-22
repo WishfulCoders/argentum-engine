@@ -11,11 +11,11 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * {1}{G} · Instant
  *
  * Kicker {1}{B}
- * Exile target artifact or enchantment. If this spell was kicked, exile target nonland permanent
- * instead.
+ * Exile target artifact or enchantment. If this spell was kicked, exile target nonland
+ * permanent instead.
  *
  * "Instead" swaps the target restriction, so the kicked cast announces a different target
- * (`kickerTarget` / `kickerEffect`, as Expel the Unworthy and Fight with Fire do).
+ * through the `kickerTarget` / `kickerEffect` slots (as Expel the Unworthy does).
  */
 val TearAsunder = card("Tear Asunder") {
     manaCost = "{1}{G}"
@@ -30,17 +30,14 @@ val TearAsunder = card("Tear Asunder") {
         val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Exile(artifactOrEnchantment)
 
-        val nonland = kickerTarget(TargetFilter.NonlandPermanent)
-        kickerEffect = Effects.Exile(nonland)
+        val nonlandPermanent = kickerTarget(TargetFilter.NonlandPermanent)
+        kickerEffect = Effects.Exile(nonlandPermanent)
     }
 
     metadata {
         rarity = Rarity.UNCOMMON
         collectorNumber = "183"
         artist = "Dave Kendall"
-        flavorText = "No one knew why the spiritmongers were so enraged by Phyrexian technology, but it was a stroke of good luck for the Coalition."
         imageUri = "https://cards.scryfall.io/normal/front/6/2/629aa907-9533-4681-9bf2-9e56450a4cc2.jpg?1783921294"
-
-        ruling("2022-09-09", "If Tear Asunder is kicked, it can target any nonland permanent, not just an artifact or enchantment.")
     }
 }

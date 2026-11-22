@@ -65,6 +65,11 @@ data class CardComponent(
      */
     val hasCycling: Boolean = false,
     /**
+     * Precomputed from the card definition: does this card have a kicker ability (kicker or
+     * multikicker)? Read by `CardPredicate.HasKicker` (Murasa Sproutling). Printed abilities only.
+     */
+    val hasKicker: Boolean = false,
+    /**
      * The set this card was *originally printed* in (the canonical [CardDefinition.setCode], not the
      * specific printing the player owns). Read by `CardPredicate.OriginallyPrintedInSet` to model
      * "permanent with a name originally printed in [set]" (Golgothian Sylex, ARN City in a Bottle).
@@ -128,6 +133,12 @@ data class CardComponent(
     val copyWardCosts: List<com.wingedsheep.sdk.scripting.effects.WardCost> = emptyList(),
     /** Copiable spending-rule abilities, baked from the active printed statics on entry/unlock. */
     val manaSpendingGrants: List<ManaSpendingGrant> = emptyList(),
+    /**
+     * A copy exception's "its starting loyalty is N" (Jace, Mirror Mage). Copiable, so it rides
+     * along when this component is copied; read in place of the definition's printed loyalty when
+     * the permanent enters (`ZoneMovementUtils.applyIntrinsicEntryCountersIfNeeded`).
+     */
+    val startingLoyaltyOverride: Int? = null,
 ) : Component {
     /**
      * The printed characteristics projection starts every permanent from, built on first use and
@@ -176,6 +187,16 @@ data object TokenComponent : Component
  */
 @Serializable
 data class CreatedByComponent(val creatorId: com.wingedsheep.sdk.model.EntityId) : Component
+
+/**
+ * Marks a token as **embalmed** — created by a resolving embalm ability (CR 702.128b). Stamped by
+ * a `CreateTokenCopyOfTargetEffect` with `embalmed = true` and read by
+ * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsEmbalmed]. Provenance, not a copiable
+ * value: a copy of an embalmed token isn't embalmed, and the mark stays on the token when it enters
+ * as a copy of something else (Vizier of Many Faces).
+ */
+@Serializable
+data object EmbalmedComponent : Component
 
 /**
  * Tracks that an entity is a copy of another card.
@@ -278,6 +299,19 @@ data object CantBeCounteredComponent : Component
 data object CantBeCopiedComponent : Component
 
 /**
+ * Marker: this card was drawn (CR 121.1) during the current turn, pinned to the object it became
+ * in its owner's hand — [generation] is the hand entry's `ObjectIdentity` generation. Backs
+ * `StatePredicate.DrawnThisTurn` (Sylvan Library).
+ *
+ * Stamped by `DrawLoop` on every drawn card. A card that later leaves the hand gets a new
+ * generation on its next zone entry (CR 400.7 — it is a new object), so the stamp stops matching
+ * without any strip on the way out; `TurnManager.startTurn` wipes the stamps at every turn start
+ * so the "this turn" window follows MTG turn boundaries.
+ */
+@Serializable
+data class DrawnThisTurnComponent(val generation: Long) : Component
+
+/**
  * Marker: this card entered a graveyard during the current turn, recording whether it came
  * from the battlefield.
  *
@@ -291,6 +325,10 @@ data object CantBeCopiedComponent : Component
  * rather than two markers that can drift apart:
  *  - `StatePredicate.PutIntoGraveyardThisTurn` — marker present, [fromBattlefield] ignored
  *    (FDN — Abyssal Harvester's "creature card from a graveyard that was put there this turn").
+ *  - `StatePredicate.PutIntoGraveyardThisCombat` — marker present *and* [duringCombat]
+ *    (WAR — Storrev, Devkarin Lich's "wasn't put there this combat", negated).
+ *  - `StatePredicate.MilledThisTurn` — marker present *and* [milled] (PIP — Raul, Trouble
+ *    Shooter; Tato Farmer).
  *  - `StatePredicate.PutIntoGraveyardFromBattlefieldThisTurn` — marker present *and*
  *    [fromBattlefield] (LTR — Samwise the Stouthearted's "permanent card in your graveyard
  *    that was put there from the battlefield this turn" and Lobelia Sackville-Baggins's
@@ -301,5 +339,16 @@ data object CantBeCopiedComponent : Component
  */
 @Serializable
 data class PutIntoGraveyardThisTurnComponent(
-    val fromBattlefield: Boolean
+    val fromBattlefield: Boolean,
+    /**
+     * True when this arrival was a mill (CR 701.17) — set after the move by
+     * `ZoneTransitionService.trackMill`. Backs `StatePredicate.MilledThisTurn`.
+     */
+    val milled: Boolean = false,
+    /**
+     * True when the arrival happened during the combat phase that is still in progress (CR 506.1)
+     * — set by `ZoneTransitionService.recordGraveyardArrival`, cleared by `CombatManager.endCombat`
+     * when that combat phase ends. Backs `StatePredicate.PutIntoGraveyardThisCombat`.
+     */
+    val duringCombat: Boolean = false
 ) : Component

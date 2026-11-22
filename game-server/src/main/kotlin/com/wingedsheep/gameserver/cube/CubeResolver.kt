@@ -2,6 +2,8 @@ package com.wingedsheep.gameserver.cube
 
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.registry.PrintingRegistry
+import com.wingedsheep.sdk.model.CardDefinition
+import com.wingedsheep.sdk.model.Rarity
 
 /**
  * Resolves user-authored names and optional printing pins against the authoritative registries.
@@ -44,7 +46,8 @@ class CubeResolver(
                 } ?: if (entry.printing == null) canonical else null
 
                 if (resolved != null) {
-                    repeat(entry.count) { add(resolved) }
+                    val cubeCard = resolved.forCube(entry.rarity, cube.boosterStyle)
+                    repeat(entry.count) { add(cubeCard) }
                 }
             }
         }
@@ -56,8 +59,26 @@ class CubeResolver(
                 cards = resolvedCards,
                 basicLandSetCode = cube.basicLandSetCode,
                 packSize = cube.packSize,
+                boosterStyle = cube.boosterStyle,
             )
         )
+    }
+
+    /**
+     * Stamp the cube's rarity onto [this] and mark it booster-eligible: the curator put it in the
+     * cube, so a card its own set kept out of boosters (a precon or promo card) still opens. A
+     * booster-style cube prints by rarity slot, and packs only have common/uncommon/rare/mythic
+     * slots — so a special or bonus-sheet rarity is printed as a rare rather than never opening.
+     */
+    private fun CardDefinition.forCube(override: Rarity?, style: CubeBoosterStyle): CardDefinition {
+        val rarity = override ?: metadata.rarity
+        val printable = if (style.printsPacks && rarity !in PACK_RARITIES) Rarity.RARE else rarity
+        if (printable == metadata.rarity && metadata.inBooster) return this
+        return copy(metadata = metadata.copy(rarity = printable, inBooster = true))
+    }
+
+    private companion object {
+        val PACK_RARITIES = setOf(Rarity.COMMON, Rarity.UNCOMMON, Rarity.RARE, Rarity.MYTHIC)
     }
 }
 

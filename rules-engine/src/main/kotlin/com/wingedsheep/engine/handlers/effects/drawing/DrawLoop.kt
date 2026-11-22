@@ -4,6 +4,8 @@ import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.DrawnThisTurnComponent
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -47,7 +49,9 @@ object DrawLoop {
         dispatcher: DrawReplacementDispatcher?,
         isDrawStep: Boolean,
         emptyLibraryReason: String = "Empty library",
-        context: EffectContext? = null
+        context: EffectContext? = null,
+        /** The card whose cycling ability causes these draws (`EventPattern.DrawEvent.cyclingOf`). */
+        cycledCardId: EntityId? = null
     ): EffectResult {
         var newState = state
         val drawnCards = mutableListOf<EntityId>()
@@ -65,12 +69,13 @@ object DrawLoop {
         while (remaining > 0) {
             newState = newState.copy(activeReplacementChain = inheritedChain)
 
-            // 0. A per-turn draw cap (Narset, Parter of Veils) is a "can't" effect, not a
-            //    replacement: a draw it forbids simply doesn't happen (CR 101.2, CR 614.17), and
-            //    because it can't happen no replacement effect may replace it either (CR 614.17c —
-            //    dredge, Hullbreacher). So it is checked before step 1. Nothing a skipped draw does
-            //    changes the count, so every remaining draw of this instruction is forbidden too.
-            if (primitive.drawAllowance(newState, playerId) == 0) break
+            // 0. A per-turn draw cap (CR 121.2b, Narset) applies to each individual draw: the
+            //    instruction is carried out as far as it can be and the rest are not drawn. A
+            //    draw the player can't make isn't an event, so it is checked before replacements
+            //    (Narset's ruling: they can't replace a disallowed draw) and before the empty-
+            //    library check (nothing was attempted). Nothing below can lift the cap mid-loop,
+            //    so the remaining draws all stop here.
+            if (primitive.drawProhibited(newState, playerId)) break
 
             // 1. Check replacements. This runs *before* the primitive draw and before any
             //    empty-library check, and CR 614.11 requires exactly that ordering: effects
@@ -84,12 +89,13 @@ object DrawLoop {
                     drawsLeftIncludingThis = remaining,
                     drawnCardsSoFar = drawnCards.toList(),
                     isDrawStep = isDrawStep,
-                    context = context
+                    context = context,
+                    cycledCardId = cycledCardId
                 )
                 when (dispatch) {
                     is DrawReplacementDispatcher.DispatchResult.Paused -> {
                         return buildPausedResult(
-                            newState, playerId, drawnCards, perCardEvents, dispatch.result
+                            newState, playerId, drawnCards, perCardEvents, dispatch.result, cycledCardId
                         )
                     }
                     is DrawReplacementDispatcher.DispatchResult.Replaced -> {
@@ -119,15 +125,117 @@ object DrawLoop {
 
             if (drawOneResult.failed) {
                 // Empty library — flush aggregate event for prior draws and stop here.
-                return buildSuccessResult(newState, playerId, drawnCards, perCardEvents)
+                return buildSuccessResult(newState, playerId, drawnCards, perCardEvents, cycledCardId)
             }
 
             drawnCards.add(drawOneResult.drawnCardId!!)
             remaining--
+
+            // 3. "As you draw it" questions about the first card of the turn — optional reveals
+            //    (God-Eternal Kefnet), then miracle (CR 702.94a: "you may reveal this card from your
+            //    hand as you draw it") — asked now, before the next card is drawn, with the rest of
+            //    the instruction waiting beneath them.
+            val miracleCost = drawOneResult.miracle?.cost
+            val revealSources = drawOneResult.optionalRevealSources
+            if (miracleCost != null || revealSources.isNotEmpty()) {
+                val withTail = newState.copy(activeReplacementChain = null).pushContinuation(
+                    DrawReplacementRemainingDrawsContinuation(
+                        drawingPlayerId = playerId,
+                        remainingDraws = remaining,
+                        isDrawStep = isDrawStep,
+                        announcementApplied = true,
+                        cycledCardId = cycledCardId
+                    )
+                )
+                val pause = EffectResult.from(
+                    askFirstDrawQuestion(withTail, playerId, drawOneResult.drawnCardId, revealSources, miracleCost)!!
+                )
+                return buildPausedResult(newState, playerId, drawnCards, perCardEvents, pause, cycledCardId)
+            }
         }
 
-        return buildSuccessResult(newState, playerId, drawnCards, perCardEvents)
+        return buildSuccessResult(newState, playerId, drawnCards, perCardEvents, cycledCardId)
     }
+
+    /**
+     * Ask the next "as you draw it" question about [cardId], the first card [playerId] drew this
+     * turn: the first of [revealSources]' optional reveals, else the miracle reveal when
+     * [miracleCost] is set. Null when nothing is left to ask. The caller has already pushed the
+     * [DrawReplacementRemainingDrawsContinuation] carrying the rest of the instruction — an empty
+     * tail too, which in the draw step hands the drawing player priority once the answers are in.
+     *
+     * The miracle question is a [PrivateQuestion]: it exists only because the card has miracle, so
+     * it reaches no other seat. An optional reveal's question is public — its source is on the
+     * battlefield — and names the drawn card only in the asked player's prompt.
+     */
+    fun askFirstDrawQuestion(
+        state: GameState,
+        playerId: EntityId,
+        cardId: EntityId,
+        revealSources: List<EntityId>,
+        miracleCost: com.wingedsheep.sdk.core.ManaCost?,
+        events: List<GameEvent> = emptyList()
+    ): ExecutionResult? {
+        val cardName = state.getEntity(cardId)?.get<CardComponent>()?.name ?: "this card"
+        val sourceId = revealSources.firstOrNull()
+        if (sourceId != null) {
+            val sourceName = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: "this permanent"
+            return state.suspendForDecision(
+                question = { id ->
+                    YesNoDecision(
+                        id = id,
+                        playerId = playerId,
+                        prompt = "Reveal $cardName with $sourceName?",
+                        context = DecisionContext(
+                            sourceId = sourceId,
+                            sourceName = sourceName,
+                            phase = DecisionPhase.RESOLUTION
+                        ),
+                        yesText = "Reveal",
+                        noText = "Keep hidden",
+                        hint = "$sourceName lets you reveal the first card you draw each turn as you draw it."
+                    )
+                },
+                answer = OptionalFirstDrawRevealContinuation(
+                    playerId, cardId, sourceId, revealSources.drop(1), miracleCost
+                ),
+                events = events
+            )
+        }
+        if (miracleCost == null) return null
+        return state.suspendForDecision(
+            question = { id ->
+                YesNoDecision(
+                    id = id,
+                    playerId = playerId,
+                    prompt = "Reveal $cardName for its miracle?",
+                    context = DecisionContext(
+                        sourceId = cardId,
+                        sourceName = cardName,
+                        phase = DecisionPhase.RESOLUTION
+                    ),
+                    yesText = "Reveal",
+                    noText = "Keep hidden",
+                    hint = "Miracle $miracleCost — reveal it as the first card you drew this turn, and a " +
+                        "trigger lets you cast it for $miracleCost as it resolves."
+                )
+            },
+            answer = MiracleRevealContinuation(playerId, cardId, miracleCost),
+            events = events
+        )
+    }
+
+    /**
+     * Pin each drawn card's [DrawnThisTurnComponent] to the object it is now in its hand
+     * (`StatePredicate.DrawnThisTurn`). A card no longer in a hand by now — moved on by a pause's
+     * own effects — is skipped, since it already stopped being the drawn object.
+     */
+    private fun stampDrawnThisTurn(state: GameState, drawnCards: List<EntityId>): GameState =
+        drawnCards.fold(state) { acc, cardId ->
+            val ref = acc.objectRef(cardId)
+            if (ref == null || acc.logicalZone(cardId)?.zoneType != Zone.HAND) acc
+            else acc.updateEntity(cardId) { it.with(DrawnThisTurnComponent(ref.generation)) }
+        }
 
     /**
      * Build a success result with a prepended [CardsDrawnEvent] aggregating
@@ -140,16 +248,17 @@ object DrawLoop {
         state: GameState,
         playerId: EntityId,
         drawnCards: List<EntityId>,
-        perCardEvents: List<GameEvent>
+        perCardEvents: List<GameEvent>,
+        cycledCardId: EntityId?
     ): EffectResult {
         val events = mutableListOf<GameEvent>()
         var newState = state.copy(activeReplacementChain = null)
         if (drawnCards.isNotEmpty()) {
             val cardNames = drawnCards.map { newState.getEntity(it)?.get<CardComponent>()?.name ?: "Card" }
-            events.add(CardsDrawnEvent(playerId, drawnCards.size, drawnCards, cardNames, setOf(state.actorFor(playerId)) - playerId))
-            newState = newState.copy(
+            events.add(CardsDrawnEvent(playerId, drawnCards.size, drawnCards, cardNames, setOf(state.actorFor(playerId)) - playerId, cycledCardId))
+            newState = stampDrawnThisTurn(newState.copy(
                 lastCardDrawnThisTurnByPlayer = newState.lastCardDrawnThisTurnByPlayer + (playerId to drawnCards.last())
-            )
+            ), drawnCards)
         }
         events.addAll(perCardEvents)
         return EffectResult.success(newState, events)
@@ -166,16 +275,17 @@ object DrawLoop {
         playerId: EntityId,
         drawnCards: List<EntityId>,
         perCardEvents: List<GameEvent>,
-        pauseResult: EffectResult
+        pauseResult: EffectResult,
+        cycledCardId: EntityId?
     ): EffectResult {
         val allEvents = mutableListOf<GameEvent>()
         var pausedState = pauseResult.state.copy(activeReplacementChain = null)
         if (drawnCards.isNotEmpty()) {
             val cardNames = drawnCards.map { state.getEntity(it)?.get<CardComponent>()?.name ?: "Card" }
-            allEvents.add(CardsDrawnEvent(playerId, drawnCards.size, drawnCards.toList(), cardNames, setOf(state.actorFor(playerId)) - playerId))
-            pausedState = pausedState.copy(
+            allEvents.add(CardsDrawnEvent(playerId, drawnCards.size, drawnCards.toList(), cardNames, setOf(state.actorFor(playerId)) - playerId, cycledCardId))
+            pausedState = stampDrawnThisTurn(pausedState.copy(
                 lastCardDrawnThisTurnByPlayer = pausedState.lastCardDrawnThisTurnByPlayer + (playerId to drawnCards.last())
-            )
+            ), drawnCards)
         }
         allEvents.addAll(perCardEvents)
         allEvents.addAll(pauseResult.events)

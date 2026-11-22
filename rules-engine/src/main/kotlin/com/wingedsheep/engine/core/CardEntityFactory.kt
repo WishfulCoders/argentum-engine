@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.core
 
+import com.wingedsheep.engine.mechanics.targeting.TypeQualityProtection
 import com.wingedsheep.engine.mechanics.targeting.SourceKind
 import com.wingedsheep.engine.registry.PrintingRegistry
 import com.wingedsheep.engine.state.ComponentContainer
@@ -82,6 +83,7 @@ object CardEntityFactory {
                 hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
                 hasActivatedAbility = cardDef.hasActivatedAbility,
                 hasCycling = cardDef.hasCycling,
+                hasKicker = cardDef.hasKicker,
                 // Original-printing set (canonical, not the pinned printing) — "originally printed in X".
                 originalSetCode = cardDef.setCode,
                 hasAdventure = cardDef.isAdventure,
@@ -123,6 +125,17 @@ object CardEntityFactory {
             }
         }
 
+        // "[This] is also a Cleric, Rogue, Warrior, and Wizard" (Tajuru Paragon) is a CDA (CR 604.3):
+        // it defines the card's subtypes in every zone, so it rides the entity's own type line —
+        // read by every in-hand / graveyard / stack subtype check — rather than a layer-4 effect.
+        if (cardDef.selfDefinedSubtypes.isNotEmpty()) {
+            val card = result.get<CardComponent>()!!
+            if (!card.typeLine.subtypes.containsAll(cardDef.selfDefinedSubtypes)) {
+                result = result.with(card.copy(typeLine = card.typeLine.copy(
+                    subtypes = card.typeLine.subtypes + cardDef.selfDefinedSubtypes)))
+            }
+        }
+
         if (cardDef.script.cantBeCountered) {
             result = result.with(CantBeCounteredComponent)
         }
@@ -150,6 +163,14 @@ object CardEntityFactory {
         (cardDef.keywordAbilities.firstOrNull { it is KeywordAbility.Madness } as? KeywordAbility.Madness)
             ?.let { result = result.with(MadnessComponent(it.cost)) }
 
+        // Statics that function from outside the battlefield (CR 113.6b — Anger's "as long as this
+        // is in your graveyard", eminence's "as long as this is in the command zone"). Lowered once
+        // here so the projector and the cost calculator read them straight off the card in that
+        // zone — see [ZoneStaticEffectsComponent].
+        com.wingedsheep.engine.mechanics.layers.StaticAbilityHandler
+            .lowerZoneScoped(cardDef.script.staticAbilities)
+            ?.let { result = result.with(it) }
+
         val dredgeAmounts = cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Dredge>().map { it.amount }
         if (dredgeAmounts.isNotEmpty()) result = result.with(DredgeComponent(dredgeAmounts))
 
@@ -167,8 +188,9 @@ object CardEntityFactory {
 
         // "Hexproof from [quality]" (CR 702.11d). Only the scopes the rules engine enforces are
         // carried: colors (`HEXPROOF_FROM_<COLOR>`), non-colors (`HEXPROOF_FROM_NON_<COLOR>`),
-        // card types (`HEXPROOF_FROM_CARDTYPE_<TYPE>`) and source kinds
-        // (`HEXPROOF_FROM_SOURCEKIND_<KIND>`, see [SourceKindProtection]).
+        // mono-/multicolored (`HEXPROOF_FROM_MONOCOLORED` / `_MULTICOLORED`), card types
+        // (`HEXPROOF_FROM_CARDTYPE_<TYPE>`) and source kinds (`HEXPROOF_FROM_SOURCEKIND_<KIND>`, see
+        // [SourceKindProtection]).
         // Other [ProtectionScope]s format oracle text but have no targeting wiring yet, so they are
         // dropped rather than projected as a keyword nothing consults.
         val hexproofScopes = cardDef.keywordAbilities
@@ -188,11 +210,18 @@ object CardEntityFactory {
             .map { it.color }
             .toSet()
         val hexproofSourceKinds = hexproofScopes.mapNotNull { SourceKind.of(it) }.toSet()
+        val hexproofMonocolored = ProtectionScope.Monocolored in hexproofScopes
+        val hexproofMulticolored = ProtectionScope.Multicolored in hexproofScopes
         if (hexproofColors.isNotEmpty() || hexproofCardTypes.isNotEmpty() ||
-            hexproofNonColors.isNotEmpty() || hexproofSourceKinds.isNotEmpty()
+            hexproofNonColors.isNotEmpty() || hexproofSourceKinds.isNotEmpty() ||
+            hexproofMonocolored || hexproofMulticolored
         ) {
             result = result.with(
-                HexproofFromComponent(hexproofColors, hexproofCardTypes, hexproofNonColors, hexproofSourceKinds)
+                HexproofFromComponent(
+                    hexproofColors, hexproofCardTypes, hexproofNonColors, hexproofSourceKinds,
+                    monocolored = hexproofMonocolored,
+                    multicolored = hexproofMulticolored,
+                )
             )
         }
 
@@ -252,10 +281,10 @@ object CardEntityFactory {
             }
         }.toSet()
         val protectionSubtypes = protections.mapNotNull {
-            (it.scope as? ProtectionScope.Subtype)?.subtype
+            (it.scope as? ProtectionScope.Subtype)?.let { s -> TypeQualityProtection.quality(s.subtype, s.cardType) }
         }.toSet()
         val protectionSupertypes = protections.mapNotNull {
-            (it.scope as? ProtectionScope.Supertype)?.supertype
+            (it.scope as? ProtectionScope.Supertype)?.let { s -> TypeQualityProtection.quality(s.supertype, s.cardType) }
         }.toSet()
         // "Protection from instants" (Emrakul, the Promised End). Normalized to the uppercase card
         // type name here so the projector can emit `PROTECTION_FROM_CARDTYPE_<TYPE>` — the same

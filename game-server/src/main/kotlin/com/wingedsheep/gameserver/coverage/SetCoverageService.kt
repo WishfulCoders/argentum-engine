@@ -36,7 +36,7 @@ import org.springframework.stereotype.Service
  * "Beginner Box", … — see [ExtraGroupDTO].
  *
  * A few cards are flagged [NotPlanned] in `coverage/card-exclusions.json` — they need mechanics
- * the engine will never carry (ante, subgames, physical dexterity). They stay in the card lists
+ * the engine will never carry (ante, physical dexterity). They stay in the card lists
  * so the detail view can show them, but they drop out of the denominator while unimplemented, so
  * "complete" means *everything we intend to build is built* rather than a bar that can never fill.
  *
@@ -63,7 +63,7 @@ class SetCoverageService(
      */
     @Serializable
     data class NotPlanned(
-        /** Short reason key — `ante`, `subgame`, `dexterity`. Groups cards and labels the badge. */
+        /** Short reason key — `ante`, `dexterity`. Groups cards and labels the badge. */
         val kind: String,
         /** Player-facing sentence explaining the decision. */
         val why: String,

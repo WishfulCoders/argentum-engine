@@ -2267,9 +2267,14 @@
                         "condition": {
                             "type": "Compare",
                             "left": {
-                                "type": "TurnTracking",
+                                "type": "CombatDamageSourcesThisTurn",
                                 "player": "EachOpponent",
-                                "tracker": "DEALT_COMBAT_DAMAGE_BY_LEGENDARY_CREATURE"
+                                "sourceFilter": {
+                                    "cardPredicates": [
+                                        "IsCreature",
+                                        "IsLegendary"
+                                    ]
+                                }
                             },
                             "operator": "GTE",
                             "right": {
@@ -2573,7 +2578,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a Mountain land card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -4035,7 +4042,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for an Equipment artifact card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -4165,7 +4174,11 @@
             {
                 "type": "ReduceEquipCost",
                 "amount": 2,
-                "onlyIfTargetIsSource": true
+                "targetFilter": {
+                    "statePredicates": [
+                        "IsSource"
+                    ]
+                }
             }
         ]
     },
@@ -4361,7 +4374,8 @@
                                     "type": "Fixed",
                                     "amount": 1
                                 }
-                            }
+                            },
+                            "description": "Draw a card"
                         }
                     ]
                 }
@@ -4899,7 +4913,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 3
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
                     }
                 },
                 "effect": {
@@ -5026,44 +5043,141 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "Composite",
-                    "effects": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
-                            "type": "GatherCards",
-                            "source": {
-                                "type": "FromMultipleZones",
-                                "zones": [
-                                    "Library",
-                                    "Graveyard"
-                                ],
-                                "filter": "artifact mv<=2"
-                            },
-                            "storeAs": "searchable",
-                            "search": true
+                            "label": "Search your library",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromMultipleZones",
+                                            "zones": [
+                                                "Library"
+                                            ],
+                                            "filter": "artifact mv<=2"
+                                        },
+                                        "storeAs": "searchable",
+                                        "search": true
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "searchable",
+                                        "selection": {
+                                            "type": "ChooseUpTo",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library for an artifact card with mana value 2 or less to put into your hand",
+                                        "selectedLabel": "Put into your hand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "found",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    "ShuffleLibrary",
+                                    "EmitLibrarySearchedEvent"
+                                ]
+                            }
                         },
                         {
-                            "type": "SelectFromCollection",
-                            "from": "searchable",
-                            "selection": {
-                                "type": "ChooseUpTo",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                }
-                            },
-                            "storeSelected": "found"
+                            "label": "Search your graveyard",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromMultipleZones",
+                                            "zones": [
+                                                "Graveyard"
+                                            ],
+                                            "filter": "artifact mv<=2"
+                                        },
+                                        "storeAs": "searchable"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "searchable",
+                                        "selection": {
+                                            "type": "ChooseExactly",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "found",
+                                        "prompt": "Search your graveyard for an artifact card with mana value 2 or less to put into your hand",
+                                        "selectedLabel": "Put into your hand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "found",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    }
+                                ]
+                            }
                         },
                         {
-                            "type": "MoveCollection",
-                            "from": "found",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Hand"
-                            },
-                            "revealed": true
-                        },
-                        "ShuffleLibrary",
-                        "EmitLibrarySearchedEvent"
+                            "label": "Search your library and graveyard",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromMultipleZones",
+                                            "zones": [
+                                                "Library",
+                                                "Graveyard"
+                                            ],
+                                            "filter": "artifact mv<=2"
+                                        },
+                                        "storeAs": "searchable",
+                                        "search": true
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "searchable",
+                                        "selection": {
+                                            "type": "ChooseUpTo",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library and/or graveyard for an artifact card with mana value 2 or less to put into your hand",
+                                        "selectedLabel": "Put into your hand"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "found",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    "ShuffleLibrary",
+                                    "EmitLibrarySearchedEvent"
+                                ]
+                            }
+                        }
                     ]
                 }
             }
@@ -7037,7 +7151,8 @@
                         ]
                     }
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -8078,7 +8193,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -10166,9 +10283,12 @@
                             "zone": "Graveyard"
                         },
                         "id": "t0",
-                        "totalManaValueAtMost": {
-                            "type": "Fixed",
-                            "amount": 6
+                        "totalAtMost": {
+                            "property": "MANA_VALUE",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 6
+                            }
                         }
                     }
                 }
@@ -11908,7 +12028,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card named Magitek Infantry to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -12790,31 +12912,18 @@
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "Gated",
-                    "gate": "Gate.MayDecide",
-                    "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "SacrificeTarget",
-                                "target": {
-                                    "type": "BoundVariable",
-                                    "name": "t0"
-                                }
-                            },
-                            {
-                                "type": "Surveil",
-                                "count": 2
-                            }
-                        ]
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "filter": {
-                        "baseFilter": "creature|artifact ctrl:you",
-                        "excludeSelf": true
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "Sacrifice",
+                            "filter": "creature|artifact",
+                            "excludeSource": true
+                        }
                     },
-                    "id": "t0"
+                    "then": {
+                        "type": "Surveil",
+                        "count": 2
+                    }
                 }
             }
         ]
@@ -13811,7 +13920,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a basic land or land Town card to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -14547,8 +14658,16 @@
         "BLACK",
         "GREEN"
     ],
+    "colorIndicator": [
+        "BLACK",
+        "GREEN"
+    ],
     "hasNoManaCost": true,
-    "meldResult": true
+    "meldResult": true,
+    "meldParts": [
+        "Fang, Fearless l'Cie",
+        "Vanille, Cheerful l'Cie"
+    ]
 }
 
 // Random Encounter
@@ -14780,7 +14899,8 @@
                         "placement": "Tapped"
                     }
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -15487,7 +15607,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -16014,7 +16137,12 @@
                                         "type": "HasSubtype",
                                         "subtype": "Saga"
                                     },
-                                    "ManaValueEqualsX"
+                                    {
+                                        "type": "CompareNumericProperty",
+                                        "property": "MANA_VALUE",
+                                        "operator": "EQ",
+                                        "amount": "XValue"
+                                    }
                                 ],
                                 "controllerPredicate": "OwnedByYou"
                             },
@@ -16425,7 +16553,11 @@
                                             "filter": "basicland"
                                         },
                                         "storeAs": "gathered0",
-                                        "search": true
+                                        "search": true,
+                                        "searcher": {
+                                            "type": "ControllerOf",
+                                            "targetDescription": "target"
+                                        }
                                     },
                                     {
                                         "type": "SelectFromCollection",
@@ -16456,7 +16588,8 @@
                                     {
                                         "type": "ShuffleLibrary",
                                         "target": "TargetController"
-                                    }
+                                    },
+                                    "EmitLibrarySearchedEvent"
                                 ]
                             },
                             "decisionMaker": "TargetController"
@@ -16528,7 +16661,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Bird or basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -16994,8 +17129,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 4
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 4
+                                    }
                                 }
                             },
                             "then": "Transform"
@@ -18174,7 +18318,9 @@
                                     "baseFilter": "creature ctrl:you"
                                 }
                             },
-                            "storeAs": "target1"
+                            "storeAs": "target1",
+                            "nonTargeting": true,
+                            "prompt": "Choose a creature you control to attach this Equipment to"
                         },
                         {
                             "type": "ConditionalOnCollection",
@@ -18382,7 +18528,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -18923,7 +19071,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -19902,7 +20053,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -21890,7 +22043,7 @@
             }
         ],
         "replacementEffects": [
-            "DoubleCounterPlacement"
+            "ScaleCounterPlacement"
         ]
     },
     "metadata": {
@@ -22762,12 +22915,12 @@
         ],
         "replacementEffects": [
             {
-                "type": "ModifyMillAmount",
-                "modifier": 4,
+                "type": "ModifyKeywordActionAmount",
                 "appliesTo": {
                     "type": "MillEvent",
                     "player": "EachOpponent"
-                }
+                },
+                "modifier": 4
             }
         ]
     },
@@ -24725,6 +24878,62 @@
                     ]
                 },
                 "descriptionOverride": "When Vanille enters, mill two cards, then return a permanent card from your graveyard to your hand."
+            },
+            {
+                "id": "Vanille, Cheerful l'Cie:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "PRECOMBAT_MAIN"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "PayManaCost",
+                            "cost": "{3}{B}{G}"
+                        }
+                    },
+                    "then": {
+                        "type": "Meld",
+                        "partner": {
+                            "cardPredicates": [
+                                "IsCreature",
+                                {
+                                    "type": "NameEquals",
+                                    "name": "Fang, Fearless l'Cie"
+                                }
+                            ]
+                        },
+                        "into": "Ragnarok, Divine Deliverance"
+                    }
+                },
+                "interveningIf": {
+                    "type": "All",
+                    "conditions": [
+                        {
+                            "type": "EntityMatches",
+                            "entity": "Self",
+                            "filter": "ctrl:you"
+                        },
+                        {
+                            "type": "Exists",
+                            "player": "You",
+                            "zone": "Battlefield",
+                            "filter": {
+                                "cardPredicates": [
+                                    "IsCreature",
+                                    {
+                                        "type": "NameEquals",
+                                        "name": "Fang, Fearless l'Cie"
+                                    }
+                                ],
+                                "controllerPredicate": "OwnedByYou"
+                            }
+                        }
+                    ]
+                }
             }
         ]
     },
@@ -25390,19 +25599,16 @@
                     }
                 },
                 "effect": {
-                    "type": "AddManaOfChoice",
-                    "colorSet": {
-                        "type": "ManaColorSet.Specific",
-                        "colors": [
-                            "BLUE",
-                            "RED"
-                        ]
-                    },
-                    "amount": {
+                    "type": "AddDynamicMana",
+                    "amountSource": {
                         "type": "EntityProperty",
                         "entity": "Self",
                         "numericProperty": "Power"
-                    }
+                    },
+                    "allowedColors": [
+                        "BLUE",
+                        "RED"
+                    ]
                 },
                 "timing": "ManaAbility",
                 "restrictions": [
@@ -25567,33 +25773,42 @@
                         }
                     },
                     "then": {
-                        "type": "AttachTargetEquipmentToCreature",
-                        "equipmentTarget": {
-                            "type": "BoundVariable",
-                            "name": "t0"
+                        "type": "ReflexiveTrigger",
+                        "action": {
+                            "type": "Composite",
+                            "effects": []
                         },
-                        "creatureTarget": {
-                            "type": "BoundVariable",
-                            "name": "t1"
-                        }
+                        "optional": false,
+                        "reflexiveEffect": {
+                            "type": "AttachTargetEquipmentToCreature",
+                            "equipmentTarget": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "creatureTarget": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            }
+                        },
+                        "reflexiveTargetRequirements": [
+                            {
+                                "type": "TargetObject",
+                                "filter": {
+                                    "baseFilter": "artifact Equipment ctrl:you"
+                                },
+                                "id": "t0"
+                            },
+                            {
+                                "type": "TargetObject",
+                                "filter": {
+                                    "baseFilter": "creature ctrl:you"
+                                },
+                                "id": "t1"
+                            }
+                        ],
+                        "descriptionOverride": "attach target Equipment you control to target creature you control."
                     }
                 },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "filter": {
-                        "baseFilter": "artifact Equipment ctrl:you"
-                    },
-                    "id": "t0"
-                },
-                "additionalTargetRequirements": [
-                    {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature ctrl:you"
-                        },
-                        "id": "t1"
-                    }
-                ],
                 "interveningIf": {
                     "type": "Exists",
                     "player": "You",
@@ -25899,7 +26114,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -25954,7 +26171,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -26728,7 +26947,7 @@
                         "message": "Shinryu, Transcendent Rival — the chosen player lost the game"
                     },
                     "triggerRestriction": {
-                        "type": "TriggeringPlayerIs",
+                        "type": "PlayerIs",
                         "player": "ChosenOpponent"
                     },
                     "descriptionOverride": "Burning Chains — When the chosen player loses the game, you win the game."
@@ -26885,48 +27104,42 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "ForEach",
-                    "space": {
-                        "type": "IterationSpace.Players",
-                        "players": "Each"
+                    "type": "ForceSacrifice",
+                    "filter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "NotSubtype",
+                                "subtype": "God"
+                            }
+                        ]
                     },
-                    "body": {
-                        "type": "ForceSacrifice",
-                        "filter": {
-                            "cardPredicates": [
-                                "IsCreature",
-                                {
-                                    "type": "NotSubtype",
-                                    "subtype": "God"
-                                }
-                            ]
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "Each"
+                    },
+                    "dynamicCount": {
+                        "type": "Divide",
+                        "numerator": {
+                            "type": "AggregateBattlefield",
+                            "player": "You",
+                            "filter": {
+                                "cardPredicates": [
+                                    "IsCreature",
+                                    {
+                                        "type": "NotSubtype",
+                                        "subtype": "God"
+                                    }
+                                ]
+                            }
                         },
-                        "target": {
-                            "type": "PlayerRef",
-                            "player": "You"
+                        "denominator": {
+                            "type": "Fixed",
+                            "amount": 2
                         },
-                        "dynamicCount": {
-                            "type": "Divide",
-                            "numerator": {
-                                "type": "AggregateBattlefield",
-                                "player": "You",
-                                "filter": {
-                                    "cardPredicates": [
-                                        "IsCreature",
-                                        {
-                                            "type": "NotSubtype",
-                                            "subtype": "God"
-                                        }
-                                    ]
-                                }
-                            },
-                            "denominator": {
-                                "type": "Fixed",
-                                "amount": 2
-                            },
-                            "roundUp": false
-                        }
-                    }
+                        "roundUp": false
+                    },
+                    "countPerPlayer": true
                 }
             },
             {

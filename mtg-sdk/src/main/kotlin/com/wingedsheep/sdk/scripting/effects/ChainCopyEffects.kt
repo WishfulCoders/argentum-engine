@@ -32,11 +32,10 @@ enum class CopyRecipient {
  * @property action The primary effect to execute (any generic Effect)
  * @property target The target of the primary action
  * @property copyRecipient Who gets offered the copy
- * @property copyCost Cost the recipient pays, mid-resolution, before they may copy (null = free).
- *   The engine collects a sacrifice ("sacrifice a land", Chain of Vapor), a discard ("discard a
- *   card", Chain of Plasma) or a mana payment ("pay {R}{R}", Chain Lightning — paid through the
- *   resolution-time mana window, CR 605.3a). Any other cost is treated as unpayable, so the copy is
- *   never offered rather than offered for free.
+ * @property copyCost Cost the recipient pays, mid-resolution, before they may copy (null = free):
+ *   a sacrifice ("sacrifice a land", Chain of Vapor), a discard ("discard a card", Chain of Plasma)
+ *   or a mana cost ("pay {R}{R}", Chain Lightning — paid through the resolution-time mana window,
+ *   CR 605.3a). Any other cost is treated as unpayable, so the copy is never offered for free.
  * @property copyTargetRequirement Target requirement for the copy's new target
  */
 @SerialName("ChainCopy")
@@ -57,11 +56,15 @@ data class ChainCopyEffect(
             CopyRecipient.AFFECTED_PLAYER -> append("that player or that permanent's controller")
         }
         append(" may ")
-        if (copyCost != null) {
-            append("${costPhrase(copyCost)}. If the player does, they may ")
+        if (copyCostText != null) {
+            append("$copyCostText. If the player does, they may ")
         }
         append("copy this spell and may choose a new target for that copy")
     }
+
+    /** The copy cost as an imperative ("sacrifice a land", "pay {R}{R}"), or null when the copy is free. */
+    val copyCostText: String?
+        get() = copyCost?.let(::costPhrase)
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
         val newAction = action.applyTextReplacement(replacer)

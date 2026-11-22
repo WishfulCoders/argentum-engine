@@ -119,8 +119,9 @@ Each group is a candidate single feature PR. Confirm with `add-card` before buil
 ### Artifact-tapped / artifact-ability-activated trigger ✅ DONE
 *Trigger: "whenever an artifact becomes tapped, or a player activates an artifact's ability
 without `{T}` in its cost."* Implemented: the tap half reuses `Triggers.becomesTapped(filter)`;
-the ability half is `Triggers.activatesAbilityWithoutTap(player, sourceFilter, binding)`, backed by
-`EventPattern.AbilityActivatedEvent(sourceFilter, requireNoTapInCost)`. The engine now emits
+the ability half is `Triggers.<player>.activatesAbility(of, tapInCost = TapSymbolInCost.WITHOUT,
+includeManaAbilities = true)` (attached: `Triggers.attached.hasAbilityActivated(...)`), backed by
+`EventPattern.AbilityActivatedEvent(sourceFilter, tapInCost, includeManaAbilities)`. The engine now emits
 `AbilityActivatedEvent` (carrying `costsTap`/`isManaAbility`) for every activated ability whose cost
 lacks `{T}` — mana abilities included — so the literal "{T}-in-cost" wording is honored, distinct
 from the existing "isn't a mana ability" wording.

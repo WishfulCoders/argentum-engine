@@ -13,7 +13,7 @@ val CompulsiveResearchReprint = Printing(
     collectorNumber = "93",
     scryfallId = "d32c0e34-45f4-412a-a643-0207cb82b883",
     artist = "Michael Sutfin",
-    imageUri = "https://cards.scryfall.io/normal/front/d/3/d32c0e34-45f4-412a-a643-0207cb82b883.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/3/d32c0e34-45f4-412a-a643-0207cb82b883.jpg?1783939360",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

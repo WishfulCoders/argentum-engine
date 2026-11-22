@@ -439,6 +439,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -1728,7 +1729,8 @@
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
-    "TIMELESS"
+    "TIMELESS",
+    "VINTAGE_RESTRICTED"
   ],
   "Karok Wrangler": [
     "BRAWL",
@@ -3135,6 +3137,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

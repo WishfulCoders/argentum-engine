@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.handlers.effects.drawing
 
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.handlers.mergeOutputs
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
@@ -24,13 +25,8 @@ import kotlin.reflect.KClass
  * subsequent pipeline effects to reference it via DynamicAmount.VariableReference.
  */
 class DrawUpToExecutor(
-    private val decisionHandler: DecisionHandler = DecisionHandler(),
-    /**
-     * How many more cards a player may draw this turn ([DrawLimits]), or `null` when uncapped. A
-     * player can't choose to draw cards they can't draw (CR 121.3), so the number offered is capped
-     * by it. Defaults to "never capped" for the bare constructions some tests use.
-     */
-    private val drawAllowance: (GameState, com.wingedsheep.sdk.model.EntityId) -> Int? = { _, _ -> null }
+    private val drawPrimitive: DrawCardPrimitive,
+    private val decisionHandler: DecisionHandler = DecisionHandler()
 ) : EffectExecutor<DrawUpToEffect> {
 
     override val effectType: KClass<DrawUpToEffect> = DrawUpToEffect::class
@@ -40,7 +36,7 @@ class DrawUpToExecutor(
         effect: DrawUpToEffect,
         context: EffectContext
     ): EffectResult {
-        val playerId = context.resolvePlayerTarget(effect.target)
+        val playerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "DrawUpTo: could not resolve player target")
 
         val sourceName = context.sourceId?.let { sourceId ->
@@ -49,14 +45,16 @@ class DrawUpToExecutor(
 
         val libraryZone = ZoneKey(playerId, Zone.LIBRARY)
         val librarySize = state.getZone(libraryZone).size
-        val actualMax = effect.maxCards.coerceAtMost(librarySize)
-            .coerceAtMost(drawAllowance(state, playerId) ?: Int.MAX_VALUE)
+        // A per-turn draw cap (CR 121.2b) means the player can't choose to draw more than it allows.
+        val drawsLeft = drawPrimitive.drawsLeftThisTurn(state, playerId) ?: Int.MAX_VALUE
+        val actualMax = effect.maxCards.coerceAtMost(librarySize).coerceAtMost(drawsLeft)
 
         if (actualMax == 0) {
-            // Can't draw any cards — store max not drawn and return
+            // Can't draw any cards: every card is "not drawn". Nothing paused, so the number is
+            // this step's own output, not a hand-off to the frame beneath.
             val storeAs = effect.storeNotDrawnAs
             return if (storeAs != null) {
-                injectStoredNumber(state, storeAs, effect.maxCards)
+                EffectResult(state, emptyList(), updatedStoredNumbers = mapOf(storeAs to effect.maxCards))
             } else {
                 EffectResult.success(state)
             }
@@ -69,7 +67,8 @@ class DrawUpToExecutor(
             sourceName = sourceName,
             maxCards = actualMax,
             originalMaxCards = effect.maxCards,
-            storeNotDrawnAs = effect.storeNotDrawnAs
+            storeNotDrawnAs = effect.storeNotDrawnAs,
+            programOrigin = context.programOrigin,
         )
 
         val decisionResult = decisionHandler.createNumberDecision(
@@ -92,16 +91,18 @@ class DrawUpToExecutor(
 
     companion object {
         /**
-         * Inject a stored number into the next EffectContinuation on the stack,
-         * following the same injection pattern as SelectFromCollectionContinuation.
+         * Inject a stored number into the next EffectProgram on the stack, following the same
+         * injection pattern as SelectFromCollectionContinuation. For resumers, after a pause: a
+         * step that finishes without pausing returns the number in its result instead.
          */
         fun injectStoredNumber(state: GameState, name: String, value: Int): EffectResult {
             val nextFrame = state.peekContinuation()
-            val newState = if (nextFrame is EffectContinuation) {
+            val newState = if (nextFrame is EffectProgram) {
                 val (_, stateAfterPop) = state.popContinuation()
                 stateAfterPop.pushContinuation(
-                    nextFrame.copy(effectContext = nextFrame.effectContext.copy(
-                        pipeline = nextFrame.effectContext.pipeline.copy(storedNumbers = nextFrame.effectContext.pipeline.storedNumbers + (name to value))
+                    nextFrame.copy(effectContext = nextFrame.effectContext.mergeOutputs(
+                        com.wingedsheep.engine.handlers.PipelineOutputs(numbers = mapOf(name to value)),
+                        dedupSnapshots = true,
                     ))
                 )
             } else {

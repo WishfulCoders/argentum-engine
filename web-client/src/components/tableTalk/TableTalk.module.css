@@ -1,0 +1,551 @@
+/*
+ * Table talk: the emote button and picker beside your life orb, the speech bubbles over each seat,
+ * and the opponent card on the result screen. Same glass-and-amber language as the game overlays:
+ * amber for the one live action, everything else in quiet greys.
+ */
+
+/* ── Speech bubble ──────────────────────────────────────────────────── */
+
+.bubbleAnchor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bubble {
+  --bubble-bg: rgba(250, 248, 242, 0.97);
+  position: fixed;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 7px 9px;
+  border-radius: 14px;
+  background: var(--bubble-bg);
+  color: #1b1d26;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  transform: translateX(-50%);
+  animation: bubble-in 3.2s cubic-bezier(0.2, 0.9, 0.3, 1.25) forwards;
+}
+
+.bubble[data-placement='above'] { transform-origin: 50% 100%; }
+.bubble[data-placement='below'] { transform-origin: 50% 0%; }
+.bubble[data-placement='right'] { transform: translateY(-50%); transform-origin: 0% 50%; }
+/* Beside a rail chip, compact enough that bubbles on neighbouring chips don't run into each other. */
+.bubble[data-placement='right'] { padding: 4px 10px 4px 7px; font-size: 12px; gap: 5px; border-radius: 11px; }
+.bubble[data-placement='right'] .bubbleIcon { font-size: 15px; }
+
+/* The tail points at the orb. */
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--bubble-bg);
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+}
+.bubble[data-placement='above']::after { bottom: -5px; }
+.bubble[data-placement='below']::after { top: -5px; }
+.bubble[data-placement='right']::after {
+  /* Pointing left, the tail grows out of the mood stripe, so it wears the stripe's colour. */
+  left: -10px;
+  top: 50%;
+  background: var(--bubble-accent, var(--bubble-bg));
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.bubbleIcon { display: inline-block; font-size: 18px; line-height: 1; animation: icon-pop 0.5s 0.12s ease-out both; }
+
+/* A mood stripe along the bubble's left edge says what kind of thing was said at a glance. */
+.bubble { border-left: 4px solid var(--bubble-accent, transparent); }
+.bubble[data-mood='greet'] { --bubble-accent: #e8a94f; }
+.bubble[data-mood='react'] { --bubble-accent: #e06b6b; }
+.bubble[data-mood='talk'] { --bubble-accent: #6f8fe0; }
+
+/* A few get their own gesture. */
+.bubble[data-emote='HELLO'] .bubbleIcon,
+.bubble[data-emote='GOOD_GAME'] .bubbleIcon { animation: icon-wave 0.9s 0.1s ease-in-out both; transform-origin: 70% 80%; }
+.bubble[data-emote='OUCH'] .bubbleIcon,
+.bubble[data-emote='NO_WAY'] .bubbleIcon { animation: icon-shake 0.5s 0.12s ease-in-out both; }
+.bubble[data-emote='TAUNT'] .bubbleIcon { animation: icon-smirk 0.8s 0.12s ease-in-out both; }
+.bubble[data-emote='THINKING'] .bubbleIcon { animation: icon-ponder 1.6s 0.1s ease-in-out infinite; }
+
+@keyframes icon-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@keyframes icon-wave {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(18deg); }
+  40% { transform: rotate(-10deg); }
+  60% { transform: rotate(14deg); }
+  80% { transform: rotate(-4deg); }
+}
+@keyframes icon-shake {
+  0%, 100% { transform: translateX(0) scale(1.1); }
+  20% { transform: translateX(-3px) rotate(-8deg); }
+  40% { transform: translateX(3px) rotate(8deg); }
+  60% { transform: translateX(-2px) rotate(-4deg); }
+  80% { transform: translateX(2px) rotate(4deg); }
+}
+@keyframes icon-smirk {
+  0%, 100% { transform: rotate(0) scale(1); }
+  30% { transform: rotate(-12deg) scale(1.2); }
+  60% { transform: rotate(8deg) scale(1.1); }
+}
+@keyframes icon-ponder {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(-10deg) translateY(-1px); }
+}
+.bubbleText { position: relative; z-index: 1; }
+
+@keyframes bubble-in {
+  0% { opacity: 0; scale: 0.6; translate: 0 6px; }
+  9% { opacity: 1; scale: 1.06; translate: 0 0; }
+  14% { scale: 1; }
+  86% { opacity: 1; scale: 1; translate: 0 0; }
+  100% { opacity: 0; scale: 0.96; translate: 0 -4px; }
+}
+
+/* ── Emote button + picker ──────────────────────────────────────────── */
+
+.pickerRoot {
+  position: relative;
+  display: inline-flex;
+}
+
+.emoteButton {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 12, 20, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #c9cfdc;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s, transform 0.12s;
+}
+
+.emoteButton:hover,
+.emoteButton[data-open] {
+  color: #f6c27a;
+  border-color: rgba(242, 180, 92, 0.55);
+  background: rgba(30, 24, 14, 0.85);
+}
+.emoteButton:active { transform: scale(0.94); }
+
+/* Cooldown: an amber ring draining around the button. */
+.emoteButton[data-cooling]::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(rgba(242, 180, 92, 0.75) var(--sweep), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: cooldown-drain var(--cooldown-ms, 2500ms) linear forwards;
+}
+
+@property --sweep {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 360deg;
+}
+
+@keyframes cooldown-drain {
+  from { --sweep: 360deg; }
+  to { --sweep: 0deg; }
+}
+
+.picker {
+  position: fixed;
+  z-index: 1500;
+  width: min(420px, calc(100vw - 16px));
+  padding: 8px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: rgba(12, 14, 22, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: picker-in 0.16s ease-out;
+}
+
+/* Laptop-height screens: tighter rows so the whole picker fits without scrolling. */
+@media (max-height: 820px) {
+  .picker { padding: 6px; }
+  .group + .group { margin-top: 5px; }
+  .groupTitle { margin-bottom: 3px; font-size: 10px; }
+  .grid { gap: 3px; }
+  .emoteOption { height: 31px; font-size: 12px; }
+  .optionIcon { font-size: 15px; }
+  .muteList { margin-top: 5px; padding-top: 5px; }
+}
+
+.picker[data-direction='up'] { transform-origin: 18px 100%; }
+.picker[data-direction='down'] { transform-origin: 18px 0%; }
+
+@keyframes picker-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.group + .group { margin-top: 8px; }
+
+.groupTitle {
+  margin: 0 0 4px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7d8597;
+}
+.group[data-mood='greet'] .groupTitle { color: #d9a86a; }
+.group[data-mood='react'] .groupTitle { color: #e58f8f; }
+.group[data-mood='talk'] .groupTitle { color: #8fa6e5; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.emoteOption {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 8px 0 7px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e8ebf2;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, transform 0.1s;
+}
+
+.emoteOption:hover:not(:disabled) {
+  background: rgba(242, 180, 92, 0.14);
+  border-color: rgba(242, 180, 92, 0.4);
+}
+.group[data-mood='react'] .emoteOption:hover:not(:disabled) {
+  background: rgba(229, 143, 143, 0.13);
+  border-color: rgba(229, 143, 143, 0.4);
+}
+.group[data-mood='talk'] .emoteOption:hover:not(:disabled) {
+  background: rgba(143, 166, 229, 0.13);
+  border-color: rgba(143, 166, 229, 0.4);
+}
+.emoteOption:hover:not(:disabled) .optionIcon { transform: scale(1.18) rotate(-6deg); }
+.emoteOption:active:not(:disabled) { transform: scale(0.97); }
+.emoteOption:disabled { opacity: 0.45; cursor: default; }
+
+.optionIcon { font-size: 17px; line-height: 1; transition: transform 0.15s; }
+.optionLabel { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.muteList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.muteRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 6px;
+  border-radius: 8px;
+  color: #aab2c3;
+  font-size: 12px;
+  cursor: pointer;
+}
+.muteRow:hover { background: rgba(255, 255, 255, 0.04); }
+.seatDot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.muteName { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 17px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.switch:checked { background: #e2a24d; }
+.switch:checked::after { transform: translateX(13px); }
+
+.emoteButton:focus-visible,
+.emoteOption:focus-visible,
+.switch:focus-visible,
+.rematch:focus-visible,
+.friendChip:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Result screen: your opponent ───────────────────────────────────── */
+
+.postGame {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 2px 0 4px;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.opponentRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #3a3f52, #23262f);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f0f2f7;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+}
+/* The opponent's portrait, ringed in gold like the match intro's, so the result card closes the match
+   with the same face that opened it. */
+.avatar[data-portrait='true'] {
+  position: relative;
+  background: #10131c;
+  border: none;
+  box-shadow: 0 0 0 2px rgba(10, 12, 20, 0.9), 0 0 0 3.5px rgba(242, 180, 92, 0.8), 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+/* A phone's card is narrow enough that the name needs the room more than the portrait does. */
+@media (max-width: 639px) {
+  .avatar { width: 46px; height: 46px; font-size: 20px; }
+}
+
+.opponentText {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.opponentName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f4f5f9;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.opponentStatus {
+  font-size: 12px;
+  color: #8f98ac;
+}
+.opponentStatus[data-tone='live'] { color: #f6c27a; }
+.opponentStatus[data-tone='gone'] { color: #6f7789; }
+
+.friendChip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #e8ebf2;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+button.friendChip:hover { background: rgba(255, 255, 255, 0.14); }
+.friendChip[data-state='done'] {
+  border-color: rgba(46, 204, 113, 0.35);
+  background: rgba(46, 204, 113, 0.1);
+  color: #8fe0b0;
+  cursor: default;
+}
+.friendChip[data-state='invited'] {
+  border-color: rgba(242, 180, 92, 0.55);
+  background: rgba(242, 180, 92, 0.14);
+  color: #f6c27a;
+}
+
+.notice {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #f6c3c3;
+  font-size: 12.5px;
+}
+
+.rematch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: #f2b45c;
+  color: #1d1405;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.rematch:hover:not(:disabled) { background: #f7c67f; }
+
+.rematch[data-state='invited'] {
+  animation: rematch-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes rematch-glow {
+  0%, 100% { box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25), 0 0 0 0 rgba(242, 180, 92, 0.5); }
+  50% { box-shadow: 0 6px 26px rgba(242, 180, 92, 0.45), 0 0 0 6px rgba(242, 180, 92, 0); }
+}
+
+.rematch[data-state='waiting'] {
+  background: rgba(242, 180, 92, 0.12);
+  border: 1px solid rgba(242, 180, 92, 0.45);
+  color: #f6c27a;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+.rematch[data-state='waiting']:hover { background: rgba(242, 180, 92, 0.2); }
+
+.rematchHint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.rematch[data-state='waiting'] > span:nth-child(2) { margin-left: 0; }
+
+.rematch:disabled {
+  background: rgba(255, 255, 255, 0.07);
+  color: #8f98ac;
+  box-shadow: none;
+  cursor: default;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rematchSpinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(242, 180, 92, 0.25);
+  border-top-color: #f2b45c;
+  animation: tabletalk-spin 0.9s linear infinite;
+}
+
+@keyframes tabletalk-spin { to { transform: rotate(360deg); } }
+
+.blockRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 20px;
+}
+
+.blockedNote {
+  flex: 1 1 180px;
+  color: #8f98ac;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: #8f98ac;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.linkButton:hover { color: #e8ebf2; }
+.danger { color: #f08a8a; }
+.danger:hover { color: #ffb0b0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble { animation: bubble-fade 3.2s linear forwards; }
+  .bubbleIcon, .bubble .bubbleIcon { animation: none !important; }
+  .picker, .rematch[data-state='invited'] { animation: none; }
+  .emoteButton[data-cooling]::before { animation: none; display: none; }
+}
+
+@keyframes bubble-fade {
+  0%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}

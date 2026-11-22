@@ -128,12 +128,19 @@ whole-corpus gate (snapshots, lint, facade boundary) and has to stay runnable wi
 
 - `just prune-worktrees` — reclaims `build/` and `.gradle/` from worktrees nobody is working in
   (~15 GB across 20 live worktrees when measured; 2.5 GB at a 7-day threshold). Dry run by default.
-- `just kill-daemons` — reaps idle Kotlin and Gradle daemons. `org.gradle.daemon.idletimeout`
-  governs only the *Gradle* daemon; the Kotlin compile daemon is a separate 6 GB JVM with its own
-  lifetime, and a few hours-old idle ones are what push the box into swap and make the next compile
-  OOM. Dry run by default.
-- Both refuse to act while a `gradle-locked` semaphore slot is held, skip anything a running JVM
-  references, and never touch `kotlin-lsp` — so they cannot disturb another agent mid-build.
+- `just kill-daemons` — reaps Kotlin and Gradle daemons that are *idle* (hours old, 0% CPU),
+  *orphaned* (a Gradle daemon whose worktree was deleted) or *sick* (a Kotlin daemon grinding on a
+  full old generation — the usual cause of both build slots sitting "stuck" for hours, because every
+  worktree shares the one compile daemon). `org.gradle.daemon.idletimeout` governs only the *Gradle*
+  daemon; the Kotlin compile daemon is a separate 6 GB JVM with its own lifetime. Dry run by default.
+- `scripts/gradle-locked` runs it automatically: a build queued for a slot checks for sick daemons
+  every two minutes, and a build that acquires a slot reaps orphaned and idle ones first.
+  `GRADLE_REAP=0` turns that off.
+- Idle reaping refuses to act while another `gradle-locked` slot is held. Sick and orphan reaping
+  do not, since a sick daemon is what the in-flight build is stuck on. Neither touches `kotlin-lsp`.
+- A user-level `~/.gradle/gradle.properties` overrides the project's `kotlin.daemon.jvmargs`. A
+  stale `-Xmx4g` there starved the shared daemon for weeks, so keep it in step with this repo or
+  leave the key out.
 - `just install-gradle-init` — installs `gradle/init.d/argentum-cache-retention.init.gradle.kts`,
   which bounds Gradle user home cache retention (the local build cache had reached 19 GB with nothing
   ever expiring it). This has to be an init script: Gradle rejects cache-retention settings from a

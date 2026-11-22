@@ -26,7 +26,7 @@ class RevealHandEffectExecutor : EffectExecutor<RevealHandEffect> {
         effect: RevealHandEffect,
         context: EffectContext
     ): EffectResult {
-        val targetPlayerId = context.resolvePlayerTarget(effect.target)
+        val targetPlayerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid target player for reveal hand")
 
         // Get all cards in the target player's hand

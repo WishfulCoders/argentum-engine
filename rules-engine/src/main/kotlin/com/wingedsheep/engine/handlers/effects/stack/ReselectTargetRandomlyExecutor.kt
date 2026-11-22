@@ -1,21 +1,22 @@
 package com.wingedsheep.engine.handlers.effects.stack
 
 import com.wingedsheep.engine.core.EffectResult
+import com.wingedsheep.engine.core.TargetReselectedEvent
 import com.wingedsheep.engine.handlers.EffectContext
-import com.wingedsheep.engine.handlers.PredicateContext
-import com.wingedsheep.engine.handlers.PredicateEvaluator
-import com.wingedsheep.engine.handlers.effects.EffectExecutor
-import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.handlers.TargetingSourceType
+import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.TargetsComponent
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.ReselectTargetRandomlyEffect
-import com.wingedsheep.sdk.scripting.targets.*
+import com.wingedsheep.sdk.scripting.targets.TargetRequirement
 import kotlin.reflect.KClass
 
 /**
@@ -23,11 +24,11 @@ import kotlin.reflect.KClass
  * "If it has a single target, reselect its target at random."
  *
  * Uses context.triggeringEntityId to find the spell/ability on the stack.
- * If it has exactly one target, finds all legal targets and randomly picks one.
+ * If it has exactly one target, finds all legal targets for it (via [TargetFinder]) and randomly
+ * picks one.
  * If it has zero or multiple targets, does nothing.
  */
 class ReselectTargetRandomlyExecutor(
-    private val predicateEvaluator: PredicateEvaluator,
     private val targetFinder: TargetFinder
 ) : EffectExecutor<ReselectTargetRandomlyEffect> {
 
@@ -55,13 +56,15 @@ class ReselectTargetRandomlyExecutor(
         }
 
         val currentTarget = spellTargets.first()
-        val targetRequirements = targetsComponent.targetRequirements
+        val requirement = targetsComponent.targetRequirements.firstOrNull()
+            ?: return EffectResult.success(state)
 
-        // 3. Find all legal targets
-        val spellController = stackEntity.get<ControllerComponent>()?.playerId ?: context.controllerId
-        val legalTargets = findLegalTargets(
-            state, currentTarget, targetRequirements, spellController, triggeringEntityId
-        )
+        // 3. Find all legal targets. The object's own controller judges them ("an opponent
+        // controls"); an activated/triggered ability carries no ControllerComponent.
+        val spellController = TargetResolutionUtils.stackObjectController(state, triggeringEntityId)
+            ?: stackEntity.get<ControllerComponent>()?.playerId
+            ?: context.controllerId
+        val legalTargets = findLegalTargets(state, triggeringEntityId, requirement, spellController)
 
         if (legalTargets.isEmpty()) {
             // No legal targets at all — keep current target
@@ -72,23 +75,18 @@ class ReselectTargetRandomlyExecutor(
         val (chosenTargetId, stateAfterPick) = state.nextRandom { pick(legalTargets) }
 
         // 5. Build the new ChosenTarget based on what was chosen
-        val newTarget = buildChosenTarget(stateAfterPick, chosenTargetId, currentTarget)
-            ?: return EffectResult.success(stateAfterPick)
+        val newTarget = ContestedRetargetLogic.rebuildTarget(stateAfterPick, chosenTargetId, currentTarget)
 
         // 6. Update the target on the stack entity
-        val newTargetsComponent = TargetsComponent.capture(
-            stateAfterPick,
-            listOf(newTarget),
-            targetsComponent.targetRequirements
-        )
+        val newTargetsComponent = targetsComponent.retargeted(stateAfterPick, listOf(newTarget))
         val newState = stateAfterPick.updateEntity(triggeringEntityId) { container ->
             container.with(newTargetsComponent)
         }
 
         // 7. Emit event for the game log
         val spellName = stackEntity.get<CardComponent>()?.name
-            ?: stackEntity.get<com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent>()?.sourceName
-            ?: stackEntity.get<com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent>()?.sourceName
+            ?: stackEntity.get<TriggeredAbilityOnStackComponent>()?.sourceName
+            ?: stackEntity.get<ActivatedAbilityOnStackComponent>()?.sourceName
             ?: "spell or ability"
         val oldTargetId = getTargetEntityId(currentTarget)
         val newTargetId = getTargetEntityId(newTarget)
@@ -97,9 +95,13 @@ class ReselectTargetRandomlyExecutor(
         val sourceName = context.sourceId?.let { state.getEntity(it)?.get<CardComponent>()?.name } ?: "Grip of Chaos"
 
         val events = if (oldTargetId != newTargetId) {
-            listOf(com.wingedsheep.engine.core.TargetReselectedEvent(
+            // The ids let the client boundary mask a face-down object's name per viewer.
+            listOf(TargetReselectedEvent(
+                spellOrAbilityId = triggeringEntityId,
                 spellOrAbilityName = spellName,
+                oldTargetId = oldTargetId,
                 oldTargetName = oldTargetName,
+                newTargetId = newTargetId,
                 newTargetName = newTargetName,
                 sourceName = sourceName
             ))
@@ -111,129 +113,33 @@ class ReselectTargetRandomlyExecutor(
     }
 
     /**
-     * Find all legal targets for the spell/ability (including the current target).
+     * All legal targets for the spell/ability's single target, the current one included.
      * Per ruling: "If there are multiple legal targets, it may still choose the original one."
+     *
+     * Asks [TargetFinder] for the requirement as it was chosen, judged from the object's own
+     * controller and source (a spell targets as itself, an ability as its source), so the
+     * requirement's filter and every targeting restriction — shroud, hexproof, protection —
+     * apply exactly as when the target was first chosen. A spell or ability can't target itself.
      */
     private fun findLegalTargets(
         state: GameState,
-        currentTarget: ChosenTarget,
-        targetRequirements: List<TargetRequirement>,
-        controllerId: EntityId,
-        sourceId: EntityId
+        stackObjectId: EntityId,
+        requirement: TargetRequirement,
+        controllerId: EntityId
     ): List<EntityId> {
-        val projected = state.projectedState
-        val requirement = targetRequirements.firstOrNull()
-
-        return when {
-            requirement is AnyTarget -> {
-                targetFinder.findLegalTargets(state, requirement, controllerId, sourceId)
-            }
-
-            requirement is TargetCreatureOrPlayer -> {
-                val creatures = state.getBattlefield().filter { entityId ->
-                    projected.hasType(entityId, "CREATURE")
-                }
-                val players = state.turnOrder.filter { state.hasEntity(it) }
-                creatures + players
-            }
-
-            requirement is TargetPermanentOrPlayer -> {
-                val predContext = PredicateContext(controllerId = controllerId)
-                val permanents = state.getBattlefield().filter { entityId ->
-                    predicateEvaluator.matches(
-                        state, projected, entityId, requirement.permanentFilter.baseFilter, predContext
-                    )
-                }
-                val players = state.turnOrder.filter {
-                    state.hasEntity(it) && (!requirement.opponentsOnly || state.isOpponentOf(it, controllerId))
-                }
-                permanents + players
-            }
-
-            requirement is TargetOpponentOrPlaneswalker -> {
-                val opponents = state.turnOrder.filter { it != controllerId && state.hasEntity(it) }
-                val planeswalkers = state.getBattlefield().filter { entityId ->
-                    projected.hasType(entityId, "PLANESWALKER")
-                }
-                opponents + planeswalkers
-            }
-
-            requirement is TargetCreatureOrPlaneswalker -> {
-                state.getBattlefield().filter { entityId ->
-                    projected.hasType(entityId, "CREATURE") || projected.hasType(entityId, "PLANESWALKER")
-                }
-            }
-
-            requirement is TargetObject && requirement.filter.zone == Zone.BATTLEFIELD -> {
-                val predContext = PredicateContext(controllerId = controllerId)
-                state.getBattlefield().filter { entityId ->
-                    predicateEvaluator.matches(
-                        state, projected, entityId, requirement.filter.baseFilter, predContext
-                    )
-                }
-            }
-
-            requirement is TargetPlayer -> {
-                state.turnOrder.filter { state.hasEntity(it) }
-            }
-
-            requirement is TargetOpponent -> {
-                state.turnOrder.filter { it != controllerId && state.hasEntity(it) }
-            }
-
-            requirement is TargetSpellOrPermanent -> {
-                // Spells on stack + permanents on battlefield
-                state.stack + state.getBattlefield()
-            }
-
-            // Fallback: infer from current target type
-            else -> findTargetsByCurrentType(state, currentTarget, projected)
+        val stackObject = state.getEntity(stackObjectId) ?: return emptyList()
+        val triggered = stackObject.get<TriggeredAbilityOnStackComponent>()
+        val activated = stackObject.get<ActivatedAbilityOnStackComponent>()
+        val (sourceId, sourceType) = when {
+            triggered != null -> triggered.sourceId to TargetingSourceType.TRIGGERED_ABILITY
+            activated != null -> activated.sourceId to TargetingSourceType.ACTIVATED_ABILITY
+            else -> stackObjectId to TargetingSourceType.SPELL
         }
-    }
-
-    private fun findTargetsByCurrentType(
-        state: GameState,
-        currentTarget: ChosenTarget,
-        projected: ProjectedState
-    ): List<EntityId> {
-        return when (currentTarget) {
-            is ChosenTarget.Permanent -> {
-                state.getBattlefield()
-            }
-            is ChosenTarget.Player -> {
-                state.turnOrder.filter { state.hasEntity(it) }
-            }
-            else -> {
-                val id = getTargetEntityId(currentTarget)
-                if (id != null) listOf(id) else emptyList()
-            }
-        }
-    }
-
-    private fun buildChosenTarget(
-        state: GameState,
-        chosenId: EntityId,
-        currentTarget: ChosenTarget
-    ): ChosenTarget? {
-        // Check if it's a player
-        if (state.turnOrder.contains(chosenId)) {
-            return ChosenTarget.Player(chosenId)
-        }
-        // Check if it's on the battlefield
-        if (state.getBattlefield().contains(chosenId)) {
-            return ChosenTarget.Permanent(chosenId)
-        }
-        // Check if it's on the stack
-        if (state.stack.contains(chosenId)) {
-            return ChosenTarget.Spell(chosenId)
-        }
-        // Fallback: keep structure of current target
-        return when (currentTarget) {
-            is ChosenTarget.Permanent -> ChosenTarget.Permanent(chosenId)
-            is ChosenTarget.Player -> ChosenTarget.Player(chosenId)
-            is ChosenTarget.Spell -> ChosenTarget.Spell(chosenId)
-            is ChosenTarget.Card -> ChosenTarget.Card(chosenId, currentTarget.ownerId, currentTarget.zone)
-        }
+        return targetFinder.findLegalTargets(
+            state, requirement, controllerId, sourceId,
+            targetingSourceType = sourceType,
+            triggeringEntityId = triggered?.triggerContext?.triggeringEntityId
+        ).filter { it != stackObjectId }
     }
 
     private fun getTargetEntityId(target: ChosenTarget): EntityId? {

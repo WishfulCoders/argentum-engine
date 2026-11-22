@@ -4,21 +4,17 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid
+import com.wingedsheep.sdk.scripting.EntersOnlyIfPaid
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.TimingRule
 
 /**
- * Mox Diamond — Stronghold #138
- * {0} · Artifact
- *
+ * Mox Diamond
+ * {0}
+ * Artifact
  * If this artifact would enter, you may discard a land card instead. If you do, put this artifact
  * onto the battlefield. If you don't, put it into its owner's graveyard.
  * {T}: Add one mana of any color.
- *
- * The first line is [EntersOnlyIfCostPaid] with a "discard a land card" cost: a self-replacement on
- * its own entry (CR 614.1a, 614.12), settled before it enters (CR 614.12a) however it would enter —
- * cast, or put onto the battlefield by an effect. Unpaid, it goes straight to its owner's graveyard
- * and never enters (2008-05-01 ruling).
  */
 val MoxDiamond = card("Mox Diamond") {
     manaCost = "{0}"
@@ -26,12 +22,13 @@ val MoxDiamond = card("Mox Diamond") {
     typeLine = "Artifact"
     oracleText = "If this artifact would enter, you may discard a land card instead. If you do, put this artifact onto the battlefield. If you don't, put it into its owner's graveyard.\n{T}: Add one mana of any color."
 
-    replacementEffect(EntersOnlyIfCostPaid(Costs.pay.Discard(GameObjectFilter.Land)))
+    replacementEffect(EntersOnlyIfPaid(Costs.pay.Discard(GameObjectFilter.Land)))
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddManaOfChoice()
+        effect = Effects.AddAnyColorMana()
         manaAbility = true
+        timing = TimingRule.ManaAbility
     }
 
     metadata {

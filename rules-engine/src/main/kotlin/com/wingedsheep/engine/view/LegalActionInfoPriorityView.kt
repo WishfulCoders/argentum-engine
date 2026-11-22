@@ -19,6 +19,7 @@ private class LegalActionInfoPriorityView(private val info: LegalActionInfo) : P
     override val actionType: String get() = info.actionType
     override val requiresTargets: Boolean get() = info.requiresTargets
     override val validTargets: List<EntityId>? get() = info.validTargets
+    override val minTargets: Int get() = info.minTargets
     override val validAttackers: List<EntityId>? get() = info.validAttackers
     override val validBlockers: List<EntityId>? get() = info.validBlockers
     override val isManaAbility: Boolean get() = info.isManaAbility
@@ -27,4 +28,5 @@ private class LegalActionInfoPriorityView(private val info: LegalActionInfo) : P
     override val additionalCostType: String? get() = info.additionalCostInfo?.costType
     override val hasUnfillableTargetRequirement: Boolean
         get() = info.targetRequirements?.any { it.minTargets > 0 && it.validTargets.isEmpty() } ?: false
+    override val inertReason: String? get() = info.inertReason
 }

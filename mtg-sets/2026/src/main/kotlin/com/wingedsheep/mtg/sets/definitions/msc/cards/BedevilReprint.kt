@@ -13,7 +13,7 @@ val BedevilReprint = Printing(
     collectorNumber = "182",
     scryfallId = "985b9779-b8f6-4d7e-9490-5d2b91ee8db2",
     artist = "Björn Barends",
-    imageUri = "https://cards.scryfall.io/normal/front/9/8/985b9779-b8f6-4d7e-9490-5d2b91ee8db2.jpg?1783903227",
+    imageUri = "https://cards.scryfall.io/normal/front/9/8/985b9779-b8f6-4d7e-9490-5d2b91ee8db2.jpg",
     releaseDate = "2026-06-26",
     rarity = Rarity.RARE,
 )

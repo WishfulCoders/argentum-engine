@@ -13,7 +13,7 @@ val PlummetReprint = Printing(
     collectorNumber = "173",
     scryfallId = "86cdfd69-8d69-472a-8d52-3db4a70f7cca",
     artist = "Pete Venters",
-    imageUri = "https://cards.scryfall.io/normal/front/8/6/86cdfd69-8d69-472a-8d52-3db4a70f7cca.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/8/6/86cdfd69-8d69-472a-8d52-3db4a70f7cca.jpg?1783939344",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

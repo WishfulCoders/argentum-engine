@@ -15,6 +15,8 @@ the rules engine is untouched.
   email.
 - **Friends** — request → accept friendships, an unfriend action, live **online presence**, and a
   per-account **hide-my-online-status** toggle (see "Friends & presence" below).
+- **Direct messages** — private conversations between accounts; a non-friend's first messages arrive
+  as a request to accept, delete or block (see "Direct messages" below).
 - **Saved decks** stored per account (the deckbuilder's `SharedDeck` JSON), reachable from any device.
 - **Stats** — one row per finished game; per-account win/loss, preferred colors/sets, game modes
   played, head-to-head vs specific opponents, and a game history, all computed on demand.
@@ -90,7 +92,7 @@ Flyway migration `V1__init.sql`:
 
 | Table | Purpose |
 |-------|---------|
-| `users` | account: email (unique), display name, created_at, `is_admin` (added in `V3__admin_role.sql`), `learn_progress` — the Learn to Play course document as the client's own JSON, opaque to the server (`V13__learn_progress.sql`) |
+| `users` | account: email (unique), display name, created_at, `is_admin` (added in `V3__admin_role.sql`), `learn_progress` — the Learn to Play course document as the client's own JSON, opaque to the server (`V13__learn_progress.sql`), `preferences` — the player's preferences document (auto-pass stops, starting priority mode, battlefield stacking, motion), likewise opaque; read/written at `GET`/`PUT /api/auth/me/preferences`, reconciled with the browser's copy by newest `updatedAt` (`V16__user_preferences.sql`) |
 | `login_tokens` | single-use magic-link tokens (SHA-256 hashed, short TTL) |
 | `decks` | saved decks: denormalized name/format + full `SharedDeck` JSON in `data` |
 | `match_results` | one row per finished game |
@@ -133,12 +135,64 @@ when it is **1v1 between two signed-in accounts** (no guests, no AI):
   lobby — not AI or Two-Headed Giant). Casual by default.
 - **Tournaments:** **ranked by default** for a `TOURNAMENT`-mode bracket (its matches are 1v1); the host
   can uncheck it. Free-for-All / team modes are never ranked.
+- **Matchmaking:** the home screen's **Find an opponent** queue has a casual and a ranked pool for Random
+  deck and for each Constructed format (Jump In and Momir Basic are casual only; see **Matchmaking**
+  below). The ranked pool needs a signed-in account; a matched pair's game is already flagged ranked.
 
 If a lobby is flagged ranked but a seat isn't a signed-in human at start time, the game still runs — it
 just plays **unranked** (the flag is dropped, not blocked). The ranked flag + the queue (`RankedMode`,
 derived from the lobby format) are stamped on the `GameSession` at creation, and `GamePlayHandler`
 applies the rating change at game-over via `RankedResultSink` — per game, so each game of a best-of-N
 match counts.
+
+### Matchmaking
+
+`matchmaking/MatchmakingQueue.kt` is a pure state machine, `MatchmakingService` its Spring owner (ticked
+once a second). A queue is a `QueueKey(mode, format, ranked)`, built through `QueueKey.of` so the three
+agree: `mode` is a `MatchmakingMode` — `RANDOM_DECK`, `JUMP_IN`, `MOMIR_BASIC` or `CONSTRUCTED` — and only
+Constructed names a `format`. Only Random deck and Constructed are `rankable`. Casual and ranked never mix. **Casual** pairs the two longest waiters. **Ranked** pairs the
+longest waiter with the closest rating (looked up via `RatingLookup` for the format's `RankedMode`) within
+a band of ±100 that grows by 50 every 10 s and opens fully after two minutes, so a small population still
+finds a game. One account never pairs with itself.
+
+A pair gets a one-minute **accept** prompt (`matchFound` → `respondToMatch`). Whoever declines, times out,
+disconnects or wanders into another lobby/game drops out; whoever accepted goes back in the queue at their
+original join time. When both accept they are seated by mode, and each gets an idle `matchmakingStatus`
+with `matched = true` — the client's cue to bring a player on another page home to the game:
+
+- **Constructed** — `QuickGameLobbyHandler.createMatchmadeLobby` seats them in a quick lobby with
+  `matchmade = true`: format and ranked are locked, it has no host, invite code or AI seat, and either
+  player leaving closes it. From there it is an ordinary quick game — pick a deck, ready up.
+- **Random deck** and **Momir Basic** — the same matchmade quick lobby, but with nothing to prepare
+  accepting the match *was* the ready check, so the game starts at once and the lobby is never shown.
+  A Random deck pair opens boosters from one random set, so both play the same sealed environment.
+- **Jump In** — `LobbyHandler.createMatchmadeJumpInLobby` opens a private two-seat Jump In lobby (J22,
+  one game) already on its pack choice; picking the second pack is each player's ready signal.
+
+Searching counts per queue are pushed to every connected player (`matchmakingQueues`) whenever they
+change, and served at `GET /api/matchmaking/queues` for the home screen's first paint.
+
+**Warming up while queued.** A vs-AI quick lobby or game (outside any tournament, one human seat) does
+not count as busy, so a player can play the AI and stay in the queue. When both accept a match,
+`MatchmakingService.releaseFromPractice` dissolves the AI lobby or concedes the AI game through
+`GamePlayHandler.leavePracticeGame`, which marks the seat `departedForMatch`: no `gameOver` reaches them
+and the game isn't recorded in their stats.
+
+### After the game: rematch, add friend, block, emotes
+
+`social/PostGameService` opens a post-game when a 1v1 between two humans outside any tournament ends,
+and pushes each seat a `postGame` message on every change. **Rematch** replays the `RematchRecipe` the
+quick lobby recorded at start (`social/RematchRecipes`): once both ask, `QuickGameLobbyHandler.startRematch`
+seats them with the same decks and settings and starts at once. **Add friend** sends a request or
+accepts theirs (`FriendsService.befriend`), accounts only. **Block** goes through `social/BlockService`:
+durable between accounts (`V14__user_blocks.sql`, which also ends any friendship), session-scoped when
+either side is a guest. A block is mutual in effect — never matched (`MatchmakingQueue.tick`'s
+`isBlocked`), no rematch or friend request, and the blocker stops receiving the other's emotes — and
+to the blocked player it reads only as the opponent leaving. `GET/DELETE /api/blocks` back the Friends
+page's "Blocked" list.
+
+`social/EmoteService` relays a closed set of preset `Emote`s to a seated player's table (and spectators),
+rate-limited per player and filtered by blocks; the AI answers a greeting in kind.
 
 The math (`ranking/Elo.kt`, pure and unit-tested) is standard ELO calibrated to chess.com-style numbers:
 new ratings start at **1200**, an even game between established players shifts about **±10**
@@ -184,7 +238,7 @@ Flyway migration `V12__cubes.sql` adds saved cubes — deliberately the `decks` 
 
 | Table / columns | Purpose |
 |-----------------|---------|
-| `cubes` | saved cube: denormalized `name` / `card_count` + full `SharedCube` JSON in `data` (name, card names + counts, basic-land art set, pack size), `user_id` → `users(id)` cascade, `idx_cubes_user`. `card_count` is total *physical* cards (sum of entry counts), which is what the lobby's capacity rule is measured against. |
+| `cubes` | saved cube: denormalized `name` / `card_count` + full `SharedCube` JSON in `data` (name, card names + counts, basic-land art set, pack size), `user_id` → `users(id)` cascade, `idx_cubes_user`. `card_count` is total *physical* cards (sum of entry counts), which is what the lobby's capacity rule is measured against. `V18__cube_share_codes.sql` adds a nullable, uniquely indexed `share_code` — the capability behind a public cube link. |
 
 ## Auth flow (magic link)
 
@@ -232,6 +286,7 @@ Every admin endpoint (`/api/admin/**` and `/api/stats/admin/**`) accepts either 
 | POST | `/api/auth/verify` | `{ token }` → `{ authToken, user }` |
 | GET | `/api/auth/me` | Bearer → `user` (includes `isAdmin` + `hidePresence`; `id` is the UUID friend code) |
 | PUT | `/api/auth/me` | Bearer + `{ displayName }` → updated `user` (1–40 chars; duplicates allowed) |
+| PUT | `/api/auth/me/avatar` | Bearer + `{ avatar }` → updated `user`; a preset id from `profile/Avatars.kt`, a card-art crop `card:<x>,<y>,<size>:<scryfall path>` of a catalogued printing, or `null` for the initial |
 | GET | `/api/account/decks` | list summaries |
 | GET | `/api/account/decks?full` | every deck in full (one round-trip; powers the unified deck browser) |
 | GET | `/api/account/decks/{id}` | full deck |
@@ -244,6 +299,9 @@ Every admin endpoint (`/api/admin/**` and `/api/stats/admin/**`) accepts either 
 | POST | `/api/account/cubes` | body = `SharedCube` JSON → created cube |
 | PUT | `/api/account/cubes/{id}` | replace |
 | DELETE | `/api/account/cubes/{id}` | |
+| POST | `/api/account/cubes/{id}/share` | mint (or return the existing) public link code → `{ shareCode }` |
+| DELETE | `/api/account/cubes/{id}/share` | revoke the link; old links 404 |
+| GET | `/api/cubes/shared/{code}` | **public** — the owner's latest saved cube: `{ shareCode, name, cardCount, updatedAt, ownerName, cube }` |
 
 > `/api/account/decks` is intentionally separate from the existing stateless `/api/decks`
 > (validation, formats, examples).
@@ -290,6 +348,19 @@ Per-user endpoints take `Authorization: Bearer …`; admin endpoints take either
 The replay browser lives at `/api/admin/games` and `/api/admin/games/{id}/replay` (also either
 credential; password-only on a DB-less server).
 
+### Admin — live overview (`/api/admin/live-overview`, either admin credential)
+
+`GET /api/admin/live-overview` → `{ generatedAt, onlinePlayers, games, lobbies, players, feed }`: every game session in
+memory (public or private, AI or human — seats with connection/AI flags and life, mode, turn and step,
+`startedAt`, `lastActionAt`, spectator count, `hasConnectedHuman`) plus every tournament lobby that is
+drafting, deckbuilding, or playing rounds. In-memory only, so it needs no database and is mounted
+whether or not accounts are enabled. The dashboard's **Live overview** screen polls it to judge whether a
+restart would interrupt play, and opens any started game through the `/?spectate=<gameSessionId>` deep
+link (an ephemeral spectator the seated players see in their watcher list). `lastActionAt` is not
+persisted — a game restored after a restart counts from its restore. `feed` (recent player moves,
+in memory) omits the requesting admin's own moves when the request carries their account's Bearer
+token — the dashboard sends it alongside the bootstrap password when signed in.
+
 Aggregate queries live in `StatsQueryService` (plain SQL via `JdbcTemplate`). Geolocation
 (`GeoIpService`) resolves IPs via the free ip-api.com batch endpoint, cached in-process; it's only
 called from the admin `geo` endpoint, never the hot recording path.
@@ -320,6 +391,32 @@ when a request arrives. These carry no game events, so they need no `ClientEvent
 also fetches `/api/friends` on load and on a slow poll as the catch-all for the passive side of an
 accept/unfriend.
 
+## Direct messages
+
+All under `/api/messages` (Bearer; only mounted with accounts enabled). A conversation is addressed by
+the **other account's id**, so opening one needs no thread to exist yet.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/api/messages` | your conversations, newest first: other party, `state`, `isFriend`, last message, `unread` |
+| GET | `/api/messages/{accountId}?before=` | newest 50 messages (or the page before an ISO timestamp), `state`, `requestMessagesLeft`, `maxLength`. 404 when the account doesn't exist or a block stands between you |
+| POST | `/api/messages/{accountId}` | `{ body }` → send. 400 empty / too long (1000) / self · 404 can't message · 409 request cap reached · 429 rate limited (20/min) |
+| POST | `/api/messages/{accountId}/accept` | accept their request |
+| POST | `/api/messages/{accountId}/read` | mark read |
+| DELETE | `/api/messages/{accountId}` | delete the conversation for yourself (also declines a request) |
+| POST | `/api/messages/{accountId}/block` | block the other side of a conversation you share |
+
+`V15__direct_messages.sql` stores one `dm_threads` row per pair (canonical `user_low`/`user_high`
+order, `initiator_id`, `accepted`, and per-side `*_read_at` / `*_cleared_at` markers) and the
+`dm_messages` under it. `DirectMessageService` holds the rules: friends talk freely; anyone else's
+thread is an `INCOMING_REQUEST` for the recipient until they accept or reply, and the initiator can
+send only three messages meanwhile (counted from the recipient's clear marker, so declining resets
+it). Deleting only moves your own clear marker — the thread reappears for you when a new message
+arrives. A block either way (`BlockService.accountBlocks`) hides the thread and rejects sends, reading
+as "can't message this player". New messages are pushed to every open socket of both sides as
+`ServerMessage.DirectMessage` (via `UserSockets`); reads, accepts and deletes send a
+`DirectMessagesChanged` hint and the client refetches.
+
 ## Frontend
 
 - `authStore` (standalone Zustand) holds the signed-in user; `api/account.ts` is the REST client.
@@ -335,6 +432,15 @@ accept/unfriend.
   so signed-in users can pick their cloud decks to play. Both render the same full-art gallery tile
   (`components/deck/DeckTile`), whose **Cloud / Local** badge is where a deck's storage shows up.
 - **Display name:** editable on the profile page (`PUT /api/auth/me`); the email stays the identity.
+- **Avatar:** `users.avatar` holds either a preset portrait id (`profile/Avatars.kt`, art in
+  `web-client/src/assets/avatars/`) or a card-art crop, `card:<x>,<y>,<size>:<path>` — `path` is a
+  printing's Scryfall image path (`front/a/b/<uuid>`), the crop square is in units of the art's
+  height, and `AvatarValidator` accepts only paths of printings the catalog has. Picked from the
+  profile page. Friends, requests, blocks, message
+  threads and public profiles carry it; in games it rides on each seat's `PlayerSeatInfo.avatar`
+  (also re-sent in `Reconnected.players` so a refresh keeps it). Guests have none; an AI seat takes
+  its persona's portrait (`AiGameManager.AI_PERSONAS` → `Avatars.aiIds`, art in
+  `web-client/src/assets/avatars/ai/`), which no account can pick.
 - Profile page at `/profile` shows the win/loss summary plus colors played (a Recharts bar chart),
   sets, game modes, head-to-head, most-played cards, tournament finishes, and a recent-games list — all
   from `/api/stats/me/*` via `api/account.ts`. Each recent game with a stored replay (`hasReplay`)

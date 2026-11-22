@@ -22,8 +22,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  *
  * "That player" is the damaged player: the ATTACHED damage trigger carries the same
  * `TriggerContext.fromEvent` as a self-bound one, so `controlledByTriggeringPlayer()` scopes the
- * target exactly as on Rustmouth Ogre. The target is chosen when the trigger goes on the stack; the
- * "you may" is the resolution-time choice, hence [Effects.May] around the destroy.
+ * target exactly as on Rustmouth Ogre. The target is chosen when the trigger goes on the stack;
+ * [Effects.May] asks whether to destroy it on resolution.
  */
 val HammerOfRuin = card("Hammer of Ruin") {
     manaCost = "{2}"

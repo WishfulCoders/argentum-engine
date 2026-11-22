@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.mechanics.layers.StateProjector
+import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
@@ -52,6 +53,8 @@ class SagesNoulithsScenarioTest : ScenarioTestBase() {
 
             // Attack with the equipped Hero token: it taps, then the granted trigger fires and
             // (with the Hero as the only attacking creature) untaps that same attacker.
+            // The token was created this turn; let it attack in this turn's combat.
+            game.state = game.state.updateEntity(hero) { it.without<SummoningSicknessComponent>() }
             game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
             game.declareAttackers(mapOf("Hero Token" to 2))
             withClue("Hero is tapped right after being declared as an attacker") {

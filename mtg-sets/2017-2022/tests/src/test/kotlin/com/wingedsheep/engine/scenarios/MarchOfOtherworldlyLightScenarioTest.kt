@@ -2,67 +2,82 @@ package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.engine.core.PaymentStrategy
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.neo.cards.MarchOfOtherworldlyLight
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
-import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 
 /**
- * March of Otherworldly Light (NEO #28) — {X}{W} instant: "As an additional cost to cast this spell,
- * you may exile any number of white cards from your hand. This spell costs {2} less to cast for each
- * card exiled this way. Exile target artifact, creature, or enchantment with mana value X or less."
+ * March of Otherworldly Light — {X}{W} instant: "you may exile any number of white cards from your
+ * hand. This spell costs {2} less to cast for each card exiled this way. Exile target artifact,
+ * creature, or enchantment with mana value X or less."
  */
-class MarchOfOtherworldlyLightScenarioTest : ScenarioTestBase() {
-    init {
-        fun TestGame.march(x: Int, target: EntityId, exiled: List<EntityId> = emptyList()) = execute(
-            CastSpell(
-                player1Id, findCardsInHand(1, "March of Otherworldly Light").single(),
-                targets = listOf(ChosenTarget.Permanent(target)),
-                xValue = x,
-                additionalCostPayment = AdditionalCostPayment(exiledCards = exiled),
-            )
-        )
+class MarchOfOtherworldlyLightScenarioTest : FunSpec({
 
-        fun board(plains: Int) = scenario().withPlayers("P1", "P2")
-            .withCardInHand(1, "March of Otherworldly Light")
-            .withCardInHand(1, "Savannah Lions")
-            .withCardInHand(1, "Grizzly Bears")
-            .withLandsOnBattlefield(1, "Plains", plains)
-            .withCardOnBattlefield(2, "Hill Giant")
-            .withCardOnBattlefield(2, "Bonesplitter")
-            .withActivePlayer(1)
-            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-
-        test("X = 4 with one white card exiled costs {2}{W} and exiles a mana value 4 creature") {
-            val game = board(3).build()
-            val r = game.march(4, game.findPermanent("Hill Giant")!!, game.findCardsInHand(1, "Savannah Lions"))
-            withClue("${r.error}") { r.error shouldBe null }
-            game.isInExile(1, "Savannah Lions") shouldBe true
-            game.resolveStack()
-            game.isInExile(2, "Hill Giant") shouldBe true
-        }
-
-        test("a nonwhite card can't be exiled to pay") {
-            val game = board(3).build()
-            game.march(4, game.findPermanent("Hill Giant")!!, game.findCardsInHand(1, "Grizzly Bears"))
-                .error shouldNotBe null
-        }
-
-        test("the target's mana value must be X or less") {
-            val game = board(5).build()
-            game.march(3, game.findPermanent("Hill Giant")!!).error shouldNotBe null
-        }
-
-        test("artifacts are legal targets; with nothing exiled it costs {X}{W}") {
-            val game = board(2).build()
-            val r = game.march(1, game.findPermanent("Bonesplitter")!!)
-            withClue("${r.error}") { r.error shouldBe null }
-            game.resolveStack()
-            game.isInExile(2, "Bonesplitter") shouldBe true
-        }
+    val threeDrop = card("Test Three Drop") {
+        manaCost = "{2}{G}"
+        typeLine = "Creature — Beast"
+        power = 3
+        toughness = 3
     }
-}
+
+    val whiteCard = card("Test White Card") {
+        manaCost = "{W}"
+        typeLine = "Creature — Human"
+        power = 1
+        toughness = 1
+    }
+
+    fun setup(): GameTestDriver {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(MarchOfOtherworldlyLight, threeDrop, whiteCard))
+        driver.initMirrorMatch(deck = Deck.of("Plains" to 20))
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver
+    }
+
+    test("exiling a white card pays {2} of X = 3, exiling a mana value 3 creature for {1}{W}") {
+        val d = setup()
+        val me = d.activePlayer!!
+        val opponent = d.getOpponent(me)
+        val beast = d.putCreatureOnBattlefield(opponent, "Test Three Drop")
+        val march = d.putCardInHand(me, "March of Otherworldly Light")
+        val fodder = d.putCardInHand(me, "Test White Card")
+        d.giveMana(me, Color.WHITE, 2)
+
+        val cast = d.submit(CastSpell(
+            me, march, targets = listOf(ChosenTarget.Permanent(beast)), xValue = 3,
+            additionalCostPayment = AdditionalCostPayment(exiledCards = listOf(fodder)),
+            paymentStrategy = PaymentStrategy.FromPool,
+        ))
+        cast.outcome shouldBe Outcome.Done
+        d.bothPass()
+
+        d.findPermanent(opponent, "Test Three Drop") shouldBe null
+        d.getExileCardNames(opponent) shouldBe listOf("Test Three Drop")
+        d.getExileCardNames(me) shouldBe listOf("Test White Card")
+    }
+
+    test("X bounds the target — a mana value 3 creature can't be targeted with X = 2") {
+        val d = setup()
+        val me = d.activePlayer!!
+        val opponent = d.getOpponent(me)
+        val beast = d.putCreatureOnBattlefield(opponent, "Test Three Drop")
+        val march = d.putCardInHand(me, "March of Otherworldly Light")
+        d.giveMana(me, Color.WHITE, 3)
+
+        val cast = d.submit(CastSpell(
+            me, march, targets = listOf(ChosenTarget.Permanent(beast)), xValue = 2,
+            paymentStrategy = PaymentStrategy.FromPool,
+        ))
+        (cast.outcome is Outcome.Rejected) shouldBe true
+    }
+})

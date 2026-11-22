@@ -12,8 +12,8 @@ val CropRotationReprint = Printing(
     setCode = "C20",
     collectorNumber = "169",
     scryfallId = "4a61749d-a2e5-4da4-96db-e49cbac05d73",
-    artist = "Daniel Ljunggren",
-    imageUri = "https://cards.scryfall.io/normal/front/4/a/4a61749d-a2e5-4da4-96db-e49cbac05d73.jpg?1783931165",
+    artist = null,
+    imageUri = "https://cards.scryfall.io/normal/front/4/a/4a61749d-a2e5-4da4-96db-e49cbac05d73.jpg",
     releaseDate = "2020-04-17",
     rarity = Rarity.COMMON,
 )

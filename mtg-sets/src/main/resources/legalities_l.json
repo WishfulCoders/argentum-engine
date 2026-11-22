@@ -5020,7 +5020,8 @@
   "Library of Alexandria": [
     "BRAWL",
     "GLADIATOR",
-    "TIMELESS"
+    "TIMELESS",
+    "VINTAGE_RESTRICTED"
   ],
   "Library of Lat-Nam": [
     "COMMANDER",
@@ -6719,6 +6720,25 @@
     "VINTAGE"
   ],
   "Liliana of the Veil // Liliana of the Veil": [],
+  "Liliana the Faultless": [
+    "ALCHEMY",
+    "BRAWL",
+    "COMMANDER",
+    "COMPETITIVEBRAWL",
+    "DUEL",
+    "FUTURE",
+    "GLADIATOR",
+    "HISTORIC",
+    "LEGACY",
+    "MODERN",
+    "OATHBREAKER",
+    "PIONEER",
+    "STANDARD",
+    "STANDARDBRAWL",
+    "TIMELESS",
+    "TLR",
+    "VINTAGE"
+  ],
   "Liliana's Caress": [
     "COMMANDER",
     "DUEL",
@@ -7529,7 +7549,8 @@
     "COMMANDER",
     "LEGACY",
     "PREDH",
-    "PREMODERN"
+    "PREMODERN",
+    "VINTAGE_RESTRICTED"
   ],
   "Lionheart Glimmer": [
     "ALCHEMY",
@@ -7859,6 +7880,7 @@
   "Lively Dirge": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -8330,6 +8352,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -9105,7 +9128,8 @@
     "OATHBREAKER",
     "PENNY",
     "PREDH",
-    "TIMELESS"
+    "TIMELESS",
+    "VINTAGE_RESTRICTED"
   ],
   "Lodestone Myr": [
     "COMMANDER",
@@ -10846,7 +10870,8 @@
     "PAUPERCOMMANDER",
     "PREDH",
     "PREMODERN",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Lotus Ring": [
     "BRAWL",
@@ -12204,6 +12229,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

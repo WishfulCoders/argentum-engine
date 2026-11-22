@@ -8,8 +8,10 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.CopyOfComponent
 import com.wingedsheep.engine.state.permissions.MayPlayPermission
 import com.wingedsheep.engine.state.permissions.addMayPlayPermission
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardDefinition
+import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -18,7 +20,9 @@ import com.wingedsheep.sdk.model.EntityId
  *
  * A creature with the [com.wingedsheep.sdk.model.CardLayout.PREPARE] layout *enters* prepared when
  * its creature face carries the [com.wingedsheep.sdk.core.Keyword.PREPARED] keyword
- * (`[StackResolver]` calls this on resolution). It can *become* prepared later via an effect such
+ * ([enterPreparedIfKeyworded]) — however it enters: cast and resolved (`PermanentEntry`), put onto
+ * the battlefield from any zone (`ZoneTransitionService`), or created as a token copy
+ * (`EntersWithReplacements.applyOnEntry`) (CR 722.3a). It can *become* prepared later via an effect such
  * as Leech Collector's "becomes prepared" trigger ([com.wingedsheep.engine.handlers.effects.permanent.BecomePreparedExecutor]).
  *
  * Either way the mechanics are identical: create a copy of the prepare spell (`cardFaces[0]`) in
@@ -28,6 +32,23 @@ import com.wingedsheep.sdk.model.EntityId
  * ([CopyOfComponent]). A creature that is already prepared does not re-prepare.
  */
 object PreparationLogic {
+
+    /**
+     * "This creature enters prepared" (CR 722.3a): make [permanentId] prepared as it enters if
+     * [cardDef] is a preparation card whose creature face has the
+     * [com.wingedsheep.sdk.core.Keyword.PREPARED] keyword. PREPARE-layout creatures without the
+     * keyword (Leech Collector, which only becomes prepared via a trigger) don't. Callers skip
+     * face-down entries — a face-down permanent has no prepare spell.
+     */
+    fun enterPreparedIfKeyworded(
+        state: GameState,
+        permanentId: EntityId,
+        cardDef: CardDefinition,
+        controllerId: EntityId,
+    ): GameState {
+        if (cardDef.layout != CardLayout.PREPARE || Keyword.PREPARED !in cardDef.keywords) return state
+        return makePrepared(state, permanentId, cardDef, controllerId)
+    }
 
     /**
      * Make the permanent [permanentId] prepared. No-op if the permanent is missing, isn't a

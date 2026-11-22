@@ -73,6 +73,11 @@ class FastDecisionResponder(private val intents: IntentCatalog = IntentCatalog.N
         return when (decision) {
             is com.wingedsheep.engine.core.PlayCardDecision ->
                 error("Forced play must use the rollout's ordinary action policy")
+            // New engine decisions (2026-11-22 upstream merge), answered as DecisionResponder answers them.
+            is com.wingedsheep.engine.core.OrderTriggersDecision ->
+                com.wingedsheep.engine.core.TriggerOrderResponse(decision.id, decision.triggers.indices.toList())
+            is com.wingedsheep.engine.core.FlipOntoBattlefieldDecision -> com.wingedsheep.engine.core.FlipThrowResponse.toward(
+                decision.id, decision.table, decision.table.width / 2, -2 * decision.table.height)
             // Rank by the same heuristic the Strategist's cheap path uses. Not "first legal": a
             // playout that aims every removal spell at the nearest 1/1 systematically undervalues
             // removal, which is a bias in the leaf the whole phase exists to improve.

@@ -13,7 +13,7 @@ val MorkrutBansheeReprint = Printing(
     collectorNumber = "118",
     scryfallId = "729979f6-e53b-4338-81bd-e38a1a096d90",
     artist = "Svetlin Velinov",
-    imageUri = "https://cards.scryfall.io/normal/front/7/2/729979f6-e53b-4338-81bd-e38a1a096d90.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/7/2/729979f6-e53b-4338-81bd-e38a1a096d90.jpg?1783939354",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

@@ -11,10 +11,14 @@ import com.wingedsheep.sdk.model.TokenPrinting
 /**
  * Dominaria United Commander (2022)
  *
- * Commander preconstructed decks released alongside the Dominaria United main set.
+ * Commander preconstructed decks. Scaffolded to hold the canonical [CardDefinition] for cards
+ * first printed here (e.g. Dihada, Binder of Wills; Shanid, Sleepers' Scourge) and the
+ * [Printing] rows of the already-implemented cards it reprints.
+ *
+ * [sealedSupported] stays false: Commander precons are fixed 100-card decks, not a draftable product.
  *
  * Set Code: DMC
- * Release Date: September 9, 2022
+ * Release Date: 2022-09-09
  */
 object DominariaUnitedCommanderSet : MtgSet {
 

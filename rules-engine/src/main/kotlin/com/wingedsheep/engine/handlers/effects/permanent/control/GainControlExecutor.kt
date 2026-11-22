@@ -7,6 +7,7 @@ import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.mechanics.layers.Layer
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
+import com.wingedsheep.engine.mechanics.sba.permanent.EndedDurationExpiryCheck
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -90,6 +91,14 @@ class GainControlExecutor : EffectExecutor<GainControlEffect> {
                 context = floatingContext
             )
 
+        // CR 611.2b: a "for as long as …" duration that ended before the effect would begin means
+        // the effect does nothing — Dragonlord Silumgar left the battlefield, came back as a new
+        // object, or changed hands before its enters trigger resolved. Asked of the very gate the
+        // expiry SBA latches on, so the two can never disagree.
+        if (durationAlreadyEnded(stateWithControlEffect, effect.duration, floatingContext)) {
+            return EffectResult.success(state)
+        }
+
         // Ordinary control changes make the creature unable to attack/tap this turn. Old Man of
         // the Sea's duration is the long-lived exception in this engine: keeping the source tapped
         // preserves the stolen creature as usable under the new controller.
@@ -115,6 +124,45 @@ class GainControlExecutor : EffectExecutor<GainControlEffect> {
     }
 
     /**
+     * Whether the control effect just appended to [stateWithEffect] is already over. A
+     * source-keyed duration also ends when the source returned as a new object since the ability
+     * began resolving: its entity id is back on the battlefield, but it is not the permanent the
+     * duration names (CR 400.7).
+     */
+    private fun durationAlreadyEnded(
+        stateWithEffect: GameState,
+        duration: Duration,
+        context: EffectContext
+    ): Boolean {
+        if (!duration.canEndEarly()) return false
+        if (context.sourceReferenceLost && duration.isSourceKeyed()) return true
+        // addFloatingEffect appends, so the effect just created is the last one.
+        val floating = stateWithEffect.floatingEffects.last()
+        return EndedDurationExpiryCheck.activeAffectedEntities(
+            stateWithEffect, stateWithEffect.projectedState, floating
+        ).isEmpty()
+    }
+
+    /** The "for as long as …" durations [EndedDurationExpiryCheck] gates; any other can't have ended yet. */
+    private fun Duration.canEndEarly(): Boolean = isSourceKeyed() || when (this) {
+        Duration.WhileSourceAttachedToAffected,
+        Duration.WhileAffectedAttachedToSource,
+        Duration.WhileControlledByController,
+        Duration.WhileAffectedTapped,
+        is Duration.WhileAffectedHasCounter -> true
+        else -> false
+    }
+
+    private fun Duration.isSourceKeyed(): Boolean = when (this) {
+        is Duration.WhileSourceOnBattlefield,
+        is Duration.WhileSourceTapped,
+        is Duration.WhileSourceTappedAndAffectedPowerAtMostSource,
+        is Duration.WhileYouControlSource,
+        is Duration.WhileYouControlSourceAndSourceTapped -> true
+        else -> false
+    }
+
+    /**
      * "Gain control of target spell" (Invert Polarity). A spell's controller is not a layer
      * characteristic — continuous effects never touch objects on the stack — so the change is a
      * direct rewrite of the stack object: [SpellOnStackComponent.casterId] is what every
@@ -132,13 +180,25 @@ class GainControlExecutor : EffectExecutor<GainControlEffect> {
     ): EffectResult {
         val oldControllerId = spell.casterId
         if (oldControllerId == newControllerId) return EffectResult.success(state)
-        val newState = state.updateEntity(spellId) { container ->
+        return EffectResult.success(
+            setSpellController(state, spellId, spell, newControllerId),
+            listOf(ControlChangedEvent(spellId, cardComponent.name, oldControllerId, newControllerId))
+        )
+    }
+
+    companion object {
+        /**
+         * Rewrite a spell's controller on its stack object (no event — callers emit their own
+         * [ControlChangedEvent]). Shared with [ExchangeControlExecutor]'s spell side.
+         */
+        fun setSpellController(
+            state: GameState,
+            spellId: EntityId,
+            spell: SpellOnStackComponent,
+            newControllerId: EntityId
+        ): GameState = state.updateEntity(spellId) { container ->
             val updated = container.with(spell.copy(casterId = newControllerId))
             if (updated.has<ControllerComponent>()) updated.with(ControllerComponent(newControllerId)) else updated
         }
-        return EffectResult.success(
-            newState,
-            listOf(ControlChangedEvent(spellId, cardComponent.name, oldControllerId, newControllerId))
-        )
     }
 }

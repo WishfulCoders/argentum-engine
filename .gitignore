@@ -216,3 +216,4 @@ scripts/__pycache__/
 # Python bytecode anywhere (scripts/ tools are imported from several roots)
 __pycache__/
 *.py[cod]
+e2e-scenarios/.ui-check/

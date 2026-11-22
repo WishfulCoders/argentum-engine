@@ -47,6 +47,11 @@ class MoveCountersExecutor(
 
         val counterType = effect.counterType
 
+        // CR 122.5: a counter the destination can't have isn't removed from the source either.
+        if (!state.projectedState.canReceiveCounters(destinationId, counterType)) {
+            return EffectResult.success(state, emptyList())
+        }
+
         val requested = amountEvaluator.evaluate(state, effect.amount, context)
         if (requested <= 0) return EffectResult.success(state, emptyList())
 
@@ -67,8 +72,11 @@ class MoveCountersExecutor(
         // Adding to the destination honors counter-placement replacement effects (Hardened Scales).
         val placedCount = ReplacementEffectUtils.applyCounterPlacementModifiers(
             afterRemoval, destinationId, counterType, moveCount, placerId = context.controllerId,
-            predicateEvaluator = amountEvaluator.predicates
+            predicateEvaluator = amountEvaluator.predicates, byEffect = true
         )
+        val removed = CountersRemovedEvent(sourceId, effect.counterType, moveCount, sourceName, removedBy = context.controllerId)
+        // A placement modifier cut it to nothing: the counters left the source, none was put on.
+        if (placedCount <= 0) return EffectResult.success(afterRemoval, listOf(removed))
         val destCounters = afterRemoval.getEntity(destinationId)?.get<CountersComponent>() ?: CountersComponent()
         val firstThisTurn = DamageUtils.isFirstCounterThisTurn(afterRemoval, destinationId)
         val firstOfTypeThisTurn = DamageUtils.isFirstCounterOfTypeThisTurn(afterRemoval, destinationId, counterType)
@@ -80,7 +88,7 @@ class MoveCountersExecutor(
         return EffectResult.success(
             newState,
             listOf(
-                CountersRemovedEvent(sourceId, effect.counterType, moveCount, sourceName),
+                removed,
                 CountersAddedEvent(destinationId, effect.counterType, placedCount, destName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = context.controllerId)
             )
         )

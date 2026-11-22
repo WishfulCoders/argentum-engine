@@ -23,7 +23,7 @@ class ShuffleLibraryExecutor : EffectExecutor<ShuffleLibraryEffect> {
         effect: ShuffleLibraryEffect,
         context: EffectContext
     ): EffectResult {
-        val targetId = context.resolvePlayerTarget(effect.target)
+        val targetId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid player for shuffle")
 
         val libraryZone = ZoneKey(targetId, Zone.LIBRARY)

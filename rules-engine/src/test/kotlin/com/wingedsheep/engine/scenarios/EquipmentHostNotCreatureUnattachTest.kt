@@ -55,7 +55,7 @@ class EquipmentHostNotCreatureUnattachTest : ScenarioTestBase() {
                 }
 
                 // Run state-based actions over the board.
-                val sbaChecker = StateBasedActionChecker(zones, cardRegistry = cardRegistry)
+                val sbaChecker = StateBasedActionChecker(zones, cardRegistry = cardRegistry, finishAbandonedResolution = services.finishAbandonedResolution)
                 game.state = sbaChecker.checkAndApply(game.state).newState
 
                 withClue(

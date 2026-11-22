@@ -1,3 +1,49 @@
+// Circle of Protection: Black
+{
+    "name": "Circle of Protection: Black",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "{1}: The next time a black source of your choice would deal damage to you this turn, prevent that damage.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Circle of Protection: Black:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "PreventDamageShield",
+                    "sourceFilter": {
+                        "type": "PreventFromChosen",
+                        "eligible": {
+                            "cardPredicates": [
+                                {
+                                    "type": "HasColor",
+                                    "color": "BLACK"
+                                }
+                            ]
+                        }
+                    },
+                    "nextInstanceOnly": true
+                },
+                "descriptionOverride": "{1}: The next time a black source of your choice would deal damage to you this turn, prevent that damage."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "10",
+        "artist": "Jesper Myrfors",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/a/fa47b4cd-8da4-4544-b011-ba92b7009203.jpg?1783948654"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Volcanic Island
 {
     "name": "Volcanic Island",

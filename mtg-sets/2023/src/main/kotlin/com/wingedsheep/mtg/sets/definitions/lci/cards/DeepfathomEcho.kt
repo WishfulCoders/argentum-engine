@@ -62,7 +62,11 @@ val DeepfathomEcho = card("Deepfathom Echo") {
             // it is only asked when the player accepts, and does not bind at stack-placement time.
             Effects.May(
                 Effects.Pipeline {
-                    val copySource = selectTarget(TargetObject(filter = TargetFilter.OtherCreatureYouControl))
+                    val copySource = selectTarget(
+                        TargetObject(filter = TargetFilter.OtherCreatureYouControl),
+                        nonTargeting = true,
+                        prompt = "Choose another creature you control for this creature to copy"
+                    )
                     run(Effects.EachPermanentBecomesCopyOfTarget(
                         target = copySource.asTarget,
                         duration = Duration.EndOfTurn,

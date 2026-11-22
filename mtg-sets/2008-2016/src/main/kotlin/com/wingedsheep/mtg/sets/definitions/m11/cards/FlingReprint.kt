@@ -13,7 +13,7 @@ val FlingReprint = Printing(
     collectorNumber = "139",
     scryfallId = "1c1e41a8-018b-49b3-ad2d-38ec038d738c",
     artist = "Paolo Parente",
-    imageUri = "https://cards.scryfall.io/normal/front/1/c/1c1e41a8-018b-49b3-ad2d-38ec038d738c.jpg?1783941806",
+    imageUri = "https://cards.scryfall.io/normal/front/1/c/1c1e41a8-018b-49b3-ad2d-38ec038d738c.jpg",
     releaseDate = "2010-07-16",
     rarity = Rarity.COMMON,
 )

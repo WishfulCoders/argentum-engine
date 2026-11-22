@@ -4,7 +4,6 @@
  * dashboard from a single bundled response. Account-gated.
  */
 import { useEffect, useState } from 'react'
-import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   type AccountStats,
@@ -28,12 +27,17 @@ import {
   fetchTournamentHistory,
 } from '@/api/account'
 import { StatsDashboard } from '@/components/profile/StatsDashboard'
+import { describeFilter, isAllGames } from '@/api/statsFilter'
+import { useStatsFilterParam } from '@/components/stats/StatsFilterBar'
+import { AccountPage, MessageCard, accountStyles as a } from '@/components/profile/accountUi'
+import { pageStyles as p } from '@/components/ui/PageShell'
 import { useAuthStore } from '@/store/authStore'
 
 export function StatsPage() {
   const navigate = useNavigate()
   const status = useAuthStore((s) => s.status)
   const init = useAuthStore((s) => s.init)
+  const accountsEnabled = useAuthStore((s) => s.accountsEnabled)
 
   const [stats, setStats] = useState<AccountStats | null>(null)
   const [colors, setColors] = useState<StatBucket[]>([])
@@ -47,80 +51,112 @@ export function StatsPage() {
   const [tournaments, setTournaments] = useState<UserTournamentEntry[]>([])
   const [ratings, setRatings] = useState<RatingEntry[]>([])
   const [ratingHistory, setRatingHistory] = useState<RatingPoint[]>([])
+  const [filter, setFilter] = useStatsFilterParam()
 
   useEffect(() => {
     if (status === 'idle') void init()
   }, [status, init])
 
+  // Ratings and tournaments are their own records; the filter doesn't apply to them.
   useEffect(() => {
     if (status !== 'authenticated') return
-    void fetchStats().then(setStats).catch(() => setStats(null))
-    void fetchColorStats().then(setColors).catch(() => setColors([]))
-    void fetchCardTypes().then(setCardTypes).catch(() => setCardTypes([]))
-    void fetchManaCurve().then(setCurve).catch(() => setCurve([]))
-    void fetchCreatureTypes(12).then(setCreatureTypes).catch(() => setCreatureTypes([]))
-    void fetchSetStats().then(setSets).catch(() => setSets([]))
-    void fetchModeStats().then(setModes).catch(() => setModes([]))
-    void fetchOpponents().then(setOpponents).catch(() => setOpponents([]))
-    void fetchTopCards(24).then(setTopCards).catch(() => setTopCards([]))
     void fetchTournamentHistory(15).then(setTournaments).catch(() => setTournaments([]))
     void fetchRatings().then(setRatings).catch(() => setRatings([]))
     void fetchRatingsHistory().then(setRatingHistory).catch(() => setRatingHistory([]))
   }, [status])
 
+  // Everything game-derived follows the filter. A response that lands after the filter moved on is
+  // dropped, so a fast click-through never leaves an older slice on screen.
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    let live = true
+    function load<T>(request: Promise<T>, set: (value: T) => void, fallback: T) {
+      request.then(
+        (value) => live && set(value),
+        () => live && set(fallback),
+      )
+    }
+    load<AccountStats | null>(fetchStats(filter), setStats, null)
+    load(fetchColorStats(filter), setColors, [])
+    load(fetchCardTypes(filter), setCardTypes, [])
+    load(fetchManaCurve(filter), setCurve, [])
+    load(fetchCreatureTypes(12, filter), setCreatureTypes, [])
+    load(fetchSetStats(filter), setSets, [])
+    load(fetchModeStats(filter), setModes, [])
+    load(fetchOpponents(filter), setOpponents, [])
+    load(fetchTopCards(24, filter), setTopCards, [])
+    return () => {
+      live = false
+    }
+  }, [status, filter])
+
   if (status !== 'authenticated') {
+    const resolving = status === 'idle' || status === 'loading'
     return (
-      <div style={styles.wrap}>
-        <div style={styles.container}>
-          <button type="button" style={styles.link} onClick={() => navigate('/profile')}>
-            ← Profile
-          </button>
-          <h1 style={styles.title}>Your stats</h1>
-          <p style={styles.muted}>
-            {status === 'idle' || status === 'loading' ? 'Loading…' : 'Sign in to see your stats.'}
+      <AccountPage title="Stats" width="wide" plain>
+        <MessageCard>
+          <h1 className={p.h1}>Your stats</h1>
+          <p className={a.muted}>
+            {resolving
+              ? 'Loading…'
+              : accountsEnabled
+                ? 'Sign in to see your record, ratings and the cards you play.'
+                : "Accounts aren't available on this server."}
           </p>
-        </div>
-      </div>
+          {!resolving && accountsEnabled && (
+            <button type="button" className={p.buttonPrimary} onClick={() => navigate('/profile')}>
+              Go to sign in
+            </button>
+          )}
+        </MessageCard>
+      </AccountPage>
     )
   }
 
-  return (
-    <div style={styles.wrap}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <button type="button" style={styles.link} onClick={() => navigate('/profile')}>
-            ← Profile
-          </button>
-          <button type="button" style={styles.link} onClick={() => navigate('/')}>
-            Home
-          </button>
-        </div>
-        <h1 style={styles.title}>Your stats</h1>
-        {(stats?.games ?? 0) === 0 && <p style={styles.muted}>Play some games to start building your stats.</p>}
-        <StatsDashboard
-          stats={stats}
-          ratings={ratings}
-          ratingHistory={ratingHistory}
-          colors={colors}
-          cardTypes={cardTypes}
-          curve={curve}
-          creatureTypes={creatureTypes}
-          modes={modes}
-          sets={sets}
-          topCards={topCards}
-          opponents={opponents}
-          tournaments={tournaments}
-        />
-      </div>
-    </div>
-  )
-}
+  const empty = (stats?.games ?? 0) === 0
+  const filtered = !isAllGames(filter)
 
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { height: '100vh', overflowY: 'auto', backgroundColor: '#0a0a15', padding: '32px 16px' },
-  container: { maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 },
-  header: { display: 'flex', justifyContent: 'space-between' },
-  link: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 14, padding: 0 },
-  title: { margin: '4px 0 0', color: '#fff', fontSize: 28 },
-  muted: { margin: 0, color: '#888', fontSize: 14 },
+  return (
+    <AccountPage title="Stats" width="wide" plain>
+      <div>
+        <h1 className={p.h1}>Your stats</h1>
+        <p className={p.lede}>
+          {empty && filtered
+            ? `No games ${describeFilter(filter)}.`
+            : empty
+              ? 'Play some games to start building your stats.'
+              : filtered
+                ? `Your games ${describeFilter(filter)}.`
+                : 'Everything you play, at a glance.'}
+        </p>
+      </div>
+      <StatsDashboard
+        stats={stats}
+        ratings={ratings}
+        ratingHistory={ratingHistory}
+        colors={colors}
+        cardTypes={cardTypes}
+        curve={curve}
+        creatureTypes={creatureTypes}
+        modes={modes}
+        sets={sets}
+        topCards={topCards}
+        opponents={opponents}
+        tournaments={tournaments}
+        filter={filter}
+        onFilterChange={setFilter}
+      />
+      {empty && !filtered && (
+        <section className={p.panel}>
+          <div className={a.emptyHero}>
+            <h2 className={a.sectionTitle}>Nothing to chart yet</h2>
+            <p className={a.muted}>Finish a game while signed in — colors, curve, ratings and head-to-head fill in from there.</p>
+            <button type="button" className={p.buttonPrimary} onClick={() => navigate('/')}>
+              Find a game
+            </button>
+          </div>
+        </section>
+      )}
+    </AccountPage>
+  )
 }

@@ -7,7 +7,6 @@ import com.wingedsheep.assay.syntax.oneOf
 import com.wingedsheep.assay.syntax.phrase
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.APlayerLifeAtMost
 import com.wingedsheep.sdk.scripting.conditions.AnyCondition
 import com.wingedsheep.sdk.scripting.conditions.Condition
 import com.wingedsheep.sdk.scripting.conditions.Compare
@@ -301,12 +300,15 @@ object Conditions {
         // Delirium and Matzalantli's gate — the same graveyard count by *distinct types* rather than
         // by cards. The noun is the row and the threshold the slot: "card types" and "permanent
         // types" are two `Aggregation`s with a facade each, and both print the one sentence shape.
-        graveyardTypes("card", SdkConditions::Delirium),
-        graveyardTypes("permanent", SdkConditions::DistinctPermanentTypesInGraveyard),
+        graveyardDistinct("card types", SdkConditions::Delirium),
+        graveyardDistinct("permanent types", SdkConditions::DistinctPermanentTypesInGraveyard),
+        // Streets of New Capenna's gate: the same sentence counting distinct *mana values*.
+        graveyardDistinct("mana values", SdkConditions::DistinctManaValuesInGraveyard),
     )
 
     /**
-     * "There are four or more card types among cards in your graveyard" — delirium's condition.
+     * "There are four or more card types among cards in your graveyard" — delirium's condition, and
+     * its siblings counting permanent types or mana values.
      *
      * A row of its own rather than a member of [zoneCount], because the amount is a different value:
      * `AggregateZone` over a distinct-type aggregation, not a `Count` of the zone. The facades own
@@ -314,10 +316,10 @@ object Conditions {
      * compares the whole model — a filtered or opponent-side tally refuses to print rather than
      * reading as your whole graveyard.
      */
-    private fun graveyardTypes(kind: String, condition: (Int) -> Condition): Phrase<Condition> =
+    private fun graveyardDistinct(kind: String, condition: (Int) -> Condition): Phrase<Condition> =
         phrase(
-            "there are {n} or more $kind types among cards in your graveyard",
-            name = "$kind types in your graveyard",
+            "there are {n} or more $kind among cards in your graveyard",
+            name = "$kind in your graveyard",
         ) {
             slot("n", Cardinals.word)
             build { condition(it.int("n")) }
@@ -401,7 +403,7 @@ object Conditions {
     /**
      * "A player has 13 or less life" — the Duskmourn lands' shared condition.
      *
-     * `APlayerLifeAtMost` is the whole clause, so the only slot is the threshold, and it reads
+     * `Conditions.APlayerLifeAtMost` is the whole clause, so the only slot is the threshold, and it reads
      * digits: Oracle spells a life total as a numeral where it spells a count of permanents as a
      * word. The two leaves are not interchangeable in either direction, which is the distinction
      * [Cardinals] exists to keep.
@@ -461,7 +463,8 @@ object Conditions {
             slot("n", Primitives.cardinal)
             build { SdkConditions.APlayerLifeAtMost(it.int("n")) }
             match { value ->
-                val threshold = (value as? APlayerLifeAtMost)?.threshold ?: return@match null
+                val compare = value as? Compare ?: return@match null
+                val threshold = (compare.right as? DynamicAmount.Fixed)?.amount ?: return@match null
                 if (value != SdkConditions.APlayerLifeAtMost(threshold)) return@match null
                 bind("n" to threshold)
             }

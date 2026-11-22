@@ -12,8 +12,8 @@ val BalanceReprint = Printing(
     setCode = "LEB",
     collectorNumber = "3",
     scryfallId = "0f2c32a0-ee97-4239-94e3-aabab91dab83",
-    artist = null,
-    imageUri = "https://cards.scryfall.io/normal/front/0/f/0f2c32a0-ee97-4239-94e3-aabab91dab83.jpg",
+    artist = "Mark Poole",
+    imageUri = "https://cards.scryfall.io/normal/front/0/f/0f2c32a0-ee97-4239-94e3-aabab91dab83.jpg?1783948656",
     releaseDate = "1993-10-04",
     rarity = Rarity.RARE,
 )

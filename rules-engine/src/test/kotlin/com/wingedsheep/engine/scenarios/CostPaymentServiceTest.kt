@@ -527,6 +527,68 @@ class CostPaymentServiceTest : ScenarioTestBase() {
                 .getCount(CounterType.PLUS_ONE_PLUS_ONE) shouldBe 0
         }
 
+        test("typed counter payment exposes capacities and removes three counters from one permanent") {
+            val game = scenario().withPlayers()
+                .withCardOnBattlefield(1, "Goblin Guide")
+                .withCardOnBattlefield(1, "Savannah Lions")
+                .withCardOnBattlefield(2, "Savannah Lions")
+                .build()
+            val service = CostPaymentService(EngineServices(cardRegistry))
+            val source = bfCardByName(game.state, game.player1Id, "Goblin Guide")
+            val target = bfCardByName(game.state, game.player1Id, "Savannah Lions")
+            val opponent = bfCardByName(game.state, game.player2Id, "Savannah Lions")
+            game.state = game.state.updateEntity(target) {
+                it.with(CountersComponent(mapOf(CounterType.STUN to 3, CounterType.PLUS_ONE_PLUS_ONE to 2)))
+            }.updateEntity(opponent) { it.with(CountersComponent(mapOf(CounterType.STUN to 10))) }
+            val cost = Costs.pay.RemoveCounters(count = 3, counterType = CounterType.STUN)
+            val pending = service.pay(game.state, game.player1Id, cost, source) as PaymentResult.Pending
+            val decision = pending.pendingDecision.shouldBeInstanceOf<SelectCardsDecision>()
+            decision.useTargetingUI.shouldBeTrue()
+            decision.options shouldBe listOf(target)
+            decision.selectionLimits shouldBe mapOf(target to 3)
+            val validate = com.wingedsheep.engine.handlers.actions.decision.DecisionValidators
+            validate.validate(decision, CardsSelectedResponse(decision.id, listOf(target)))
+                .shouldNotBeNull()
+            validate.validate(decision, CardsSelectedResponse(decision.id, emptyList())) shouldBe null
+            validate.validate(decision, CardsSelectedResponse(decision.id, List(3) { target })) shouldBe null
+            game.state = pending.state
+            game.submitDecision(CardsSelectedResponse(decision.id, List(3) { target }))
+            val counters = game.state.getEntity(target)!!.get<CountersComponent>()!!
+            counters.getCount(CounterType.STUN) shouldBe 0
+            counters.getCount(CounterType.PLUS_ONE_PLUS_ONE) shouldBe 2
+            game.state.getEntity(opponent)!!.get<CountersComponent>()!!.getCount(CounterType.STUN) shouldBe 10
+        }
+
+        test("typed counter payment supports split allocations and rejects exceeding a permanent capacity") {
+            val game = scenario().withPlayers()
+                .withCardOnBattlefield(1, "Goblin Guide")
+                .withCardOnBattlefield(1, "Savannah Lions")
+                .build()
+            val source = bfCardByName(game.state, game.player1Id, "Goblin Guide")
+            val other = bfCardByName(game.state, game.player1Id, "Savannah Lions")
+            game.state = game.state.updateEntity(source) {
+                it.with(CountersComponent(mapOf(CounterType.STUN to 1)))
+            }.updateEntity(other) { it.with(CountersComponent(mapOf(CounterType.STUN to 2))) }
+            val service = CostPaymentService(EngineServices(cardRegistry))
+            val pending = service.pay(game.state, game.player1Id,
+                Costs.pay.RemoveCounters(count = 3, counterType = CounterType.STUN), source) as PaymentResult.Pending
+            val decision = pending.pendingDecision.shouldBeInstanceOf<SelectCardsDecision>()
+            decision.selectionLimits shouldBe mapOf(source to 1, other to 2)
+            val encoded = kotlinx.serialization.json.Json.encodeToString(SelectCardsDecision.serializer(), decision)
+            val decoded = kotlinx.serialization.json.Json.decodeFromString(SelectCardsDecision.serializer(), encoded)
+            decoded.selectionLimits shouldBe decision.selectionLimits
+            com.wingedsheep.engine.handlers.actions.decision.DecisionValidators.validate(
+                decoded, CardsSelectedResponse(decoded.id, listOf(source, other, other))
+            ) shouldBe null
+            com.wingedsheep.engine.handlers.actions.decision.DecisionValidators.validate(
+                decision, CardsSelectedResponse(decision.id, listOf(source, source, other))
+            ).shouldNotBeNull()
+            game.state = pending.state
+            game.submitDecision(CardsSelectedResponse(decision.id, listOf(source, other, other)))
+            game.state.getEntity(source)!!.get<CountersComponent>()!!.getCount(CounterType.STUN) shouldBe 0
+            game.state.getEntity(other)!!.get<CountersComponent>()!!.getCount(CounterType.STUN) shouldBe 0
+        }
+
         test("RemoveCounters any-type: yes/no continuation auto-resolves the removal") {
             val game = scenario().withPlayers()
                 .withCardOnBattlefield(1, "Goblin Guide")

@@ -3,10 +3,13 @@ package com.wingedsheep.gameserver.deck
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.registry.PrintingRegistry
 import com.wingedsheep.gameserver.protocol.DeckEntryDTO
+import com.wingedsheep.sdk.core.CanadianHighlanderPoints
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.DeckFormat
+import com.wingedsheep.sdk.core.PrimordialFormat
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CommanderEligibility
+import com.wingedsheep.sdk.model.CompanionEligibility
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.PrintingRef
 import org.springframework.beans.factory.annotation.Autowired
@@ -27,6 +30,13 @@ import org.springframework.stereotype.Component
  *     Persistent Petitioners decks legal.
  *   - **Standard Brawl**: 60-card singleton restricted to the Standard pool (Scryfall key
  *     `standardbrawl`). Identical singleton + override rules as Brawl, just smaller.
+ *   - **Highlander / Canadian Highlander**: 100-card *minimum* singleton with no commander, over the
+ *     Vintage pool (legality derived in `LegalityData`). Canadian Highlander also caps the deck at
+ *     [CanadianHighlanderPoints.POINT_CAP] points and allows no sideboard.
+ *   - **Primordial** ([PrimordialFormat]): 40-card minimum, every card from one block or standalone
+ *     set, exactly 2 rares/mythics and 6 uncommons, copy caps by rarity (1 / 2 / 4) across deck and
+ *     sideboard, sideboard of at most 10. Legality comes from [PrimordialCardPool], not Scryfall;
+ *     the validator infers the deck's pool from its cards and reports it in [PrimordialSummary].
  *   - **Standard / Pioneer / Modern / Pauper / Legacy / Vintage / Premodern**: 60-card minimum,
  *     4-of (current default). Format-specific banned-list enforcement comes from the per-card
  *     legality data Scryfall publishes — `card.legalFormats` already encodes "is currently legal
@@ -44,41 +54,51 @@ class DeckValidator @Autowired constructor(
      * about printings), the printing check is skipped silently.
      */
     private val printingRegistry: PrintingRegistry? = null,
+    /**
+     * Primordial's per-pool printing index. Built from [printingRegistry] when not injected; with
+     * neither, Primordial decks are validated for shape only and report no pool.
+     */
+    injectedPrimordialPool: PrimordialCardPool? = null,
 ) {
 
     /** Convenience constructor for tests / callers that don't care about printings. */
     constructor(cardRegistry: CardRegistry) : this(cardRegistry, null)
+
+    private val primordialPool: PrimordialCardPool? by lazy {
+        injectedPrimordialPool ?: printingRegistry?.let(::PrimordialCardPool)
+    }
 
     fun validate(
         deckList: Map<String, Int>,
         format: DeckFormat? = null,
         cardEntries: List<DeckEntryDTO>? = null,
         commanderPrinting: PrintingRef? = null,
+        playingForAnte: Boolean = false,
     ): DeckValidationResult = runValidation(
         deckList = deckList,
         format = format,
-        commander = null,
+        commanders = emptyList(),
         commanderAware = false,
         cardEntries = cardEntries,
-        commanderPrinting = commanderPrinting,
+        commanderPrintings = emptyMap(),
+        playingForAnte = playingForAnte,
     )
 
     /**
-     * Validate a [Deck] — the structured form that carries an explicit commander. For
-     * commander-shaped formats this enables the full set of commander rules (eligibility,
-     * color identity, library + command zone size). For other formats the [Deck.commander]
-     * field is ignored.
+     * Validate a [Deck] — the structured form that carries explicit commanders. For
+     * commander-shaped formats this enables the full set of commander rules (eligibility or
+     * partner pairing, combined color identity, library + command zone size). For other formats
+     * the [Deck.commanders] are ignored.
      *
-     * The library and the commander are merged into a single counts map for copy-cap and
-     * format-legality checks (so e.g. submitting the commander a second time inside [Deck.cards]
-     * trips the singleton cap).
+     * The library and the commanders are merged into a single counts map for copy-cap and
+     * format-legality checks (so e.g. submitting a commander a second time inside [Deck.cards]
+     * trips the singleton cap), and so a two-commander deck's 100 cards include both commanders
+     * (CR 702.124b).
      */
-    fun validate(deck: Deck, format: DeckFormat? = null): DeckValidationResult {
-        val commander = deck.commander
+    fun validate(deck: Deck, format: DeckFormat? = null, playingForAnte: Boolean = false): DeckValidationResult {
+        val commanders = deck.commanders
         val counts = deck.cards.groupingBy { it }.eachCount().toMutableMap()
-        if (commander != null) {
-            counts.merge(commander, 1, Int::plus)
-        }
+        for (commander in commanders) counts.merge(commander, 1, Int::plus)
         // Mirror the rich-entry check from the Map overload: if the [Deck] carries pinned
         // printings, validate them against [printingRegistry].
         val richEntries = deck.cardEntries.takeIf { it.isNotEmpty() }?.map {
@@ -87,11 +107,40 @@ class DeckValidator @Autowired constructor(
         return runValidation(
             counts,
             format,
-            commander = commander,
+            commanders = commanders,
             commanderAware = true,
             cardEntries = richEntries,
-            commanderPrinting = deck.commanderPrinting,
+            commanderPrintings = commanders
+                .mapNotNull { name -> deck.commanderPrintingOf(name)?.let { name to it } }
+                .toMap(),
+            companion = deck.companion,
+            sideboard = deck.sideboard.map { it.name },
+            playingForAnte = playingForAnte,
         )
+    }
+
+    /**
+     * Only the companion rules (CR 702.139) for [deck] — for a Limited submission, whose deck
+     * shape is validated elsewhere (against its pool) but whose companion still has to fit.
+     * [minimumDeckSize] defaults to the format's. Empty when the deck names no companion.
+     */
+    fun companionIssues(deck: Deck, format: DeckFormat?, minimumDeckSize: Int? = null): List<DeckValidationIssue> {
+        val companion = deck.companion ?: return emptyList()
+        val profile = profileFor(format)
+        val counts = deck.cards.mapNotNull { cardRegistry.getCard(it)?.name }.groupingBy { it }.eachCount().toMutableMap()
+        for (commander in deck.commanders) counts.merge(commander, 1, Int::plus)
+        val errors = mutableListOf<DeckValidationIssue>()
+        validateCompanion(
+            companion = companion,
+            sideboard = deck.sideboard.map { it.name },
+            countsByBaseName = counts,
+            commanders = deck.commanders,
+            commanderShape = format?.isCommanderShape == true || deck.commanders.isNotEmpty(),
+            minimumDeckSize = minimumDeckSize ?: (profile.exactSize ?: profile.minSize),
+            profile = profile,
+            errors = errors,
+        )
+        return errors
     }
 
     /**
@@ -99,14 +148,21 @@ class DeckValidator @Autowired constructor(
      *   overload). Only commander-aware calls raise MISSING_COMMANDER for a null commander —
      *   the legacy [Map] overload doesn't surface a commander field, so silently skipping
      *   keeps existing submission paths working until they migrate to [Deck].
+     * @param playingForAnte whether the game this deck is for is played for ante. When false, ante
+     *   cards ([CardDefinition.requiresAnte]) in the deck or sideboard are REQUIRES_ANTE errors
+     *   (CR 407.3); when true they are also exempt from format legality, which Scryfall marks them
+     *   banned in purely because of ante.
      */
     private fun runValidation(
         deckList: Map<String, Int>,
         format: DeckFormat?,
-        commander: String?,
+        commanders: List<String>,
         commanderAware: Boolean,
         cardEntries: List<DeckEntryDTO>? = null,
-        commanderPrinting: PrintingRef? = null,
+        commanderPrintings: Map<String, PrintingRef> = emptyMap(),
+        companion: String? = null,
+        sideboard: List<String> = emptyList(),
+        playingForAnte: Boolean = false,
     ): DeckValidationResult {
         val errors = mutableListOf<DeckValidationIssue>()
         val warnings = mutableListOf<DeckValidationIssue>()
@@ -134,7 +190,7 @@ class DeckValidator @Autowired constructor(
                     )
                 }
             }
-            if (commander != null && commanderPrinting != null) {
+            for ((commander, commanderPrinting) in commanderPrintings) {
                 val printing = printings.getPrinting(commanderPrinting)
                 when {
                     printing == null -> errors += DeckValidationIssue(
@@ -170,26 +226,45 @@ class DeckValidator @Autowired constructor(
             }
             countsByBaseName.merge(card.name, count, Int::plus)
         }
+        val setBased = format?.isSetBased == true
 
         for ((cardName, count) in countsByBaseName) {
             val card = cardRegistry.getCard(cardName) ?: continue
             val limit = copyLimitFor(card, profile)
-            if (limit != null && count > limit) {
+            // A set-based format's copy caps hang on the card's rarity in the deck's pool.
+            if (limit != null && count > limit && !setBased) {
                 errors += DeckValidationIssue(
                     code = "TOO_MANY_COPIES",
                     message = copyLimitMessage(cardName, count, limit, profile),
                     cardName = cardName
                 )
             }
+            // Ante cards (CR 407.3) belong only in a game played for ante. In one, their format
+            // legality is moot: every format bans them solely for being ante cards.
+            if (card.requiresAnte) {
+                if (!playingForAnte) errors += requiresAnteIssue(cardName)
+                continue
+            }
             // Format legality. Cards with no recorded legality (custom test cards, missing Scryfall
             // data) are accepted silently — only an explicit "this card is not in $format" rejects.
-            if (format != null && card.legalFormats.isNotEmpty() && format !in card.legalFormats) {
+            // Set-based formats (Primordial) decide legality per pool, below.
+            if (format != null && !setBased && card.legalFormats.isNotEmpty() && format !in card.legalFormats) {
                 errors += DeckValidationIssue(
                     code = "NOT_LEGAL_IN_FORMAT",
                     message = "$cardName is not legal in ${format.displayName}",
                     cardName = cardName
                 )
             }
+        }
+
+        // CR 407.3 covers the sideboard too. Skip names already reported from the deck itself.
+        if (!playingForAnte) {
+            sideboard
+                .mapNotNull { cardRegistry.getCard(it) }
+                .filter { it.requiresAnte && it.name !in countsByBaseName }
+                .map { it.name }
+                .distinct()
+                .forEach { errors += requiresAnteIssue(it) }
         }
 
         when {
@@ -210,34 +285,272 @@ class DeckValidator @Autowired constructor(
         }
 
         if (format != null && format.isCommanderShape && commanderAware) {
-            validateCommanderRules(commander, countsByBaseName, format.displayName, errors)
+            validateCommanderRules(commanders, countsByBaseName, format.displayName, errors)
+        }
+
+        val points = if (format == DeckFormat.CANADIAN_HIGHLANDER) {
+            canadianHighlanderPoints(countsByBaseName, errors)
+        } else {
+            null
+        }
+        if (format == DeckFormat.CANADIAN_HIGHLANDER && (sideboard.isNotEmpty() || companion != null)) {
+            errors += DeckValidationIssue(
+                code = "SIDEBOARD_NOT_ALLOWED",
+                message = "${format.displayName} decks have no sideboard",
+                cardName = null,
+            )
+        }
+
+        val primordial = if (format == DeckFormat.PRIMORDIAL) {
+            primordialRules(countsByBaseName, sideboard, errors)
+        } else {
+            null
+        }
+
+        if (companion != null) {
+            validateCompanion(
+                companion = companion,
+                sideboard = sideboard,
+                countsByBaseName = countsByBaseName,
+                commanders = commanders,
+                commanderShape = format?.isCommanderShape == true,
+                minimumDeckSize = profile.exactSize ?: profile.minSize,
+                profile = profile,
+                errors = errors,
+            )
         }
 
         return DeckValidationResult(
             valid = errors.isEmpty(),
             totalCards = totalCards,
             errors = errors,
-            warnings = warnings
+            warnings = warnings,
+            points = points,
+            primordial = primordial,
         )
     }
 
     /**
-     * Enforces the commander-specific rules layered on top of the constructed baseline:
-     * a designated commander is required, it must be a legal commander (CR 903.3), and every
-     * other card's color identity must fit within the commander's (CR 903.4).
+     * Primordial's deck-construction rules ([PrimordialFormat]) over the deck ([countsByBaseName])
+     * and its [sideboard]. Returns the summary the deckbuilder shows — the inferred pool and the
+     * rarity budget — whatever the outcome, so it can guide a deck that is still being built.
      *
-     * Called only when [format] is commander-shaped. When [commander] is null, only the
+     * The deck's pool is inferred, not chosen: the pools every non-basic card is printed in. When
+     * several fit (an all-reprint list), the one the deck breaks the fewest copy caps in wins, then
+     * the one nearest the rarity totals, newest first on a tie. When none fits, the pool most of the cards come from is the one
+     * reported, and each card outside it is an error naming it.
+     */
+    private fun primordialRules(
+        countsByBaseName: Map<String, Int>,
+        sideboard: List<String>,
+        errors: MutableList<DeckValidationIssue>,
+    ): PrimordialSummary? {
+        val index = primordialPool ?: return null
+        val label = DeckFormat.PRIMORDIAL.displayName
+        val sideboardCounts = sideboard.mapNotNull { cardRegistry.getCard(it)?.name }.groupingBy { it }.eachCount()
+        val combined = (countsByBaseName.keys + sideboardCounts.keys).associateWith {
+            (countsByBaseName[it] ?: 0) + (sideboardCounts[it] ?: 0)
+        }
+
+        // Cards that need a pool: everything but the five free basics.
+        val pooled = mutableListOf<String>()
+        for (name in combined.keys.sorted()) {
+            if (name in PrimordialFormat.FREE_BASIC_LANDS) continue
+            when {
+                PrimordialFormat.isBanned(name) -> errors += DeckValidationIssue(
+                    code = "NOT_LEGAL_IN_FORMAT",
+                    message = "$name is banned in $label",
+                    cardName = name,
+                )
+                index.poolsOf(name).isEmpty() -> errors += DeckValidationIssue(
+                    code = "NOT_LEGAL_IN_FORMAT",
+                    message = "$name isn't printed in any $label-legal block or set",
+                    cardName = name,
+                )
+                else -> pooled += name
+            }
+        }
+
+        val candidates = PrimordialFormat.pools.filter { pool -> pooled.all { pool in index.poolsOf(it) } }
+        val chosen = when {
+            pooled.isEmpty() -> null
+            candidates.isEmpty() -> PrimordialFormat.pools.maxBy { pool -> pooled.count { pool in index.poolsOf(it) } }
+            else -> candidates.minBy { pool -> primordialBudgetMisses(pool, index, countsByBaseName, combined) }
+        }
+        if (chosen == null) {
+            if (sideboard.size > PrimordialFormat.MAX_SIDEBOARD) errors += primordialSideboardIssue(sideboard.size)
+            return PrimordialSummary(
+                pool = null,
+                setCodes = emptyList(),
+                candidateSetCodes = emptyList(),
+                alternatives = emptyList(),
+                rares = 0,
+                uncommons = 0,
+                sideboard = sideboard.size,
+                slotByCard = emptyMap(),
+            )
+        }
+
+        if (candidates.isEmpty()) {
+            for (name in pooled) {
+                if (chosen in index.poolsOf(name)) continue
+                val elsewhere = index.poolsOf(name).keys.sortedBy { PrimordialFormat.pools.indexOf(it) }.first().name
+                errors += DeckValidationIssue(
+                    code = "PRIMORDIAL_OUTSIDE_POOL",
+                    message = "$name isn't in ${chosen.name} (it's from $elsewhere) — " +
+                        "every card in a $label deck comes from one block or set",
+                    cardName = name,
+                )
+            }
+        }
+
+        val slotByCard = pooled.mapNotNull { name -> index.poolsOf(name)[chosen]?.let { name to it } }.toMap()
+        val rares = slotByCard.filterValues { it == PrimordialFormat.Slot.RARE }.keys.sumOf { countsByBaseName[it] ?: 0 }
+        val uncommons = slotByCard.filterValues { it == PrimordialFormat.Slot.UNCOMMON }.keys.sumOf { countsByBaseName[it] ?: 0 }
+        if (rares != PrimordialFormat.RARE_SLOTS) {
+            errors += DeckValidationIssue(
+                code = "PRIMORDIAL_RARE_COUNT",
+                message = "$label decks need exactly ${PrimordialFormat.RARE_SLOTS} rares or mythics (have $rares)",
+                cardName = null,
+            )
+        }
+        if (uncommons != PrimordialFormat.UNCOMMON_SLOTS) {
+            errors += DeckValidationIssue(
+                code = "PRIMORDIAL_UNCOMMON_COUNT",
+                message = "$label decks need exactly ${PrimordialFormat.UNCOMMON_SLOTS} uncommons (have $uncommons)",
+                cardName = null,
+            )
+        }
+        for ((name, slot) in slotByCard) {
+            val limit = primordialCopyLimit(name, slot) ?: continue
+            val total = combined[name] ?: 0
+            if (total > limit) {
+                val onSideboard = sideboardCounts[name] ?: 0
+                val basis = if (onSideboard > 0) " (deck and sideboard together)" else ""
+                errors += DeckValidationIssue(
+                    code = "TOO_MANY_COPIES",
+                    message = "$total copies of $name — $label allows $limit of ${slotArticle(slot)}$basis",
+                    cardName = name,
+                )
+            }
+        }
+        if (sideboard.size > PrimordialFormat.MAX_SIDEBOARD) errors += primordialSideboardIssue(sideboard.size)
+
+        return PrimordialSummary(
+            pool = chosen.name,
+            setCodes = chosen.setCodes,
+            candidateSetCodes = (candidates.ifEmpty { listOf(chosen) }).flatMap { it.setCodes }.distinct(),
+            alternatives = candidates.filter { it != chosen }.map { it.name },
+            rares = rares,
+            uncommons = uncommons,
+            sideboard = sideboard.size,
+            slotByCard = slotByCard.mapValues { it.value.name },
+        )
+    }
+
+    /** How far [pool] leaves the deck from its rarity budget — the tie-breaker between candidate pools. */
+    private fun primordialBudgetMisses(
+        pool: PrimordialFormat.Pool,
+        index: PrimordialCardPool,
+        deck: Map<String, Int>,
+        combined: Map<String, Int>,
+    ): Int {
+        var rares = 0
+        var uncommons = 0
+        var overCap = 0
+        for ((name, total) in combined) {
+            val slot = index.poolsOf(name)[pool] ?: continue
+            val inDeck = deck[name] ?: 0
+            when (slot) {
+                PrimordialFormat.Slot.RARE -> rares += inDeck
+                PrimordialFormat.Slot.UNCOMMON -> uncommons += inDeck
+                PrimordialFormat.Slot.COMMON -> Unit
+            }
+            val limit = primordialCopyLimit(name, slot)
+            if (limit != null && total > limit) overCap += total - limit
+        }
+        // Breaking a copy cap is a mistake; missing the 2/6 totals is usually a deck still being built.
+        // So a pool that keeps every card within its cap always wins over one that is merely nearer
+        // the totals.
+        return overCap * OVER_CAP_WEIGHT + kotlin.math.abs(rares - PrimordialFormat.RARE_SLOTS) +
+            kotlin.math.abs(uncommons - PrimordialFormat.UNCOMMON_SLOTS)
+    }
+
+    /**
+     * The per-name cap for a card in [slot]; null for unlimited — a basic land (snow-covered ones
+     * included, once their pool allows them) or a card saying "A deck can have any number of cards
+     * named …". Such a card still spends its slot's budget for every copy.
+     */
+    private fun primordialCopyLimit(name: String, slot: PrimordialFormat.Slot): Int? {
+        val card = cardRegistry.getCard(name)
+        if (card != null) {
+            if (card.typeLine.isBasicLand) return null
+            parseDeckSizeOverride(card.oracleText, card.name)?.let { return it.cap.takeIf { cap -> cap != Int.MAX_VALUE } }
+        }
+        return slot.maxCopies
+    }
+
+    private fun slotArticle(slot: PrimordialFormat.Slot): String = when (slot) {
+        PrimordialFormat.Slot.RARE -> "a rare or mythic"
+        PrimordialFormat.Slot.UNCOMMON -> "an uncommon"
+        PrimordialFormat.Slot.COMMON -> "a common"
+    }
+
+    private fun primordialSideboardIssue(size: Int) = DeckValidationIssue(
+        code = "SIDEBOARD_TOO_LARGE",
+        message = "${DeckFormat.PRIMORDIAL.displayName} sideboards hold at most ${PrimordialFormat.MAX_SIDEBOARD} cards (have $size)",
+        cardName = null,
+    )
+
+    /**
+     * Tallies the deck's Canadian Highlander points and raises POINTS_OVER_CAP when it spends more
+     * than [CanadianHighlanderPoints.POINT_CAP]. The tally is returned whatever the outcome, so the
+     * deckbuilder can show it while the deck is still being built.
+     */
+    private fun canadianHighlanderPoints(
+        countsByBaseName: Map<String, Int>,
+        errors: MutableList<DeckValidationIssue>,
+    ): DeckPoints {
+        val byCard = countsByBaseName
+            .mapValues { (name, count) -> CanadianHighlanderPoints.pointsFor(name) * count }
+            .filterValues { it > 0 }
+            .toSortedMap()
+        val total = byCard.values.sum()
+        val cap = CanadianHighlanderPoints.POINT_CAP
+        if (total > cap) {
+            errors += DeckValidationIssue(
+                code = "POINTS_OVER_CAP",
+                message = "Deck spends $total points — ${DeckFormat.CANADIAN_HIGHLANDER.displayName} allows $cap",
+                cardName = null,
+            )
+        }
+        return DeckPoints(total = total, cap = cap, byCard = byCard)
+    }
+
+    private fun requiresAnteIssue(cardName: String) = DeckValidationIssue(
+        code = "REQUIRES_ANTE",
+        message = "$cardName can only be played in a game played for ante",
+        cardName = cardName,
+    )
+
+    /**
+     * Enforces the commander-specific rules layered on top of the constructed baseline:
+     * a designated commander is required; one commander must be a legal commander (CR 903.3),
+     * and two must pair through a partner ability (CR 702.124); and every other card's color
+     * identity must fit within the commanders' combined identity (CR 903.5c, 702.124c).
+     *
+     * Called only when [format] is commander-shaped. When [commanders] is empty, only the
      * MISSING_COMMANDER error is raised — color-identity checks need a known commander to
-     * compare against. Callers using the legacy [Map] entry point pass null and skip identity
+     * compare against. Callers using the legacy [Map] entry point pass none and skip identity
      * enforcement until the surrounding flow is updated to provide a [Deck].
      */
     private fun validateCommanderRules(
-        commander: String?,
+        commanders: List<String>,
         countsByBaseName: Map<String, Int>,
         formatLabel: String,
         errors: MutableList<DeckValidationIssue>,
     ) {
-        if (commander == null) {
+        if (commanders.isEmpty()) {
             errors += DeckValidationIssue(
                 code = "MISSING_COMMANDER",
                 message = "$formatLabel decks require a designated commander",
@@ -245,32 +558,149 @@ class DeckValidator @Autowired constructor(
             )
             return
         }
-        val commanderCard = cardRegistry.getCard(commander)
-        if (commanderCard == null) {
-            // UNKNOWN_CARD already raised by the main loop if the commander is also missing
-            // from the registry — no second error needed.
-            return
-        }
-        if (!CommanderEligibility.isLegalCommander(commanderCard)) {
-            errors += DeckValidationIssue(
-                code = "INVALID_COMMANDER",
-                message = "${commanderCard.name} cannot be a $formatLabel commander",
-                cardName = commanderCard.name,
-            )
-            // Identity check against an illegal commander would be misleading — bail.
-            return
+        // UNKNOWN_CARD is already raised by the main loop for a commander missing from the
+        // registry — no second error needed.
+        val commanderCards = commanders.map { cardRegistry.getCard(it) ?: return }
+        when (commanderCards.size) {
+            1 -> {
+                val commanderCard = commanderCards.single()
+                if (!CommanderEligibility.isLegalCommander(commanderCard)) {
+                    val why = if (CommanderEligibility.isBackground(commanderCard)) {
+                        " on its own — a Background needs a commander with \"Choose a Background\" beside it"
+                    } else {
+                        ""
+                    }
+                    errors += DeckValidationIssue(
+                        code = "INVALID_COMMANDER",
+                        message = "${commanderCard.name} cannot be a $formatLabel commander$why",
+                        cardName = commanderCard.name,
+                    )
+                    // Identity check against an illegal commander would be misleading — bail.
+                    return
+                }
+            }
+            2 -> {
+                val (first, second) = commanderCards
+                val pairingError = CommanderEligibility.pairingError(first, second)
+                if (pairingError != null) {
+                    errors += DeckValidationIssue(
+                        code = "INVALID_COMMANDER_PAIR",
+                        message = pairingError,
+                        cardName = null,
+                    )
+                    return
+                }
+            }
+            else -> {
+                // No partner ability can give a deck more than two commanders (CR 702.124g).
+                errors += DeckValidationIssue(
+                    code = "INVALID_COMMANDER_PAIR",
+                    message = "A deck can have at most two commanders",
+                    cardName = null,
+                )
+                return
+            }
         }
 
-        val allowed: Set<Color> = commanderCard.colorIdentity
+        val commanderNames = commanderCards.map { it.name }.toSet()
+        val allowed: Set<Color> = CommanderEligibility.identityOf(commanderCards)
+        val commanderLabel = commanderCards.joinToString(" and ") { it.name }
         for ((cardName, _) in countsByBaseName) {
-            if (cardName == commanderCard.name) continue
+            if (cardName in commanderNames) continue
             val card = cardRegistry.getCard(cardName) ?: continue
             val violating = card.colorIdentity - allowed
             if (violating.isNotEmpty()) {
                 errors += DeckValidationIssue(
                     code = "COLOR_IDENTITY_VIOLATION",
-                    message = colorIdentityMessage(cardName, violating, commanderCard.name, allowed),
+                    message = colorIdentityMessage(cardName, violating, commanderLabel, allowed),
                     cardName = cardName,
+                )
+            }
+        }
+    }
+
+    /**
+     * The companion rules (CR 702.139, 103.2b) for a deck that names one:
+     *  - it is a card with a companion ability, revealed from the deck's sideboard (outside the game);
+     *  - the **starting deck** fulfils its condition — in Commander that includes the commanders,
+     *    which are set aside only after (CR 702.139b);
+     *  - in Commander it may not share a name with a card in the starting deck, and its colour
+     *    identity must fit the commanders' (CR 903.11a — cards brought in from outside the game);
+     *  - elsewhere it is one of the sideboard cards, so the copy limit counts it together with the
+     *    deck's copies (CR 100.4a).
+     */
+    private fun validateCompanion(
+        companion: String,
+        sideboard: List<String>,
+        countsByBaseName: Map<String, Int>,
+        commanders: List<String>,
+        commanderShape: Boolean,
+        minimumDeckSize: Int,
+        profile: FormatProfile,
+        errors: MutableList<DeckValidationIssue>,
+    ) {
+        val card = cardRegistry.getCard(companion)
+        if (card == null) {
+            errors += DeckValidationIssue("UNKNOWN_CARD", "Unknown companion: \"$companion\"", companion)
+            return
+        }
+        if (!CompanionEligibility.hasCompanion(card)) {
+            errors += DeckValidationIssue(
+                code = "INVALID_COMPANION",
+                message = "${card.name} has no companion ability, so it can't be your companion",
+                cardName = card.name,
+            )
+            return
+        }
+        if (sideboard.none { it == companion || cardRegistry.getCard(it)?.name == card.name }) {
+            errors += DeckValidationIssue(
+                code = "COMPANION_NOT_IN_SIDEBOARD",
+                message = "Your companion ${card.name} must be on your sideboard — it starts the game outside it",
+                cardName = card.name,
+            )
+        }
+        // The starting deck: the library plus, in Commander, the commanders (CR 702.139b).
+        // countsByBaseName already merges the commanders in on the Deck path.
+        val startingDeck = countsByBaseName.flatMap { (name, count) ->
+            val definition = cardRegistry.getCard(name) ?: return@flatMap emptyList()
+            List(count) { definition }
+        }
+        CompanionEligibility.conditionError(card, startingDeck, minimumDeckSize)?.let { why ->
+            errors += DeckValidationIssue("COMPANION_CONDITION_NOT_MET", why, card.name)
+        }
+        if (commanderShape) {
+            if (card.name in countsByBaseName) {
+                errors += DeckValidationIssue(
+                    code = "COMPANION_DUPLICATE_NAME",
+                    message = "${card.name} is already in your deck, so it can't also be your companion",
+                    cardName = card.name,
+                )
+            }
+            val commanderCards = commanders.mapNotNull { cardRegistry.getCard(it) }
+            if (commanderCards.isNotEmpty()) {
+                val allowed = CommanderEligibility.identityOf(commanderCards)
+                val violating = card.colorIdentity - allowed
+                if (violating.isNotEmpty()) {
+                    errors += DeckValidationIssue(
+                        code = "COMPANION_COLOR_IDENTITY",
+                        message = "Companion " + colorIdentityMessage(
+                            card.name, violating, commanderCards.joinToString(" and ") { it.name }, allowed,
+                        ),
+                        cardName = card.name,
+                    )
+                }
+            }
+        } else {
+            val limit = copyLimitFor(card, profile)
+            val inDeck = countsByBaseName[card.name] ?: 0
+            val onSideboard = sideboard.count { it == companion || cardRegistry.getCard(it)?.name == card.name }
+                .coerceAtLeast(1)
+            if (limit != null && inDeck + onSideboard > limit) {
+                errors += DeckValidationIssue(
+                    code = "TOO_MANY_COPIES",
+                    message = "${inDeck + onSideboard} copies of ${card.name} counting your companion — " +
+                        "the limit of $limit applies to deck and sideboard together",
+                    cardName = card.name,
                 )
             }
         }
@@ -318,13 +748,25 @@ class DeckValidator @Autowired constructor(
 
     private fun profileFor(format: DeckFormat?): FormatProfile = when (format) {
         DeckFormat.COMMANDER, DeckFormat.BRAWL -> FormatProfile(
-            // 100-card singleton. Commander eligibility and color identity are enforced by
-            // validateCommanderRules() when the caller supplies a Deck (with explicit
-            // commander). Partner / Background pairs are not yet supported — that's the
-            // remaining structural rule a future revision needs to handle.
+            // 100-card singleton, counting the commander — or both commanders of a partner
+            // pair (CR 702.124b). Commander eligibility, pairing and color identity are enforced
+            // by validateCommanderRules() when the caller supplies a Deck (with explicit
+            // commanders).
             minSize = SINGLETON_HUNDRED_DECK_SIZE,
             exactSize = SINGLETON_HUNDRED_DECK_SIZE,
             maxCopiesNonBasic = 1,
+            formatLabel = format.displayName,
+        )
+        DeckFormat.HIGHLANDER, DeckFormat.CANADIAN_HIGHLANDER -> FormatProfile(
+            // 100 is a floor, not an exact size: a Highlander deck may run more.
+            minSize = SINGLETON_HUNDRED_DECK_SIZE,
+            maxCopiesNonBasic = 1,
+            formatLabel = format.displayName,
+        )
+        DeckFormat.PRIMORDIAL -> FormatProfile(
+            minSize = PrimordialFormat.MIN_DECK_SIZE,
+            // Copy caps depend on the card's rarity in the deck's pool; primordialRules() owns them.
+            maxCopiesNonBasic = Int.MAX_VALUE,
             formatLabel = format.displayName,
         )
         DeckFormat.STANDARD_BRAWL -> FormatProfile(
@@ -368,16 +810,13 @@ class DeckValidator @Autowired constructor(
         val warnings = mutableListOf<DeckValidationIssue>()
 
         val poolCounts: Map<String, Int> = pool.groupingBy { it.name }.eachCount()
-        val commander = deck.commander
+        val commanders = deck.commanders
 
-        val mainboardCounts: Map<String, Int> = deck.cards.groupingBy { it }.eachCount()
-        val allCounts: Map<String, Int> = if (commander != null) {
-            mainboardCounts.toMutableMap().apply { merge(commander, 1, Int::plus) }
-        } else {
-            mainboardCounts
+        val allCounts: Map<String, Int> = deck.cards.groupingBy { it }.eachCount().toMutableMap().apply {
+            for (commander in commanders) merge(commander, 1, Int::plus)
         }
 
-        // Resolve every submitted card; basic lands bypass the pool-membership check (the lobby
+        // Resolve every submitted card; freely added basics (not snow, not Wastes) bypass the pool-membership check (the lobby
         // ships basics out-of-band via lobby.basicLands).
         for ((cardName, submitted) in allCounts) {
             val card = cardRegistry.getCard(cardName)
@@ -389,7 +828,7 @@ class DeckValidator @Autowired constructor(
                 )
                 continue
             }
-            if (card.typeLine.isBasicLand) continue
+            if (card.typeLine.isFreelyAddedBasicLand) continue
 
             val available = poolCounts[cardName] ?: 0
             if (submitted > available) {
@@ -424,11 +863,31 @@ class DeckValidator @Autowired constructor(
         // Commander rules: required, legal commander, colour identity bounds the rest of the
         // deck. Reuse the shared helper so the error codes match the constructed path.
         validateCommanderRules(
-            commander = commander,
+            commanders = commanders,
             countsByBaseName = allCounts,
             formatLabel = "Commander Draft",
             errors = errors,
         )
+
+        deck.companion?.let { companion ->
+            if (companion !in poolCounts) {
+                errors += DeckValidationIssue(
+                    code = "NOT_IN_POOL",
+                    message = "Your companion $companion isn't in your pool",
+                    cardName = companion,
+                )
+            }
+            validateCompanion(
+                companion = companion,
+                sideboard = deck.sideboard.map { it.name },
+                countsByBaseName = allCounts,
+                commanders = commanders,
+                commanderShape = true,
+                minimumDeckSize = minDeckSize,
+                profile = singletonProfile,
+                errors = errors,
+            )
+        }
 
         return DeckValidationResult(
             valid = errors.isEmpty(),
@@ -455,6 +914,7 @@ class DeckValidator @Autowired constructor(
         // generically so a future 100-card singleton variant can reuse it without renaming.
         const val SINGLETON_HUNDRED_DECK_SIZE = 100
         const val STANDARD_BRAWL_DECK_SIZE = 60
+        private const val OVER_CAP_WEIGHT = 1_000
 
         // "A deck can have any number of cards named <Name>" → unlimited.
         // "A deck can have up to <N> cards named <Name>"     → cap at N.
@@ -508,7 +968,47 @@ data class DeckValidationResult(
     val valid: Boolean,
     val totalCards: Int,
     val errors: List<DeckValidationIssue>,
-    val warnings: List<DeckValidationIssue>
+    val warnings: List<DeckValidationIssue>,
+    /** The deck's points tally, for formats with a points list (Canadian Highlander); else null. */
+    val points: DeckPoints? = null,
+    /** The inferred pool and rarity budget of a Primordial deck; else null. */
+    val primordial: PrimordialSummary? = null,
+)
+
+/**
+ * Where a Primordial deck stands: the block or set its cards come from and how much of the rarity
+ * budget it spends. Present for every Primordial validation, so the deckbuilder can guide a deck
+ * that is still half built.
+ *
+ * @property pool The inferred block or set's name; null while the deck has no card needing one.
+ * @property setCodes That pool's set codes.
+ * @property candidateSetCodes Every set code of every pool the deck's cards all fit — what the
+ *   deckbuilder narrows its catalog to. An all-reprint list can fit several pools.
+ * @property alternatives The other pools that would also hold every card.
+ * @property slotByCard Each pooled card's slot in [pool]: `RARE`, `UNCOMMON` or `COMMON`.
+ */
+data class PrimordialSummary(
+    val pool: String?,
+    val setCodes: List<String>,
+    val candidateSetCodes: List<String>,
+    val alternatives: List<String>,
+    val rares: Int,
+    val uncommons: Int,
+    val sideboard: Int,
+    val slotByCard: Map<String, String>,
+    val rareSlots: Int = PrimordialFormat.RARE_SLOTS,
+    val uncommonSlots: Int = PrimordialFormat.UNCOMMON_SLOTS,
+    val sideboardMax: Int = PrimordialFormat.MAX_SIDEBOARD,
+)
+
+/**
+ * A points-list format's tally: [total] spent of [cap], and the cards that cost points — each
+ * entry is that card's points times its copies, keyed by card name.
+ */
+data class DeckPoints(
+    val total: Int,
+    val cap: Int,
+    val byCard: Map<String, Int>,
 )
 
 data class DeckValidationIssue(

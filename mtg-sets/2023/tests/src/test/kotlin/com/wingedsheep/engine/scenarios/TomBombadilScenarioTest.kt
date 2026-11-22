@@ -1,5 +1,8 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.engine.core.SagaChapterResolvedEvent
+import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.mechanics.layers.StateProjector
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.SagaComponent
@@ -16,7 +19,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
  * Tom Bombadil — {W}{U}{B}{R}{G} Legendary Creature — God Bard 4/4.
@@ -172,5 +177,46 @@ class TomBombadilScenarioTest : FunSpec({
             driver.state.getEntity(it)?.get<CardComponent>()?.name == "Three-Chapter Saga"
         }
         revealed shouldBe 1
+    }
+
+    test("a final chapter that asks a question still triggers Tom once it resolves") {
+        // Awaken the Honored Dead's chapter III asks "you may discard a card", so its resolution
+        // pauses. The chapter still finishes resolving once that's answered (CR 608.2n), and that
+        // is what Tom's trigger waits for.
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(TomBombadil, ThreeChapterSaga))
+        driver.initMirrorMatch(deck = Deck.of("Forest" to 40))
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val active = driver.activePlayer!!
+
+        driver.putCreatureOnBattlefield(active, "Tom Bombadil")
+        val awaken = driver.putPermanentOnBattlefield(active, "Awaken the Honored Dead")
+        setLoreCounters(driver, awaken, 2)
+
+        // To our next precombat main, where the third lore counter triggers chapter III.
+        driver.passPriorityUntil(Step.END)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, active)
+        val chapter = driver.state.stack.single()
+
+        // Tom's reveal target, put on top only now so the draw step didn't take it.
+        driver.putCardOnTopOfLibrary(active, "Three-Chapter Saga")
+        driver.putCardOnTopOfLibrary(active, "Forest")
+
+        driver.bothPass().outcome.shouldBeInstanceOf<Outcome.Paused>()
+        driver.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
+        driver.state.stack shouldContain chapter
+
+        val before = driver.events.size
+        driver.submitYesNo(active, false).outcome shouldBe Outcome.Done
+        driver.events.drop(before).count { it is SagaChapterResolvedEvent && it.isFinalChapter } shouldBe 1
+
+        var guard = 0
+        while (guard++ < 20 && driver.state.stack.isNotEmpty()) {
+            driver.bothPass()
+        }
+
+        driver.state.getBattlefield().any {
+            driver.state.getEntity(it)?.get<CardComponent>()?.name == "Three-Chapter Saga"
+        } shouldBe true
     }
 })

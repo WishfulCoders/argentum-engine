@@ -14,11 +14,15 @@ interface TargetCardInfo {
   basePower: number | null | undefined
   baseToughness: number | null | undefined
   damage: number | null | undefined
+  /** Set when the target is a player ("any target" divisions) — shown as a name-and-life tile. */
+  lifeTotal?: number
 }
 
 /**
  * Modal for distributing damage at cast time for DividedDamageEffect spells (e.g., Forked Lightning).
- * Shows selected target cards with +/- buttons to allocate damage amounts.
+ * Shows selected target cards with +/- buttons to allocate damage amounts. The same modal divides
+ * counters announced at activation (Ajani, Sleeper Agent's −3) when the state carries a `unit`; the
+ * lethal-damage hints are then hidden.
  *
  * This is shown AFTER target selection, BEFORE the spell is cast.
  */
@@ -34,6 +38,10 @@ export function DamageDistributionModal() {
   const [minimized, setMinimized] = useState(false)
 
   if (!damageDistributionState) return null
+
+  // A counter division names its unit ("+1/+1 counter"); damage is the default.
+  const counterUnit = damageDistributionState.unit
+  const unitLabel = (n: number) => (counterUnit ? `${counterUnit}${n === 1 ? '' : 's'}` : 'damage')
 
   if (minimized) {
     return (
@@ -57,12 +65,14 @@ export function DamageDistributionModal() {
           pointerEvents: 'auto',
         }}
       >
-        Return to Damage Distribution
+        {counterUnit ? 'Return to Counter Distribution' : 'Return to Damage Distribution'}
       </button>
     )
   }
 
   const { cardName, targetIds, totalDamage, minPerTarget, distribution } = damageDistributionState
+  // An activated ability (Chandra, Flameshaper's −4; Huatli, Warrior Poet's −X) is activated, not cast.
+  const confirmLabel = damageDistributionState.action.type === 'ActivateAbility' ? 'Activate' : 'Cast Spell'
 
   // Calculate remaining amount to distribute
   const totalAllocated = Object.values(distribution).reduce((sum, val) => sum + val, 0)
@@ -71,6 +81,20 @@ export function DamageDistributionModal() {
 
   // Get card info for each target
   const targetCards: TargetCardInfo[] = targetIds.map((targetId): TargetCardInfo => {
+    const player = gameState?.players.find((p) => p.playerId === targetId)
+    if (player) {
+      return {
+        id: targetId,
+        name: player.name,
+        imageUri: null,
+        power: null,
+        toughness: null,
+        basePower: null,
+        baseToughness: null,
+        damage: null,
+        lifeTotal: player.life,
+      }
+    }
     const card = gameState?.cards[targetId]
     return {
       id: targetId,
@@ -145,7 +169,9 @@ export function DamageDistributionModal() {
             fontSize: responsive.fontSize.normal,
           }}
         >
-          Divide {totalDamage} damage among {targetIds.length} targets
+          {counterUnit
+            ? `Distribute ${totalDamage} ${unitLabel(totalDamage)} among ${targetIds.length} targets`
+            : `Divide ${totalDamage} damage among ${targetIds.length} targets`}
         </p>
       </div>
 
@@ -166,10 +192,10 @@ export function DamageDistributionModal() {
           }}
         >
           {remaining === 0 ? (
-            'All damage allocated'
+            counterUnit ? 'All counters allocated' : 'All damage allocated'
           ) : (
             <>
-              Remaining: <span style={{ color: '#f87171' }}>{remaining}</span> damage
+              Remaining: <span style={{ color: '#f87171' }}>{remaining}</span> {unitLabel(remaining)}
             </>
           )}
         </span>
@@ -191,7 +217,7 @@ export function DamageDistributionModal() {
           const toughness = card.toughness ?? 0
           const existingDamage = card.damage ?? 0
           const remainingToughness = Math.max(0, toughness - existingDamage)
-          const isLethal = allocated >= remainingToughness && remainingToughness > 0
+          const isLethal = !counterUnit && allocated >= remainingToughness && remainingToughness > 0
 
           return (
             <div
@@ -205,7 +231,7 @@ export function DamageDistributionModal() {
             >
               {/* Card image */}
               <div
-                onMouseEnter={(e) => handleMouseEnter(card.id, e)}
+                onMouseEnter={(e) => { if (card.lifeTotal == null) handleMouseEnter(card.id, e) }}
                 onMouseLeave={handleMouseLeave}
                 style={{
                   width: cardWidth,
@@ -219,14 +245,37 @@ export function DamageDistributionModal() {
                   position: 'relative',
                 }}
               >
-                <img
-                  src={cardImageUrl}
-                  alt={card.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
+                {card.lifeTotal != null ? (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: '#1a1a2e',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ color: '#888', fontSize: 32 }}>&#9823;</span>
+                    <span style={{ color: 'white', fontSize: responsive.fontSize.normal, fontWeight: 500 }}>
+                      {card.name}
+                    </span>
+                    <span style={{ color: '#888', fontSize: responsive.fontSize.small }}>
+                      Life: {card.lifeTotal}
+                    </span>
+                  </div>
+                ) : (
+                  <img
+                    src={cardImageUrl}
+                    alt={card.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )}
 
                 {/* Damage badge */}
                 {allocated > 0 && (
@@ -235,7 +284,7 @@ export function DamageDistributionModal() {
                       position: 'absolute',
                       top: 8,
                       right: 8,
-                      backgroundColor: '#dc2626',
+                      backgroundColor: counterUnit ? '#16a34a' : '#dc2626',
                       color: 'white',
                       width: 36,
                       height: 36,
@@ -323,7 +372,7 @@ export function DamageDistributionModal() {
                   {card.name}
                 </span>
                 {/* Damage vs Toughness indicator */}
-                {toughness > 0 && (
+                {!counterUnit && toughness > 0 && (
                   <span
                     style={{
                       color: isLethal ? '#f87171' : '#888',
@@ -426,9 +475,9 @@ export function DamageDistributionModal() {
           style={{
             padding: responsive.isMobile ? '12px 24px' : '16px 32px',
             fontSize: responsive.fontSize.normal,
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
+            backgroundColor: 'var(--chrome-bg)',
+            color: 'var(--chrome-text)',
+            border: '1px solid var(--chrome-border)',
             borderRadius: 8,
             cursor: 'pointer',
             fontWeight: 600,
@@ -451,7 +500,7 @@ export function DamageDistributionModal() {
             transition: 'all 0.15s',
           }}
         >
-          Cast Spell
+          {confirmLabel}
         </button>
       </div>
     </div>

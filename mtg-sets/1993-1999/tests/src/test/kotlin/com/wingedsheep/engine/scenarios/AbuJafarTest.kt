@@ -89,10 +89,7 @@ class AbuJafarTest : FunSpec({
         val blockingBears = driver.putCreatureOnBattlefield(defender, "Grizzly Bears")
         driver.removeSummoningSickness(blockingBears)
 
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        if (driver.activePlayer != attacker) {
-            driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        }
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, attacker)
 
         driver.declareAttackers(attacker, listOf(abu), defender)
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
@@ -127,10 +124,7 @@ class AbuJafarTest : FunSpec({
             )
         )
 
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        if (driver.activePlayer != attacker) {
-            driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        }
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, attacker)
 
         driver.declareAttackers(attacker, listOf(abu), defender)
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)

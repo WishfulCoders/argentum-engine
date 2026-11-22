@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  * Executor for the [ScryEffect] macro (CR 701.22). It carries no gather/select/move logic of its
  * own: it expands the marker into the shared [LibraryPatterns.scryPipeline] composite and delegates
  * to the registry's recursive [effectExecutor], which dispatches the composite through
- * `CompositeEffectExecutor`. That executor already owns the choose-pause → `EffectContinuation`
+ * `CompositeEffectExecutor`. That executor already owns the choose-pause → `EffectProgram`
  * plumbing, so the `SelectCardsDecision` pause for "put any number on the bottom" still works, and
  * the `ScriedEvent` tail still fires "Whenever you scry" triggers (CR 701.22d).
  *

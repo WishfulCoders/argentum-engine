@@ -5,119 +5,124 @@ import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.SagaComponent
-import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Urza's Saga (MH2 #259) — a Saga that is a land.
+ * Urza's Saga (MH2 #259).
  *
- * Played from hand it enters with a lore counter (CR 714.3a) and chapter I triggers; chapter I gives
- * it "{T}: Add {C}", chapter II "{2}, {T}: create a 0/0 Construct that gets +1/+1 per artifact you
- * control", and chapter III tutors an artifact with mana cost {0} or {1} — *mana cost*, not mana
- * value (ruling 2021-06-18) — onto the battlefield, after which the Saga is sacrificed (CR 714.4).
+ *   I — This Saga gains "{T}: Add {C}."
+ *   II — This Saga gains "{2}, {T}: Create a 0/0 Construct … +1/+1 for each artifact you control."
+ *   III — Search your library for an artifact card with mana cost {0} or {1}, put it onto the
+ *   battlefield, then shuffle.
+ *
+ * The land play gets its lore counter like any Saga, chapter I's grant leaves a working mana
+ * ability, and chapter III offers exactly the {0}/{1} artifacts — not {X}{X} Chalice of the Void
+ * (mana value 0) — then the Saga is sacrificed.
  */
 class UrzasSagaScenarioTest : ScenarioTestBase() {
 
     init {
-        fun TestGame.saga(): EntityId? = findPermanent("Urza's Saga")
-        fun TestGame.lore(): Int =
-            saga()?.let { state.getEntity(it)?.get<CountersComponent>()?.getCount(CounterType.LORE) } ?: -1
-        fun TestGame.grantedAbilityIds(id: EntityId) =
-            state.grantedActivatedAbilities.filter { it.entityId == id }.map { it.ability }
+        test("played as a land, chapter I gives it {T}: Add {C}") {
+            val game = scenario()
+                .withPlayers("Player", "Opponent")
+                .withCardInHand(1, "Urza's Saga")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
 
-        fun TestGame.toOwnNextMain() {
-            val start = state.turnNumber
-            var guard = 0
-            while (guard++ < 8) {
-                passUntilPhase(Phase.ENDING, Step.END)
-                passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                if (state.activePlayerId == player1Id && state.turnNumber > start) break
+            val cardId = game.findCardsInHand(1, "Urza's Saga").single()
+            game.execute(PlayLand(game.player1Id, cardId)).error shouldBe null
+            game.resolveStack()
+
+            val saga = game.findPermanent("Urza's Saga")!!
+            game.state.getEntity(saga)!!.get<CountersComponent>()!!.getCount(CounterType.LORE) shouldBe 1
+            val abilities = game.getLegalActions(1)
+                .filter { (it.action as? ActivateAbility)?.sourceId == saga }
+            withClue("chapter I's mana ability, and not yet chapter II's") {
+                abilities.size shouldBe 1
+                abilities.single().isManaAbility shouldBe true
             }
         }
 
-        context("Urza's Saga") {
-            test("played as a land it is a Saga: chapters I-III, then it is sacrificed") {
-                val builder = scenario()
-                    .withPlayers("Player", "Opponent")
-                    .withCardInHand(1, "Urza's Saga")
-                    .withLandsOnBattlefield(1, "Island", 2)
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                // Islands on top for the draws; the artifacts below them for chapter III.
-                repeat(10) {
-                    builder.withCardInLibrary(1, "Island")
-                    builder.withCardInLibrary(2, "Island")
-                }
-                builder
-                    .withCardInLibrary(1, "Ornithopter")          // {0}: findable
-                    .withCardInLibrary(1, "Sol Ring")             // {1}: findable
-                    .withCardInLibrary(1, "Chalice of the Void")  // {X}{X}: mana value 0, not {0}
-                    .withCardInLibrary(1, "Lotus Bloom")          // no mana cost (CR 202.1b)
-                    .withCardInLibrary(1, "Bottle Gnomes")        // {3}
-                val game = builder.build()
+        test("on the next turn chapter II adds the Construct ability and chapter I's stays") {
+            val game = scenario()
+                .withPlayers("Player", "Opponent")
+                .withCardInHand(1, "Urza's Saga")
+                .withCardOnBattlefield(1, "Sol Ring")
+                .withLandsOnBattlefield(1, "Island", 2)
+                .apply { repeat(6) { withCardInLibrary(1, "Island"); withCardInLibrary(2, "Island") } }
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
 
-                val sagaCard = game.findCardsInHand(1, "Urza's Saga").single()
-                game.execute(PlayLand(game.player1Id, sagaCard)).error shouldBe null
-                withClue("played as a land, it entered as a Saga with one lore counter") {
-                    game.state.getEntity(sagaCard)?.get<SagaComponent>() shouldNotBe null
-                    game.lore() shouldBe 1
-                }
-                game.resolveStack()
+            val cardId = game.findCardsInHand(1, "Urza's Saga").single()
+            game.execute(PlayLand(game.player1Id, cardId)).error shouldBe null
+            game.resolveStack()
+            // Through the opponent's turn and back to ours: the precombat-main lore counter.
+            repeat(2) {
+                game.passUntilPhase(Phase.ENDING, Step.END)
+                game.passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+            }
+            game.state.activePlayerId shouldBe game.player1Id
+            game.resolveStack()
 
-                // Chapter I: "{T}: Add {C}."
-                val manaAbility = game.grantedAbilityIds(sagaCard).single()
-                withClue("chapter I granted a mana ability") { manaAbility.isManaAbility shouldBe true }
-                game.execute(ActivateAbility(game.player1Id, sagaCard, manaAbility.id)).error shouldBe null
-                withClue("tapping the Saga added {C}") {
-                    game.state.getEntity(game.player1Id)!!.get<ManaPoolComponent>()!!.colorless shouldBe 1
-                }
+            val saga = game.findPermanent("Urza's Saga")!!
+            game.state.getEntity(saga)!!.get<CountersComponent>()!!.getCount(CounterType.LORE) shouldBe 2
+            val abilities = game.getLegalActions(1)
+                .filter { (it.action as? ActivateAbility)?.sourceId == saga }
+            abilities.size shouldBe 2
+            val construct = abilities.single { !it.isManaAbility }
 
-                // Chapter II on the next turn: "{2}, {T}: Create a 0/0 Construct ..."
-                game.toOwnNextMain()
-                game.lore() shouldBe 2
-                game.resolveStack()
-                val abilities = game.grantedAbilityIds(sagaCard)
-                withClue("the Saga keeps chapter I's ability and gains chapter II's") { abilities.size shouldBe 2 }
-                val construct = abilities.single { !it.isManaAbility }
-                game.execute(ActivateAbility(game.player1Id, sagaCard, construct.id)).error shouldBe null
-                game.resolveStack()
-                val token = game.findPermanent("Construct Token")
-                withClue("a Construct token was created and counts itself as an artifact") {
-                    token shouldNotBe null
-                    game.state.projectedState.getPower(token!!) shouldBe 1
-                    game.state.projectedState.getToughness(token!!) shouldBe 1
-                }
+            game.execute(construct.action).error shouldBe null
+            if (game.hasPendingDecision()) game.submitManaSourcesAutoPay()
+            game.resolveStack()
 
-                // Chapter III: only the {0} and {1} artifacts are offered.
-                game.toOwnNextMain()
-                game.lore() shouldBe 3
-                game.resolveStack()
-                val search = game.getPendingDecision().shouldBeInstanceOf<SelectCardsDecision>()
-                val ornithopter = game.findCardsInLibrary(1, "Ornithopter").single()
-                val solRing = game.findCardsInLibrary(1, "Sol Ring").single()
-                withClue("mana cost {0} or {1} — not mana value") {
-                    search.options shouldContainExactlyInAnyOrder listOf(ornithopter, solRing)
-                }
-                game.selectCards(listOf(solRing))
-                game.resolveStack()
+            val token = game.findPermanents("Construct Token").single()
+            withClue("Sol Ring and the Construct itself: two artifacts") {
+                game.state.projectedState.getPower(token) shouldBe 2
+                game.state.projectedState.getToughness(token) shouldBe 2
+            }
+        }
 
-                withClue("Sol Ring was put onto the battlefield") { game.isOnBattlefield("Sol Ring") shouldBe true }
-                withClue("the Construct now sees two artifacts") {
-                    game.state.projectedState.getPower(token!!) shouldBe 2
-                }
-                withClue("after chapter III the Saga is sacrificed (CR 714.4)") {
-                    game.saga() shouldBe null
-                    game.isInGraveyard(1, "Urza's Saga") shouldBe true
-                }
+        test("chapter III finds only an artifact with printed mana cost {0} or {1}") {
+            val game = scenario()
+                .withPlayers("Player", "Opponent")
+                .withCardOnBattlefield(1, "Urza's Saga")
+                .withCardInLibrary(1, "Ornithopter")
+                .withCardInLibrary(1, "Sol Ring")
+                .withCardInLibrary(1, "Chalice of the Void")
+                .withCardInLibrary(1, "Steel Overseer")
+                .apply { repeat(4) { withCardInLibrary(1, "Island") } }
+                .withActivePlayer(1)
+                .inPhase(Phase.BEGINNING, Step.UPKEEP)
+                .build()
+
+            val saga = game.findPermanent("Urza's Saga")!!
+            game.state = game.state.updateEntity(saga) { container ->
+                container.with(CountersComponent().withAdded(CounterType.LORE, 2))
+                    .with(SagaComponent(triggeredChapters = setOf(1, 2)))
+            }
+            game.passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+            game.resolveStack()
+
+            val decision = game.getPendingDecision().shouldBeInstanceOf<SelectCardsDecision>()
+            val ornithopter = game.findCardsInLibrary(1, "Ornithopter").single()
+            val solRing = game.findCardsInLibrary(1, "Sol Ring").single()
+            decision.options shouldContainExactlyInAnyOrder listOf(ornithopter, solRing)
+
+            game.selectCards(listOf(solRing))
+            game.resolveStack()
+
+            game.isOnBattlefield("Sol Ring") shouldBe true
+            withClue("sacrificed after its final chapter") {
+                game.isInGraveyard(1, "Urza's Saga") shouldBe true
             }
         }
     }

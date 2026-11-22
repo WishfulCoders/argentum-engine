@@ -71,7 +71,7 @@ class BasicLandArtOrderTest : FunSpec({
             ("FDN" to "Plains") to "272",
             ("SOS" to "Plains") to "267",
             ("POR" to "Plains") to "196",
-            ("FRA" to "Plains") to "281", // vs non-booster treatments 382-384
+            ("FRA" to "Plains") to "281", // vs tower arts 382-384
         )
 
         assertSoftly {

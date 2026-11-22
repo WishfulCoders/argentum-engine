@@ -1,6 +1,8 @@
 package com.wingedsheep.engine.mechanics.cost.spell
 
 import com.wingedsheep.engine.handlers.CostHandler
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment
 import com.wingedsheep.engine.legalactions.AdditionalCostData
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.core.ManaCost
@@ -40,7 +42,7 @@ object SpellCosts {
         put(CostAtom.Mill::class, AbilityOnlyAtomCostKind)
         put(CostAtom.ExileTopOfLibrary::class, AbilityOnlyAtomCostKind)
         put(CostAtom.PutCountersOnSelf::class, AbilityOnlyAtomCostKind)
-        put(CostAtom.PutCountersOnPermanent::class, AbilityOnlyAtomCostKind)
+        put(CostAtom.PutCountersOnPermanent::class, PutCountersOnPermanentCostKind)
         put(CostAtom.RevealNotedCreatureType::class, AbilityOnlyAtomCostKind)
         put(CostAtom.Unattach::class, AbilityOnlyAtomCostKind)
         put(CostAtom.PutFromHandOnTopOfLibrary::class, AbilityOnlyAtomCostKind)
@@ -49,8 +51,9 @@ object SpellCosts {
         put(AdditionalCost.PayLifePerTarget::class, PayLifePerTargetCostKind)
         put(AdditionalCost.PayXLife::class, PayXLifeCostKind)
         put(AdditionalCost.PayLifeEqualToManaValueOfSpell::class, PayLifeEqualToManaValueCostKind)
-        put(AdditionalCost.ExileVariableCards::class, ExileVariableCardsCostKind)
-        put(AdditionalCost.SacrificeCreaturesForCostReduction::class, SacrificeForCostReductionCostKind)
+        put(AdditionalCost.OthersGainLife::class, OthersGainLifeCostKind)
+        put(AdditionalCost.VariableCards::class, VariableCardsCostKind)
+        put(AdditionalCost.AnyNumberForCostReduction::class, AnyNumberForCostReductionCostKind)
         put(AdditionalCost.ExileCardsForCostReduction::class, ExileForCostReductionCostKind)
         put(AdditionalCost.Forage::class, ForageCostKind)
         put(AdditionalCost.BlightOrPay::class, BlightOrPayCostKind)
@@ -146,6 +149,26 @@ object SpellCosts {
         }
         return null
     }
+
+    /**
+     * The X ceiling [costs] put on the cast's announcement when they themselves read X — "pay X
+     * energy", "remove X counters from among …", "sacrifice X creatures", "discard X cards" —
+     * independent of any `{X}` in the mana cost; null when none does. The tightest of the pools.
+     * [castCardId] is the card being cast, which is on the stack before its costs are paid
+     * (CR 601.2a) and so never pays its own discard.
+     */
+    fun additionalCostMaxX(
+        state: GameState,
+        payer: EntityId,
+        costs: List<AdditionalCost>,
+        predicateEvaluator: PredicateEvaluator,
+        castCardId: EntityId? = null,
+    ): Int? = listOfNotNull(
+        PlayerCounterPayment.spellMaxX(state, payer, costs),
+        RemoveCountersCostKind.maxX(state, payer, costs, predicateEvaluator),
+        VariablePermanentsCostKind.maxX(state, payer, costs, predicateEvaluator),
+        VariableCardsCostKind.maxX(state, payer, costs, predicateEvaluator, castCardId),
+    ).minOrNull()
 
     /** Expand [AdditionalCost.Composite] wrappers so every cost in the list stands on its own. */
     fun flattenComposites(costs: List<AdditionalCost>): List<AdditionalCost> =

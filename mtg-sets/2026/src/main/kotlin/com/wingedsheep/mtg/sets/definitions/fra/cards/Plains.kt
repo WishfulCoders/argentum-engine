@@ -2,12 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.fra.cards
 
 import com.wingedsheep.sdk.dsl.basicLand
 
-/**
- * Reality Fracture Plains arts: two regular-frame booster arts in the main set numbering, then
- * three non-booster treatments above it. Scryfall reports `booster: false` for every FRA basic
- * (pre-release data), so the regular arts are marked in-booster by hand — they are what
- * limited deck building hands out (`BoosterGenerator.getBasicLands`).
- */
+/** Reality Fracture Plains arts: two default-frame and three tower arts, all in Play Boosters. */
 val RealityFracturePlains281 = basicLand("Plains") {
     collectorNumber = "281"
     artist = "Luc Courtois"
@@ -24,19 +19,16 @@ val RealityFracturePlains382 = basicLand("Plains") {
     collectorNumber = "382"
     artist = "Alayna Danner"
     imageUri = "https://cards.scryfall.io/normal/front/7/9/796b72af-5078-427d-b566-9bccad17090f.jpg?1788878349"
-    inBooster = false
 }
 
 val RealityFracturePlains383 = basicLand("Plains") {
     collectorNumber = "383"
     artist = "Alayna Danner"
     imageUri = "https://cards.scryfall.io/normal/front/5/7/57999b70-74c6-415a-aef8-3afc546e7557.jpg?1788878349"
-    inBooster = false
 }
 
 val RealityFracturePlains384 = basicLand("Plains") {
     collectorNumber = "384"
     artist = "Alayna Danner"
     imageUri = "https://cards.scryfall.io/normal/front/4/8/48964496-cbbb-4646-a257-153497bbc83d.jpg?1788878351"
-    inBooster = false
 }

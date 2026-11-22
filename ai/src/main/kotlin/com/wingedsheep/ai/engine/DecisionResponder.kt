@@ -91,6 +91,12 @@ class DecisionResponder(
             is ChooseNumberDecision -> respondNumber(state, decision, playerId)
             is DistributeDecision -> respondDistribute(state, decision, playerId)
             is OrderObjectsDecision -> respondOrder(state, decision, playerId)
+            // Engine API since the 2026-11-22 upstream merge. Upstream's AI aims flips (FlipAim); this fork skipped
+            // upstream's AI changes, so a flip is thrown off the table and triggers keep their offered order.
+            is com.wingedsheep.engine.core.OrderTriggersDecision ->
+                com.wingedsheep.engine.core.TriggerOrderResponse(decision.id, decision.triggers.indices.toList())
+            is com.wingedsheep.engine.core.FlipOntoBattlefieldDecision -> com.wingedsheep.engine.core.FlipThrowResponse.toward(
+                decision.id, decision.table, decision.table.width / 2, -2 * decision.table.height)
             is SplitPilesDecision -> respondSplitPiles(state, decision, playerId)
             is ChooseOptionDecision -> respondOption(state, decision, playerId)
             is ChooseReplacementDecision -> respondReplacement(decision)

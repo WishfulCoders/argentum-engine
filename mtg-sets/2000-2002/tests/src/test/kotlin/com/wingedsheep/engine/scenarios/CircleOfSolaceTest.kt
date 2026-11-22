@@ -209,6 +209,7 @@ class CircleOfSolaceTest : FunSpec({
             )
         )
         driver.bothPass() // resolve first activation
+        driver.passPriority(activePlayer) // the active player receives priority after it (CR 117.3b)
 
         driver.submit(
             ActivateAbility(

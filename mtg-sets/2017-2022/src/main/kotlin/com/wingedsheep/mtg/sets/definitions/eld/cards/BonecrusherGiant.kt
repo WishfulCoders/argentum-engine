@@ -10,32 +10,34 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Bonecrusher Giant // Stomp
- * {2}{R} Creature — Giant 4/3 // {1}{R} Instant — Adventure
+ * {2}{R}
+ * Creature — Giant
+ * 4/3
+ * Whenever this creature becomes the target of a spell, this creature deals 2 damage to that
+ * spell's controller.
  *
- * Bonecrusher Giant: Whenever this creature becomes the target of a spell, this creature deals 2
- * damage to that spell's controller.
- * Stomp: Damage can't be prevented this turn. Stomp deals 2 damage to any target.
+ * Adventure: Stomp — {1}{R}, Instant — Adventure
+ * Damage can't be prevented this turn. Stomp deals 2 damage to any target.
  *
- * The trigger is [Triggers.self]`.becomesTarget(spellsOnly = true)` — abilities don't fire it — and
- * the damage goes to [Player.ControllerOfTargetingSource], the controller of the spell that did the
- * targeting. It resolves before that spell, and even if the spell is later countered (ruling
- * 2019-10-04). Stomp is [Effects.DamageCantBePreventedThisTurn] followed by the 2 damage, the same
- * shape as Impractical Joke; the adventure() block gives the exile-then-cast-later behaviour.
+ * The becomes-target trigger is narrowed to spells (Goldspan Dragon's `spellsOnly`), and "that
+ * spell's controller" is [Player.ControllerOfCause] — the same handle Thunderbreak Regent uses
+ * for the other end of the targeting. The trigger fires for any spell, including its controller's
+ * own (e.g. an Aura or pump spell), as printed.
  */
 val BonecrusherGiant = card("Bonecrusher Giant") {
     manaCost = "{2}{R}"
     colorIdentity = "R"
     typeLine = "Creature — Giant"
-    oracleText = "Whenever this creature becomes the target of a spell, this creature deals 2 damage to " +
-        "that spell's controller."
+    oracleText = "Whenever this creature becomes the target of a spell, this creature deals 2 damage " +
+        "to that spell's controller."
     power = 4
     toughness = 3
 
     triggeredAbility {
         trigger = Triggers.self.becomesTarget(spellsOnly = true)
-        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.ControllerOfTargetingSource))
-        description = "Whenever this creature becomes the target of a spell, this creature deals 2 damage " +
-            "to that spell's controller."
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.ControllerOfCause))
+        description = "Whenever this creature becomes the target of a spell, this creature deals " +
+            "2 damage to that spell's controller."
     }
 
     adventure("Stomp") {

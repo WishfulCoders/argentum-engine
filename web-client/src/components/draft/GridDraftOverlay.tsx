@@ -9,6 +9,8 @@ import { HoverCardPreview } from '../ui/HoverCardPreview'
 import { useDfcHoverFlip } from '../ui/useDfcHoverFlip'
 import { SetSynergiesButton } from './SetSynergiesOverlay'
 import { RarityBadge } from './RarityBadge'
+import ls from './limitedScreen.module.css'
+import { ChatButton } from '@/components/messages/ChatButton'
 
 /**
  * Grid Draft overlay for 2-4 player Grid Draft mode.
@@ -78,7 +80,8 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
   const [hoveredCard, setHoveredCard] = useState<SealedCardInfo | null>(null)
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
   const [hoveredSelection, setHoveredSelection] = useState<SelectionType | null>(null)
-  const [showPickedCards, setShowPickedCards] = useState(!responsive.isMobile)
+  // Phones only: whether the picked-cards pool replaces the piles. Desktop always shows both.
+  const [showPickedCards, setShowPickedCards] = useState(false)
   const [viewingOpponent, setViewingOpponent] = useState<string | null>(null)
 
   const dfc = useDfcHoverFlip(hoveredCard)
@@ -313,7 +316,7 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
   // Reserve vertical chrome around the grid: top header (~48), turn indicator
   // (~32), last action (~24 when present), player order (~32), column headers
   // (28), grid area padding (~40), and breathing room.
-  const verticalChrome = isMobile ? 200 : 240
+  const verticalChrome = isMobile ? 250 : 240
   const heightForCards = responsive.viewportHeight - verticalChrome
   const heightPerCard = Math.floor(heightForCards / 3)
   const widthFromHeight = Math.floor(heightPerCard / 1.4)
@@ -326,47 +329,21 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
   const cardSize = Math.max(minCardSize, Math.min(maxCardSize, fittedSize))
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #162e1e 50%, #0f4630 100%)',
-      display: 'flex', flexDirection: 'column',
-      overflow: 'hidden', zIndex: 100,
-      fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
-    }}>
+    <div className={ls.screen} style={{ zIndex: 100 }}>
       {/* Header */}
-      <div style={{
-        padding: isMobile ? '8px 12px' : '10px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(0,0,0,0.3)',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            padding: '4px 12px', borderRadius: 4,
-            fontWeight: 700, fontSize: 13, letterSpacing: '0.05em',
-            textTransform: 'uppercase', color: '#fff',
-          }}>
-            Grid Draft
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            {settings.setNames.join(' + ')}
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-            Grid #{gridState.gridNumber}
-          </span>
+      <div className={ls.header}>
+        <div className={ls.headerGroup}>
+          <h2 className={ls.title}>
+            Grid Draft <span className={ls.titleSub}>· {settings.setNames.join(' + ')}</span>
+          </h2>
+          <span className={ls.pill}>Grid #{gridState.gridNumber}</span>
           <SetSynergiesButton setCodes={settings.setCodes} cardPool={gridState.pickedCards} />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className={ls.headerGroup}>
           {/* Timer */}
-          <div style={{
-            background: timerWarning ? 'rgba(233,69,96,0.3)' : 'rgba(255,255,255,0.1)',
-            padding: '4px 12px', borderRadius: 4,
-            fontWeight: 600, fontSize: 14,
-            color: timerWarning ? '#e94560' : 'rgba(255,255,255,0.7)',
-            fontVariantNumeric: 'tabular-nums',
+          <div className={ls.pill} style={{
+            ...(timerWarning ? { background: 'rgba(233,69,96,0.3)', borderColor: 'rgba(233,69,96,0.5)', color: '#ffd0d8' } : {}),
             animation: timerWarning ? 'pulse 1s infinite' : undefined,
           }}
           title={gridState.timeRemaining === null ? 'No time limit — take as long as you like' : undefined}>
@@ -374,56 +351,28 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
           </div>
 
           {/* Deck remaining */}
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            Deck: {gridState.mainDeckRemaining}
-          </div>
+          <span className={ls.pill} title="Cards left in the main deck">Deck {gridState.mainDeckRemaining}</span>
 
           {/* Picked count */}
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            Picked: {gridState.pickedCards.length}
-          </div>
+          {/* On phones the Pool button carries the count. */}
+          {!isMobile && <span className={ls.pill} title="Cards you've picked">Picked {gridState.pickedCards.length}</span>}
 
           {isMobile && (
-            <button
-              onClick={() => setShowPickedCards((v) => !v)}
-              style={{
-                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4,
-                padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: 12,
-              }}
-            >
+            <button type="button" className={ls.button} onClick={() => setShowPickedCards((v) => !v)}>
               {showPickedCards ? 'Grid' : `Pool (${gridState.pickedCards.length})`}
             </button>
           )}
 
           {isHost ? (
-            <button
-              onClick={stopLobby}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e74c3c' }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c0392b' }}
-              style={{
-                backgroundColor: '#c0392b', color: 'white',
-                padding: '4px 14px', fontSize: 13,
-                border: 'none', borderRadius: 6, cursor: 'pointer',
-                transition: 'background-color 0.15s',
-              }}
-            >
+            <button type="button" onClick={stopLobby} className={ls.leave}>
               Stop Draft
             </button>
           ) : (
-            <button
-              onClick={leaveLobby}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e74c3c' }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c0392b' }}
-              style={{
-                backgroundColor: '#c0392b', color: 'white',
-                padding: '4px 14px', fontSize: 13,
-                border: 'none', borderRadius: 6, cursor: 'pointer',
-                transition: 'background-color 0.15s',
-              }}
-            >
+            <button type="button" onClick={leaveLobby} className={ls.leave}>
               Leave
             </button>
           )}
+          <ChatButton className={`${ls.button} ${ls.iconButton}`} />
         </div>
       </div>
 
@@ -441,7 +390,7 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
             {/* Turn indicator */}
             <div style={{
               textAlign: 'center', marginBottom: 12,
-              color: gridState.isYourTurn ? '#4ade80' : 'rgba(255,255,255,0.5)',
+              color: gridState.isYourTurn ? '#f2b45c' : 'rgba(255,255,255,0.5)',
               fontSize: 16, fontWeight: 600,
             }}>
               {gridState.isYourTurn
@@ -482,25 +431,25 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                     onClick={isOpponent ? () => setViewingOpponent(name) : undefined}
                     onMouseEnter={isOpponent ? (e) => {
                       e.currentTarget.style.background = isCurrent
-                        ? 'rgba(74,222,128,0.3)'
+                        ? 'rgba(242,180,92,0.3)'
                         : 'rgba(255,255,255,0.12)'
                     } : undefined}
                     onMouseLeave={isOpponent ? (e) => {
                       e.currentTarget.style.background = isCurrent
-                        ? 'rgba(74,222,128,0.2)'
+                        ? 'rgba(242,180,92,0.2)'
                         : 'rgba(255,255,255,0.05)'
                     } : undefined}
                     style={{
                       padding: '3px 10px', borderRadius: 4,
                       fontSize: 12, fontWeight: 600,
                       background: isCurrent
-                        ? 'rgba(74,222,128,0.2)'
+                        ? 'rgba(242,180,92,0.2)'
                         : 'rgba(255,255,255,0.05)',
                       color: isCurrent
-                        ? '#4ade80'
+                        ? '#f2b45c'
                         : 'rgba(255,255,255,0.4)',
                       border: isCurrent
-                        ? '1px solid rgba(74,222,128,0.4)'
+                        ? '1px solid rgba(242,180,92,0.4)'
                         : '1px solid rgba(255,255,255,0.1)',
                       cursor: isOpponent ? 'pointer' : 'default',
                       transition: 'background 0.15s',
@@ -509,7 +458,7 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                     {name}{isYou ? ' (You)' : ''}
                     {isOpponent && opponentCount != null && (
                       <span style={{ marginLeft: 6, opacity: 0.7 }}>
-                        — {opponentCount} cards
+                        — {opponentCount} {opponentCount === 1 ? 'card' : 'cards'}
                       </span>
                     )}
                   </div>
@@ -539,20 +488,20 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                         height: 28,
                         border: 'none',
                         background: isAnimPick
-                          ? 'rgba(74,222,128,0.4)'
+                          ? 'rgba(242,180,92,0.4)'
                           : isHovered
-                            ? 'rgba(74,222,128,0.3)'
+                            ? 'rgba(242,180,92,0.3)'
                             : isAvailable
                               ? 'rgba(255,255,255,0.08)'
                               : 'transparent',
-                        color: isAnimPick ? '#fff' : isAvailable ? '#4ade80' : 'rgba(255,255,255,0.2)',
+                        color: isAnimPick ? '#fff' : isAvailable ? '#f2b45c' : 'rgba(255,255,255,0.2)',
                         fontSize: 11, fontWeight: 600,
                         cursor: isAvailable ? 'pointer' : 'default',
                         borderRadius: '4px 4px 0 0',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         transition: 'all 0.3s',
-                        boxShadow: isAnimPick ? '0 0 12px rgba(74,222,128,0.4)' : 'none',
+                        boxShadow: isAnimPick ? '0 0 12px rgba(242,180,92,0.4)' : 'none',
                       }}
                     >
                       {getSelectionLabel(col)}
@@ -581,13 +530,13 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                         height: cardSize * 1.4 + 8,
                         border: 'none',
                         background: isAnimRowPick
-                          ? 'rgba(74,222,128,0.4)'
+                          ? 'rgba(242,180,92,0.4)'
                           : isRowHovered
-                            ? 'rgba(74,222,128,0.3)'
+                            ? 'rgba(242,180,92,0.3)'
                             : isAvailable
                               ? 'rgba(255,255,255,0.08)'
                               : 'transparent',
-                        color: isAnimRowPick ? '#fff' : isAvailable ? '#4ade80' : 'rgba(255,255,255,0.2)',
+                        color: isAnimRowPick ? '#fff' : isAvailable ? '#f2b45c' : 'rgba(255,255,255,0.2)',
                         fontSize: 11, fontWeight: 600,
                         cursor: isAvailable ? 'pointer' : 'default',
                         borderRadius: '4px 0 0 4px',
@@ -596,7 +545,7 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                         letterSpacing: '0.05em',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.3s',
-                        boxShadow: isAnimRowPick ? '0 0 12px rgba(74,222,128,0.4)' : 'none',
+                        boxShadow: isAnimRowPick ? '0 0 12px rgba(242,180,92,0.4)' : 'none',
                       }}
                     >
                       {getSelectionLabel(rowKey)}
@@ -640,10 +589,10 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                                 position: 'absolute', inset: -4,
                                 borderRadius: 10,
                                 background: animPhase === 'highlight'
-                                  ? 'rgba(74,222,128,0.25)'
+                                  ? 'rgba(242,180,92,0.25)'
                                   : 'transparent',
                                 boxShadow: animPhase === 'highlight'
-                                  ? '0 0 20px rgba(74,222,128,0.4), inset 0 0 20px rgba(74,222,128,0.15)'
+                                  ? '0 0 20px rgba(242,180,92,0.4), inset 0 0 20px rgba(242,180,92,0.15)'
                                   : 'none',
                                 transition: 'all 0.3s ease-out',
                               }} />
@@ -670,7 +619,7 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
                               width: cardSize, height: cardSize * 1.4,
                               borderRadius: 6,
                               border: '1px dashed rgba(255,255,255,0.1)',
-                              background: isAnimating ? 'rgba(74,222,128,0.05)' : 'rgba(0,0,0,0.15)',
+                              background: isAnimating ? 'rgba(242,180,92,0.05)' : 'rgba(0,0,0,0.15)',
                               transition: 'background 0.5s',
                             }} />
                           )}
@@ -689,24 +638,25 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
 
         {/* Right: Picked cards sidebar */}
         {(!isMobile || showPickedCards) && (
-          <div style={{
+          <div className={ls.rail} style={{
             width: isMobile ? '100%' : 280,
-            borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(0,0,0,0.2)',
+            borderLeft: isMobile ? 'none' : undefined,
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
           }}>
             {/* Sidebar header with stats */}
             <div style={{
-              padding: '10px 14px',
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              padding: '12px 14px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
             }}>
+              {/* Same heading as the booster draft's pool rail. */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: 8,
               }}>
-                <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: 13 }}>
-                  Picked Cards ({gridState.pickedCards.length})
+                <span style={{ color: '#ccc', fontWeight: 600, fontSize: 14 }}>Card Pool</span>
+                <span style={{ color: '#4fc3f7', fontWeight: 600, fontSize: 13 }}>
+                  {gridState.pickedCards.length} {gridState.pickedCards.length === 1 ? 'card' : 'cards'}
                 </span>
               </div>
 
@@ -874,9 +824,9 @@ function GridDrafter({ gridState, settings }: { gridState: GridDraftState; setti
           50% { opacity: 0.5; }
         }
         @keyframes gridPickGlow {
-          0% { box-shadow: 0 0 8px rgba(74,222,128,0.2); }
-          50% { box-shadow: 0 0 24px rgba(74,222,128,0.5); }
-          100% { box-shadow: 0 0 8px rgba(74,222,128,0.2); }
+          0% { box-shadow: 0 0 8px rgba(242,180,92,0.2); }
+          50% { box-shadow: 0 0 24px rgba(242,180,92,0.5); }
+          100% { box-shadow: 0 0 8px rgba(242,180,92,0.2); }
         }
       `}</style>
     </div>
@@ -975,9 +925,9 @@ function OpponentCardsOverlay({ playerName, cards, onClose, onHover }: {
         {/* Banner */}
         <div style={{
           padding: '8px 18px',
-          background: 'rgba(74,222,128,0.1)',
-          borderBottom: '1px solid rgba(74,222,128,0.15)',
-          color: 'rgba(74,222,128,0.8)',
+          background: 'rgba(242,180,92,0.1)',
+          borderBottom: '1px solid rgba(242,180,92,0.15)',
+          color: 'rgba(242,180,92,0.8)',
           fontSize: 12,
           fontWeight: 600,
           textAlign: 'center',
@@ -1071,12 +1021,12 @@ function GridCard({ card, isHighlighted, onHover, width }: {
         borderRadius: 6,
         overflow: 'hidden',
         border: isHighlighted
-          ? '2px solid #4ade80'
+          ? '2px solid #f2b45c'
           : '1px solid rgba(255,255,255,0.15)',
         background: 'rgba(0,0,0,0.3)',
         cursor: 'pointer',
         transition: 'all 0.15s',
-        boxShadow: isHighlighted ? '0 0 12px rgba(74,222,128,0.3)' : undefined,
+        boxShadow: isHighlighted ? '0 0 12px rgba(242,180,92,0.3)' : undefined,
         transform: isHighlighted ? 'scale(1.03)' : undefined,
       }}
     >

@@ -1,136 +1,123 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
-import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.war.cards.NissaWhoShakesTheWorld
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 /**
- * Nissa, Who Shakes the World (WAR #169, loyalty 5).
+ * Nissa, Who Shakes the World {3}{G}{G} — Legendary Planeswalker — Nissa (loyalty 5)
+ *   +1: Put three +1/+1 counters on up to one target noncreature land you control. Untap it. It
+ *       becomes a 0/0 Elemental creature with vigilance and haste that's still a land.
+ *   −8: You get an emblem with "Lands you control have indestructible." Search your library for
+ *       any number of Forest cards, put them onto the battlefield tapped, then shuffle.
  *
- * Pins the Forest mana doubler (one Forest pays {G}{G}), the +1 animation (counters, untap, a
- * vigilance/haste 0/0 Elemental land — so 3/3), and the −8 emblem plus the any-number Forest
- * search.
+ * The +1 must land the counters on a 0/0 that only becomes a creature afterwards, and the
+ * animation must outlive the turn (2019-05-03 ruling). The −8's emblem grants a keyword to a
+ * noncreature group, which the creature-only emblems elsewhere never exercise.
  */
-class NissaWhoShakesTheWorldScenarioTest : ScenarioTestBase() {
+class NissaWhoShakesTheWorldScenarioTest : FunSpec({
 
-    init {
-        context("Nissa, Who Shakes the World") {
-            test("a Forest you tap for mana adds an additional {G}") {
-                val game = scenario()
-                    .withPlayers("Player", "Opponent")
-                    .withCardOnBattlefield(1, "Nissa, Who Shakes the World")
-                    .withCardOnBattlefield(1, "Forest")
-                    .withCardInHand(1, "People of the Woods")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val cast = game.castSpell(1, "People of the Woods")
-                withClue("one Forest pays {G}{G}: ${cast.error}") { cast.error shouldBe null }
-                game.resolveStack()
-                game.isOnBattlefield("People of the Woods") shouldBe true
-            }
-
-            test("+1 untaps a land and makes it a 3/3 vigilance, haste Elemental land, permanently") {
-                val game = scenario()
-                    .withPlayers("Player", "Opponent")
-                    .withCardOnBattlefield(1, "Nissa, Who Shakes the World")
-                    .withCardOnBattlefield(1, "Mountain", tapped = true)
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val nissa = game.findPermanent("Nissa, Who Shakes the World")!!
-                val mountain = game.findPermanent("Mountain")!!
-                setLoyalty(game, nissa, 5)
-                activate(game, nissa, index = 0, targets = listOf(mountain))
-                game.resolveStack()
-
-                val projected = game.state.projectedState
-                withClue("the Mountain is an untapped 3/3 Elemental creature land with vigilance and haste") {
-                    game.state.getEntity(mountain)?.has<TappedComponent>() shouldBe false
-                    projected.isCreature(mountain) shouldBe true
-                    projected.hasType(mountain, "LAND") shouldBe true
-                    projected.hasSubtype(mountain, "Elemental") shouldBe true
-                    projected.getPower(mountain) shouldBe 3
-                    projected.getToughness(mountain) shouldBe 3
-                    projected.hasKeyword(mountain, Keyword.VIGILANCE) shouldBe true
-                    projected.hasKeyword(mountain, Keyword.HASTE) shouldBe true
-                }
-                loyalty(game, nissa) shouldBe 6
-
-                game.passUntilPhase(Phase.ENDING, Step.END)
-                game.passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                withClue("the animation doesn't wear off at cleanup") {
-                    game.state.projectedState.isCreature(mountain) shouldBe true
-                }
-            }
-
-            test("−8 gives lands indestructible and puts any number of Forests onto the battlefield tapped") {
-                val game = scenario()
-                    .withPlayers("Player", "Opponent")
-                    .withCardOnBattlefield(1, "Nissa, Who Shakes the World")
-                    .withCardOnBattlefield(1, "Mountain")
-                    .withCardInLibrary(1, "Forest")
-                    .withCardInLibrary(1, "Forest")
-                    .withCardInLibrary(1, "Forest")
-                    .withCardInLibrary(1, "Grizzly Bears")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val nissa = game.findPermanent("Nissa, Who Shakes the World")!!
-                setLoyalty(game, nissa, 8)
-                activate(game, nissa, index = 1)
-                game.resolveStack()
-
-                val forests = game.findCardsInLibrary(1, "Forest")
-                forests.size shouldBe 3
-                game.selectCards(forests).error shouldBe null
-                game.resolveStack()
-
-                val onBattlefield = game.findAllPermanents("Forest")
-                withClue("all three Forests entered tapped") {
-                    onBattlefield.size shouldBe 3
-                    onBattlefield.all { game.state.getEntity(it)?.has<TappedComponent>() == true } shouldBe true
-                }
-                val projected = game.state.projectedState
-                withClue("lands you control have indestructible — old and new") {
-                    projected.hasKeyword(game.findPermanent("Mountain")!!, Keyword.INDESTRUCTIBLE) shouldBe true
-                    onBattlefield.all { projected.hasKeyword(it, Keyword.INDESTRUCTIBLE) } shouldBe true
-                }
-                game.isInHand(1, "Grizzly Bears") shouldBe false
-            }
-        }
+    fun createDriver(): GameTestDriver {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(NissaWhoShakesTheWorld))
+        driver.initMirrorMatch(deck = Deck.of("Grizzly Bears" to 40), startingLife = 20)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver
     }
 
-    private fun activate(game: TestGame, source: EntityId, index: Int, targets: List<EntityId> = emptyList()) {
-        val ability = cardRegistry.getCard("Nissa, Who Shakes the World")!!.script.activatedAbilities[index]
-        game.execute(
+    fun putNissa(driver: GameTestDriver, playerId: EntityId, loyalty: Int): EntityId {
+        val nissa = driver.putPermanentOnBattlefield(playerId, "Nissa, Who Shakes the World")
+        driver.addComponent(nissa, CountersComponent(mapOf(CounterType.LOYALTY to loyalty)))
+        return nissa
+    }
+
+    val abilities = NissaWhoShakesTheWorld.script.activatedAbilities
+
+    test("+1 makes a tapped land an untapped 3/3 Elemental land creature with vigilance and haste, permanently") {
+        val driver = createDriver()
+        val me = driver.activePlayer!!
+        val nissa = putNissa(driver, me, 5)
+        val forest = driver.putLandOnBattlefield(me, "Forest")
+        driver.tapPermanent(forest)
+
+        driver.submitSuccess(
             ActivateAbility(
-                playerId = game.player1Id,
-                sourceId = source,
-                abilityId = ability.id,
-                targets = targets.map { ChosenTarget.Permanent(it) }
+                playerId = me,
+                sourceId = nissa,
+                abilityId = abilities[0].id,
+                targets = listOf(ChosenTarget.Permanent(forest))
             )
-        ).error shouldBe null
+        )
+        driver.bothPass()
+
+        driver.isTapped(forest) shouldBe false
+        driver.state.getEntity(forest)?.get<CountersComponent>()
+            ?.getCount(CounterType.PLUS_ONE_PLUS_ONE) shouldBe 3
+
+        fun assertAnimated() {
+            val projected = driver.state.projectedState
+            projected.isCreature(forest) shouldBe true
+            projected.hasType(forest, "LAND") shouldBe true
+            projected.hasSubtype(forest, "Elemental") shouldBe true
+            projected.getPower(forest) shouldBe 3
+            projected.getToughness(forest) shouldBe 3
+            projected.hasKeyword(forest, Keyword.VIGILANCE) shouldBe true
+            projected.hasKeyword(forest, Keyword.HASTE) shouldBe true
+        }
+        assertAnimated()
+
+        driver.passPriorityUntil(Step.END)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        withClue("the animation lasts indefinitely, not until end of turn") { assertAnimated() }
     }
 
-    private fun loyalty(game: TestGame, id: EntityId): Int =
-        game.state.getEntity(id)?.get<CountersComponent>()?.getCount(CounterType.LOYALTY) ?: 0
+    test("−8 grants lands indestructible via emblem and fetches any number of Forests tapped") {
+        val driver = createDriver()
+        val me = driver.activePlayer!!
+        val nissa = putNissa(driver, me, 8)
+        val bears = driver.putPermanentOnBattlefield(me, "Grizzly Bears")
+        val existingForest = driver.putLandOnBattlefield(me, "Forest")
+        val libForestA = driver.putCardOnTopOfLibrary(me, "Forest")
+        val libForestB = driver.putCardOnTopOfLibrary(me, "Forest")
 
-    private fun setLoyalty(game: TestGame, id: EntityId, amount: Int) {
-        game.state = game.state.updateEntity(id) { c ->
-            c.with(CountersComponent().withAdded(CounterType.LOYALTY, amount))
+        driver.submitSuccess(ActivateAbility(playerId = me, sourceId = nissa, abilityId = abilities[1].id))
+
+        var offered: List<EntityId> = emptyList()
+        var safety = 0
+        while (safety++ < 40) {
+            when (val pending = driver.state.pendingDecision) {
+                is SelectCardsDecision -> {
+                    offered = pending.options
+                    driver.submitCardSelection(pending.playerId, pending.options)
+                }
+                null -> if (driver.stackSize > 0) driver.bothPass() else break
+                else -> error("unexpected decision $pending")
+            }
+        }
+
+        withClue("only the Forests were offered") { offered.toSet() shouldBe setOf(libForestA, libForestB) }
+        driver.state.getBattlefield().containsAll(listOf(libForestA, libForestB)) shouldBe true
+        driver.isTapped(libForestA) shouldBe true
+        driver.isTapped(libForestB) shouldBe true
+
+        val projected = driver.state.projectedState
+        listOf(existingForest, libForestA, libForestB).forEach {
+            projected.hasKeyword(it, Keyword.INDESTRUCTIBLE) shouldBe true
+        }
+        withClue("the emblem covers lands only") {
+            projected.hasKeyword(bears, Keyword.INDESTRUCTIBLE) shouldBe false
         }
     }
-}
+})

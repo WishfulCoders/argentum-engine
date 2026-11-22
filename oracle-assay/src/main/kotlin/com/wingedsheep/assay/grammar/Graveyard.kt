@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
+import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.ForEachEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
@@ -54,14 +55,27 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 object Graveyard {
 
     /** "target creature card from your graveyard" — the requirement half. */
-    private fun inYourGraveyard(filter: GameObjectFilter): TargetRequirement =
-        TargetObject(filter = TargetFilter(filter.ownedByYou(), zone = Zone.GRAVEYARD), id = Targets.SLOT)
+    private fun inYourGraveyard(
+        filter: GameObjectFilter,
+        optional: Boolean = false,
+    ): TargetRequirement =
+        TargetObject(
+            optional = optional,
+            filter = TargetFilter(filter.ownedByYou(), zone = Zone.GRAVEYARD),
+            id = Targets.SLOT,
+        )
 
     /** The inverse: the filter a your-graveyard requirement restricts to, or null for anything else. */
-    private fun graveyardFilter(requirement: TargetRequirement): GameObjectFilter? {
-        val base = (requirement as? TargetObject)?.filter?.baseFilter ?: return null
+    private fun graveyardFilter(
+        requirement: TargetRequirement,
+        optional: Boolean = false,
+    ): GameObjectFilter? {
+        val base = (requirement as? TargetObject)?.filter?.baseFilter
+            ?: return null
         val unowned = base.copy(controllerPredicate = null)
-        return unowned.takeIf { requirement == inYourGraveyard(it) }
+        return unowned.takeIf {
+            requirement == inYourGraveyard(it, optional = optional)
+        }
     }
 
     /**
@@ -73,19 +87,29 @@ object Graveyard {
     private fun graveyardStep(
         template: String,
         name: String,
-        effect: (com.wingedsheep.sdk.scripting.targets.EffectTarget) -> com.wingedsheep.sdk.scripting.effects.Effect,
+        optional: Boolean = false,
+        effect: (EffectTarget) -> Effect,
     ): Phrase<CardScript> {
         fun scriptFor(filter: GameObjectFilter) = CardScript(
             spellEffect = effect(Targets.bound()),
-            targetRequirements = listOf(inYourGraveyard(filter)),
+            targetRequirements = listOf(
+                inYourGraveyard(filter, optional = optional)
+            ),
         )
+
         return phrase(template, name = name) {
             slot("filter", Filters.cardNoun)
+
             build { scriptFor(it.value("filter")) }
+
             match { script ->
-                val requirement = script.targetRequirements.singleOrNull() ?: return@match null
-                val filter = graveyardFilter(requirement) ?: return@match null
+                val requirement = script.targetRequirements.singleOrNull()
+                    ?: return@match null
+                val filter = graveyardFilter(requirement, optional = optional)
+                    ?: return@match null
+
                 if (script != scriptFor(filter)) return@match null
+
                 bind("filter" to filter)
             }
         }
@@ -465,6 +489,24 @@ object Graveyard {
             // graveyard by resolution. Dropping it was tried, on the reading that the target
             // requirement's own `zone = GRAVEYARD` already decides legality — the differential
             // answered immediately, fixing three cards and breaking six. The corpus keeps the guard.
+        ) { Effects.PutOntoBattlefieldFromGraveyard(it) },
+        graveyardStep(
+            "put target {filter} from your graveyard on top of your library",
+            "put a graveyard card on top of your library",
+        ) { Effects.PutOnTopOfLibrary(it) },
+        graveyardStep(
+            "put target {filter} from your graveyard on the bottom of your library",
+            "put a graveyard card on the bottom of your library",
+        ) { Effects.PutOnBottomOfLibrary(it) },
+        graveyardStep(
+            "return up to one target {filter} from your graveyard to your hand",
+            "return up to one card from your graveyard to your hand",
+            optional = true,
+        ) { Effects.Move(it, Zone.HAND) },
+        graveyardStep(
+            "return up to one target {filter} from your graveyard to the battlefield",
+            "return up to one card from your graveyard to the battlefield",
+            optional = true,
         ) { Effects.PutOntoBattlefieldFromGraveyard(it) },
     )
 }

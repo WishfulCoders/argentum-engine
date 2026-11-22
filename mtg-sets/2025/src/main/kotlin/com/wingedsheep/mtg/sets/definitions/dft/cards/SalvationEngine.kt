@@ -36,7 +36,7 @@ val SalvationEngine = card("Salvation Engine") {
         ability = ModifyStats(
             powerBonus = 2,
             toughnessBonus = 2,
-            filter = GroupFilter(GameObjectFilter.CreatureOrArtifact.youControl(), excludeSelf = true)
+            filter = GroupFilter(GameObjectFilter.ArtifactCreature.youControl(), excludeSelf = true)
         )
     }
     triggeredAbility {

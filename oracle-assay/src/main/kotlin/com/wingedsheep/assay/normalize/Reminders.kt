@@ -48,6 +48,15 @@ object Reminders {
         else -> n.toString()
     }
 
+    private fun counted(
+        n: Int,
+        singular: String,
+        plural: String = "${singular}s",
+    ): String = when (n) {
+        1 -> "a $singular"
+        else -> "${words(n)} $plural"
+    }
+
     private fun rawGloss(ability: KeywordAbility, self: String): String? = when (ability) {
         is KeywordAbility.Simple -> simpleGloss(ability.keyword, self)
         is KeywordAbility.Ward -> wardGloss(ability, self)
@@ -83,7 +92,7 @@ object Reminders {
         is KeywordAbility.Evoke ->
             "You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters."
 
-        is KeywordAbility.Suspend -> suspendGloss(ability)
+        is KeywordAbility.Suspend -> suspendGloss(ability, self)
         else -> null
     }
 
@@ -92,6 +101,7 @@ object Reminders {
         typeLine.contains("Creature") -> "this creature"
         typeLine.contains("Instant") || typeLine.contains("Sorcery") -> "this spell"
         typeLine.contains("Land") -> "this land"
+        typeLine.contains("Equipment") -> "this Equipment"
         typeLine.contains("Artifact") -> "this artifact"
         typeLine.contains("Enchantment") -> "this enchantment"
         typeLine.contains("Planeswalker") -> "this planeswalker"
@@ -99,10 +109,14 @@ object Reminders {
         else -> "this permanent"
     }
 
-    private fun suspendGloss(ability: KeywordAbility.Suspend): String =
-        "Rather than cast this card from your hand, you may pay ${ability.cost} and exile it with " +
-            "${words(ability.timeCounters)} time counters on it. At the beginning of your upkeep, remove a time " +
-            "counter. When the last is removed, you may cast it without paying its mana cost."
+    private fun suspendGloss(ability: KeywordAbility.Suspend, self: String): String {
+        val base =
+            "Rather than cast this card from your hand, you may pay ${ability.cost} and exile it with " +
+                "${counted(ability.timeCounters, "time counter")} on it. At the beginning of your upkeep, remove a time " +
+                "counter. When the last is removed, you may cast it without paying its mana cost."
+
+        return if (self == "this creature") "$base It has haste." else base
+    }
 
     private fun wardGloss(ability: KeywordAbility.Ward, self: String): String? {
         val cost = ability.cost
@@ -123,16 +137,16 @@ object Reminders {
             Keyword.CREW -> "Tap any number of creatures you control with total power $n or more: " +
                 "This Vehicle becomes an artifact creature until end of turn."
 
-            Keyword.ANNIHILATOR ->
-                "Whenever $self attacks, defending player sacrifices ${words(n)} permanents of their choice."
+            Keyword.ANNIHILATOR -> "Whenever $self attacks, defending player sacrifices " +
+                "${counted(n, "permanent")} of their choice."
 
             Keyword.BUSHIDO -> "Whenever this creature blocks or becomes blocked, it gets +$n/+$n until end of turn."
 
             Keyword.TOXIC -> "Players dealt combat damage by $self also get " +
                 (if (n == 1) "a poison counter." else "${words(n)} poison counters.")
 
-            Keyword.MODULAR -> "$self enters with ${words(n)} +1/+1 counters on it. When it dies, you may put its " +
-                "+1/+1 counters on target artifact creature."
+            Keyword.MODULAR -> "$self enters with ${counted(n, "+1/+1 counter")} on it. " +
+                "When it dies, you may put its +1/+1 counters on target artifact creature."
 
             Keyword.RENOWN -> "When $self deals combat damage to a player, if it isn't renowned, put " +
                 (if (n == 1) "a +1/+1 counter" else "${words(n)} +1/+1 counters") +
@@ -151,12 +165,14 @@ object Reminders {
         Keyword.FEAR -> "$self can't be blocked except by artifact creatures and/or black creatures."
         Keyword.SHADOW -> "$self can block or be blocked by only creatures with shadow."
         Keyword.HORSEMANSHIP -> "$self can't be blocked except by creatures with horsemanship."
+        Keyword.SKULK -> "$self can't be blocked by creatures with greater power."
         Keyword.SWAMPWALK -> landwalkGloss(self, "Swamp")
         Keyword.FORESTWALK -> landwalkGloss(self, "Forest")
         Keyword.ISLANDWALK -> landwalkGloss(self, "Island")
         Keyword.MOUNTAINWALK -> landwalkGloss(self, "Mountain")
         Keyword.PLAINSWALK -> landwalkGloss(self, "Plains")
         Keyword.DESERTWALK -> landwalkGloss(self, "Desert")
+        Keyword.LEGENDARY_LANDWALK -> landwalkGloss(self, "legendary land")
         Keyword.FIRST_STRIKE -> "$self deals combat damage before creatures without first strike."
         Keyword.DOUBLE_STRIKE -> "$self deals both first-strike and regular combat damage."
         Keyword.TRAMPLE -> "$self can deal excess combat damage to the player or planeswalker it's attacking."

@@ -18,11 +18,11 @@ const MONTH_GAP = 40 // px of breathing room required between two month labels
 const MAX_BAR = 24 // mark spec: bars never fill their slot
 const BAR_AIR = 2 // surface gap between neighbouring bars
 
-// Both hues are design-system tokens, validated against this surface for lightness, chroma, CVD
-// separation and contrast. Axis and label text stays on text tokens — only marks wear a series hue.
-const C_TOTAL = '#2196f3' // --color-accent-dark
-const C_ADDED = '#d97706' // --color-ability
-const SURFACE = '#141824'
+// The play hub's two accents, teal and amber: far apart in hue and lightness on this surface, so the
+// series stay distinct under colour-vision deficiency. Axis and label text stays on text tokens — only marks wear a series hue.
+const C_TOTAL = '#5fd0b8' // the hub's teal — the running total
+const C_ADDED = '#f2b45c' // the hub's amber — what each day added
+const SURFACE = '#10131d'
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 const niceFull = (s: string) =>
@@ -187,11 +187,11 @@ export function ProgressChartOverlay({ onClose }: { onClose: () => void }) {
       <div className={styles.chartOverlay} onClick={(e) => e.stopPropagation()}>
         <header className={styles.chartHeader}>
           <div className={styles.chartHeadText}>
-            <div className={styles.chartTitle}>Card implementation progress</div>
-            <div className={styles.chartSub}>Distinct implemented cards, day by day since the project began</div>
+            <h2 className={styles.chartTitle}>Card implementation progress</h2>
+            <p className={styles.chartSub}>Distinct implemented cards, day by day since the project began</p>
           </div>
-          <button className={styles.overlayClose} onClick={onClose} aria-label="Close">
-            ✕
+          <button type="button" className={styles.overlayClose} onClick={onClose} aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </header>
 
@@ -383,9 +383,9 @@ export function ProgressChartOverlay({ onClose }: { onClose: () => void }) {
 
 // Inline styles for the nested text spans (CSS-module class selectors can't target child class names)
 // and for the SVG text, which has no class hooks of its own.
-const statK: React.CSSProperties = { fontSize: 'var(--font-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }
-const statV: React.CSSProperties = { fontSize: 'var(--font-xl)', fontWeight: 700, marginTop: 2 }
-const statSmall: React.CSSProperties = { fontSize: 'var(--font-sm)', color: 'var(--text-faint)', fontWeight: 500 }
+const statK: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#8f98ac', textTransform: 'uppercase', letterSpacing: '0.08em' }
+const statV: React.CSSProperties = { fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: '#f4f5f9', lineHeight: 1.15 }
+const statSmall: React.CSSProperties = { fontFamily: 'var(--font-sans)', fontSize: 13, color: '#8f98ac', fontWeight: 500 }
 const axisText: React.CSSProperties = { fill: 'var(--text-muted)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }
 const panelCaption: React.CSSProperties = { fill: 'var(--text-secondary)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }
 const endLabel: React.CSSProperties = { fill: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }

@@ -19,6 +19,7 @@ import com.wingedsheep.engine.state.components.identity.RoomFaceStatics
 import com.wingedsheep.engine.state.components.identity.EmblemLinkedSourceComponent
 import com.wingedsheep.engine.state.components.identity.emblemStaticAbilitiesOf
 import com.wingedsheep.engine.handlers.effects.linkedexile.LinkedExileLookup
+import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.ActivationRestriction
@@ -96,8 +97,14 @@ class LegalityKernel(
         }
         is ActivationRestriction.OncePerTurn -> {
             val tracker = state.getEntity(sourceId)?.get<AbilityActivatedThisTurnComponent>()
-            if (tracker != null && tracker.hasActivated(ability.id)) "This ability can only be activated once each turn"
-            else null
+            when {
+                tracker == null || !tracker.hasActivated(ability.id) -> null
+                // Boast's once-each-turn can be raised ("Creatures you control can boast twice").
+                ability.isBoast && OnceOnlyActivationAllowance.mayActivateThisTurn(
+                    state, playerId, tracker.activationCount(ability.id), ability, cardRegistry, conditionEvaluator
+                ) -> null
+                else -> "This ability can only be activated once each turn"
+            }
         }
         is ActivationRestriction.MaxPerTurn -> {
             val tracker = state.getEntity(sourceId)?.get<AbilityActivatedThisTurnComponent>()
@@ -170,6 +177,17 @@ class LegalityKernel(
         if (restrictions.isEmpty()) return null
         val context = EffectContext(sourceId = null, controllerId = playerId, targets = emptyList(), xValue = 0)
         return restrictions.firstNotNullOfOrNull { castRestrictionFailure(state, it, context) }
+    }
+
+    /**
+     * The largest X [playerId] may announce casting [spellCardId] with ("X can't be greater
+     * than ..."), or `null` when [script] sets no cap. Read as X is announced (CR 601.2b) — the
+     * enumerator's slider ceiling and the validator's check — and never re-read afterwards.
+     */
+    fun spellXMaximum(state: GameState, playerId: EntityId, spellCardId: EntityId, script: CardScript): Int? {
+        val cap = script.xMaximum ?: return null
+        val context = EffectContext(sourceId = spellCardId, controllerId = playerId)
+        return conditionEvaluator.amounts.evaluate(state, cap, context).coerceAtLeast(0)
     }
 
     /** Boolean spelling of [castRestrictionsFailure]. */
@@ -279,7 +297,10 @@ class LegalityKernel(
             }
             if (cap != null && card.manaCost.cmc > cap) return false
         }
-        return CastZoneResolver.matchesCardFilter(card, grant.filter, state, granter.granterId)
+        return CastZoneResolver.matchesCardFilter(
+            card, grant.filter, state, granter.granterId, state.projectedState.colorSetOf(cardId),
+            subtypes = CastZoneResolver.effectiveSubtypes(state, cardId, card),
+        )
     }
 
     /** The first granter (battlefield order) whose grant lets [playerId] cast [cardId], or `null`. */

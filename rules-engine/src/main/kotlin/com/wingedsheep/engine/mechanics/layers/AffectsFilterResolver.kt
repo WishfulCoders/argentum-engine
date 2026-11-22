@@ -1,8 +1,9 @@
 package com.wingedsheep.engine.mechanics.layers
 
 import com.wingedsheep.engine.state.components.battlefield.chosenColor
-import com.wingedsheep.engine.state.components.battlefield.chosenCreatureType
+import com.wingedsheep.engine.state.components.battlefield.chosenSubtype
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
+import com.wingedsheep.engine.state.components.battlefield.chosenCreatureOf
 import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
 import com.wingedsheep.engine.handlers.predicates.becameTappedOnlyOnceThisTurn
 import com.wingedsheep.engine.handlers.predicates.hasDealtDamage
@@ -13,7 +14,6 @@ import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
-import com.wingedsheep.engine.state.components.battlefield.HasDealtCombatDamageToPlayerComponent
 import com.wingedsheep.engine.state.components.battlefield.PreparedComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.battlefield.WasDealtDamageThisTurnComponent
@@ -38,6 +38,7 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.predicates.evaluateWith
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 
@@ -203,6 +204,10 @@ internal class AffectsFilterResolver(
             // static's "as long as this creature is paired" clause needs no separate gate.
             is AffectsFilter.SoulbondPair ->
                 com.wingedsheep.engine.mechanics.SoulbondPairing.pairOf(state, sourceId)
+            // "The chosen creature gets …" — bound to the chosen object, whoever controls it now.
+            is AffectsFilter.ChosenCreature -> state.chosenCreatureOf(sourceId)
+                ?.takeIf { it in state.getBattlefield() }
+                ?.let(::setOf) ?: emptySet()
             is AffectsFilter.FaceDownCreatures -> {
                 state.getBattlefield().filter { entityId ->
                     state.getEntity(entityId)?.has<FaceDownComponent>() == true
@@ -255,6 +260,37 @@ internal class AffectsFilterResolver(
             ))
     }
 
+    /**
+     * True when the filter reads keywords ("creatures without flying" — Moat). Such a filter must
+     * be re-resolved where its effect applies, after the Layer-6 grants and removals it depends on
+     * (CR 613.8a); see [keywordsReadBy].
+     */
+    fun isKeywordDependentFilter(filter: AffectsFilter): Boolean = keywordsReadBy(filter).isNotEmpty()
+
+    /**
+     * True when the filter reads power or toughness ("creatures with power 3 or less" — Temur
+     * Charm, Rumbling Ruin). A rules-effect restriction over such a group is re-resolved after
+     * Layer 7, once counters and pumps have settled P/T (CR 613.11).
+     */
+    fun isPowerToughnessDependentFilter(filter: AffectsFilter): Boolean {
+        if (filter !is AffectsFilter.Generic) return false
+        fun reads(p: CardPredicate): Boolean = when (p) {
+            is CardPredicate.PowerEquals, is CardPredicate.PowerAtMost, is CardPredicate.PowerAtLeast,
+            is CardPredicate.ToughnessEquals, is CardPredicate.ToughnessAtMost, is CardPredicate.ToughnessAtLeast,
+            is CardPredicate.PowerOrToughnessAtLeast, is CardPredicate.PowerOrToughnessAtMost,
+            is CardPredicate.TotalPowerAndToughnessAtMost, CardPredicate.ToughnessGreaterThanPower,
+            CardPredicate.PowerGreaterThanBase, is CardPredicate.BasePowerEquals,
+            is CardPredicate.BaseToughnessEquals -> true
+            is CardPredicate.And -> p.predicates.any(::reads)
+            is CardPredicate.Or -> p.predicates.any(::reads)
+            is CardPredicate.Not -> reads(p.predicate)
+            else -> false
+        }
+        fun reads(f: com.wingedsheep.sdk.scripting.GameObjectFilter): Boolean =
+            f.cardPredicates.any(::reads) || f.anyOf.any(::reads)
+        return reads(filter.groupFilter.baseFilter)
+    }
+
     fun isControllerDependentFilter(filter: AffectsFilter): Boolean {
         return filter is AffectsFilter.AllCreaturesYouControl ||
             filter is AffectsFilter.AllCreaturesOpponentsControl ||
@@ -299,7 +335,7 @@ internal class AffectsFilterResolver(
 
         // Read chosen subtype once from source's CastChoicesComponent if needed
         val chosenSubtype = if (groupFilter.chosenSubtypeKey != null) {
-            state.getEntity(sourceId)?.chosenCreatureType()
+            state.getEntity(sourceId)?.chosenSubtype()
                 ?: return emptySet()
         } else null
 
@@ -356,6 +392,18 @@ internal class AffectsFilterResolver(
                         // controller (Laughing Jasper Flint: "creatures you control but don't own").
                         ControllerPredicate.OwnedByYou -> card.ownerId != null && card.ownerId == controller
                         ControllerPredicate.OwnedByOpponent -> card.ownerId != null && card.ownerId != controller
+                        // "creatures that player controls" — a player pinned when a floating group
+                        // restriction resolved (ResolutionFilterBaker), or a state-relative reference.
+                        // Answered by the evaluator's shared player leaf; it must never fail open, or
+                        // a one-player restriction would bind every controller's creatures.
+                        is ControllerPredicate.ControlledByReferencedPlayer -> when (val ref = leaf.target) {
+                            is EffectTarget.SpecificEntity -> entityController == ref.entityId
+                            else -> if (entityController == null) false else relationalContext?.let { ctx ->
+                                relationalEvaluator.playerMatchesControlLeaf(
+                                    state, relationalProjection, entityController, leaf, ctx
+                                )
+                            } ?: false
+                        }
                         else -> null // other predicates not applicable in static ability context
                     }
                 }
@@ -456,7 +504,7 @@ internal class AffectsFilterResolver(
         // is trivially satisfied here; it only does work in PredicateEvaluator, where an object
         // that has left the battlefield can still be asked about.
         // Script introspection needs a card registry, which this projection stage does not carry.
-        StatePredicate.HasManaAbility -> false
+        StatePredicate.HasManaAbility, is StatePredicate.HasActivatedAbilities -> false
         StatePredicate.IsOnBattlefield -> true
         is StatePredicate.InZone -> predicate.zone == com.wingedsheep.sdk.core.Zone.BATTLEFIELD
         StatePredicate.IsTapped -> container.has<TappedComponent>()
@@ -507,6 +555,9 @@ internal class AffectsFilterResolver(
             }
             player != null && defendingPlayer != null && player in state.sharedTurnTeam(defendingPlayer)
         }
+        // A referenced player ("that player") needs a trigger or effect context that projection
+        // doesn't carry; no static uses it today, so fail closed rather than guess.
+        is StatePredicate.IsAttackingPlayer -> false
         StatePredicate.IsAttackingYouOrYourPlaneswalkers -> {
             val defenderId = container.get<AttackingComponent>()?.defenderId
             sourceController != null && defenderId != null && (
@@ -549,12 +600,16 @@ internal class AffectsFilterResolver(
         // group-static projection. Only meaningful in target/group-damage contexts via
         // PredicateEvaluator. Never match here.
         StatePredicate.IsBlockingSource -> false
+        // The reverse direction ("creatures it's blocking") — same: no source permanent here.
+        StatePredicate.IsBlockedBySource -> false
         // Same reasoning for the both-directions live pairing — no source permanent here.
         StatePredicate.IsCombatPairedWithSource -> false
         // Loop-relative; only meaningful inside a ForEach at resolution, never in projection.
         StatePredicate.IsBlockingIterationEntity -> false
         // Role-relative ("blocking it"); needs an effect context, never present in projection.
         is StatePredicate.IsBlockingEntity -> false
+        // Reference-relative identity; projection has no effect context to resolve it.
+        is StatePredicate.IsEntity -> false
         // Source-relative: "created with the source" needs the ability's source permanent, absent
         // in group-static projection. Only meaningful in target/gather-filter contexts via
         // PredicateEvaluator. Never match here.
@@ -576,12 +631,10 @@ internal class AffectsFilterResolver(
         // Source-relative too: "dealt damage by the source this turn" reads the source's per-turn
         // damaged-creature record. Only meaningful via PredicateEvaluator / the zone-change gate.
         StatePredicate.WasDealtDamageBySourceThisTurn -> false
-        // Not source-relative: the candidate's own record of its sources' damage-time controllers,
-        // read against the projecting static's controller as "you". Fails closed with no controller.
-        StatePredicate.WasDealtDamageBySourceYouControlledThisTurn ->
-            sourceController != null && container
-                .get<com.wingedsheep.engine.state.components.battlefield.DamagedBySourcesThisTurnComponent>()
-                ?.sources?.any { it.sourceControllerId == sourceController } == true
+        // Its mirror ("dealt damage to the source this turn") is just as source-relative.
+        StatePredicate.DealtDamageToSourceThisTurn -> false
+        // "By a source you controlled" needs the ability's controller, absent here too.
+        is StatePredicate.WasDealtDamageThisTurnBy -> false
         // Likewise source-relative: "crewed/saddled the source this turn" needs the ability's
         // source permanent, absent in group-static projection. Only meaningful in target/count
         // contexts via PredicateEvaluator / DynamicAmountEvaluator. Never match here.
@@ -606,13 +659,23 @@ internal class AffectsFilterResolver(
         StatePredicate.IsSource -> false
         // No granter context during projection — granter-relative exclusion is resolution-time only.
         StatePredicate.IsGrantingPermanent -> false
-        // Nor a trigger context — trigger-relative exclusion is resolution-time only.
+        // No trigger context during projection — triggering-entity exclusion is targeting-time only.
         StatePredicate.IsTriggeringEntity -> false
         // Source-relative exile linkage (LinkedExileComponent on the effect source). Only
         // meaningful in target/gather-filter contexts via PredicateEvaluator; never match in
         // group-static projection.
         StatePredicate.ExiledWithSource -> false
-        StatePredicate.EnteredThisTurn -> container.has<EnteredThisTurnComponent>()
+        // Exile-zone only; group statics project battlefield permanents.
+        StatePredicate.ExiledByYou -> false
+        // The under-your-control form reads the static controller's entry log — plain per-player
+        // history, no layered characteristic.
+        is StatePredicate.EnteredThisTurn ->
+            if (predicate.underYourControl) {
+                com.wingedsheep.engine.handlers.effects.PermanentEntryTracker
+                    .enteredThisTurnUnderControlOf(state, entityId, sourceController)
+            } else {
+                container.has<EnteredThisTurnComponent>()
+            }
         StatePredicate.ActivatedThisTurn -> container.get<AbilityActivatedThisTurnComponent>()?.anyActivated == true
         // Counter history — the per-permanent marker, so a group static gated on "each creature you
         // control that you've put one or more +1/+1 counters on this turn" (Kid Loki) resolves
@@ -628,15 +691,19 @@ internal class AffectsFilterResolver(
             com.wingedsheep.engine.handlers.predicates.sharesNameWithSpellCastThisTurn(
                 state, projectedValues[entityId]?.name ?: container.get<CardComponent>()?.name
             )
-        StatePredicate.WasDealtDamageThisTurn -> container.has<WasDealtDamageThisTurnComponent>()
+        is StatePredicate.WasDealtDamageThisTurn ->
+            container.get<WasDealtDamageThisTurnComponent>()?.matches(predicate.damageType) == true
         // Damage history — plain per-entity state with no source-relative half, so a group static
         // gated on "each creature that dealt damage this turn" resolves during projection and gives
         // the identical answer to PredicateEvaluator's.
         is StatePredicate.HasDealtDamage ->
             hasDealtDamage(container, state.turnNumber, predicate)
-        StatePredicate.HasDealtCombatDamageToPlayer -> container.has<HasDealtCombatDamageToPlayerComponent>()
-        StatePredicate.ControlledSinceTurnBegan ->
-            com.wingedsheep.engine.core.ControlHistory.matches(state, entityId, projectedController(state, entityId, projectedValues))
+        StatePredicate.StartedTurnUntapped ->
+            com.wingedsheep.engine.core.ControlHistory.startedTurnUntapped(state, entityId)
+        is StatePredicate.ControlledContinuouslySince ->
+            com.wingedsheep.engine.core.ControlHistory.controlledSince(
+                state, entityId, projectedController(state, entityId, projectedValues), predicate.since,
+            )
         StatePredicate.AttackedThisTurn -> state.turnOrder.any { playerId ->
             state.getEntity(playerId)?.get<PlayerAttackersThisTurnComponent>()
                 ?.attackerIds?.contains(entityId) == true
@@ -693,14 +760,22 @@ internal class AffectsFilterResolver(
         // has had its from-graveyard marker stripped on battlefield entry — so the
         // projection answer is unconditionally false here.
         StatePredicate.PutIntoGraveyardThisTurn -> false
+        StatePredicate.MilledThisTurn -> false
+        StatePredicate.DiscardedThisTurn -> false
+        StatePredicate.PutIntoGraveyardThisCombat -> false
+        // Hand-only predicate; never true of a battlefield permanent.
+        StatePredicate.DrawnThisTurn -> false
         StatePredicate.PutIntoGraveyardFromBattlefieldThisTurn -> false
-        StatePredicate.BlockedOrWasBlockedByLegendaryThisTurn ->
-            container.has<com.wingedsheep.engine.state.components.combat.BlockedOrWasBlockedByLegendaryThisTurnComponent>()
+        // A partner filter read against frozen snapshots needs the predicate evaluator's
+        // snapshot matcher; no static uses it, so projection matches nothing rather than guessing.
+        is StatePredicate.BlockPairedWithMatchingThisTurn -> false
         // Relative to a referenced entity a static's affected-set has no way to name; no static
         // uses it, so projection matches nothing rather than guessing.
-        is StatePredicate.BlockedOrWasBlockedByEntityThisTurn -> false
+        is StatePredicate.BlockPairedWithEntityThisTurn -> false
         StatePredicate.IsFaceDown -> isFaceDown
         StatePredicate.IsFaceUp -> !isFaceDown
+        StatePredicate.IsCommander ->
+            container.has<com.wingedsheep.engine.state.components.identity.CommanderComponent>()
         // Transformed permanent (CR 701.27g). Every candidate here comes off the battlefield, so
         // "back face up" is the whole test — PredicateEvaluator adds the zone check it needs.
         StatePredicate.IsTransformed ->
@@ -791,10 +866,12 @@ internal class AffectsFilterResolver(
         // resolve that "you", so this predicate is only meaningful in target/condition contexts via
         // PredicateEvaluator (where the controllerId is supplied). Never match in projection.
         is StatePredicate.AttachedTo -> false
-        // "whose controller controls <filter>" needs a battlefield scan bound to the
-        // candidate's controller, which the group-static projection pass cannot do here.
+        // Its inverse ("with <filter> attached") nests a filter the same way — same reasoning.
+        is StatePredicate.HasAttached -> false
+        // "whose controller <condition>" needs a condition evaluated for the candidate's
+        // controller, which the group-static projection pass cannot do here.
         // Only meaningful in target/condition contexts via PredicateEvaluator.
-        is StatePredicate.ControllerControls -> false
+        is StatePredicate.ControllerMeets -> false
         is StatePredicate.AttachedToCardType -> {
             val attached = container.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()
             attached != null &&
@@ -817,19 +894,25 @@ internal class AffectsFilterResolver(
         // this creature is monstrous, it has trample" (Domesticated Hydra) be a conditional static.
         StatePredicate.IsMonstrous ->
             container.has<com.wingedsheep.engine.state.components.battlefield.MonstrousComponent>()
+        // Embalmed (CR 702.128b) — token provenance stamped at creation, evaluable here.
+        StatePredicate.IsEmbalmed -> container.has<com.wingedsheep.engine.state.components.identity.EmbalmedComponent>()
         // Suspected (CR 701.60a) is itself a Layer-ability modification, so it is read off the
         // values accumulated so far in this projection pass — the same source `ProjectedState`
         // exposes as `isSuspected`, and the same self-referential caveat as IsModified above.
         StatePredicate.IsSuspected -> projectedValues[entityId]?.isSuspected == true
         StatePredicate.IsWarpExiled ->
             container.has<com.wingedsheep.engine.state.components.identity.WarpExiledComponent>()
+        StatePredicate.IsForetold ->
+            container.has<com.wingedsheep.engine.state.components.identity.ForetoldComponent>()
+        // Exile-only: a battlefield permanent in group-static projection is never suspended.
+        StatePredicate.IsSuspended -> false
         StatePredicate.WasCastForWarp ->
             container.has<com.wingedsheep.engine.state.components.battlefield.WarpedComponent>()
         // Stack-only: cast-origin zone reads SpellOnStackComponent, which battlefield permanents
         // in group-static projection never carry. Only meaningful in target/counter contexts via
         // PredicateEvaluator. Never match here.
-        is StatePredicate.WasCastFromZone -> false
-        // Stack-only, like WasCastFromZone: a permanent has no chosen targets.
+        is StatePredicate.WasCast -> false
+        // Stack-only, like WasCast: a permanent has no chosen targets.
         StatePredicate.HasSingleTarget -> false
         StatePredicate.HasGreatestPower -> hasGreatestPowerInProjection(state, entityId, container, projectedValues)
         StatePredicate.HasLeastPowerAmongAllCreatures -> hasLeastPowerAmongAllCreaturesInProjection(state, entityId, container, projectedValues)
@@ -960,6 +1043,13 @@ internal class AffectsFilterResolver(
         return entityPower <= minPower
     }
 
+    /**
+     * The permanent's mana value as a static ability's affects-filter reads it: 0 while face down
+     * (CR 708.2), otherwise the card's own (`{X}` is 0 off the stack, CR 202.3e).
+     */
+    private fun faceDownAwareManaValue(card: CardComponent, isFaceDown: Boolean): Int =
+        if (isFaceDown) 0 else card.manaValue
+
     private fun matchesCardPredicateForProjection(
         predicate: CardPredicate,
         card: CardComponent,
@@ -977,6 +1067,7 @@ internal class AffectsFilterResolver(
         CardPredicate.IsEnchantment -> "ENCHANTMENT" in types
         CardPredicate.IsPlaneswalker -> "PLANESWALKER" in types
         CardPredicate.IsBattle -> "BATTLE" in types
+        CardPredicate.IsKindred -> "KINDRED" in types
         CardPredicate.IsInstant -> "INSTANT" in types
         CardPredicate.IsSorcery -> "SORCERY" in types
         // Adventure-ness is a static whole-card characteristic, not a projected type.
@@ -998,6 +1089,7 @@ internal class AffectsFilterResolver(
         CardPredicate.HasNonManaActivatedAbility -> card.hasNonManaActivatedAbility
         CardPredicate.HasActivatedAbility -> card.hasActivatedAbility
         CardPredicate.HasCycling -> card.hasCycling
+        CardPredicate.HasKicker -> card.hasKicker
         is CardPredicate.HasSubtype -> if (isFaceDown) false else subtypes.any { it.equals(predicate.subtype.value, ignoreCase = true) }
         is CardPredicate.NotSubtype -> if (isFaceDown) true else subtypes.none { it.equals(predicate.subtype.value, ignoreCase = true) }
         is CardPredicate.HasAnyOfSubtypes -> if (isFaceDown) false else predicate.subtypes.any { sub -> subtypes.any { it.equals(sub.value, ignoreCase = true) } }
@@ -1019,13 +1111,7 @@ internal class AffectsFilterResolver(
         // falls back to the printed value, which is what a base P/T is before 7a/7b apply.
         is CardPredicate.BasePowerEquals -> (projected?.basePower ?: card.baseStats?.basePower) == predicate.value
         is CardPredicate.BaseToughnessEquals -> (projected?.baseToughness ?: card.baseStats?.baseToughness) == predicate.value
-        // PowerEqualsX / PowerAtLeastX are resolution-time only; layer-projection has no
-        // chosen-number context.
-        CardPredicate.PowerEqualsX -> false
-        CardPredicate.PowerAtLeastX -> false
         is CardPredicate.ToughnessAtMost -> (projected?.toughness ?: card.baseStats?.baseToughness ?: 0) <= predicate.max
-        // ToughnessAtMostX is resolution-time only; layer-projection has no X context, so it never matches here.
-        CardPredicate.ToughnessAtMostX -> false
         is CardPredicate.ToughnessAtLeast -> (projected?.toughness ?: card.baseStats?.baseToughness ?: 0) >= predicate.min
         is CardPredicate.ToughnessEquals -> (projected?.toughness ?: card.baseStats?.baseToughness) == predicate.value
         is CardPredicate.PowerOrToughnessAtLeast -> {
@@ -1043,12 +1129,12 @@ internal class AffectsFilterResolver(
             val toughness = projected?.toughness ?: card.baseStats?.baseToughness ?: 0
             (power + toughness) <= predicate.max
         }
-        is CardPredicate.ManaValueEquals -> card.manaValue == predicate.value
-        is CardPredicate.ManaValueAtMost -> card.manaValue <= predicate.max
-        // ManaValueAtMostX / ManaValueEqualsX are resolution-time only; layer-projection has no chosen-number context.
-        CardPredicate.ManaValueAtMostX -> false
-        CardPredicate.ManaValueEqualsX -> false
-        is CardPredicate.ManaValueAtLeast -> card.manaValue >= predicate.min
+        // A face-down permanent has no mana cost, so its mana value is 0 (CR 708.2) — the same
+        // reading PredicateEvaluator and TriggerMatcher give it (Void Winnower's "can't block with
+        // creatures with even mana values" stops a morph from blocking).
+        is CardPredicate.ManaValueEquals -> faceDownAwareManaValue(card, isFaceDown) == predicate.value
+        is CardPredicate.ManaValueAtMost -> faceDownAwareManaValue(card, isFaceDown) <= predicate.max
+        is CardPredicate.ManaValueAtLeast -> faceDownAwareManaValue(card, isFaceDown) >= predicate.min
         // Entity-relative — layer-projection has no trigger/source context for filter purposes here.
         is CardPredicate.ManaValueAtMostEntity -> false
         is CardPredicate.ManaValueAtMostEntityManaSpent -> false
@@ -1061,38 +1147,39 @@ internal class AffectsFilterResolver(
         is CardPredicate.ToughnessEqualsDynamic -> false
         is CardPredicate.PowerGreaterThanEntity -> false
         is CardPredicate.PowerAtMostEntity -> false
-        is CardPredicate.CouldEnchant -> false
+        is CardPredicate.CouldAttachTo -> false
         CardPredicate.CouldProduceColorlessMana -> false
         is CardPredicate.PowerLessThanEntity -> false
         is CardPredicate.CompareNumericProperty -> false
         CardPredicate.PowerGreaterThanBase -> {
-            // Self-relative: projected power vs the object's own printed base power.
-            val basePower = card.baseStats?.basePower
+            // Self-relative: projected power vs the object's own effective base power — the
+            // layer-7b snapshot once layer 7 has run, the printed base before it.
+            val basePower = projected?.basePower ?: card.baseStats?.basePower
             val currentPower = projected?.power ?: basePower
             basePower != null && currentPower != null && currentPower > basePower
         }
-        CardPredicate.ManaValueIsEven -> card.manaValue % 2 == 0
-        CardPredicate.ManaValueIsOdd -> card.manaValue % 2 != 0
+        CardPredicate.ManaValueIsEven -> faceDownAwareManaValue(card, isFaceDown) % 2 == 0
+        CardPredicate.ManaValueIsOdd -> faceDownAwareManaValue(card, isFaceDown) % 2 != 0
         CardPredicate.HasXInManaCost -> if (isFaceDown) false else card.manaCost.hasX
-        is CardPredicate.ManaCostIs -> if (isFaceDown) false else predicate.matches(card.manaCost)
+        CardPredicate.HasRepeatedManaSymbol -> if (isFaceDown) false else card.manaCost.hasRepeatedSymbol
+        is CardPredicate.ManaCostIs -> if (isFaceDown) false else card.manaCost == predicate.manaCost
         is CardPredicate.ColoredManaSymbolsAtLeast ->
             // Printed cost's colored pips (CR 107.4e/f); face-down has no mana cost (CR 708.2).
             if (isFaceDown) false
             else card.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
-        is CardPredicate.NameEquals -> card.name == predicate.name
+        // Face-down objects have no name (CR 708.2).
+        is CardPredicate.NameEquals -> !isFaceDown && card.name == predicate.name
         // Room-name distinctness is a resolution-time search filter, not a continuous/static
         // affects-filter concern.
         CardPredicate.NameNotSharedWithControlledRoom -> false
-        CardPredicate.NameNotSharedWithControlledToken -> false
-        // Likewise "no other permanent you control shares this name" — a targeting restriction
-        // evaluated against live battlefield state, not a static affects-filter.
-        CardPredicate.NameNotSharedWithAnotherControlledPermanent -> false
         is CardPredicate.OriginallyPrintedInSet ->
             card.originalSetCode?.equals(predicate.setCode, ignoreCase = true) == true
         is CardPredicate.HasBasicLandType -> if (isFaceDown) false else subtypes.any { it.equals(predicate.landType, ignoreCase = true) }
         is CardPredicate.And -> predicate.predicates.all { matchesCardPredicateForProjection(it, card, container, projected, types, subtypes, colors, keywords, isFaceDown) }
         is CardPredicate.Or -> predicate.predicates.any { matchesCardPredicateForProjection(it, card, container, projected, types, subtypes, colors, keywords, isFaceDown) }
-        is CardPredicate.Not -> !matchesCardPredicateForProjection(predicate.predicate, card, container, projected, types, subtypes, colors, keywords, isFaceDown)
+        is CardPredicate.Not ->
+            !com.wingedsheep.engine.handlers.predicates.LiveBattlefieldPredicates.answerableOnlyLive(predicate.predicate) &&
+                !matchesCardPredicateForProjection(predicate.predicate, card, container, projected, types, subtypes, colors, keywords, isFaceDown)
         CardPredicate.ToughnessGreaterThanPower -> {
             val power = projected?.power ?: card.baseStats?.basePower ?: 0
             val toughness = projected?.toughness ?: card.baseStats?.baseToughness ?: 0
@@ -1106,9 +1193,11 @@ internal class AffectsFilterResolver(
         CardPredicate.SharesCreatureTypeWithSource,
         CardPredicate.SharesCreatureTypeWithTriggeringEntity,
         CardPredicate.ConvokedSource,
+        CardPredicate.ChosenBySource,
         CardPredicate.HasChosenSubtype,
         CardPredicate.SharesChosenColorWithSource,
         CardPredicate.SharesColorWithRecipient,
+        CardPredicate.SharesColorWithTriggeringMana,
         is CardPredicate.SharesCreatureTypeWith,
         is CardPredicate.SharesCardTypeWith,
         CardPredicate.SharesCardTypeWithLinkedExile,
@@ -1117,12 +1206,13 @@ internal class AffectsFilterResolver(
         is CardPredicate.SharesManaValueWith,
         is CardPredicate.SharesNameWith,
         is CardPredicate.SharesColorWithPermanentYouControl,
-        is CardPredicate.SharesNameWithPermanentYouControl,
+        is CardPredicate.SharesNameWithYourCard,
         is CardPredicate.DoesNotShareCreatureTypeWithPermanentYouControl,
         is CardPredicate.DoesNotShareLandTypeWithPermanentYouControl,
         is CardPredicate.HasSubtypeFromVariable,
         is CardPredicate.HasSubtypeInStoredList,
         is CardPredicate.NameEqualsChosen,
+        is CardPredicate.CardTypeEqualsChosen,
         // Resolved separately in resolveGenericFilter against the source's CastChoicesComponent
         // (no source in scope here) — fail closed if it ever reaches this generic path.
         is CardPredicate.NameEqualsChosenComponent,
@@ -1131,9 +1221,11 @@ internal class AffectsFilterResolver(
         // Stack-only predicates — never match a battlefield entity being projected.
         CardPredicate.IsActivatedOrTriggeredAbility,
         CardPredicate.IsTriggeredAbility,
-        CardPredicate.IsActivatedAbility -> false
+        CardPredicate.IsActivatedAbility,
+        CardPredicate.IsLoyaltyAbility -> false
         is CardPredicate.TargetsMatching -> false
         is CardPredicate.TargetsPlayer -> false
+        is CardPredicate.WouldDestroy -> false
         is CardPredicate.AbilitySourceMatches -> false
     }
 
@@ -1149,4 +1241,25 @@ internal class AffectsFilterResolver(
         return projectedValues[entityId]?.controllerId
             ?: state.getEntity(entityId)?.get<ControllerComponent>()?.playerId
     }
+}
+
+/**
+ * The keywords a [AffectsFilter.Generic] filter's card predicates read, looking through
+ * `And`/`Or`/`Not`; empty for every other filter shape.
+ */
+internal fun keywordsReadBy(filter: AffectsFilter): Set<Keyword> {
+    if (filter !is AffectsFilter.Generic) return emptySet()
+    val out = mutableSetOf<Keyword>()
+    fun visit(p: CardPredicate) {
+        when (p) {
+            is CardPredicate.HasKeyword -> out += p.keyword
+            is CardPredicate.NotKeyword -> out += p.keyword
+            is CardPredicate.And -> p.predicates.forEach(::visit)
+            is CardPredicate.Or -> p.predicates.forEach(::visit)
+            is CardPredicate.Not -> visit(p.predicate)
+            else -> {}
+        }
+    }
+    filter.groupFilter.baseFilter.cardPredicates.forEach(::visit)
+    return out
 }

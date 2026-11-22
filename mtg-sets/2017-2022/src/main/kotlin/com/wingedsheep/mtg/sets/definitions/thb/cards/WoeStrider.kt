@@ -10,8 +10,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Woe Strider
@@ -23,8 +23,8 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Escape—{3}{B}{B}, Exile four other cards from your graveyard.
  * This creature escapes with two +1/+1 counters on it.
  *
- * Escape and "escapes with" follow Ox of Agonas: the keyword ability plus an [EntersWithCounters]
- * replacement gated on [Conditions.Escaped] (CR 702.138c).
+ * "Escapes with two +1/+1 counters" (CR 702.138c) is an [EntersWithCounters] replacement gated on
+ * [Conditions.Escaped], as on Ox of Agonas.
  */
 val WoeStrider = card("Woe Strider") {
     manaCost = "{2}{B}"
@@ -70,12 +70,18 @@ val WoeStrider = card("Woe Strider") {
         collectorNumber = "123"
         artist = "John Thacker"
         imageUri = "https://cards.scryfall.io/normal/front/3/4/3457b558-b35b-49fd-b499-b1ec755f86ce.jpg?1783931556"
+
         ruling(
             "2020-01-24",
             "After an escaped spell resolves, it returns to its owner's graveyard if it's not a permanent " +
                 "spell. If it is a permanent spell, it enters the battlefield and will return to its owner's " +
                 "graveyard if it dies later. Perhaps it will escape again—good underworld security is so hard " +
                 "to come by these days."
+        )
+        ruling(
+            "2020-01-24",
+            "If you cast a spell with its escape permission, you can't choose to apply any other alternative " +
+                "costs or to cast it without paying its mana cost. If it has any additional costs, you must pay those."
         )
     }
 }

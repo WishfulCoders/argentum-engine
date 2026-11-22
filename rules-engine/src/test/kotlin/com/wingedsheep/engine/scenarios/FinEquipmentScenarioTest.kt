@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.mechanics.layers.StateProjector
@@ -183,6 +184,8 @@ class FinEquipmentScenarioTest : ScenarioTestBase() {
             }
 
             val lifeBefore = game.getLifeTotal(1)
+            // The Hero token was created this turn; let it attack in this turn's combat.
+            game.state = game.state.updateEntity(hero) { it.without<SummoningSicknessComponent>() }
             game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
             game.declareAttackers(mapOf("Hero Token" to 2))
             game.passPriority()
@@ -374,6 +377,8 @@ class FinEquipmentScenarioTest : ScenarioTestBase() {
             }
 
             val handBefore = game.handSize(1)
+            // The Hero token was created this turn; let it attack in this turn's combat.
+            game.state = game.state.updateEntity(hero) { it.without<SummoningSicknessComponent>() }
             game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
             game.declareAttackers(mapOf("Hero Token" to 2))
             game.passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)

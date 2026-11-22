@@ -1,5 +1,7 @@
 package com.wingedsheep.gameserver.replay
 
+import com.wingedsheep.engine.core.ActionProcessor
+import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
 import com.wingedsheep.engine.core.PlayerConfig
@@ -306,9 +308,10 @@ class ReplayDurabilityTest : ScenarioTestBase() {
                         setup = setup,
                         actions = emptyList(),
                     )
+                    // Mulligans are skipped, so the recorded game begins its first turn at once.
                     val expected = GameInitializer(cardRegistry).initializeGame(
                         config.copy(shuffledTeamSeats = version >= 4)
-                    ).state
+                    ).state.let { ActionProcessor(EngineServices(cardRegistry)).beginGame(it).state }
                     val actual = reconstructor.initialState(ReplayCodec.decode(ReplayCodec.encode(replay)))
                     actual.turnOrder shouldBe expected.turnOrder
                     actual.activePlayerId shouldBe expected.activePlayerId

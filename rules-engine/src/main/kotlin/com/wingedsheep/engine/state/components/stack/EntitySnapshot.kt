@@ -11,6 +11,9 @@ import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.battlefield.DamageSourceLki
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
+import com.wingedsheep.engine.state.components.identity.copiableCardComponent
+import com.wingedsheep.engine.state.components.identity.copiableDoubleFacedComponent
+import com.wingedsheep.engine.state.components.identity.copiableNumericKeywords
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
@@ -96,6 +99,10 @@ data class EntitySnapshot(
      * card needs control-at-zone-leave fidelity.
      */
     override val controllerId: EntityId? = null,
+    /** Owner captured independently of control, retained after a token ceases to exist. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val ownerId: EntityId? = null,
     override val counters: Map<CounterType, Int> = emptyMap(),
     override val keywords: Set<String> = emptySet(),
     override val lostAllAbilities: Boolean = false,
@@ -106,6 +113,21 @@ data class EntitySnapshot(
     val typeLine: TypeLine? = null,
     /** Card definition id, so dies/leaves triggers resolve for tokens after 704.5d cleanup. */
     val cardDefinitionId: String? = null,
+    /**
+     * Copiable values (CR 707.2) as the permanent last existed on the battlefield — its copy
+     * effects and face-down status applied — so an effect that copies a creature which has since
+     * left ("create a token that's a copy of that creature") copies it from last-known
+     * information (CR 608.2h). Null outside a battlefield exit.
+     */
+    val copiableCard: com.wingedsheep.engine.state.components.identity.CardComponent? = null,
+    /** Numeric abilities carried outside CardComponent, normalized to the copiable upright face. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val copiableNumericKeywords: List<com.wingedsheep.sdk.scripting.KeywordAbility.Numeric> = emptyList(),
+    /** Both copiable faces and the active face, independent of any later visit to the battlefield. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val copiableDoubleFaced: com.wingedsheep.engine.state.components.identity.DoubleFacedComponent? = null,
     /** Effective text at departure, before zone movement ends the object's text changes. */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
@@ -142,6 +164,16 @@ data class EntitySnapshot(
      */
     val attachmentIds: List<EntityId> = emptyList(),
     /**
+     * [attachmentIds] with each attachment's controller and subtypes frozen too, so "for each Aura
+     * **you controlled** that was attached to it" (Hateful Eidolon) counts the Auras as they were,
+     * not as their owners' graveyard cards — the last-known leg of
+     * [com.wingedsheep.sdk.scripting.values.EntityNumericProperty.AttachmentCount]. A separate field
+     * rather than a replacement because persisted snapshots carry [attachmentIds].
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val attachments: List<AttachmentLki> = emptyList(),
+    /**
      * True if this permanent had at least one Aura attached when it left the battlefield (CR 303.4).
      * Last-known counterpart to [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsEnchanted];
      * see [wasModified] for the last-known
@@ -155,6 +187,39 @@ data class EntitySnapshot(
      * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsModified].
      */
     val wasModified: Boolean = false,
+    /**
+     * True if this permanent was cast (it carried `WasCastComponent`) when it left. The marker is
+     * stripped on the zone change (CR 400.7), so an "if you cast it" intervening-if rechecked on
+     * resolution after its source died (CR 603.4) reads it from here — Retriever Phoenix's ruling.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val wasCast: Boolean = false,
+    /** Whether this permanent was its controller's Ring-bearer at capture. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val wasRingBearer: Boolean = false,
+    /**
+     * True if this permanent had the monstrous designation (CR 701.37b) when it left. The marker
+     * lives on the permanent and is gone after the zone change (CR 400.7), so "if this creature is
+     * monstrous" rechecked on resolution after its source left (CR 603.4) reads it from here —
+     * Polis Crusher's ruling: once the ability triggers, it resolves even if the creature is gone.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val wasMonstrous: Boolean = false,
+    /** The zone it was cast from (hand, graveyard, library, exile) when it left; null if not cast or untracked. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val castFromZone: com.wingedsheep.sdk.core.Zone? = null,
+    /**
+     * The zone it was put onto the battlefield from without being cast (a reanimation, a blink, a
+     * library search) when it left; null if it resolved as a spell or never changed zones. The
+     * zone-exit strip removes the marker (CR 400.7), so "if it entered from …" reads it here.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val enteredFromZone: com.wingedsheep.sdk.core.Zone? = null,
     /** Creatures blocking, or blocked by, this one when it left (CR 509; Abu Ja'far). */
     val blockingOrBlockedByIds: List<EntityId> = emptyList(),
     /**
@@ -184,6 +249,14 @@ data class EntitySnapshot(
      * by that point the live component the defender is normally read off has been torn down.
      */
     val attackedDefenderId: EntityId? = null,
+    /**
+     * True if the permanent was tapped at capture time. Frozen because the zone exit drops the live
+     * `TappedComponent`, so an intervening "if [this] is untapped" read after the permanent has left
+     * the battlefield has to use last-known information (CR 608.2h) — Voodoo Doll destroys itself,
+     * then deals damage, under a check answered as it last existed. Backs the last-known leg of
+     * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsTapped] / `IsUntapped`.
+     */
+    val wasTapped: Boolean = false,
     /** True if the leaving entity was a token (CR 704.5d — suppress persist-style return triggers). */
     val wasToken: Boolean = false,
     /**
@@ -205,10 +278,43 @@ data class EntitySnapshot(
     val wasSuspected: Boolean = false,
     /** Per-player damage dealt to this entity this turn, keyed by source-controller (Grothama). */
     val damageDealtByPlayers: Map<EntityId, Int> = emptyMap(),
-    /** Snapshots of the sources that dealt damage to this entity this turn (Shelob, Child of Ungoliant). */
+    /**
+     * Snapshots of the sources that dealt damage to this entity this turn, each frozen as it dealt
+     * the damage (Shelob, Child of Ungoliant) — the last-known leg of
+     * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.WasDealtDamageThisTurnBy]. A damage
+     * event's recipient snapshot carries the record *including* that hit, so "is dealt excess
+     * damage, if a spell you controlled dealt damage to it this turn" (Aegar, the Freezing Flame)
+     * still reads it when the damage destroyed the permanent. Only meaningful during the turn it
+     * was captured.
+     */
     val damageSources: Set<DamageSourceLki> = emptySet(),
     /** The cast-time {X} carried by `CastChoicesComponent`, so dies/leaves triggers read `DynamicAmount.CastX`. */
     val castX: Int? = null,
+    /**
+     * The creature this permanent chose as it entered (`ChoiceSlot.CREATURE`), with the chosen
+     * object's generation. Frozen because the cast-choices bag is stripped on departure (CR 400.7),
+     * yet "when this creature leaves the battlefield, sacrifice the chosen creature" (Tyrannical
+     * Pitlord) resolves after that.
+     */
+    val chosenCreature: com.wingedsheep.engine.state.components.battlefield.ChoiceValue.EntityChoice? = null,
+    /**
+     * The numbers locked into the cast-choices bag (`ChoiceValue.NumberChoice`, e.g.
+     * `ChoiceSlot.CHOSEN_NUMBER` / `NOTED_NUMBER`), frozen at departure because the bag is stripped
+     * then (CR 400.7). An ability whose source has left reads "the last noted life total for this
+     * enchantment" (Sigarda's Splendor) from here — as the source last existed (CR 113.7a).
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val numberChoices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, Int> = emptyMap(),
+    /**
+     * The text choices locked into the cast-choices bag (`ChoiceValue.TextChoice`, e.g.
+     * `ChoiceSlot.CREATURE_TYPE`), frozen at departure for the same reason as [numberChoices]. A
+     * self-sacrificing ability still reads "target card of the chosen type" (Dawn-Blessed Pennant)
+     * from here once its source is in the graveyard (CR 113.7a).
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val textChoices: Map<com.wingedsheep.sdk.scripting.ChoiceSlot, String> = emptyMap(),
     /**
      * True if this permanent was face down (CR 708) when it left the battlefield.
      *
@@ -220,6 +326,26 @@ data class EntitySnapshot(
      * way [wasSuspected] does for the suspected designation.
      */
     val wasFaceDown: Boolean = false,
+    /**
+     * True if this permanent's blitz cost was paid (CR 702.152a) as it left. Frozen because the
+     * marker is stripped on departure, yet the blitz "when this permanent dies, draw a card" trigger
+     * looks back to it (CR 603.10a).
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val wasBlitzed: Boolean = false,
+    /**
+     * The turn number in which this permanent entered the battlefield, set only when it still
+     * carried the entered-this-turn marker at capture (null otherwise). Frozen because the marker
+     * is stripped on departure, yet "unless this creature entered this turn" (Moon-Circuit Hacker)
+     * resolving after the creature left reads last-known information (CR 608.2h). A turn number
+     * rather than a flag so the information can't go stale on a card that sits in a graveyard
+     * into later turns. Backs the last-known leg of
+     * [com.wingedsheep.sdk.scripting.predicates.StatePredicate.EnteredThisTurn].
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val enteredOnTurn: Int? = null,
     /** Copy-added rules text, frozen before the original identity is restored on departure. */
     val copyTriggeredAbilities: List<com.wingedsheep.sdk.scripting.TriggeredAbility> = emptyList(),
     /**
@@ -239,6 +365,37 @@ data class EntitySnapshot(
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val manaValue: Int? = null,
+    /**
+     * How many times the permanent had mutated (CR 702.140c) as it last existed on the battlefield,
+     * so "the number of times this creature has mutated" still reads it once it has left (CR 608.2h)
+     * Null when it never mutated.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val timesMutated: Int? = null,
+    /**
+     * Base power at capture — the layer-7b value after copy effects, characteristic-defining
+     * abilities and "base power is N" effects, before counters and modifiers (CR 613.4b). Frozen
+     * because off the battlefield only the printed value is readable, yet "if its power was
+     * different from its base power" (Jason Bright, Glowing Prophet) compares the departed
+     * creature's last-known power against its last-known base power (CR 608.2h).
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val basePower: Int? = null,
+    /** Base toughness at capture — the toughness sibling of [basePower]. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val baseToughness: Int? = null,
+    /**
+     * Projected colors at capture (CR 105.2), null when not captured. Frozen because a sacrificed
+     * token ceases to exist and a color-changing effect ends as the permanent leaves, yet "count
+     * the colors of the sacrificed creature" (Evolving Door) reads it as it last existed on the
+     * battlefield (CR 608.2h).
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val colors: Set<String>? = null,
 ) : EntityView {
     companion object {
         /**
@@ -256,20 +413,57 @@ data class EntitySnapshot(
                 battlefieldEntryTimestamp = state.getEntity(entityId)
                     ?.get<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()?.timestamp,
                 manaValue = permanentManaValue(state, entityId),
+                timesMutated = timesMutatedOf(state, entityId).takeIf { it > 0 },
                 power = projected.getPower(entityId),
                 toughness = projected.getToughness(entityId),
+                basePower = projected.getBasePower(entityId),
+                baseToughness = projected.getBaseToughness(entityId),
+                colors = projected.getColors(entityId),
                 subtypes = projected.getSubtypes(entityId),
                 supertypes = projected.getSupertypes(entityId),
                 controllerId = projected.getController(entityId),
+                ownerId = state.getEntity(entityId)?.get<CardComponent>()?.ownerId,
                 counters = countersOf(state, entityId),
                 keywords = projected.getKeywords(entityId),
                 lostAllAbilities = projected.hasLostAllAbilities(entityId),
                 wasSuspected = projected.isSuspected(entityId),
                 name = state.getEntity(entityId)?.get<CardComponent>()?.name,
+                numberChoices = numberChoicesOf(state, entityId),
+                textChoices = textChoicesOf(state, entityId),
             )
         }
     }
 }
+
+/** The numbers in [entityId]'s cast-choices bag, by slot. */
+internal fun numberChoicesOf(state: GameState, entityId: EntityId): Map<com.wingedsheep.sdk.scripting.ChoiceSlot, Int> =
+    state.getEntity(entityId)?.get<com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent>()
+        ?.chosen.orEmpty().mapNotNull { (slot, value) ->
+            (value as? com.wingedsheep.engine.state.components.battlefield.ChoiceValue.NumberChoice)?.let { slot to it.amount }
+        }.toMap()
+
+/** The text choices in [entityId]'s cast-choices bag, by slot. */
+internal fun textChoicesOf(state: GameState, entityId: EntityId): Map<com.wingedsheep.sdk.scripting.ChoiceSlot, String> =
+    state.getEntity(entityId)?.get<com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent>()
+        ?.chosen.orEmpty().mapNotNull { (slot, value) ->
+            (value as? com.wingedsheep.engine.state.components.battlefield.ChoiceValue.TextChoice)?.let { slot to it.text }
+        }.toMap()
+
+/**
+ * The subtype `CardPredicate.HasChosenSubtype` matches, as the permanent last existed — the
+ * snapshot counterpart of `ComponentContainer.chosenSubtype()`.
+ */
+val EntitySnapshot.chosenSubtype: String?
+    get() = textChoices[com.wingedsheep.sdk.scripting.ChoiceSlot.CREATURE_TYPE]
+        ?: textChoices[com.wingedsheep.sdk.scripting.ChoiceSlot.PLANESWALKER_TYPE]
+
+/**
+ * How many mutating spells have merged with [entityId] (CR 702.140c): each merge adds exactly one
+ * component to its pile, the host being the remaining one. Zero for a permanent that never mutated.
+ */
+fun timesMutatedOf(state: GameState, entityId: EntityId): Int =
+    state.getEntity(entityId)?.get<com.wingedsheep.engine.mechanics.MergedComponent>()
+        ?.let { it.componentIds.size - 1 } ?: 0
 
 /** The non-zero counters on [entityId]. */
 private fun countersOf(state: GameState, entityId: EntityId): Map<CounterType, Int> =
@@ -291,12 +485,22 @@ fun captureEntitySnapshots(
         wasFaceDown = state?.getEntity(id)?.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() == true,
         name = state?.getEntity(id)?.get<CardComponent>()?.name,
         manaValue = state?.let { permanentManaValue(it, id) },
+        timesMutated = state?.let { timesMutatedOf(it, id) }?.takeIf { it > 0 },
         power = projected.getPower(id),
         toughness = projected.getToughness(id),
+        basePower = projected.getBasePower(id),
+        baseToughness = projected.getBaseToughness(id),
+        colors = projected.getColors(id),
         subtypes = projected.getSubtypes(id),
         supertypes = projected.getSupertypes(id),
         controllerId = projected.getController(id),
+        ownerId = state?.getEntity(id)?.get<CardComponent>()?.ownerId,
         wasSuspected = projected.isSuspected(id),
+        // The projected type line rides along so a "shares a card type with the sacrificed
+        // permanent" read sees the types it had on the battlefield — an animated land's Creature,
+        // a token that no longer exists at all (CR 608.2h).
+        typeLine = state?.getEntity(id)?.get<CardComponent>()?.typeLine
+            ?.let { projectedTypeLine(projected, id, it) },
     )
 }
 
@@ -306,7 +510,8 @@ fun captureEntitySnapshots(
  * and its **name** ([EntitySnapshot.name], via [CardComponent]). Use at a sacrifice site when a
  * following sibling needs either — Exploit's `ExploitedEvent.sacrificedWasToken` (read by Skull
  * Skaab's "exploits a nontoken creature" clause) for the first, naming what an alternative cost ate
- * for the second. Caller must invoke this BEFORE the zone change so projected values, the token
+ * for the second. It also freezes the permanent's battlefield visit and copiable values, so a
+ * token copy of a sacrificed permanent is made from them (Three Dog, Galaxy News DJ). Caller must invoke this BEFORE the zone change so projected values, the token
  * component and the card component all still resolve.
  */
 fun captureEntitySnapshots(
@@ -319,6 +524,14 @@ fun captureEntitySnapshots(
             ?.get<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()?.timestamp,
         wasToken = container?.has<TokenComponent>() ?: false,
         name = container?.get<CardComponent>()?.name,
+        wasTapped = container?.has<com.wingedsheep.engine.state.components.battlefield.TappedComponent>() ?: false,
+        // Copiable values (CR 707.2) as it last existed on the battlefield, so "create a token
+        // that's a copy of that [sacrificed] permanent" can still copy it once it is gone — a
+        // token has ceased to exist outright (CR 704.5d), and a card in the graveyard is a new
+        // object whose own values are not the ones to copy (CR 608.2h).
+        copiableCard = container?.copiableCardComponent(),
+        copiableNumericKeywords = container?.copiableNumericKeywords().orEmpty(),
+        copiableDoubleFaced = container?.copiableDoubleFacedComponent { it },
     )
 }
 
@@ -335,6 +548,7 @@ fun captureCardInHandSnapshots(state: GameState, ids: List<EntityId>): List<Enti
         entityId = id,
         objectRef = state.objectRef(id),
         name = card?.name,
+        ownerId = card?.ownerId,
         manaValue = card?.manaValue ?: 0,
         power = (card?.baseStats?.power as? CharacteristicValue.Fixed)?.value,
         toughness = (card?.baseStats?.toughness as? CharacteristicValue.Fixed)?.value,
@@ -357,14 +571,67 @@ fun captureLastKnown(state: GameState, entityId: EntityId): EntitySnapshot {
     return captureEntitySnapshots(listOf(entityId), state).single().copy(
         typeLine = projectedTypeLine(state, entityId),
         keywords = state.projectedState.getKeywords(entityId),
+        // A self-sacrifice cost wipes the counters before the effect reads "the number of stash
+        // counters on this artifact" (Glittering Stockpile) — freeze them here like the zone-exit
+        // snapshot does (CR 113.7a).
+        counters = countersOf(state, entityId),
         cardDefinitionId = container?.get<CardComponent>()?.cardDefinitionId,
         copyTriggeredAbilities = captureCopyTriggeredAbilities(state, entityId),
         textChanges = TextChanges.of(state, entityId),
         wasAttacking = container?.has<AttackingComponent>() ?: false,
         wasBlocking = container?.has<BlockingComponent>() ?: false,
+        enteredOnTurn = state.turnNumber.takeIf {
+            container?.has<com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent>() == true
+        },
+        // CR 700.9, frozen like the zone-exit snapshot: a cost that sacrifices or exiles the
+        // source wipes its counters and attachments before "if it's modified" is read.
+        wasModified = com.wingedsheep.engine.handlers.predicates.isModified(state, entityId) {
+            state.projectedState.getController(it)
+        },
+        damageSources = damagedBySourcesOf(state, entityId),
+        wasCast = container?.has<com.wingedsheep.engine.state.components.battlefield.WasCastComponent>() == true,
+        wasRingBearer = com.wingedsheep.engine.mechanics.targeting.SourceKindProtection.isRingBearer(state, entityId),
+        wasMonstrous = container?.has<com.wingedsheep.engine.state.components.battlefield.MonstrousComponent>() == true,
+        castFromZone = container?.let(::castFromZoneOf),
+        enteredFromZone = container?.get<com.wingedsheep.engine.state.components.battlefield.EnteredFromZoneComponent>()?.zone,
         attachmentIds = attachmentIdsOf(state, entityId),
+        attachments = attachmentLkiOf(state, entityId),
+        // The cost strips the cast-choices bag too; "the last noted …" reads it from here.
+        numberChoices = numberChoicesOf(state, entityId),
+        textChoices = textChoicesOf(state, entityId),
     )
 }
+
+/**
+ * One attachment of a permanent as it last existed on the battlefield: which object it was, who
+ * controlled it, and its projected subtypes (Aura / Equipment / Curse). See
+ * [EntitySnapshot.attachments].
+ */
+@Serializable
+data class AttachmentLki(
+    val entityId: EntityId,
+    val controllerId: EntityId?,
+    val subtypes: Set<String>,
+) {
+    fun hasSubtype(subtype: Subtype): Boolean = subtypes.any { it.equals(subtype.value, ignoreCase = true) }
+}
+
+/**
+ * The attachments of [entityId] right now, each with its projected controller and subtypes
+ * (printed subtypes when unprojected) — the value frozen into [EntitySnapshot.attachments].
+ */
+fun attachmentLkiOf(state: GameState, entityId: EntityId?): List<AttachmentLki> =
+    attachmentIdsOf(state, entityId).map { id ->
+        val projectedSubtypes = state.projectedState.getSubtypes(id)
+        AttachmentLki(
+            entityId = id,
+            controllerId = state.projectedState.getController(id),
+            subtypes = projectedSubtypes.ifEmpty {
+                state.getEntity(id)?.get<CardComponent>()?.typeLine?.subtypes?.mapTo(mutableSetOf()) { it.value }
+                    ?: emptySet()
+            },
+        )
+    }
 
 /**
  * The Auras/Equipment attached to [entityId] right now, in attachment order — the value frozen into
@@ -392,8 +659,12 @@ fun projectedTypeLine(state: GameState, entityId: EntityId): TypeLine? {
 }
 
 /** [projectedTypeLine] for a caller that already holds the printed [baseTypeLine]. */
-fun projectedTypeLine(state: GameState, entityId: EntityId, baseTypeLine: TypeLine): TypeLine {
-    val projected = state.projectedState.getProjectedValues(entityId) ?: return baseTypeLine
+fun projectedTypeLine(state: GameState, entityId: EntityId, baseTypeLine: TypeLine): TypeLine =
+    projectedTypeLine(state.projectedState, entityId, baseTypeLine)
+
+/** [projectedTypeLine] read through an explicit [projection] (a caller mid-cost holding its own). */
+fun projectedTypeLine(projection: ProjectedState, entityId: EntityId, baseTypeLine: TypeLine): TypeLine {
+    val projected = projection.getProjectedValues(entityId) ?: return baseTypeLine
     val cardTypes = projected.types
         .mapNotNull { runCatching { CardType.valueOf(it) }.getOrNull() }
         .toSet()
@@ -424,6 +695,25 @@ fun captureCopyTriggeredAbilities(state: GameState, entityId: EntityId): List<co
 }
 
 /** Face-down permanents have no mana cost; copies and transformed faces use the effective card. */
-private fun permanentManaValue(state: GameState, entityId: EntityId): Int =
+internal fun permanentManaValue(state: GameState, entityId: EntityId): Int =
     if (state.getEntity(entityId)?.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() == true) 0
     else state.getEntity(entityId)?.get<CardComponent>()?.manaValue ?: 0
+
+/**
+ * The zone [container] was cast from, read off the cast-origin markers stamped as it resolved onto
+ * the battlefield — null when it wasn't cast or the origin isn't tracked. Frozen into snapshots
+ * because zone changes strip the markers (CR 400.7).
+ */
+fun castFromZoneOf(container: com.wingedsheep.engine.state.ComponentContainer): com.wingedsheep.sdk.core.Zone? = when {
+    container.has<com.wingedsheep.engine.state.components.battlefield.CastFromHandComponent>() -> com.wingedsheep.sdk.core.Zone.HAND
+    container.has<com.wingedsheep.engine.state.components.battlefield.CastFromGraveyardComponent>() -> com.wingedsheep.sdk.core.Zone.GRAVEYARD
+    container.has<com.wingedsheep.engine.state.components.battlefield.CastFromLibraryComponent>() -> com.wingedsheep.sdk.core.Zone.LIBRARY
+    container.has<com.wingedsheep.engine.state.components.battlefield.CastFromExileComponent>() -> com.wingedsheep.sdk.core.Zone.EXILE
+    else -> null
+}
+
+/** [targetId]'s record of the sources that dealt damage to it this turn, as [EntitySnapshot.damageSources] freezes it. */
+fun damagedBySourcesOf(state: GameState, targetId: EntityId): Set<DamageSourceLki> =
+    state.getEntity(targetId)
+        ?.get<com.wingedsheep.engine.state.components.battlefield.DamagedBySourcesThisTurnComponent>()
+        ?.sources ?: emptySet()

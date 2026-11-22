@@ -94,16 +94,15 @@ class CombatLethalDamageTest : FunSpec({
         return creatureId
     }
 
-    test("combat phase skips declare attackers when no valid attackers") {
+    test("combat phase reaches end of combat when no valid attackers") {
         val driver = createDriverWithCreatures()
 
-        // With no creatures on battlefield (or all with summoning sickness),
-        // declare attackers step should be skipped entirely
+        // With no creatures on battlefield (or all with summoning sickness), the empty attack is
+        // declared for the active player and blockers and damage are skipped (CR 508.8)
         driver.passPriorityUntil(Step.BEGIN_COMBAT)
         driver.currentStep shouldBe Step.BEGIN_COMBAT
         driver.currentPhase shouldBe Phase.COMBAT
 
-        // Should skip directly to END_COMBAT when there are no valid attackers
         driver.passPriorityUntil(Step.END_COMBAT)
         driver.currentStep shouldBe Step.END_COMBAT
     }

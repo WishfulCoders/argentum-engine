@@ -13,7 +13,7 @@ val CuriosityReprint = Printing(
     collectorNumber = "147",
     scryfallId = "c5a0be10-c20f-4ac0-89a5-1770ecf48aad",
     artist = "Igor Kieryluk",
-    imageUri = "https://cards.scryfall.io/normal/front/c/5/c5a0be10-c20f-4ac0-89a5-1770ecf48aad.jpg?1783930457",
+    imageUri = "https://cards.scryfall.io/normal/front/c/5/c5a0be10-c20f-4ac0-89a5-1770ecf48aad.jpg",
     releaseDate = "2020-07-17",
     rarity = Rarity.UNCOMMON,
 )

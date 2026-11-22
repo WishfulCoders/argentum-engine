@@ -39,7 +39,9 @@ val BoilerbilgesRipper = card("Boilerbilges Ripper") {
                 val permanentToSacrifice = selectTarget(
                     TargetObject(
                         filter = TargetFilter.CreatureOrEnchantment.youControl().other()
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose another creature or enchantment to sacrifice"
                 )
                 run(Effects.SacrificeTarget(permanentToSacrifice.asTarget))
             },

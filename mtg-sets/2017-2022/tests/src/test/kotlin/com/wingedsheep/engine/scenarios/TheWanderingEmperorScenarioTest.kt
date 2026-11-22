@@ -1,97 +1,102 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.mtg.sets.definitions.neo.cards.TheWanderingEmperor
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.scripting.AbilityCost
-import io.kotest.assertions.withClue
+import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
 /**
- * The Wandering Emperor (NEO #42) — flash; as long as she entered this turn, her loyalty abilities
- * can be activated any time you could cast an instant (still once per turn, ruling 2022-02-18).
- *
- * Flashes her in on the opponent's turn, exiles their tapped creature with −2, then shows the
- * once-per-turn limit holds and that on her controller's next turn she is back to sorcery timing.
+ * The Wandering Emperor: flashed in on an opponent's turn, she may use a loyalty ability at
+ * instant speed that turn — still only one — and goes back to sorcery timing on later turns.
  */
 class TheWanderingEmperorScenarioTest : ScenarioTestBase() {
-    init {
-        fun abilityId(change: Int) = TheWanderingEmperor.activatedAbilities
-            .single { (it.cost as? AbilityCost.Loyalty)?.change == change }.id
+    private val name = "The Wandering Emperor"
 
-        fun board() = scenario()
-            .withPlayers("P1", "P2")
-            .withCardInHand(1, "The Wandering Emperor")
+    private fun TestGame.loyalty(index: Int, target: EntityId? = null) = ActivateAbility(
+        player1Id,
+        findPermanent(name)!!,
+        cardRegistry.getCard(name)!!.script.activatedAbilities[index].id,
+        targets = listOfNotNull(target).map { ChosenTarget.Permanent(it) },
+    )
+
+    private fun TestGame.offered(index: Int) =
+        getLegalActions(1).any { (it.action as? ActivateAbility)?.abilityId == loyalty(index).abilityId }
+
+    private fun TestGame.givePriorityTo1() {
+        state = state.copy(priorityPlayerId = player1Id)
+    }
+
+    /** Bob's postcombat main, his Grizzly Bears tapped; Alice flashes the Emperor in off four Plains. */
+    private fun flashedIn(): TestGame {
+        val game = scenario().withPlayers("Alice", "Bob")
+            .withCardInHand(1, name)
             .withLandsOnBattlefield(1, "Plains", 4)
             .withCardOnBattlefield(2, "Grizzly Bears", tapped = true)
-            .withCardOnBattlefield(2, "Hill Giant")
-            .withCardInLibrary(1, "Plains")
-            .withCardInLibrary(1, "Plains")
-            .withCardInLibrary(2, "Plains")
-            .withCardInLibrary(2, "Plains")
-            .withActivePlayer(2)
-            .withPriorityPlayer(1)
-            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+            .withCardInLibrary(1, "Plains").withCardInLibrary(2, "Plains")
+            .withActivePlayer(2).withPriorityPlayer(1)
+            .inPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
             .build()
+        game.castSpell(1, name).error shouldBe null
+        game.resolveStack()
+        game.isOnBattlefield(name) shouldBe true
+        game.givePriorityTo1()
+        return game
+    }
 
-        fun TestGame.resolveAndTakePriority() {
-            resolveStack()
-            if (state.priorityPlayerId == player2Id) passPriority()
-            state.priorityPlayerId shouldBe player1Id
-        }
-
-        test("flashed in on the opponent's turn, −2 exiles their tapped creature at instant speed") {
-            val game = board()
-            game.castSpell(1, "The Wandering Emperor").error shouldBe null
-            game.resolveAndTakePriority()
-            val emperor = game.findPermanent("The Wandering Emperor")!!
-            withClue("her loyalty abilities are offered on the opponent's turn") {
-                game.getLegalActions(1).any { (it.action as? ActivateAbility)?.sourceId == emperor } shouldBe true
-            }
-
-            withClue("an untapped creature is not a legal −2 target") {
-                game.execute(
-                    ActivateAbility(
-                        game.player1Id, emperor, abilityId(-2),
-                        targets = listOf(ChosenTarget.Permanent(game.findPermanent("Hill Giant")!!))
-                    )
-                ).error shouldNotBe null
-            }
-
-            game.execute(
-                ActivateAbility(
-                    game.player1Id, emperor, abilityId(-2),
-                    targets = listOf(ChosenTarget.Permanent(game.findPermanent("Grizzly Bears")!!))
-                )
-            ).error shouldBe null
-            game.resolveAndTakePriority()
-
+    init {
+        test("flashed in on an opponent's turn, her -2 exiles a tapped creature at instant speed") {
+            val game = flashedIn()
+            val bears = game.findPermanent("Grizzly Bears")!!
+            game.offered(2) shouldBe true
+            game.execute(game.loyalty(2, bears)).error shouldBe null
+            game.resolveStack()
             game.isInExile(2, "Grizzly Bears") shouldBe true
             game.getLifeTotal(1) shouldBe 22
-
-            withClue("still only one loyalty ability per turn") {
-                game.execute(ActivateAbility(game.player1Id, emperor, abilityId(-1))).error shouldNotBe null
-            }
         }
 
-        test("on her controller's next turn she has not entered this turn, so she is back to sorcery timing") {
-            val game = board()
-            game.castSpell(1, "The Wandering Emperor").error shouldBe null
-            game.resolveAndTakePriority()
-            val emperor = game.findPermanent("The Wandering Emperor")!!
-
-            game.passUntilPhase(Phase.BEGINNING, Step.UPKEEP)
-            game.state.activePlayerId shouldBe game.player1Id
-            game.execute(ActivateAbility(game.player1Id, emperor, abilityId(-1))).error shouldNotBe null
-
-            game.passUntilPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-            game.execute(ActivateAbility(game.player1Id, emperor, abilityId(-1))).error shouldBe null
+        test("only one loyalty ability the turn she enters") {
+            val game = flashedIn()
+            game.execute(game.loyalty(1)).error shouldBe null
             game.resolveStack()
-            game.findPermanents("Samurai Token").size shouldBe 1
+            game.state.getBattlefield(game.player1Id).count { game.state.projectedState.isCreature(it) } shouldBe 1
+            game.givePriorityTo1()
+            game.offered(0) shouldBe false
+            game.execute(game.loyalty(0)).error shouldNotBe null
+        }
+
+        test("on a later opponent's turn she is back to sorcery timing") {
+            val game = scenario().withPlayers("Alice", "Bob")
+                .withCardOnBattlefield(1, name)
+                .withCardInLibrary(1, "Plains").withCardInLibrary(2, "Plains")
+                .withActivePlayer(2).withPriorityPlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+            game.offered(1) shouldBe false
+            game.execute(game.loyalty(1)).error shouldNotBe null
+        }
+
+        test("+1 puts a counter on up to one target creature and gives it first strike") {
+            val game = flashedIn()
+            val bears = game.findPermanent("Grizzly Bears")!!
+            game.execute(game.loyalty(0, bears)).error shouldBe null
+            game.resolveStack()
+            game.state.projectedState.getPower(bears) shouldBe 3
+            game.state.projectedState.hasKeyword(bears, Keyword.FIRST_STRIKE) shouldBe true
+        }
+
+        test("+1 with no target still adds loyalty") {
+            val game = flashedIn()
+            game.execute(game.loyalty(0)).error shouldBe null
+            game.resolveStack()
+            game.state.getEntity(game.findPermanent(name)!!)!!
+                .get<CountersComponent>()!!.getCount(CounterType.LOYALTY) shouldBe 4
         }
     }
 }

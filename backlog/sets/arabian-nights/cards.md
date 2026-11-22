@@ -2,7 +2,7 @@
 
 **Set Size:** 78 cards
 **Release Date:** December 17, 1993
-**Implemented:** 76 / 78
+**Implemented:** 77 / 78
 | Color | Count |
 |-------|-------|
 | White | 11 |
@@ -24,7 +24,7 @@
 - [x] Moorish Cavalry
 - [x] Piety
 - [x] Repentant Blacksmith
-- [ ] Shahrazad
+- [x] Shahrazad
 - [x] War Elephant
 - [x] Dandân
 - [x] Fishliver Oil

@@ -241,6 +241,103 @@ class PreventionTest : StringSpec({
         )
     }
 
+
+    // ---------------------------------------------------------------------------------------
+    // One-shot damage prevention
+    // ---------------------------------------------------------------------------------------
+
+    "one-shot prevention chooses or matches a source without targeting it" {
+        val samples = listOf(
+            "The next time a source of your choice would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(),
+
+            "The next time a blue source of your choice would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Any.withColor(
+                        com.wingedsheep.sdk.core.Color.BLUE
+                    )
+                ),
+
+            "The next time an artifact source of your choice would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(GameObjectFilter.Artifact),
+
+            "The next time a land source of your choice would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(GameObjectFilter.Land),
+
+            "The next time a creature of your choice with shadow would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Creature.withKeyword(
+                        com.wingedsheep.sdk.core.Keyword.SHADOW
+                    )
+                ),
+
+            "The next time a source of your choice of the chosen color would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Any.withChosenColor()
+                ),
+
+            "The next time a black or red source of your choice would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Any.withAnyColor(
+                        com.wingedsheep.sdk.core.Color.BLACK,
+                        com.wingedsheep.sdk.core.Color.RED,
+                    )
+                ),
+
+            "The next time a creature of the chosen type would deal damage to you this turn, prevent that damage." to
+                PreventionSourceFilter.Matching(
+                    GameObjectFilter.Creature.withChosenSubtype()
+                ),
+        )
+
+        samples.forEach { (line, source) ->
+            val effect = shield(line)
+
+            effect.nextInstanceOnly shouldBe true
+            effect.sourceFilter shouldBe source
+            effect.direction shouldBe PreventionDirection.ToTarget
+
+            fragment(line).script.targetRequirements shouldBe emptyList()
+
+            roundTrips(line)
+        }
+    }
+
+    "one-shot prevention can protect a targeted creature" {
+        val line =
+            "The next time a red source of your choice would deal damage to target creature this turn, prevent that damage."
+
+        val effect = shield(line)
+
+        effect.nextInstanceOnly shouldBe true
+        effect.sourceFilter shouldBe PreventionSourceFilter.Chosen(
+            GameObjectFilter.Any.withColor(
+                com.wingedsheep.sdk.core.Color.RED
+            )
+        )
+
+        fragment(line).script.targetRequirements.size shouldBe 1
+
+        roundTrips(line)
+    }
+
+    "targeting a damage source differs from choosing one" {
+        val line =
+            "The next time target creature would deal damage this turn, prevent that damage."
+
+        val effect = shield(line)
+
+        effect.nextInstanceOnly shouldBe true
+        effect.direction shouldBe PreventionDirection.FromTarget
+        effect.sourceFilter shouldBe PreventionSourceFilter.AnySource
+
+        fragment(line).script.targetRequirements.size shouldBe 1
+
+        roundTrips(line)
+    }
+
+
+
     // ---------------------------------------------------------------------------------------
     // Two SDK gaps this band reports rather than approximates
     // ---------------------------------------------------------------------------------------

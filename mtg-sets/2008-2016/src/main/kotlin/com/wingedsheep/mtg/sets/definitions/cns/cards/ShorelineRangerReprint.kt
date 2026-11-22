@@ -13,7 +13,7 @@ val ShorelineRangerReprint = Printing(
     collectorNumber = "106",
     scryfallId = "14c2ec82-6cd5-4edc-befd-f670090f1fc8",
     artist = "Michael Sutfin",
-    imageUri = "https://cards.scryfall.io/normal/front/1/4/14c2ec82-6cd5-4edc-befd-f670090f1fc8.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/1/4/14c2ec82-6cd5-4edc-befd-f670090f1fc8.jpg?1783939358",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

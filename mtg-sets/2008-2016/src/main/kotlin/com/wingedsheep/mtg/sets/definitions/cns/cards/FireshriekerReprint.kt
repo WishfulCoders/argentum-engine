@@ -13,7 +13,7 @@ val FireshriekerReprint = Printing(
     collectorNumber = "199",
     scryfallId = "821e3c5a-6418-40c2-89ae-4922bec9e519",
     artist = "Christopher Moeller",
-    imageUri = "https://cards.scryfall.io/normal/front/8/2/821e3c5a-6418-40c2-89ae-4922bec9e519.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/8/2/821e3c5a-6418-40c2-89ae-4922bec9e519.jpg?1783939336",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

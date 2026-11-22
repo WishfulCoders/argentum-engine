@@ -27,7 +27,7 @@ class GrantSpellsCantBeCounteredExecutor : EffectExecutor<GrantSpellsCantBeCount
         effect: GrantSpellsCantBeCounteredEffect,
         context: EffectContext
     ): EffectResult {
-        val targetId = context.resolvePlayerTarget(effect.target)
+        val targetId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid target for grant-can't-be-countered effect")
 
         if (!state.turnOrder.contains(targetId)) {

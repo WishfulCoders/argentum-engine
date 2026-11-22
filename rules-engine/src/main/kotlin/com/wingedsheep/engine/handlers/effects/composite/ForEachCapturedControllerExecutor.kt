@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
-import com.wingedsheep.engine.core.EffectContinuation
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.ForEachContinuation
 import com.wingedsheep.engine.core.ForEachItem
@@ -31,12 +30,16 @@ import com.wingedsheep.engine.core.Outcome
  * drove the tally.
  *
  * Sub-effect pauses re-enter via a player-space [ForEachContinuation] over the
- * remaining controllers, resumed by [ForEachExecutor.processItems] with the standard
- * player binding (the per-controller `countVariable` is not re-bound on that path).
+ * remaining controllers, resumed by [ForEachExecutor.processItems]; each remaining item
+ * carries its controller's `countVariable` tally and keeps the outer collections, so a
+ * resumed pass binds exactly what an unpaused one does.
  */
 class ForEachCapturedControllerExecutor(
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    /** The registry's plain entry point, for the effect program each controller's sub-effects run as. */
+    plainExecutor: (GameState, Effect, EffectContext) -> EffectResult
 ) : EffectExecutor<ForEachCapturedControllerEffect> {
+
+    private val interpreter = EffectProgramInterpreter(plainExecutor)
 
     override val effectType: KClass<ForEachCapturedControllerEffect> =
         ForEachCapturedControllerEffect::class
@@ -89,13 +92,18 @@ class ForEachCapturedControllerExecutor(
     ): EffectResult {
         var currentState = state
         val allEvents = mutableListOf<GameEvent>()
+        // What every controller's sub-effects stored, later ones replacing earlier names.
+        var stored = EffectResult(state)
 
         for ((index, entry) in controllerTallies.withIndex()) {
             val (playerId, count) = entry
-            val remaining = controllerTallies.drop(index + 1).map { it.first }
+            val remaining = controllerTallies.drop(index + 1)
 
             val perIterationContext = outerContext.copy(
                 controllerId = playerId,
+                // Keep the spell's controller reachable (Chooser.SourceController), as the player
+                // iteration space does: the caster still makes the choices inside each pass.
+                effectControllerId = outerContext.effectControllerId ?: outerContext.controllerId,
                 pipeline = outerContext.pipeline.copy(
                     // Preserve outer storedCollections (unlike the player iteration space) so the
                     // sub-effects can still see the dead pile, original list, and snapshot.
@@ -105,7 +113,9 @@ class ForEachCapturedControllerExecutor(
 
             val stateForExecution = if (remaining.isNotEmpty()) {
                 val continuation = ForEachContinuation(
-                    remainingItems = remaining.map { ForEachItem.OfPlayer(it) },
+                    remainingItems = remaining.map { (id, n) ->
+                        ForEachItem.OfPlayer(id, boundNumbers = mapOf(effect.countVariable to n), keepCollections = true)
+                    },
                     effect = ForEachEffect(
                         // Resume-only carrier: the items are already enumerated, so the
                         // Players selector is never consulted — only the per-player binding.
@@ -135,71 +145,30 @@ class ForEachCapturedControllerExecutor(
                 result.state
             }
             allEvents.addAll(result.events)
+            stored = stored.copy(
+                updatedCollections = stored.updatedCollections + result.updatedCollections,
+                updatedSubtypeGroups = stored.updatedSubtypeGroups + result.updatedSubtypeGroups,
+                updatedStoredNumbers = stored.updatedStoredNumbers + result.updatedStoredNumbers,
+                updatedChosenValues = stored.updatedChosenValues + result.updatedChosenValues,
+                updatedStringLists = stored.updatedStringLists + result.updatedStringLists,
+                updatedSacrificedPermanents = stored.updatedSacrificedPermanents + result.updatedSacrificedPermanents,
+                updatedDepartedPermanents = stored.updatedDepartedPermanents + result.updatedDepartedPermanents,
+                updatedPermittedMoves = stored.updatedPermittedMoves + result.updatedPermittedMoves,
+            )
         }
 
-        return EffectResult.success(currentState, allEvents)
+        // Published like a composite's outputs: a paused controller's program hands the frame
+        // beneath the same outputs when it finishes.
+        return stored.copy(state = currentState, events = allEvents)
     }
 
+    /**
+     * One controller's sub-effects, as an effect program over them: the same run, pause and finish
+     * as any composite, so a paused iteration publishes exactly what an unpaused one returns.
+     */
     private fun executeSubEffects(
         state: GameState,
         effects: List<Effect>,
         context: EffectContext
-    ): EffectResult {
-        var currentState = state
-        var currentContext = context
-        val allEvents = mutableListOf<GameEvent>()
-
-        for ((index, subEffect) in effects.withIndex()) {
-            val remainingEffects = effects.drop(index + 1)
-
-            val stateForExecution = if (remainingEffects.isNotEmpty()) {
-                val continuation = EffectContinuation(
-                    remainingEffects = remainingEffects,
-                    effectContext = currentContext
-                )
-                currentState.pushContinuation(continuation)
-            } else {
-                currentState
-            }
-
-            val result = effectExecutor(stateForExecution, subEffect, currentContext)
-
-            if (result.outcome !is Outcome.Done && result.outcome !is Outcome.Paused) {
-                currentState = if (remainingEffects.isNotEmpty()) {
-                    val (_, stateWithoutCont) = result.state.popContinuation()
-                    stateWithoutCont
-                } else {
-                    result.state
-                }
-                allEvents.addAll(result.events)
-                continue
-            }
-
-            if (result.outcome is Outcome.Paused) {
-                return EffectResult.propagatePause(
-                    result.state,
-                    allEvents + result.events
-                )
-            }
-
-            currentState = if (remainingEffects.isNotEmpty()) {
-                val (_, stateWithoutCont) = result.state.popContinuation()
-                stateWithoutCont
-            } else {
-                result.state
-            }
-            allEvents.addAll(result.events)
-
-            if (result.updatedCollections.isNotEmpty() || result.updatedSubtypeGroups.isNotEmpty()) {
-                currentContext = currentContext.copy(
-                    pipeline = currentContext.pipeline.copy(
-                        storedCollections = currentContext.pipeline.storedCollections + result.updatedCollections,
-                        storedSubtypeGroups = currentContext.pipeline.storedSubtypeGroups + result.updatedSubtypeGroups
-                    )
-                )
-            }
-        }
-
-        return EffectResult.success(currentState, allEvents)
-    }
+    ): EffectResult = interpreter.run(state, CompositeEffect(effects), context.copy(resolutionDepth = context.resolutionDepth + 1))
 }

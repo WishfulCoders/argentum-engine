@@ -466,7 +466,11 @@
             "protectedTargets": [],
             "redirectTo": "Controller",
             "scope": "CONTINUOUS",
-            "creaturesOnly": true,
+            "protectedFilter": {
+                "cardPredicates": [
+                    "IsCreature"
+                ]
+            },
             "optional": true
         }
     },
@@ -627,7 +631,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         }
                     ]
@@ -942,7 +949,10 @@
                     "type": "PayAtom",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 1
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
                     }
                 },
                 "consequenceIfNonePaid": {
@@ -1292,7 +1302,10 @@
                     "ability": {
                         "type": "ReplaceLandManaColor",
                         "filter": "land ctrl:you",
-                        "color": "BLUE"
+                        "produces": {
+                            "type": "com.wingedsheep.sdk.core.ManaSymbol.Colored",
+                            "color": "BLUE"
+                        }
                     },
                     "target": "Self"
                 },
@@ -1670,7 +1683,10 @@
                                 "type": "PayAtom",
                                 "atom": {
                                     "type": "AtomPayLife",
-                                    "amount": 1
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
                                 }
                             }
                         ]
@@ -1896,7 +1912,11 @@
                     "then": {
                         "type": "Composite",
                         "effects": [
-                            "SkipNextDrawStep",
+                            {
+                                "type": "SkipStepOrPhaseEffect",
+                                "part": "DRAW_STEP",
+                                "duration": "NEXT"
+                            },
                             {
                                 "type": "GainLife",
                                 "amount": {
@@ -3358,16 +3378,8 @@
         ],
         "staticAbilities": [
             {
-                "type": "CantAttackUnlessSacrifice",
-                "sacrificeFilter": {
-                    "cardPredicates": [
-                        "IsLand",
-                        {
-                            "type": "HasSubtype",
-                            "subtype": "Island"
-                        }
-                    ]
-                },
+                "type": "CantAttackUnlessPermanentCost",
+                "filter": "land Island",
                 "count": 2
             }
         ],
@@ -4818,7 +4830,11 @@
                     {
                         "type": "TargetObject",
                         "filter": {
-                            "baseFilter": {},
+                            "baseFilter": {
+                                "statePredicates": [
+                                    "HasSingleTarget"
+                                ]
+                            },
                             "zone": "Stack"
                         },
                         "id": "t0"
@@ -5436,7 +5452,10 @@
                         "type": "PayAtom",
                         "atom": {
                             "type": "AtomPayLife",
-                            "amount": 2
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
                         }
                     },
                     "suffer": "SacrificeSelf"
@@ -5788,7 +5807,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -6405,7 +6427,10 @@
                                     "type": "PayAtom",
                                     "atom": {
                                         "type": "AtomPayLife",
-                                        "amount": 1
+                                        "amount": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
                                     }
                                 },
                                 "suffer": {
@@ -6809,12 +6834,12 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "optional": true,
                 "filter": {
                     "baseFilter": "creature"
                 },
                 "id": "t0",
-                "dynamicMaxCount": "XValue"
+                "dynamicMaxCount": "XValue",
+                "dynamicMinCount": "XValue"
             }
         ]
     },

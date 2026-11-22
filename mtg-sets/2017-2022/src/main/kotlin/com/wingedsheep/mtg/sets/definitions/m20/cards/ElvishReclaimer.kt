@@ -19,6 +19,10 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * This creature gets +2/+2 as long as there are three or more land cards in your graveyard.
  * {2}, {T}, Sacrifice a land: Search your library for a land card, put it onto the battlefield
  * tapped, then shuffle.
+ *
+ * The buff is the Reclusive Taxidermist shape (a [ConditionalStaticAbility] over [ModifyStats]
+ * on the source) gated on land cards in your graveyard; the activated ability is the Warped
+ * Landscape search with a sacrifice-a-land cost instead of sacrifice-self.
  */
 val ElvishReclaimer = card("Elvish Reclaimer") {
     manaCost = "{G}"
@@ -27,8 +31,7 @@ val ElvishReclaimer = card("Elvish Reclaimer") {
     power = 1
     toughness = 2
     oracleText = "This creature gets +2/+2 as long as there are three or more land cards in your graveyard.\n" +
-        "{2}, {T}, Sacrifice a land: Search your library for a land card, put it onto the battlefield tapped, " +
-        "then shuffle."
+        "{2}, {T}, Sacrifice a land: Search your library for a land card, put it onto the battlefield tapped, then shuffle."
 
     staticAbility {
         ability = ConditionalStaticAbility(
@@ -38,18 +41,12 @@ val ElvishReclaimer = card("Elvish Reclaimer") {
     }
 
     activatedAbility {
-        cost = Costs.Composite(
-            Costs.Mana("{2}"),
-            Costs.Tap,
-            Costs.Sacrifice(GameObjectFilter.Land)
-        )
+        cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.Sacrifice(GameObjectFilter.Land))
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land,
             destination = SearchDestination.BATTLEFIELD,
             entersTapped = true
         )
-        description = "{2}, {T}, Sacrifice a land: Search your library for a land card, put it onto the " +
-            "battlefield tapped, then shuffle."
     }
 
     metadata {

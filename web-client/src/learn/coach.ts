@@ -107,7 +107,7 @@ export interface CoachView {
   /** The game ended because the player conceded — not a finished mission. */
   conceded: boolean
   /**
-   * What the big button at the bottom right says right now — "Pass", "Pass to Attackers",
+   * What the big button at the bottom right says right now — "Pass", "To Attackers",
    * "End Turn", "Resolve". The server computes it; the coach names it so the tip and the button
    * agree.
    */
@@ -143,9 +143,12 @@ const GESTURES: Record<string, [hover: string, touch: string]> = {
   '{click-lower}': ['click', 'tap'],
 }
 
-/** Substitute `{pass}` and the gesture words so a tip always names this device's real controls. */
+/**
+ * Substitute `{pass}` and the gesture words so a tip always names this device's real controls.
+ * The button label is quoted: "press To Attackers" reads as broken English, "press “To Attackers”" doesn't.
+ */
 export function wordTip(text: string, view: Pick<CoachView, 'passLabel' | 'hasHover'>): string {
-  let out = text.replaceAll('{pass}', view.passLabel)
+  let out = text.replaceAll('{pass}', `“${view.passLabel}”`)
   for (const [token, [hover, touch]] of Object.entries(GESTURES)) {
     out = out.replaceAll(token, view.hasHover ? hover : touch)
   }

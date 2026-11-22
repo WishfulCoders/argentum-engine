@@ -13,7 +13,7 @@ val CourierHawkReprint = Printing(
     collectorNumber = "68",
     scryfallId = "9395663f-c7af-4d51-ba2a-3b76db8c25ec",
     artist = "Mark Poole",
-    imageUri = "https://cards.scryfall.io/normal/front/9/3/9395663f-c7af-4d51-ba2a-3b76db8c25ec.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/9/3/9395663f-c7af-4d51-ba2a-3b76db8c25ec.jpg?1783939366",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

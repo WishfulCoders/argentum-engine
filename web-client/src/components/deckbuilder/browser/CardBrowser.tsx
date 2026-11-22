@@ -8,18 +8,15 @@
  * override. Card selection is the caller's business: `onAdd` / `onRemove` fire on click and
  * shift/right-click, and every tile is draggable (payload source `catalog`).
  */
-import { useEffect, useMemo, useState } from 'react'
-import { isAdvancedQuery, parseQuery, type CardSummary } from '../cardFilter'
-import { extractSetFilter } from '../query'
+import { useState } from 'react'
+import type { CardSummary } from '../cardFilter'
 import { CardGrid } from './CardGrid'
 import { FilterSection } from './FilterSection'
 import { SearchBar } from './SearchBar'
-import { sortCards, type SortMode } from './cardSort'
+import { useCardBrowse } from './useCardBrowse'
 import type { SetInfo } from './useCardCatalog'
-import { useArtOverrides, useCardsWithSetArt, useSetPrintingOverride, type PrintingOverride } from './useSetPrintingOverride'
+import type { PrintingOverride } from './useSetPrintingOverride'
 import styles from './CardBrowser.module.css'
-
-const PAGE_SIZE = 120
 
 export function CardBrowser({
   catalog,
@@ -56,35 +53,9 @@ export function CardBrowser({
   /** Denser card tiles — on by default, since this component is built for a side pane. */
   compact?: boolean
 }) {
-  const [query, setQuery] = useState(initialQuery)
-  const [sortMode, setSortMode] = useState<SortMode>('name')
+  const browse = useCardBrowse(catalog, initialQuery)
+  const { query, setQuery, displayed, filtered, overrides } = browse
   const [filtersOpen, setFiltersOpen] = useState(filtersOpenByDefault)
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-
-  const parseResult = useMemo(() => parseQuery(query, { withErrors: true }), [query])
-  const advanced = useMemo(() => isAdvancedQuery(query), [query])
-  const activeSetFilter = useMemo(() => extractSetFilter(parseResult.ast), [parseResult.ast])
-
-  const predicate = parseResult.predicate
-  const filtered = useMemo(
-    () => sortCards(catalog.filter(predicate), sortMode),
-    [catalog, predicate, sortMode],
-  )
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [query, sortMode])
-
-  // Only the visible page needs reprint art — asking for every match of a broad `s:` filter
-  // would be a needlessly large request.
-  const visibleNames = useMemo(
-    () => filtered.slice(0, visibleCount).map((c) => c.name),
-    [filtered, visibleCount],
-  )
-  const setOverrides = useSetPrintingOverride(activeSetFilter, visibleNames)
-  const overrides = useArtOverrides(parseResult.ast, filtered, setOverrides)
-  const withArt = useCardsWithSetArt(filtered, overrides)
-  const displayed = useMemo(() => withArt.slice(0, visibleCount), [withArt, visibleCount])
 
   const resultLabel = loading
     ? 'Loading…'
@@ -97,9 +68,10 @@ export function CardBrowser({
         <SearchBar
           query={query}
           onQueryChange={setQuery}
-          sortMode={sortMode}
-          onSortChange={setSortMode}
-          errors={parseResult.errors}
+          sortMode={browse.sortMode}
+          onSortChange={browse.setSortMode}
+          errors={browse.errors}
+          explanation={browse.explanation}
           resultLabel={resultLabel}
           {...(actionHint !== undefined ? { actionHint } : {})}
         />
@@ -123,7 +95,7 @@ export function CardBrowser({
                 onQueryChange={setQuery}
                 catalog={catalog}
                 setInfos={setInfos}
-                advanced={advanced}
+                advanced={browse.advanced}
               />
             </div>
           )}
@@ -136,8 +108,8 @@ export function CardBrowser({
                 deckCards={counts}
                 onAdd={(card) => onAdd(card, overrides[card.name] ?? null)}
                 onRemove={onRemove}
-                hasMore={displayed.length < filtered.length}
-                onShowMore={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                hasMore={browse.hasMore}
+                onShowMore={browse.showMore}
                 compact={compact}
               />
             )}

@@ -4,78 +4,54 @@ import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 
 /**
- * Field of the Dead — the intervening "if" counts lands with different names, the entering land
- * (Field itself included) counts, and duplicate names count once.
+ * Field of the Dead (M20 #247) — Land. Enters tapped; {T}: Add {C}; whenever it or another land
+ * you control enters, if you control seven or more lands with different names, create a 2/2 black
+ * Zombie. The intervening "if" counts Field itself and the entering land.
  */
 class FieldOfTheDeadScenarioTest : ScenarioTestBase() {
-
-    private fun TestGame.zombies(): Int = findAllPermanents("Zombie Token").size
-
-    private fun TestGame.playLand(name: String) {
-        val land = findCardsInHand(1, name).first()
-        execute(PlayLand(player1Id, land)).error shouldBe null
-        resolveStack()
-    }
-
     init {
-        context("Field of the Dead") {
-            test("entering as the seventh differently named land makes a Zombie") {
-                val game = scenario()
-                    .withPlayers("Player1", "Opponent")
-                    .withCardOnBattlefield(1, "Plains")
-                    .withCardOnBattlefield(1, "Island")
-                    .withCardOnBattlefield(1, "Swamp")
-                    .withCardOnBattlefield(1, "Mountain")
-                    .withCardOnBattlefield(1, "Forest")
-                    .withCardOnBattlefield(1, "Caldera Lake")
-                    .withCardInHand(1, "Field of the Dead")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
+        fun main() = scenario().withPlayers("P1", "P2")
+            .withActivePlayer(1).inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
 
-                game.playLand("Field of the Dead")
-                withClue("Field counts itself: seven names, one Zombie") { game.zombies() shouldBe 1 }
-            }
+        test("Field entering as the seventh differently named land counts itself") {
+            val game = main().withCardOnBattlefield(1, "Plains")
+                .withCardOnBattlefield(1, "Island")
+                .withCardOnBattlefield(1, "Swamp")
+                .withCardOnBattlefield(1, "Mountain")
+                .withCardOnBattlefield(1, "Forest")
+                .withCardOnBattlefield(1, "Terramorphic Expanse")
+                .withCardInHand(1, "Field of the Dead").build()
+            val field = game.findCardsInHand(1, "Field of the Dead").single()
+            game.execute(PlayLand(game.player1Id, field)).error shouldBe null
+            game.resolveStack()
+            game.findPermanents("Zombie Token").size shouldBe 1
+        }
 
-            test("duplicate names count once — six names makes nothing") {
-                val game = scenario()
-                    .withPlayers("Player1", "Opponent")
-                    .withCardOnBattlefield(1, "Plains")
-                    .withCardOnBattlefield(1, "Plains")
-                    .withCardOnBattlefield(1, "Island")
-                    .withCardOnBattlefield(1, "Swamp")
-                    .withCardOnBattlefield(1, "Mountain")
-                    .withCardOnBattlefield(1, "Forest")
-                    .withCardInHand(1, "Field of the Dead")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
+        test("another land entering makes a Zombie once seven names are present") {
+            val game = main().withCardOnBattlefield(1, "Field of the Dead")
+                .withCardOnBattlefield(1, "Plains")
+                .withCardOnBattlefield(1, "Island")
+                .withCardOnBattlefield(1, "Swamp")
+                .withCardOnBattlefield(1, "Mountain")
+                .withCardOnBattlefield(1, "Forest")
+                .withCardInHand(1, "Evolving Wilds").build()
+            val wilds = game.findCardsInHand(1, "Evolving Wilds").single()
+            game.execute(PlayLand(game.player1Id, wilds)).error shouldBe null
+            game.resolveStack()
+            game.findPermanents("Zombie Token").size shouldBe 1
+        }
 
-                game.playLand("Field of the Dead")
-                withClue("seven lands but only six names") { game.zombies() shouldBe 0 }
-            }
-
-            test("another land you control entering triggers it") {
-                val game = scenario()
-                    .withPlayers("Player1", "Opponent")
-                    .withCardOnBattlefield(1, "Field of the Dead")
-                    .withCardOnBattlefield(1, "Plains")
-                    .withCardOnBattlefield(1, "Island")
-                    .withCardOnBattlefield(1, "Swamp")
-                    .withCardOnBattlefield(1, "Mountain")
-                    .withCardOnBattlefield(1, "Caldera Lake")
-                    .withCardInHand(1, "Forest")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                game.playLand("Forest")
-                withClue("the Forest is the seventh name") { game.zombies() shouldBe 1 }
-            }
+        test("duplicate land names do not count toward seven") {
+            val game = main().withCardOnBattlefield(1, "Field of the Dead")
+                .withLandsOnBattlefield(1, "Forest", 6)
+                .withCardInHand(1, "Plains").build()
+            val plains = game.findCardsInHand(1, "Plains").single()
+            game.execute(PlayLand(game.player1Id, plains)).error shouldBe null
+            game.resolveStack()
+            game.findPermanents("Zombie Token").size shouldBe 0
         }
     }
 }

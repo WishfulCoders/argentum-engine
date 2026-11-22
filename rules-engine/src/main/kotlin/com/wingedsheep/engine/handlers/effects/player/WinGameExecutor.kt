@@ -31,7 +31,7 @@ class WinGameExecutor(
         effect: WinGameEffect,
         context: EffectContext
     ): EffectResult {
-        val winnerId = context.resolvePlayerTarget(effect.target)
+        val winnerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No target player for WinGameEffect")
 
         // "Your opponents can't win the game" (Herald of Eternal Dawn): if an opponent of the

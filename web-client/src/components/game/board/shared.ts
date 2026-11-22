@@ -314,7 +314,7 @@ export function attachmentStackLayout(input: {
 export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): boolean {
   // Count distinct casting method types
   const hasNormalCast = cardLegalActions.some(
-    (a) => a.action.type === 'CastSpell' && a.actionType !== 'CastFaceDown' && a.actionType !== 'CastWithKicker' && a.actionType !== 'CastWithFlashback' && a.actionType !== 'CastWithEscape' && a.actionType !== 'CastWithWarp' && a.actionType !== 'CastWithDash' && a.actionType !== 'CastWithDisturb'
+    (a) => a.action.type === 'CastSpell' && a.actionType !== 'CastFaceDown' && a.actionType !== 'CastWithKicker' && a.actionType !== 'CastWithFlashback' && a.actionType !== 'CastWithEscape' && a.actionType !== 'CastWithWarp' && a.actionType !== 'CastWithDash' && a.actionType !== 'CastWithSurge' && a.actionType !== 'CastWithBlitz' && a.actionType !== 'CastWithDisturb'
   )
   const hasMorphCast = cardLegalActions.some((a) => a.actionType === 'CastFaceDown')
   const hasKickerCast = cardLegalActions.some((a) => a.actionType === 'CastWithKicker')
@@ -324,11 +324,14 @@ export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): 
   const escapeCastCount = cardLegalActions.filter((a) => a.actionType === 'CastWithEscape').length
   const hasWarpCast = cardLegalActions.some((a) => a.actionType === 'CastWithWarp')
   const hasDashCast = cardLegalActions.some((a) => a.actionType === 'CastWithDash')
+  const hasSurgeCast = cardLegalActions.some((a) => a.actionType === 'CastWithSurge')
+  const hasBlitzCast = cardLegalActions.some((a) => a.actionType === 'CastWithBlitz')
   // Disturb (CR 702.146) casts the card's back face from the graveyard, so it is a distinct
   // casting option from any normal cast of the same card.
   const hasDisturbCast = cardLegalActions.some((a) => a.actionType === 'CastWithDisturb')
   const hasCycling = cardLegalActions.some((a) => a.action.type === 'CycleCard')
   const hasPlot = cardLegalActions.some((a) => a.action.type === 'PlotCard')
+  const hasForetell = cardLegalActions.some((a) => a.action.type === 'ForetellCard')
   const hasSuspend = cardLegalActions.some((a) => a.action.type === 'SuspendCardFromHand')
   // Counted rather than flagged: a modal double-faced land offers one PlayLand per land face
   // (CR 712.12), and two faces are two options even though there is no cast among them.
@@ -342,9 +345,12 @@ export function hasMultipleCastingOptions(cardLegalActions: LegalActionInfo[]): 
   options += escapeCastCount
   if (hasWarpCast) options++
   if (hasDashCast) options++
+  if (hasSurgeCast) options++
+  if (hasBlitzCast) options++
   if (hasDisturbCast) options++
   if (hasCycling) options++
   if (hasPlot) options++
+  if (hasForetell) options++
   if (hasSuspend) options++
   options += playLandCount
 
@@ -384,7 +390,7 @@ export function shouldShowCastModal(
   // More than one legal action, or multiple casting variants (morph + normal cast, etc.).
   if (cardLegalActions.length > 1) return true
   if (hasMultipleCastingOptions(cardLegalActions)) return true
-  // Impending / evoke: the printed cost and the keyword cost are both real prices for this card,
+  // Impending / evoke / bestow / mutate: the printed cost and the keyword cost are both real prices for this card,
   // so any cast of it is a choice between two buttons — whichever one the server could afford.
   if (
     cardInfo &&
@@ -395,11 +401,15 @@ export function shouldShowCastModal(
   }
   // A lone alternative play mode still implies a second (possibly-unaffordable) option the
   // menu surfaces as a grayed-out button: "Play land" for lands, "Cast" for everything else.
+  // A modal DFC's back-face land play counts too: dragging out Pinnacle Monk you can't afford
+  // must not silently put Mystic Peak onto the battlefield — the menu shows both faces first.
   return cardLegalActions.some(
     (a) =>
+      (a.action.type === 'PlayLand' && a.action.asBackFace === true) ||
       a.action.type === 'CycleCard' ||
       a.action.type === 'TypecycleCard' ||
       a.action.type === 'PlotCard' ||
+      a.action.type === 'ForetellCard' ||
       a.action.type === 'SuspendCardFromHand'
   )
 }
@@ -779,6 +789,7 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.PAGE,
   CounterType.HOOFPRINT,
   CounterType.MANNEQUIN,
+  CounterType.INCARNATION,
   CounterType.REV,
   CounterType.BLOODSTAIN,
   CounterType.BLOOD,
@@ -794,6 +805,9 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.POINT,
   CounterType.WISH,
   CounterType.REVIVAL,
+  CounterType.FUSE,
+  CounterType.FORESHADOW,
+  CounterType.LUCK,
   CounterType.INGENUITY,
   CounterType.FILM,
   CounterType.ICE,
@@ -812,6 +826,8 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   // battle's own defense badge over the printed shield, not in this marker-badge allowlist.
   CounterType.STORAGE,
   CounterType.HUNGER,
+  // Age counters (cumulative upkeep — Mystic Remora): the count *is* next upkeep's bill.
+  CounterType.AGE,
   // Phyrexia: All Will Be One's oil — spent, counted and proliferated by the cards that care.
   CounterType.OIL,
   CounterType.DOOM,
@@ -828,6 +844,7 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.PLUS_ZERO_PLUS_TWO,
   CounterType.MINUS_ONE_MINUS_ZERO,
   CounterType.MINUS_ZERO_MINUS_ONE,
+  CounterType.MINUS_ZERO_MINUS_TWO,
   // Fallen Empires. Tide is the one that most needs a badge: Homarid's whole clock is the exact
   // count, switching at one and at three and shedding all at four, so a player who can't read it
   // off the board can't play the card.
@@ -844,10 +861,14 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.BLOODLINE,
   CounterType.INVITATION,
   CounterType.IMPOSTOR,
+  // Promise of Loyalty's vow marker: while it's on, the creature can't attack the caster.
+  CounterType.VOW,
   // Champions of Kamigawa. Bloodthirsty Ogre's devotion tally is the size of its -X/-X.
   CounterType.DEVOTION,
   // Night Dealings' theft tally is spent as X to tutor a card.
   CounterType.THEFT,
+  CounterType.ACORN,
+  CounterType.INGREDIENT,
   // Sensei Golden-Tail's training marker records which creatures it trained.
   CounterType.TRAINING,
   CounterType.MIRE,
@@ -858,6 +879,68 @@ export const PASSIVE_COUNTER_TYPES: readonly CounterType[] = [
   CounterType.BRICK,
   // Living Artifact's vitality store is spent one at a time to gain life.
   CounterType.VITALITY,
+  // Sphere of Annihilation's void tally caps the mana value it exiles each upkeep.
+  CounterType.VOID,
+  // Instrument of the Bards' harmony tally sets the mana value its search finds.
+  CounterType.HARMONY,
+  // The Book of Exalted Deeds' enlightened marker on the Angel it made unbeatable.
+  CounterType.ENLIGHTENED,
+  // Weatherlight Compleated's phyresis tally: a Phyrexian creature at four, card draw at seven.
+  CounterType.PHYRESIS,
+  // Assemble the Legion's muster tally sets how many Soldiers it makes each upkeep.
+  CounterType.MUSTER,
+  // Divine Intervention's countdown: the game is a draw when the last one comes off.
+  CounterType.INTERVENTION,
+  // Tolarian Contempt's mark: its end-step trigger may only target creatures carrying one.
+  CounterType.REJECTION,
+  // Intrepid Adversary's anthem: creatures you control get +1/+1 for each one on it.
+  CounterType.VALOR,
+  // Heirloom Mirror's countdown: at three it removes them and transforms.
+  CounterType.RITUAL,
+  // Embodiment of Flame's fuel: each one pays for an impulse draw.
+  CounterType.FLAME,
+  // Smoldering Egg's countdown: at seven it removes them and transforms.
+  CounterType.EMBER,
+  // Spell Satchel's store: one pays for {C}, three for a card.
+  CounterType.BOOK,
+  // Kianne / Imbraham's mark on exiled cards.
+  CounterType.STUDY,
+  // Etrata's mark on exiled cards: a player who owns three loses the game.
+  CounterType.HIT,
+  // Uvilda's countdown on an exiled instant or sorcery.
+  CounterType.REFINE,
+  // Cosima's tally of lands entered while she voyages in exile.
+  CounterType.VOYAGE,
+  // Kaya's reminder that the creature returns to hand when it dies or is exiled.
+  CounterType.GHOSTFORM,
+  // Replicating Ring's upkeep countdown to eight Replicated Rings.
+  CounterType.NIGHT,
+  // Heliod's Punishment's countdown, ticked by the enchanted creature's granted {T} ability.
+  CounterType.TASK,
+  // Midnight Clock's tally toward its twelfth-hour reset.
+  CounterType.HOUR,
+  // The Magic Mirror's growing upkeep draw.
+  CounterType.KNOWLEDGE,
+  // Phylactery Lich's anchor: the Lich is sacrificed once no permanent you control has one.
+  CounterType.PHYLACTERY,
+  // Peace in Our Time's win tally: twelve wins the game.
+  CounterType.PEACE,
+  // Beckett Mariner's tally: at three they are removed and she deals 2 damage to each opponent.
+  CounterType.PROMOTION,
+  // Tetzimoc's mark: each opponent's creature with one is destroyed when Tetzimoc enters.
+  CounterType.PREY,
+  // Call for Unity's anthem: creatures you control get +1/+1 for each one on it.
+  CounterType.UNITY,
+  // Daredevil Dragster's tally: at two it is sacrificed and its controller draws two cards.
+  CounterType.VELOCITY,
+  // Nazar's lifegain tally: three may be removed when it attacks to draw three and lose 3 life.
+  CounterType.FEEDING,
+  // Quarantine Field: enters with X; its entry trigger exiles up to one permanent per counter.
+  CounterType.ISOLATION,
+  // Prism Array: enters with one per color spent (converge); remove one to tap target creature.
+  CounterType.CRYSTAL,
+  // Arbiter of the Ideal's memory aid: the permanent stays an enchantment even once it is gone.
+  CounterType.MANIFESTATION,
   CounterType.PLUS_ONE_PLUS_TWO,
   CounterType.PLUS_TWO_PLUS_TWO,
   CounterType.MINUS_TWO_MINUS_TWO,
@@ -897,6 +980,10 @@ export function getEffectIcon(icon: string): string {
       return '♻️'
     case 'emblem':
       return '👑'
+    case 'monarch':
+      return '👑'
+    case 'initiative':
+      return '🗝️'
     case 'copy-spell':
       return '📋'
     case 'free-cast':

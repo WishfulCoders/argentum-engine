@@ -1,6 +1,6 @@
 """Shared reader for `coverage/card-exclusions.json` — cards we won't implement.
 
-A handful of cards need mechanics the engine will never carry (ante, subgames,
+A handful of cards need mechanics the engine will never carry (ante,
 physical dexterity). Counting them as "missing" forever means a set like Antiquities
 can never read complete even once every card we intend to build is built, so coverage
 reporting treats them as *resolved-by-decision*: they drop out of the denominator
@@ -30,7 +30,7 @@ def _load() -> dict:
 
 
 def load_exclusions() -> dict[str, str]:
-    """Map card name -> reason key (`ante`, `subgame`, …). Empty if the manifest is absent.
+    """Map card name -> reason key (`ante`, `dexterity`, …). Empty if the manifest is absent.
 
     A reason is mandatory and must resolve to a sentence in the manifest's `reasons` block:
     "we're not doing this one" is only a defensible answer to "why is this set complete?" if it

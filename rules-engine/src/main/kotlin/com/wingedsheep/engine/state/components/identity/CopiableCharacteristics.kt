@@ -1,8 +1,13 @@
 package com.wingedsheep.engine.state.components.identity
 
 import com.wingedsheep.engine.state.Component
+import com.wingedsheep.engine.core.CardEntityFactory
+import com.wingedsheep.engine.registry.CardRegistry
+import com.wingedsheep.engine.state.components.stack.EntitySnapshot
+import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.engine.state.ComponentContainer
 import kotlinx.serialization.Serializable
+import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.TypeLine
@@ -16,21 +21,33 @@ import com.wingedsheep.sdk.model.CreatureStats
 fun ComponentContainer.copiableCardComponent(): CardComponent? {
     val card = get<CardComponent>() ?: return null
     if (has<FaceDownComponent>()) {
-        val mode = get<FaceDownModeComponent>()?.mode
+        val modeComponent = get<FaceDownModeComponent>()
+        val mode = modeComponent?.mode
         val ward = mode?.faceDownWard
+        // CR 708.2a: characteristics the face-down entry specified are copiable values too.
+        val specified = modeComponent?.characteristics
+        val typeLine = TypeLine(
+            // Printed order: "Artifact Creature".
+            cardTypes = specified?.addedCardTypes.orEmpty().filterNotTo(linkedSetOf()) { it == CardType.CREATURE } + CardType.CREATURE,
+            subtypes = specified?.creatureSubtypes.orEmpty() + specified?.addedSubtypes.orEmpty(),
+        )
         return CardComponent(
             cardDefinitionId = "face-down",
             name = "",
             manaCost = ManaCost.ZERO,
-            typeLine = TypeLine.parse("Creature"),
-            baseStats = CreatureStats(2, 2),
+            typeLine = typeLine,
+            baseStats = CreatureStats(specified?.power ?: 2, specified?.toughness ?: 2),
+            colors = specified?.addedColors.orEmpty(),
             baseKeywords = if (ward == null) emptySet() else setOf(Keyword.WARD),
             copyWardCosts = listOfNotNull(ward),
             ownerId = card.ownerId,
             imageUri = mode?.helperCardImageUri,
         )
     }
-    return get<FlippedComponent>()?.unflippedCard ?: card
+    // CR 712.8g: a copy of a melded permanent has mana value 0, not the summed front faces'.
+    if (has<MeldedComponent>()) return card.copy(manaValueOverride = null)
+    // An exchanged text box isn't a copiable value (CR 707.2): copy the permanent's own text.
+    return ownCardUnderTextExchange() ?: get<FlippedComponent>()?.unflippedCard ?: card
 }
 
 /** A face-down double-faced source still makes a double-faced token, with only public values. */
@@ -110,4 +127,52 @@ data class LastKnownCopiableComponent(
             )
         }
     }
+}
+
+/** Numeric ability values are copiable, while flipped status and face-down rules text are not. */
+fun ComponentContainer.copiableNumericKeywords(registry: CardRegistry? = null): List<KeywordAbility.Numeric> =
+    buildList {
+        if (!has<FaceDownComponent>()) {
+            val upright = get<FlippedComponent>()?.unflippedCard
+            if (upright != null) {
+                addAll(registry?.getCard(upright.cardDefinitionId)?.keywordAbilities
+                    ?.filterIsInstance<KeywordAbility.Numeric>().orEmpty())
+                addAll(upright.copyNumericKeywords)
+            } else {
+                get<ToxicComponent>()?.let { add(KeywordAbility.Numeric(Keyword.TOXIC, it.amount)) }
+                get<NumericKeywordValuesComponent>()?.values?.forEach { (keyword, n) ->
+                    add(KeywordAbility.Numeric(keyword, n))
+                }
+            }
+        }
+    }
+
+/** Rebuild the departed object's copiable values without borrowing any later object's components. */
+fun EntitySnapshot.copiableContainer(): ComponentContainer? {
+    val card = copiableCard ?: return null
+    var container = CardEntityFactory.applyNumericKeywords(ComponentContainer.of(card), copiableNumericKeywords)
+    copiableDoubleFaced?.let { container = container.with(it) }
+    return container
+}
+
+/**
+ * The copiable values of the permanent [entityId] as they are right now, tagged with its battlefield
+ * visit — what a trigger freezes about an object it captured, so a payoff can still copy it after
+ * the object has left (CR 608.2h), including a token that has since ceased to exist (CR 704.5d).
+ */
+fun captureCopiableSnapshot(
+    state: com.wingedsheep.engine.state.GameState,
+    entityId: com.wingedsheep.sdk.model.EntityId,
+    registry: CardRegistry,
+): EntitySnapshot? {
+    val container = state.getEntity(entityId) ?: return null
+    val card = container.copiableCardComponent() ?: return null
+    return EntitySnapshot(
+        entityId = entityId,
+        battlefieldEntryTimestamp = container
+            .get<com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent>()?.timestamp,
+        copiableCard = card,
+        copiableNumericKeywords = container.copiableNumericKeywords(registry),
+        copiableDoubleFaced = container.copiableDoubleFacedComponent { it },
+    )
 }

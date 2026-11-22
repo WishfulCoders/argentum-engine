@@ -1,7 +1,9 @@
 package com.wingedsheep.engine.legalactions.enumerators
 
 import com.wingedsheep.engine.core.CrewVehicle
+import com.wingedsheep.engine.handlers.actions.ability.CrewRequirement
 import com.wingedsheep.engine.handlers.actions.ability.CrewSaddleContributionEvaluator
+import com.wingedsheep.engine.handlers.actions.ability.TapForPowerActivationTax
 import com.wingedsheep.engine.legalactions.ActionEnumerator
 import com.wingedsheep.engine.legalactions.TapForPowerCreatureData
 import com.wingedsheep.engine.legalactions.EnumerationContext
@@ -9,10 +11,9 @@ import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.mechanics.combat.rules.AttackAvailability
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.scripting.CrewSaddleCost
-import com.wingedsheep.sdk.scripting.KeywordAbility
 
 /**
  * Enumerates crew actions for Vehicle permanents controlled by the player.
@@ -35,27 +36,13 @@ class CrewEnumerator : ActionEnumerator {
         for (entityId in context.battlefieldPermanents) {
             val container = state.getEntity(entityId) ?: continue
             val cardComponent = container.get<CardComponent>() ?: continue
-            // By definition id, not name — `CrewVehicleHandler` resolves the crew keyword by id,
-            // so a renamed copy of a Vehicle (CR 707.9) would otherwise be crewable by the engine
-            // but never offered the Crew action.
-            val cardDef = context.cardRegistry.getCard(cardComponent) ?: continue
-
-            val crewAbility = cardDef.keywordAbilities
-                .filterIsInstance<KeywordAbility.Numeric>()
-                .firstOrNull { it.keyword == Keyword.CREW } ?: continue
+            // Printed or granted ("Vehicles you control have crew 1"), minus a once-each-turn crew
+            // already used — the same resolution `CrewVehicleHandler` validates against.
+            val crewAbility = CrewRequirement.available(state, projected, context.cardRegistry, entityId) ?: continue
 
             // Crew is an activated ability (CR 702.122a) — mirror `CrewVehicleHandler`'s
             // activation-prohibition check so it's never offered and then refused.
             if (context.castPermissionUtils.isActivationForbidden(state, entityId, playerId)) continue
-
-            // "Crew N. Activate only once each turn." — once it's already been crewed this turn,
-            // the crew action is no longer available (Luxurious Locomotive).
-            if (crewAbility.onceEachTurn) {
-                val crewActivations = container
-                    .get<com.wingedsheep.engine.state.components.battlefield.CrewSaddleContributorsComponent>()
-                    ?.crewActivations ?: 0
-                if (crewActivations >= 1) continue
-            }
 
             // Find all untapped creatures controlled by the player that can crew.
             //
@@ -74,6 +61,7 @@ class CrewEnumerator : ActionEnumerator {
                 if (!projected.isCreature(creatureId)) continue
                 val creatureContainer = state.getEntity(creatureId) ?: continue
                 if (creatureContainer.has<TappedComponent>()) continue
+                if (projected.hasKeyword(creatureId, AbilityFlag.CANT_CREW)) continue
                 // Summoning sickness does NOT prevent crewing.
                 // What it contributes, not its raw power — `CrewVehicleHandler` measures the cost
                 // through the same evaluator, so a creature that "crews Vehicles as though its
@@ -92,18 +80,45 @@ class CrewEnumerator : ActionEnumerator {
                 totalAvailablePower += power
             }
 
-            val canAfford = totalAvailablePower >= crewAbility.n
+            // A cost-modifying static can add mana to crew/saddle; the handler charges it after
+            // tapping the creatures, so it's priced here the same way.
+            val tax = TapForPowerActivationTax.of(context.castPermissionUtils, state, entityId, playerId)
+            val canAfford = totalAvailablePower >= crewAbility.n &&
+                (tax.isEmpty() || context.manaSolver.canPay(state, playerId, tax))
             result.add(
                 LegalAction(
                     actionType = "CrewVehicle",
                     description = "Crew ${cardComponent.name}",
                     action = CrewVehicle(playerId, entityId, emptyList()),
                     affordable = canAfford,
+                    manaCostString = tax.takeUnless { it.isEmpty() }?.toString(),
                     tapForPower = true,
                     tapForPowerRequired = crewAbility.n,
                     tapForPowerCreatures = validCrewCreatures
                 )
             )
+
+            // "You may remove a loyalty counter from a planeswalker you control rather than pay
+            // this Vehicle's crew cost" (Heart of Kiran) — one action per permanent that can pay
+            // it, so the choice of payer is the action itself and needs no creature selection.
+            val alternativePayments = CrewRequirement.alternativePayments(
+                state, projected, context.cardRegistry, context.predicateEvaluator, entityId, playerId
+            )
+            val canPayTax = alternativePayments.isNotEmpty() &&
+                (tax.isEmpty() || context.manaSolver.canPay(state, playerId, tax))
+            for (payment in alternativePayments) {
+                val payerName = state.getEntity(payment.permanentId)?.get<CardComponent>()?.name ?: "a permanent"
+                val counter = payment.cost.counterType?.printed ?: "counter"
+                result.add(
+                    LegalAction(
+                        actionType = "CrewVehicle",
+                        description = "Crew ${cardComponent.name} — remove a $counter counter from $payerName",
+                        action = CrewVehicle(playerId, entityId, emptyList(), alternativeCostFrom = payment.permanentId),
+                        affordable = canPayTax,
+                        manaCostString = tax.takeUnless { it.isEmpty() }?.toString()
+                    )
+                )
+            }
         }
 
         return result

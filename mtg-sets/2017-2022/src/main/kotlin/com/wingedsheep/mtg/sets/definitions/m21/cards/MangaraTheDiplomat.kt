@@ -1,64 +1,40 @@
 package com.wingedsheep.mtg.sets.definitions.m21.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Conditions
-import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.AttackedDefenders
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
- * Mangara, the Diplomat
- * {3}{W}
- * Legendary Creature — Human Cleric
- * 2/4
- * Lifelink
- * Whenever an opponent attacks with creatures, if two or more of those creatures are attacking you
- * and/or planeswalkers you control, draw a card.
- * Whenever an opponent casts their second spell each turn, draw a card.
+ * Mangara, the Diplomat — Core Set 2021 #27
+ * {3}{W} · Legendary Creature — Human Cleric · 2/4
  *
- * Tomik, Wielder of Law's attack trigger and Howling Moon's second-spell trigger, each drawing one
- * card. As with Tomik, the intervening "if" counts the creatures attacking now: one that left the
- * battlefield in response no longer counts, where the ruling would still count it.
+ * The attack trigger's `minAttackers = 2` over "you and/or planeswalkers you control" is the
+ * trigger-time check. The resolution re-check is deliberately not modelled as a battlefield
+ * recount: per the 2020-06-23 ruling, attackers that left the battlefield still count by
+ * last-known information, and a recount would miss them. The approximation: an attacker
+ * removed from combat (without leaving) before resolution is still counted.
  */
 val MangaraTheDiplomat = card("Mangara, the Diplomat") {
     manaCost = "{3}{W}"
     colorIdentity = "W"
     typeLine = "Legendary Creature — Human Cleric"
+    oracleText = "Lifelink\n" +
+        "Whenever an opponent attacks with creatures, if two or more of those creatures are " +
+        "attacking you and/or planeswalkers you control, draw a card.\n" +
+        "Whenever an opponent casts their second spell each turn, draw a card."
     power = 2
     toughness = 4
-    oracleText = "Lifelink\n" +
-        "Whenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card.\n" +
-        "Whenever an opponent casts their second spell each turn, draw a card."
 
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.CreaturesAttackYouEvent(
-                minAttackers = 2,
-                includePlaneswalkersYouControl = true,
-            ),
-            binding = TriggerBinding.ANY,
-        )
-        interveningIf = Conditions.CompareAmounts(
-            DynamicAmounts.battlefield(
-                Player.Each,
-                GameObjectFilter.Creature.attackingYouOrYourPlaneswalkers(),
-            ).count(),
-            ComparisonOperator.GTE,
-            DynamicAmount.Fixed(2),
-        )
+        trigger = Triggers.you.isAttacked(2, defenders = AttackedDefenders.YOU_AND_PLANESWALKERS_YOU_CONTROL)
         effect = Effects.DrawCards(1)
-        description = "Whenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card."
+        description = "Whenever an opponent attacks with creatures, if two or more of those " +
+            "creatures are attacking you and/or planeswalkers you control, draw a card."
     }
 
     triggeredAbility {
@@ -73,6 +49,8 @@ val MangaraTheDiplomat = card("Mangara, the Diplomat") {
         artist = "Howard Lyon"
         imageUri = "https://cards.scryfall.io/normal/front/9/b/9b4e628f-5fc5-4c17-a07d-448d361d7e7c.jpg?1783930737"
         ruling("2020-06-23", "If your opponent attacks you with one creature and your planeswalker with another, you draw a card.")
+        ruling("2020-06-23", "If some of the attacking creatures leave the battlefield while Mangara's triggered ability is on the stack, use the player or planeswalker they were attacking before they left to determine whether you draw a card. On the other hand, if they're removed from combat without leaving the battlefield, use their current information to determine that they're not attacking you or a planeswalker you control anymore.")
+        ruling("2020-06-23", "An ability that triggers when a player casts a spell resolves before the spell that caused it to trigger. It resolves even if that spell is countered.")
         ruling("2020-06-23", "You draw just one card, no matter how many creatures are attacking you and your planeswalkers beyond the second.")
     }
 }

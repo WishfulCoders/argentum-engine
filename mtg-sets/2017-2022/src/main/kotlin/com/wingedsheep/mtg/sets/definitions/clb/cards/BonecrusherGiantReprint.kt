@@ -4,8 +4,9 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Bonecrusher Giant reprint in Commander Legends: Battle for Baldur's Gate. Canonical [com.wingedsheep.sdk.model.CardDefinition]
- * lives in another set's `cards/` package; this file contributes only presentation data.
+ * Bonecrusher Giant reprint in CLB. The canonical CardDefinition lives in
+ * Throne of Eldraine (`eld`), the card's earliest real printing; this file
+ * contributes only per-printing presentation data.
  */
 val BonecrusherGiantReprint = Printing(
     oracleId = "d6d72f5f-8f5d-4180-b514-f22ff5482902",

@@ -3400,6 +3400,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -4271,6 +4272,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -6295,6 +6297,7 @@
   "Deep-Cavern Bat": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -7960,6 +7963,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -8227,7 +8231,8 @@
     "DUEL",
     "OATHBREAKER",
     "PREDH",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Demonic Counsel": [
     "ALCHEMY",
@@ -8408,7 +8413,8 @@
     "DUEL",
     "GLADIATOR",
     "OATHBREAKER",
-    "PREDH"
+    "PREDH",
+    "VINTAGE_RESTRICTED"
   ],
   "Demonic Tutor // Demonic Tutor": [],
   "Demonic Vigor": [
@@ -9556,15 +9562,20 @@
     "VINTAGE"
   ],
   "Deserted Beach": [
+    "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
+    "FUTURE",
     "GLADIATOR",
     "HISTORIC",
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
     "PIONEER",
+    "STANDARD",
+    "STANDARDBRAWL",
     "TIMELESS",
     "TLR",
     "VINTAGE"
@@ -11463,7 +11474,8 @@
     "OATHBREAKER",
     "PENNY",
     "PIONEER",
-    "TIMELESS"
+    "TIMELESS",
+    "VINTAGE_RESTRICTED"
   ],
   "Dig Up": [
     "BRAWL",
@@ -19624,6 +19636,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

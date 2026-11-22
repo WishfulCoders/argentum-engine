@@ -1,26 +1,26 @@
 /**
- * Landing screen — the centred glass card you see before any game exists.
+ * Landing screen — before any game exists.
  *
- * Three labelled tiers instead of one `Quick Game | Tournament` toggle:
+ * Two layouts, by connection state:
  *
- * - **PLAY** — the {@link PlayWizard}'s three questions, a join-code row, and a Continue chip when a
- *   lobby is still live from a previous page load.
- * - **BUILD & BROWSE** — deckbuilder, replays and set completion. The account pages (`/stats`,
- *   `/friends`, `/profile`) live on the {@link AuthWidget} in the top bar instead, next to who you
- *   are signed in as.
- * - **LAB** — debugging and content tools, dev builds only; the tier does not render otherwise.
+ * - **Not yet connected, or a created game waiting for its opponent** — the centred glass card:
+ *   name entry, the Learn callout for a first-time visitor, the invite code.
+ * - **Connected** — the play hub over the card art: a top bar (Decks & Cubes, Cards, Replays, Sets, Learn, Help and
+ *   the account), a "jump back in" row (a lobby still open from before a reload, saved setups, an
+ *   invite-code field), and the {@link PlayHub} mode catalogue with its launch panel. Open lobbies,
+ *   live games and the account callouts sit beside the catalogue and give way to the panel.
  *
- * What is playable is declarative (`lobby/modeMatrix.ts`) and the wizard only renders it; this file
- * only knows how to turn a finished selection into lobby-creation messages.
+ * What is playable is declarative (`lobby/playModes.ts` over `lobby/modeMatrix.ts`); this file only
+ * lays the screen out and turns a recipe into lobby-creation messages via `useApplyRecipe`.
  */
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useGameStore } from '@/store/gameStore.ts'
-import type { TournamentFormat } from '@/types'
 import { randomBackground } from '@/utils/background.ts'
+import { PreferencesButton } from '@/components/preferences/PreferencesButton'
+import { ChatButton } from '@/components/messages/ChatButton'
 import { ReplayViewer, type GameSummary } from '../admin/ReplayViewer'
 import type { ReplayData } from '@/replay/reconstructSnapshots.ts'
-import { labelForFormat } from '@/utils/deckLegality'
 import { useAuthStore } from '@/store/authStore'
 import { useConnectName } from '@/store/useConnectName'
 import { AuthWidget } from '@/components/auth/AuthWidget'
@@ -29,20 +29,21 @@ import { DeckMigrationPrompt } from '@/components/auth/DeckMigrationPrompt'
 import { AccountBenefitsCallout } from '@/components/auth/AccountBenefitsCallout'
 import { LearnCallout } from '@/components/learn/LearnCallout'
 import { WhatsNew } from '@/components/whatsNew/WhatsNew'
+import { ArgentumMark } from './ArgentumMark'
 import { FullscreenButton } from './FullscreenButton'
-import { PlayWizard } from './PlayWizard'
+import { PlayHub } from './PlayHub'
 import { SetupRail } from './SetupRail'
-import type { Selection } from '../lobby/modeMatrix'
-import { recipeFromSelection } from '../lobby/lobbyRecipe'
+import { FindOpponentPanel } from '../matchmaking/FindOpponentPanel'
+import { PublicLobbyList, type PublicLobbyEntry, type PublicQuickGameSummary, type PublicTournamentSummary } from './PublicLobbyList'
 import { useApplyRecipe } from '../lobby/useApplyRecipe'
 import { loadLobbyId, clearLobbyId } from '@/store/slices/shared'
 import styles from './GameUI.module.css'
+import home from './Home.module.css'
+import welcome from './Welcome.module.css'
+import { GITHUB_REPOSITORY_URL } from '@/utils/links'
 
 /** Community invite, also linked from the contributing guide's "get help" section. */
 const DISCORD_INVITE_URL = 'https://discord.com/invite/dy6eSRPWzu'
-
-/** Public source repository for the engine and web client. */
-const GITHUB_REPOSITORY_URL = 'https://github.com/wingedsheep/argentum-engine'
 
 /** The maker's portfolio site — a byline in the credits, not a community link. */
 const MAKER_PORTFOLIO_URL = 'https://wingedsheep.com'
@@ -53,31 +54,6 @@ const MAKER_PORTFOLIO_URL = 'https://wingedsheep.com'
  * nginx serves the directory index directly instead of leaning on the SPA fallback.
  */
 const CONTRIBUTING_GUIDE_URL = '/contribute/'
-
-interface PublicTournamentSummary {
-  lobbyId: string
-  state: string
-  playerCount: number
-  maxPlayers: number
-  format: TournamentFormat
-  setNames: string[]
-  boosterCount: number
-  gamesPerMatch: number
-  deckFormat?: string | null
-}
-
-interface PublicQuickGameSummary {
-  lobbyId: string
-  playerCount: number
-  maxPlayers: number
-  setCode: string | null
-  hostName: string | null
-  format?: string | null
-}
-
-type PublicLobbyEntry =
-  | ({ kind: 'tournament' } & PublicTournamentSummary)
-  | ({ kind: 'quickGame' } & PublicQuickGameSummary)
 
 interface LiveQuickGameSummary {
   gameSessionId: string
@@ -163,16 +139,6 @@ export function HomeScreen({
       joinQuickGameLobby(joinSessionId.trim())
     }
   }
-
-  /**
-   * Create the lobby a completed wizard selection describes.
-   *
-   * A selection is the thinnest possible recipe — three answers and no settings — so the wizard and
-   * a saved setup take the same path out of this screen. That is what stopped this function
-   * hardcoding `['ECL'], 6, 45, false`: the values now come from the recipe, and a wizard-made draft
-   * lobby opens on no sets rather than on one nobody picked.
-   */
-  const launch = (selection: Selection) => applyRecipe(recipeFromSelection(selection))
 
   // Replay a join that was queued while disconnected.
   useEffect(() => {
@@ -301,262 +267,379 @@ export function HomeScreen({
     connect(name)
   }
 
-  return (
-    <div className={styles.connectionOverlay} style={{ backgroundImage: `url(${randomBackground})` }}>
-      {/* One flow row across the top: viewport controls left, account right. See `.landingTopBar`. */}
-      <div className={styles.landingTopBar}>
-        <div className={styles.landingTopBarControls}>
-          <FullscreenButton />
-          <button
-            type="button"
-            onClick={() => navigate('/help')}
-            className={styles.fullscreenButton}
-            title="How Argentum works — modes, priority, shortcuts"
-          >
-            ? Help
-          </button>
-          <WhatsNew />
-        </div>
-        <AuthWidget />
-      </div>
-      <div className={styles.landingLayout}>
-        {/* Mirrors the side rail's width so the glass card stays viewport-centred rather than
-            centred-minus-the-rail. Collapsed below 1480px, where that symmetry costs more width
-            than the card can spare — see `.landingGutter`. */}
-        {showSideRail && <div className={styles.landingGutter} aria-hidden="true" />}
-        <div className={styles.contentBackdrop}>
-          <h1 className={styles.title}>Argentum Engine</h1>
-          <span className={styles.commitHash}>{__COMMIT_HASH__}</span>
+  const joinPublicLobby = (entry: PublicLobbyEntry) => {
+    setJoinSessionId(entry.lobbyId)
+    if (status === 'connected') {
+      // QuickGameLobbyHandler routes by lobby kind — works for both.
+      joinQuickGameLobby(entry.lobbyId)
+    } else {
+      const name = connectName ?? playerName.trim()
+      if (!name) return
+      localStorage.setItem('argentum-player-name', name)
+      setPendingJoinCode(entry.lobbyId)
+      setNameConfirmed(true)
+      connect(name)
+    }
+  }
 
-          {error && (
-            <p className={styles.errorMessage}>Error: {error}</p>
-          )}
+  const sideLists = (
+    <>
+      {showPublicLobbies && (
+        <PublicLobbyList
+          lobbies={publicLobbies}
+          error={publicLobbiesError}
+          onlinePlayers={onlinePlayers}
+          onJoin={joinPublicLobby}
+        />
+      )}
+      {showLiveGames && (
+        <LiveGameList
+          games={liveGames}
+          onSpectate={handleSpectate}
+          disabled={!connectName && !playerName.trim() && status !== 'connected'}
+        />
+      )}
+    </>
+  )
 
-          {/* Only a visitor with no name at all is asked for one. A signed-in account already has a
-              display name, and the server would overwrite anything typed here with it. Held back
-              while the account check is in flight so the prompt can't flash and vanish. */}
-          {!nameConfirmed && !connectName && !nameResolving && (
-            <div className={styles.inputGroup}>
-              {/* The one screen a first-time visitor sees. Someone who has never played Magic
-                  needs the course before they need a name, so it comes first — unless they arrived
-                  with an invite code or a game token, in which case they are here to join a
-                  table, not to learn. */}
-              {!joinSessionId && !new URLSearchParams(window.location.search).has('token') && (
-                <LearnCallout variant="arrival" />
-              )}
-              <label className={styles.inputLabel}>{joinSessionId ? 'Enter your name to join' : 'Enter your name'}</label>
-              <input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') confirmName() }}
-                placeholder="Your name"
-                autoFocus
-                maxLength={20}
-                className={styles.textInput}
-              />
-              <button
-                onClick={confirmName}
-                disabled={!playerName.trim()}
-                className={styles.primaryButton}
-              >
-                Continue
-              </button>
-              {accountsEnabled && authStatus !== 'authenticated' && (
-                <p className={styles.accountNudge}>
-                  Playing as a guest.{' '}
-                  <button
-                    type="button"
-                    onClick={() => setLoginOpen(true)}
-                    className={styles.accountNudgeButton}
-                  >
-                    Create a free account
-                  </button>{' '}
-                  — one magic link, no password — to save decks across devices, add friends, play
-                  ranked, track your stats, and rewatch your games.
-                </p>
-              )}
-            </div>
-          )}
+  // Connected and not in a game: the mode catalogue. Everything before that — name entry, the
+  // connection in flight, a created game waiting for its opponent — keeps the centred glass card.
+  if (status === 'connected' && !sessionId) {
+    return (
+      <div
+        className={`${styles.connectionOverlay} ${home.overlay}`}
+        style={{ backgroundImage: `url(${randomBackground})` }}
+      >
+        <div className={home.artTint} aria-hidden />
+        <header className={home.topBar}>
+          <Link to="/" className={home.brand} aria-label="Argentum — home" onClick={() => setShowReplays(false)}>
+            <BrandMark />
+            Argentum
+          </Link>
+          <nav className={home.nav} aria-label="Main">
+            <button
+              type="button"
+              className={home.navItem}
+              onClick={() => navigate('/library')}
+              title="Build and save decks and cubes, and share them with friends"
+            >
+              Decks &amp; Cubes
+            </button>
+            <button
+              type="button"
+              className={home.navItem}
+              onClick={() => navigate('/cards')}
+              title="Look through every card you can play here"
+            >
+              Cards
+            </button>
+            <button type="button" className={home.navItem} onClick={() => setShowReplays(true)}>Replays</button>
+            {/* "Which cards of a set can I actually play with?" is a deckbuilding question. */}
+            <button
+              type="button"
+              className={home.navItem}
+              onClick={() => navigate('/set-completion')}
+              title="How much of every Magic set Argentum can play today"
+            >
+              Sets
+            </button>
+            {/* "Which set should I draft or play sealed?" — the guide to the fully playable sets. */}
+            <button
+              type="button"
+              className={home.navItem}
+              onClick={() => navigate('/sets')}
+              title="Compare the sets you can draft or play sealed and find one that suits you"
+            >
+              Set guide
+            </button>
+            <button type="button" className={home.navItem} onClick={() => navigate('/learn')}>Learn</button>
+            <button
+              type="button"
+              className={home.navItem}
+              onClick={() => navigate('/help')}
+              title="How Argentum works — modes, priority, shortcuts"
+            >
+              Help
+            </button>
+          </nav>
+          <div className={home.topBarEnd}>
+            <WhatsNew compact />
+            <PreferencesButton />
+            <ChatButton />
+            <FullscreenButton compact />
+            <AuthWidget />
+          </div>
+        </header>
 
-          {status === 'connected' && !sessionId && (
-            <div className={styles.homeTiers}>
-              {/* ── PLAY ─────────────────────────────────────────────── */}
-              <section className={styles.homeTier}>
-                <SectionHeading label="Play" />
-                {/* Above the wizard, and absent until you have played something: a returning player
-                    gets one click, a first-time player gets the three questions unchanged. */}
-                <SetupRail onLaunch={applyRecipe} />
-                <PlayWizard aiEnabled={aiEnabled} onLaunch={launch} />
+        <main className={home.main}>
+          {error && <p className={home.error}>Error: {error}</p>}
 
-                {/* Not a step. Someone who has a code has had the three questions answered for them,
-                    so the join row stays visible throughout rather than hiding behind step 1. */}
-                <div className={styles.joinRow}>
-                  <input
-                    type="text"
-                    value={joinSessionId}
-                    onChange={(e) => setJoinSessionId(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-                    placeholder="Been invited? Paste the code here"
-                    className={styles.sessionInput}
-                  />
-                  <button
-                    onClick={handleJoin}
-                    disabled={!joinSessionId.trim()}
-                    className={styles.joinButton}
-                  >
-                    Join
-                  </button>
+          <div className={home.quickRow}>
+            {resumableLobbyId && (
+              <div className={home.resume}>
+                <div className={home.resumeText}>
+                  <span className={home.resumeLabel}>Lobby still open</span>
+                  <span className={home.resumeCode}>{resumableLobbyId}</span>
                 </div>
+                <button
+                  type="button"
+                  className={home.resumeButton}
+                  onClick={() => joinQuickGameLobby(resumableLobbyId)}
+                >
+                  Rejoin
+                </button>
+                <button
+                  type="button"
+                  className={home.resumeDismiss}
+                  aria-label="Dismiss"
+                  title="I'm done with that lobby"
+                  onClick={() => { clearLobbyId(); setResumableLobbyId(null) }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {/* Absent until you have played something: a returning player gets one click, a
+                first-time player sees only the catalogue. */}
+            <SetupRail onLaunch={applyRecipe} />
+          </div>
 
-                {resumableLobbyId && (
-                  <div className={styles.continueChip}>
-                    <button
-                      type="button"
-                      className={styles.continueChipButton}
-                      onClick={() => joinQuickGameLobby(resumableLobbyId)}
-                    >
-                      Continue → lobby <span className={styles.continueChipCode}>{resumableLobbyId}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.continueChipDismiss}
-                      aria-label="Dismiss"
-                      title="I'm done with that lobby"
-                      onClick={() => { clearLobbyId(); setResumableLobbyId(null) }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-
-                {/* Quiet row for a connected player: progress while the course is unfinished,
-                    then a dimmed "course complete" row that still opens it for a replay. */}
+          <PlayHub
+            aiEnabled={aiEnabled}
+            onLaunch={(recipe) => applyRecipe(recipe)}
+            // Not a mode: someone with a code has had every question answered for them.
+            headerAction={
+              <form
+                className={home.joinCard}
+                onSubmit={(e) => { e.preventDefault(); handleJoin() }}
+              >
+                <label htmlFor="join-code" className={home.joinLabel}>Have a code?</label>
+                <input
+                  id="join-code"
+                  type="text"
+                  value={joinSessionId}
+                  onChange={(e) => setJoinSessionId(e.target.value)}
+                  placeholder="Invite code"
+                  autoComplete="off"
+                  className={home.joinInput}
+                />
+                <button type="submit" disabled={!joinSessionId.trim()} className={home.joinButton} data-testid="join-code-submit">
+                  Join
+                </button>
+              </form>
+            }
+            aside={
+              <>
+                <FindOpponentPanel onSignIn={() => setLoginOpen(true)} />
+                {sideLists}
                 <LearnCallout variant="tier" />
                 <AccountBenefitsCallout onCreateAccount={() => setLoginOpen(true)} />
                 <DeckMigrationPrompt />
-              </section>
+              </>
+            }
+          />
 
-              {/* ── BUILD & BROWSE ───────────────────────────────────────
-                  Only what every visitor can use. Stats, Friends and Profile were here too, and
-                  they are all account-scoped and all already reachable from the AuthWidget in the
-                  side rail — two routes to the same three pages, one of which is right above. */}
-              <section className={styles.homeTier}>
-                <SectionHeading label="Build & Browse" />
-                <div className={styles.secondaryButtonRow}>
-                  <button onClick={() => navigate('/deckbuilder')} className={styles.secondaryButton}>
-                    Deckbuilder
-                  </button>
-                  <button onClick={() => setShowReplays(true)} className={styles.secondaryButton}>
-                    Replays
-                  </button>
-                  {/* "Which cards of a set can I actually play with?" is a deckbuilding question, not
-                      a debugging one — it sat under LAB, behind an "advanced" caption that told
-                      players it wasn't for them. */}
-                  <button onClick={() => navigate('/set-completion')} className={styles.secondaryButton}>
-                    Set Completion
-                  </button>
-                </div>
-              </section>
+        </main>
 
-              {/* ── LAB ──────────────────────────────────────────────────
-                  Dev builds only, and the whole tier goes with it. Every entry point drives
-                  `/api/dev/*`, which exists only when the server runs with GAME_DEV_ENDPOINTS_ENABLED
-                  — in a production build they lead somewhere that cannot work, and with Set
-                  Completion moved out there is nothing left in the tier to justify rendering it.
-                  The *routes* stay open either way: a replay's "share as scenario" link is a real
-                  `/scenario?s=` deep link, and gating the route would break it. */}
-              {import.meta.env.DEV && (
-                <section className={styles.homeTier}>
-                  <SectionHeading label="Lab" hint="dev builds only" />
-                  <div className={styles.secondaryButtonRow}>
-                    <button onClick={() => navigate('/scenario')} className={styles.secondaryButton}>
-                      Scenario Builder
-                    </button>
-                    <button onClick={() => navigate('/llm-tournament')} className={styles.secondaryButton}>
-                      LLM Tournament
-                    </button>
-                    {/* Bot-vs-bot with nobody in a seat — the way to watch the engine AI play and
-                        see where it goes wrong. */}
-                    <button onClick={() => navigate('/ai-sandbox')} className={styles.secondaryButton}>
-                      AI Sandbox
-                    </button>
-                  </div>
-                  <p className={styles.tierCaption}>
-                    Debugging and content tools, not part of normal play.
-                  </p>
-                </section>
+        <HomeFooter>
+          {/* Dev builds only: every entry point drives `/api/dev/*`, which exists only when the
+              server runs with GAME_DEV_ENDPOINTS_ENABLED. The *routes* stay open either way — a
+              replay's "share as scenario" link is a real `/scenario?s=` deep link. */}
+          {import.meta.env.DEV && (
+            <nav className={home.lab} aria-label="Lab">
+              <span className={home.labLabel}>Lab</span>
+              <button type="button" onClick={() => navigate('/scenario')} className={home.labLink}>Scenario Builder</button>
+              <button type="button" onClick={() => navigate('/llm-tournament')} className={home.labLink}>LLM Tournament</button>
+              {/* Bot-vs-bot with nobody in a seat — the way to watch the engine AI play. */}
+              <button type="button" onClick={() => navigate('/ai-sandbox')} className={home.labLink}>AI Sandbox</button>
+            </nav>
+          )}
+        </HomeFooter>
+        <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      </div>
+    )
+  }
+
+  // Before the hub: name entry, the connection in flight, or a created game waiting for its
+  // opponent. The hub's frame (top bar, footer) around one centred glass card.
+  const askingForName = !nameConfirmed && !connectName && !nameResolving
+  const connecting = !askingForName && !sessionId && !error
+  return (
+    <div
+      className={`${styles.connectionOverlay} ${home.overlay}`}
+      style={{ backgroundImage: `url(${randomBackground})` }}
+    >
+      <div className={home.artTint} aria-hidden />
+      <header className={home.topBar}>
+        <Link to="/" className={home.brand} aria-label="Argentum — home">
+          <BrandMark />
+          Argentum
+        </Link>
+        <nav className={home.nav} aria-label="Main">
+          <button type="button" className={home.navItem} onClick={() => navigate('/library')}>Decks &amp; Cubes</button>
+          <button type="button" className={home.navItem} onClick={() => navigate('/cards')}>Cards</button>
+          <button type="button" className={home.navItem} onClick={() => navigate('/set-completion')}>Sets</button>
+          <button type="button" className={home.navItem} onClick={() => navigate('/sets')}>Set guide</button>
+          <button type="button" className={home.navItem} onClick={() => navigate('/learn')}>Learn</button>
+          <button
+            type="button"
+            className={home.navItem}
+            onClick={() => navigate('/help')}
+            title="How Argentum works — modes, priority, shortcuts"
+          >
+            Help
+          </button>
+        </nav>
+        <div className={home.topBarEnd}>
+          <WhatsNew compact />
+          <PreferencesButton />
+          <ChatButton />
+          <FullscreenButton compact />
+          <AuthWidget />
+        </div>
+      </header>
+
+      <main className={welcome.main}>
+        <div className={welcome.layout} data-side={showSideRail}>
+          <div className={welcome.card}>
+            <div className={welcome.heading}>
+              <h1 className={welcome.title}>
+                {sessionId ? 'Game created' : joinSessionId ? 'Join the table' : 'Welcome to Argentum'}
+              </h1>
+              {askingForName && !sessionId && (
+                <p className={welcome.lede}>Play Magic in your browser — against friends, strangers or the AI.</p>
               )}
             </div>
-          )}
 
-          {sessionId && (
-            <WaitingForOpponent sessionId={sessionId} />
+            {error && <p className={welcome.error}>Error: {error}</p>}
+
+            {/* Only a visitor with no name at all is asked for one. A signed-in account already has a
+                display name, and the server would overwrite anything typed here with it. Held back
+                while the account check is in flight so the prompt can't flash and vanish. */}
+            {askingForName && (
+              <>
+                {/* The one screen a first-time visitor sees. Someone who has never played Magic
+                    needs the course before they need a name, so it comes first — unless they arrived
+                    with an invite code or a game token, in which case they are here to join a
+                    table, not to learn. */}
+                {!joinSessionId && !new URLSearchParams(window.location.search).has('token') && (
+                  <LearnCallout variant="arrival" />
+                )}
+                <div className={welcome.form}>
+                  <label className={welcome.label} htmlFor="player-name">
+                    {joinSessionId ? 'Your name, to join' : 'What should we call you?'}
+                  </label>
+                  <div className={welcome.inputRow}>
+                    <input
+                      id="player-name"
+                      type="text"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmName() }}
+                      placeholder="Your name"
+                      autoFocus
+                      maxLength={20}
+                      className={welcome.input}
+                    />
+                    <button
+                      type="button"
+                      onClick={confirmName}
+                      disabled={!playerName.trim()}
+                      className={welcome.primary}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+                {accountsEnabled && authStatus !== 'authenticated' && (
+                  <p className={welcome.nudge}>
+                    Playing as a guest.{' '}
+                    <button
+                      type="button"
+                      onClick={() => setLoginOpen(true)}
+                      className={welcome.nudgeButton}
+                    >
+                      Create a free account
+                    </button>{' '}
+                    — one magic link, no password — to save decks across devices, add friends, play
+                    ranked, track your stats, and rewatch your games.
+                  </p>
+                )}
+              </>
+            )}
+
+            {connecting && (
+              <div className={welcome.status} role="status">
+                <span className={welcome.spinner} aria-hidden />
+                Connecting…
+              </div>
+            )}
+
+            {sessionId && (
+              <WaitingForOpponent sessionId={sessionId} />
+            )}
+
+            <span className={welcome.commit}>{__COMMIT_HASH__}</span>
+          </div>
+
+          {showSideRail && (
+            <div className={welcome.side}>
+              {sideLists}
+            </div>
           )}
         </div>
+      </main>
 
-        {showSideRail && (
-          <div className={styles.sidePanelStack}>
-            {showPublicLobbies && (
-              <PublicLobbyList
-                lobbies={publicLobbies}
-                error={publicLobbiesError}
-                onlinePlayers={onlinePlayers}
-                onJoin={(entry) => {
-                  setJoinSessionId(entry.lobbyId)
-                  if (status === 'connected') {
-                    // QuickGameLobbyHandler routes by lobby kind — works for both.
-                    joinQuickGameLobby(entry.lobbyId)
-                  } else {
-                    const name = connectName ?? playerName.trim()
-                    if (!name) return
-                    localStorage.setItem('argentum-player-name', name)
-                    setPendingJoinCode(entry.lobbyId)
-                    setNameConfirmed(true)
-                    connect(name)
-                  }
-                }}
-              />
-            )}
-            {showLiveGames && (
-              <LiveGameList
-                games={liveGames}
-                onSpectate={handleSpectate}
-                disabled={!connectName && !playerName.trim() && status !== 'connected'}
-              />
-            )}
-          </div>
-        )}
-      </div>
-      <div className={styles.attribution}>
-        <span className={styles.communityLinks}>
-          <a href={DISCORD_INVITE_URL} target="_blank" rel="noopener noreferrer" className={styles.communityLink}>
+      <HomeFooter />
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+    </div>
+  )
+}
+
+/** The Argentum mark beside the wordmark. */
+function BrandMark() {
+  return <ArgentumMark size={36} className={home.brandMark} />
+}
+
+/**
+ * One glass bar, styled like the top bar's nav: the credits and fan-content disclaimer on the left,
+ * the community links on the right, and `children` (the dev-only Lab links) between them. On a
+ * desktop it is a single row — anything taller would push the hub into scrolling on a laptop.
+ */
+function HomeFooter({ children }: { children?: ReactNode }) {
+  return (
+    <footer className={home.footer}>
+      <div className={home.footerBar}>
+        <p className={home.credits}>
+          <span>
+            Made by <a href={MAKER_PORTFOLIO_URL} target="_blank" rel="noopener noreferrer">wingedsheep</a> and{' '}
+            <a href={`${GITHUB_REPOSITORY_URL}/graphs/contributors`} target="_blank" rel="noopener noreferrer">contributors</a>
+            <span className={home.creditsDot} aria-hidden>·</span>
+            Card images via <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer">Scryfall</a>
+            <span className={home.creditsDot} aria-hidden>·</span>
+            Mana symbols by <a href="https://mana.andrewgioia.com" target="_blank" rel="noopener noreferrer">Mana Font</a>
+          </span>
+          <span className={home.disclaimer}>
+            Fan-made; not affiliated with or endorsed by Wizards of the Coast. Magic: The Gathering is © Wizards of the Coast LLC.
+          </span>
+        </p>
+        {children}
+        <nav className={home.community} aria-label="Community">
+          <a href={DISCORD_INVITE_URL} target="_blank" rel="noopener noreferrer" className={home.communityLink} data-brand="discord">
             <DiscordIcon />
             Discord
           </a>
-          <a href={GITHUB_REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className={styles.communityLink}>
+          <a href={GITHUB_REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className={home.communityLink}>
             <GitHubIcon />
             GitHub
           </a>
-          <a href={CONTRIBUTING_GUIDE_URL} target="_blank" rel="noopener noreferrer" className={styles.communityLink}>
+          <a href={CONTRIBUTING_GUIDE_URL} target="_blank" rel="noopener noreferrer" className={home.communityLink}>
             <GuideIcon />
             Help build it
           </a>
-        </span>
-        <span>
-          Made by <a href={MAKER_PORTFOLIO_URL} target="_blank" rel="noopener noreferrer" className={styles.attributionLink}>wingedsheep</a>
-        </span>
-        <span>
-          Card images via <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer" className={styles.attributionLink}>Scryfall</a>
-          {' · '}
-          Mana symbols by <a href="https://mana.andrewgioia.com" target="_blank" rel="noopener noreferrer" className={styles.attributionLink}>Mana Font</a> (SIL OFL 1.1 / MIT)
-        </span>
-        <span className={styles.attributionDisclaimer}>
-          Fan-made project. Not affiliated with, endorsed, or sponsored by Wizards of the Coast. Magic: The Gathering is © Wizards of the Coast LLC.
-        </span>
+        </nav>
       </div>
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
-    </div>
+    </footer>
   )
 }
 
@@ -600,69 +683,6 @@ function GuideIcon() {
     >
       <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
     </svg>
-  )
-}
-
-/** Rule-and-label heading separating the landing screen's tiers. */
-function SectionHeading({ label, hint }: { label: string; hint?: string }) {
-  return (
-    <div className={styles.tierHeading}>
-      <span className={styles.tierHeadingLabel}>
-        {label}
-        {hint && <span className={styles.tierHeadingHint}>{hint}</span>}
-      </span>
-      <span className={styles.tierHeadingRule} />
-    </div>
-  )
-}
-
-function PublicLobbyList({
-  lobbies,
-  error,
-  onlinePlayers,
-  onJoin,
-}: {
-  lobbies: PublicLobbyEntry[]
-  error: string | null
-  onlinePlayers: number | null
-  onJoin: (entry: PublicLobbyEntry) => void
-}) {
-  if (lobbies.length === 0 && !error && (onlinePlayers ?? 0) === 0) return null
-
-  return (
-    <div className={styles.publicTournamentPanel}>
-      <div className={styles.publicTournamentHeader}>
-        <span className={styles.publicTournamentTitle}>Public Lobbies</span>
-        <div className={styles.publicTournamentHeaderRight}>
-          {onlinePlayers !== null && onlinePlayers > 0 && (
-            <span className={styles.onlinePlayersBadge}>
-              <span className={styles.onlinePlayersDot} />
-              {onlinePlayers} online
-            </span>
-          )}
-          {lobbies.length > 0 && (
-            <span className={styles.publicTournamentCount}>{lobbies.length}</span>
-          )}
-        </div>
-      </div>
-      {lobbies.length === 0 && !error ? (
-        <p className={styles.publicTournamentEmpty}>No public lobbies right now.</p>
-      ) : error && lobbies.length === 0 ? (
-        <p className={styles.publicTournamentEmpty}>{error}</p>
-      ) : (
-        lobbies.map((entry) => (
-          <div key={`${entry.kind}-${entry.lobbyId}`} className={styles.publicTournamentRow}>
-            <div className={styles.publicTournamentInfo}>
-              <span className={styles.publicTournamentName}>{publicLobbyName(entry)}</span>
-              <span className={styles.publicTournamentMeta}>{publicLobbyMeta(entry)}</span>
-            </div>
-            <button onClick={() => onJoin(entry)} className={styles.publicTournamentJoinButton}>
-              Join
-            </button>
-          </div>
-        ))
-      )}
-    </div>
   )
 }
 
@@ -716,62 +736,12 @@ function liveGameMeta(game: LiveGameEntry): string {
   return `${nbsp('Quick Game')} · ${lifeSummary}`
 }
 
-function publicLobbyName(entry: PublicLobbyEntry): string {
-  if (entry.kind === 'tournament') {
-    if (entry.format === 'PREMADE_DECKS') return 'Premade Decks Tournament'
-    return entry.setNames.join(' + ') || 'Tournament'
-  }
-  return entry.hostName ? `${entry.hostName}'s Quick Game` : 'Quick Game'
-}
-
 /**
  * Non-breaking spaces inside each fact, so the rail's narrow column only ever wraps at a `·` —
  * "1/2" and "players" on separate lines read as two facts rather than one.
  */
 function nbsp(text: string): string {
   return text.replace(/ /g, ' ')
-}
-
-function publicLobbyMeta(entry: PublicLobbyEntry): string {
-  const seats = nbsp(`${entry.playerCount}/${entry.maxPlayers} players`)
-  if (entry.kind === 'tournament') {
-    const series = entry.gamesPerMatch > 1 ? nbsp(`${entry.gamesPerMatch} games per matchup`) : null
-    if (entry.format === 'PREMADE_DECKS') {
-      const parts = [nbsp('Premade Decks')]
-      if (entry.deckFormat) parts.push(nbsp(labelForFormat(entry.deckFormat)))
-      parts.push(seats)
-      if (series) parts.push(series)
-      return parts.join(' · ')
-    }
-    const packs = nbsp(`${entry.boosterCount} ${entry.format === 'DRAFT' ? 'packs' : 'boosters'}`)
-    const parts = [nbsp(formatTournamentFormat(entry.format)), packs, seats]
-    if (series) parts.push(series)
-    return parts.join(' · ')
-  }
-  const parts = [nbsp('Quick Game')]
-  if (entry.setCode) parts.push(entry.setCode)
-  if (entry.format) parts.push(nbsp(labelForFormat(entry.format)))
-  parts.push(seats)
-  return parts.join(' · ')
-}
-
-function formatTournamentFormat(format: PublicTournamentSummary['format']): string {
-  switch (format) {
-    case 'WINSTON_DRAFT':
-      return 'Winston Draft'
-    case 'GRID_DRAFT':
-      return 'Grid Draft'
-    case 'DRAFT':
-      return 'Draft'
-    case 'COMMANDER_DRAFT':
-      return 'Commander Draft'
-    case 'SEALED':
-      return 'Sealed'
-    case 'COMMANDER_SEALED':
-      return 'Commander Sealed'
-    case 'PREMADE_DECKS':
-      return 'Premade Decks'
-  }
 }
 
 /**
@@ -792,24 +762,25 @@ function WaitingForOpponent({
   }
 
   return (
-    <div className={styles.waitingSection}>
-      <p className={styles.waitingTitle}>Game Created!</p>
-      <div
+    <div className={welcome.waiting}>
+      <button
+        type="button"
         onClick={copySessionId}
-        className={`${styles.inviteBox} ${copied ? styles.inviteBoxCopied : ''}`}
+        className={welcome.inviteButton}
+        data-copied={copied}
       >
-        <div className={styles.inviteCode}>
-          {sessionId}
-        </div>
-        <span className={`${styles.inviteCopyLabel} ${copied ? styles.inviteCopyLabelCopied : ''}`}>
-          {copied ? 'Copied!' : 'Copy'}
+        <span className={welcome.inviteText}>
+          <span className={welcome.inviteLabel}>Invite code — send it to your opponent</span>
+          <span className={welcome.inviteCode}>{sessionId}</span>
         </span>
+        <span className={welcome.inviteAction}>{copied ? 'Copied!' : 'Copy'}</span>
+      </button>
+      <div className={welcome.status} role="status">
+        <span className={welcome.spinner} aria-hidden />
+        Waiting for your opponent to join…
       </div>
-      <p className={styles.waitingSubtitle}>
-        Waiting for opponent to join...
-      </p>
-      <button onClick={cancelGame} className={styles.cancelButton}>
-        Cancel Game
+      <button type="button" onClick={cancelGame} className={welcome.secondary}>
+        Cancel game
       </button>
     </div>
   )

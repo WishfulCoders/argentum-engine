@@ -13,7 +13,7 @@ val TravelerSCloakReprint = Printing(
     collectorNumber = "109",
     scryfallId = "c29e4a61-8f84-4c19-909d-6aebb3b9ab9b",
     artist = "Rebecca Guay",
-    imageUri = "https://cards.scryfall.io/normal/front/c/2/c29e4a61-8f84-4c19-909d-6aebb3b9ab9b.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/c/2/c29e4a61-8f84-4c19-909d-6aebb3b9ab9b.jpg?1783939356",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

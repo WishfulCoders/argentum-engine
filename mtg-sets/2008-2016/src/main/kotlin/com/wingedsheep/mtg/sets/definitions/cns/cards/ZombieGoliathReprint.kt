@@ -13,7 +13,7 @@ val ZombieGoliathReprint = Printing(
     collectorNumber = "135",
     scryfallId = "a4897302-7726-4827-9fa7-66ac0c264bd4",
     artist = "E. M. Gist",
-    imageUri = "https://cards.scryfall.io/normal/front/a/4/a4897302-7726-4827-9fa7-66ac0c264bd4.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/a/4/a4897302-7726-4827-9fa7-66ac0c264bd4.jpg?1783939352",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

@@ -46,10 +46,15 @@ object StateDiffCalculator {
 
         // --- Zones diff ---
         val prevZoneMap = previous.zones.associateBy { it.zoneId }
+        val currentZoneIds = current.zones.mapTo(HashSet()) { it.zoneId }
         val updatedZones = current.zones.filter { zone ->
             val prevZone = prevZoneMap[zone.zoneId]
             prevZone == null || prevZone != zone
-        }
+        } + previous.zones
+            // A zone the new state no longer has — a subgame's fresh zones (CR 729.2) replacing the
+            // main game's, and back — is sent empty, so the client doesn't keep showing its cards.
+            .filter { it.zoneId !in currentZoneIds && (it.size > 0 || it.cardIds.isNotEmpty()) }
+            .map { it.copy(cardIds = emptyList(), size = 0, positions = it.positions?.let { emptyList() }) }
 
         // --- Scalars diff ---
         val phaseDelta = if (current.currentPhase != previous.currentPhase) current.currentPhase else null
@@ -57,9 +62,13 @@ object StateDiffCalculator {
         val activePlayerDelta = if (current.activePlayerId != previous.activePlayerId) current.activePlayerId else null
         val priorityPlayerDelta = if (current.priorityPlayerId != previous.priorityPlayerId) current.priorityPlayerId else null
         val turnNumberDelta = if (current.turnNumber != previous.turnNumber) current.turnNumber else null
+        val roundNumberDelta = if (current.roundNumber != previous.roundNumber) current.roundNumber else null
         val isGameOverDelta = if (current.isGameOver != previous.isGameOver) current.isGameOver else null
         val winnerIdDelta = if (current.winnerId != previous.winnerId) current.winnerId else null
         val dayNightDelta = if (current.dayNight != previous.dayNight) current.dayNight else null
+        // Only a subgame starting or ending (CR 729) takes the game back to neither day nor night.
+        val dayNightCleared = previous.dayNight != null && current.dayNight == null
+        val subgameChanged = current.subgame != previous.subgame
         val voidActiveDelta = if (current.voidActive != previous.voidActive) current.voidActive else null
 
         // --- Combat diff ---
@@ -91,10 +100,14 @@ object StateDiffCalculator {
             activePlayerId = activePlayerDelta,
             priorityPlayerId = priorityPlayerDelta,
             turnNumber = turnNumberDelta,
+            roundNumber = roundNumberDelta,
             isGameOver = isGameOverDelta,
             winnerId = winnerIdDelta,
             dayNight = dayNightDelta,
+            dayNightCleared = if (dayNightCleared) true else null,
             voidActive = voidActiveDelta,
+            subgame = if (subgameChanged) current.subgame else null,
+            subgameCleared = if (subgameChanged && current.subgame == null) true else null,
             combat = combatDelta,
             combatCleared = if (combatCleared) true else null,
             newLogEntries = newLogEntries,

@@ -1,7 +1,7 @@
 package com.wingedsheep.engine.state
 
 import com.wingedsheep.engine.core.DecisionContext
-import com.wingedsheep.engine.core.EffectContinuation
+import com.wingedsheep.engine.core.EffectProgram
 import com.wingedsheep.engine.core.Suspension
 import com.wingedsheep.engine.core.TriggerDamageDistributionContinuation
 import com.wingedsheep.engine.core.TriggeredAbilityContinuation
@@ -106,13 +106,14 @@ class LegacyTriggerContextLiftTest : FunSpec({
                     totalDamage = 3
                 )
             ),
-            EffectContinuation(
-                remainingEffects = listOf(Effects.GainLife(1)),
-                effectContext = EffectContext(
+            EffectProgram.queued(
+                listOf(Effects.GainLife(1)),
+                EffectContext(
                     sourceId = source, controllerId = p1,
                     triggeringEntityId = dying, triggeringPlayerId = p2, xValue = 9,
                     triggerContext = contextRecord
-                )
+                ),
+                origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null),
             ),
             Suspension(
                 decision("r1"),
@@ -209,7 +210,7 @@ class LegacyTriggerContextLiftTest : FunSpec({
         val decoded = json.decodeFromString<GameState>(old.toString())
         decoded shouldBe current
         decoded.getEntity(ability)!!.get<TriggeredAbilityOnStackComponent>()!!.triggerContext shouldBe stackRecord
-        val context = (decoded.continuationStack[1] as EffectContinuation).effectContext
+        val context = (decoded.continuationStack[1] as EffectProgram).effectContext
         // EffectContext kept its own triggering slots; the lift mirrors them into the record.
         context.triggeringEntityId shouldBe dying
         context.xValue shouldBe 9
@@ -227,7 +228,7 @@ class LegacyTriggerContextLiftTest : FunSpec({
                 )
             ),
             continuationStack = listOf(
-                EffectContinuation(listOf(Effects.GainLife(1)), EffectContext(sourceId = null, controllerId = p1))
+                EffectProgram.queued(listOf(Effects.GainLife(1)), EffectContext(sourceId = null, controllerId = p1), origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null))
             ),
             nextRoutingId = 0,
         )

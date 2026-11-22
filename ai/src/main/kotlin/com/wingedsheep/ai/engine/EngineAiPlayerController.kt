@@ -193,7 +193,8 @@ class EngineAiPlayerController(
         packNumber: Int,
         pickNumber: Int,
         picksRequired: Int,
-        passDirection: String
+        passDirection: String,
+        podSize: Int?,
     ): List<String> {
         val colorCommitment = inferColors(pickedSoFar)
         val ranked = pack.sortedByDescending { rateCard(it, colorCommitment, pickedSoFar) }

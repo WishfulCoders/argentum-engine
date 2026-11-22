@@ -89,7 +89,7 @@ val CurseOfHospitality = card("Curse of Hospitality") {
             run(Effects.GrantMayPlayFromExile(
                 from = cursedCard,
                 expiry = MayPlayExpiry.EndOfTurn,
-                withAnyManaType = true,
+                withAnyManaColor = true,
                 recipient = EffectTarget.ControllerOfTriggeringEntity,
             ))
         }

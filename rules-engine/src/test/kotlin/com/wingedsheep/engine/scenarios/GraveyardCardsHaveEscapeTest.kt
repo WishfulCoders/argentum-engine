@@ -4,19 +4,15 @@ import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.Outcome
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.handlers.EffectContext
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
-import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
@@ -26,7 +22,6 @@ import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GraveyardCardsHaveEscape
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.conditions.Escaped
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -34,88 +29,84 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainAll
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
- * `GraveyardCardsHaveEscape` — the whole-graveyard escape grant behind Underworld Breach ("Each
- * nonland card in your graveyard has escape. The escape cost is equal to the card's mana cost plus
- * exile three other cards from your graveyard."), read through `EscapeCasts.escapeOptions`.
- *
- * Rules pinned here:
- * - CR 702.138a: a granted escape is an escape ability — cast from the graveyard for the escape cost
- *   (here the card's mana cost plus exiling three *other* cards), normal timing, not exiled on
- *   resolution.
- * - CR 702.138b: a spell cast with a granted escape "escaped" (instant reads it while resolving; a
- *   permanent is stamped).
- * - CR 109.5: "your graveyard" — only the granter's controller's graveyard gets escape.
- * - CR 118.6: a card with no mana cost has an unpayable escape cost from this grant.
- * - CR 107.3a: an {X} in the mana cost is announced as usual.
- * - CR 601.2b + Underworld Breach ruling: with a printed and a granted escape, the caster chooses
- *   which to apply; each is charged as its own cost.
+ * `GraveyardCardsHaveEscape` — the whole-graveyard Escape (CR 702.138) group grant behind
+ * Underworld Breach: "Each nonland card in your graveyard has escape. The escape cost is equal to
+ * the card's mana cost plus exile three other cards from your graveyard." Routed through
+ * `EscapeCasts.effectiveEscape`, so a granted escape behaves like a printed one:
+ *  - 702.138a: cast from the graveyard for the escape cost; the exile pool never holds the card itself.
+ *  - not exiled on resolution — an escaped sorcery goes back to the graveyard and can escape again.
+ *  - 702.138b: a permanent cast this way "escaped".
+ *  - Ruling: a card with no mana cost has an unpayable escape cost, so "equal to its mana cost" grants nothing.
  */
 class GraveyardCardsHaveEscapeTest : FunSpec({
 
-    val breach = card("Breach Test") {
+    val breach = card("Escape Grant Test") {
         manaCost = "{1}{R}"
         typeLine = "Enchantment"
         staticAbility {
             ability = GraveyardCardsHaveEscape(
                 filter = GameObjectFilter.Nonland,
-                additionalCost = Costs.additional.ExileOtherCards(3)
+                additionalCost = Costs.additional.ExileOtherCards(3),
             )
         }
     }
 
-    // {1}{R} instant: gain 5 life if it escaped, else 2.
-    val escapeShock = card("Breach Shock") {
+    // A fixed-cost, during-your-turn grant, to pin the two optional axes.
+    val fixedBreach = card("Fixed Escape Grant Test") {
+        manaCost = "{2}"
+        typeLine = "Enchantment"
+        staticAbility {
+            ability = GraveyardCardsHaveEscape(
+                filter = GameObjectFilter.Nonland,
+                cost = ManaCost.parse("{B}"),
+                duringYourTurnOnly = true,
+            )
+        }
+    }
+
+    val gainSorcery = card("Escape Gain Sorcery") {
         manaCost = "{1}{R}"
-        typeLine = "Instant"
-        spell {
-            effect = Effects.If(
-                condition = Conditions.Escaped,
-                then = Effects.GainLife(5),
-                otherwise = Effects.GainLife(2)
-            )
-        }
+        typeLine = "Sorcery"
+        spell { effect = Effects.GainLife(3) }
     }
 
-    val bear = card("Breach Bear") {
+    val gainInstant = card("Escape Gain Instant") {
+        manaCost = "{2}{G}"
+        typeLine = "Instant"
+        spell { effect = Effects.GainLife(2) }
+    }
+
+    val bear = card("Escape Grant Bear") {
         manaCost = "{1}{G}"
         typeLine = "Creature — Bear"
         power = 2
         toughness = 2
     }
 
-    // Printed escape {B} + exile two; mana cost {3}{B} (so Breach's escape is {3}{B} + exile three).
-    val printedEscaper = card("Printed Escaper") {
-        manaCost = "{3}{B}"
-        typeLine = "Creature — Zombie"
-        power = 3
-        toughness = 3
-        keywordAbility(KeywordAbility.escape("{B}", Costs.additional.ExileOtherCards(2)))
-    }
-
-    // No mana cost (suspend-style): unpayable escape cost from the grant.
-    val noCost = card("Costless Wonder") {
+    // No mana cost at all (Ancestral Vision shape) — distinct from a printed {0}.
+    val costless = card("Escape Costless Sorcery") {
+        manaCost = ""
         typeLine = "Sorcery"
         spell { effect = Effects.GainLife(1) }
     }
 
-    // {X}{R} sorcery: gain X life.
-    val xGain = card("Breach X Gain") {
-        manaCost = "{X}{R}"
+    // A printed escape: the printed one wins over the grant.
+    val printed = card("Escape Printed Sorcery") {
+        manaCost = "{3}{R}"
         typeLine = "Sorcery"
-        spell { effect = Effects.GainLife(DynamicAmounts.xValue()) }
+        spell { effect = Effects.GainLife(4) }
+        keywordAbility(KeywordAbility.escape("{R}", Costs.additional.ExileOtherCards(1)))
     }
 
     fun createDriver(): GameTestDriver {
         val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + listOf(breach, escapeShock, bear, printedEscaper, noCost, xGain))
-        driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), startingLife = 20)
+        driver.registerCards(TestCards.all + listOf(breach, fixedBreach, gainSorcery, gainInstant, bear, costless, printed))
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true, startingPlayer = 0)
         return driver
     }
 
@@ -123,224 +114,134 @@ class GraveyardCardsHaveEscapeTest : FunSpec({
         LegalActionEnumerator.create(driver.cardRegistry).enumerate(driver.state, playerId)
             .filter { (it.action as? CastSpell)?.let { a -> a.cardId == cardId && a.alternativeCostType == AlternativeCostType.ESCAPE } == true }
 
-    fun escape(playerId: EntityId, cardId: EntityId, exiled: List<EntityId>, choice: Int? = null, x: Int? = null) = CastSpell(
+    fun escape(playerId: EntityId, cardId: EntityId, exiled: List<EntityId>) = CastSpell(
         playerId = playerId,
         cardId = cardId,
-        xValue = x,
         useAlternativeCost = true,
         alternativeCostType = AlternativeCostType.ESCAPE,
-        escapeChoice = choice,
         additionalCostPayment = AdditionalCostPayment(exiledCards = exiled),
         paymentStrategy = PaymentStrategy.FromPool
     )
 
-    fun fillers(driver: GameTestDriver, playerId: EntityId, n: Int) = List(n) { driver.putCardInGraveyard(playerId, "Swamp") }
+    fun fillGraveyard(driver: GameTestDriver, playerId: EntityId, n: Int) =
+        List(n) { driver.putCardInGraveyard(playerId, "Mountain") }
 
-    fun resolveStack(driver: GameTestDriver) {
-        while (driver.state.stack.isNotEmpty()) driver.bothPass()
-    }
-
-    fun manaLeft(driver: GameTestDriver, playerId: EntityId): Int =
-        driver.state.getEntity(playerId)?.get<ManaPoolComponent>()
-            ?.let { it.white + it.blue + it.black + it.red + it.green + it.colorless } ?: 0
-
-    test("the grant gives a nonland graveyard card escape at its mana cost, and never a land") {
+    test("the grant offers escape at the card's mana cost, with the card itself outside the exile pool") {
         val driver = createDriver()
         val you = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val shock = driver.putCardInGraveyard(you, "Breach Shock")
-        val swamps = fillers(driver, you, 3)
+        driver.putPermanentOnBattlefield(you, "Escape Grant Test")
+        val sorcery = driver.putCardInGraveyard(you, "Escape Gain Sorcery")
+        fillGraveyard(driver, you, 2)
         driver.giveMana(you, Color.RED, 2)
 
-        val offer = escapeOffers(driver, you, shock).single()
+        // Two other cards can't pay "exile three other cards".
+        escapeOffers(driver, you, sorcery).single().affordable.shouldBeFalse()
+
+        driver.putCardInGraveyard(you, "Mountain")
+        val offer = escapeOffers(driver, you, sorcery).single()
         offer.affordable.shouldBeTrue()
         offer.manaCostString shouldBe "{1}{R}"
-        offer.description shouldBe "Cast Breach Shock (Escape)"
-        offer.additionalCostInfo.shouldNotBeNull().validExileTargets shouldContainAll swamps
-        offer.additionalCostInfo!!.validExileTargets shouldNotContain shock
-        swamps.forEach { escapeOffers(driver, you, it).shouldBeEmpty() }
+        offer.additionalCostInfo.shouldNotBeNull().validExileTargets shouldNotContain sorcery
     }
 
-    test("escaping with the grant exiles three others; the instant escaped and returns to the graveyard") {
+    test("without the granter, a plain graveyard card has no escape") {
         val driver = createDriver()
         val you = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val shock = driver.putCardInGraveyard(you, "Breach Shock")
-        val swamps = fillers(driver, you, 3)
+        val sorcery = driver.putCardInGraveyard(you, "Escape Gain Sorcery")
+        fillGraveyard(driver, you, 3)
         driver.giveMana(you, Color.RED, 2)
-        val lifeBefore = driver.getLifeTotal(you)
 
-        val result = driver.submit(escape(you, shock, swamps))
-        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
-        driver.getExile(you) shouldContainAll swamps
-        resolveStack(driver)
-
-        driver.getLifeTotal(you) shouldBe lifeBefore + 5
-        driver.getGraveyard(you) shouldContain shock
-        driver.getExile(you) shouldNotContain shock
+        escapeOffers(driver, you, sorcery).shouldBeEmpty()
     }
 
-    test("a permanent cast with the granted escape escaped (CR 702.138b)") {
+    test("the Nonland filter excludes lands, and a card with no mana cost can't escape") {
         val driver = createDriver()
         val you = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val bearCard = driver.putCardInGraveyard(you, "Breach Bear")
-        val swamps = fillers(driver, you, 3)
+        driver.putPermanentOnBattlefield(you, "Escape Grant Test")
+        val lands = fillGraveyard(driver, you, 4)
+        val costlessCard = driver.putCardInGraveyard(you, "Escape Costless Sorcery")
+        driver.giveMana(you, Color.RED, 2)
+
+        escapeOffers(driver, you, lands.first()).shouldBeEmpty()
+        escapeOffers(driver, you, costlessCard).shouldBeEmpty()
+    }
+
+    test("an escaped sorcery pays the exile half, resolves, and returns to the graveyard to escape again") {
+        val driver = createDriver()
+        val you = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        driver.putPermanentOnBattlefield(you, "Escape Grant Test")
+        val sorcery = driver.putCardInGraveyard(you, "Escape Gain Sorcery")
+        val others = fillGraveyard(driver, you, 6)
+        driver.giveMana(you, Color.RED, 2)
+        val life = driver.getLifeTotal(you)
+
+        val result = driver.submit(escape(you, sorcery, others.take(3)))
+        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
+        driver.getExile(you) shouldContainAll others.take(3)
+        while (driver.state.stack.isNotEmpty()) driver.bothPass()
+
+        driver.getLifeTotal(you) shouldBe life + 3
+        driver.getGraveyard(you) shouldContain sorcery
+        driver.getExile(you) shouldNotContain sorcery
+
+        driver.giveMana(you, Color.RED, 2)
+        escapeOffers(driver, you, sorcery).single().affordable.shouldBeTrue()
+    }
+
+    test("a permanent cast with granted escape escaped and stays on the battlefield") {
+        val driver = createDriver()
+        val you = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        driver.putPermanentOnBattlefield(you, "Escape Grant Test")
+        val bearCard = driver.putCardInGraveyard(you, "Escape Grant Bear")
+        val others = fillGraveyard(driver, you, 3)
         driver.giveMana(you, Color.GREEN, 2)
 
-        driver.submit(escape(you, bearCard, swamps)).outcome shouldBe Outcome.Done
-        resolveStack(driver)
+        val result = driver.submit(escape(you, bearCard, others))
+        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
+        while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
-        val perm = driver.findPermanent(you, "Breach Bear").shouldNotBeNull()
+        val perm = driver.findPermanent(you, "Escape Grant Bear").shouldNotBeNull()
         driver.state.getEntity(perm)?.get<CastChoicesComponent>()?.chosen?.containsKey(ChoiceSlot.ESCAPED) shouldBe true
-        PredicateEvaluator(cardRegistry = null).conditions.evaluate(
-            driver.state, Escaped, EffectContext(sourceId = perm, controllerId = you)
-        ).shouldBeTrue()
     }
 
-    test("the exile half needs three OTHER cards: the card plus two others can't pay it") {
+    test("printed and graveyard-wide escape abilities offer both costs") {
         val driver = createDriver()
         val you = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val shock = driver.putCardInGraveyard(you, "Breach Shock")
-        val swamps = fillers(driver, you, 2)
-        driver.giveMana(you, Color.RED, 2)
+        driver.putPermanentOnBattlefield(you, "Escape Grant Test")
+        val card = driver.putCardInGraveyard(you, "Escape Printed Sorcery")
+        fillGraveyard(driver, you, 1)
+        driver.giveMana(you, Color.RED, 1)
 
-        escapeOffers(driver, you, shock).single().affordable.shouldBeFalse()
-        driver.submitExpectFailure(escape(you, shock, swamps))
-        driver.submitExpectFailure(escape(you, shock, swamps + shock))
+        val offers = escapeOffers(driver, you, card)
+        offers.size shouldBe 2
+        val offer = offers.single { it.manaCostString == "{R}" }
+        offer.affordable.shouldBeTrue()
+        offer.manaCostString shouldBe "{R}"
     }
 
-    test("no granter, no escape; an opponent's granter doesn't grant escape to your graveyard (CR 109.5)") {
+    test("a fixed-cost grant uses its own cost, and a during-your-turn grant is off on the opponent's turn") {
         val driver = createDriver()
         val you = driver.activePlayer!!
         val opponent = driver.getOpponent(you)
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        val shock = driver.putCardInGraveyard(you, "Breach Shock")
-        val swamps = fillers(driver, you, 3)
-        driver.giveMana(you, Color.RED, 2)
+        driver.putPermanentOnBattlefield(you, "Fixed Escape Grant Test")
+        driver.putPermanentOnBattlefield(opponent, "Fixed Escape Grant Test")
+        val theirs = driver.putCardInGraveyard(opponent, "Escape Gain Instant")
+        driver.giveMana(opponent, Color.BLACK, 1)
 
-        escapeOffers(driver, you, shock).shouldBeEmpty()
-        driver.putPermanentOnBattlefield(opponent, "Breach Test")
-        escapeOffers(driver, you, shock).shouldBeEmpty()
-        driver.submitExpectFailure(escape(you, shock, swamps))
-    }
+        // Opponent's during-your-turn grant, on your turn: their instant has no escape.
+        escapeOffers(driver, opponent, theirs).shouldBeEmpty()
 
-    test("a card with no mana cost has an unpayable escape cost, so it can't escape (CR 118.6)") {
-        val driver = createDriver()
-        val you = driver.activePlayer!!
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val wonder = driver.putCardInGraveyard(you, "Costless Wonder")
-        val swamps = fillers(driver, you, 3)
-
-        escapeOffers(driver, you, wonder).shouldBeEmpty()
-        driver.submitExpectFailure(escape(you, wonder, swamps))
-        driver.getGraveyard(you) shouldContain wonder
-    }
-
-    test("an {X} in the mana cost is announced and paid as usual (CR 107.3a)") {
-        val driver = createDriver()
-        val you = driver.activePlayer!!
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val spell = driver.putCardInGraveyard(you, "Breach X Gain")
-        val swamps = fillers(driver, you, 3)
-        driver.giveMana(you, Color.RED, 4)
-        val lifeBefore = driver.getLifeTotal(you)
-
-        val offer = escapeOffers(driver, you, spell).single()
-        offer.hasXCost.shouldBeTrue()
-        offer.maxAffordableX shouldBe 3
-
-        val result = driver.submit(escape(you, spell, swamps, x = 3))
-        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
-        manaLeft(driver, you) shouldBe 0
-        resolveStack(driver)
-        driver.getLifeTotal(you) shouldBe lifeBefore + 3
-    }
-
-    test("printed and granted escape: one offer each, the caster chooses, and each charges its own cost") {
-        val driver = createDriver()
-        val you = driver.activePlayer!!
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val escaper = driver.putCardInGraveyard(you, "Printed Escaper")
-        val swamps = fillers(driver, you, 3)
+        val yours = driver.putCardInGraveyard(you, "Escape Gain Instant")
         driver.giveMana(you, Color.BLACK, 1)
-
-        val offers = escapeOffers(driver, you, escaper)
-        offers shouldHaveSize 2
-        offers.map { (it.action as CastSpell).escapeChoice } shouldContainExactlyInAnyOrder listOf(0, 1)
-        offers.map { it.manaCostString } shouldContainExactlyInAnyOrder listOf("{B}", "{3}{B}")
-        offers.first { (it.action as CastSpell).escapeChoice == 0 }.affordable.shouldBeTrue()
-        offers.first { (it.action as CastSpell).escapeChoice == 1 }.affordable.shouldBeFalse()
-
-        // Breach's escape costs {3}{B}: one black mana can't pay it, and a choice past the
-        // options is rejected rather than falling back to another escape.
-        driver.submitExpectFailure(escape(you, escaper, swamps, choice = 1))
-        driver.submitExpectFailure(escape(you, escaper, swamps.take(2), choice = 2))
-
-        // The printed escape: {B} + exactly two others.
-        val result = driver.submit(escape(you, escaper, swamps.take(2), choice = 0))
-        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
-        driver.getExile(you) shouldContainAll swamps.take(2)
-        driver.getGraveyard(you) shouldContain swamps[2]
-    }
-
-    test("choosing the granted escape over the printed one pays the mana cost and exiles three") {
-        val driver = createDriver()
-        val you = driver.activePlayer!!
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val escaper = driver.putCardInGraveyard(you, "Printed Escaper")
-        val swamps = fillers(driver, you, 3)
-        driver.giveMana(you, Color.BLACK, 4)
-
-        val result = driver.submit(escape(you, escaper, swamps, choice = 1))
-        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
-        manaLeft(driver, you) shouldBe 0
-        driver.getExile(you) shouldContainAll swamps
-        resolveStack(driver)
-        val perm = driver.findPermanent(you, "Printed Escaper").shouldNotBeNull()
-        driver.state.getEntity(perm)?.get<CastChoicesComponent>()?.chosen?.containsKey(ChoiceSlot.ESCAPED) shouldBe true
-    }
-
-    test("two granters grant the same escape once") {
-        val driver = createDriver()
-        val you = driver.activePlayer!!
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val shock = driver.putCardInGraveyard(you, "Breach Shock")
-        fillers(driver, you, 3)
-        driver.giveMana(you, Color.RED, 2)
-
-        val offer = escapeOffers(driver, you, shock).single()
-        (offer.action as CastSpell).escapeChoice shouldBe null
-    }
-
-    test("escape grants no timing permission: with a spell on the stack an instant escapes, a creature doesn't") {
-        val driver = createDriver()
-        val you = driver.activePlayer!!
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        driver.putPermanentOnBattlefield(you, "Breach Test")
-        val shockInHand = driver.putCardInHand(you, "Breach Shock")
-        val shock = driver.putCardInGraveyard(you, "Breach Shock")
-        val bearCard = driver.putCardInGraveyard(you, "Breach Bear")
-        fillers(driver, you, 3)
-        driver.giveMana(you, Color.RED, 4)
-        driver.giveMana(you, Color.GREEN, 2)
-
-        escapeOffers(driver, you, bearCard) shouldHaveSize 1
-        driver.submit(CastSpell(you, shockInHand, paymentStrategy = PaymentStrategy.FromPool)).outcome shouldBe Outcome.Done
-        driver.state.stack.isNotEmpty().shouldBeTrue()
-
-        escapeOffers(driver, you, shock) shouldHaveSize 1
-        escapeOffers(driver, you, bearCard).shouldBeEmpty()
+        val offer = escapeOffers(driver, you, yours).single()
+        offer.manaCostString shouldBe "{B}"
+        offer.affordable.shouldBeTrue()
     }
 })

@@ -27,7 +27,7 @@ class TauntExecutor : EffectExecutor<TauntEffect> {
         context: EffectContext
     ): EffectResult {
         // Resolve the target player (whose creatures must attack)
-        val targetPlayerId = context.resolvePlayerTarget(effect.target)
+        val targetPlayerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid target player for Taunt effect")
 
         // The defender is the controller of Taunt (the caster)

@@ -1399,6 +1399,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -3817,6 +3818,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -4525,6 +4527,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -4532,6 +4535,7 @@
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
+    "PENNY",
     "PIONEER",
     "PREDH",
     "STANDARD",
@@ -4978,7 +4982,6 @@
     "OATHBREAKER",
     "PAUPER",
     "PAUPERCOMMANDER",
-    "PENNY",
     "PIONEER",
     "STANDARD",
     "STANDARDBRAWL",
@@ -6597,7 +6600,8 @@
     "COMMANDER",
     "DUEL",
     "OATHBREAKER",
-    "PREDH"
+    "PREDH",
+    "VINTAGE_RESTRICTED"
   ],
   "Wheel of Misfortune": [
     "COMMANDER",
@@ -9662,7 +9666,8 @@
     "DUEL",
     "OATHBREAKER",
     "PREDH",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Windgrace Acolyte": [
     "BRAWL",
@@ -10744,6 +10749,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

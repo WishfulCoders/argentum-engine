@@ -1,11 +1,16 @@
 package com.wingedsheep.engine.handlers.actions.spell
 
+import com.wingedsheep.engine.mechanics.BeamMeUp
+import com.wingedsheep.engine.mechanics.cost.spell.AnyNumberForCostReductionCostKind
 import com.wingedsheep.engine.core.AlternativeCostType
+import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils.toEntityId
+import com.wingedsheep.engine.mechanics.CastCharacteristics
 import com.wingedsheep.engine.mechanics.DisturbCasts
 import com.wingedsheep.engine.mechanics.EmergeCasts
+import com.wingedsheep.engine.mechanics.EscapeCasts
 import com.wingedsheep.engine.mechanics.FlashbackGrants
 import com.wingedsheep.engine.mechanics.HarmonizeGrants
 import com.wingedsheep.engine.mechanics.MayhemGrants
@@ -21,8 +26,8 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.identity.MiracleWindowComponent
 import com.wingedsheep.engine.state.components.identity.PlayWithCostIncreaseComponent
+import com.wingedsheep.engine.state.components.identity.PlayWithCostReductionComponent
 import com.wingedsheep.engine.state.components.identity.PlayWithFixedAlternativeManaCostComponent
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
@@ -58,6 +63,25 @@ internal class CastCostTotaller(
 ) {
 
     /**
+     * Whether a runtime cast tax owes on this cast. A tax tied to a permission ("costs {8} more to
+     * cast **this way**", Mavinda) lapses with it and isn't owed by a cast that announces one of the
+     * card's own graveyard routes (flashback, harmonize, mayhem, escape, disturb) — that's a
+     * different way of casting it. "Unless it targets …" waives it on a matching chosen target.
+     */
+    private fun taxApplies(state: GameState, action: CastSpell, tax: PlayWithCostIncreaseComponent): Boolean {
+        if (!tax.appliesTo(state, action.playerId)) return false
+        if (tax.grantedPermissionId != null && action.useAlternativeCost &&
+            action.alternativeCostType in GRAVEYARD_ROUTES
+        ) return false
+        val waiver = tax.unlessAnyTargetMatches ?: return true
+        val battlefield = state.getBattlefield().toSet()
+        val targets = (action.targets + action.modeTargetsOrdered.flatten()).map { it.toEntityId() }
+            .filter { it in battlefield }
+        val context = PredicateContext(controllerId = action.playerId)
+        return targets.none { predicateEvaluator.matches(state, state.projectedState, it, waiver, context) }
+    }
+
+    /**
      * The total cost of casting [action] (CR 601.2f), before tap/exile payment reductions. Null when
      * the cast names an alternative cost that isn't available to it, or the card has no mana cost to
      * pay (CR 202.1b / 118.6) — `validate` rejects the cast in both cases.
@@ -78,23 +102,18 @@ internal class CastCostTotaller(
         if (!playForFree && !action.useAlternativeCost) {
             // Summed over every declared cost: "Kicker [A] and/or [B]" kicked with both pays both
             // (CR 702.33b); a single-cost declaration is the one-element case.
-            val kickerManaCost = optionalCostsManaPaid(declaredOptionalCosts(action, cardDef), action.declaredCostTimes)
+            val kickerManaCost = optionalCostsManaPaid(
+                declaredOptionalCosts(
+                    action,
+                    com.wingedsheep.engine.mechanics.OffspringGrants.effectiveOptionalCosts(
+                        state, action.cardId, cardDef, action.playerId, cardRegistry, predicateEvaluator
+                    )
+                ),
+                action.declaredCostTimes
+            )
             if (kickerManaCost != null) {
                 effectiveCost = ManaCost(effectiveCost.symbols + kickerManaCost.symbols)
             }
-        }
-
-        // "This spell costs {W}{U} more to cast for each target beyond the first" (Officious
-        // Interrogation). Charged outside every `playForFree` / alternative-cost / face-down base,
-        // because a cost *increase* is not part of the cost those bases waive or replace
-        // (CR 601.2f) — the card's own ruling spells it out: a free cast still owes the tax for
-        // targets beyond the first. `calculateEffectiveCost` already applied it on the ordinary
-        // path, so only the bases that bypassed it are topped up here.
-        if (cardDef != null && !com.wingedsheep.engine.mechanics.BestowCasts.selected(action) &&
-            (playForFree || action.useAlternativeCost || action.castFaceDown)) {
-            effectiveCost = effectiveCost + costCalculator.selfPerTargetTax(
-                cardDef, action.targets.map { it.toEntityId() }
-            )
         }
 
         // Per-mode additional mana cost (e.g., Feed the Cycle "pay {B}" mode). With choose-N
@@ -120,7 +139,7 @@ internal class CastCostTotaller(
         // caster declined.
         if (cardDef != null && !playForFree) {
             effectiveCost = SpellCosts.applyManaSurcharges(
-                effectiveCost, cardDef.script.additionalCosts, action.additionalCostPayment
+                effectiveCost, CastCharacteristics.scriptForCast(cardDef, action).additionalCosts, action.additionalCostPayment
             )
         }
 
@@ -134,31 +153,19 @@ internal class CastCostTotaller(
             }
         }
 
-        // Airbend: a fixed alternative cost ({2}) is paid *instead of* the printed cost — it
-        // replaces the base. A cost increase (e.g. Soul Partition's tax, or a Thalia-style "costs
-        // {1} more") is not part of the cost it replaces, so it still applies on top: an airbended
-        // card cast under a {1}-tax costs {3}, not {2}.
-        if (!playForFree) {
-            val fixedAltCost = state.getEntity(action.cardId)
-                ?.get<PlayWithFixedAlternativeManaCostComponent>()
-                ?.takeIf { it.controllerId == action.playerId }
-            if (fixedAltCost != null) {
-                effectiveCost = fixedAltCost.fixedCost
-            }
-            // Apply runtime mana tax from exile permissions (e.g., Soul Partition) on top of
-            // whichever base applies (printed cost, or the fixed alternative above).
-            val runtimeCostIncrease = state.getEntity(action.cardId)
-                ?.get<PlayWithCostIncreaseComponent>()
-                ?.takeIf { it.controllerId == action.playerId }
-            if (runtimeCostIncrease != null) {
-                effectiveCost = effectiveCost + runtimeCostIncrease.cost
-            }
+        // Apply runtime mana tax from exile permissions (e.g., Soul Partition) on top of whichever
+        // base applies (printed cost, a fixed alternative cost from baseCost, or a free cast's {0} — an
+        // increase survives "without paying its mana cost", CR 601.2f).
+        val runtimeCostIncrease = state.getEntity(action.cardId)
+            ?.get<PlayWithCostIncreaseComponent>()
+            ?.takeIf { taxApplies(state, action, it) }
+        if (runtimeCostIncrease != null) {
+            effectiveCost = effectiveCost + runtimeCostIncrease.cost
         }
 
         // Splice (CR 702.47a): every revealed splice card's cost is an *additional* cost, so it lands
         // on top of whatever is paying for the spell itself — a free cast and an alternative cost both
-        // waive only the mana cost, never the additional costs (CR 601.2f–h). Added after the airbend
-        // branch above, which *replaces* effectiveCost outright and would otherwise wipe it.
+        // waive only the mana cost, never the additional costs (CR 601.2f–h).
         if (action.splicedCardIds.isNotEmpty()) {
             effectiveCost = SpliceCasts.addSpliceCosts(effectiveCost, state, action.splicedCardIds, cardRegistry)
         }
@@ -170,23 +177,33 @@ internal class CastCostTotaller(
             effectiveCost = effectiveCost + ManaCost.parse("{${action.additionalManaForCounters}}")
         }
 
-        // Sacrifice-for-cost-reduction (Torgaar): the declared sacrifices take generic mana off.
+        // "You may sacrifice / tap / exile any number of …; this spell costs {N} less for each"
+        // (Torgaar, Explosive Singularity, the Marches): the declared picks take generic mana off.
         if (cardDef != null && action.additionalCostPayment != null) {
-            for (cost in cardDef.script.additionalCosts) {
-                if (cost is AdditionalCost.SacrificeCreaturesForCostReduction) {
-                    val reduction = action.additionalCostPayment.sacrificedPermanents.size * cost.costReductionPerCreature
+            for (cost in CastCharacteristics.scriptForCast(cardDef, action).additionalCosts) {
+                if (cost is AdditionalCost.AnyNumberForCostReduction) {
+                    val picks = AnyNumberForCostReductionCostKind.chosen(cost, action.additionalCostPayment)
+                    val reduction = picks.size * cost.reductionPerUnit
                     if (reduction > 0) {
+                        // The reduction applies to the *total* cost, whose generic part includes the
+                        // announced X (CR 601.2f, 107.3a) — March of Otherworldly Light's ruling: with
+                        // X=6, "{6}{W}", each exiled card takes {2} off. So when the picks reduce past
+                        // the other generic mana, X is locked in as generic mana first.
+                        val xValue = action.xValue ?: 0
+                        if (reduction > effectiveCost.genericAmount && effectiveCost.hasX && xValue > 0 &&
+                            cardDef.script.xManaRestriction.isEmpty()
+                        ) {
+                            effectiveCost = effectiveCost.withXAs(xValue)
+                        }
                         effectiveCost = effectiveCost.reduceGeneric(reduction)
                     }
                 }
             }
         }
 
-        // Exile-for-cost-reduction (the march cycle). The reduction applies to the *total* cost,
-        // whose generic part includes the announced value of X (CR 601.2f, 107.3a) — March of
-        // Otherworldly Light's ruling: with X=6, "{6}{W}", each exiled card takes {2} off. So when
-        // the declared exiles reduce past the other generic mana, X is locked in as generic mana
-        // first and the reduction is taken from that; coloured symbols always remain.
+        // The fork's older march-cycle cost, [AdditionalCost.ExileCardsForCostReduction] — superseded
+        // by upstream's `AnyNumberForCostReduction` above (no card uses it any more); kept priced so
+        // the cost stays whole while it exists. Same X rule as above (CR 601.2f, 107.3a).
         if (cardDef != null && action.additionalCostPayment != null) {
             val reduction = cardDef.script.additionalCosts
                 .filterIsInstance<AdditionalCost.ExileCardsForCostReduction>()
@@ -202,6 +219,24 @@ internal class CastCostTotaller(
             }
         }
 
+        if (cardDef != null && action.optionalCostPayments.isNotEmpty()) {
+            val spell = costCalculator.optionalPaymentDefinition(state, action, cardDef)
+            effectiveCost = costCalculator.withOptionalPayments(action.optionalCostPayments).applyOptionalPayments(
+                state, spell, action.playerId, effectiveCost, action.targets.map { it.toEntityId() },
+                castSourceZone(state, action.cardId), action.declaredCostSlot,
+                (action.paymentStrategy as? com.wingedsheep.engine.core.PaymentStrategy.Explicit)?.phyrexianLifePayments.orEmpty(),
+                announcedX = action.xValue)
+        }
+
+        // "It costs {4} less to cast this way" (Uvilda, Dean of Perfection): a one-cast reduction
+        // stamped by a resolution-time cast, applied after every increase (CR 601.2f) and taking
+        // only generic mana off.
+        val runtimeReduction = state.getEntity(action.cardId)
+            ?.get<PlayWithCostReductionComponent>()
+            ?.takeIf { it.appliesTo(state, action.playerId) }
+        if (runtimeReduction != null) {
+            effectiveCost = effectiveCost.reduceGeneric(runtimeReduction.genericReduction)
+        }
         return effectiveCost
     }
 
@@ -253,7 +288,7 @@ internal class CastCostTotaller(
         // Account for improvise (CR 702.126): each tapped artifact pays {1} of the generic in the
         // spell's *total* cost, with no cap beyond that generic. Shares the tap-for-generic carrier
         // with waterbend, and no card has both — the cap above being 0 is what tells them apart.
-        val costAfterImprovise = if (!playForFree && cardDef != null && validateWaterbendCap == 0 &&
+        val costAfterImprovise = if (cardDef != null && validateWaterbendCap == 0 &&
             action.alternativePayment != null && action.alternativePayment.tapForGenericPermanents.isNotEmpty()
         ) {
             alternativePaymentHandler.calculateReducedCostForImprovise(
@@ -282,6 +317,26 @@ internal class CastCostTotaller(
     // The base
     // ---------------------------------------------------------------------------------------------
 
+    /**
+     * The fixed alternative mana cost stamped on the card for this caster, or null — the cast
+     * face's own one when the stamp prices faces apart ([PlayWithFixedAlternativeManaCostComponent.faceCosts]).
+     */
+    private fun fixedAlternativeManaCost(state: GameState, action: CastSpell, cardDef: CardDefinition?): ManaCost? =
+        state.getEntity(action.cardId)
+            ?.get<PlayWithFixedAlternativeManaCostComponent>()
+            ?.takeIf { it.appliesTo(state, action.playerId) }
+            ?.costFor(castFaceName(state, action, cardDef))
+
+    /** The name of the alternative face [action] casts — a `cardFaces` entry or a modal DFC's back — or null for the primary. */
+    private fun castFaceName(state: GameState, action: CastSpell, cardDef: CardDefinition?): String? =
+        action.faceIndex?.let { cardDef?.cardFaces?.getOrNull(it)?.name }
+            ?: modalBackFace(state, action)?.name
+
+    private fun modalBackFace(state: GameState, action: CastSpell): CardDefinition? =
+        if (action.useAlternativeCost && action.altAllows(AlternativeCostType.MODAL_BACK_FACE)) {
+            zoneResolver.modalBackCastFace(state, action.playerId, action.cardId)
+        } else null
+
     private fun baseCost(
         state: GameState,
         action: CastSpell,
@@ -290,18 +345,75 @@ internal class CastCostTotaller(
         playForFree: Boolean,
         castingFromCommandZone: Boolean,
     ): ManaCost? {
-        // Split-layout (CR 709.3a) — only the chosen half is evaluated for legality. When
-        // `faceIndex` is set, the cost is the face's printed mana cost passed through the standard
-        // battlefield cost-modifier pipeline (CR 118.9a applies cost modifiers to the chosen half
-        // just like to a normal cast).
-        val faceManaCostOverride: ManaCost? = action.faceIndex?.let { idx -> cardDef?.cardFaces?.getOrNull(idx)?.manaCost }
+        // A face cast — split half, Adventure, Omen, modal spell back, prepare-spell copy. Only the
+        // chosen face is evaluated (CR 709.3a / 715.3a / 712.11c / 722.3c), so it is priced as a
+        // normal cast of that face: its own mana cost, with every modifier judged against it.
+        val castFace = action.faceIndex?.let { idx -> cardDef?.cardFaces?.getOrNull(idx) }
+        // The characteristics a free or fixed-cost cast is judged by: the cast face, a modal DFC's
+        // permanent back (CR 712.11c), or the card.
+        val castSpell = cardDef?.let { def ->
+            castFace?.let { costCalculator.faceCharacteristics(def, it) } ?: modalBackFace(state, action) ?: def
+        }
         return when {
+            // "Without paying its mana cost" is a {0} alternative cost (CR 118.9): increases still
+            // land on it, and reductions then take them back off (CR 601.2f).
+            playForFree && castSpell != null -> costCalculator.calculateFreeCastCost(
+                state,
+                castSpell,
+                action.playerId,
+                action.targets.map { it.toEntityId() },
+                fromZone = if (castingFromCommandZone) Zone.COMMAND else castSourceZone(state, action.cardId),
+                declaredCostSlot = action.declaredCostSlot,
+                card = cardDef,
+                spellId = action.cardId,
+            )
             playForFree -> ManaCost.ZERO
-            faceManaCostOverride != null && cardDef != null ->
-                costCalculator.calculateEffectiveCostWithAlternativeBase(state, cardDef, faceManaCostOverride, action.playerId)
+            // A fixed alternative mana cost — airbend's {2}, foretell, madness, Jadzi's {1} — is paid
+            // *instead of* the printed cost (CR 118.9), so it replaces only the base: cost increases
+            // and reductions are applied to it (CR 601.2f) and additional costs such as kicker still
+            // land on top. Ahead of the face branch: a face chosen for such a cast (a modal DFC's
+            // back) is priced at the fixed cost too.
+            fixedAlternativeManaCost(state, action, cardDef) != null && castSpell != null -> costCalculator.calculateEffectiveCost(
+                state,
+                castSpell,
+                action.playerId,
+                action.targets.map { it.toEntityId() },
+                fromZone = if (castingFromCommandZone) Zone.COMMAND else castSourceZone(state, action.cardId),
+                declaredCostSlot = action.declaredCostSlot,
+                // An {X} in the fixed cost (Starnheim Unleashed's foretell {X}{X}{W}) takes the
+                // announced X, as a printed {X} does.
+                baseCost = withAnnouncedX(checkNotNull(fixedAlternativeManaCost(state, action, cardDef)), action, cardDef),
+                card = cardDef,
+                spellId = action.cardId,
+                announcedX = action.xValue,
+            )
+            action.useAlternativeCost && action.alternativeCostType == AlternativeCostType.ESCAPE && cardDef != null -> {
+                val escape = EscapeCasts.effectiveEscape(
+                    state, action.cardId, cardDef, action.playerId, cardRegistry, predicateEvaluator, action.escapeAbility
+                )?.takeIf { zoneResolver.hasEscapePermission(state, action.playerId, action.cardId) } ?: return null
+                val spell = castFace?.let { costCalculator.faceCharacteristics(cardDef, it) } ?: cardDef
+                costCalculator.calculateEffectiveCost(
+                    state, spell, action.playerId, action.targets.map { it.toEntityId() },
+                    fromZone = Zone.GRAVEYARD, declaredCostSlot = action.declaredCostSlot,
+                    baseCost = withAnnouncedX(escape.cost, action, cardDef), card = cardDef,
+                    spellId = action.cardId, announcedX = action.xValue,
+                )
+            }
+            castFace != null && cardDef != null ->
+                costCalculator.calculateFaceCastCost(
+                    state,
+                    cardDef,
+                    castFace,
+                    action.playerId,
+                    action.targets.map { it.toEntityId() },
+                    fromZone = if (castingFromCommandZone) Zone.COMMAND else castSourceZone(state, action.cardId),
+                    declaredCostSlot = action.declaredCostSlot,
+                    announcedX = action.xValue,
+                    spellId = action.cardId,
+                )
             action.useAlternativeCost && cardDef != null ->
                 alternativeBases.firstNotNullOfOrNull { (type, base) ->
-                    if (action.altAllows(type)) base(AlternativeBaseQuery(state, action, cardDef)) else null
+                    if (action.altAllows(type)) base(AlternativeBaseQuery(state, action, cardDef, type)) else null
                 }
             // CR 708.4 — a face-down spell costs {3} (morph / disguise), before modifiers.
             action.castFaceDown -> costCalculator.calculateFaceDownCost(state, action.playerId)
@@ -322,19 +434,74 @@ internal class CastCostTotaller(
                     // Price the branch the player actually announced — a "costs {2} less to cast if
                     // it's bargained" reduction is gated on the declaration (CR 702.166).
                     declaredCostSlot = action.declaredCostSlot,
+                    baseCost = withAnnouncedX(cardDef.manaCost, action, cardDef),
+                    spellId = action.cardId,
+                    // CR 202.3e: the spell is on the stack as its cost is determined, so a filter on
+                    // its mana value ("mana value 5 or greater", Spectacle Mage) counts the X.
+                    announcedX = action.xValue,
+                    // A cast its own cast-from-zone permission authorizes pays that permission's
+                    // price change (Risen Executioner's "if you pay {1} more …"). A hand cast never
+                    // finds one: no permission names the hand.
+                    zonePermissionModification = if (castingFromCommandZone) null else
+                        zoneResolver.findMayCastSelfFromZoneAbility(state, action.playerId, action.cardId, action)
+                            ?.costModification,
                 )
             }
             else -> cardComponent.manaCost
         }
     }
 
-    private class AlternativeBaseQuery(val state: GameState, val action: CastSpell, val cardDef: CardDefinition) {
+    /**
+     * [cost] with the announced X folded in as generic mana. CR 601.2f locks the total cost with
+     * X's value in place of the {X}, *then* applies reductions — so "costs {1} less for each …" on
+     * an `{X}{U}` spell (Spectral Denial) keeps paying into the X once the printed generic is gone.
+     * With the X materialized the cost has no {X} left, so [paymentXValue] charges no separate X.
+     * Kept symbolic when "spend only <colour> mana on X" (Drain Life) needs the X apart from the
+     * rest of the cost.
+     */
+    private fun withAnnouncedX(cost: ManaCost, action: CastSpell, cardDef: CardDefinition): ManaCost {
+        val x = action.xValue ?: return cost
+        if (!cost.hasX || cardDef.script.xManaRestriction.isNotEmpty()) return cost
+        return cost.withXAs(x)
+    }
+
+    /**
+     * The alternative cost this cast actually pays (CR 118.9), or null for a cast that doesn't use
+     * one. An explicit [CastSpell.alternativeCostType] is that choice; an untyped
+     * `useAlternativeCost` cast resolves to the first available base in [alternativeBases]' order —
+     * the same base its price came from — so the spell still records which cost was paid. A free
+     * cast pays no alternative cost (CR 118.9a: only one alternative cost applies), so it records none.
+     */
+    fun paidAlternativeCostType(state: GameState, action: CastSpell, cardDef: CardDefinition?): AlternativeCostType? {
+        if (!action.useAlternativeCost) return null
+        if (action.useWithoutPayingManaCost || zoneResolver.hasPlayWithoutPayingCost(state, action.playerId, action.cardId)) return null
+        action.alternativeCostType?.let { return it }
+        if (cardDef == null) return null
+        return alternativeBases.firstOrNull { (type, base) -> base(AlternativeBaseQuery(state, action, cardDef, type)) != null }?.first
+    }
+
+    private class AlternativeBaseQuery(
+        val state: GameState,
+        val action: CastSpell,
+        val cardDef: CardDefinition,
+        /** The alternative cost being priced, so a `castUsing` modifier lands on its cast only. */
+        val type: AlternativeCostType,
+    ) {
         val playerId: EntityId get() = action.playerId
         val cardId: EntityId get() = action.cardId
     }
 
+    // Priced from the zone the card is cast from, like the plain cast, so zone-scoped modifiers
+    // ("spells cast from graveyards cost {2} more") land on a flashback / mayhem / disturb cast too.
     private fun AlternativeBaseQuery.priced(base: ManaCost): ManaCost =
-        costCalculator.calculateEffectiveCostWithAlternativeBase(state, cardDef, base, playerId)
+        costCalculator.calculateEffectiveCostWithAlternativeBase(
+            state, cardDef, base, playerId, action.targets.map { it.toEntityId() },
+            fromZone = if (zoneResolver.hasCommanderCastPermission(state, playerId, cardId)) Zone.COMMAND
+                else castSourceZone(state, cardId),
+            announcedX = action.xValue,
+            spellId = cardId,
+            castUsing = type.castUsing,
+        )
 
     /**
      * The alternative costs that can replace a spell's mana cost (CR 118.9), in the order they are
@@ -345,7 +512,7 @@ internal class CastCostTotaller(
      * cost isn't available to this cast, and a cast with no available base is rejected — a specific
      * alternative cost whose own permission gate failed never falls back to an unrelated one.
      *
-     * Every base runs through the alternative-base cost-modifier pipeline, so battlefield cost
+     * Every base runs through a cost-modifier pipeline, so battlefield cost
      * modifiers apply to it.
      */
     private val alternativeBases: List<Pair<AlternativeCostType, AlternativeBaseQuery.() -> ManaCost?>> = listOf(
@@ -355,6 +522,13 @@ internal class CastCostTotaller(
             FlashbackGrants.effectiveFlashback(state, cardId, cardDef, playerId, cardRegistry, predicateEvaluator)
                 ?.takeIf { zoneResolver.hasFlashbackPermission(state, playerId, cardId) }
                 ?.let { priced(it.cost) }
+        },
+        // Beam me up — explicit choice only: its creature return is owed only on a cast that names
+        // BEAM_ME_UP, so an untyped alternative cast must never be priced at the beam cost.
+        AlternativeCostType.BEAM_ME_UP to {
+            if (action.alternativeCostType == AlternativeCostType.BEAM_ME_UP) {
+                BeamMeUp.selected(state, action, cardRegistry, predicateEvaluator)?.let { priced(it.cost) }
+            } else null
         },
         // Harmonize — printed or granted at runtime (Songcrafter Mage). The per-creature power
         // reduction is applied afterward via alternativePayment.
@@ -372,7 +546,8 @@ internal class CastCostTotaller(
         // Escape (CR 702.138a) — cast from graveyard for its escape mana; the non-mana half is
         // owed as an additional cost (CastAdditionalCosts).
         AlternativeCostType.ESCAPE to {
-            zoneResolver.escapeFor(state, playerId, cardId, action.escapeChoice)
+            EscapeCasts.effectiveEscape(state, cardId, cardDef, playerId, cardRegistry, predicateEvaluator, action.escapeAbility)
+                ?.takeIf { zoneResolver.hasEscapePermission(state, playerId, cardId) }
                 ?.let { priced(it.cost) }
         },
         // Disturb (CR 702.146a) — printed on the front face, which is also the face the cost-modifier
@@ -384,9 +559,16 @@ internal class CastCostTotaller(
         },
         // Modal DFC back face (CR 712.11b) — you pay that face's *own* printed mana cost, not an
         // alternative one; unlike disturb the base is the back face's cost, because CR 712.8f gives
-        // a modal back face its own mana value.
+        // a modal back face its own mana value. Only the back is evaluated (CR 712.11c), so it is
+        // priced as a normal cast of the back, with every modifier judged against the back.
         AlternativeCostType.MODAL_BACK_FACE to {
-            zoneResolver.modalBackCastFace(state, playerId, cardId)?.let { priced(it.manaCost) }
+            zoneResolver.modalBackCastFace(state, playerId, cardId)?.let { back ->
+                costCalculator.calculateEffectiveCost(
+                    state, back, playerId, action.targets.map { it.toEntityId() },
+                    declaredCostSlot = action.declaredCostSlot, card = cardDef, spellId = cardId,
+                    announcedX = action.xValue,
+                )
+            }
         },
         // Warp (hand only — CR 702.185a). Re-casts from exile pay the regular mana cost. Printed warp
         // wins; a battlefield grant ([GrantWarpToCardsInHand]) supplies the cost otherwise.
@@ -413,9 +595,15 @@ internal class CastCostTotaller(
                         chosenTargets = action.targets.map { target -> target.toEntityId() },
                         fromZone = if (zoneResolver.hasCommanderCastPermission(state, playerId, cardId)) Zone.COMMAND else castSourceZone(state, cardId),
                         declaredCostSlot = action.declaredCostSlot,
-                        baseCost = action.xValue?.let { x -> it.cost.withXAs(x) } ?: it.cost)
+                        baseCost = action.xValue?.let { x -> it.cost.withXAs(x) } ?: it.cost,
+                        spellId = cardId,
+                        announcedX = action.xValue)
                 }
             } else null
+        },
+        // Mutate (CR 702.140a) — the mutate cost instead of the mana cost.
+        AlternativeCostType.MUTATE to {
+            com.wingedsheep.engine.mechanics.MutateCasts.mutateOf(cardDef)?.let { priced(it.cost) }
         },
         AlternativeCostType.EVOKE to {
             cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Evoke>().firstOrNull()?.let { priced(it.cost) }
@@ -438,6 +626,19 @@ internal class CastCostTotaller(
                 ?.takeIf { zoneResolver.hasDashPermission(state, playerId, cardId) }
                 ?.let { priced(it.cost) }
         },
+        // Surge (CR 702.117a — hand, once you or a teammate has cast another spell this turn).
+        AlternativeCostType.SURGE to {
+            cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Surge>().firstOrNull()
+                ?.takeIf { zoneResolver.hasSurgePermission(state, playerId, cardId) }
+                ?.let { priced(it.cost) }
+        },
+        // Blitz (CR 702.152a — hand, or a graveyard cast permission restricted to blitz). The bundled
+        // non-mana half (Tenacious Underdog's "Pay 2 life") is paid with the additional costs.
+        AlternativeCostType.BLITZ to {
+            cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Blitz>().firstOrNull()
+                ?.takeIf { zoneResolver.hasBlitzPermission(state, playerId, cardId) }
+                ?.let { priced(it.cost) }
+        },
         AlternativeCostType.IMPENDING to {
             cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Impending>().firstOrNull()?.let { priced(it.cost) }
         },
@@ -450,16 +651,27 @@ internal class CastCostTotaller(
         AlternativeCostType.OVERLOAD to {
             cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Overload>().firstOrNull()?.let { priced(it.cost) }
         },
-        // Miracle (CR 702.94 — printed or granted in hand, window-gated). The window component is
-        // present only when the card was drawn as the first card this turn; without it, the miracle
-        // alternative cost is unavailable.
+        // Awaken (CR 702.113a — an alternative cost; the awaken spell ability is appended at cast
+        // and resolution, not here).
+        AlternativeCostType.AWAKEN to {
+            cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Awaken>().firstOrNull()?.let { priced(it.cost) }
+        },
+        // Miracle (CR 702.94a — printed or granted in hand). Only an explicit MIRACLE cast prices it,
+        // and only the miracle trigger's resolution makes one: CastValidator refuses a player's.
         AlternativeCostType.MIRACLE to {
-            if (state.getEntity(cardId)?.has<MiracleWindowComponent>() == true) {
+            if (action.alternativeCostType == AlternativeCostType.MIRACLE) {
                 MiracleGrants.effectiveMiracle(state, cardId, cardDef, playerId, cardRegistry, predicateEvaluator)
                     ?.let { priced(it.cost) }
             } else null
         },
         // A card's own alternative cost (e.g., Zahid's {3}{U} + tap an artifact).
+        // A card's own priced cast-from-zone permission ("You may cast this card from your
+        // graveyard by paying {2}{W} rather than paying its mana cost", Raffine's Guidance).
+        AlternativeCostType.SELF_ZONE to {
+            zoneResolver.findMayCastSelfFromZoneAbility(state, playerId, cardId, action)
+                ?.alternativeManaCost
+                ?.let { priced(it) }
+        },
         AlternativeCostType.SELF_ALTERNATIVE to {
             cardDef.script.selfAlternativeCost?.let { priced(it.manaCost) }
         },
@@ -549,10 +761,17 @@ internal class CastCostTotaller(
      */
     fun castSourceZone(state: GameState, cardId: EntityId): Zone? {
         for (ownerId in state.turnOrder) {
-            for (zone in listOf(Zone.HAND, Zone.GRAVEYARD, Zone.EXILE, Zone.LIBRARY)) {
+            for (zone in listOf(Zone.HAND, Zone.GRAVEYARD, Zone.EXILE, Zone.LIBRARY, Zone.SIDEBOARD)) {
                 if (cardId in state.getZone(ZoneKey(ownerId, zone))) return zone
             }
         }
         return null
+    }
+
+    private companion object {
+        val GRAVEYARD_ROUTES = setOf(
+            AlternativeCostType.BEAM_ME_UP, AlternativeCostType.FLASHBACK, AlternativeCostType.HARMONIZE, AlternativeCostType.MAYHEM,
+            AlternativeCostType.ESCAPE, AlternativeCostType.DISTURB,
+        )
     }
 }

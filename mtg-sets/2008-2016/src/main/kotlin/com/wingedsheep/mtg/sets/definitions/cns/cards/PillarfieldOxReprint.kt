@@ -13,7 +13,7 @@ val PillarfieldOxReprint = Printing(
     collectorNumber = "76",
     scryfallId = "53a5c7bd-7d08-421d-ad43-70bc0c2db4d4",
     artist = "Andrew Robinson",
-    imageUri = "https://cards.scryfall.io/normal/front/5/3/53a5c7bd-7d08-421d-ad43-70bc0c2db4d4.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/5/3/53a5c7bd-7d08-421d-ad43-70bc0c2db4d4.jpg?1783939365",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

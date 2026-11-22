@@ -13,7 +13,7 @@ val PhageTheUntouchableReprint = Printing(
     collectorNumber = "120",
     scryfallId = "d497a5a3-65fb-4c12-b3f2-8ce4cf4e0f6f",
     artist = "Ron Spears",
-    imageUri = "https://cards.scryfall.io/normal/front/d/4/d497a5a3-65fb-4c12-b3f2-8ce4cf4e0f6f.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/4/d497a5a3-65fb-4c12-b3f2-8ce4cf4e0f6f.jpg?1783939355",
     releaseDate = "2014-06-06",
     rarity = Rarity.MYTHIC,
 )

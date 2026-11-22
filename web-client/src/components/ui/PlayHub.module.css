@@ -1,0 +1,927 @@
+/*
+ * The landing screen's mode catalogue and launch panel.
+ *
+ * Glass over the card-art background rather than an opaque sheet: the art is part of the screen's
+ * character, so every surface here is translucent and blurred, and the layout leaves the art showing
+ * around and between the panels. On a phone the launch panel becomes a bottom sheet.
+ */
+
+.hub {
+  --hub-glass: rgba(10, 12, 20, 0.72);
+  --hub-glass-strong: rgba(10, 12, 20, 0.84);
+  --hub-line: rgba(255, 255, 255, 0.09);
+  --hub-line-strong: rgba(255, 255, 255, 0.18);
+  --hub-tile: rgba(255, 255, 255, 0.06);
+  --hub-tile-hover: rgba(255, 255, 255, 0.11);
+  --hub-text: #eef0f6;
+  --hub-muted: #b4bccd;
+  --hub-faint: #8f98ac;
+  --hub-play: #f2b45c;
+  --hub-play-hover: #f7c67f;
+  --hub-play-text: #1d1405;
+  --hub-now: #5fd0b8;
+  --hub-packs: #f2b45c;
+  --hub-table: #b9a4ff;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+  color: var(--hub-text);
+}
+
+/* ── Catalogue ─────────────────────────────────────────────────────────── */
+
+.catalog {
+  container: catalog / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  border-radius: 18px;
+  background: var(--hub-glass);
+  border: 1px solid var(--hub-line);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  min-width: 0;
+}
+
+.catalogHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.catalogHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupHeading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.groupSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  align-self: center;
+  background: var(--hub-now);
+}
+.groupSwatch[data-group='PACKS'] { background: var(--hub-packs); }
+.groupSwatch[data-group='TABLE'] { background: var(--hub-table); }
+
+.groupLabel {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.groupCaption {
+  font-size: 13px;
+  color: var(--hub-faint);
+}
+
+.tiles {
+  display: grid;
+  /* Two or four across, never three: the groups hold four, two and four modes, and a three-wide
+     grid leaves one tile stranded on a row of its own. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Four across from a laptop up. Two across doubles the catalogue's height, and on a 720px-tall
+   laptop that pushed the last group below the fold. */
+@container catalog (min-width: 720px) {
+  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Four across in a laptop-width catalogue: a smaller icon and tighter padding so the label keeps
+   room beside it (~190px tiles). */
+@container catalog (min-width: 720px) and (max-width: 819.98px) {
+  .tile { gap: 10px; padding: 10px; min-height: 68px; }
+  .icon { width: 32px; height: 32px; border-radius: 9px; }
+  .icon svg { width: 18px; height: 18px; }
+  .tileLabel { font-size: 17px; }
+  .tileCaption { font-size: 12.5px; }
+}
+
+.tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--hub-line);
+  background: var(--hub-tile);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast, 0.12s), border-color var(--transition-fast, 0.12s), transform var(--transition-fast, 0.12s);
+}
+
+.tile:hover {
+  background: var(--hub-tile-hover);
+  border-color: var(--hub-line-strong);
+}
+
+.tile:active { transform: scale(0.99); }
+
+.tile[data-selected='true'] {
+  background: rgba(242, 180, 92, 0.1);
+  border-color: var(--hub-play);
+  box-shadow: 0 0 0 3px rgba(242, 180, 92, 0.16);
+}
+
+.tile:focus-visible,
+.segment:focus-visible,
+.chip:focus-visible,
+.stepButton:focus-visible,
+.setButton:focus-visible,
+.select:focus-visible,
+.closeButton:focus-visible,
+.playButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.tileText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.tileTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tilePlayers {
+  display: none;
+  font-size: 12px;
+  color: var(--hub-faint);
+  white-space: nowrap;
+}
+
+.tileLabel {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tileCaption {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--hub-muted);
+}
+
+.icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hub-now);
+  background: rgba(95, 208, 184, 0.13);
+}
+.icon[data-group='PACKS'] { color: var(--hub-packs); background: rgba(242, 180, 92, 0.13); }
+.icon[data-group='TABLE'] { color: var(--hub-table); background: rgba(185, 164, 255, 0.14); }
+
+/* ── Side column ───────────────────────────────────────────────────────── */
+
+.side {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* On a wide screen the panel takes the column; the lobby lists come back when it closes. */
+.side[data-panel-open='true'] .aside { display: none; }
+
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sheetBackdrop { display: none; }
+
+/* ── Launch panel ──────────────────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--hub-glass-strong);
+  border: 1px solid var(--hub-line-strong);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  animation: panelIn 0.16s ease-out;
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--hub-line);
+}
+
+.panelTitleBlock { flex: 1 1 auto; min-width: 0; }
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.panelDescription {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--hub-muted);
+}
+
+.closeButton {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--hub-muted);
+  cursor: pointer;
+}
+.closeButton:hover { background: rgba(255, 255, 255, 0.08); color: var(--hub-text); }
+
+.panelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px 18px 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field[data-inline='true'] {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--hub-faint);
+}
+
+.fieldNote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--hub-muted);
+}
+
+.segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--hub-line);
+}
+
+.segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 48px;
+  padding: 6px 4px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--hub-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.segment:hover:not(:disabled) { color: var(--hub-text); }
+.segment[aria-checked='true'] {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--hub-line-strong);
+  color: var(--hub-text);
+}
+.segment:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.segmentLabel { font-size: 14px; font-weight: 600; }
+.segmentSub { font-size: 11.5px; opacity: 0.8; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 9px;
+  border: 1px solid var(--hub-line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--hub-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chip:hover { color: var(--hub-text); border-color: var(--hub-line-strong); }
+.chip[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--hub-text);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid var(--hub-line-strong);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--hub-text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.stepButton:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.stepButton:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.stepValue {
+  min-width: 34px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.setButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hub-line-strong);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--hub-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.setButton:hover { background: rgba(255, 255, 255, 0.1); }
+
+.setIcon { font-size: 20px; color: var(--hub-text); }
+.setName { flex: 1 1 auto; min-width: 0; font-weight: 500; }
+.setChange { font-size: 13px; color: #b7c7ff; }
+.setTagline { margin: 2px 0 0; font-size: 13px; line-height: 1.45; color: var(--hub-muted, #b4bccd); }
+.setGuideLink { align-self: flex-start; font-size: 13px; color: #b7c7ff; }
+.setGuideLink:hover { color: #f2b45c; }
+.setGuideLink:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* ── Your deck ──────────────────────────────────────────────────────────── */
+
+.deckChoice { display: flex; flex-direction: column; gap: 6px; }
+
+/* The chosen deck and its facts read as one card; the button is its header row. */
+.deckChoiceCard {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid var(--hub-line-strong);
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.deckChoiceCard[data-open='true'] { border-color: rgba(255, 255, 255, 0.35); }
+.deckChoiceCard .deckChoiceButton { border: none; border-radius: 0; background: transparent; }
+.deckChoiceCard .deckChoiceButton:hover { background: rgba(255, 255, 255, 0.06); }
+
+.deckChoiceNameRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pips { display: inline-flex; gap: 2px; flex: 0 0 auto; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
+
+.deckArt {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 40px;
+  border-radius: 7px;
+  background-color: #1b1f2b;
+  background-size: cover;
+  background-position: center 30%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.deckOptionAside {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--hub-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.deckFacts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 11px;
+  border-top: 1px solid var(--hub-line);
+  background: rgba(0, 0, 0, 0.18);
+}
+.deckFactsRow { display: flex; align-items: flex-end; gap: 14px; }
+
+.curve {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+}
+.curveCol { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 3px; min-width: 0; }
+.curveBar {
+  display: block;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(to top, rgba(242, 180, 92, 0.55), rgba(242, 201, 122, 0.95));
+  max-height: calc(100% - 14px);
+}
+.curveBar[data-empty='true'] { background: rgba(255, 255, 255, 0.1); }
+.curveLabel { font-size: 10px; line-height: 1; text-align: center; color: var(--hub-faint); font-variant-numeric: tabular-nums; }
+
+.deckSplit {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.deckSplit > div { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.deckSplit dt { font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hub-faint); }
+.deckSplit dd { margin: 0; font-size: 16px; font-weight: 600; color: var(--hub-text); font-variant-numeric: tabular-nums; }
+
+.keyCards {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--hub-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.keyCardsLabel { color: var(--hub-faint); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 4px; }
+
+@media (max-width: 380px) {
+  .deckSplit { gap: 8px; }
+  .deckSplit dd { font-size: 14px; }
+}
+
+.deckChoiceButton,
+.deckOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 7px 12px 7px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--hub-line-strong);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--hub-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.deckChoiceButton:hover { background: rgba(255, 255, 255, 0.1); }
+.deckChoiceButton[aria-expanded='true'] { border-color: rgba(255, 255, 255, 0.35); }
+
+.deckChoiceText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.deckChoiceName {
+  font-weight: 500;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deckChoiceMeta {
+  font-size: 12.5px;
+  color: var(--hub-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The owner's note on a saved deck stands in for the meta line — italic, so it reads as theirs. */
+.deckChoiceMeta[data-note] {
+  font-style: italic;
+  color: var(--hub-text, inherit);
+  opacity: 0.78;
+}
+
+.deckTip {
+  margin: 0;
+  font-size: 12.5px;
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--hub-text);
+  opacity: 0.78;
+}
+
+.deckGlyph {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--hub-muted);
+}
+.deckGlyph[data-kind='SAVED'] { background: rgba(98, 196, 160, 0.16); color: #8fdcbf; }
+.deckGlyph[data-kind='EXAMPLE'] { background: rgba(242, 180, 92, 0.15); color: #f2c97a; }
+.deckGlyph[data-kind='RANDOM'] { background: rgba(140, 160, 255, 0.16); color: #b7c7ff; }
+
+.deckList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(340px, 45dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--hub-line);
+  background: rgba(0, 0, 0, 0.28);
+  scrollbar-width: thin;
+}
+
+.deckGroup { display: flex; flex-direction: column; gap: 4px; }
+.deckGroupLabel {
+  padding: 0 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--hub-faint);
+}
+.deckListNote { margin: 0; padding: 6px 4px; font-size: 13px; color: var(--hub-muted); }
+
+.deckOption {
+  min-height: 48px;
+  border-color: transparent;
+  background: transparent;
+}
+.deckOption:hover { background: rgba(255, 255, 255, 0.07); }
+.deckOption[aria-selected='true'] {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.deckOptionCheck { flex: 0 0 auto; color: #f2c97a; }
+
+.deckChoiceButton:focus-visible,
+.deckOption:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.select {
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hub-line-strong);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--hub-text);
+  font: inherit;
+  font-size: 15px;
+}
+.select option { background: #161a26; color: #eef0f6; }
+
+.panelFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--hub-line);
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 0 0 18px 18px;
+}
+
+.stages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--hub-muted);
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stage + .stage::before {
+  content: '→';
+  color: var(--hub-faint);
+  margin: 0 2px;
+}
+
+.playButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  border-radius: 13px;
+  border: none;
+  background: var(--hub-play);
+  color: var(--hub-play-text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
+  transition: background var(--transition-fast, 0.12s), transform var(--transition-fast, 0.12s);
+}
+.playButton:hover { background: var(--hub-play-hover); }
+.playButton:active { transform: scale(0.99); }
+
+.playButtonMeta {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.footerHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--hub-faint);
+  text-align: center;
+}
+
+/* The advanced way in for an AI game: open its lobby instead of starting straight away. */
+.footerLink {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--hub-text, #dfe3ec);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.footerLink:hover { color: #f2b45c; }
+.footerLink:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* Inside a page that fits the viewport (`Home.module.css`), the hub fills what is left and each
+   column scrolls on its own rather than the page. */
+@media (min-width: 901px) and (min-height: 600px) {
+  .hub { flex: 1 1 auto; min-height: 0; height: 100%; }
+  .catalog { max-height: 100%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+  .side { position: static; max-height: 100%; overscroll-behavior: contain; }
+  /* When the panel is taller than the column, its options scroll and the Play button stays put at
+     the bottom of the column — never below the fold or under the footer. */
+  .panelFooter {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: #0e1018;
+  }
+  /* Options scrolling under the pinned footer fade out rather than being sliced mid-line, so the
+     column reads as "more above", not as cut off. */
+  .panelFooter::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 28px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(14, 16, 24, 0), #0e1018);
+  }
+}
+
+/* When a short window makes the catalogue scroll, its bottom edge fades out instead of slicing a
+   row of tiles in half. Driven by the catalogue's own scroll: the fade is full while there is more
+   below and gone at the end. Where the content fits, the scroll timeline is inactive and nothing is
+   masked; browsers without scroll timelines just scroll. */
+@property --catalog-fade {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes catalogFade {
+  from { --catalog-fade: 40px; }
+  to { --catalog-fade: 0px; }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 901px) and (min-height: 600px) {
+    .catalog {
+      mask-image: linear-gradient(to bottom, #000 calc(100% - var(--catalog-fade)), transparent);
+      animation: catalogFade linear both;
+      animation-timeline: scroll(self);
+      animation-range: calc(100% - 60px) 100%;
+    }
+  }
+}
+
+/* ── Narrow screens: one column, the panel becomes a bottom sheet ──────── */
+
+@media (max-width: 900px) {
+  .hub {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .side[data-panel-open='true'] .aside { display: flex; }
+
+  .sheetBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: none;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.55);
+    animation: fadeIn 0.16s ease-out;
+  }
+
+  .panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 61;
+    max-height: 88dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    animation: sheetIn 0.2s ease-out;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .panelHeader::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    margin-left: -19px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .panelHeader { position: relative; padding-top: 20px; }
+
+  /* The Play button stays in reach however long the panel's options run. */
+  .panelFooter {
+    position: sticky;
+    bottom: 0;
+    border-radius: 0;
+    background: rgba(10, 12, 20, 0.96);
+  }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetIn { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+
+@media (max-width: 560px) {
+  .catalog { padding: 16px 14px 18px; gap: 18px; border-radius: 16px; }
+  .catalogHeading { font-size: 22px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tile { min-height: 0; padding: 11px; gap: 10px; flex-direction: column; }
+  .tilePlayers { display: none; }
+  .icon { width: 34px; height: 34px; border-radius: 9px; }
+  .icon svg { width: 19px; height: 19px; }
+  .tileLabel { font-size: 17px; }
+  .tileCaption { font-size: 12.5px; }
+  .groupCaption { display: none; }
+}
+
+/* A laptop is wide and short: tighten the panel's rhythm so it and the catalogue fit without
+   scrolling at ~800px of viewport. */
+@media (min-width: 901px) and (max-height: 920px) {
+  .panelHeader { padding: 14px 16px 12px; }
+  .panelTitle { font-size: 22px; }
+  .panelDescription { font-size: 13.5px; }
+  .panelBody { gap: 14px; padding: 14px 16px; }
+  .panelFooter { padding: 12px 16px 14px; gap: 8px; }
+  .segment { min-height: 44px; }
+  .playButton { min-height: 50px; }
+}
+
+/* A short laptop (~720px): the stage list repeats what the panel's description already says, so it
+   gives its two lines back to the options above the pinned Play button. */
+@media (min-width: 901px) and (max-height: 780px) {
+  .stages { display: none; }
+  .panelDescription { font-size: 13px; }
+}
+
+/* A short laptop: a denser catalogue rhythm, so all three groups fit above the footer without the
+   catalogue having to scroll. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .catalog { padding: 14px 16px 16px; gap: 12px; }
+  .catalogHeading { font-size: 22px; }
+  .group { gap: 6px; }
+  .tile { min-height: 0; padding: 9px 12px; gap: 10px; }
+  .icon { width: 32px; height: 32px; border-radius: 9px; }
+  .icon svg { width: 18px; height: 18px; }
+  .tileLabel { font-size: 17px; }
+}
+
+/* A narrow laptop: the launch panel gives up 40px so the two-across tiles keep their captions on
+   one line. */
+@media (min-width: 901px) and (max-width: 1199.98px) {
+  .hub { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel, .sheetBackdrop { animation: none; }
+  .tile, .playButton { transition: none; }
+}
+
+/* A phone on its side: the sheet is ~390px tall, so the sticky footer keeps only the Play button
+   and the options get the rest. */
+@media (max-width: 900px) and (max-height: 500px) {
+  .panel { max-height: 94dvh; }
+  .panelHeader { padding-top: 16px; padding-bottom: 10px; }
+  .panelDescription { display: none; }
+  .panelFooter { padding: 8px 16px 10px; }
+  .stages, .footerHint { display: none; }
+  .playButton { min-height: 44px; }
+}
+

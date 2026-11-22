@@ -90,7 +90,7 @@ object RemoveAnyNumberOfCountersFlow {
 
             if (minHere == maxHere) {
                 // Nothing left to decide — apply it rather than asking a question with one answer.
-                val (applied, event) = removeCounters(currentState, targetId, kind, minHere, targetName)
+                val (applied, event) = removeCounters(currentState, targetId, kind, minHere, targetName, controllerId)
                 currentState = applied
                 event?.let { events.add(it) }
                 remainingBudget = remainingBudget?.minus(minHere)
@@ -166,13 +166,14 @@ object RemoveAnyNumberOfCountersFlow {
         targetId: EntityId,
         kind: CounterType,
         count: Int,
-        targetName: String
+        targetName: String,
+        removedBy: EntityId?
     ): Pair<GameState, CountersRemovedEvent?> {
         if (count <= 0) return state to null
         val current = state.getEntity(targetId)?.get<CountersComponent>() ?: return state to null
         val updated = state.updateEntity(targetId) { container ->
             container.with(current.withRemoved(kind, count))
         }
-        return updated to CountersRemovedEvent(targetId, kind, count, targetName)
+        return updated to CountersRemovedEvent(targetId, kind, count, targetName, removedBy = removedBy)
     }
 }

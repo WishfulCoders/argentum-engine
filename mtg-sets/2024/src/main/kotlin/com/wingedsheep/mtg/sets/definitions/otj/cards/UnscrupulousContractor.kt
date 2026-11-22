@@ -43,7 +43,11 @@ val UnscrupulousContractor = card("Unscrupulous Contractor") {
         trigger = Triggers.self.enters()
         effect = Effects.ReflexiveTrigger(
             action = Effects.Pipeline {
-                val creatureToSacrifice = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl))
+                val creatureToSacrifice = selectTarget(
+                    TargetObject(filter = TargetFilter.CreatureYouControl),
+                    nonTargeting = true,
+                    prompt = "Choose a creature to sacrifice"
+                )
                 run(Effects.SacrificeTarget(creatureToSacrifice.asTarget))
             },
             optional = true,

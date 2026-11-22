@@ -13,7 +13,7 @@ val ExplorerSScopeReprint = Printing(
     collectorNumber = "198",
     scryfallId = "faa78ff3-56df-4b58-987b-7a7407745853",
     artist = "Vincent Proce",
-    imageUri = "https://cards.scryfall.io/normal/front/f/a/faa78ff3-56df-4b58-987b-7a7407745853.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/f/a/faa78ff3-56df-4b58-987b-7a7407745853.jpg?1783939337",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

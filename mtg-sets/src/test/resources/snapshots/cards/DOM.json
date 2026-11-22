@@ -3905,7 +3905,8 @@
                         "zone": "Graveyard"
                     }
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -4249,24 +4250,30 @@
     "name": "Gaea's Blessing",
     "manaCost": "{1}{G}",
     "typeLine": "Sorcery",
-    "oracleText": "Target player shuffles up to three target cards from their graveyard into their library. Draw a card.\nWhen Gaea's Blessing is put into your graveyard from your library, shuffle your graveyard into your library.",
+    "oracleText": "Target player shuffles up to three target cards from their graveyard into their library.\nDraw a card.\nWhen this card is put into your graveyard from your library, shuffle your graveyard into your library.",
     "script": {
         "spellEffect": {
             "type": "Composite",
             "effects": [
                 {
                     "type": "ForEach",
-                    "space": "IterationSpace.Targets",
+                    "space": {
+                        "type": "IterationSpace.TargetsOf",
+                        "group": "t1"
+                    },
                     "body": {
                         "type": "MoveToZone",
-                        "target": {
-                            "type": "ContextTarget",
-                            "index": 0
-                        },
+                        "target": "IterationEntity",
                         "destination": "Library"
                     }
                 },
-                "ShuffleLibrary",
+                {
+                    "type": "ShuffleLibrary",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
                 {
                     "type": "DrawCards",
                     "count": {
@@ -4278,13 +4285,18 @@
         },
         "targetRequirements": [
             {
+                "type": "TargetPlayer",
+                "id": "t0"
+            },
+            {
                 "type": "TargetObject",
                 "count": 3,
                 "optional": true,
                 "filter": {
-                    "baseFilter": {},
+                    "baseFilter": "own:target-player",
                     "zone": "Graveyard"
-                }
+                },
+                "id": "t1"
             }
         ],
         "triggeredAbilities": [
@@ -4970,7 +4982,9 @@
                                 "amount": 2
                             }
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for up to two basic land cards to put onto the battlefield",
+                        "selectedLabel": "Put onto the battlefield"
                     },
                     {
                         "type": "MoveCollection",
@@ -5007,7 +5021,9 @@
                                 "amount": 1
                             }
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for a basic land card to put onto the battlefield",
+                        "selectedLabel": "Put onto the battlefield"
                     },
                     {
                         "type": "MoveCollection",
@@ -8674,7 +8690,10 @@
             }
         ],
         "staticAbilities": [
-            "ExtraLoyaltyActivation"
+            {
+                "type": "LoyaltyActivationPermission",
+                "times": 2
+            }
         ]
     },
     "metadata": {
@@ -10289,7 +10308,9 @@
                             "baseFilter": "planeswalker ctrl:you"
                         }
                     },
-                    "storeAs": "target1"
+                    "storeAs": "target1",
+                    "nonTargeting": true,
+                    "prompt": "Choose a planeswalker you control to get two loyalty counters"
                 },
                 {
                     "type": "AddCountersToCollection",
@@ -10478,7 +10499,10 @@
         "replacementEffects": [
             {
                 "type": "PreventDamage",
-                "amount": 2,
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 2
+                },
                 "appliesTo": {
                     "type": "DamageEvent",
                     "recipient": {
@@ -10663,7 +10687,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -11626,7 +11652,7 @@
                                     {
                                         "type": "GatherCards",
                                         "source": {
-                                            "type": "ControlledPermanents",
+                                            "type": "BattlefieldMatching",
                                             "filter": "land"
                                         },
                                         "storeAs": "gathered0"
@@ -11669,7 +11695,10 @@
                         "name": "t0"
                     },
                     "destination": "Library",
-                    "positionFromTop": 2
+                    "positionFromTop": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
                 },
                 "targetRequirements": [
                     {
@@ -13151,7 +13180,12 @@
             }
         ],
         "additionalCosts": [
-            "SacrificeCreaturesForCostReduction"
+            {
+                "type": "AnyNumberForCostReduction",
+                "action": "SACRIFICE",
+                "filter": "creature",
+                "reductionPerUnit": 2
+            }
         ]
     },
     "metadata": {

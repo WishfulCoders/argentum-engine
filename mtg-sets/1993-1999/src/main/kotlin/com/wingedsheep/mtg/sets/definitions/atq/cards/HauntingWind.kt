@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.TapSymbolInCost
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -19,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  - the tap half (`Triggers.<subject>.becomesTapped(reason, firstTimeEachTurn)` over [GameObjectFilter.Artifact]) — "that artifact's
  *    controller" is the controller of the just-tapped artifact, reached via
  *    [EffectTarget.ControllerOfTriggeringEntity].
- *  - the ability half (`Triggers.<player>.activatesAbility(of, withoutTapInCost = true)`) — keys on the literal "without {T}
+ *  - the ability half (`Triggers.<player>.activatesAbility(of, tapInCost = TapSymbolInCost.WITHOUT, includeManaAbilities = true)`) — keys on the literal "without {T}
  *    in its activation cost" wording (not "isn't a mana ability"), so a non-{T} mana ability also
  *    fires it. "That artifact's controller" is the controller of the activated artifact
  *    ([EffectTarget.ControllerOfTriggeringEntity]) — not the activating player, which differs
@@ -39,7 +40,7 @@ val HauntingWind = card("Haunting Wind") {
     }
 
     triggeredAbility {
-        trigger = Triggers.anyPlayer.activatesAbility(of = GameObjectFilter.Artifact, withoutTapInCost = true)
+        trigger = Triggers.anyPlayer.activatesAbility(of = GameObjectFilter.Artifact, tapInCost = TapSymbolInCost.WITHOUT, includeManaAbilities = true)
         effect = Effects.DealDamage(1, EffectTarget.ControllerOfTriggeringEntity)
     }
 

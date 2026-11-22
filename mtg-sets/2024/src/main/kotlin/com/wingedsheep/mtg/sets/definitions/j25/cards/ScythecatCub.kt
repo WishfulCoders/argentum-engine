@@ -12,31 +12,29 @@ import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffe
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * Scythecat Cub — Foundations Jumpstart #24
+ * Scythecat Cub — Foundations Jumpstart #24 (canonical printing; its debut)
  * {1}{G} · Creature — Cat · 2/2
  *
  * Trample
- * Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature you
- * control. If this is the second time this ability has resolved this turn, double the number of
- * +1/+1 counters on that creature instead.
+ * Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature you control.
+ * If this is the second time this ability has resolved this turn, double the number of +1/+1
+ * counters on that creature instead.
  *
- * The landfall ability counts its own resolutions the Harvestrite Host / Omnath way:
- * [IncrementAbilityResolutionCountEffect] first, then a [Conditions.SourceAbilityResolvedNTimes] (2)
- * branch. "Instead" makes the two arms exclusive — the second resolution doubles and adds no
- * single counter; every other resolution (first, third, …) adds one counter. Doubling puts as many
- * +1/+1 counters as the creature already has (ruling), so counter-placement replacements apply to
- * it. A resolution whose target became illegal doesn't resolve, so it isn't counted.
+ * The landfall payoff bumps the source's per-turn resolution counter first and branches on it
+ * (cf. Omnath, Locus of Creation): the second resolution doubles the target's +1/+1 counters *instead
+ * of* adding one, so a target with none stays at none; every other resolution adds one. A fizzled
+ * trigger never resolves, so it doesn't advance the count.
  */
 val ScythecatCub = card("Scythecat Cub") {
     manaCost = "{1}{G}"
     colorIdentity = "G"
     typeLine = "Creature — Cat"
+    oracleText = "Trample\n" +
+        "Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature you " +
+        "control. If this is the second time this ability has resolved this turn, double the number of " +
+        "+1/+1 counters on that creature instead."
     power = 2
     toughness = 2
-    oracleText = "Trample\n" +
-        "Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature you control. " +
-        "If this is the second time this ability has resolved this turn, double the number of +1/+1 " +
-        "counters on that creature instead."
 
     keywords(Keyword.TRAMPLE)
 
@@ -47,11 +45,11 @@ val ScythecatCub = card("Scythecat Cub") {
             Effects.If(
                 condition = Conditions.SourceAbilityResolvedNTimes(2),
                 then = Effects.DoubleCounters(CounterType.PLUS_ONE_PLUS_ONE, creature),
-                otherwise = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
+                otherwise = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature),
             )
-        description = "Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature " +
-            "you control. If this is the second time this ability has resolved this turn, double the number " +
-            "of +1/+1 counters on that creature instead."
+        description = "Landfall — Whenever a land you control enters, put a +1/+1 counter on target " +
+            "creature you control. If this is the second time this ability has resolved this turn, " +
+            "double the number of +1/+1 counters on that creature instead."
     }
 
     metadata {
@@ -59,12 +57,6 @@ val ScythecatCub = card("Scythecat Cub") {
         collectorNumber = "24"
         artist = "Gabor Szikszai"
         imageUri = "https://cards.scryfall.io/normal/front/b/3/b3dd3c7d-4685-4579-b483-14ddaaaddf5b.jpg?1783908863"
-
-        ruling(
-            "2024-11-08",
-            "To double the number of +1/+1 counters on a creature, put a number of +1/+1 counters on it " +
-                "equal to the number it already has. Other cards that interact with putting counters on it " +
-                "will interact with this effect accordingly."
-        )
+        ruling("2024-11-08", "To double the number of +1/+1 counters on a creature, put a number of +1/+1 counters on it equal to the number it already has. Other cards that interact with putting counters on it will interact with this effect accordingly.")
     }
 }

@@ -13,7 +13,7 @@ val MyrBattlesphereReprint = Printing(
     collectorNumber = "254",
     scryfallId = "ee943152-c0a5-41b5-9ee3-539b92018aca",
     artist = "Franz Vohwinkel",
-    imageUri = "https://cards.scryfall.io/normal/front/e/e/ee943152-c0a5-41b5-9ee3-539b92018aca.jpg?1783938819",
+    imageUri = "https://cards.scryfall.io/normal/front/e/e/ee943152-c0a5-41b5-9ee3-539b92018aca.jpg",
     releaseDate = "2014-11-07",
     rarity = Rarity.RARE,
 )

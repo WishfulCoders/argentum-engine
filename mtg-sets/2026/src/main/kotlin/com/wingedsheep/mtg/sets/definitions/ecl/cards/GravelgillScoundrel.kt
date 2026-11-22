@@ -32,7 +32,9 @@ val GravelgillScoundrel = card("Gravelgill Scoundrel") {
                 val creatureToTap = selectTarget(
                     TargetObject(
                         filter = TargetFilter.OtherCreatureYouControl.untapped()
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose another untapped creature you control to tap"
                 )
                 run(Effects.Tap(creatureToTap.asTarget))
             },

@@ -144,7 +144,7 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
                 .build()
             val forest = game.findPermanent("Forest")!!
             game.state = game.state.updateEntity(forest) {
-                it.with(com.wingedsheep.engine.state.components.battlefield.WasDealtDamageThisTurnComponent)
+                it.with(com.wingedsheep.engine.state.components.battlefield.WasDealtDamageThisTurnComponent(noncombat = true))
             }
             game.castSpell(1, "Filtered Test Bolt", forest).error shouldNotBe null
         }
@@ -170,7 +170,7 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
                 game.state, com.wingedsheep.sdk.scripting.effects.ChangeTargetEffect(), context
             )
             (changed.state.pendingDecision as com.wingedsheep.engine.core.SelectCardsDecision).options shouldBe listOf(game.player2Id)
-            val random = com.wingedsheep.engine.handlers.effects.stack.ReselectTargetRandomlyExecutor(predicateEvaluator = services.predicateEvaluator, targetFinder = services.targetFinder).execute(
+            val random = com.wingedsheep.engine.handlers.effects.stack.ReselectTargetRandomlyExecutor(targetFinder = services.targetFinder).execute(
                 game.state, com.wingedsheep.sdk.scripting.effects.ReselectTargetRandomlyEffect,
                 context.copy(triggeringEntityId = spell)
             )

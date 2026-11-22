@@ -32,6 +32,7 @@ class DecisionHandler {
         requirements: List<TargetRequirementInfo>,
         legalTargets: Map<Int, List<EntityId>>,
         effectHint: String? = null,
+        candidateZones: Set<com.wingedsheep.sdk.core.Zone>? = null,
         answer: AnswerContinuation,
     ): ExecutionResult {
         return state.suspendForDecision(
@@ -43,7 +44,8 @@ class DecisionHandler {
                     sourceId = sourceId,
                     sourceName = sourceName,
                     phase = DecisionPhase.CASTING,
-                    effectHint = effectHint
+                    effectHint = effectHint,
+                    candidateZones = candidateZones
                 ),
                 targetRequirements = requirements,
                 legalTargets = legalTargets
@@ -72,6 +74,7 @@ class DecisionHandler {
          * See [SelectCardsDecision.minTotalManaValue].
          */
         minTotalManaValue: Int? = null,
+        selectionLimits: Map<EntityId, Int>? = null,
         answer: AnswerContinuation,
     ): ExecutionResult {
         return state.suspendForDecision(
@@ -89,7 +92,8 @@ class DecisionHandler {
                 maxSelections = maxSelections,
                 ordered = ordered,
                 useTargetingUI = useTargetingUI,
-                minTotalManaValue = minTotalManaValue
+                minTotalManaValue = minTotalManaValue,
+                selectionLimits = selectionLimits
             ) },
             answer = answer,
         )

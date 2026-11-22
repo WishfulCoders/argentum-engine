@@ -61,7 +61,7 @@ test.describe('Imagecrafter + Boneknitter interaction', () => {
     await p1.declareBlocker('Aphetto Alchemist', 'Boneknitter')
     await p1.confirmBlockers()
 
-    // P1 passes priority (clicks "Resolve combat damage") → P2 gets priority
+    // P1 passes priority (clicks "To Damage") → P2 gets priority
     await p1.pass()
 
     // P2 activates Boneknitter's regenerate ability targeting itself

@@ -1,6 +1,7 @@
 package com.wingedsheep.sdk.scripting.effects
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.selfNounToken
 import com.wingedsheep.sdk.scripting.text.TextReplacer
@@ -57,7 +58,8 @@ enum class ReturnFace { TRANSFORMED, FRONT, BACK }
 
 /**
  * Exile a double-faced permanent, then return it to the battlefield as a **new object** on the
- * chosen face under its owner's control (FIN "Dominant" / eikon transform).
+ * chosen face under its owner's control — or the ability controller's, via [controllerOverride] (FIN
+ * "Dominant" / eikon transform; Conqueror's Galleon).
  *
  * Unlike [TransformEffect] (CR 701.27 — turning a permanent already on the battlefield over in
  * place, preserving counters/damage/attachments and firing transform triggers), this models the
@@ -69,19 +71,67 @@ enum class ReturnFace { TRANSFORMED, FRONT, BACK }
  *
  * Used by both directions of the cycle: the front face's activated/triggered ability returns it
  * [TRANSFORMED] (front → back Saga), and the back Saga's final chapter returns it [FRONT].
+ *
+ * [controllerOverride] names the player the returned permanent enters under, the same axis as
+ * [ReturnSelfFromZoneTransformedEffect.controllerOverride]: null is the owner (the eikons), and
+ * [EffectTarget.Controller] is "return it to the battlefield transformed **under your control**"
+ * (Conqueror's Galleon), which differs from the owner when the ability's controller doesn't own it.
  */
 @SerialName("ExileAndReturnTransformed")
 @Serializable
 data class ExileAndReturnTransformedEffect(
     val target: EffectTarget = EffectTarget.Self,
-    val returnAs: ReturnFace = ReturnFace.TRANSFORMED
+    val returnAs: ReturnFace = ReturnFace.TRANSFORMED,
+    val controllerOverride: EffectTarget? = null
 ) : Effect, SelfReferentialDescription {
     override val descriptionTemplate: String = when (returnAs) {
         ReturnFace.TRANSFORMED -> "Exile ${target.selfNounToken}, then return it to the battlefield transformed"
         ReturnFace.FRONT -> "Exile ${target.selfNounToken}, then return it to the battlefield front face up"
         ReturnFace.BACK -> "Exile ${target.selfNounToken}, then return it to the battlefield back face up"
-    }
+    } + (if (controllerOverride != null) " under your control" else "")
     override val description: String get() = defaultResolvedDescription
+}
+
+/**
+ * Meld (CR 701.42) — "If you both own and control [this] and a [partner], exile them, then meld
+ * them into [into]." The ability lives on one card of a meld pair (CR 712.4a); its source is always
+ * the meld card itself.
+ *
+ * Resolution, in order:
+ *  1. The source must be on the battlefield and both owned and controlled by the ability's
+ *     controller, and a *different* permanent matching [partner] must be too. Otherwise nothing
+ *     happens — nothing is exiled. [partner] carries the "named …" predicate and any extra
+ *     requirement on it ("a creature named Phyrexian Dragon Engine" that is attacking).
+ *  2. Both are exiled together.
+ *  3. If the two exiled objects are the two cards of [into]'s meld pair (`meldOf`, CR 701.42b),
+ *     they are put onto the battlefield combined as [into] — one new object represented by two
+ *     cards. Anything else (a token, a copy of a meld card) stays in exile (CR 701.42c).
+ *
+ * The melded permanent's mana value is the sum of the two front faces' (CR 712.8g). When it leaves
+ * the battlefield, one permanent leaves and both cards go to the new zone, front face up
+ * (CR 712.21). Meld cards can't be transformed (CR 712.4c), and a melded permanent is never a
+ * "transformed permanent" (CR 701.27g).
+ *
+ * @property partner The other meld card, as the oracle text names it.
+ * @property into The meld result's card name; its definition must declare this pair via `meldOf`.
+ * @property tappedAndAttacking "It enters tapped and attacking" (Mishra, Claimed by Gix).
+ */
+@SerialName("Meld")
+@Serializable
+data class MeldEffect(
+    val partner: GameObjectFilter,
+    val into: String,
+    val tappedAndAttacking: Boolean = false
+) : Effect {
+    override val description: String = buildString {
+        append("If you both own and control this and a ${partner.description}, exile them, then meld them into $into")
+        if (tappedAndAttacking) append(". It enters tapped and attacking")
+    }
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newPartner = partner.applyTextReplacement(replacer)
+        return if (newPartner !== partner) copy(partner = newPartner) else this
+    }
 }
 
 /**
@@ -125,14 +175,22 @@ data object ReturnSelfFromExileTransformedEffect : Effect {
  * Because the graveyard→battlefield move preserves the entity id, a card that enters with
  * counters ("...with three time counters on it", Ojer Pakpatiq) composes this effect with a
  * following `AddCounters(..., EffectTarget.Self)` — no dedicated counter parameter is needed.
+ *
+ * [controllerOverride] names the player the back-face permanent enters under, the same axis as
+ * [MoveToZoneEffect.controllerOverride]: null is the owner (the god cycle, Garland), and
+ * [EffectTarget.Controller] is "return this card to the battlefield transformed **under your
+ * control**" (Journey to Eternity), which differs from the owner when the ability's controller
+ * doesn't own the card.
  */
 @SerialName("ReturnSelfFromZoneTransformed")
 @Serializable
 data class ReturnSelfFromZoneTransformedEffect(
     val fromZone: Zone = Zone.GRAVEYARD,
     val tapped: Boolean = false,
+    val controllerOverride: EffectTarget? = null,
 ) : Effect {
     override val description: String =
-        "Return this card from your ${fromZone.displayName.lowercase()} to the battlefield transformed" +
-            if (tapped) " tapped" else ""
+        "Return this card from your ${fromZone.noun} to the battlefield transformed" +
+            (if (tapped) " tapped" else "") +
+            (if (controllerOverride != null) " under your control" else "")
 }

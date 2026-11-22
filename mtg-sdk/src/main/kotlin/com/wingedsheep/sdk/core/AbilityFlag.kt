@@ -64,6 +64,22 @@ enum class AbilityFlag(val displayName: String) {
     // ── Sacrifice restriction flags ─────────────────────────────
     CANT_BE_SACRIFICED("Can't be sacrificed"),
 
+    /**
+     * Can't be sacrificed to pay a cost of casting a spell or activating an ability, mana abilities
+     * included — `CantBeSacrificed(scope = CASTING_AND_ACTIVATION_COSTS)` (Angel of Jubilation).
+     * Read through the engine's `SacrificeCostLegality`, which every sacrifice-cost candidate pool,
+     * validator and payment consults; sacrifices a resolving spell or ability performs ignore it.
+     */
+    CANT_BE_SACRIFICED_FOR_COSTS("Can't be sacrificed to cast spells or activate abilities"),
+
+    // ── Cost-payment restriction flags ──────────────────────────
+    /**
+     * Can't be returned to its owner's hand to pay a beam me up cost (Marooned). Read by
+     * `BeamMeUp.options` when it builds each offer's return pool; other return costs and bounce
+     * effects ignore it.
+     */
+    CANT_BE_BEAMED_UP("Can't be beamed up"),
+
     // ── State-based action exemptions ───────────────────────────
     /**
      * "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty"
@@ -86,6 +102,16 @@ enum class AbilityFlag(val displayName: String) {
      * (gain / exchange / by-most). Granted by effects like Guardian Beast.
      */
     CANT_GAIN_CONTROL("Can't be gained control of"),
+
+    // ── Crew restriction flags ──────────────────────────────────
+    /**
+     * "This creature can't crew Vehicles" (Revoke Privileges, Bound in Gold, Intercessor's Arrest).
+     * Crewing is tapping untapped creatures to pay a Vehicle's crew cost (CR 702.122a), so this
+     * removes the creature from that cost's candidates: `CrewEnumerator` never offers it and
+     * `CrewVehicleHandler` refuses a crew that names it. Crew only — saddling a Mount (CR 702.171)
+     * is a different cost and stays open. Grant it to the Aura's host through the `GrantKeyword` static.
+     */
+    CANT_CREW("Can't crew Vehicles"),
 
     // ── Transform restriction flags ─────────────────────────────
     /**

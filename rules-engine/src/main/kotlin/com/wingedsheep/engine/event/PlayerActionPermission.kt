@@ -26,6 +26,10 @@ data class PlayerActionPermission(
         val refreshed = aligned.map(::current)
         return context.withCurrentObjectReferences(state).copy(
             targets = refreshed.filterNotNull(), alignedTargets = refreshed,
+            // A special action's effect is a program the action handler starts.
+            programOrigin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy(
+                com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter.stepName(
+                    com.wingedsheep.engine.handlers.actions.special.TakePlayerActionHandler::class), null),
             pipeline = context.pipeline.copy(namedTargets = context.pipeline.namedTargets.mapNotNull { (key, target) -> current(target)?.let { key to it } }.toMap()),
         )
     }

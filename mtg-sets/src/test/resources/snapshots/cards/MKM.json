@@ -499,7 +499,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your graveyard and/or hand and/or library for a card named Magnifying Glass to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -538,7 +540,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your graveyard and/or hand and/or library for a card named Thinking Cap to put onto the battlefield",
+                                    "selectedLabel": "Put onto the battlefield"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -1038,7 +1042,9 @@
                                 "amount": 1
                             }
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for a creature or land card to put into your hand",
+                        "selectedLabel": "Put into your hand"
                     },
                     {
                         "type": "MoveCollection",
@@ -1076,7 +1082,9 @@
                                 "amount": 1
                             }
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for a basic land card to put into your hand",
+                        "selectedLabel": "Put into your hand"
                     },
                     {
                         "type": "MoveCollection",
@@ -1322,7 +1330,8 @@
                                     "zone": "Library",
                                     "filter": "creature|land"
                                 },
-                                "storeAs": "gathered0"
+                                "storeAs": "gathered0",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
@@ -1714,13 +1723,9 @@
             {
                 "id": "Aurelia, the Law Above:1",
                 "trigger": {
-                    "type": "AttackEvent",
-                    "requires": [
-                        {
-                            "type": "AttackerCountAtLeast",
-                            "n": 3
-                        }
-                    ]
+                    "type": "YouAttackEvent",
+                    "minAttackers": 3,
+                    "player": "Each"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -1735,13 +1740,9 @@
             {
                 "id": "Aurelia, the Law Above:2",
                 "trigger": {
-                    "type": "AttackEvent",
-                    "requires": [
-                        {
-                            "type": "AttackerCountAtLeast",
-                            "n": 5
-                        }
-                    ]
+                    "type": "YouAttackEvent",
+                    "minAttackers": 5,
+                    "player": "Each"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -4471,7 +4472,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -4677,7 +4680,7 @@
                         }
                     ]
                 },
-                "descriptionOverride": "To solve — if there are no suspected Skeleton creature in your battlefield"
+                "descriptionOverride": "To solve — if you control no suspected Skeleton creatures"
             }
         ],
         "activatedAbilities": [
@@ -4718,7 +4721,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -4968,7 +4973,7 @@
                         }
                     ]
                 },
-                "descriptionOverride": "To solve — the amount of life your gained this turn is at least 5"
+                "descriptionOverride": "To solve — you gained 5 or more life this turn"
             }
         ],
         "activatedAbilities": [
@@ -6029,7 +6034,9 @@
                                         "baseFilter": "artifact ctrl:you"
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose an artifact to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -6670,7 +6677,7 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "MarkMustBlockThisTurn",
+                    "type": "MarkMustBlock",
                     "target": {
                         "type": "BoundVariable",
                         "name": "t0"
@@ -6689,7 +6696,7 @@
                 "id": "Culvert Ambusher:2",
                 "trigger": "TurnFaceUpEvent",
                 "effect": {
-                    "type": "MarkMustBlockThisTurn",
+                    "type": "MarkMustBlock",
                     "target": {
                         "type": "BoundVariable",
                         "name": "t1"
@@ -7373,9 +7380,8 @@
                         "condition": {
                             "type": "Compare",
                             "left": {
-                                "type": "TurnTracking",
-                                "player": "You",
-                                "tracker": "ARTIFACT_SACRIFICED"
+                                "type": "PermanentsSacrificedThisTurn",
+                                "filter": "artifact"
                             },
                             "operator": "GTE",
                             "right": {
@@ -7479,7 +7485,7 @@
     "script": {
         "staticAbilities": [
             {
-                "type": "SuppressEntersTriggers",
+                "type": "SuppressZoneChangeTriggers",
                 "filter": "creature|artifact"
             }
         ]
@@ -7536,11 +7542,12 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "optional": true,
                 "filter": {
                     "baseFilter": "permanent"
                 },
-                "dynamicMaxCount": "XValue"
+                "id": "t0",
+                "dynamicMaxCount": "XValue",
+                "dynamicMinCount": "XValue"
             }
         ]
     },
@@ -7971,7 +7978,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -8188,7 +8197,10 @@
                             "effects": [
                                 {
                                     "type": "GatherCards",
-                                    "source": "Self",
+                                    "source": {
+                                        "type": "Entity",
+                                        "entity": "Self"
+                                    },
                                     "storeAs": "gathered0"
                                 },
                                 {
@@ -8745,31 +8757,31 @@
                     ]
                 },
                 "effect": {
-                    "type": "Modal",
-                    "modes": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
+                            "label": "Ezrim gains vigilance until end of turn",
                             "effect": {
                                 "type": "GrantKeyword",
                                 "keyword": "VIGILANCE",
                                 "target": "Self"
-                            },
-                            "description": "Ezrim gains vigilance until end of turn"
+                            }
                         },
                         {
+                            "label": "Ezrim gains lifelink until end of turn",
                             "effect": {
                                 "type": "GrantKeyword",
                                 "keyword": "LIFELINK",
                                 "target": "Self"
-                            },
-                            "description": "Ezrim gains lifelink until end of turn"
+                            }
                         },
                         {
+                            "label": "Ezrim gains hexproof until end of turn",
                             "effect": {
                                 "type": "GrantKeyword",
                                 "keyword": "HEXPROOF",
                                 "target": "Self"
-                            },
-                            "description": "Ezrim gains hexproof until end of turn"
+                            }
                         }
                     ]
                 },
@@ -10019,9 +10031,8 @@
                 "condition": {
                     "type": "Compare",
                     "left": {
-                        "type": "TurnTracking",
-                        "player": "You",
-                        "tracker": "ARTIFACT_SACRIFICED"
+                        "type": "PermanentsSacrificedThisTurn",
+                        "filter": "artifact"
                     },
                     "operator": "GTE",
                     "right": {
@@ -10540,7 +10551,7 @@
                 "id": "Goblin Maskmaker:1",
                 "trigger": "AttackEvent",
                 "effect": {
-                    "type": "ReduceSpellCosts",
+                    "type": "ModifySpellCosts",
                     "spellFilter": {
                         "statePredicates": [
                             "IsFaceDown"
@@ -11521,14 +11532,14 @@
                     "type": "Composite",
                     "effects": [
                         {
-                            "type": "MarkMustAttackThisTurn",
+                            "type": "MarkMustAttack",
                             "target": {
                                 "type": "BoundVariable",
                                 "name": "t0"
                             }
                         },
                         {
-                            "type": "MarkMustBlockThisTurn",
+                            "type": "MarkMustBlock",
                             "target": {
                                 "type": "BoundVariable",
                                 "name": "t0"
@@ -13039,7 +13050,10 @@
                         "Investigate",
                         {
                             "type": "PlayAdditionalLands",
-                            "count": 1
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
                         }
                     ]
                 }
@@ -13306,7 +13320,9 @@
                                                         "amount": 1
                                                     }
                                                 },
-                                                "storeSelected": "found"
+                                                "storeSelected": "found",
+                                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                                "selectedLabel": "Put onto the battlefield tapped"
                                             },
                                             {
                                                 "type": "MoveCollection",
@@ -14264,7 +14280,7 @@
                 }
             }
         ],
-        "mayStartOnBattlefield": true
+        "beginOnBattlefield": {}
     },
     "metadata": {
         "collectorNumber": "217",
@@ -14492,11 +14508,12 @@
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
-                    "optional": true,
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "dynamicMaxCount": "CastX"
+                    "id": "t0",
+                    "dynamicMaxCount": "CastX",
+                    "dynamicMinCount": "CastX"
                 },
                 "descriptionOverride": "When this enchantment enters, tap X target creatures. Put a stun counter on each of those creatures you don't control."
             }
@@ -15489,7 +15506,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Plains, Island, Swamp, Mountain, or Forest land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -15596,6 +15615,12 @@
     "keywords": [
         "FLYING"
     ],
+    "keywordAbilities": [
+        {
+            "type": "Hexproof",
+            "scope": "ProtectionScope.Multicolored"
+        }
+    ],
     "script": {
         "triggeredAbilities": [
             {
@@ -15658,15 +15683,6 @@
                         "id": "t1"
                     }
                 ]
-            }
-        ],
-        "staticAbilities": [
-            {
-                "type": "GrantHexproofFromMulticoloredToGroup",
-                "filter": {
-                    "baseFilter": "permanent",
-                    "scope": "Self"
-                }
             }
         ]
     },
@@ -15758,8 +15774,14 @@
                         "gate": {
                             "type": "Gate.WhenCondition",
                             "condition": {
-                                "type": "PlayerControlsMostPermanents",
-                                "player": "You"
+                                "type": "PlayerHasMost",
+                                "player": "You",
+                                "amount": {
+                                    "type": "Count",
+                                    "player": "You",
+                                    "zone": "Battlefield",
+                                    "filter": "creature"
+                                }
                             }
                         },
                         "then": {
@@ -15983,9 +16005,12 @@
                 "type": "ModifySpellCost",
                 "target": "SelfCast",
                 "modification": {
-                    "type": "IncreaseColoredPerUnit",
+                    "type": "IncreaseManaPerUnit",
                     "symbols": "{W}{U}",
-                    "countSource": "ChosenTargetsBeyondTheFirst"
+                    "countSource": {
+                        "type": "ChosenTargets",
+                        "beyond": 1
+                    }
                 }
             }
         ]
@@ -17929,113 +17954,27 @@
             "type": "Composite",
             "effects": [
                 {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "destination": "Battlefield"
+                    "type": "GatherCards",
+                    "source": "ChosenTargets",
+                    "storeAs": "gathered0"
                 },
                 {
-                    "type": "BecomeCreature",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
+                    "type": "MoveCollection",
+                    "from": "gathered0",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
                     },
-                    "power": {
-                        "type": "Fixed",
-                        "amount": 5
-                    },
-                    "toughness": {
-                        "type": "Fixed",
-                        "amount": 5
-                    },
-                    "duration": "Permanent"
-                },
-                {
-                    "type": "AddSubtype",
-                    "subtype": "Elemental",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "duration": "Permanent"
-                },
-                {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "MoveToZone",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t1"
-                            },
-                            "destination": "Battlefield"
-                        },
-                        {
-                            "type": "BecomeCreature",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t1"
-                            },
-                            "power": {
-                                "type": "Fixed",
-                                "amount": 5
-                            },
-                            "toughness": {
-                                "type": "Fixed",
-                                "amount": 5
-                            },
-                            "duration": "Permanent"
-                        },
-                        {
-                            "type": "AddSubtype",
-                            "subtype": "Elemental",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t1"
-                            },
-                            "duration": "Permanent"
-                        }
-                    ]
-                },
-                {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "MoveToZone",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t2"
-                            },
-                            "destination": "Battlefield"
-                        },
-                        {
-                            "type": "BecomeCreature",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t2"
-                            },
-                            "power": {
-                                "type": "Fixed",
-                                "amount": 5
-                            },
-                            "toughness": {
-                                "type": "Fixed",
-                                "amount": 5
-                            },
-                            "duration": "Permanent"
-                        },
-                        {
-                            "type": "AddSubtype",
-                            "subtype": "Elemental",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "t2"
-                            },
-                            "duration": "Permanent"
-                        }
-                    ]
+                    "entersWith": {
+                        "addedCardTypes": [
+                            "CREATURE"
+                        ],
+                        "addedSubtypes": [
+                            "Elemental"
+                        ],
+                        "power": 5,
+                        "toughness": 5
+                    }
                 }
             ]
         },
@@ -20081,9 +20020,8 @@
                     "condition": {
                         "type": "Compare",
                         "left": {
-                            "type": "TurnTracking",
-                            "player": "You",
-                            "tracker": "ARTIFACT_SACRIFICED"
+                            "type": "PermanentsSacrificedThisTurn",
+                            "filter": "artifact"
                         },
                         "operator": "GTE",
                         "right": {
@@ -20561,7 +20499,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -20903,7 +20843,7 @@
                 "trigger": {
                     "type": "CreaturesAttackYouEvent",
                     "minAttackers": 2,
-                    "includePlaneswalkersYouControl": true
+                    "defenders": "YOU_AND_PLANESWALKERS_YOU_CONTROL"
                 },
                 "binding": "ANY",
                 "effect": {

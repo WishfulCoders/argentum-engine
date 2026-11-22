@@ -2,9 +2,13 @@
  * Handlers for connection and reconnection messages.
  */
 import type { MessageHandlers } from '@/network/messageHandlers.ts'
-import { entityId, createJoinLobbyMessage, createSpectateGameMessage } from '@/types'
+import { entityId, createJoinLobbyMessage, createSpectateGameMessage, createSetTriggerOrderingMessage } from '@/types'
+import { getPreferences } from '@/store/preferencesStore'
+import { useTableTalkStore } from '@/store/tableTalkStore'
 import { useFriendsStore } from '@/store/friendsStore'
+import { useMessagesStore } from '@/store/messagesStore'
 import { getWebSocket, clearLobbyId, loadLobbyId } from '../shared'
+import { beginServerRestart, endServerRestart } from '../serverRestart'
 import type { SetState, GetState } from './types'
 
 type ConnectionHandlerKeys =
@@ -13,13 +17,19 @@ type ConnectionHandlerKeys =
   | 'onOnlinePlayersCount'
   | 'onFriendPresence'
   | 'onFriendRequestReceived'
+  | 'onDirectMessage'
+  | 'onDirectMessagesChanged'
+  | 'onEmote'
+  | 'onPostGame'
   | 'onPong'
   | 'onSessionReplaced'
+  | 'onServerRestarting'
 
 export function createConnectionHandlers(set: SetState, get: GetState): Pick<MessageHandlers, ConnectionHandlerKeys> {
   return {
     onConnected: (msg) => {
       localStorage.setItem('argentum-token', msg.token)
+      endServerRestart(set, get)
       // A plain Connected (not Reconnected) after an auto-reconnect means the server has
       // no memory of this identity (e.g. it restarted while the tab was backgrounded) —
       // any session state from before is stale. Drop it so the user lands in the lobby
@@ -27,6 +37,9 @@ export function createConnectionHandlers(set: SetState, get: GetState): Pick<Mes
       const stale = get().sessionId !== null || get().gameState !== null
       set({
         connectionStatus: 'connected',
+        // The server drops a disconnected player from matchmaking, so a search from before is gone.
+        matchmaking: null,
+        matchOffer: null,
         playerId: entityId(msg.playerId),
         aiEnabled: msg.aiEnabled ?? false,
         availableSets: msg.availableSets ?? [],
@@ -60,8 +73,12 @@ export function createConnectionHandlers(set: SetState, get: GetState): Pick<Mes
 
     onReconnected: (msg) => {
       localStorage.setItem('argentum-token', msg.token)
+      endServerRestart(set, get)
       const updates: Partial<import('../types').GameStore> = {
         connectionStatus: 'connected',
+        // The server drops a disconnected player from matchmaking, so a search from before is gone.
+        matchmaking: null,
+        matchOffer: null,
         playerId: entityId(msg.playerId),
         aiEnabled: msg.aiEnabled ?? false,
         availableSets: msg.availableSets ?? [],
@@ -70,6 +87,12 @@ export function createConnectionHandlers(set: SetState, get: GetState): Pick<Mes
         updates.sessionId = msg.contextId
       }
       set(updates)
+      if (msg.context === 'game' && msg.players?.length) get().setSeatAvatars(msg.players)
+      // Back in a game: the preference may have changed while away (another device, the
+      // preferences page), so bring the server's copy in line. Setting the same value is a no-op.
+      if (msg.context === 'game' && msg.contextId) {
+        getWebSocket()?.send(createSetTriggerOrderingMessage(!getPreferences().gameplay.autoOrderTriggers))
+      }
 
       if (!msg.context && !msg.contextId) {
         const savedLobbyId = loadLobbyId()
@@ -90,6 +113,21 @@ export function createConnectionHandlers(set: SetState, get: GetState): Pick<Mes
     onFriendRequestReceived: () => {
       useFriendsStore.getState().noteIncomingRequest()
     },
+    // Direct messages likewise live in their own store.
+    onDirectMessage: (msg) => {
+      useMessagesStore.getState().receive(msg)
+    },
+    onDirectMessagesChanged: (msg) => {
+      useMessagesStore.getState().noteChanged(msg.withAccountId)
+    },
+
+    // Emotes and the result screen's social actions live in the table-talk store, for the same reason.
+    onEmote: (msg) => {
+      useTableTalkStore.getState().receiveEmote(msg.playerId, msg.emote)
+    },
+    onPostGame: (msg) => {
+      useTableTalkStore.getState().setPostGame(msg)
+    },
 
     // Liveness replies are consumed by GameWebSocket's last-message tracking; nothing
     // store-side to update.
@@ -104,6 +142,11 @@ export function createConnectionHandlers(set: SetState, get: GetState): Pick<Mes
       set({ sessionReplaced: true })
       getWebSocket()?.disconnect()
       set({ connectionStatus: 'disconnected' })
+    },
+
+    onServerRestarting: (msg) => {
+      // The socket closes right after this; the restart notice covers the wait.
+      beginServerRestart(set, get, msg.expectedDowntimeSeconds)
     },
   }
 }

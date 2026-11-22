@@ -1,0 +1,40 @@
+{
+  "player1Name": "Scheherazade",
+  "player2Name": "Shahryar",
+  "aiPlayer": 2,
+  "player1": {
+    "lifeTotal": 20,
+    "hand": ["Shahrazad", "Grizzly Bears", "Plains"],
+    "battlefield": [
+      {"name": "Plains"},
+      {"name": "Plains"},
+      {"name": "Plains"},
+      {"name": "Savannah Lions"}
+    ],
+    "graveyard": ["Raging Goblin"],
+    "library": [
+      "Plains", "Plains", "Plains", "Plains", "Plains", "Plains", "Plains", "Plains",
+      "Savannah Lions", "Savannah Lions", "Grizzly Bears", "Grizzly Bears",
+      "Serra Angel", "Pacifism", "Shahrazad", "Plains", "Forest", "Forest", "Llanowar Elves", "Giant Growth"
+    ]
+  },
+  "player2": {
+    "lifeTotal": 13,
+    "hand": ["Grizzly Bears", "Forest"],
+    "battlefield": [
+      {"name": "Forest"},
+      {"name": "Forest"},
+      {"name": "Mountain"},
+      {"name": "Grizzly Bears"}
+    ],
+    "graveyard": ["Giant Growth"],
+    "library": [
+      "Forest", "Forest", "Forest", "Forest", "Mountain", "Mountain", "Mountain", "Mountain",
+      "Grizzly Bears", "Grizzly Bears", "Llanowar Elves", "Llanowar Elves", "Raging Goblin",
+      "Raging Goblin", "Giant Growth", "Shock", "Shock", "Forest", "Mountain", "Hill Giant"
+    ]
+  },
+  "phase": "PRECOMBAT_MAIN",
+  "activePlayer": 1,
+  "priorityPlayer": 1
+}

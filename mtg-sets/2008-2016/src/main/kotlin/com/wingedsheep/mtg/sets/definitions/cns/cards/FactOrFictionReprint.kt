@@ -13,7 +13,7 @@ val FactOrFictionReprint = Printing(
     collectorNumber = "97",
     scryfallId = "5be2ca64-b8e4-4374-bdf5-041fae5df698",
     artist = "Matt Cavotta",
-    imageUri = "https://cards.scryfall.io/normal/front/5/b/5be2ca64-b8e4-4374-bdf5-041fae5df698.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/5/b/5be2ca64-b8e4-4374-bdf5-041fae5df698.jpg?1783939360",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

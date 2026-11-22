@@ -13,7 +13,7 @@ val ReyaDawnbringerReprint = Printing(
     collectorNumber = "79",
     scryfallId = "d4cd8daf-221b-4320-9c9a-b7470911227a",
     artist = "Matthew D. Wilson",
-    imageUri = "https://cards.scryfall.io/normal/front/d/4/d4cd8daf-221b-4320-9c9a-b7470911227a.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/4/d4cd8daf-221b-4320-9c9a-b7470911227a.jpg?1783939364",
     releaseDate = "2014-06-06",
     rarity = Rarity.RARE,
 )

@@ -21,9 +21,9 @@ import io.kotest.matchers.shouldNotBe
  * "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.
  *  Counter target spell."
  *
- * The alternative cost bundles two non-mana costs (life + a pitched blue card) with no turn gate,
- * so the cases worth proving are: both halves are paid and the spell is countered; a non-blue card
- * can't be pitched; and with no other blue card in hand the alternative isn't offered.
+ * The first self-alternative cost that bundles a life payment with a pitched card, and — unlike
+ * Force of Negation — with no turn gate. Proves both halves of the cost are paid, that a nonblue
+ * card can't be pitched, and that the cast works on your own turn too.
  */
 class ForceOfWillScenarioTest : FunSpec({
 
@@ -33,69 +33,75 @@ class ForceOfWillScenarioTest : FunSpec({
         return driver
     }
 
-    fun altCastOffered(driver: GameTestDriver, player: EntityId, cardId: EntityId): Boolean =
-        driver.legalActions(player).any { legal ->
-            val action = legal.action
-            action is CastSpell && action.cardId == cardId && action.useAlternativeCost &&
-                action.alternativeCostType == AlternativeCostType.SELF_ALTERNATIVE
-        }
+    fun pitch(you: EntityId, force: EntityId, target: EntityId, fodder: EntityId) = CastSpell(
+        playerId = you,
+        cardId = force,
+        targets = listOf(ChosenTarget.Spell(target)),
+        useAlternativeCost = true,
+        alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE,
+        additionalCostPayment = AdditionalCostPayment(exiledCards = listOf(fodder))
+    )
 
-    /** Opponent is active and casts Lightning Bolt at "you"; returns (you, opponent, bolt). */
-    fun setUpBolt(driver: GameTestDriver): Triple<EntityId, EntityId, EntityId> {
+    test("pitch cast pays 1 life, exiles the blue card, and counters the spell") {
+        val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Island" to 40), startingLife = 20, startingPlayer = 1)
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
         val opponent = driver.activePlayer!!
         val you = driver.getOpponent(opponent)
-        val bolt = driver.putCardInHand(opponent, "Lightning Bolt")
-        driver.giveMana(opponent, Color.RED, 1)
-        driver.castSpell(opponent, bolt, targets = listOf(you)).error shouldBe null
+
+        val elves = driver.putCardInHand(opponent, "Llanowar Elves")
+        driver.giveMana(opponent, Color.GREEN, 1)
+        driver.castSpell(opponent, elves).error shouldBe null
         driver.passPriority(opponent)
-        return Triple(you, opponent, bolt)
-    }
 
-    test("paying 1 life and pitching a blue card counters the spell") {
-        val driver = createDriver()
-        val (you, opponent, bolt) = setUpBolt(driver)
-        val pitched = driver.putCardInHand(you, "Counterspell")
+        val fodder = driver.putCardInHand(you, "Counterspell")
         val force = driver.putCardInHand(you, "Force of Will")
-        altCastOffered(driver, you, force) shouldBe true
-
-        driver.submit(
-            CastSpell(
-                playerId = you,
-                cardId = force,
-                targets = listOf(ChosenTarget.Spell(bolt)),
-                useAlternativeCost = true,
-                alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE,
-                additionalCostPayment = AdditionalCostPayment(exiledCards = listOf(pitched))
-            )
-        ).error shouldBe null
+        driver.submit(pitch(you, force, elves, fodder)).error shouldBe null
         driver.getLifeTotal(you) shouldBe 19
         while (driver.stackSize > 0) driver.bothPass()
 
-        driver.getLifeTotal(you) shouldBe 19
-        driver.getGraveyardCardNames(opponent) shouldBe listOf("Lightning Bolt")
+        driver.getGraveyardCardNames(opponent) shouldBe listOf("Llanowar Elves")
         driver.getExileCardNames(you) shouldBe listOf("Counterspell")
         driver.getGraveyardCardNames(you) shouldBe listOf("Force of Will")
     }
 
-    test("a non-blue card can't be pitched, and with no blue card the alternative isn't offered") {
+    test("a nonblue card can't be pitched") {
         val driver = createDriver()
-        val (you, _, bolt) = setUpBolt(driver)
-        val red = driver.putCardInHand(you, "Lightning Bolt")
-        val force = driver.putCardInHand(you, "Force of Will")
-        altCastOffered(driver, you, force) shouldBe false
+        driver.initMirrorMatch(deck = Deck.of("Island" to 40), startingLife = 20, startingPlayer = 1)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val opponent = driver.activePlayer!!
+        val you = driver.getOpponent(opponent)
 
-        driver.submit(
-            CastSpell(
-                playerId = you,
-                cardId = force,
-                targets = listOf(ChosenTarget.Spell(bolt)),
-                useAlternativeCost = true,
-                alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE,
-                additionalCostPayment = AdditionalCostPayment(exiledCards = listOf(red))
-            )
-        ).error shouldNotBe null
+        val bolt = driver.putCardInHand(opponent, "Lightning Bolt")
+        driver.giveMana(opponent, Color.RED, 1)
+        driver.castSpell(opponent, bolt, targets = listOf(you)).error shouldBe null
+        driver.passPriority(opponent)
+
+        val redCard = driver.putCardInHand(you, "Lightning Bolt")
+        val force = driver.putCardInHand(you, "Force of Will")
+        driver.submit(pitch(you, force, bolt, redCard)).error shouldNotBe null
         driver.getLifeTotal(you) shouldBe 20
+    }
+
+    test("the pitch cost has no turn gate: it works on your own turn") {
+        val driver = createDriver()
+        driver.initMirrorMatch(deck = Deck.of("Island" to 40), startingLife = 20)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val you = driver.activePlayer!!
+        val opponent = driver.getOpponent(you)
+
+        driver.passPriority(you)
+        val bolt = driver.putCardInHand(opponent, "Lightning Bolt")
+        driver.giveMana(opponent, Color.RED, 1)
+        driver.castSpell(opponent, bolt, targets = listOf(you)).error shouldBe null
+        driver.passPriority(opponent)
+
+        val fodder = driver.putCardInHand(you, "Counterspell")
+        val force = driver.putCardInHand(you, "Force of Will")
+        driver.submit(pitch(you, force, bolt, fodder)).error shouldBe null
+        while (driver.stackSize > 0) driver.bothPass()
+
+        driver.getLifeTotal(you) shouldBe 19
+        driver.getGraveyardCardNames(opponent) shouldBe listOf("Lightning Bolt")
     }
 })

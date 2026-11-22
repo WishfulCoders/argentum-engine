@@ -71,8 +71,8 @@ internal class StackItemProjector(
             colors = sourceColors(state, activatedAbility.sourceId, sourceCard),
             oracleText = activatedAbility.descriptionOverride
                 ?: stackText.runtimeAbilityText(state, entityId, activatedAbility)
-                ?: stackText.effectDisplayText(
-                    activatedAbility.effect, stackText.selfNounFor(state, activatedAbility.sourceId)
+                ?: StackTextRenderer.effectDisplayText(
+                    activatedAbility.effect, StackTextRenderer.selfNounFor(state, activatedAbility.sourceId)
                 ),
             power = null,
             toughness = null,
@@ -98,11 +98,24 @@ internal class StackItemProjector(
             targets = StackTextRenderer.toClientTargets(targetsComponent),
             imageUri = sourceCard?.imageUri ?: cardDef?.metadata?.imageUri,
             chosenX = activatedAbility.xValue,
+            chosenModeDescriptions = (activatedAbility.effect as? com.wingedsheep.sdk.scripting.effects.ModalEffect)?.let { modal ->
+                activatedAbility.chosenModes.map { modal.modes[it].description }
+            } ?: emptyList(),
+            perModeTargets = (activatedAbility.effect as? com.wingedsheep.sdk.scripting.effects.ModalEffect)?.let { modal ->
+                stackText.perModeTargetGroups(state, activatedAbility.chosenModes, activatedAbility.modeTargetsOrdered,
+                    activatedAbility.chosenModes.map { modal.modes[it].description }, viewingPlayerId, isSpectator)
+            } ?: emptyList(),
             abilityIdentity = activatedAbility.abilityIdentity?.takeIf { identityVisible }?.let {
                 ClientAbilityIdentity(it.cardDefinitionId, it.abilityId.value)
             }
         )
     }
+
+    /** A room ability's source is a dungeon card (CR 309.4c), which has no [CardComponent]. */
+    private fun dungeonImage(state: GameState, sourceId: EntityId): String? =
+        state.getEntity(sourceId)
+            ?.get<com.wingedsheep.engine.state.components.identity.DungeonCardComponent>()
+            ?.let { com.wingedsheep.sdk.dungeons.Dungeons.byName(it.dungeon)?.imageUri }
 
     private fun projectTriggered(
         state: GameState,
@@ -156,8 +169,8 @@ internal class StackItemProjector(
             colors = sourceColors(state, triggeredAbility.sourceId, sourceCard),
             oracleText = triggeredAbility.descriptionOverride
                 ?: stackText.runtimeAbilityText(state, entityId, triggeredAbility)
-                ?: stackText.effectDisplayText(
-                    triggeredAbility.effect, stackText.selfNounFor(state, triggeredAbility.sourceId)
+                ?: StackTextRenderer.effectDisplayText(
+                    triggeredAbility.effect, StackTextRenderer.selfNounFor(state, triggeredAbility.sourceId)
                 ),
             power = null,
             toughness = null,
@@ -182,7 +195,8 @@ internal class StackItemProjector(
             isFaceDown = false,
             targets = StackTextRenderer.toClientTargets(targetsComponent),
             triggeringEntityId = triggeringId,
-            imageUri = sourceCard?.imageUri ?: cardDef?.metadata?.imageUri,
+            imageUri = sourceCard?.imageUri ?: cardDef?.metadata?.imageUri
+                ?: dungeonImage(state, triggeredAbility.sourceId),
             sourceZone = sourceZone,
             chosenX = triggeredAbility.xValue,
             abilityIdentity = triggeredAbility.abilityIdentity?.takeIf { identityVisible }?.let {
@@ -213,7 +227,12 @@ internal class StackItemProjector(
             state.projectedState.getColors(sourceId).mapNotNull { name ->
                 Color.entries.firstOrNull { it.name == name }
             }.toSet()
-        } else visibleCard?.colors.orEmpty()
+        } else visibleCard?.let { card ->
+            // An off-battlefield color effect (Mycosynth Lattice) overrides the shown printed colors.
+            state.projectedState.offBattlefieldColors(sourceId)
+                ?.mapNotNullTo(linkedSetOf()) { name -> Color.entries.firstOrNull { it.name == name } }
+                ?: card.colors
+        }.orEmpty()
 
     /**
      * Find which zone an entity is currently in.

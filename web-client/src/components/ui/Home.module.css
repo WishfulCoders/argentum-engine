@@ -1,0 +1,400 @@
+/*
+ * The connected landing screen's frame: top bar, the "jump back in" row, and the page column the
+ * mode catalogue sits in. The catalogue and launch panel themselves are `PlayHub.module.css`.
+ *
+ * The background art is the screen's character, so nothing here paints an opaque surface over it —
+ * a light tint keeps text legible, panels are glass, and the column is capped so the art shows at
+ * the sides of a wide screen.
+ */
+
+.overlay {
+  /* Replaces the base overlay's padding/gap and centring: this layout spaces itself. */
+  background-color: #07080d;
+  gap: 0;
+  padding: 0;
+  align-items: stretch;
+}
+
+/* A light tint over the art, strongest at the bottom where the attribution sits. */
+.artTint {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 7, 12, 0.35) 0%, rgba(6, 7, 12, 0.18) 35%, rgba(6, 7, 12, 0.55) 100%);
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+
+.topBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 10px 24px;
+  box-sizing: border-box;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f1f3f9;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+}
+
+.brand:hover { color: #fff; }
+.brand:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+
+.brandMark { flex: none; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6)); }
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(10, 12, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.navItem {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #c9cfdc;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.navItem:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.navItem:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.topBarEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Page column ───────────────────────────────────────────────────────── */
+
+.main {
+  position: relative;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 4px 24px 28px;
+  box-sizing: border-box;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.7);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+  font-size: 14px;
+}
+
+/* ── Jump back in ──────────────────────────────────────────────────────── */
+
+.quickRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.quickRow:empty { display: none; }
+.quickRow > * { flex: 1 1 420px; min-width: 0; }
+.quickRow > .resume { flex: 0 1 auto; }
+
+.resume {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(60, 44, 12, 0.62);
+  border: 1px solid rgba(242, 180, 92, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #f6ead2;
+}
+
+.resumeText { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.resumeLabel { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #f2b45c; }
+.resumeCode { font-family: var(--font-mono); font-size: 15px; letter-spacing: 0.08em; }
+
+.resumeButton {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: none;
+  background: #f2b45c;
+  color: #1d1405;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.resumeButton:hover { background: #f7c67f; }
+
+.resumeDismiss {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(246, 234, 210, 0.7);
+  font-size: 18px;
+  cursor: pointer;
+}
+.resumeDismiss:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+.joinCard {
+  flex: 0 1 340px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.joinLabel {
+  padding-left: 6px;
+  font-size: 13px;
+  color: #b4bccd;
+  white-space: nowrap;
+}
+
+.joinInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.3);
+  color: #eef0f6;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+.joinInput::placeholder { font-family: var(--font-sans); letter-spacing: 0; color: #8f98ac; }
+.joinInput:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+
+.joinButton {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #eef0f6;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.joinButton:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); }
+.joinButton:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Footer ────────────────────────────────────────────────────────────
+ * A glass bar in the top bar's nav material, so the credits stay legible over bright art. One row on
+ * a desktop — credits, Lab (dev builds), community links — wrapping into stacked rows on a phone. */
+
+.footer {
+  position: relative;
+  flex: none;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px calc(10px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.footerBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 5px 6px 5px 14px;
+  border-radius: 12px;
+  background: rgba(10, 12, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #8f98ac;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.credits {
+  flex: 1 1 420px;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.credits a {
+  color: #c9cfdc;
+  text-decoration: none;
+  border-radius: 3px;
+}
+.credits a:hover { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+.credits a:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.creditsDot { margin: 0 7px; color: rgba(255, 255, 255, 0.28); }
+
+.disclaimer { color: #737c90; }
+
+/* Separated from the community links by a hairline, the way the nav groups read as one control. */
+.lab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding-right: 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.labLabel {
+  margin-right: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px dashed rgba(242, 180, 92, 0.45);
+  color: #f2b45c;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.labLink,
+.communityLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #c9cfdc;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.labLink:hover,
+.communityLink:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.labLink:focus-visible,
+.communityLink:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.communityLink[data-brand='discord']:hover { background: rgba(88, 101, 242, 0.24); }
+.communityLink svg { width: 15px; height: 15px; opacity: 0.85; }
+.communityLink:hover svg { opacity: 1; }
+
+.community {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+/* A tablet: the credits take their own line under the links, so neither squeezes the other. */
+@media (max-width: 900px) {
+  .footer { padding: 0 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .footerBar { padding: 10px 12px 12px; gap: 10px 14px; }
+  .credits { order: 3; flex-basis: 100%; padding: 10px 4px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+  .lab { border-right: none; padding-right: 0; }
+}
+
+/* A phone: the community links become three equal tap targets across the bar. */
+@media (max-width: 560px) {
+  .community {
+    order: 1;
+    flex: 1 0 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-left: 0;
+  }
+  .communityLink {
+    min-height: 40px;
+    padding: 0 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .lab { order: 2; }
+  .creditsDot { margin: 0 5px; }
+  .disclaimer { margin-top: 4px; }
+}
+
+/* ── Fit the viewport on a desktop ───────────────────────────────────────
+ * Wide and tall enough for the two-column hub: the page stops scrolling, the catalogue and the side
+ * column each scroll on their own if a short window needs it. Below either bound the page scrolls. */
+@media (min-width: 901px) and (min-height: 600px) {
+  .overlay { overflow: hidden; }
+  .main { flex: 1 1 auto; min-height: 0; padding-bottom: 10px; }
+}
+
+/* A short laptop: every row of chrome gives back a few pixels so the catalogue fits whole. */
+@media (min-width: 901px) and (min-height: 600px) and (max-height: 800px) {
+  .topBar { padding-top: 8px; padding-bottom: 8px; }
+  .main { gap: 10px; padding-bottom: 8px; }
+  .footer { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .footerBar { padding-top: 3px; padding-bottom: 3px; line-height: 1.4; }
+}
+
+/* ── Narrow screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .topBar { padding: 12px 14px 8px; }
+  .main { padding: 4px 14px 24px; gap: 14px; }
+  /* The nav takes its own full-width line and scrolls sideways rather than wrapping. */
+  .nav {
+    order: 3;
+    flex: 1 0 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .joinCard { flex: 1 1 100%; }
+}
+
+@media (max-width: 560px) {
+  .brand { font-size: 19px; }
+  .joinLabel { display: none; }
+  .navItem { padding: 0 12px; }
+}
+
+/* A tall screen has height to spare: ease the content down from the top bar by a share of what is
+   left over, rather than centring it. Centring on the content's own height either moved the
+   catalogue under the pointer as the launch panel changed size, or (measuring the catalogue alone)
+   let a tall panel hang past the footer. This depends only on the viewport, so it never moves. */
+@media (min-width: 901px) and (min-height: 600px) {
+  .main { padding-top: clamp(4px, calc((100dvh - 1000px) / 4), 96px); }
+}

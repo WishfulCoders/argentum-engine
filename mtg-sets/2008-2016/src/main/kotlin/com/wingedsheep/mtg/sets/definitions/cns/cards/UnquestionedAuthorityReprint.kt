@@ -13,7 +13,7 @@ val UnquestionedAuthorityReprint = Printing(
     collectorNumber = "85",
     scryfallId = "a924eb8b-7423-40a6-97e2-6fe91f5a767b",
     artist = "Zoltan Boros",
-    imageUri = "https://cards.scryfall.io/normal/front/a/9/a924eb8b-7423-40a6-97e2-6fe91f5a767b.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/a/9/a924eb8b-7423-40a6-97e2-6fe91f5a767b.jpg?1783939362",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

@@ -1,10 +1,10 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.OptionChosenResponse
-import com.wingedsheep.engine.state.components.battlefield.chosenCardName
-import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -20,84 +20,75 @@ import io.kotest.matchers.shouldNotBe
  *   As this creature enters, choose a nonland card name.
  *   Activated abilities of sources with the chosen name can't be activated.
  *
- * Pins the nonland name pool, the lock on a named permanent's ability, and — unlike Sorcerous
- * Spyglass — that mana abilities are locked too.
+ * Unlike Pithing Needle there is no mana-ability exemption: a named Llanowar Elves can't tap for
+ * mana by hand, and auto-pay won't tap it either.
  */
 class PhyrexianRevokerScenarioTest : ScenarioTestBase() {
 
     private fun TestGame.castRevokerNaming(name: String) {
-        castSpell(1, "Phyrexian Revoker").error shouldBe null
-        if (hasPendingDecision()) submitManaSourcesAutoPay()
+        castSpell(1, "Phyrexian Revoker")
+        if (hasPendingDecision() && getPendingDecision() !is ChooseOptionDecision) submitManaSourcesAutoPay()
         resolveStack()
-        val decision = getPendingDecision()
-        withClue("Revoker presents an as-enters card-name choice") {
-            (decision is ChooseOptionDecision) shouldBe true
-        }
-        decision as ChooseOptionDecision
-        withClue("The pool is nonland names") {
+        val decision = getPendingDecision() as ChooseOptionDecision
+        withClue("the nonland pool offers nonland names only") {
             decision.options shouldContain name
             decision.options shouldNotContain "Forest"
         }
         submitDecision(OptionChosenResponse(decision.id, decision.options.indexOf(name)))
-        resolveStack()
-        state.getEntity(findPermanent("Phyrexian Revoker")!!)?.chosenCardName() shouldBe name
     }
 
+    private fun board() = scenario()
+        .withPlayers("Player", "Opponent")
+        .withCardInHand(1, "Phyrexian Revoker")
+        .withCardInHand(1, "Grizzly Bears")
+        .withCardOnBattlefield(1, "Llanowar Elves", summoningSickness = false)
+        .withCardOnBattlefield(1, "Prodigal Sorcerer", summoningSickness = false)
+        .withLandsOnBattlefield(1, "Plains", 3)
+        .withActivePlayer(1)
+        .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+        .build()
+
     init {
-        test("naming a card stops its activated ability") {
-            val game = scenario()
-                .withPlayers("Alice", "Bob")
-                .withCardInHand(1, "Phyrexian Revoker")
-                .withLandsOnBattlefield(1, "Plains", 2)
-                .withCardOnBattlefield(1, "Prodigal Sorcerer")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
+        context("Phyrexian Revoker locks mana abilities too") {
+            test("a named Llanowar Elves can't be tapped for mana by hand") {
+                val game = board()
+                // Pay the Revoker with two Plains so the Elves stay untapped.
+                game.castRevokerNaming("Llanowar Elves")
+                val elves = game.findPermanent("Llanowar Elves")!!
+                val manaAbility = cardRegistry.getCard("Llanowar Elves")!!.script.activatedAbilities.first()
 
-            val sorcerer = game.findPermanent("Prodigal Sorcerer")!!
-            withClue("Before Revoker, the Sorcerer's ping is a legal action") {
-                game.getLegalActions(1).any { (it.action as? ActivateAbility)?.sourceId == sorcerer } shouldBe true
+                withClue("the Elves' mana ability is no longer offered") {
+                    game.getLegalActions(1).none { (it.action as? ActivateAbility)?.sourceId == elves } shouldBe true
+                }
+                game.execute(ActivateAbility(game.player1Id, elves, manaAbility.id)).error shouldNotBe null
             }
 
-            game.castRevokerNaming("Prodigal Sorcerer")
+            test("auto-pay won't tap a named mana creature") {
+                val game = board()
+                game.castRevokerNaming("Llanowar Elves")
+                val elves = game.findPermanent("Llanowar Elves")!!
+                withClue("the Revoker cost two of the three Plains, leaving the Elves untapped") {
+                    game.state.getEntity(elves)!!.has<TappedComponent>() shouldBe false
+                }
 
-            withClue("After naming it, the ping is no longer offered") {
-                game.getLegalActions(1).none { (it.action as? ActivateAbility)?.sourceId == sorcerer } shouldBe true
+                // One Plains + the Elves would pay Grizzly Bears' {1}{G} without the lock.
+                val bears = game.getLegalActions(1).firstOrNull { it.action is CastSpell }
+                (bears?.isAffordable ?: false) shouldBe false
+                game.castSpell(1, "Grizzly Bears").error shouldNotBe null
+                game.state.getEntity(elves)!!.has<TappedComponent>() shouldBe false
             }
-            val ping = cardRegistry.getCard("Prodigal Sorcerer")!!.script.activatedAbilities.first()
-            val result = game.execute(
-                ActivateAbility(
-                    playerId = game.player1Id,
-                    sourceId = sorcerer,
-                    abilityId = ping.id,
-                    targets = listOf(ChosenTarget.Player(game.player2Id)),
-                )
-            )
-            withClue("Direct activation of the named source's ability is rejected") { result.error shouldNotBe null }
-        }
 
-        test("mana abilities of the named source are locked too") {
-            val game = scenario()
-                .withPlayers("Alice", "Bob")
-                .withCardInHand(1, "Phyrexian Revoker")
-                .withLandsOnBattlefield(1, "Plains", 2)
-                .withCardOnBattlefield(1, "Llanowar Elves")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
+            test("naming a different card leaves the Elves' mana ability alone and locks the named one") {
+                val game = board()
+                game.castRevokerNaming("Prodigal Sorcerer")
+                val sorcerer = game.findPermanent("Prodigal Sorcerer")!!
 
-            game.castRevokerNaming("Llanowar Elves")
-
-            val elves = game.findPermanent("Llanowar Elves")!!
-            val manaAbility = cardRegistry.getCard("Llanowar Elves")!!.script.activatedAbilities.first()
-            val result = game.execute(
-                ActivateAbility(playerId = game.player1Id, sourceId = elves, abilityId = manaAbility.id)
-            )
-            withClue("Unlike Sorcerous Spyglass, Revoker has no mana-ability exemption") {
-                result.error shouldNotBe null
-            }
-            withClue("The Elves' mana ability is not offered as a legal action") {
-                game.getLegalActions(1).none { (it.action as? ActivateAbility)?.sourceId == elves } shouldBe true
+                withClue("Prodigal Sorcerer's ping is locked") {
+                    game.getLegalActions(1).none { (it.action as? ActivateAbility)?.sourceId == sorcerer } shouldBe true
+                }
+                withClue("the unnamed Elves still pay for Grizzly Bears with the last Plains") {
+                    game.castSpell(1, "Grizzly Bears").error shouldBe null
+                }
             }
         }
     }

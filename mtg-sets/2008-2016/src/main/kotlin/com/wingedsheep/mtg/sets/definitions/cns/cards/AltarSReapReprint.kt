@@ -13,7 +13,7 @@ val AltarSReapReprint = Printing(
     collectorNumber = "112",
     scryfallId = "be8809ac-01e8-4527-a192-47c3444f6e62",
     artist = "Donato Giancola",
-    imageUri = "https://cards.scryfall.io/normal/front/b/e/be8809ac-01e8-4527-a192-47c3444f6e62.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/e/be8809ac-01e8-4527-a192-47c3444f6e62.jpg?1783939356",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

@@ -7,12 +7,15 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.LoyaltyAbilitiesAtInstantSpeed
+import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.LoyaltyActivationPermission
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * The Wandering Emperor — Kamigawa: Neon Dynasty #42 (canonical printing)
- * {2}{W}{W} · Legendary Planeswalker · Loyalty 3
+ * The Wandering Emperor
+ * {2}{W}{W}
+ * Legendary Planeswalker
  *
  * Flash
  * As long as The Wandering Emperor entered this turn, you may activate her loyalty abilities any
@@ -21,9 +24,9 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * −1: Create a 2/2 white Samurai creature token with vigilance.
  * −2: Exile target tapped creature. You gain 2 life.
  *
- * The second paragraph is [LoyaltyAbilitiesAtInstantSpeed] gated on
- * [Conditions.SourceEnteredThisTurn]: it lifts only the timing half of CR 606.3, so she still
- * activates one loyalty ability per turn (ruling 2022-02-18).
+ * The timing clause is a self-scoped instant-speed [LoyaltyActivationPermission] gated on
+ * `Conditions.SourceEnteredThisTurn`; it lifts only the timing half of CR 606.3, so she still
+ * activates one loyalty ability per turn.
  */
 val TheWanderingEmperor = card("The Wandering Emperor") {
     manaCost = "{2}{W}{W}"
@@ -39,13 +42,15 @@ val TheWanderingEmperor = card("The Wandering Emperor") {
     keywords(Keyword.FLASH)
 
     staticAbility {
-        condition = Conditions.SourceEnteredThisTurn
-        ability = LoyaltyAbilitiesAtInstantSpeed
+        ability = ConditionalStaticAbility(
+            ability = LoyaltyActivationPermission(GameObjectFilter.Any.sourceItself(), instantSpeed = true),
+            condition = Conditions.SourceEnteredThisTurn,
+        )
     }
 
     loyaltyAbility(+1) {
         val creature = target(TargetFilter.Creature, optional = true)
-        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = creature) then
             Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
     }
 
@@ -56,12 +61,11 @@ val TheWanderingEmperor = card("The Wandering Emperor") {
             colors = setOf(Color.WHITE),
             creatureTypes = setOf("Samurai"),
             keywords = setOf(Keyword.VIGILANCE),
-            imageUri = "https://cards.scryfall.io/normal/front/f/6/f68e5337-6e44-4f8f-a102-2f97b433beea.jpg?1783923716",
         )
     }
 
     loyaltyAbility(-2) {
-        val creature = target(TargetFilter.TappedCreature)
+        val creature = target(TargetFilter.Creature.tapped())
         effect = Effects.Exile(creature) then Effects.GainLife(2)
     }
 

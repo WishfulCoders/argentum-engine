@@ -17,17 +17,15 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird
  * creature token with flying.
  *
- * The Bird is created before the counter, while the spell is still on the stack, so
- * `TargetController` reads the spell's controller (same order as An Offer You Can't Refuse). The
- * token doesn't depend on the counter: per the ruling, a spell that can't be countered still
- * gives its controller a Bird.
+ * Strix Serenade's shape: the Bird is created before the counter so the target's controller is
+ * still read off the stack, and a spell that can't be countered still yields the Bird (ruling).
  */
 val SwanSong = card("Swan Song") {
     manaCost = "{U}"
     colorIdentity = "U"
     typeLine = "Instant"
-    oracleText = "Counter target enchantment, instant, or sorcery spell. Its controller creates a " +
-        "2/2 blue Bird creature token with flying."
+    oracleText = "Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 " +
+        "blue Bird creature token with flying."
 
     spell {
         target(

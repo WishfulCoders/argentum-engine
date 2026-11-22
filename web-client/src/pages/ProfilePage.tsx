@@ -1,7 +1,7 @@
 /**
  * Account profile: shows the signed-in user, lets them rename their display name, a compact win/loss
  * summary (with a link to the full stats dashboard), a launcher into the deckbuilder's saved-deck
- * browser, and a paginated list of recent games — each of which can be opened to review both players'
+ * browser, the ante Spoils won in games played for ante, and a paginated list of recent games — each of which can be opened to review both players'
  * decks or watched/shared as a replay. Prompts sign-in when anonymous. The heavy analytics (charts,
  * head-to-head, colors, mana curve, …) live on the separate /stats page.
  */
@@ -19,12 +19,21 @@ import {
   listDecks,
 } from '@/api/account'
 import { LoginModal } from '@/components/auth/LoginModal'
+import { AvatarPicker } from '@/components/profile/AvatarPicker'
 import { DeckViewModal } from '@/components/profile/DeckViewModal'
+import { SpoilsPanel } from '@/components/profile/SpoilsPanel'
 import { TournamentDetailModal } from '@/components/profile/TournamentDetailModal'
-import { TournamentStatusBadge } from '@/components/tournament/TournamentStatusBadge'
-import { EloCell, GameModeCell, OpponentCell } from '@/components/profile/gameHistoryCells'
-import { colorForIdentity, colorLabel } from '@/components/admin/statFormat'
-import { formatDateTime } from '@/utils/datetime'
+import {
+  AccountPage,
+  Avatar,
+  GameHistoryList,
+  MessageCard,
+  TournamentList,
+  accountStyles as a,
+} from '@/components/profile/accountUi'
+import { pageStyles as p } from '@/components/ui/PageShell'
+import { ALL_GAMES, type StatsFilter, filterQuery } from '@/api/statsFilter'
+import { NotCountedNote, OpponentSplit, StatsFilterBar } from '@/components/stats/StatsFilterBar'
 import { useAuthStore } from '@/store/authStore'
 
 const PAGE_SIZE = 10
@@ -37,15 +46,19 @@ export function ProfilePage() {
   const init = useAuthStore((s) => s.init)
   const logout = useAuthStore((s) => s.logout)
   const updateDisplayName = useAuthStore((s) => s.updateDisplayName)
+  const updateAvatar = useAuthStore((s) => s.updateAvatar)
 
   const [stats, setStats] = useState<AccountStats | null>(null)
   const [decks, setDecks] = useState<DeckSummary[]>([])
   const [history, setHistory] = useState<GameHistoryEntry[]>([])
   const [historyTotal, setHistoryTotal] = useState(0)
   const [page, setPage] = useState(0)
+  // Who the listed games were against; the list keeps games that don't count, marked.
+  const [historyFilter, setHistoryFilter] = useState<StatsFilter>(ALL_GAMES)
   const [tournaments, setTournaments] = useState<UserTournamentEntry[]>([])
   const [openTournament, setOpenTournament] = useState<number | null>(null)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -78,7 +91,7 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return
-    void fetchHistoryPage(PAGE_SIZE, page * PAGE_SIZE)
+    void fetchHistoryPage(PAGE_SIZE, page * PAGE_SIZE, historyFilter)
       .then((p) => {
         setHistory(p.entries)
         setHistoryTotal(p.total)
@@ -87,7 +100,7 @@ export function ProfilePage() {
         setHistory([])
         setHistoryTotal(0)
       })
-  }, [status, page])
+  }, [status, page, historyFilter])
 
   const startEditName = () => {
     setNameDraft(user?.displayName ?? '')
@@ -118,226 +131,204 @@ export function ProfilePage() {
     const firstShown = historyTotal === 0 ? 0 : page * PAGE_SIZE + 1
     const lastShown = Math.min(historyTotal, page * PAGE_SIZE + history.length)
     return (
-      <div style={styles.wrap}>
-        <div style={styles.container}>
-          <div style={styles.header}>
-            <button type="button" style={styles.link} onClick={() => navigate('/')}>
-              ← Home
-            </button>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <button type="button" style={styles.link} onClick={() => navigate('/friends')}>
-                Friends
-              </button>
-              <button type="button" style={styles.link} onClick={logout}>
-                Sign out
-              </button>
-            </div>
-          </div>
-
-          {editingName ? (
-            <div style={styles.nameEditRow}>
-              <input
-                style={styles.nameInput}
-                value={nameDraft}
-                maxLength={40}
-                autoFocus
-                onChange={(e) => setNameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void submitName()
-                  if (e.key === 'Escape') setEditingName(false)
-                }}
-              />
-              <button type="button" style={styles.smallPrimary} disabled={savingName} onClick={() => void submitName()}>
-                {savingName ? 'Saving…' : 'Save'}
-              </button>
-              <button type="button" style={styles.smallGhost} onClick={() => setEditingName(false)}>
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <div style={styles.nameRow}>
-              <h1 style={styles.title}>{user.displayName}</h1>
-              <button type="button" style={styles.editLink} onClick={startEditName}>
-                Edit name
-              </button>
-            </div>
-          )}
-          {nameError ? <p style={styles.error}>{nameError}</p> : <p style={styles.muted}>{user.email}</p>}
-
-          {user.isAdmin && (
-            <button type="button" style={styles.adminLink} onClick={() => navigate('/admin')}>
-              <span style={styles.adminLinkBadge}>ADMIN</span>
-              <span style={styles.adminLinkText}>Open the admin dashboard</span>
-              <span style={styles.adminLinkArrow}>→</span>
-            </button>
-          )}
-
-          <div style={styles.statsRow}>
-            <Stat label="Games" value={stats?.games ?? 0} />
-            <Stat label="Wins" value={stats?.wins ?? 0} />
-            <Stat label="Losses" value={stats?.losses ?? 0} />
-            <Stat label="Win rate" value={stats ? `${Math.round(stats.winRate * 100)}%` : '—'} />
-          </div>
-
-          <button type="button" style={styles.statsLink} onClick={() => navigate('/stats')}>
-            <span style={styles.statsLinkText}>
-              <span style={styles.statsLinkTitle}>View full stats</span>
-              <span style={styles.muted}>Charts, colors, mana curve, head-to-head & more</span>
-            </span>
-            <span style={styles.statsLinkArrow}>→</span>
-          </button>
-
-          <h2 style={styles.section}>Decks</h2>
-          {/* Small launcher into the deckbuilder's saved-deck browser (the polished overlay that lists
-              account + browser decks with online badges) — no need to duplicate that UI here. */}
-          <button type="button" style={styles.deckManager} onClick={() => navigate('/deckbuilder?decks=open')}>
-            <span style={styles.deckManagerText}>
-              <span style={styles.deckManagerTitle}>Manage my decks</span>
-              <span style={styles.muted}>
-                {decks.length === 0
-                  ? 'No decks saved to your account yet'
-                  : `${decks.length} deck${decks.length === 1 ? '' : 's'} saved to your account`}
+      <AccountPage title="Profile">
+        <section className={p.panel}>
+          <div className={a.identity}>
+            <button
+              type="button"
+              className={a.avatarEdit}
+              onClick={() => setAvatarPickerOpen(true)}
+              aria-label="Change avatar"
+              title="Change avatar"
+              data-testid="profile-avatar"
+            >
+              <Avatar name={user.displayName} avatar={user.avatar} />
+              <span className={a.avatarEditOverlay} aria-hidden>Change</span>
+              <span className={a.avatarEditBadge} aria-hidden>
+                <PencilIcon />
               </span>
-            </span>
-            <span style={styles.deckManagerArrow}>Open deck browser →</span>
-          </button>
-
-          {(history.length > 0 || historyTotal > 0) && (
-            <div style={styles.sectionBlock}>
-              <div style={styles.recentHead}>
-                <h2 style={{ ...styles.section, margin: 0 }}>Recent games</h2>
-                {historyTotal > 0 && (
-                  <span style={styles.muted}>
-                    {firstShown}–{lastShown} of {historyTotal}
-                  </span>
-                )}
-              </div>
-              <SimpleTable
-                head={[
-                  'Date',
-                  'Mode',
-                  'Colors',
-                  'Opponent',
-                  { label: 'Elo' },
-                  { label: 'Result', numeric: true },
-                  { label: 'Deck', numeric: true },
-                  { label: 'Replay', numeric: true },
-                ]}
-              >
-                {history.map((g, i) => (
-                  <tr key={`${g.gameId}-${i}`}>
-                    <td style={styles.td}>{formatDateTime(g.endedAt)}</td>
-                    <td style={styles.td}>
-                      <GameModeCell gameMode={g.gameMode} format={g.format} />
-                    </td>
-                    <td style={styles.td}>
-                      {g.colors ? (
-                        <span style={styles.colorsCell}>
-                          <span style={{ ...styles.colorDot, backgroundColor: colorForIdentity(g.colors) }} />
-                          {colorLabel(g.colors)}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td style={styles.td}>
-                      <OpponentCell entry={g} />
-                    </td>
-                    <td style={styles.td}>
-                      <EloCell entry={g} />
-                    </td>
-                    <td style={{ ...styles.tdNum, color: g.won ? '#5bd16e' : '#e15b6e' }}>
-                      {g.won ? 'Win' : 'Loss'}
-                    </td>
-                    <td style={styles.tdNum}>
-                      <button
-                        type="button"
-                        style={styles.link}
-                        onClick={() => setDeckModal({ gameId: g.gameId, opponent: g.opponents ?? 'opponent' })}
-                      >
-                        View
-                      </button>
-                    </td>
-                    <td style={styles.tdNum}>
-                      {g.hasReplay ? (
-                        <span style={{ display: 'inline-flex', gap: 10, justifyContent: 'flex-end' }}>
-                          <button type="button" style={styles.link} onClick={() => navigate(`/replay/${g.gameId}`)}>
-                            Watch
-                          </button>
-                          <button type="button" style={styles.link} onClick={() => shareReplay(g.gameId)}>
-                            {copiedReplay === g.gameId ? 'Copied!' : 'Share'}
-                          </button>
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </SimpleTable>
-              {pageCount > 1 && (
-                <div style={styles.pager}>
-                  <button
-                    type="button"
-                    style={{ ...styles.pagerBtn, ...(page === 0 ? styles.pagerBtnDisabled : {}) }}
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  >
-                    ← Newer
+            </button>
+            <div className={a.identityText}>
+              {editingName ? (
+                <div className={a.nameEdit}>
+                  <input
+                    className={p.input}
+                    value={nameDraft}
+                    maxLength={40}
+                    autoFocus
+                    aria-label="Display name"
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void submitName()
+                      if (e.key === 'Escape') setEditingName(false)
+                    }}
+                  />
+                  <button type="button" className={p.buttonPrimary} disabled={savingName} onClick={() => void submitName()}>
+                    {savingName ? 'Saving…' : 'Save'}
                   </button>
-                  <span style={styles.muted}>
-                    Page {page + 1} of {pageCount}
-                  </span>
-                  <button
-                    type="button"
-                    style={{ ...styles.pagerBtn, ...(page + 1 >= pageCount ? styles.pagerBtnDisabled : {}) }}
-                    disabled={page + 1 >= pageCount}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Older →
+                  <button type="button" className={p.buttonGhost} onClick={() => setEditingName(false)}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className={a.nameRow}>
+                  <h1 className={p.h1}>{user.displayName}</h1>
+                  <button type="button" className={a.link} style={{ fontSize: 13 }} onClick={startEditName}>
+                    Edit name
                   </button>
                 </div>
               )}
+              {nameError ? <p className={a.error}>{nameError}</p> : <p className={a.muted}>{user.email}</p>}
+            </div>
+            <div className={a.identityActions}>
+              {user.isAdmin && (
+                <button type="button" className={a.adminPill} onClick={() => navigate('/admin')}>
+                  <span className={a.adminBadge}>ADMIN</span>
+                  Dashboard
+                </button>
+              )}
+              <button type="button" className={p.button} onClick={logout}>
+                Log out
+              </button>
+            </div>
+          </div>
+          <div className={p.statGrid} style={{ marginTop: 18 }}>
+            <Stat label="Games" value={stats?.games ?? 0} />
+            <Stat label="Wins" value={stats?.wins ?? 0} />
+            <Stat label="Losses" value={stats?.losses ?? 0} />
+            <Stat label="Win rate" value={stats && stats.games > 0 ? `${Math.round(stats.winRate * 100)}%` : '—'} />
+          </div>
+          {stats && (stats.vsHumans.games > 0 || stats.vsAi.games > 0 || stats.notCounted > 0) && (
+            <div className={a.overviewFoot} style={{ marginTop: 12 }}>
+              {/* Each record opens the full stats page filtered to it. */}
+              <OpponentSplit
+                vsHumans={stats.vsHumans}
+                vsAi={stats.vsAi}
+                filter={ALL_GAMES}
+                onChange={(f) => navigate(`/stats${filterQuery(f).replace(/^&/, '?')}`)}
+              />
+              <NotCountedNote count={stats.notCounted} />
             </div>
           )}
-          {tournaments.length > 0 && (
-            <div style={styles.sectionBlock}>
-              <div style={styles.recentHead}>
-                <h2 style={{ ...styles.section, margin: 0 }}>Recent tournaments</h2>
-                <span style={styles.muted}>Open one for its standings and every game’s replay</span>
-              </div>
-              <SimpleTable
-                head={[
-                  'Date',
-                  'Tournament',
-                  'Mode',
-                  'Status',
-                  { label: 'Place', numeric: true },
-                ]}
-              >
-                {tournaments.map((t, i) => (
-                  <tr
-                    key={`${t.id}-${i}`}
-                    style={styles.clickableRow}
-                    onClick={() => setOpenTournament(t.id)}
-                  >
-                    <td style={styles.td}>{formatDateTime(t.endedAt)}</td>
-                    <td style={styles.tdLink}>{t.name?.trim() || 'Tournament'}</td>
-                    <td style={styles.td}>
-                      <GameModeCell gameMode={t.gameMode} format={t.format} />
-                    </td>
-                    <td style={styles.td}>
-                      <TournamentStatusBadge status={t.status} />
-                    </td>
-                    <td style={styles.tdNum}>
-                      {t.status === 'COMPLETED' ? `${t.placement}/${t.playerCount}` : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </SimpleTable>
-            </div>
-          )}
+        </section>
+
+        <div className={a.shortcuts}>
+          <Shortcut
+            icon={<ChartIcon />}
+            title="Full stats"
+            sub="Ratings, colors, curve & more"
+            onClick={() => navigate('/stats')}
+          />
+          {/* Launcher into the Decks & Cubes library — no need to duplicate that UI here. */}
+          <Shortcut
+            icon={<DecksIcon />}
+            title="My decks"
+            sub={
+              decks.length === 0
+                ? 'None saved to your account yet'
+                : `${decks.length} deck${decks.length === 1 ? '' : 's'} saved to your account`
+            }
+            onClick={() => navigate('/library?tab=decks')}
+          />
+          <Shortcut icon={<FriendsIcon />} title="Friends" sub="Your friend code and who's online" onClick={() => navigate('/friends')} />
+          <Shortcut
+            icon={<SlidersIcon />}
+            title="Preferences"
+            sub="Auto-pass stops, card stacking & more"
+            onClick={() => navigate('/preferences')}
+          />
         </div>
+
+        <section className={p.panel}>
+          <div className={a.sectionHead}>
+            <h2 className={a.sectionTitle}>Recent games</h2>
+            {historyTotal > 0 && (
+              <span className={a.count}>
+                {firstShown}–{lastShown} of {historyTotal}
+              </span>
+            )}
+          </div>
+          {(historyTotal > 0 || historyFilter.vs !== 'all') && (
+            <div style={{ marginBottom: 10 }}>
+              <StatsFilterBar
+                filter={historyFilter}
+                showPeriod={false}
+                onChange={(f) => {
+                  setHistoryFilter(f)
+                  setPage(0)
+                }}
+              />
+            </div>
+          )}
+          {history.length === 0 ? (
+            <p className={a.muted}>
+              {historyFilter.vs === 'all'
+                ? 'No games yet — finished games show up here with their decks and replays.'
+                : `No games against ${historyFilter.vs === 'ai' ? 'the AI' : 'humans'} yet.`}
+            </p>
+          ) : (
+            <GameHistoryList
+              games={history}
+              renderActions={(g) => (
+                <>
+                  <button
+                    type="button"
+                    className={a.miniButton}
+                    onClick={() => setDeckModal({ gameId: g.gameId, opponent: g.opponents ?? 'opponent' })}
+                  >
+                    Decks
+                  </button>
+                  {g.hasReplay && (
+                    <>
+                      <button type="button" className={a.miniButton} onClick={() => navigate(`/replay/${g.gameId}`)}>
+                        Watch
+                      </button>
+                      <button type="button" className={a.miniButton} onClick={() => shareReplay(g.gameId)}>
+                        {copiedReplay === g.gameId ? 'Copied!' : 'Share'}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            />
+          )}
+          {pageCount > 1 && (
+            <div className={a.pager}>
+              <button
+                type="button"
+                className={p.buttonGhost}
+                disabled={page === 0}
+                onClick={() => setPage((n) => Math.max(0, n - 1))}
+              >
+                ← Newer
+              </button>
+              <span>
+                Page {page + 1} of {pageCount}
+              </span>
+              <button
+                type="button"
+                className={p.buttonGhost}
+                disabled={page + 1 >= pageCount}
+                onClick={() => setPage((n) => n + 1)}
+              >
+                Older →
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Cards won in games played for ante (CR 407). */}
+        <SpoilsPanel />
+
+        {tournaments.length > 0 && (
+          <section className={p.panel}>
+            <div className={a.sectionHead}>
+              <h2 className={a.sectionTitle}>Recent tournaments</h2>
+              <span className={a.count}>Open one for its standings and replays</span>
+            </div>
+            <TournamentList tournaments={tournaments} onOpen={setOpenTournament} />
+          </section>
+        )}
 
         {deckModal && (
           <DeckViewModal
@@ -349,221 +340,121 @@ export function ProfilePage() {
         {openTournament != null && (
           <TournamentDetailModal tournamentId={openTournament} onClose={() => setOpenTournament(null)} />
         )}
-      </div>
+        {avatarPickerOpen && (
+          <AvatarPicker
+            name={user.displayName}
+            current={user.avatar ?? null}
+            onSave={updateAvatar}
+            onClose={() => setAvatarPickerOpen(false)}
+          />
+        )}
+      </AccountPage>
     )
   }
 
   const resolving = status === 'idle' || status === 'loading'
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.container}>
-        <button type="button" style={styles.link} onClick={() => navigate('/')}>
-          ← Home
-        </button>
-        <h1 style={styles.title}>Your account</h1>
+    <AccountPage title="Profile">
+      <MessageCard>
+        <h1 className={p.h1}>Your account</h1>
         {accountsEnabled ? (
           <>
-            <p style={styles.muted}>
-              Sign in to save decks to the cloud and track your win/loss record.
-            </p>
-            <button type="button" style={styles.primary} onClick={() => setLoginOpen(true)}>
+            <p className={p.lede}>Sign in with your email — no password — to keep your progress across devices.</p>
+            <ul className={a.benefits}>
+              <li>Save decks to the cloud</li>
+              <li>Track your record, ratings and stats</li>
+              <li>Add friends and see who's online</li>
+            </ul>
+            <button type="button" className={`${p.buttonPrimary} ${a.fullButton}`} onClick={() => setLoginOpen(true)}>
               Sign in
             </button>
             <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
           </>
         ) : resolving ? (
-          <p style={styles.muted}>Loading…</p>
+          <p className={a.muted}>Loading…</p>
         ) : (
-          <p style={styles.muted}>Accounts aren't available on this server.</p>
+          <p className={a.muted}>Accounts aren't available on this server.</p>
         )}
-      </div>
-    </div>
+      </MessageCard>
+    </AccountPage>
   )
 }
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div style={styles.stat}>
-      <div style={styles.statValue}>{value}</div>
-      <div style={styles.statLabel}>{label}</div>
+    <div className={p.stat}>
+      <span className={p.statValue}>{value}</span>
+      <span className={p.statLabel}>{label}</span>
     </div>
   )
 }
 
-/** A table-head cell: a plain string (left-aligned) or `{ label, numeric }` for a right-aligned column. */
-type HeadCell = string | { label: string; numeric?: boolean }
-
-function SimpleTable({ head, children }: { head: HeadCell[]; children: React.ReactNode }) {
+function Shortcut({ icon, title, sub, onClick }: { icon: React.ReactNode; title: string; sub: string; onClick: () => void }) {
   return (
-    <div style={styles.tableWrap}>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            {head.map((h) => {
-              const label = typeof h === 'string' ? h : h.label
-              const numeric = typeof h === 'string' ? false : (h.numeric ?? false)
-              return (
-                <th key={label} style={numeric ? styles.thNum : styles.th}>
-                  {label}
-                </th>
-              )
-            })}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <button type="button" className={a.shortcut} onClick={onClick}>
+      <span className={a.shortcutIcon}>{icon}</span>
+      <span className={a.shortcutText}>
+        <span className={a.shortcutTitle}>{title}</span>
+        <span className={a.shortcutSub}>{sub}</span>
+      </span>
+      <span className={a.shortcutArrow} aria-hidden>→</span>
+    </button>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { height: '100vh', overflowY: 'auto', backgroundColor: '#0a0a15', padding: '32px 16px' },
-  adminLink: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-    backgroundColor: 'rgba(139,155,255,0.08)',
-    border: '1px solid #2f2f55',
-    borderRadius: 12,
-    padding: '12px 16px',
-    color: '#fff',
-    cursor: 'pointer',
-    textAlign: 'left',
-  },
-  adminLinkBadge: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 0.6,
-    color: '#8b9bff',
-    backgroundColor: 'rgba(139,155,255,0.14)',
-    border: '1px solid #8b9bff55',
-    borderRadius: 999,
-    padding: '2px 7px',
-  },
-  adminLinkText: { flex: 1, fontSize: 14, fontWeight: 600 },
-  adminLinkArrow: { color: '#8b9bff', fontSize: 16, fontWeight: 700 },
-  container: { maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 },
-  header: { display: 'flex', justifyContent: 'space-between' },
-  link: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 14, padding: 0 },
-  title: { margin: '8px 0 0', color: '#fff', fontSize: 28 },
-  nameRow: { display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' },
-  editLink: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 13, padding: 0 },
-  nameEditRow: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' },
-  nameInput: {
-    flex: '1 1 200px',
-    minWidth: 0,
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 8,
-    padding: '8px 12px',
-    color: '#fff',
-    fontSize: 18,
-  },
-  smallPrimary: {
-    padding: '8px 14px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontWeight: 600,
-    fontSize: 13,
-    cursor: 'pointer',
-  },
-  smallGhost: {
-    padding: '8px 14px',
-    borderRadius: 8,
-    border: '1px solid #2a2a3e',
-    backgroundColor: 'transparent',
-    color: '#aaa',
-    fontSize: 13,
-    cursor: 'pointer',
-  },
-  error: { margin: 0, color: '#ff6b6b', fontSize: 13 },
-  muted: { margin: 0, color: '#888', fontSize: 14 },
-  section: { margin: '0 0 10px', color: '#fff', fontSize: 18 },
-  sectionBlock: {
-    marginTop: 8,
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '16px 18px',
-  },
-  recentHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },
-  tableWrap: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { textAlign: 'left', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e' },
-  thNum: { textAlign: 'right', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e' },
-  td: { textAlign: 'left', color: '#ccc', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  tdLink: { textAlign: 'left', color: '#8b9bff', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  tdNum: { textAlign: 'right', color: '#ccc', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  clickableRow: { cursor: 'pointer' },
-  colorsCell: { display: 'inline-flex', alignItems: 'center', gap: 6 },
-  colorDot: { width: 9, height: 9, borderRadius: 999, display: 'inline-block' },
-  pager: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 12 },
-  pagerBtn: {
-    background: 'none',
-    border: '1px solid #2a2a3e',
-    borderRadius: 8,
-    color: '#cdd',
-    cursor: 'pointer',
-    fontSize: 13,
-    padding: '6px 12px',
-  },
-  pagerBtnDisabled: { color: '#555', cursor: 'default', borderColor: '#1f1f2e' },
-  statsRow: { display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' },
-  stat: {
-    flex: '1 1 120px',
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '16px 12px',
-    textAlign: 'center',
-  },
-  statValue: { color: '#fff', fontSize: 26, fontWeight: 700 },
-  statLabel: { color: '#888', fontSize: 12, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  statsLink: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    textAlign: 'left',
-    backgroundColor: 'rgba(91,110,225,0.10)',
-    border: '1px solid #2f2f55',
-    borderRadius: 12,
-    padding: '14px 16px',
-    color: '#fff',
-    cursor: 'pointer',
-  },
-  statsLinkText: { display: 'flex', flexDirection: 'column', gap: 3 },
-  statsLinkTitle: { fontSize: 15, fontWeight: 600 },
-  statsLinkArrow: { color: '#8b9bff', fontSize: 18, fontWeight: 700, flexShrink: 0 },
-  deckManager: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    textAlign: 'left',
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '16px 18px',
-    color: '#fff',
-    cursor: 'pointer',
-  },
-  deckManagerText: { display: 'flex', flexDirection: 'column', gap: 4 },
-  deckManagerTitle: { fontSize: 16, fontWeight: 600 },
-  deckManagerArrow: { color: '#8b9bff', fontSize: 14, fontWeight: 600, flexShrink: 0 },
-  primary: {
-    alignSelf: 'flex-start',
-    marginTop: 8,
-    padding: '10px 18px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
+const iconProps = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  'aria-hidden': true,
+}
+
+function PencilIcon() {
+  return (
+    <svg {...iconProps} width="12" height="12" strokeWidth={2.4}>
+      <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+    </svg>
+  )
+}
+
+function ChartIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </svg>
+  )
+}
+
+function DecksIcon() {
+  return (
+    <svg {...iconProps}>
+      <rect x="7" y="3" width="12" height="16" rx="2" />
+      <path d="M4 7v12a2 2 0 0 0 2 2h9" />
+    </svg>
+  )
+}
+
+function FriendsIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.8.8 3 2.6 3.5 5.2" />
+    </svg>
+  )
+}
+
+function SlidersIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </svg>
+  )
 }

@@ -13,19 +13,23 @@
  * Storage is a versioned envelope so the shape can migrate later without losing users' cubes.
  *
  * ## Storage versions
- * - **v1** — `{ id, name, cards: CubeEntry[], basicLandSetCode, packSize, updatedAt }`.
+ * - **v1** — `{ id, name, cards: CubeEntry[], basicLandSetCode, packSize, updatedAt }`, later widened
+ *   with the optional `description`, `boosterStyle` and per-entry `rarity` — additive, so a v1 cube
+ *   written before them still reads as a plain shuffled cube and no version bump was needed.
  */
 import { create } from 'zustand'
+import type { CubeBoosterStyle, SharedCubeEntry } from '@/api/account'
 
-/** One line of a cube: a card name and how many physical copies the cube runs. */
-export interface CubeEntry {
-  readonly name: string
-  readonly count: number
-}
+/**
+ * One line of a cube: a card name, how many physical copies the cube runs, and optionally the rarity
+ * it is printed at when the cube is opened as boosters (absent = the card's own rarity).
+ */
+export type CubeEntry = SharedCubeEntry
 
 export interface SavedCube {
   id: string
   name: string
+  description?: string
   cards: readonly CubeEntry[]
   /**
    * Set code the basic-land art comes from. A cube has no basics of its own, but the deckbuilder
@@ -35,6 +39,8 @@ export interface SavedCube {
   basicLandSetCode: string
   /** Cards per pack when this cube is drafted or dealt as sealed. */
   packSize: number
+  /** How the cube becomes packs. Absent = `SHUFFLED`. */
+  boosterStyle?: CubeBoosterStyle
   updatedAt: number
 }
 
@@ -111,9 +117,11 @@ export const useCubeLibrary = create<CubeLibraryState>((set, get) => ({
     const saved: SavedCube = {
       id,
       name: input.name,
+      ...(input.description ? { description: input.description } : {}),
       cards: [...input.cards],
       basicLandSetCode: input.basicLandSetCode,
       packSize: input.packSize,
+      ...(input.boosterStyle ? { boosterStyle: input.boosterStyle } : {}),
       updatedAt: Date.now(),
     }
     const cubes = existing

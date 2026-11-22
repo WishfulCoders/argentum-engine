@@ -18,7 +18,7 @@
                 "trigger": {
                     "type": "DrawEvent",
                     "player": "EachOpponent",
-                    "exceptFirstInDrawStep": true
+                    "firstInDrawStep": "EXCLUDED"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -1489,7 +1489,8 @@
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Treasure"
-                            }
+                            },
+                            "description": "Create a Treasure token"
                         },
                         {
                             "effect": {
@@ -3667,7 +3668,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -3686,9 +3689,8 @@
                 "interveningIf": {
                     "type": "Compare",
                     "left": {
-                        "type": "TurnTracking",
-                        "player": "You",
-                        "tracker": "FOOD_SACRIFICED"
+                        "type": "PermanentsSacrificedThisTurn",
+                        "filter": "Food"
                     },
                     "operator": "GTE",
                     "right": {
@@ -3744,8 +3746,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 2
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
                                 }
                             },
                             "then": "TheRingTemptsYou"
@@ -4175,7 +4186,12 @@
                             "baseFilter": {
                                 "cardPredicates": [
                                     "IsCreature",
-                                    "PowerEqualsX"
+                                    {
+                                        "type": "CompareNumericProperty",
+                                        "property": "POWER",
+                                        "operator": "EQ",
+                                        "amount": "XValue"
+                                    }
                                 ]
                             }
                         },
@@ -4243,7 +4259,9 @@
                                         "amount": 3
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to three basic land cards to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4281,7 +4299,9 @@
                                         "amount": 2
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to two basic land cards to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -5557,7 +5577,7 @@
         "staticAbilities": [
             {
                 "type": "TransformPermanent",
-                "setSubtypes": [
+                "setCreatureSubtypes": [
                     "Spirit"
                 ]
             },
@@ -6336,13 +6356,15 @@
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Food"
-                            }
+                            },
+                            "description": "Create a Food token"
                         },
                         {
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Treasure"
-                            }
+                            },
+                            "description": "Create a Treasure token"
                         }
                     ]
                 }
@@ -6379,13 +6401,15 @@
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Food"
-                            }
+                            },
+                            "description": "Create a Food token"
                         },
                         {
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Treasure"
-                            }
+                            },
+                            "description": "Create a Treasure token"
                         }
                     ]
                 }
@@ -6761,7 +6785,10 @@
                         "type": "MoveToZone",
                         "target": "Self",
                         "destination": "Library",
-                        "positionFromTop": 4
+                        "positionFromTop": {
+                            "type": "Fixed",
+                            "amount": 4
+                        }
                     }
                 }
             }
@@ -7103,8 +7130,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -8851,7 +8887,8 @@
                 "id": "Horn of the Mark:1",
                 "trigger": {
                     "type": "YouAttackEvent",
-                    "minAttackers": 2
+                    "minAttackers": 2,
+                    "attackedPlayer": "Each"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -9248,7 +9285,10 @@
                 "name": "t0"
             },
             "destination": "Library",
-            "positionFromTop": 1
+            "positionFromTop": {
+                "type": "Fixed",
+                "amount": 1
+            }
         },
         "targetRequirements": [
             {
@@ -9379,26 +9419,6 @@
     ]
 }
 
-// Knight of the Keep
-{
-    "name": "Knight of the Keep",
-    "manaCost": "{2}{W}",
-    "typeLine": "Creature — Human Knight",
-    "creatureStats": {
-        "power": 3,
-        "toughness": 2
-    },
-    "metadata": {
-        "collectorNumber": "291",
-        "artist": "Nicholas Gregory",
-        "flavorText": "Now the cries of clear strong voices came ringing over the fields. They rode in: a long line of mail-clad Men, swift, shining, fell and fair to look upon. Suddenly they swept up with a noise like thunder, and the foremost horseman swerved.",
-        "imageUri": "https://cards.scryfall.io/normal/front/3/a/3af21576-3793-4796-ab60-112fbbb5fc0d.jpg?1687424787"
-    },
-    "colorIdentityOverride": [
-        "WHITE"
-    ]
-}
-
 // Knights of Dol Amroth
 {
     "name": "Knights of Dol Amroth",
@@ -9457,7 +9477,8 @@
                 "id": "Landroval, Horizon Witness:1",
                 "trigger": {
                     "type": "YouAttackEvent",
-                    "minAttackers": 2
+                    "minAttackers": 2,
+                    "attackedPlayer": "Each"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -10276,7 +10297,10 @@
                 "name": "t0"
             },
             "destination": "Library",
-            "positionFromTop": 3
+            "positionFromTop": {
+                "type": "Fixed",
+                "amount": 3
+            }
         },
         "targetRequirements": [
             {
@@ -10472,7 +10496,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a basic land card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -10692,7 +10718,8 @@
                             }
                         ],
                         "controllerPredicate": "ControlledByYou"
-                    }
+                    },
+                    "attackedPlayer": "Each"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -11528,7 +11555,10 @@
                             "type": "PayAtom",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         },
                         "suffer": {
@@ -11646,7 +11676,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -12550,7 +12583,7 @@
                 "trigger": {
                     "type": "DrawEvent",
                     "player": "EachOpponent",
-                    "exceptFirstInDrawStep": true
+                    "firstInDrawStep": "EXCLUDED"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -13964,7 +13997,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card that shares a color with creature legendary you control to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -15855,7 +15890,7 @@
             {
                 "type": "PreventActivatedAbilities",
                 "filter": "land ctrl:opponent",
-                "nonManaAbilitiesOnly": true
+                "abilities": "NON_MANA"
             },
             {
                 "type": "GainActivatedAbilitiesOfPermanents",
@@ -16236,7 +16271,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -18462,7 +18499,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mountain card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -19088,7 +19127,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a creature legendary card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -19134,7 +19175,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a creature legendary card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -19673,7 +19716,15 @@
                             "IsCreature"
                         ],
                         "statePredicates": [
-                            "BlockedOrWasBlockedByLegendaryThisTurn"
+                            {
+                                "type": "BlockPairedWithMatchingThisTurn",
+                                "partner": {
+                                    "cardPredicates": [
+                                        "IsCreature",
+                                        "IsLegendary"
+                                    ]
+                                }
+                            }
                         ]
                     }
                 },

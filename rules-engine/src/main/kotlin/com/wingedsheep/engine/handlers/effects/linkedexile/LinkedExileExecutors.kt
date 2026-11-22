@@ -17,8 +17,9 @@ class LinkedExileExecutors(private val zones: ZoneTransitionService) : ExecutorM
         ExileWithAurasNotingCountersExecutor(zones),
         MarkExileOnDeathExecutor(),
         MarkExileControllerGraveyardOnDeathExecutor(),
-        ReturnOneFromLinkedExileExecutor(),
+        ReturnOneFromLinkedExileExecutor(zones),
         ReturnNotedExileTappedWithAurasExecutor(zones),
-        RecordChosenLinkedExileExecutor()
+        RecordChosenLinkedExileExecutor(),
+        LinkCollectionToPermanentExecutor()
     )
 }

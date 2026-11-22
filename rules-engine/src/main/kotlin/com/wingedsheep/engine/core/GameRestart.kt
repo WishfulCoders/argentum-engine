@@ -12,7 +12,7 @@ import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.CopyOfComponent
 import com.wingedsheep.engine.state.components.identity.DoubleFacedComponent
 import com.wingedsheep.engine.state.components.identity.EmblemSourceComponent
-import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
+import com.wingedsheep.engine.state.components.identity.MeldedComponent
 import com.wingedsheep.engine.state.components.identity.OwnerComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.identity.TeamComponent
@@ -87,87 +87,41 @@ class GameRestarter(
      */
     private val beginFirstTurn: ((GameState, List<GameEvent>) -> ExecutionResult)? = null,
 ) {
+    private val newGame = NewGameProcedure(cardRegistry)
 
     fun restart(state: GameState, request: GameRestartRequest): ExecutionResult {
         val involved = state.turnOrder.filter { state.getEntity(it)?.has<PlayerLostComponent>() != true }
         val starting = request.startingPlayerId.takeIf { it in involved } ?: involved.first()
         val exemptInExile = request.exempt.filter { state.logicalZone(it)?.zoneType == Zone.EXILE }.toSet()
 
-        var fresh = GameState(
-            preserveGraveyardOrder = state.preserveGraveyardOrder,
-            format = state.format,
-            attackMode = state.attackMode,
-            rng = state.rng,
-            nextEntityId = state.nextEntityId,
-            nextRoutingId = state.nextRoutingId,
-            nextObjectGeneration = state.nextObjectGeneration,
-            timestamp = state.timestamp,
-            yieldsByPlayer = state.yieldsByPlayer,
-        ).clearUntilEndOfTurnYields()
+        // Every seat stays in the turn order; a player who already left the game is not part of
+        // the new one, but keeps their seat.
+        var fresh = newGame.emptyGame(state, newGame.turnOrderFrom(state, state.turnOrder.toSet(), starting))
+            // A restarted subgame is still a subgame of the same main game, which is unaffected (CR 727.6).
+            .copy(mainGame = state.mainGame)
 
-        val turnOrder = startingFrom(state, starting)
-        fresh = fresh.copy(
-            turnOrder = turnOrder,
-            activePlayerId = starting,
-            priorityPlayerId = starting,
-            turnNumber = 1,
-            phase = Phase.BEGINNING,
-            step = Step.UNTAP,
-        )
-
-        // The cards each involved player owns, in a stable order, with the zone each starts the new
-        // game in. Vanguard avatars aren't cards of a deck; they keep their place in the command zone.
-        val cards = linkedMapOf<EntityId, MutableList<Pair<ComponentContainer, Zone>>>()
-        val oldIdsByOwner = linkedMapOf<EntityId, MutableList<EntityId>>()
-        val avatars = mutableListOf<Pair<EntityId, ComponentContainer>>()
-        val candidates = state.zones
-            .filterKeys { it.zoneType != Zone.SIDEBOARD }
-            .values.flatten() + state.stack
-        for (oldId in candidates.distinct()) {
-            val container = state.getEntity(oldId) ?: continue
-            if (container.has<VanguardAvatarComponent>()) {
-                avatars += oldId to container
-                continue
-            }
-            val card = container.get<CardComponent>() ?: continue
-            if (container.has<TokenComponent>() || container.has<EmblemSourceComponent>()) continue
-            // A copy with no card beneath it (a copied spell, a prepared copy, a copy made into a
-            // collection) is not a Magic card, wherever it is.
-            if (container.get<CopyOfComponent>()?.let { it.originalCardComponent == null } == true) continue
-            val owner = container.get<OwnerComponent>()?.playerId ?: card.ownerId ?: continue
-            if (owner !in involved) continue
-            val zone = when {
-                oldId in exemptInExile -> Zone.EXILE
-                container.has<CommanderComponent>() -> Zone.COMMAND
-                else -> Zone.LIBRARY
-            }
-            cards.getOrPut(owner) { mutableListOf() } += printedCard(container, card, owner) to zone
-            oldIdsByOwner.getOrPut(owner) { mutableListOf() } += oldId
-        }
-
-        // Mint new ids per owner and hand them out in a shuffled order (as GameInitializer does).
+        // The cards each involved player owns, with the zone each starts the new game in.
+        val cardsByOwner = newGame.cardsInGame(state, involved.toSet()).groupBy { it.owner }
         val idMap = mutableMapOf<EntityId, EntityId>()
-        for ((owner, entries) in cards) {
-            val newIds = entries.map {
-                val (id, next) = fresh.newEntity()
-                fresh = next
-                id
+        for ((owner, cards) in cardsByOwner) {
+            val placed = cards.map { card ->
+                val zone = when {
+                    card.id in exemptInExile -> Zone.EXILE
+                    card.container.has<CommanderComponent>() -> Zone.COMMAND
+                    else -> Zone.LIBRARY
+                }
+                Triple(card.id, newGame.printedCard(card.container, owner), zone)
             }
-            val (shuffled, advanced) = fresh.nextRandom { shuffle(newIds) }
-            fresh = advanced
-            val oldIds = oldIdsByOwner.getValue(owner)
-            entries.forEachIndexed { index, (container, zone) ->
-                val newId = shuffled[index]
-                idMap[oldIds[index]] = newId
-                fresh = fresh.withEntity(newId, container).addToZone(ZoneKey(owner, zone), newId)
-            }
+            val (next, ids) = newGame.placeUnderFreshIds(fresh, owner, placed)
+            fresh = next
+            idMap += ids
         }
 
         for (playerId in state.turnOrder) {
             val old = state.getEntity(playerId) ?: continue
             fresh = fresh.withEntity(
                 playerId,
-                if (playerId in involved) newPlayer(old, playerId == starting, idMap) else old
+                if (playerId in involved) newGame.newPlayer(old, playerId == starting, idMap) else old
             )
         }
         // Cards outside the game (CR 100.4) aren't involved in it and stay where they are, as they are.
@@ -178,106 +132,24 @@ class GameRestarter(
                 fresh = fresh.withEntity(id, container).addToZone(key, id)
             }
         }
-        for ((avatarId, container) in avatars) {
-            val owner = container.get<VanguardAvatarComponent>()!!.ownerId
-            if (owner !in involved) continue
-            fresh = fresh.withEntity(avatarId, container).addToZone(ZoneKey(owner, Zone.COMMAND), avatarId)
-        }
-
-        val events = mutableListOf<GameEvent>(GameRestartedEvent(starting))
-        for (playerId in involved) {
-            val library = ZoneKey(playerId, Zone.LIBRARY)
-            val (order, shuffledState) = fresh.nextRandom { shuffle(fresh.getZone(library)) }
-            fresh = shuffledState.reorderZone(library, order)
-            events += LibraryShuffledEvent(playerId, ShuffleCause.GAME_SETUP)
-        }
-        for (playerId in involved) {
-            val (drawn, drawEvents) = GameInitializer.drawCards(fresh, playerId, MulliganStateComponent.STARTING_HAND_SIZE)
-            fresh = drawn
-            events += drawEvents
-            // CR 727.3: a player whose deck can't supply seven cards loses when state-based actions
-            // are first checked, in the first upkeep, whatever mulligans they take.
-            if (drawEvents.any { it is DrawFailedEvent }) {
-                fresh = fresh.updateEntity(playerId) { it.with(AttemptedDrawFromEmptyLibraryComponent) }
+        // Vanguard avatars aren't cards of a deck; they keep their place in the command zone.
+        for ((key, ids) in state.zones) {
+            if (key.zoneType != Zone.COMMAND) continue
+            for (avatarId in ids) {
+                val container = state.getEntity(avatarId) ?: continue
+                val owner = container.get<VanguardAvatarComponent>()?.ownerId ?: continue
+                if (owner !in involved) continue
+                fresh = fresh.withEntity(avatarId, container).addToZone(ZoneKey(owner, Zone.COMMAND), avatarId)
             }
         }
+
+        val (dealt, dealEvents) = newGame.dealOpeningHands(fresh, involved)
+        fresh = dealt
+        val events = listOf<GameEvent>(GameRestartedEvent(starting)) + dealEvents
 
         fresh = fresh.copy(restartFollowUp = request.followUp?.let { remap(it, idMap) })
-        val mulligansSkipped = involved.all { fresh.getEntity(it)?.get<MulliganStateComponent>()?.skipped == true }
-        if (mulligansSkipped && beginFirstTurn != null) return beginFirstTurn.invoke(fresh, events)
+        if (newGame.mulligansSkipped(fresh, involved) && beginFirstTurn != null) return beginFirstTurn.invoke(fresh, events)
         return ExecutionResult.success(fresh, events)
-    }
-
-    /**
-     * The card as printed, owned and controlled by [owner]: rebuilt from its definition, so no
-     * counter, designation, copy effect, face or other state from the old game survives. The art it
-     * was played with is kept. A card whose definition can't be found keeps its printed component.
-     */
-    private fun printedCard(container: ComponentContainer, current: CardComponent, owner: EntityId): ComponentContainer {
-        val uncopied = container.get<CopyOfComponent>()?.originalCardComponent ?: current
-        val dfc = container.get<DoubleFacedComponent>()
-        val printed = if (dfc != null && dfc.isBack) dfc.frontFaceCard ?: uncopied else uncopied
-        val definition = cardRegistry.getCard(printed.cardDefinitionId)
-        val rebuilt = if (definition == null) {
-            ComponentContainer.of(printed.copy(ownerId = owner), OwnerComponent(owner), ControllerComponent(owner))
-        } else {
-            val made = CardEntityFactory.create(definition, owner)
-            val card = made.get<CardComponent>()!!
-            made.with(card.copy(
-                imageUri = printed.imageUri,
-                backFaceImageUri = printed.backFaceImageUri,
-                printingSetCode = printed.printingSetCode,
-            ))
-        }
-        // Commander tax counts casts in this game only (CR 903.8).
-        return container.get<CommanderComponent>()?.let { rebuilt.with(CommanderComponent(ownerId = it.ownerId)) } ?: rebuilt
-    }
-
-    /**
-     * A player at the start of a game: starting life, empty pool, no history, mulligans ahead — or
-     * none, when the game was set up without them. What the session set up around the game rather
-     * than inside it (team, hotseat control) stays.
-     */
-    private fun newPlayer(old: ComponentContainer, isStarting: Boolean, idMap: Map<EntityId, EntityId>): ComponentContainer {
-        val player = old.get<PlayerComponent>()!!
-        val mulligans = old.get<MulliganStateComponent>()
-        val skipMulligans = mulligans?.skipped == true
-        var container = ComponentContainer.of(
-            player,
-            LifeTotalComponent(player.startingLifeTotal),
-            ManaPoolComponent(),
-            LandDropsComponent(),
-            // As at setup, the starting player's first turn is counted as it begins.
-            PlayerTurnsTakenComponent(count = if (isStarting) 1 else 0),
-            MulliganStateComponent(
-                hasKept = skipMulligans,
-                freeMulligan = mulligans?.freeMulligan == true,
-                skipped = skipMulligans,
-            ),
-        )
-        old.get<TeamComponent>()?.let { container = container.with(it) }
-        old.get<HotseatControlComponent>()?.let { container = container.with(it) }
-        old.get<CommanderRegistryComponent>()?.let { registry ->
-            container = container.with(CommanderRegistryComponent(registry.commanderIds.mapNotNull { idMap[it] }))
-        }
-        return container
-    }
-
-    /**
-     * The turn order beginning with [starting]. Shared team turns (CR 805) seat teammates together
-     * and the team takes the turn, so the order begins at the first seat of [starting]'s team.
-     */
-    private fun startingFrom(state: GameState, starting: EntityId): List<EntityId> {
-        val order = state.turnOrder
-        var index = order.indexOf(starting)
-        if (state.format.sharesTeamTurns) {
-            val team = state.teamOf(starting)
-            repeat(order.size - 1) {
-                val previous = (index - 1 + order.size) % order.size
-                if (state.teamOf(order[previous]) == team) index = previous
-            }
-        }
-        return order.subList(index, order.size) + order.subList(0, index)
     }
 
     private fun remap(followUp: TurnStartFollowUp, idMap: Map<EntityId, EntityId>): TurnStartFollowUp {

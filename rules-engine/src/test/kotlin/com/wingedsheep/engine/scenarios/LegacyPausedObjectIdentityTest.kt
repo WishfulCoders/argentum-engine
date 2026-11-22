@@ -1,7 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.DecisionContext
-import com.wingedsheep.engine.core.EffectContinuation
+import com.wingedsheep.engine.core.EffectProgram
 import com.wingedsheep.engine.core.MayAbilityContinuation
 import com.wingedsheep.engine.core.Suspension
 import com.wingedsheep.engine.core.suspendForDecision
@@ -74,10 +74,7 @@ class LegacyPausedObjectIdentityTest : FunSpec({
                     val remainingEffects = if (sourceInstructionFrame == "effect")
                         listOf(bounce, Effects.GainLife(3)) else listOf(Effects.GainLife(3))
                     var paused = driver.state
-                        .pushContinuation(EffectContinuation(
-                            remainingEffects = remainingEffects,
-                            effectContext = context
-                        ))
+                        .pushContinuation(EffectProgram.queued(remainingEffects, context, origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null)))
                         .suspendForDecision(
                             question = { decisionId -> YesNoDecision(
                                 id = decisionId,
@@ -110,7 +107,7 @@ class LegacyPausedObjectIdentityTest : FunSpec({
                     driver.replaceState(imported)
 
                     // Goes through SubmitDecision -> ContinuationHandler -> registered may resumer
-                    // and automatic EffectContinuation resume, including the actual executor registry.
+                    // and automatic EffectProgram resume, including the actual executor registry.
                     driver.submitYesNo(player, true).error shouldBe null
                     driver.pendingDecision shouldBe null
                     driver.state.continuationStack shouldBe emptyList()

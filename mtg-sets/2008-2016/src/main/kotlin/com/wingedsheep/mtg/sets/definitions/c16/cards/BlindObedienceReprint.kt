@@ -13,7 +13,7 @@ val BlindObedienceReprint = Printing(
     collectorNumber = "59",
     scryfallId = "9bc548e8-22d2-4acd-8673-4efcbc57e754",
     artist = "Seb McKinnon",
-    imageUri = "https://cards.scryfall.io/normal/front/9/b/9bc548e8-22d2-4acd-8673-4efcbc57e754.jpg?1783937078",
+    imageUri = "https://cards.scryfall.io/normal/front/9/b/9bc548e8-22d2-4acd-8673-4efcbc57e754.jpg",
     releaseDate = "2016-11-11",
     rarity = Rarity.RARE,
 )

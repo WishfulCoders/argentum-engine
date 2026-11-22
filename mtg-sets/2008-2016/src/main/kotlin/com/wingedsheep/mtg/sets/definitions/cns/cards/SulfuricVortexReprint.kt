@@ -13,7 +13,7 @@ val SulfuricVortexReprint = Printing(
     collectorNumber = "152",
     scryfallId = "d2bd25ff-3b10-4b7e-b7ac-77f1ecddd6d1",
     artist = "Greg Staples",
-    imageUri = "https://cards.scryfall.io/normal/front/d/2/d2bd25ff-3b10-4b7e-b7ac-77f1ecddd6d1.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/2/d2bd25ff-3b10-4b7e-b7ac-77f1ecddd6d1.jpg?1783939347",
     releaseDate = "2014-06-06",
     rarity = Rarity.RARE,
 )

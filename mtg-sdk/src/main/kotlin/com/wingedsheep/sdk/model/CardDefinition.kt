@@ -221,6 +221,15 @@ data class CardDefinition(
     val metadata: ScryfallMetadata = ScryfallMetadata(),  // Scryfall metadata for web client
     val startingLoyalty: Int? = null,  // For planeswalkers
     /**
+     * True for a planeswalker whose printed loyalty is X (Nissa, Steward of Elements). Its intrinsic
+     * "enters with loyalty counters equal to its printed loyalty" replacement (CR 306.5b) reads X as
+     * the value chosen for the spell it resolved from (CR 107.3m), so a cast with X=3 enters with
+     * three counters. On any other entry — reanimation, a blink, a token copy — X is 0, which is why
+     * [startingLoyalty] holds 0 alongside this flag and every non-cast entry path needs no change.
+     * Printed as "X" wherever the printed loyalty is shown.
+     */
+    val loyaltyIsX: Boolean = false,
+    /**
      * The number printed in a battle's lower right corner (CR 310.4a). A battle has the intrinsic
      * ability "this permanent enters with this many defense counters on it" (CR 310.4b), so on the
      * battlefield its defense is its defense-counter count (CR 310.4c) rather than this field. The
@@ -250,8 +259,8 @@ data class CardDefinition(
      * A meld result is physically the *back halves* of its two meld parts, not a card of its own:
      * it is never opened in a booster, never drafted, never picked in limited, and never put in a
      * deck — the only way it exists is by melding the pair on the battlefield. We nonetheless
-     * define it as a standalone [CardDefinition] so the corpus carries its characteristics for when
-     * meld is supported (today the parts' meld triggers are deliberately unwired).
+     * define it as a standalone [CardDefinition] so the corpus carries its characteristics, and
+     * so the meld action (`MeldEffect`, CR 701.42) has a definition to put onto the battlefield.
      *
      * That "in the corpus but not a real deck card" split is exactly what this flag exists for:
      * every pool that answers *"which cards can a player end up owning?"* — booster / draft /
@@ -260,8 +269,18 @@ data class CardDefinition(
      * card they're printed on is in the booster and legal (as the meld *parts*).
      */
     val meldResult: Boolean = false,
+    /**
+     * The two meld cards this meld result is formed from (CR 712.5) — empty on every card that
+     * isn't a [meldResult]. The meld action reads it to enforce CR 701.42b: only the two cards of
+     * the same meld pair can be melded, so a token, a copy, or the wrong card exiled alongside the
+     * meld part stays in exile instead (CR 701.42c).
+     */
+    val meldParts: List<String> = emptyList(),
 ) {
     init {
+        require(meldParts.isEmpty() || (meldResult && meldParts.size == 2)) {
+            "$name: meldParts names the two meld cards of a meld result (CR 712.5) — set meldResult and exactly two parts"
+        }
         if (typeLine.isCreature) {
             requireNotNull(creatureStats) { "Creature cards must have power/toughness: $name" }
         }
@@ -285,6 +304,10 @@ data class CardDefinition(
      * "becomes blue" still applies on top, which is the order CR 613.3 asks for (CDAs first, then
      * other effects by timestamp).
      *
+     * A printed "[this] is all colors" / "[this] is blue" ([selfDefinedColors]) is the same kind of
+     * CDA (CR 604.3a), so it too replaces the mana-cost colors here, in every zone (Sphinx of the
+     * Guildpact is all colors in hand, on the stack and on the battlefield).
+     *
      * [colorIdentity] deliberately does **not** consult devoid: CR 903.4 builds identity out of the
      * mana symbols in the cost and rules text, and devoid defines *no* color for the CDA clause to
      * contribute. Ulamog's Nullifier is colorless and blue-identity at the same time.
@@ -292,6 +315,7 @@ data class CardDefinition(
     val colors: Set<Color>
         get() = when {
             hasDevoid -> emptySet()
+            selfDefinedColors != null -> selfDefinedColors!!
             colorIndicator == null -> manaCost.colors
             else -> manaCost.colors + colorIndicator
         }
@@ -304,6 +328,53 @@ data class CardDefinition(
      */
     private val hasDevoid: Boolean
         get() = Keyword.DEVOID in keywords || keywordAbilities.any { it.keyword == Keyword.DEVOID }
+
+    /**
+     * The colors this card's own "[this] is all colors" / "[this] is [color]" ability defines — the
+     * last top-level [com.wingedsheep.sdk.scripting.SetColors] in [script] whose filter is the source
+     * itself and that reaches no other zone's objects (Sphinx of the Guildpact: "Sphinx of the
+     * Guildpact is all colors."). Printed on the object it describes and unconditional, it is a
+     * characteristic-defining ability (CR 604.3a) that functions in every zone, so it is folded into
+     * [colors] (and [colorIdentity], CR 903.4) rather than projected as a battlefield-only layer-5
+     * effect. `null` when the card has no such ability. A self-`SetColors` wrapped in a condition is
+     * not a CDA and isn't counted; it stays an ordinary layer-5 effect.
+     */
+    val selfDefinedColors: Set<Color>?
+        get() = script.staticAbilities.lastOrNull { ability ->
+            ability is com.wingedsheep.sdk.scripting.SetColors && ability.isSelfColorShape
+        }?.let { (it as com.wingedsheep.sdk.scripting.SetColors).colors }
+
+    /**
+     * The subtypes this card's own "[this] is also a [subtype]" abilities define — every top-level
+     * [com.wingedsheep.sdk.scripting.GrantSubtype] in [script] whose filter is the source itself
+     * (Tajuru Paragon: "Tajuru Paragon is also a Cleric, Rogue, Warrior, and Wizard."). Printed on
+     * the object it describes and unconditional, such an ability is characteristic-defining (CR
+     * 604.3a), and CDAs function in every zone (CR 604.3) — so, like [Keyword.DEVOID] in [colors],
+     * it belongs to the card's derived characteristics rather than to a battlefield-only layer-4
+     * effect: the engine folds these into the entity's type line wherever the card is, and doesn't
+     * also project them as a timestamped effect. [typeLine] itself stays as printed.
+     *
+     * A self-`GrantSubtype` wrapped in a condition ("as long as …") or granted by another object is
+     * not a CDA and isn't counted here; it stays an ordinary layer-4 effect.
+     */
+    val selfDefinedSubtypes: Set<Subtype>
+        get() = script.staticAbilities.mapNotNullTo(linkedSetOf()) { ability ->
+            (ability as? com.wingedsheep.sdk.scripting.GrantSubtype)
+                ?.takeIf { it.filter == com.wingedsheep.sdk.scripting.filters.unified.GroupFilter.source() }
+                ?.let { Subtype(it.subtype) }
+        }
+
+    /**
+     * The card's type line with its [selfDefinedSubtypes] folded in — the object's actual types in
+     * every zone. Read this, not the printed [typeLine], wherever a card off the battlefield is
+     * judged by its subtypes (a spell being cast against "Wizard spells cost {1} less", a card in a
+     * graveyard). Identical to [typeLine] for every card without such a CDA.
+     */
+    val characteristicTypeLine: TypeLine
+        get() = selfDefinedSubtypes.let { cda ->
+            if (cda.isEmpty() || typeLine.subtypes.containsAll(cda)) typeLine
+            else typeLine.copy(subtypes = typeLine.subtypes + cda)
+        }
 
     /**
      * Color identity per CR 903.4: the colors of any mana symbols in the card's mana cost or
@@ -335,6 +406,7 @@ data class CardDefinition(
             colorIdentityOverride?.let { return it }
             val identity = manaCost.colors.toMutableSet()
             colorIndicator?.let(identity::addAll)
+            selfDefinedColors?.let(identity::addAll)
             if (oracleText.isNotBlank()) {
                 for (match in COLOR_SYMBOL_REGEX.findAll(oracleText)) {
                     for (ch in match.groupValues[1]) {
@@ -396,6 +468,7 @@ data class CardDefinition(
     val isArtifact: Boolean get() = typeLine.isArtifact
     val isAura: Boolean get() = typeLine.isAura
     val isEquipment: Boolean get() = typeLine.isEquipment
+    val isFortification: Boolean get() = typeLine.isFortification
     val isPermanent: Boolean get() = typeLine.isPermanent
     val isDoubleFaced: Boolean get() = backFace != null
     val isFlip: Boolean get() = flipSide != null
@@ -458,6 +531,31 @@ data class CardDefinition(
      */
     val deliriumThreshold: Int? by lazy { GraveyardThresholds.delirium(this) }
 
+    /**
+     * Whether anything on this card — any ability, effect, cost or face — reads the order of cards
+     * in a graveyard (a [com.wingedsheep.sdk.scripting.values.ReadsGraveyardOrder] node, such as
+     * Nether Shadow's "creature cards above this card"). A game asks owners to order simultaneous
+     * graveyard arrivals only when one of its cards does. Derived from the whole typed tree once
+     * per definition; never authored or serialized.
+     */
+    val readsGraveyardOrder: Boolean by lazy {
+        var found = false
+        com.wingedsheep.sdk.serialization.ScriptTreeWalker.forEachNode(this) { node ->
+            if (node is com.wingedsheep.sdk.scripting.values.ReadsGraveyardOrder) found = true
+        }
+        found
+    }
+
+    /**
+     * Whether this card may only be played in a game played for ante — its Oracle text carries
+     * "Remove this card from your deck before playing if you're not playing for ante." CR 407.3:
+     * when not playing for ante, players can't include these cards in their decks or sideboards.
+     * Read off the Oracle text once per definition; delegated, so never serialized.
+     */
+    val requiresAnte: Boolean by lazy {
+        oracleText.contains("if you're not playing for ante", ignoreCase = true)
+    }
+
     /** The effect when this spell resolves (for instants/sorceries) */
     val spellEffect get() = script.spellEffect
 
@@ -506,6 +604,13 @@ data class CardDefinition(
      */
     val hasCycling: Boolean
         get() = keywordAbilities.any { it is com.wingedsheep.sdk.scripting.KeywordAbility.Cycling }
+
+    /**
+     * Does this card have a kicker ability — kicker or multikicker (CR 702.33)? Printed abilities
+     * only. Backs `CardPredicate.HasKicker` via `CardComponent.hasKicker`.
+     */
+    val hasKicker: Boolean
+        get() = keywordAbilities.any { it is com.wingedsheep.sdk.scripting.KeywordAbility.OptionalAdditionalCost && it.isKicker }
 
     /** Static abilities (continuous effects) on this card */
     val staticAbilities get() = script.staticAbilities

@@ -1,6 +1,7 @@
 package com.wingedsheep.gameserver.priority
 
 import com.wingedsheep.engine.legalactions.MeaningfulActionFilter
+import com.wingedsheep.engine.legalactions.OwnStackStop
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
@@ -18,8 +19,8 @@ import org.slf4j.LoggerFactory
  *
  * The rules themselves live in [MeaningfulActionFilter] in the rules engine, because the AI and the
  * gym hold engine `LegalAction`s and never build a [LegalActionInfo]. This class adapts the DTO,
- * delegates the decision, and logs the reason. What stays here is presentation: the "Pass to
- * Combat" button label and the step lookahead that computes it.
+ * delegates the decision, and logs the reason. What stays here is presentation: the "To Combat"
+ * button label and the step lookahead that computes it.
  *
  * The rules, in short (full detail on [MeaningfulActionFilter]):
  *
@@ -28,7 +29,8 @@ import org.slf4j.LoggerFactory
  * 2. **Opponent's-turn compression** — upkeep/draw pass; main phases, combat windows and the end
  *    step stop when you have an instant-speed response; declare blockers stops when you can block.
  * 3. **Your-turn optimization** — you stop at your main phases and at declare attackers.
- * 4. **Stack response** — your own object on top auto-passes; an opponent's non-permanent spell or
+ * 4. **Stack response** — your own object on top auto-passes (unless the player keeps priority
+ *    over that kind of their own object and can respond); an opponent's non-permanent spell or
  *    ability stops.
  */
 class AutoPassManager(
@@ -57,7 +59,8 @@ class AutoPassManager(
         legalActions: List<LegalActionInfo>,
         myTurnStops: Set<Step> = emptySet(),
         opponentTurnStops: Set<Step> = emptySet(),
-        stopsMode: Boolean = false
+        stopsMode: Boolean = false,
+        ownStackStops: Set<OwnStackStop> = emptySet()
     ): Boolean {
         val verdict = MeaningfulActionFilter.autoPassVerdict(
             state = state,
@@ -67,6 +70,7 @@ class AutoPassManager(
             opponentTurnStops = opponentTurnStops,
             stopsMode = stopsMode,
             cardRegistry = cardRegistry,
+            ownStackStops = ownStackStops,
         )
         logger.debug(verdict.reason)
         return verdict.autoPass
@@ -80,7 +84,11 @@ class AutoPassManager(
 
     /**
      * Calculates the next step/phase where the game will stop for this player.
-     * This is used to show on the Pass button (e.g., "Pass to Combat", "To my turn").
+     * This is used to show on the Pass button (e.g., "To Combat", "To My Turn").
+     *
+     * Every label is one of: "Resolve" (the stack), "Pass" (yielding on someone else's turn),
+     * "End Turn", or "To <destination>" in Title Case. Step names match the client's
+     * `StepShortNames` so the button and the step strip say the same thing.
      *
      * @param state The current game state
      * @param playerId The player who has priority
@@ -110,19 +118,16 @@ class AutoPassManager(
         }
 
         if (hasAttackers && currentStep == Step.DECLARE_ATTACKERS && isMyTurn) {
-            return "To Blockers"
+            return "To ${stepLabel(Step.DECLARE_BLOCKERS)}"
         }
 
         if (hasAttackers && currentStep == Step.DECLARE_BLOCKERS) {
-            return if (hasCombatFirstStrike(state)) {
-                "Resolve first strike damage"
-            } else {
-                "Resolve combat damage"
-            }
+            val next = if (hasCombatFirstStrike(state)) Step.FIRST_STRIKE_COMBAT_DAMAGE else Step.COMBAT_DAMAGE
+            return "To ${stepLabel(next)}"
         }
 
         if (hasAttackers && currentStep == Step.FIRST_STRIKE_COMBAT_DAMAGE) {
-            return "Resolve combat damage"
+            return "To ${stepLabel(Step.COMBAT_DAMAGE)}"
         }
 
         // At postcombat main on my turn, passing effectively ends the turn
@@ -189,6 +194,9 @@ class AutoPassManager(
             return true
         }
 
+        // Stops mode: the declare attackers window holds even when nothing attacks
+        if (stopsMode && step == Step.DECLARE_ATTACKERS) return true
+
         return if (isMyTurn) {
             !shouldAutoPassOnMyTurnForStep(step, hasMeaningfulActions)
         } else {
@@ -241,11 +249,11 @@ class AutoPassManager(
         // If the stop is on a later turn that changes whose turn it is for us, say so. Between two
         // opponents' turns the plain "Pass" below still fits — we're only yielding.
         if (turnChanged && willBeMyTurn != currentlyMyTurn) {
-            return if (willBeMyTurn) "To my turn" else "To opponent's turn"
+            return if (willBeMyTurn) "To My Turn" else "To Opponent's Turn"
         }
 
         // On opponent's turn, use neutral "Pass" — the player is just yielding priority,
-        // not driving the turn forward. Destination-specific labels like "Pass to Attackers"
+        // not driving the turn forward. Destination-specific labels like "To Attackers"
         // feel misleading when it's not your turn.
         if (!currentlyMyTurn) {
             return "Pass"
@@ -256,22 +264,25 @@ class AutoPassManager(
             return "End Turn"
         }
 
-        // Own turn: show "Pass to <step>" to indicate where the game is heading
-        return when (step) {
-            Step.UNTAP -> "Pass to Untap"
-            Step.UPKEEP -> "Pass to Upkeep"
-            Step.DRAW -> "Pass to Draw"
-            Step.PRECOMBAT_MAIN -> "Pass to Main"
-            Step.BEGIN_COMBAT -> "Pass to Combat"
-            Step.DECLARE_ATTACKERS -> "Pass to Attackers"
-            Step.DECLARE_BLOCKERS -> "Pass to Blockers"
-            Step.FIRST_STRIKE_COMBAT_DAMAGE -> "Pass to First Strike"
-            Step.COMBAT_DAMAGE -> "Pass to Damage"
-            Step.END_COMBAT -> "Pass to End Combat"
-            Step.POSTCOMBAT_MAIN -> "Pass to Main 2"
-            Step.END -> "Pass to End Step"
-            Step.CLEANUP -> "Pass to Cleanup"
-        }
+        // Own turn: "To <step>" names where the game is heading
+        return "To ${stepLabel(step)}"
+    }
+
+    /** Short step name for a "To <step>" label — kept in step with the client's `StepShortNames`. */
+    private fun stepLabel(step: Step): String = when (step) {
+        Step.UNTAP -> "Untap"
+        Step.UPKEEP -> "Upkeep"
+        Step.DRAW -> "Draw"
+        Step.PRECOMBAT_MAIN -> "Main 1"
+        Step.BEGIN_COMBAT -> "Combat"
+        Step.DECLARE_ATTACKERS -> "Attackers"
+        Step.DECLARE_BLOCKERS -> "Blockers"
+        Step.FIRST_STRIKE_COMBAT_DAMAGE -> "First Strike"
+        Step.COMBAT_DAMAGE -> "Damage"
+        Step.END_COMBAT -> "End Combat"
+        Step.POSTCOMBAT_MAIN -> "Main 2"
+        Step.END -> "End Step"
+        Step.CLEANUP -> "Cleanup"
     }
 
     /**

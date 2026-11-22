@@ -24,6 +24,15 @@ internal class JevDecisions(private val q: JevChoices, private val label: (Entit
             r.index to cards("${d.prompt}: ${r.description}", d.legalTargets[r.index].orEmpty(), r.minTargets, r.maxTargets)
         })
         is OrderObjectsDecision -> OrderedResponse(d.id, cards("${d.prompt}: choose next in order", d.objects, d.objects.size, d.objects.size))
+        is com.wingedsheep.engine.core.OrderTriggersDecision -> com.wingedsheep.engine.core.TriggerOrderResponse(d.id, q.select("${d.prompt}: choose next to resolve",
+            d.triggers.indices.toList(), d.triggers.size, d.triggers.size) { "${d.triggers[it].sourceName}: ${d.triggers[it].text}" })
+        is com.wingedsheep.engine.core.FlipOntoBattlefieldDecision -> {
+            // Flick cleanly at a permanent's centre, or throw it off the table (upstream's Jev answer).
+            val aims = d.table.cards.filter { it.eligible }
+            val aim = q.pick("${d.prompt}: aim at", aims + listOf(null)) { it?.let { c -> c.name ?: "a face-down permanent" } ?: "Off the table" }
+            if (aim == null) com.wingedsheep.engine.core.FlipThrowResponse.toward(d.id, d.table, d.table.width / 2, -2 * d.table.height)
+            else com.wingedsheep.engine.core.FlipThrowResponse.toward(d.id, d.table, aim.x, aim.y)
+        }
         is ReorderLibraryDecision -> OrderedResponse(d.id, cards("${d.prompt}: top first", d.cards, d.cards.size, d.cards.size))
         is SplitPilesDecision -> if (d.suggestedPiles != null) PilesSplitResponse(d.id, d.suggestedPiles!!) else {
             val piles = List(d.numberOfPiles) { mutableListOf<EntityId>() }

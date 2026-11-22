@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
+import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -62,6 +63,7 @@ val WindsOfAbandon = card("Winds of Abandon") {
                     placement = ZonePlacement.Tapped,
                 )
             )
+            run(EmitLibrarySearchedEventEffect)
             run(Effects.ShuffleLibrary(target = EffectTarget.TargetController))
         }
 
@@ -82,6 +84,7 @@ val WindsOfAbandon = card("Winds of Abandon") {
                         prompt = "Search your library for a basic land card for each creature exiled"
                     )
                     move(found, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.Tapped))
+                    run(EmitLibrarySearchedEventEffect)
                     run(Effects.ShuffleLibrary(EffectTarget.PlayerRef(Player.You)))
                 }
             }

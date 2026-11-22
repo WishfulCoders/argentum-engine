@@ -41,7 +41,7 @@
                         "count": 1,
                         "target": "Self"
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, put 1 +1/+1 counter on this creature"
+                    "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature"
                 },
                 "descriptionOverride": "clash with an opponent. If you win, put a +1/+1 counter on this creature."
             }
@@ -328,10 +328,7 @@
                 "effect": {
                     "type": "MayRevealCardFromHand",
                     "filter": "Giant",
-                    "otherwise": {
-                        "type": "TapUntap",
-                        "target": "Self"
-                    }
+                    "otherwise": "EnterTapped"
                 }
             }
         ]
@@ -523,8 +520,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -773,10 +779,7 @@
                 "effect": {
                     "type": "MayRevealCardFromHand",
                     "filter": "Goblin",
-                    "otherwise": {
-                        "type": "TapUntap",
-                        "target": "Self"
-                    }
+                    "otherwise": "EnterTapped"
                 }
             }
         ]
@@ -1364,7 +1367,7 @@
                         "count": 1,
                         "target": "Self"
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, put 1 +1/+1 counter on this creature"
+                    "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature"
                 },
                 "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature."
             }
@@ -1581,7 +1584,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Goblin card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -2370,7 +2375,7 @@
     "script": {
         "staticAbilities": [
             {
-                "type": "GainKeywordsOfGraveyardCreatureCards",
+                "type": "GainKeywordsOfCards",
                 "keywords": [
                     "FLYING",
                     "FEAR",
@@ -2384,8 +2389,10 @@
                     "SHROUD",
                     "VIGILANCE"
                 ],
-                "anyLandwalk": true,
-                "anyProtection": true
+                "families": [
+                    "LANDWALK",
+                    "PROTECTION"
+                ]
             }
         ]
     },
@@ -3410,7 +3417,10 @@
                 "type": "GrantMayCastFromLinkedExile",
                 "filter": {}
             },
-            "SkipDrawStep",
+            {
+                "type": "SkipStepOrPhase",
+                "part": "DRAW_STEP"
+            },
             "RestrictSpellsCastPerTurn"
         ]
     },
@@ -3787,7 +3797,8 @@
                             },
                             "id": "t0"
                         }
-                    ]
+                    ],
+                    "description": "Counter target spell"
                 },
                 {
                     "effect": {
@@ -3832,7 +3843,8 @@
                             "type": "Fixed",
                             "amount": 1
                         }
-                    }
+                    },
+                    "description": "Draw a card"
                 }
             ],
             "chooseCount": 2
@@ -4713,7 +4725,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an Elf card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -5221,7 +5235,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Faerie card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -5866,7 +5882,7 @@
                             }
                         ]
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, target gets +2/+2 until end of turn. target gains trample until end of turn"
+                    "descriptionOverride": "Clash with an opponent. If you win, target creature gets +2/+2 until end of turn. target creature gains trample until end of turn"
                 }
             ]
         },
@@ -6018,7 +6034,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an Elemental card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -6636,7 +6654,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Giant card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -6843,10 +6863,7 @@
                 "effect": {
                     "type": "MayRevealCardFromHand",
                     "filter": "Elf",
-                    "otherwise": {
-                        "type": "TapUntap",
-                        "target": "Self"
-                    }
+                    "otherwise": "EnterTapped"
                 }
             }
         ]
@@ -9338,8 +9355,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -9892,7 +9918,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Kithkin card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -10416,7 +10444,7 @@
         "staticAbilities": [
             {
                 "type": "TransformPermanent",
-                "setSubtypes": [
+                "setCreatureSubtypes": [
                     "Treefolk"
                 ]
             },
@@ -10550,7 +10578,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card to put on top of your library",
+                            "selectedLabel": "Put on top of your library"
                         },
                         "ShuffleLibrary",
                         {
@@ -11225,7 +11255,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Merfolk card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -12324,7 +12356,7 @@
                         "count": 1,
                         "target": "Self"
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, put 1 +1/+1 counter on this creature"
+                    "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature"
                 },
                 "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature."
             }
@@ -12801,7 +12833,7 @@
                         "count": 1,
                         "target": "Self"
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, put 1 +1/+1 counter on this creature"
+                    "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature"
                 },
                 "descriptionOverride": "clash with an opponent. If you win, put a +1/+1 counter on this creature."
             }
@@ -13016,7 +13048,7 @@
                         "count": 1,
                         "target": "Self"
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, put 1 +1/+1 counter on this creature"
+                    "descriptionOverride": "Clash with an opponent. If you win, put a +1/+1 counter on this creature"
                 },
                 "descriptionOverride": "clash with an opponent. If you win, put a +1/+1 counter on this creature."
             }
@@ -13238,7 +13270,11 @@
                             "type": "PlayerRef",
                             "player": "ChosenOpponent"
                         },
-                        "affectsLands": false
+                        "permanents": {
+                            "cardPredicates": [
+                                "IsCreature"
+                            ]
+                        }
                     },
                     "descriptionOverride": "Clash with an opponent. If you win, creatures the chosen player controls don't untap during their next untap step"
                 }
@@ -13427,7 +13463,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a creature card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -13513,7 +13551,12 @@
                                 "baseFilter": {
                                     "cardPredicates": [
                                         "IsCreature",
-                                        "ManaValueAtMostX"
+                                        {
+                                            "type": "CompareNumericProperty",
+                                            "property": "MANA_VALUE",
+                                            "operator": "LTE",
+                                            "amount": "XValue"
+                                        }
                                     ],
                                     "controllerPredicate": "OwnedByYou"
                                 },
@@ -14278,12 +14321,13 @@
                                 }
                             }
                         },
+                        "stepScope": "AnyMainPhase",
                         "fireOnPlayer": {
                             "type": "PlayerRef",
                             "player": "You"
                         }
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, create a delayed trigger at the beginning of the next Precombat Main Phase"
+                    "descriptionOverride": "Clash with an opponent. If you win, create a delayed trigger at the beginning of the next main phase"
                 }
             ]
         },
@@ -14400,10 +14444,7 @@
                 "effect": {
                     "type": "MayRevealCardFromHand",
                     "filter": "Faerie",
-                    "otherwise": {
-                        "type": "TapUntap",
-                        "target": "Self"
-                    }
+                    "otherwise": "EnterTapped"
                 }
             }
         ]
@@ -14466,7 +14507,9 @@
                                         "amount": 3
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to three Forest land cards to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -15415,8 +15458,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -15962,7 +16014,7 @@
                             "name": "t0"
                         }
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, target gains double strike until end of turn"
+                    "descriptionOverride": "Clash with an opponent. If you win, target creature gains double strike until end of turn"
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
@@ -17408,7 +17460,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Treefolk or Forest card to put on top of your library",
+                            "selectedLabel": "Put on top of your library"
                         },
                         "ShuffleLibrary",
                         {
@@ -18132,7 +18186,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -18195,10 +18251,7 @@
                 "effect": {
                     "type": "MayRevealCardFromHand",
                     "filter": "Merfolk",
-                    "otherwise": {
-                        "type": "TapUntap",
-                        "target": "Self"
-                    }
+                    "otherwise": "EnterTapped"
                 }
             }
         ]
@@ -18674,7 +18727,7 @@
                 },
                 "destination": "Hand"
             },
-            "descriptionOverride": "Clash with an opponent. If you win, put that creature on top of its owner's library?. Otherwise, return target to its owner's hand"
+            "descriptionOverride": "Clash with an opponent. If you win, put that creature on top of its owner's library?. Otherwise, return target creature to its owner's hand"
         },
         "targetRequirements": [
             {
@@ -19196,7 +19249,7 @@
                             "tap": false
                         }
                     },
-                    "descriptionOverride": "Clash with an opponent. If you win, untap each you control Forest lands"
+                    "descriptionOverride": "Clash with an opponent. If you win, untap each Forest land you control"
                 }
             ]
         },
@@ -19526,7 +19579,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]

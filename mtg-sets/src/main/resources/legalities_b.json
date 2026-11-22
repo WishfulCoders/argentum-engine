@@ -6,6 +6,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -687,7 +688,9 @@
     "OATHBREAKER",
     "VINTAGE"
   ],
-  "Balance": [],
+  "Balance": [
+    "VINTAGE_RESTRICTED"
+  ],
   "Balance of Power": [
     "COMMANDER",
     "DUEL",
@@ -8557,6 +8560,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -9054,6 +9058,7 @@
   "Bitter Triumph": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -9274,7 +9279,9 @@
     "TLR",
     "VINTAGE"
   ],
-  "Black Lotus": [],
+  "Black Lotus": [
+    "VINTAGE_RESTRICTED"
+  ],
   "Black Lotus Lounge": [],
   "Black Mage's Rod": [
     "ALCHEMY",
@@ -10362,6 +10369,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -10615,6 +10623,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -12262,6 +12271,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -14117,6 +14127,7 @@
   "Blooming Marsh": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -14124,7 +14135,6 @@
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
-    "PENNY",
     "PIONEER",
     "STANDARD",
     "STANDARDBRAWL",
@@ -18934,7 +18944,8 @@
     "PAUPERCOMMANDER",
     "PREDH",
     "TIMELESS",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Brainstorm // Brainstorm": [],
   "Brainsurge": [
@@ -21783,6 +21794,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -24368,6 +24380,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -24377,6 +24390,7 @@
     "OATHBREAKER",
     "PAUPER",
     "PAUPERCOMMANDER",
+    "PENNY",
     "PIONEER",
     "PREDH",
     "STANDARD",

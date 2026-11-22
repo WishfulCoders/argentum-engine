@@ -122,7 +122,9 @@ private val DireBlunderbuss = card("Dire Blunderbuss") {
                                         .youControl()
                                         .notGrantingPermanent()
                                 )
-                            )
+                            ),
+                            nonTargeting = true,
+                            prompt = "Choose an artifact other than Dire Blunderbuss to sacrifice"
                         )
                         run(Effects.SacrificeTarget(toSacrifice.asTarget))
                     },

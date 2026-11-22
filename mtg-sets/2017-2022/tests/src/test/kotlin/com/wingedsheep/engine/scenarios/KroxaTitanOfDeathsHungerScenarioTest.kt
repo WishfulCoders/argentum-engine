@@ -26,60 +26,41 @@ import io.kotest.matchers.shouldBe
  * "When Kroxa enters, sacrifice it unless it escaped. / Whenever Kroxa enters or attacks, each
  * opponent discards a card, then each opponent who didn't discard a nonland card this way loses 3
  * life. / Escape—{B}{B}{R}{R}, Exile five other cards from your graveyard."
+ *
+ * Pins the per-opponent tracking of what was discarded: a land discard costs 3 life, a nonland
+ * discard costs nothing, and the sacrifice applies only to a Kroxa that didn't escape.
  */
 class KroxaTitanOfDeathsHungerScenarioTest : FunSpec({
 
     fun setup(): Triple<GameTestDriver, EntityId, EntityId> {
         val driver = GameTestDriver()
         driver.registerCards(TestCards.all)
-        driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), startingLife = 20)
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), startingLife = 20)
         val player = driver.activePlayer!!
         val opponent = driver.getOpponent(player)
         return Triple(driver, player, opponent)
     }
 
-    /** Resolve everything; the opponent discards [preferred] when offered it, else the first card. */
-    fun resolveAll(driver: GameTestDriver, opponent: EntityId, preferred: EntityId? = null) {
+    /** Resolve the stack; the opponent discards [pick] when it is offered, otherwise the first card. */
+    fun resolveAll(driver: GameTestDriver, opponent: EntityId, pick: EntityId? = null) {
         var guard = 0
         while ((driver.state.stack.isNotEmpty() || driver.pendingDecision != null) && guard++ < 50) {
             val decision = driver.pendingDecision
             when {
                 decision == null -> driver.bothPass()
-                decision is SelectCardsDecision && decision.playerId == opponent &&
-                    preferred != null && preferred in decision.options ->
-                    driver.submitCardSelection(opponent, listOf(preferred))
+                decision is SelectCardsDecision && decision.playerId == opponent && pick != null &&
+                    pick in decision.options -> driver.submitCardSelection(opponent, listOf(pick))
                 else -> driver.autoResolveDecision()
             }
         }
     }
 
-    test("hard-cast Kroxa is sacrificed; an opponent who discards a land loses 3 life") {
-        val (driver, player, opponent) = setup()
-        val kroxa = driver.putCardInHand(player, "Kroxa, Titan of Death's Hunger")
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        val oppHandBefore = driver.getHandSize(opponent)
-        driver.giveMana(player, Color.BLACK, 1)
-        driver.giveMana(player, Color.RED, 1)
-
-        val result = driver.submit(CastSpell(player, kroxa, paymentStrategy = PaymentStrategy.FromPool))
-        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
-        resolveAll(driver, opponent)
-
-        driver.findPermanent(player, "Kroxa, Titan of Death's Hunger").shouldBeNull()
-        driver.getGraveyard(player) shouldContain kroxa
-        withClue("opponent discarded one (land) card") { driver.getHandSize(opponent) shouldBe oppHandBefore - 1 }
-        driver.getLifeTotal(opponent) shouldBe 17
-    }
-
-    test("escaped Kroxa stays; an opponent who discards a nonland card loses no life") {
-        val (driver, player, opponent) = setup()
+    fun escape(driver: GameTestDriver, player: EntityId): EntityId {
         val kroxa = driver.putCardInGraveyard(player, "Kroxa, Titan of Death's Hunger")
-        val fodder = (1..5).map { driver.putCardInGraveyard(player, "Swamp") }
-        val bears = driver.putCardInHand(opponent, "Grizzly Bears")
+        val fodder = (1..5).map { driver.putCardInGraveyard(player, "Mountain") }
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
         driver.giveMana(player, Color.BLACK, 2)
         driver.giveMana(player, Color.RED, 2)
-
         val result = driver.submit(
             CastSpell(
                 playerId = player,
@@ -92,10 +73,45 @@ class KroxaTitanOfDeathsHungerScenarioTest : FunSpec({
         )
         withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
         driver.getExile(player) shouldContainAll fodder
-        resolveAll(driver, opponent, preferred = bears)
+        return kroxa
+    }
 
-        driver.findPermanent(player, "Kroxa, Titan of Death's Hunger").shouldNotBeNull()
+    test("hard-cast Kroxa is sacrificed; an opponent who discards a land loses 3 life") {
+        val (driver, player, opponent) = setup()
+        val kroxa = driver.putCardInHand(player, "Kroxa, Titan of Death's Hunger")
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val opponentHand = driver.getHandSize(opponent)
+        driver.giveMana(player, Color.BLACK, 1)
+        driver.giveMana(player, Color.RED, 1)
+
+        val result = driver.submit(CastSpell(player, kroxa, paymentStrategy = PaymentStrategy.FromPool))
+        withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
+        resolveAll(driver, opponent)
+
+        driver.findPermanent(player, "Kroxa, Titan of Death's Hunger").shouldBeNull()
+        driver.getGraveyard(player) shouldContain kroxa
+        driver.getHandSize(opponent) shouldBe opponentHand - 1
+        driver.getLifeTotal(opponent) shouldBe 17
+        withClue("the controller is not an opponent") { driver.getLifeTotal(player) shouldBe 20 }
+    }
+
+    test("escaped Kroxa stays; a nonland discard spares the life, a land discard on attack doesn't") {
+        val (driver, player, opponent) = setup()
+        val bears = driver.putCardInHand(opponent, "Grizzly Bears")
+        escape(driver, player)
+        resolveAll(driver, opponent, pick = bears)
+
+        val perm = driver.findPermanent(player, "Kroxa, Titan of Death's Hunger").shouldNotBeNull()
         driver.getGraveyard(opponent) shouldContain bears
-        driver.getLifeTotal(opponent) shouldBe 20
+        withClue("discarding a nonland card costs no life") { driver.getLifeTotal(opponent) shouldBe 20 }
+
+        driver.removeSummoningSickness(perm)
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.declareAttackers(player, listOf(perm), opponent)
+        val handBeforeAttackTrigger = driver.getHandSize(opponent)
+        resolveAll(driver, opponent)
+
+        driver.getHandSize(opponent) shouldBe handBeforeAttackTrigger - 1
+        withClue("only Mountains were left to discard") { driver.getLifeTotal(opponent) shouldBe 17 }
     }
 })

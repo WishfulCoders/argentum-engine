@@ -88,7 +88,7 @@ class RollDieExecutorTest : FunSpec({
         val event = modified.events.single() as DieRolledEvent
         event.playerId shouldBe player
         event.sides shouldBe 20
-        event.naturalResult shouldBe natural
+        event.natural shouldBe natural
         event.result shouldBe natural - 25
         event.sourceId shouldBe player
         event.sourceName shouldBe "Unknown"
@@ -101,7 +101,7 @@ class RollDieExecutorTest : FunSpec({
         val rolls = mutableListOf<Int>()
         repeat(30) {
             val result = executor.execute(state, RollDieEffect(20), context)
-            result.events.map { (it as DieRolledEvent).naturalResult } shouldContainExactly
+            result.events.map { (it as DieRolledEvent).natural } shouldContainExactly
                 listOf(result.updatedStoredNumbers.getValue(DIE_ROLL_RESULT))
             rolls += result.updatedStoredNumbers.getValue(DIE_ROLL_RESULT)
             state = result.state

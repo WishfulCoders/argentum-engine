@@ -10,6 +10,7 @@ import com.wingedsheep.engine.core.DecisionResponse
 import com.wingedsheep.engine.core.NumberChosenResponse
 import com.wingedsheep.engine.core.OptionChosenResponse
 import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
+import com.wingedsheep.engine.state.components.battlefield.chosenOpponent
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.engine.core.ChooseNumberDecision
 import com.wingedsheep.engine.core.ChooseOptionDecision
@@ -21,6 +22,7 @@ import com.wingedsheep.engine.core.EntersWithChoiceOnBattlefieldContinuation
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.HandLookedAtEvent
+import com.wingedsheep.engine.core.HandRevealedEvent
 import com.wingedsheep.engine.core.OptionMetadata
 import com.wingedsheep.engine.core.PendingDecision
 import com.wingedsheep.engine.core.SelectCardsDecision
@@ -38,6 +40,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.CardNamePool
+import com.wingedsheep.sdk.scripting.CardNameSource
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersAsCopy
 import com.wingedsheep.sdk.scripting.EntersWithChoice
@@ -120,6 +123,76 @@ object PermanentEntryReplacements {
             state, handCards, observers + viewerId)
         return newState to listOf(HandLookedAtEvent(viewerId, opponentId, handCards, observers))
     }
+
+    /**
+     * The names a [ChoiceType.CARD_NAME] choice offers [controllerId], per its
+     * [EntersWithChoice.cardNamePool] and [EntersWithChoice.cardNameSource]: every registered name
+     * in the pool, or — for [CardNameSource.OPPONENTS_REVEALED_HANDS] — only the pool names among the
+     * cards in [controllerId]'s opponents' hands (Alhammarret, High Arbiter's "the name of a nonland
+     * card revealed this way"). The single place every entry path (spell resolution, land drop,
+     * leyline opening, token/effect entry, clone re-ask) reads its option list from. Unsorted.
+     */
+    fun cardNameOptions(
+        state: GameState,
+        registry: CardRegistry,
+        controllerId: EntityId,
+        choice: EntersWithChoice,
+    ): List<String> {
+        val pool = registry.cardNamesIn(choice.cardNamePool)
+        return when (choice.cardNameSource) {
+            CardNameSource.ANY_CARD -> pool.toList()
+            CardNameSource.OPPONENTS_REVEALED_HANDS -> state.getOpponents(controllerId)
+                .flatMap { state.getHand(it) }
+                .mapNotNull { state.getEntity(it)?.get<CardComponent>()?.name }
+                .filter { it in pool }
+                .distinct()
+        }
+    }
+
+    /**
+     * The hand reveal a [ChoiceType.CARD_NAME] choice makes before it is asked: the private "look at
+     * an opponent's hand" of [EntersWithChoice.lookAtOpponentHand] ([revealOpponentHandForEntersChoice]),
+     * or — for [CardNameSource.OPPONENTS_REVEALED_HANDS] — each opponent of [controllerId] revealing
+     * their hand to every player (the same durable public reveal as `RevealHandEffect`, one
+     * [HandRevealedEvent] per non-empty hand). Returns the state unchanged with no events otherwise.
+     */
+    fun revealForCardNameChoice(
+        state: GameState,
+        controllerId: EntityId,
+        choice: EntersWithChoice,
+    ): Pair<GameState, List<GameEvent>> = when {
+        choice.lookAtOpponentHand -> revealOpponentHandForEntersChoice(state, controllerId)
+        choice.cardNameSource == CardNameSource.OPPONENTS_REVEALED_HANDS -> {
+            var newState = state
+            val events = mutableListOf<GameEvent>()
+            for (opponentId in state.getOpponents(controllerId)) {
+                val hand = state.getHand(opponentId)
+                if (hand.isEmpty()) continue
+                newState = com.wingedsheep.engine.handlers.effects.library.LibraryRevealUtils
+                    .markRevealed(newState, hand, state.turnOrder)
+                events += HandRevealedEvent(opponentId, hand)
+            }
+            newState to events
+        }
+        else -> state to emptyList()
+    }
+
+    /**
+     * A [CardNameSource.OPPONENTS_REVEALED_HANDS] choice that revealed cards but none of them in the
+     * pool still pauses — the reveal is part of the replacement, so the chooser sees the hands — and
+     * asks only for this acknowledgement. Its continuation carries no names, so the answer records
+     * nothing ([isDeclinedEntersChoice]).
+     */
+    const val NOTHING_TO_NAME_OPTION = "Continue"
+
+    /** The prompt of the [NOTHING_TO_NAME_OPTION] acknowledgement — "No nonland card was revealed". */
+    fun nothingToNamePrompt(pool: CardNamePool): String =
+        "No ${pool.nounPhrase.removePrefix("a ").removePrefix("an ").removeSuffix(" name")} was revealed"
+
+    /** True when [choice] revealed hands but left nothing to name, so it asks only to acknowledge. */
+    fun revealedNothingToName(state: GameState, controllerId: EntityId, choice: EntersWithChoice): Boolean =
+        choice.cardNameSource == CardNameSource.OPPONENTS_REVEALED_HANDS &&
+            state.getOpponents(controllerId).any { state.getHand(it).isNotEmpty() }
 
     /**
      * The single [OnEnterRun] a card definition contributes, or `null` if it has none.
@@ -207,6 +280,8 @@ object PermanentEntryReplacements {
          * put onto the battlefield by an effect).
          */
         xValue: Int? = null,
+        /** The origin of whatever put the permanent onto the battlefield; the entry run's parent. */
+        parentOrigin: com.wingedsheep.engine.core.ProgramOrigin? = null,
     ): EffectResult? {
         val cardDefinitionId = state.getEntity(entityId)?.get<CardComponent>()?.cardDefinitionId ?: return null
         val onEnter = onEnterRunEffectFor(cardRegistry.getCard(cardDefinitionId)) ?: return null
@@ -223,8 +298,51 @@ object PermanentEntryReplacements {
                 ),
                 resolutionDepth = resolutionDepth,
                 xValue = xValue,
+                // A permanent's entry is a step of its own, not the resolving object's effect.
+                programOrigin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy(
+                    com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter.stepName(OnEnterRun::class), parentOrigin),
             ),
         )
+    }
+
+    /**
+     * Whether an [EntersAsCopy]'s [EntersAsCopy.condition] (Protean Raider's raid) holds as
+     * [entityId] would enter: evaluated with the entrant as the source and [controllerId] as "you".
+     * A failed condition means no copy choice at all — the permanent enters as its printed self.
+     */
+    fun entersAsCopyConditionHolds(
+        state: GameState,
+        entityId: EntityId,
+        controllerId: EntityId,
+        effect: EntersAsCopy,
+        predicateEvaluator: PredicateEvaluator
+    ): Boolean {
+        val condition = effect.condition ?: return true
+        return predicateEvaluator.conditions.evaluate(
+            state, condition, EffectContext(sourceId = entityId, controllerId = controllerId)
+        )
+    }
+
+    /**
+     * [effect] with its [EntersAsCopy.conditionalExceptions] settled as [entityId] would enter:
+     * each clause whose condition holds (the entrant as the source, [controllerId] as "you") is
+     * layered over [EntersAsCopy.exceptions], and the clause list is emptied — so every resumer
+     * downstream reads one plain [EntersAsCopy.exceptions]. "Except if Vizier of Many Faces was
+     * embalmed, the token has no mana cost, it's white, and it's a Zombie …" (CR 707.9b).
+     */
+    fun withConditionalExceptions(
+        state: GameState,
+        entityId: EntityId,
+        controllerId: EntityId,
+        effect: EntersAsCopy,
+        predicateEvaluator: PredicateEvaluator
+    ): EntersAsCopy {
+        if (effect.conditionalExceptions.isEmpty()) return effect
+        val context = EffectContext(sourceId = entityId, controllerId = controllerId)
+        val folded = effect.conditionalExceptions
+            .filter { predicateEvaluator.conditions.evaluate(state, it.condition, context) }
+            .fold(effect.exceptions) { base, clause -> clause.exceptions.over(base) }
+        return effect.copy(exceptions = folded, conditionalExceptions = emptyList())
     }
 
     /**
@@ -240,6 +358,7 @@ object PermanentEntryReplacements {
         effect: EntersAsCopy,
         predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
+        if (!entersAsCopyConditionHolds(state, entityId, controllerId, effect, predicateEvaluator)) return emptyList()
         val pool = if (effect.copyFromZone == Zone.GRAVEYARD) {
             state.turnOrder.flatMap { state.getGraveyard(it) }
         } else {
@@ -283,6 +402,7 @@ object PermanentEntryReplacements {
         entryNewObject: com.wingedsheep.engine.state.ObjectRef? = state.objectRef(entityId),
         predicateEvaluator: PredicateEvaluator
     ): ExecutionResult? {
+        val effect = withConditionalExceptions(state, entityId, controllerId, effect, predicateEvaluator)
         val copyFromGraveyard = effect.copyFromZone == Zone.GRAVEYARD
         val candidates = entersAsCopyCandidates(state, entityId, controllerId, effect, predicateEvaluator = predicateEvaluator)
         if (candidates.isEmpty()) return null
@@ -318,7 +438,7 @@ object PermanentEntryReplacements {
             toughnessOverride = effect.toughnessOverride,
             exileCopiedCard = effect.exileCopiedCard,
             tappedIfCopied = effect.tappedIfCopied,
-            additionalCounters = effect.additionalCounters,
+            entersWithCounters = effect.entersWithCounters,
             duration = effect.duration,
             entryOldObject = entryOldObject,
             entryNewObject = entryNewObject,
@@ -355,6 +475,7 @@ object PermanentEntryReplacements {
         entryOldObject: com.wingedsheep.engine.state.ObjectRef? = null,
         entryNewObject: com.wingedsheep.engine.state.ObjectRef? = state.objectRef(entityId),
         copyOfOriginalName: String? = null,
+        simultaneousEntryGroup: String? = null,
     ): ExecutionResult? {
         val prompt = entersChoicePrompt(
             state, entityId, controllerId, cardComponent, choice, fromZone,
@@ -367,6 +488,7 @@ object PermanentEntryReplacements {
             prompt.answer.copy(
                 entryOldObject = entryOldObject, entryNewObject = entryNewObject,
                 copyOfOriginalName = copyOfOriginalName,
+                simultaneousEntryGroup = simultaneousEntryGroup,
             ),
             carryEvents + prompt.events,
         )
@@ -374,9 +496,12 @@ object PermanentEntryReplacements {
 
     /**
      * Read the player's answer to an [entersChoicePrompt] question into the [ChoiceSlot] it fills
-     * and the value to record there, or `null` when the response doesn't fit the question.
+     * and the value to record there, or `null` when the response doesn't fit the question. A chosen
+     * creature is stamped with its current object generation from [state], so readers can tell the
+     * chosen object from a later one the same card becomes (CR 400.7).
      */
     fun decodeEntersChoice(
+        state: GameState,
         question: EntersWithChoiceOnBattlefieldContinuation,
         response: DecisionResponse,
     ): Pair<ChoiceSlot, ChoiceValue>? {
@@ -386,8 +511,10 @@ object PermanentEntryReplacements {
                 ?.let { ChoiceSlot.COLOR to ChoiceValue.ColorChoice(it.color) }
             ChoiceType.CREATURE_TYPE -> option(question.creatureTypes)
                 ?.let { ChoiceSlot.CREATURE_TYPE to ChoiceValue.TextChoice(it) }
+            ChoiceType.PLANESWALKER_TYPE -> option(question.planeswalkerTypes)
+                ?.let { ChoiceSlot.PLANESWALKER_TYPE to ChoiceValue.TextChoice(it) }
             ChoiceType.CREATURE_ON_BATTLEFIELD -> (response as? CardsSelectedResponse)?.selectedCards?.firstOrNull()
-                ?.let { ChoiceSlot.CREATURE to ChoiceValue.EntityChoice(it) }
+                ?.let { ChoiceSlot.CREATURE to ChoiceValue.EntityChoice(it, state.objectRef(it)?.generation) }
             ChoiceType.MODE -> option(question.modeOptionIds)
                 ?.let { ChoiceSlot.MODE to ChoiceValue.TextChoice(it) }
             ChoiceType.BASIC_LAND_TYPE -> option(question.landTypes)
@@ -402,6 +529,20 @@ object PermanentEntryReplacements {
     }
 
     /**
+     * True when [response] declines an optional [ChoiceType.CREATURE_ON_BATTLEFIELD] choice — an
+     * empty pick, which the decision only allows for "you may choose" ([EntersWithChoice.mayChooseNothing])
+     * — or acknowledges a revealed-hands [ChoiceType.CARD_NAME] choice that had nothing to name
+     * ([NOTHING_TO_NAME_OPTION]). The permanent then enters with nothing recorded.
+     */
+    fun isDeclinedEntersChoice(question: EntersWithChoiceOnBattlefieldContinuation, response: DecisionResponse): Boolean =
+        when (question.choiceType) {
+            ChoiceType.CREATURE_ON_BATTLEFIELD -> (response as? CardsSelectedResponse)?.selectedCards?.isEmpty() == true
+            // A revealed-hands name choice with nothing to name only asked to acknowledge.
+            ChoiceType.CARD_NAME -> question.cardNames.isEmpty() && (response as? OptionChosenResponse)?.optionIndex == 0
+            else -> false
+        }
+
+    /**
      * An [EntersWithChoice] question, not yet asked: the decision to present, and the answer frame
      * that knows how to read the response ([decodeEntersChoice]). [state] and [events] carry the
      * reveal a [EntersWithChoice.lookAtOpponentHand] choice makes before it is asked.
@@ -413,11 +554,109 @@ object PermanentEntryReplacements {
         val events: List<GameEvent> = emptyList(),
     )
 
+    /** Registry-free: a [EntersWithChoice.permanentFilter] reads the board, never a printed script. */
+    private val permanentChoiceEvaluator = PredicateEvaluator(cardRegistry = null)
+
+    /**
+     * The permanents a [ChoiceType.CREATURE_ON_BATTLEFIELD] choice may pick for [entityId] entering
+     * under [controllerId]: its [EntersWithChoice.permanentFilter] (by default "another creature you
+     * control") over the battlefield, from the controller's point of view, never the entering object
+     * itself. Shared by the spell-resolution and on-battlefield prompts so both offer the same pool.
+     */
+    fun chosenPermanentCandidates(
+        state: GameState,
+        entityId: EntityId,
+        controllerId: EntityId,
+        choice: EntersWithChoice,
+    ): List<EntityId> {
+        val projected = state.projectedState
+        val filter = choice.permanentFilter
+        return state.getBattlefield().filter { eid ->
+            if (eid == entityId) return@filter false
+            if (filter == null) {
+                projected.getController(eid) == controllerId && projected.isCreature(eid)
+            } else {
+                permanentChoiceEvaluator.matches(
+                    state, projected, eid, filter,
+                    PredicateContext(controllerId = controllerId, sourceId = entityId)
+                )
+            }
+        }
+    }
+
+    /** The prompt for a [ChoiceType.CREATURE_ON_BATTLEFIELD] choice, shared by both entry paths. */
+    fun chosenPermanentPrompt(cardComponent: CardComponent, choice: EntersWithChoice): String {
+        // A choice with a rider says what the pick is for (Deadpool: "… — exchange the text boxes
+        // of this creature and the chosen creature").
+        val purpose = choice.then?.description?.replaceFirstChar { it.lowercase() }?.let { " — $it" } ?: ""
+        return choosePermanentPhrase(cardComponent, choice) + purpose
+    }
+
+    private fun choosePermanentPhrase(cardComponent: CardComponent, choice: EntersWithChoice): String {
+        val filter = choice.permanentFilter
+        if (filter != null) {
+            return (if (choice.mayChooseNothing) "You may choose " else "Choose ") +
+                "${filter.indefiniteArticle} ${filter.singularPermanentDescription}"
+        }
+        // "Another" only reads right when the entering permanent is itself a creature (Dauntless
+        // Bodyguard). The pool excludes the entering object either way, so an Equipment or
+        // enchantment making this choice (Grifter's Blade) just says "a creature you control".
+        return if (cardComponent.isCreature) "Choose another creature you control" else "Choose a creature you control"
+    }
+
+    /**
+     * Who makes [choice] for a permanent entering under [controllerId]: the controller, or for an
+     * [Player.AnOpponent] chooser ("an opponent of your choice", Tribute — CR 702.104a) the opponent
+     * the controller picked, recorded under [ChoiceSlot.OPPONENT] ([recordedOpponent]). With a single
+     * opponent there is nothing to pick. `null` means the controller must pick first, among
+     * [GameState.getOpponents] — the [opponentOfYourChoiceQuestion] both entry paths ask.
+     */
+    fun entersChoiceChooser(
+        state: GameState,
+        controllerId: EntityId,
+        choice: EntersWithChoice,
+        recordedOpponent: EntityId?,
+    ): EntityId? {
+        if (choice.chooser != Player.AnOpponent) return controllerId
+        val opponents = state.getOpponents(controllerId)
+        if (recordedOpponent != null && recordedOpponent in opponents) return recordedOpponent
+        return when (opponents.size) {
+            0 -> controllerId
+            1 -> opponents.single()
+            else -> null
+        }
+    }
+
+    /**
+     * The controller's "choose an opponent" question that precedes an [Player.AnOpponent] choice in a
+     * game with more than one opponent ([entersChoiceChooser] returned `null`). Its answer is read
+     * like a [ChoiceType.OPPONENT] choice, into [ChoiceSlot.OPPONENT].
+     */
+    fun opponentOfYourChoiceQuestion(
+        state: GameState,
+        decisionId: String,
+        controllerId: EntityId,
+        opponentIds: List<EntityId>,
+        context: DecisionContext,
+    ): ChooseOptionDecision = ChooseOptionDecision(
+        id = decisionId,
+        playerId = controllerId,
+        prompt = "Choose an opponent to make the choice for ${context.sourceName ?: "this permanent"}",
+        context = context,
+        options = playerNames(state, opponentIds),
+    )
+
+    private fun playerNames(state: GameState, playerIds: List<EntityId>): List<String> =
+        playerIds.map { pid -> state.getEntity(pid)?.get<PlayerComponent>()?.name ?: "Player ${pid.value}" }
+
     /**
      * Build the question for one [EntersWithChoice] of [entityId] — shared by the post-entry pause
      * above and the pre-entry preparation of an effect-driven entry
      * ([com.wingedsheep.engine.handlers.effects.EffectEntryChoices]).
      *
+     * @param recordedOpponent the opponent already picked to make an [Player.AnOpponent] choice
+     *   (see [entersChoiceChooser]); read off the permanent by default, supplied by an effect-driven
+     *   entry whose answers ride its context until it arrives.
      * @return `null` if the choice cannot be presented (see [pauseForEntersWithChoice]).
      */
     fun entersChoicePrompt(
@@ -430,12 +669,28 @@ object PermanentEntryReplacements {
         cardNameOptions: List<String> = emptyList(),
         syntheticRiot: Boolean = false,
         syntheticRiotRemaining: Int = 0,
+        recordedOpponent: EntityId? = state.getEntity(entityId)?.chosenOpponent(),
     ): EntersChoicePrompt? {
-        val chooserId = when (choice.chooser) {
-            Player.AnOpponent -> state.getOpponents(controllerId).firstOrNull() ?: controllerId
-            else -> controllerId
-        }
+        // Drawn on entry, not asked (see EntersWithReplacements.applyFromDefinition).
+        if (choice.atRandom) return null
         val name = cardComponent.name
+        val chooserId = entersChoiceChooser(state, controllerId, choice, recordedOpponent) ?: run {
+            // "An opponent of your choice" with several opponents: the controller picks one first.
+            val opponentIds = state.getOpponents(controllerId)
+            val context = DecisionContext(sourceId = entityId, sourceName = name, phase = DecisionPhase.RESOLUTION)
+            return EntersChoicePrompt(
+                { id -> opponentOfYourChoiceQuestion(state, id, controllerId, opponentIds, context) },
+                EntersWithChoiceOnBattlefieldContinuation(
+                    entityId = entityId,
+                    controllerId = controllerId,
+                    choiceType = ChoiceType.OPPONENT,
+                    opponentIds = opponentIds,
+                    forChoice = choice.choiceType,
+                    fromZone = fromZone,
+                ),
+                state,
+            )
+        }
 
         fun context() = DecisionContext(
             sourceId = entityId,
@@ -485,27 +740,38 @@ object PermanentEntryReplacements {
                 )
             }
 
+            ChoiceType.PLANESWALKER_TYPE -> {
+                val options = Subtype.ALL_PLANESWALKER_TYPES
+                pause(
+                    { id -> ChooseOptionDecision(
+                        id = id,
+                        playerId = chooserId,
+                        prompt = "Choose a planeswalker type",
+                        context = context(),
+                        options = options,
+                        defaultSearch = ""
+                    ) },
+                    EntersWithChoiceOnBattlefieldContinuation(
+                        entityId = entityId,
+                        controllerId = controllerId,
+                        choiceType = ChoiceType.PLANESWALKER_TYPE,
+                        planeswalkerTypes = options,
+                        fromZone = fromZone
+                    )
+                )
+            }
+
             ChoiceType.CREATURE_ON_BATTLEFIELD -> {
-                val creatures = state.getBattlefield().filter { eid ->
-                    if (eid == entityId) return@filter false
-                    state.projectedState.getController(eid) == controllerId &&
-                        state.projectedState.isCreature(eid)
-                }
+                val creatures = chosenPermanentCandidates(state, entityId, controllerId, choice)
                 if (creatures.isEmpty()) return null
                 pause(
                     { id -> SelectCardsDecision(
                         id = id,
                         playerId = controllerId,
-                        // Same wording rule as the spell path: "another" only when the entering
-                        // permanent is itself a creature.
-                        prompt = if (cardComponent.isCreature) {
-                            "Choose another creature you control"
-                        } else {
-                            "Choose a creature you control"
-                        },
+                        prompt = chosenPermanentPrompt(cardComponent, choice),
                         context = context(),
                         options = creatures,
-                        minSelections = 1,
+                        minSelections = if (choice.mayChooseNothing) 0 else 1,
                         maxSelections = 1,
                         useTargetingUI = true
                     ) },
@@ -567,9 +833,7 @@ object PermanentEntryReplacements {
             ChoiceType.OPPONENT -> {
                 val opponentIds = state.turnOrder.filter { it != chooserId }
                 if (opponentIds.isEmpty()) return null
-                val opponentNames = opponentIds.map { pid ->
-                    state.getEntity(pid)?.get<PlayerComponent>()?.name ?: "Player ${pid.value}"
-                }
+                val opponentNames = playerNames(state, opponentIds)
                 pause(
                     { id -> ChooseOptionDecision(
                         id = id,
@@ -593,19 +857,18 @@ object PermanentEntryReplacements {
                 // supplied by the caller, which has the registry in scope. If empty, there is nothing
                 // to name — complete entry normally.
                 val options = cardNameOptions.sorted()
-                if (options.isEmpty()) return null
-                // "As this enters, look at an opponent's hand, then …": reveal to the controller
-                // before presenting the choice, so they see the hand while naming a card.
-                val (baseState, lookEvents) = if (choice.lookAtOpponentHand) {
-                    revealOpponentHandForEntersChoice(state, controllerId)
-                } else state to emptyList()
-                val prompt = choice.cardNamePool.prompt
+                val nothingToName = options.isEmpty() && revealedNothingToName(state, controllerId, choice)
+                if (options.isEmpty() && !nothingToName) return null
+                // "Look at an opponent's hand, then …" / "each opponent reveals their hand": reveal
+                // before presenting the choice, so the chooser sees the cards while naming one.
+                val (baseState, lookEvents) = revealForCardNameChoice(state, controllerId, choice)
+                val prompt = if (nothingToName) nothingToNamePrompt(choice.cardNamePool) else choice.cardNamePool.prompt
                 val question = { decisionId: String -> ChooseOptionDecision(
                     id = decisionId,
                     playerId = chooserId,
                     prompt = prompt,
                     context = context(),
-                    options = options
+                    options = if (nothingToName) listOf(NOTHING_TO_NAME_OPTION) else options
                 ) }
                 val continuation = EntersWithChoiceOnBattlefieldContinuation(
                     entityId = entityId,

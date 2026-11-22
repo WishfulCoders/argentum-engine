@@ -57,12 +57,9 @@ export class GamePage {
     await this.screenshot(`Select action: ${label}`)
   }
 
-  /** Click the Pass / Resolve / End Turn button. */
+  /** Click the priority button — whatever it says ("Pass", "Resolve", "To Combat", "End Turn"). */
   async pass() {
-    const passButton = this.page
-      .getByRole('button')
-      .filter({ hasText: /^(Pass|Resolve|End Turn)/ })
-    await passButton.first().click()
+    await this.page.locator('button[data-learn="pass"]').click()
     await this.screenshot('Pass')
   }
 

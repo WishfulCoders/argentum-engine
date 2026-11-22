@@ -22,10 +22,13 @@ import type { LobbyState } from '@/store/slices/types'
 import { randomBackground } from '@/utils/background'
 import { buildJoinUrl } from '@/utils/joinLink'
 import { labelForFormat } from '@/utils/deckLegality'
+import { JumpInEmblem } from './JumpInEmblem'
 import momirVigUrl from '@/assets/momir-vig.svg'
 import { DeckPicker, type DeckPickerTab } from '../ui/DeckPicker'
 import { DeckPickerModal } from '../ui/DeckPickerModal'
 import { FullscreenButton } from '../ui/FullscreenButton'
+import { ChatButton } from '@/components/messages/ChatButton'
+import { ArgentumMark } from '@/components/ui/ArgentumMark'
 import { JoinQrModal } from '../ui/JoinQrModal'
 import { SettingsLabel } from '../ui/SettingsLabel'
 import {
@@ -47,12 +50,8 @@ import {
   eventCaption,
 } from './LobbyAxes'
 import { SettingsGroup } from './SettingsGroup'
-import {
-  GROUP_IDS,
-  groupLabel,
-  groupSummary,
-  groupTopicId,
-} from './settingsGroups'
+import lobby from './Lobby.module.css'
+import { GROUP_IDS, groupLabel, groupTopicId } from './settingsGroups'
 import { LobbyAxisSummary } from './LobbyAxisSummary'
 import { TeamChip, TournamentLobbySettings } from './TournamentLobbySettings'
 import { rulesFromLobbySettings } from './axes'
@@ -86,13 +85,43 @@ export function LobbyScreen() {
   const [aiSource, setAiSource] = useState<AiDeckSource>(() => initialAiSource(quickLobby?.aiDeck))
   /** Which quick-lobby seat's deck modal is open. */
   const [quickDeckSeat, setQuickDeckSeat] = useState<'human' | 'ai' | null>(null)
+  /**
+   * Whether your quick-lobby deck picker is mounted — not the same as open.
+   *
+   * The picker is what submits a deck, so a lobby launched with one already decided (a Random deck,
+   * or the saved deck named on the launch panel) mounts it hidden straight away; otherwise "Random
+   * deck · Starts right away" would sit in the lobby until someone opened a modal to confirm it.
+   * Once mounted it stays mounted, so reopening shows the deck you chose rather than a blank list.
+   */
+  const [deckPickerMounted, setDeckPickerMounted] = useState(
+    () => intent?.deckTab === 'random' || Boolean(intent?.deckName) || Boolean(intent?.exampleName),
+  )
   const [tournamentDeckOpen, setTournamentDeckOpen] = useState(false)
+  /**
+   * The premade-decks twin of {@link deckPickerMounted}: a deck named on the launch panel is
+   * submitted without anyone opening the dialog, so "Constructed vs 3 AI" with a deck picked starts
+   * on its own instead of stopping at a Choose-deck button whose answer is already known.
+   */
+  const [tournamentDeckMounted, setTournamentDeckMounted] = useState(
+    () => Boolean(intent?.deckName) || Boolean(intent?.exampleName),
+  )
+  /** A deck submission the picker has debounced but not yet sent — readying now would race it. */
+  const [deckSubmitPending, setDeckSubmitPending] = useState(false)
   const [pendingRecreate, setPendingRecreate] = useState<RecreateSpec | null>(null)
   /** Which AI seat's deck the host is choosing, by player id. Null = the modal is closed. */
   const [aiDeckSeat, setAiDeckSeat] = useState<string | null>(null)
   // Which saved deck is loaded, by name — the identity `onDeckChange`'s card list can't carry, and
   // the one thing a setup needs in order to bring the same deck back. See `lobbyRecipe.ts`.
   const [savedDeckName, setSavedDeckName] = useState<string | null>(null)
+  const [exampleName, setExampleName] = useState<string | null>(null)
+  /**
+   * The deck your seat last submitted, by name, for the dialog's footer. Browsing to another tab
+   * clears the picker's own selection but not the submission, so the footer keeps naming what
+   * you would actually play.
+   */
+  const pickedNow = savedDeckName ?? exampleName ?? (deckTab === 'random' ? 'Random deck' : null)
+  const [lastPicked, setLastPicked] = useState<string | null>(null)
+  useEffect(() => { if (pickedNow) setLastPicked(pickedNow) }, [pickedNow])
   const [savingSetup, setSavingSetup] = useState(false)
   const [notes, setNotes] = useState<readonly string[]>(intent?.notes ?? [])
 
@@ -103,7 +132,7 @@ export function LobbyScreen() {
       : null
 
   const commands = useLobbyCommands(view, setDeckTab)
-  const capture = useCaptureRecipe(view, lobbyState, quickLobby, deckTab, savedDeckName)
+  const capture = useCaptureRecipe(view, lobbyState, quickLobby, deckTab, savedDeckName, exampleName)
   /**
    * Start the game, remembering what it was first.
    *
@@ -125,10 +154,22 @@ export function LobbyScreen() {
    * with its notes on screen instead of in a game you didn't mean to start.
    *
    * **Only when nobody can join.** A lobby with an invite code exists so that people can use it;
-   * starting it the instant it opens would slam the door on them.
+   * starting it the instant it opens would slam the door on them. A tournament lobby always has a
+   * code, so one the host asked to fill with AI says so explicitly with `startWhenSeated`, and is
+   * started once that many players — you and every AI seat — are in it.
    */
-  const canAutoStart = intent?.autoStart === true && view !== null && !view.invitable &&
-    view.primaryAction?.kind === 'READY' && !view.primaryAction.disabled
+  const seatedForAutoStart = intent?.startWhenSeated !== undefined && view !== null && view.isHost &&
+    view.primaryAction?.kind === 'START' && !view.primaryAction.disabled &&
+    view.players.length >= intent.startWhenSeated
+  // A quick lobby readies itself only for a deck the launch already named. "Choose in the lobby"
+  // means the player is still deciding — readying the instant any valid deck appears would start
+  // the game on the first tile they click, or halfway through pasting a list.
+  const launchNamedDeck = intent?.deckTab === 'random' || Boolean(intent?.deckName) ||
+    Boolean(intent?.exampleName) || view?.axes.cards.kind === 'MOMIR'
+  const canAutoStart = intent?.autoStart === true && view !== null && (
+    (!view.invitable && launchNamedDeck && view.primaryAction?.kind === 'READY' && !view.primaryAction.disabled) ||
+    seatedForAutoStart
+  )
   const autoStarted = useRef(false)
   useEffect(() => {
     if (!canAutoStart || autoStarted.current) return
@@ -136,6 +177,27 @@ export function LobbyScreen() {
     runPrimary()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAutoStart])
+
+  /**
+   * A guest follows the host into a Random-deck game.
+   *
+   * Random is per seat on the server, so the host's choice never reached the guest: they joined a
+   * game the host launched as "Random deck" and met a lobby titled Constructed asking them to choose
+   * a deck. Once, on the first broadcast that shows the host on a rolled deck and you on nothing,
+   * your picker is moved to Random and mounted so it submits — exactly what the host's own launch
+   * did. Choosing something else afterwards is still one click on your row.
+   */
+  const followedHostRandom = useRef(false)
+  const hostRollsRandom = quickLobby?.players.find((p) => !p.isAi)?.randomDeck === true
+  const youHaveNoDeck = quickLobby?.players.find((p) => p.playerId === quickLobby.youPlayerId)?.deckSelected === false
+  const youAreGuest = view !== null && !view.isHost
+  useEffect(() => {
+    if (followedHostRandom.current || !youAreGuest || !hostRollsRandom || !youHaveNoDeck) return
+    if (deckPickerMounted || quickLobby?.momirBasic) return
+    followedHostRandom.current = true
+    setDeckTab('random')
+    setDeckPickerMounted(true)
+  }, [youAreGuest, hostRollsRandom, youHaveNoDeck, deckPickerMounted, quickLobby?.momirBasic])
 
   if (!view) return null
 
@@ -149,14 +211,26 @@ export function LobbyScreen() {
   const isMomir = view.axes.cards.kind === 'MOMIR'
 
   return (
-    <div className={styles.lobbyOverlay} style={{ backgroundImage: `url(${randomBackground})` }}>
-      <div className={styles.cornerControls}><FullscreenButton /></div>
-      <div className={styles.lobbyContent}>
-        <div className={styles.lobbyHeader}>
-          {isMomir && <MomirCrest />}
-          <h1 className={styles.lobbyTitle}>{view.title}</h1>
-          <p className={styles.lobbySubtitle}>{view.subtitle}</p>
-          <LobbyAxisSummary axes={view.axes} jumpstart={Boolean(lobbyState?.settings.jumpstartActive)} />
+    <div className={lobby.overlay} style={{ backgroundImage: `url(${randomBackground})` }}>
+      <div className={lobby.artTint} aria-hidden />
+      <header className={lobby.topBar}>
+        <span className={lobby.brand}>
+          <ArgentumMark size={34} />
+          Argentum
+        </span>
+        <div className={lobby.topBarEnd}><ChatButton /><FullscreenButton compact /></div>
+      </header>
+      <div className={lobby.page}>
+      <div className={lobby.layout} data-two-col={showSettings}>
+      <div className={lobby.column}>
+        <div className={lobby.header}>
+          <div className={lobby.headerTop}>
+            {isMomir && <MomirCrest />}
+            {view.axes.cards.kind === 'JUMP_IN' && <JumpInEmblem className={lobby.headerEmblem} />}
+            <h1 className={lobby.title}>{view.title}</h1>
+          </div>
+          <p className={lobby.subtitle}>{view.subtitle}</p>
+          <LobbyAxisSummary axes={view.axes} jumpstart={Boolean(lobbyState?.settings.jumpstartActive)} ante={view.ante.on} />
           {view.isWaiting && view.isHost && (
             <button
               type="button"
@@ -191,28 +265,21 @@ export function LobbyScreen() {
         )}
 
         {view.invitable && (
-          <div style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'stretch', gap: 8 }}>
+          <div className={lobby.invite}>
             <button
               type="button"
               onClick={copyLobbyId}
-              className={`${styles.inviteBox} ${copied ? styles.inviteBoxCopied : ''}`}
-              style={{ flex: 1, marginBottom: 0, justifyContent: 'space-between' }}
+              className={lobby.inviteButton}
+              data-copied={copied}
               aria-label={copied ? 'Invite code copied' : `Copy invite code ${view.lobbyId}`}
             >
-              <div>
-                <div style={{ color: 'var(--text-disabled)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>
-                  Invite Code
-                </div>
-                <div className={styles.inviteCode} data-testid="invite-code">{view.lobbyId}</div>
-              </div>
-              <span
-                className={`${styles.inviteCopyLabel} ${copied ? styles.inviteCopyLabelCopied : ''}`}
-                style={{ flexShrink: 0, marginLeft: 12 }}
-              >
-                {copied ? 'Copied!' : 'Copy'}
+              <span className={lobby.inviteText}>
+                <span className={lobby.inviteLabel}>Invite code</span>
+                <span className={lobby.inviteCode} data-testid="invite-code">{view.lobbyId}</span>
               </span>
+              <span className={lobby.inviteAction}>{copied ? 'Copied!' : 'Copy'}</span>
             </button>
-            <JoinQrModal url={buildJoinUrl(view.lobbyId)} />
+            <JoinQrModal url={buildJoinUrl(view.lobbyId)} buttonClassName={lobby.qrButton} />
           </div>
         )}
 
@@ -274,12 +341,19 @@ export function LobbyScreen() {
                 {view.kind === 'QUICK' && !isMomir && player.isYou && (
                   <button
                     type="button"
-                    onClick={() => setQuickDeckSeat('human')}
+                    onClick={() => { setDeckPickerMounted(true); setQuickDeckSeat('human') }}
                     disabled={player.tone === 'ready'}
-                    className={`${styles.playerStatus} ${styles.playerDeckButton} ${statusClass(player.tone)}`}
-                    title={player.tone === 'ready' ? 'Cancel ready before changing your deck' : 'Choose your deck'}
+                    className={`${styles.playerStatus} ${styles.playerDeckButton} ${player.needsDeck ? styles.playerDeckButtonCta : player.tone === 'ready' ? statusClass(player.tone) : styles.playerDeckButtonChosen}`}
+                    title={player.tone === 'ready' ? 'Cancel ready before changing your deck' : 'Change your deck'}
+                    data-testid="your-deck-button"
                   >
-                    {player.status} <span aria-hidden>✎</span>
+                    {/* Your own row is where a deck is chosen, so until one is it names the action
+                        rather than reporting a state ("Choosing deck…" read as somebody else's).
+                        Once chosen it names the deck you know — the server only knows "Custom (60)". */}
+                    {player.needsDeck
+                      ? 'Choose deck'
+                      : ownDeckLabel(player.status, player.tone === 'ready', savedDeckName ?? exampleName)}{' '}
+                    <span aria-hidden>✎</span>
                   </button>
                 )}
                 {view.kind === 'QUICK' && !isMomir && player.isAi && view.isHost && (
@@ -297,13 +371,13 @@ export function LobbyScreen() {
                   view.axes.cards.kind === 'BRING_A_DECK' && player.isYou && (
                     <button
                       type="button"
-                      onClick={() => setTournamentDeckOpen(true)}
-                      className={`${styles.playerStatus} ${styles.playerDeckButton} ${statusClass(player.tone)}`}
+                      onClick={() => { setTournamentDeckMounted(true); setTournamentDeckOpen(true) }}
+                      className={`${styles.playerStatus} ${styles.playerDeckButton} ${player.tone === 'ready' ? statusClass(player.tone) : styles.playerDeckButtonCta}`}
                       title={player.tone === 'ready' ? 'View or change your submitted deck' : 'Choose and submit your deck'}
                     >
                       {/* Every other seat shows its state here, but on your own seat this is the only
                           control that submits a deck — so it says what pressing it does instead. */}
-                      {player.tone === 'ready' ? '✓ Deck ready · Change' : 'Choose your deck'}{' '}
+                      {player.tone === 'ready' ? '✓ Deck ready · Change' : 'Choose deck'}{' '}
                       <span aria-hidden>✎</span>
                     </button>
                 )}
@@ -344,14 +418,16 @@ export function LobbyScreen() {
               className={styles.playerRow}
               style={{ borderBottom: 'none', justifyContent: 'center', color: 'var(--text-faint)', fontStyle: 'italic' }}
             >
-              Waiting for opponent…
+              {view.maxPlayers > 2 ? 'Waiting for players…' : 'Waiting for opponent…'}
             </div>
           )}
         </div>
 
-        {/* Settings sit below the players and the deck picker, not above them. The lobby overlay is
-            the single scroll container, so every relevant control can remain visible. */}
+      </div>
+
+        {/* Settings sit beside the players on a wide screen and below them on a narrow one. */}
         {showSettings && (
+          <div className={`${lobby.column} ${lobby.settingsColumn}`}>
           <div className={styles.settingsPanel}>
             {GROUP_IDS.map((id) => {
               const axisStrip = {
@@ -365,6 +441,12 @@ export function LobbyScreen() {
               const rows: ReactNode[] = []
               if (id === 'CARDS') rows.push(<CardsAxisBody key="axis" view={view} commands={commands} jumpstart={Boolean(lobbyState?.settings.jumpstartActive)} />)
               if (id === 'RULES') rows.push(<RulesAxisBody key="axis" view={view} commands={commands} />)
+              // Ante is a rules variant (CR 407) — it changes what's at stake, not who sits where.
+              if (id === 'RULES' && view.ante.available) {
+                rows.push(
+                  <AnteRow key="ante" on={view.ante.on} lockedReason={view.ante.lockedReason} onChange={commands.setAnte} />,
+                )
+              }
               if (id === 'TABLE') rows.push(<TableAxisBody key="axis" view={view} />)
               if (id === 'EVENT' && eventCaption(view) !== '') {
                 rows.push(<EventAxisBody key="axis" view={view} />)
@@ -395,7 +477,6 @@ export function LobbyScreen() {
                   key={id}
                   label={groupLabel(id)}
                   topicId={groupTopicId(id, view)}
-                  summary={groupSummary(id, view, lobbyState)}
                   axisStrip={axisStrip}
                   blocking={view.blockGroup === id ? view.primaryAction?.reason : undefined}
                   testId={id.toLowerCase()}
@@ -405,31 +486,51 @@ export function LobbyScreen() {
               )
             })}
           </div>
+          </div>
         )}
-        <div className={styles.actionsRow}>
-          {view.primaryAction && (
-            <button
-              type="button"
-              onClick={runPrimary}
-              disabled={view.primaryAction.disabled}
-              title={view.primaryAction.reason ?? ''}
-              className={styles.startButton}
-            >
-              {view.primaryAction.label}
-            </button>
-          )}
-          <button onClick={commands.leave} className={styles.leaveButton} type="button">Leave</button>
-          {/* Said, not just hovered: a `title` on a disabled button is the least discoverable place
-              to put the one sentence explaining why it can't be pressed. */}
-          {view.primaryAction?.disabled && view.primaryAction.reason && (
-            <span className={styles.actionsBlockReason}>{view.primaryAction.reason}</span>
-          )}
+      </div>
+        <div className={lobby.actionBar}>
+          <div className={lobby.actionBarInner}>
+            <button onClick={commands.leave} className={lobby.leave} type="button">Leave</button>
+            {/* Said, not just hovered: a `title` on a disabled button is the least discoverable
+                place to put the one sentence explaining why it can't be pressed. */}
+            {view.primaryAction?.disabled && view.primaryAction.reason && (
+              <span className={lobby.blockReason}>{view.primaryAction.reason}</span>
+            )}
+            {view.primaryAction && (
+              <button
+                type="button"
+                onClick={runPrimary}
+                disabled={view.primaryAction.disabled}
+                title={view.primaryAction.reason ?? ''}
+                className={lobby.start}
+              >
+                {view.primaryAction.label}
+              </button>
+            )}
+          </div>
         </div>
-
       </div>
 
-      {quickDeckSeat === 'human' && quickLobby && !isMomir && (
-        <DeckPickerModal title={`${view.you?.name ?? 'Your'} deck`} onClose={() => setQuickDeckSeat(null)}>
+      {deckPickerMounted && quickLobby && !isMomir && (
+        <DeckPickerModal
+          title="Your deck"
+          subtitle={view.invitable
+            ? 'Pick what you bring to this game. Your opponent chooses their own.'
+            : 'Pick what you play against the AI.'}
+          hidden={quickDeckSeat !== 'human'}
+          onClose={() => setQuickDeckSeat(null)}
+          selection={quickLobby?.players.find((p) => p.playerId === quickLobby.youPlayerId)?.deckSelected ? lastPicked : null}
+          primary={view.primaryAction?.kind === 'READY'
+            ? {
+                // Against the AI, ready *is* start — the AI is always ready.
+                label: view.invitable ? 'Ready up' : 'Start game',
+                disabled: view.primaryAction.disabled || deckSubmitPending,
+                reason: deckSubmitPending ? undefined : view.primaryAction.reason,
+                onRun: runPrimary,
+              }
+            : undefined}
+        >
           <QuickGameDeckPicker
             youSetCode={quickLobby.players.find((p) => p.playerId === quickLobby.youPlayerId)?.setCode ?? null}
             youSetCodes={quickLobby.players.find((p) => p.playerId === quickLobby.youPlayerId)?.setCodes}
@@ -440,6 +541,9 @@ export function LobbyScreen() {
             onValidityChange={setDeckValid}
             initialSavedDeckName={intent?.deckName}
             onSavedDeckNameChange={setSavedDeckName}
+            initialExampleName={intent?.exampleName}
+            onExampleNameChange={setExampleName}
+            onSubmitPendingChange={setDeckSubmitPending}
           />
         </DeckPickerModal>
       )}
@@ -461,14 +565,21 @@ export function LobbyScreen() {
         )
       })()}
 
-      {tournamentDeckOpen && lobbyState && view.kind === 'TOURNAMENT' && view.isWaiting &&
+      {tournamentDeckMounted && lobbyState && view.kind === 'TOURNAMENT' && view.isWaiting &&
         lobbyState.settings.format === 'PREMADE_DECKS' && (
-          <DeckPickerModal title={`${view.you?.name ?? 'Your'} deck`} onClose={() => setTournamentDeckOpen(false)}>
+          <DeckPickerModal
+            title="Your deck"
+            hidden={!tournamentDeckOpen}
+            onClose={() => setTournamentDeckOpen(false)}
+          >
             <PremadeDeckPickerPanel
               lobbyState={lobbyState}
               playerId={playerId}
               initialSavedDeckName={intent?.deckName}
               onSavedDeckNameChange={setSavedDeckName}
+              initialExampleName={intent?.exampleName}
+              onExampleNameChange={setExampleName}
+              autoSubmit={Boolean(intent?.deckName) || Boolean(intent?.exampleName)}
             />
           </DeckPickerModal>
       )}
@@ -595,6 +706,56 @@ function RankedRow({ on, onChange }: { on: boolean; onChange: (ranked: boolean) 
   )
 }
 
+/**
+ * Play for ante (CR 407). Ranked forces it off server-side, so while ranked is on both buttons stay
+ * on screen but disabled, with the reason — disabled-with-reason over hiding.
+ */
+function AnteRow({
+  on,
+  lockedReason,
+  onChange,
+}: {
+  on: boolean
+  lockedReason: string | null
+  onChange: (playingForAnte: boolean) => void
+}) {
+  const locked = lockedReason !== null
+  return (
+    <div className={styles.settingsRow} data-testid="ante-row">
+      <SettingsLabel topicId="playing-for-ante">Play for ante</SettingsLabel>
+      <div className={styles.variantGroup}>
+        <div className={styles.settingsButtons}>
+          <button
+            type="button"
+            onClick={() => onChange(false)}
+            disabled={locked}
+            className={`${styles.settingsButton} ${!on ? styles.settingsButtonActive : ''}`}
+            title={lockedReason ?? 'Play for fun — every card goes home with its owner'}
+          >
+            Off
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(true)}
+            disabled={locked}
+            className={`${styles.settingsButton} ${on ? styles.settingsButtonActive : ''}`}
+            title={lockedReason ?? 'Each player antes a random card; the winner takes the ante'}
+          >
+            For ante
+          </button>
+        </div>
+        <div className={styles.variantCaption}>
+          {locked
+            ? lockedReason
+            : on
+              ? 'Each player antes a random card from their deck. The winner takes the ante — in a Limited tournament it joins their pool for the rest of the event; otherwise it’s a trophy on their profile. Enables the ante cards (Contract from Below, Darkpact, …).'
+              : 'Wager a random card from each deck on the outcome.'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function VisibilityRow({
   isPublic,
   onChange,
@@ -633,6 +794,12 @@ function statusClass(tone: 'ready' | 'joined' | 'disconnected'): string {
   }
 }
 
+/** Your own seat's deck chip: the deck's own name where the picker knows it, and an explicit Change. */
+function ownDeckLabel(status: string, ready: boolean, localName: string | null): string {
+  if (!localName) return ready ? status : `${status} · Change`
+  return ready ? `✓ Ready · ${localName}` : `${localName} · Change`
+}
+
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
@@ -642,9 +809,9 @@ function MomirCrest() {
     <div
       aria-hidden
       style={{
-        width: 84,
-        height: 84,
-        margin: '0 auto 8px',
+        flex: 'none',
+        width: 52,
+        height: 52,
         backgroundColor: 'var(--accent-teal, #6fd3c0)',
         WebkitMaskImage: `url(${momirVigUrl})`,
         maskImage: `url(${momirVigUrl})`,
@@ -728,6 +895,9 @@ function QuickGameDeckPicker({
   onValidityChange,
   initialSavedDeckName,
   onSavedDeckNameChange,
+  initialExampleName,
+  onExampleNameChange,
+  onSubmitPendingChange,
 }: {
   youSetCode: string | null
   youSetCodes: readonly string[] | undefined
@@ -739,6 +909,10 @@ function QuickGameDeckPicker({
   /** A saved setup's deck, preselected once the library hydrates. */
   initialSavedDeckName: string | undefined
   onSavedDeckNameChange: (name: string | null) => void
+  initialExampleName: string | undefined
+  onExampleNameChange: (name: string | null) => void
+  /** Whether a debounced submission is waiting to be sent. */
+  onSubmitPendingChange: (pending: boolean) => void
 }) {
   const submitDeck = useGameStore((s) => s.submitQuickGameLobbyDeck)
   const setSetCode = useGameStore((s) => s.setQuickGameLobbySetCode)
@@ -746,7 +920,10 @@ function QuickGameDeckPicker({
 
   const pendingDeckRef = useRef<Record<string, number> | null>(null)
   const pendingCommanderRef = useRef<string | null>(null)
+  const pendingSecondCommanderRef = useRef<string | null>(null)
   const pendingSideboardRef = useRef<Record<string, number>>({})
+  const pendingCompanionRef = useRef<string | null>(null)
+  const pendingFormatRef = useRef<string | null>(null)
   const lastSubmittedKeyRef = useRef<string | null>(null)
   const debounceRef = useRef<number | null>(null)
 
@@ -755,28 +932,42 @@ function QuickGameDeckPicker({
       deckList: Record<string, number>,
       commander?: string | null,
       sideboard?: Record<string, number>,
+      secondCommander?: string | null,
+      companion?: string | null,
+      deckFormat?: string | null,
     ) => {
-      // The commander and the sideboard ride in the dedupe key, so swapping either on otherwise-
-      // identical deck contents still resubmits — editing only the sideboard is a real change.
+      // The commanders, the sideboard and the companion ride in the dedupe key, so swapping any of
+      // them on otherwise-identical deck contents still resubmits — editing only the sideboard is a
+      // real change.
       const board = sideboard ?? {}
-      const key = `${serializeDeck(deckList)}|${commander ?? ''}|${serializeDeck(board)}`
+      const key =
+        `${serializeDeck(deckList)}|${commander ?? ''}+${secondCommander ?? ''}|${serializeDeck(board)}|${companion ?? ''}|${deckFormat ?? ''}`
       if (key === lastSubmittedKeyRef.current) return
       pendingDeckRef.current = deckList
       pendingCommanderRef.current = commander ?? null
+      pendingSecondCommanderRef.current = secondCommander ?? null
       pendingSideboardRef.current = board
+      pendingCompanionRef.current = companion ?? null
+      pendingFormatRef.current = deckFormat ?? null
       if (debounceRef.current !== null) window.clearTimeout(debounceRef.current)
+      onSubmitPendingChange(true)
       debounceRef.current = window.setTimeout(() => {
+        onSubmitPendingChange(false)
         const pending = pendingDeckRef.current
         if (!pending) return
         const pendingCmdr = pendingCommanderRef.current
+        const pendingSecond = pendingSecondCommanderRef.current
         const pendingSide = pendingSideboardRef.current
-        const pendingKey = `${serializeDeck(pending)}|${pendingCmdr ?? ''}|${serializeDeck(pendingSide)}`
+        const pendingCompanion = pendingCompanionRef.current
+        const pendingFormat = pendingFormatRef.current
+        const pendingKey =
+          `${serializeDeck(pending)}|${pendingCmdr ?? ''}+${pendingSecond ?? ''}|${serializeDeck(pendingSide)}|${pendingCompanion ?? ''}|${pendingFormat ?? ''}`
         if (pendingKey === lastSubmittedKeyRef.current) return
         lastSubmittedKeyRef.current = pendingKey
-        submitDeck(pending, pendingCmdr, pendingSide)
+        submitDeck(pending, pendingCmdr, pendingSide, pendingSecond, pendingCompanion, pendingFormat)
       }, 250)
     },
-    [submitDeck],
+    [submitDeck, onSubmitPendingChange],
   )
 
   // Flush any pending deck on unmount so the user's last edit isn't dropped.
@@ -785,12 +976,19 @@ function QuickGameDeckPicker({
       if (debounceRef.current !== null) window.clearTimeout(debounceRef.current)
       const pending = pendingDeckRef.current
       const pendingCmdr = pendingCommanderRef.current
+      const pendingSecond = pendingSecondCommanderRef.current
       const pendingSide = pendingSideboardRef.current
+      const pendingCompanion = pendingCompanionRef.current
+      const pendingFormat = pendingFormatRef.current
       const pendingKey = pending
-        ? `${serializeDeck(pending)}|${pendingCmdr ?? ''}|${serializeDeck(pendingSide)}`
+        ? `${serializeDeck(pending)}|${pendingCmdr ?? ''}+${pendingSecond ?? ''}|${serializeDeck(pendingSide)}|${pendingCompanion ?? ''}|${pendingFormat ?? ''}`
         : null
       if (pending && pendingKey !== lastSubmittedKeyRef.current) {
-        submitDeck(pending, pendingCmdr, pendingSide)
+        // Recorded like any other submission, so a remount (StrictMode's, or the picker's) that
+        // re-emits the same deck doesn't send it again — once the game has started, that second
+        // send lands on a lobby that no longer exists.
+        lastSubmittedKeyRef.current = pendingKey
+        submitDeck(pending, pendingCmdr, pendingSide, pendingSecond, pendingCompanion, pendingFormat)
       }
     }
   }, [submitDeck])
@@ -809,6 +1007,8 @@ function QuickGameDeckPicker({
       onTabChange={onTabChange}
       initialSavedDeckName={initialSavedDeckName}
       onSavedDeckNameChange={onSavedDeckNameChange}
+      initialExampleName={initialExampleName}
+      onExampleNameChange={onExampleNameChange}
     />
   )
 }
@@ -875,11 +1075,18 @@ function PremadeDeckPickerPanel({
   playerId,
   initialSavedDeckName,
   onSavedDeckNameChange,
+  initialExampleName,
+  onExampleNameChange,
+  autoSubmit,
 }: {
   lobbyState: LobbyState
   playerId: string | null
   initialSavedDeckName: string | undefined
   onSavedDeckNameChange: (name: string | null) => void
+  initialExampleName: string | undefined
+  onExampleNameChange: (name: string | null) => void
+  /** Submit the preselected deck by itself, once, as soon as it resolves and validates. */
+  autoSubmit: boolean
 }) {
   const submitLobbyDeck = useGameStore((s) => s.submitLobbyDeck)
   const unsubmitLobbyDeck = useGameStore((s) => s.unsubmitLobbyDeck)
@@ -889,17 +1096,53 @@ function PremadeDeckPickerPanel({
 
   const [pendingDeck, setPendingDeck] = useState<Record<string, number>>({})
   const [pendingCommander, setPendingCommander] = useState<string | null>(null)
+  const [pendingSecondCommander, setPendingSecondCommander] = useState<string | null>(null)
   const [pendingSideboard, setPendingSideboard] = useState<Record<string, number>>({})
+  const [pendingCompanion, setPendingCompanion] = useState<string | null>(null)
   const [isValid, setIsValid] = useState(false)
+  const autoSubmitted = useRef(false)
 
   const handleDeckChange = useCallback(
-    (deck: Record<string, number>, commander?: string | null, sideboard?: Record<string, number>) => {
+    (
+      deck: Record<string, number>,
+      commander?: string | null,
+      sideboard?: Record<string, number>,
+      secondCommander?: string | null,
+      companion?: string | null,
+    ) => {
       setPendingDeck(deck)
+      setPendingCompanion(companion ?? null)
       setPendingCommander(commander ?? null)
+      setPendingSecondCommander(secondCommander ?? null)
       setPendingSideboard(sideboard ?? {})
     },
     [],
   )
+
+  const deckFormat = lobbyState.settings.deckFormat
+  // Whether this submission needs a commander follows the lobby's Rules axis, not its deck legality:
+  // the server's deck-submit path keys on `usesCommanderRules`, so deriving it from the legality here
+  // would ask for a commander the server doesn't want (Commander-legal decks under Standard rules) or
+  // — worse — not ask for one it requires.
+  const isCommanderShape = rulesFromLobbySettings(lobbyState.settings) === 'COMMANDER'
+  const totalCards = Object.values(pendingDeck).reduce((a, b) => a + b, 0)
+  const needsCommander = isCommanderShape && !pendingCommander
+  const canSubmit = isValid && totalCards >= 40 && !needsCommander
+
+  useEffect(() => {
+    if (!autoSubmit || autoSubmitted.current || hasSubmitted || !canSubmit) return
+    autoSubmitted.current = true
+    submitLobbyDeck(
+      pendingDeck,
+      isCommanderShape ? pendingCommander : null,
+      pendingSideboard,
+      isCommanderShape ? pendingSecondCommander : null,
+      pendingCompanion,
+    )
+  }, [
+    autoSubmit, hasSubmitted, canSubmit, submitLobbyDeck, pendingDeck, isCommanderShape, pendingCommander,
+    pendingSecondCommander, pendingSideboard, pendingCompanion,
+  ])
 
   if (hasSubmitted) {
     return (
@@ -913,16 +1156,6 @@ function PremadeDeckPickerPanel({
       </div>
     )
   }
-
-  const deckFormat = lobbyState.settings.deckFormat
-  // Whether this submission needs a commander follows the lobby's Rules axis, not its deck legality:
-  // the server's deck-submit path keys on `usesCommanderRules`, so deriving it from the legality here
-  // would ask for a commander the server doesn't want (Commander-legal decks under Standard rules) or
-  // — worse — not ask for one it requires.
-  const isCommanderShape = rulesFromLobbySettings(lobbyState.settings) === 'COMMANDER'
-  const totalCards = Object.values(pendingDeck).reduce((a, b) => a + b, 0)
-  const needsCommander = isCommanderShape && !pendingCommander
-  const canSubmit = isValid && totalCards >= 40 && !needsCommander
 
   return (
     <div className={styles.settingsPanel}>
@@ -941,9 +1174,17 @@ function PremadeDeckPickerPanel({
           format={deckFormat ?? null}
           initialSavedDeckName={initialSavedDeckName}
           onSavedDeckNameChange={onSavedDeckNameChange}
+          initialExampleName={initialExampleName}
+          onExampleNameChange={onExampleNameChange}
         />
         <button
-          onClick={() => submitLobbyDeck(pendingDeck, isCommanderShape ? pendingCommander : null, pendingSideboard)}
+          onClick={() => submitLobbyDeck(
+            pendingDeck,
+            isCommanderShape ? pendingCommander : null,
+            pendingSideboard,
+            isCommanderShape ? pendingSecondCommander : null,
+            pendingCompanion,
+          )}
           disabled={!canSubmit}
           title={
             canSubmit ? undefined

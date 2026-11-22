@@ -55,7 +55,11 @@ val MisterHydeMonsterWithin = card("Mister Hyde, Monster Within") {
             ),
             Mode.noTarget(
                 Effects.Pipeline {
-                    val hydeCounterSource = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl))
+                    val hydeCounterSource = selectTarget(
+                        TargetObject(filter = TargetFilter.CreatureYouControl),
+                        nonTargeting = true,
+                        prompt = "Choose a creature you control to remove a counter from"
+                    )
                     run(Effects.IfYouDo(
                         action = Effects.RemoveCounterOfAnyKind(
                             hydeCounterSource.asTarget,

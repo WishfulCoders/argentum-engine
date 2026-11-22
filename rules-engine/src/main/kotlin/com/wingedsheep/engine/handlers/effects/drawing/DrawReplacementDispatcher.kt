@@ -84,7 +84,8 @@ class DrawReplacementDispatcher(
         drawsLeftIncludingThis: Int,
         drawnCardsSoFar: List<EntityId>,
         isDrawStep: Boolean,
-        context: EffectContext? = null
+        context: EffectContext? = null,
+        cycledCardId: EntityId? = null
     ): DispatchResult {
         val remainingDraws = drawsLeftIncludingThis - 1
         val event = PendingGameEvent.DrawPending(
@@ -92,7 +93,8 @@ class DrawReplacementDispatcher(
             count = 1,
             remainingDraws = remainingDraws,
             isDrawStep = isDrawStep,
-            drawnCardsSoFar = drawnCardsSoFar
+            drawnCardsSoFar = drawnCardsSoFar,
+            cycledCardId = cycledCardId
         )
         when (val processorResult = processor.process(state, event, context)) {
             is ProcessorResult.Paused -> {
@@ -117,7 +119,7 @@ class DrawReplacementDispatcher(
                                 processorResult.state, playerId,
                                 outcome.newEffect, ctx,
                                 remainingDraws, isDrawStep,
-                                processorResult.identity, state.activeReplacementChain
+                                processorResult.identity, state.activeReplacementChain, cycledCardId
                             )
                         }
                         return DispatchResult.Replaced(processorResult.state, emptyList())
@@ -167,14 +169,16 @@ class DrawReplacementDispatcher(
         playerId: EntityId,
         totalCount: Int,
         isDrawStep: Boolean = false,
-        context: EffectContext? = null
+        context: EffectContext? = null,
+        cycledCardId: EntityId? = null
     ): DispatchResult? {
         if (totalCount <= 0) return null
 
         val event = PendingGameEvent.DrawAmountPending(
             playerId = playerId,
             totalCount = totalCount,
-            isDrawStep = isDrawStep
+            isDrawStep = isDrawStep,
+            cycledCardId = cycledCardId
         )
         when (val processorResult = processor.process(state, event, context)) {
             is ProcessorResult.Paused -> {
@@ -200,7 +204,7 @@ class DrawReplacementDispatcher(
                                 processorResult.state, playerId,
                                 outcome.newEffect, ctx,
                                 totalCount - 1, isDrawStep,
-                                processorResult.identity, state.activeReplacementChain
+                                processorResult.identity, state.activeReplacementChain, cycledCardId
                             )
                         }
                         return DispatchResult.Replaced(processorResult.state, emptyList())
@@ -249,7 +253,8 @@ class DrawReplacementDispatcher(
         remainingDraws: Int,
         isDrawStep: Boolean,
         identity: ReplacementEffectIdentity? = null,
-        previousChain: Set<ReplacementEffectIdentity>? = null
+        previousChain: Set<ReplacementEffectIdentity>? = null,
+        cycledCardId: EntityId? = null
     ): DispatchResult {
         val executor = effectExecutor ?: return DispatchResult.Replaced(processorState, emptyList())
 
@@ -264,18 +269,24 @@ class DrawReplacementDispatcher(
                     remainingDraws = remainingDraws,
                     isDrawStep = isDrawStep,
                     // Tail of an instruction already announced by executeDraws (CR 121.2a).
-                    announcementApplied = true
+                    announcementApplied = true,
+                    cycledCardId = cycledCardId
                 )
             )
         }
 
         // A nested life replacement may suspend and later restore this draw's chain.
         // Keep the draw's boundary on the stack so that restoration cannot leak into
-        // the independent instruction that follows the completed replacement.
-        state = state.pushContinuation(com.wingedsheep.engine.core.RestoreReplacementChainContinuation(previousChain))
+        // the independent instruction that follows the completed replacement. The frame
+        // also carries the chain itself (`applied`): CR 614.5 must hold for events inside
+        // the replacement effect even after it pauses for a decision (Chains of
+        // Mephistopheles' discard-then-draw), while the flat chain below is cleared.
+        state = state.pushContinuation(com.wingedsheep.engine.core.RestoreReplacementChainContinuation(
+            previousChain, applied = processorState.activeReplacementChain ?: emptySet()))
         val pipelineResult = executor(state, replacementEffect, context)
         if (pipelineResult.outcome is Outcome.Paused) {
-            // Clear chain on pause so subsequent draw iterations are unaffected.
+            // Clear the flat chain on pause; the boundary frame keeps it scoped to this
+            // replacement's own events until the frame pops.
             val clearedState = pipelineResult.state.copy(activeReplacementChain = null)
             return DispatchResult.Paused(
                 EffectResult.propagatePause(clearedState, pipelineResult.events)

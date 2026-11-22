@@ -37,13 +37,32 @@ class GainLifeExecutor(
         var newState = state
         val events = mutableListOf<EngineGameEvent>()
 
-        for ((index, playerId) in playerIds.withIndex()) {
-            val remaining = playerIds.drop(index + 1).map {
+        // One gain per player, in order. A replacement can pause one of them; the gains after it
+        // are queued beneath as a program over all of them, its cursor at the gain in progress.
+        // The root is synthetic — this gain expanded per player, the gains before the cursor having
+        // run in this call rather than in the program — so its origin is a `BuiltBy` label and the
+        // cursor a local position in that expansion, not a path into any authored tree.
+        val perPlayer by lazy {
+            com.wingedsheep.sdk.scripting.effects.CompositeEffect(playerIds.map {
                 com.wingedsheep.sdk.dsl.Effects.GainLife(amount,
                     com.wingedsheep.sdk.scripting.targets.EffectTarget.SpecificEntity(it))
-            }
-            val prepared = if (remaining.isEmpty()) newState else newState.pushContinuation(
-                com.wingedsheep.engine.core.EffectContinuation(remaining, context))
+            })
+        }
+        // The label the registry handed down to this call names this gain. The program's leaves
+        // are this gain's remaining per-player parts, so they run under the label this call ran
+        // under (its parent), and the registry labels each exactly as it labelled this call.
+        val origin = context.programOrigin ?: com.wingedsheep.engine.core.ProgramOrigin.UNATTRIBUTED
+        val leafContext = context.copy(programOrigin = (origin as? com.wingedsheep.engine.core.ProgramOrigin.BuiltBy)?.parent)
+        for ((index, playerId) in playerIds.withIndex()) {
+            val isLast = index == playerIds.lastIndex
+            val prepared = if (isLast) newState else newState.pushContinuation(
+                com.wingedsheep.engine.core.EffectProgram(
+                    root = perPlayer,
+                    origin = origin,
+                    cursor = com.wingedsheep.engine.core.ProgramCursor(listOf(
+                        com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter.rootStep(index, leafContext))),
+                    effectContext = leafContext,
+                ))
             val result = if (LifeGainReplacements.applies(prepared, playerId, amount, amountEvaluator.predicates)) {
                 LifeGainReplacements.resolve(prepared, playerId, amount, context, replacementProcessor, executeEffect)
             } else {
@@ -53,7 +72,7 @@ class GainLifeExecutor(
             events.addAll(result.events)
             if (result.outcome is com.wingedsheep.engine.core.Outcome.Paused)
                 return result.copy(events = events)
-            newState = if (remaining.isEmpty()) result.state else result.state.popContinuation().second
+            newState = if (isLast) result.state else result.state.popContinuation().second
         }
 
         return EffectResult.success(newState, events)

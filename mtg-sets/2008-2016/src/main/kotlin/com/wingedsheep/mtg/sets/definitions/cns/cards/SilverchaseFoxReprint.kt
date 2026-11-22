@@ -13,7 +13,7 @@ val SilverchaseFoxReprint = Printing(
     collectorNumber = "81",
     scryfallId = "e87d38e7-cb88-4a1e-927b-7646f8c33960",
     artist = "Howard Lyon",
-    imageUri = "https://cards.scryfall.io/normal/front/e/8/e87d38e7-cb88-4a1e-927b-7646f8c33960.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/e/8/e87d38e7-cb88-4a1e-927b-7646f8c33960.jpg?1783939363",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

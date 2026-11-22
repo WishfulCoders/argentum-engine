@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.morph
 
+import com.wingedsheep.engine.mechanics.layers.LayerTimestamps
 import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
@@ -58,10 +59,6 @@ class TurnFaceUpHandler(
 ) : ActionHandler<TurnFaceUp> {
     override val actionType: KClass<TurnFaceUp> = TurnFaceUp::class
 
-    // Lets restricted mana tagged "spend only to turn permanents face up" (Overgrown Zealot,
-    // Creeping Peeper) be recognized when paying a turn-face-up cost from the pool.
-    private val faceUpContext = SpellPaymentContext(isTurnFaceUpAction = true)
-
     /**
      * The turn-up cost as a *concrete* amount of mana, with the chosen X folded in.
      *
@@ -113,6 +110,15 @@ class TurnFaceUpHandler(
         // client-supplied, so bounds-check it here rather than trusting it.
         val procedure = morphData.procedures.getOrNull(action.procedureIndex)
             ?: return "No such turn-up procedure: ${action.procedureIndex}"
+        // "If the permanent wouldn't have a morph cost if it were face up, it can't be turned face
+        // up this way" (CR 702.37e, 702.168d): a lose-all-abilities effect closes the morph and
+        // disguise routes; a manifest or cloak route stays open.
+        if (!procedure.isOpen(state.projectedState.hasLostAllAbilities(action.sourceId))) {
+            return "This creature has lost its ${procedure.label.lowercase()} ability"
+        }
+        // Lets restricted mana tagged "spend only to turn permanents face up" (Overgrown Zealot) — or
+        // only for some procedures, "a morph cost" (Qarsi Deceiver) — pay for this procedure.
+        val faceUpContext = SpellPaymentContext.turnFaceUp(procedure.mechanic)
 
         // Validate cost payment based on morph cost type.
         val morphCost = procedure.cost
@@ -146,6 +152,7 @@ class TurnFaceUpHandler(
                             colorless = poolComponent.colorless,
                             restrictedMana = poolComponent.restrictedMana,
                             snowMana = poolComponent.snowMana,
+                            manaUnits = poolComponent.manaUnits,
                             snowColorless = poolComponent.snowColorless
                         ).withSpendingColors(state, action.playerId)
                         if (!costHandler.canPayManaCost(pool, withXResolved(manaCost, xValue), faceUpContext)) {
@@ -200,6 +207,9 @@ class TurnFaceUpHandler(
 
         val procedure = morphData.procedures.getOrNull(action.procedureIndex)
             ?: return ExecutionResult.error(state, "No such turn-up procedure: ${action.procedureIndex}")
+        // Lets restricted mana tagged "spend only to turn permanents face up" (Overgrown Zealot) — or
+        // only for some procedures, "a morph cost" (Qarsi Deceiver) — pay for this procedure.
+        val faceUpContext = SpellPaymentContext.turnFaceUp(procedure.mechanic)
 
         val cardComponent = container.get<CardComponent>()
         val cardDef = cardRegistry.getCard(morphData.originalCardDefinitionId)
@@ -231,6 +241,7 @@ class TurnFaceUpHandler(
                             colorless = poolComponent.colorless,
                             restrictedMana = poolComponent.restrictedMana,
                             snowMana = poolComponent.snowMana,
+                            manaUnits = poolComponent.manaUnits,
                             snowColorless = poolComponent.snowColorless
                         ).withSpendingColors(currentState, action.playerId)
 
@@ -248,6 +259,7 @@ class TurnFaceUpHandler(
                                     colorless = newPool.colorless,
                                     restrictedMana = newPool.restrictedMana,
                                     snowMana = newPool.snowMana,
+                                    manaUnits = newPool.manaUnits,
                                     snowColorless = newPool.snowColorless
                                 )
                             )
@@ -280,6 +292,7 @@ class TurnFaceUpHandler(
                             colorless = poolComponent.colorless,
                             restrictedMana = poolComponent.restrictedMana,
                             snowMana = poolComponent.snowMana,
+                            manaUnits = poolComponent.manaUnits,
                             snowColorless = poolComponent.snowColorless
                         ).withSpendingColors(currentState, action.playerId)
 
@@ -335,6 +348,7 @@ class TurnFaceUpHandler(
                                     colorless = poolAfterPayment.colorless,
                                     restrictedMana = poolAfterPayment.restrictedMana,
                                     snowMana = poolAfterPayment.snowMana,
+                                    manaUnits = poolAfterPayment.manaUnits,
                                     snowColorless = poolAfterPayment.snowColorless
                                 )
                             )
@@ -377,8 +391,9 @@ class TurnFaceUpHandler(
                     }
 
                     is PaymentStrategy.Explicit -> {
+                        val credited = manaSolver.creditExplicitSources(currentState, action.playerId, action.paymentStrategy.manaAbilitiesToActivate, manaCost, xValue, faceUpContext)
                         for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                            val (tappedState, tapEvents) = manaAbilitySideEffectExecutor.tapForManaPayingLife(currentState, sourceId, action.playerId)
+                            val (tappedState, tapEvents) = manaAbilitySideEffectExecutor.tapForManaPayingLife(currentState, sourceId, action.playerId, credited[sourceId])
                             currentState = tappedState
                             events.addAll(tapEvents)
                         }
@@ -433,6 +448,8 @@ class TurnFaceUpHandler(
             updated = staticAbilityHandler.addReplacementEffectComponent(updated)
             updated
         }
+        // CR 613.7f — a permanent gets a new timestamp each time it turns face up.
+        currentState = LayerTimestamps.renew(currentState, action.sourceId)
 
         // Execute face-up replacement effect (e.g., "put five +1/+1 counters on it")
         if (faceUpEffect != null) {
@@ -442,6 +459,7 @@ class TurnFaceUpHandler(
                     origin = currentState.objectRef(action.sourceId), source = currentState.objectRef(action.sourceId),
                     resolutionKey = "face-up:${action.sourceId.value}:${currentState.objectRef(action.sourceId)?.generation}"),
                 controllerId = action.playerId,
+                programOrigin = com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter.startedBy(TurnFaceUpHandler::class),
             )
             val effectResult = effectExecutorRegistry.execute(currentState, faceUpEffect, effectContext)
             if (effectResult.error == null) {

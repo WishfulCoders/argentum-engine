@@ -20,6 +20,7 @@ import type { UnifiedLobbyView } from './lobbyViewModel'
 import { BOOTSTRAP_SET_CODE } from './useApplyRecipe'
 import { setPendingLobbyIntent } from '@/store/slices/pendingLobbyIntent'
 import type { DeckPickerTab } from '../ui/DeckPicker'
+import { DEFAULT_JUMPSTART_SET, isJumpstartSet } from './jumpstartSets'
 
 export interface LobbyCommands {
   /** Cards values the current lobby can express directly. Recreate goes through {@link recreate}. */
@@ -39,6 +40,8 @@ export interface LobbyCommands {
   togglePlayerTeam: (playerId: string) => void
   setPublic: (isPublic: boolean) => void
   setRanked: (ranked: boolean) => void
+  /** Play for ante (CR 407). The server rejects it while the lobby is ranked. */
+  setAnte: (playingForAnte: boolean) => void
   /** Tear this lobby down and stand it back up on the other server implementation. */
   recreate: (spec: RecreateSpec) => void
   /** The one button beside Leave — ready / cancel ready / start, per {@link UnifiedLobbyView}. */
@@ -60,6 +63,7 @@ const NO_LOBBY: LobbyCommands = {
   togglePlayerTeam: noop,
   setPublic: noop,
   setRanked: noop,
+  setAnte: noop,
   recreate: noop,
   runPrimary: noop,
   leave: noop,
@@ -100,10 +104,11 @@ export function useLobbyCommands(
         // A recreate deliberately does *not* carry the old lobby's settings across: the confirm
         // dialog has just told the host that "set selection and any submitted decks are reset",
         // because the new lobby is a different shape and most of what was configured wouldn't mean
-        // the same thing. It is the one path that still opens on the bootstrap set.
+        // the same thing. Jump In names its published set; other modes use the bootstrap set.
         s().createTournamentLobby(
-          [BOOTSTRAP_SET_CODE], spec.format, 6, 8, 45, view.isPublic, spec.gameMode,
+          [spec.jumpIn ? DEFAULT_JUMPSTART_SET : BOOTSTRAP_SET_CODE], spec.format, 6, 8, 45, view.isPublic, spec.gameMode,
         )
+        if (spec.jumpIn) s().updateLobbySettings({ useJumpstart: true, gamesPerMatch: 1, bestOf: 1 })
       }
     }
 
@@ -132,8 +137,18 @@ export function useLobbyCommands(
         }
         switch (kind) {
           case 'BRING_A_DECK': s().updateLobbySettings({ format: 'PREMADE_DECKS' }); return
-          case 'SEALED': s().updateLobbySettings({ format: 'SEALED' }); return
-          case 'DRAFT': s().updateLobbySettings({ format: 'DRAFT' }); return
+          case 'JUMP_IN': {
+            const lobbySetCodes = s().lobbyState?.settings.setCodes
+            s().updateLobbySettings({
+              cubeCards: [],
+              // Keep a Jumpstart set the host already picked; anything else switches to the newest.
+              setCodes: [isJumpstartSet(lobbySetCodes?.[0]) ? lobbySetCodes![0]! : DEFAULT_JUMPSTART_SET], format: 'SEALED', rules: 'STANDARD',
+              deckFormat: '', useJumpstart: true, gamesPerMatch: 1, bestOf: 1,
+            })
+            return
+          }
+          case 'SEALED': s().updateLobbySettings({ format: 'SEALED', useJumpstart: false }); return
+          case 'DRAFT': s().updateLobbySettings({ format: 'DRAFT', useJumpstart: false }); return
           default: return
         }
       },
@@ -176,6 +191,11 @@ export function useLobbyCommands(
       setRanked: (ranked) => {
         if (isQuick) s().setQuickGameLobbyRanked(ranked)
         else s().updateLobbySettings({ ranked })
+      },
+
+      setAnte: (playingForAnte) => {
+        if (isQuick) s().setQuickGameLobbyAnte(playingForAnte)
+        else s().updateLobbySettings({ playingForAnte })
       },
 
       runPrimary: () => {

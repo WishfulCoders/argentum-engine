@@ -6,7 +6,8 @@ import type { PriorityMode } from '@/store/selectors.ts'
 interface StepStripProps {
   phase: Phase
   step: Step
-  turnNumber: number
+  /** Round number — every seat's turn in one pass around the table shares it */
+  roundNumber: number
   isActivePlayer: boolean
   hasPriority: boolean
   priorityMode: PriorityMode
@@ -104,7 +105,7 @@ const waitingMyTurn: ColorSet = {
 
 export function StepStrip({
   step,
-  turnNumber,
+  roundNumber,
   isActivePlayer,
   hasPriority,
   priorityMode,
@@ -122,8 +123,10 @@ export function StepStrip({
     : modeColors[priorityMode]
   // Treat short-desktop viewports (e.g. MBP 14") like mobile for HUD density:
   // smaller icons, tighter padding, compact text. Frees vertical room for the
-  // battlefield rows without changing the strip's information layout.
-  const isMobile = responsive.isMobile || responsive.isShortDesktop
+  // battlefield rows without changing the strip's information layout. A landscape phone (any
+  // viewport under 560px tall) gets the same density — at desktop size the strip took a third of
+  // the board's height there.
+  const isMobile = responsive.isMobile || responsive.isShortDesktop || responsive.viewportHeight < 560
   const currentStepIndex = STEP_ORDER.indexOf(step)
 
   const statusText = activePlayerName
@@ -241,11 +244,11 @@ export function StepStrip({
             · {turnQueueHint}
           </span>
         )}
-        <span style={{
+        <span title={`Round ${roundNumber}`} style={{
           color: '#555',
           fontSize: isMobile ? 7 : 9,
         }}>
-          T{turnNumber}
+          T{roundNumber}
         </span>
       </div>
 

@@ -1,6 +1,8 @@
 package com.wingedsheep.sdk.scripting.effects
 
+import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.targets.selfNounToken
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -18,8 +20,30 @@ import kotlinx.serialization.Serializable
 data class TapUntapEffect(
     val target: EffectTarget,
     val tap: Boolean = true
-) : Effect {
-    override val description: String = "${if (tap) "Tap" else "Untap"} ${target.description}"
+) : Effect, SelfReferentialDescription {
+    // Self routes through the self-noun token: "tap this creature" is wrong on a land (Multiversal
+    // Passage's "if you don't, it enters tapped" read "tap this creature").
+    override val descriptionTemplate: String = "${if (tap) "Tap" else "Untap"} ${target.selfNounToken}"
+    override val description: String = defaultResolvedDescription
+}
+
+/**
+ * "This permanent enters tapped" — the rider of an as-enters replacement, run inside
+ * [com.wingedsheep.sdk.scripting.OnEnterRun]: the reveal lands' "if you don't, this land enters
+ * tapped" (Auntie's Hovel, Game Trail, the snarls), Multiversal Passage's "if you don't [pay 2
+ * life], it enters tapped".
+ *
+ * An entry modification, not a tap. The permanent is put onto the battlefield tapped as part of
+ * the entry event, so no "becomes tapped" event is emitted, and a "[permanents] enter untapped"
+ * replacement (The Wandering Minstrel, Spelunking) wins and the permanent stays untapped
+ * (CR 616.1 — its controller orders the two replacements, and untapped is the only outcome worth
+ * choosing). [TapUntapEffect] on `EffectTarget.Self` does neither.
+ */
+@SerialName("EnterTapped")
+@Serializable
+data object EnterTappedEffect : Effect, SelfReferentialDescription {
+    override val descriptionTemplate: String = "${EffectTarget.Self.selfNounToken} enters tapped"
+    override val description: String get() = defaultResolvedDescription
 }
 
 /**
@@ -47,13 +71,38 @@ data class TapUntapCollectionEffect(
  *
  * Used as the "suffer" effect of a pay-or-phase trigger
  * (e.g. Vaporous Djinn: "phases out unless you pay {U}{U}").
+ *
+ * @property cantPhaseIn A window during which the permanent can't phase in — its untap-step
+ *   phase-in is skipped until the window ends, after which it phases in at its controller's *next*
+ *   untap step (the window ending never phases anything in, which is what separates this from
+ *   [PhaseOutUntilLeavesEffect]). Null for ordinary phasing. Two windows are supported:
+ *   - [Duration.WhileYouControlSource] — "It can't phase in for as long as you control this Saga"
+ *     (The Phasing of Zhalfir). Ends one-way (CR 611.2b) the moment the source leaves the
+ *     battlefield or changes controller.
+ *   - [Duration.EndOfYourNextTurn] — "Until the end of your next turn, they can't phase in"
+ *     (Teferi, Timeless Voyager). Ends at the cleanup step of the effect controller's next turn.
  */
 @SerialName("PhaseOut")
 @Serializable
 data class PhaseOutEffect(
-    val target: EffectTarget = EffectTarget.Self
+    val target: EffectTarget = EffectTarget.Self,
+    val cantPhaseIn: Duration? = null
 ) : Effect {
-    override val description: String = "${target.description} phases out"
+    init {
+        require(cantPhaseIn == null || cantPhaseIn is Duration.WhileYouControlSource ||
+            cantPhaseIn == Duration.EndOfYourNextTurn) {
+            "PhaseOutEffect.cantPhaseIn supports WhileYouControlSource and EndOfYourNextTurn, not $cantPhaseIn"
+        }
+    }
+
+    override val description: String = buildString {
+        append("${target.description} phases out")
+        when (cantPhaseIn) {
+            null -> {}
+            is Duration.WhileYouControlSource -> append(". It can't phase in ${cantPhaseIn.description}")
+            else -> append(". ${cantPhaseIn.description.replaceFirstChar { it.uppercase() }}, it can't phase in")
+        }
+    }
 }
 
 /**

@@ -10,21 +10,23 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Deadly Dispute
  * {1}{B}
  * Instant
- * As an additional cost to cast this spell, sacrifice an artifact or creature.
- * Draw two cards and create a Treasure token.
  *
- * Hellish Sideswipe's additional cost.
+ * As an additional cost to cast this spell, sacrifice an artifact or creature.
+ * Draw two cards and create a Treasure token. (It's an artifact with
+ * "{T}, Sacrifice this token: Add one mana of any color.")
  */
 val DeadlyDispute = card("Deadly Dispute") {
     manaCost = "{1}{B}"
     colorIdentity = "B"
     typeLine = "Instant"
     oracleText = "As an additional cost to cast this spell, sacrifice an artifact or creature.\n" +
-        "Draw two cards and create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
-    additionalCost(Costs.additional.SacrificePermanent(filter = GameObjectFilter.CreatureOrArtifact))
+        "Draw two cards and create a Treasure token. (It's an artifact with " +
+        "\"{T}, Sacrifice this token: Add one mana of any color.\")"
+
+    additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Artifact.or(GameObjectFilter.Creature)))
 
     spell {
-        effect = Effects.DrawCards(2).then(Effects.CreateTreasure(1))
+        effect = Effects.DrawCards(2) then Effects.CreateTreasure()
     }
 
     metadata {
@@ -32,6 +34,6 @@ val DeadlyDispute = card("Deadly Dispute") {
         collectorNumber = "94"
         artist = "Irina Nordsol"
         flavorText = "\"That's a pretty ring! Trade you my knife for it.\""
-        imageUri = "https://cards.scryfall.io/normal/front/7/3/7373fe95-ad1c-44b9-8c7f-464ce8cbffc6.jpg?1783926501"
+        imageUri = "https://cards.scryfall.io/normal/front/7/3/7373fe95-ad1c-44b9-8c7f-464ce8cbffc6.jpg"
     }
 }

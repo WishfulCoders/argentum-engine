@@ -1,6 +1,8 @@
 package com.wingedsheep.engine.core
 
+import com.wingedsheep.sdk.scripting.AbilityTriggerCause
 import com.wingedsheep.sdk.core.BendType
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -11,6 +13,7 @@ import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.TapReason
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import com.wingedsheep.sdk.scripting.OnceOnlyAbilityKind
 
 /**
  * Sealed hierarchy of all game events.
@@ -54,6 +57,8 @@ data class ZoneChangeEvent(
      * controller, the aura host it was attached to, combat pairings, token-ness, per-player damage,
      * damage sources, and lost-abilities. `null` for any transition that did not leave the
      * battlefield (entries, library→graveyard mill, etc.), so readers fall back to live state.
+     * An additional meld-card arrival shares the departed permanent's snapshot for controller
+     * provenance, but [isBattlefieldDeparture] remains false and its front face supplies card types.
      *
      * This replaces what were ~16 parallel `lastKnown*` scalar fields. See [EntitySnapshot] for the
      * per-field documentation, and its derived `plusOnePlusOneCounters` / `minusOneMinusOneCounters`
@@ -62,6 +67,9 @@ data class ZoneChangeEvent(
     val lastKnown: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
     /** Battlefield visit created by this entry; distinct from the departed visit in lastKnown. */
     val enteredBattlefieldTimestamp: Long? = null,
+    /** Engine-internal group for one simultaneous entry instruction, never a whole resolution. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val simultaneousEntryGroup: String? = null,
     /** The original card name when this permanent entered as a copy (e.g., "Clever Impersonator") */
     val copyOfOriginalName: String? = null,
     /**
@@ -87,6 +95,13 @@ data class ZoneChangeEvent(
      * that are not craft materials (removal, the crafted card's own self-exile, etc.).
      */
     val craftMaterial: Boolean = false,
+    /**
+     * True when this battlefield exit was the sacrifice of the creature chosen to pay an emerge
+     * cost (CR 702.119a). Lets a SELF trigger "When you sacrifice this creature while casting a
+     * spell with emerge" (Foul Emissary) tell it apart from every other sacrifice. Always `false`
+     * for anything but that one sacrifice.
+     */
+    val emergeSacrifice: Boolean = false,
     /** Captured at the actual move, never reconstructed from the final event-batch state. */
     val oldObject: com.wingedsheep.engine.state.ObjectRef? = null,
     val newObject: com.wingedsheep.engine.state.ObjectRef? = null,
@@ -95,8 +110,15 @@ data class ZoneChangeEvent(
     val requestedDestination: Zone = toZone,
     /** Internal: this arrival's simultaneous graveyard batch has already been ordered. */
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
-    val graveyardOrderFinalized: Boolean = false
-) : GameEvent
+    val graveyardOrderFinalized: Boolean = false,
+    /** The one departed melded permanent represented by this additional card arrival. */
+    val meldedPermanent: com.wingedsheep.engine.state.ObjectRef? = null,
+    /** Captured before movement clears the marker; exile-to-hidden-zone logs must stay private. */
+    val fromFaceDownExile: Boolean = false,
+) : GameEvent {
+    /** A meld partner arrives as a card; it is not another permanent leaving (CR 712.21). */
+    val isBattlefieldDeparture: Boolean get() = fromZone == Zone.BATTLEFIELD && meldedPermanent == null
+}
 
 @Serializable
 enum class ZoneTransitionCause { PRIMARY, REPLACEMENT_ADDITIONAL, DURATION_RETURN }
@@ -108,10 +130,12 @@ enum class ZoneTransitionCause { PRIMARY, REPLACEMENT_ADDITIONAL, DURATION_RETUR
 /**
  * A player's life total changed.
  *
- * [firstThisTurn] is only meaningful for [LifeChangeReason.LIFE_GAIN] events: it is `true` when this
- * is the first life-gaining event for [playerId] this turn (computed by `DamageUtils.gainLife`
- * before the per-turn life-gained marker is set). It backs "whenever you gain life for the first
- * time each turn" triggers (Leech Collector). It is always `false` for non-gain reasons.
+ * [firstThisTurn] is `true` when this is the first event of its direction for [playerId] this turn:
+ * for [LifeChangeReason.LIFE_GAIN], the first life-gaining event (stamped by `DamageUtils.gainLife`
+ * before the per-turn life-gained marker is set) — "whenever you gain life for the first time each
+ * turn" (Leech Collector); for every other reason, the first life-losing event (stamped via
+ * `DamageUtils.isFirstLifeLossThisTurn` before the per-turn life-lost marker is set) — "whenever an
+ * opponent loses life for the first time during each of their turns" (Valgavoth, Harrower of Souls).
  */
 @Serializable
 @SerialName("LifeChangedEvent")
@@ -127,6 +151,7 @@ data class LifeChangedEvent(
 enum class LifeChangeReason {
     DAMAGE,
     LIFE_LOSS,
+    RADIATION,
     LIFE_GAIN,
     PAYMENT
 }
@@ -189,6 +214,25 @@ data class DamageDealtEvent(
      * Cloak's Equipment kin) finds its Equipment through this snapshot rather than the live links.
      */
     val sourceAttachmentIds: List<EntityId> = emptyList(),
+    /**
+     * The damage source as it was at the instant the damage was dealt (CR 603.10) — set for every
+     * damage event whose source still existed then. Combat-damage state-based actions move a source that died in the
+     * same step — a trampler that traded with its blocker, a creature dealt damage by a
+     * first-striker's double-striking partner — before trigger detection runs, so the batched
+     * "one or more creatures deal combat damage to you / to a player" triggers read its controller
+     * and characteristics from here, and so does a damage trigger's "that creature's controller"
+     * (`TriggerContext.damageSourceControllerId`), and a "source you control deals damage" observer
+     * reads a source gone from the battlefield (a token that traded in combat) from it.
+     */
+    val sourceLastKnown: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
+    /**
+     * True when this event belongs to the same damage *instruction* as the [DamageDealtEvent]
+     * before it in the event stream — another recipient of one simultaneous damage effect, or the
+     * "and N damage to …" half of one sentence authored as adjacent damage effects. False opens a
+     * new instruction. Read by per-instruction damage triggers
+     * (`DealsDamageEvent(perInstruction = true)`, Blaze Commando); everything else ignores it.
+     */
+    val continuesInstruction: Boolean = false,
 ) : GameEvent
 
 /**
@@ -301,6 +345,69 @@ data class CitysBlessingGainedEvent(
 ) : GameEvent
 
 /**
+ * The monarch changed hands (CR 725). [previousMonarchId] is `null` when the game had no monarch
+ * yet (CR 725.1); [newMonarchId] is `null` only when the monarch left the game and no player still
+ * in it could take the title (CR 725.4). [sourceName] attributes the change — the card whose effect
+ * crowned a player, the inherent combat-damage steal (CR 725.2), or the leave-the-game hand-off.
+ */
+@Serializable
+@SerialName("MonarchChangedEvent")
+data class MonarchChangedEvent(
+    val previousMonarchId: EntityId?,
+    val newMonarchId: EntityId?,
+    val sourceName: String
+) : GameEvent
+
+/**
+ * A player took the initiative (CR 726). Unlike [MonarchChangedEvent] this fires even when
+ * [newHolderId] already had it — taking the initiative again still triggers "whenever a player takes
+ * the initiative" (CR 726.5) — so [previousHolderId] can equal [newHolderId]. [previousHolderId] is
+ * `null` when nobody had it yet (CR 726.1). [sourceName] attributes it: the card whose effect handed
+ * it out, the inherent combat-damage steal, or the leave-the-game hand-off (CR 726.4).
+ */
+@Serializable
+@SerialName("InitiativeTakenEvent")
+data class InitiativeTakenEvent(
+    val previousHolderId: EntityId?,
+    val newHolderId: EntityId,
+    val sourceName: String
+) : GameEvent
+
+/**
+ * A player ventured into the dungeon (CR 701.49) and moved their venture marker into room
+ * [roomIndex] of [dungeonName] — its topmost room when [enteredDungeon] (a new dungeon card was just
+ * put into the command zone, CR 701.49a). The room's ability triggers off this event (CR 309.4c), and
+ * so does "whenever you venture into the dungeon".
+ *
+ * @property dungeonEntityId The dungeon card in the command zone — the room ability's source.
+ * @property sourceName The card or ability that made the player venture.
+ */
+@Serializable
+@SerialName("VenturedIntoDungeonEvent")
+data class VenturedIntoDungeonEvent(
+    val playerId: EntityId,
+    val dungeonEntityId: EntityId,
+    val dungeonName: String,
+    val roomIndex: Int,
+    val roomName: String,
+    val enteredDungeon: Boolean,
+    val sourceName: String
+) : GameEvent
+
+/**
+ * A player completed a dungeon (CR 309.7) — its card was removed from the game, by the state-based
+ * action once the bottommost room's ability left the stack (CR 704.5t), or by venturing from the
+ * bottommost room (CR 701.49c). [completedCount] is how many dungeons the player has completed now.
+ */
+@Serializable
+@SerialName("DungeonCompletedEvent")
+data class DungeonCompletedEvent(
+    val playerId: EntityId,
+    val dungeonName: String,
+    val completedCount: Int
+) : GameEvent
+
+/**
  * A player gained an enduring story (The Hobbit, CR 702.195).
  *
  * Fired by the storied state-based action the first time its controller controls three or more
@@ -401,7 +508,9 @@ data class RingTemptedEvent(
 data class ScriedEvent(
     val playerId: EntityId,
     val count: Int,
-    val sourceName: String
+    val sourceName: String,
+    /** Number of cards the player chose to put on the bottom during this scry. */
+    val bottomCount: Int = 0
 ) : GameEvent
 
 /**
@@ -454,12 +563,33 @@ data class ClashedEvent(
  * @property count Number of cards actually looked at (equals surveil N unless the library held
  *   fewer cards). Surfaced via `TRIGGER_SCRY_COUNT` ("the number of cards looked at").
  * @property sourceName The card/ability that caused the surveil (for display).
+ * @property firstThisTurn true when this is [playerId]'s first surveil this turn — read before the
+ *   surveil marks `SurveiledThisTurnComponent`; backs `EventPattern.SurveiledEvent.firstTimeEachTurn`.
  */
 @Serializable
 @SerialName("SurveiledEvent")
 data class SurveiledEvent(
     val playerId: EntityId,
     val count: Int,
+    val sourceName: String,
+    val firstThisTurn: Boolean = true
+) : GameEvent
+
+/**
+ * A player just faced a dilemma — chose one or more modes for a spell or ability ("You face a
+ * dilemma as you choose one or more modes for a spell or ability"). Emitted once per mode choice,
+ * whatever the number of modes, by [com.wingedsheep.engine.mechanics.modal.Dilemmas], which also
+ * advances the player's `DilemmasFacedThisTurnComponent`. Drives
+ * [com.wingedsheep.sdk.scripting.EventPattern.DilemmaFacedEvent] triggers; internal-only on the
+ * client (the cast / activation / trigger it rides on is what the log shows).
+ *
+ * @property playerId The player who chose the modes.
+ * @property sourceName The spell or ability source the modes were chosen for (for display).
+ */
+@Serializable
+@SerialName("DilemmaFacedEvent")
+data class DilemmaFacedEvent(
+    val playerId: EntityId,
     val sourceName: String
 ) : GameEvent
 
@@ -536,6 +666,24 @@ data class ForagedEvent(
 ) : GameEvent
 
 /**
+ * A player just foretold a card — took the foretell special action, paying the setup cost and
+ * exiling the card from their hand face down (CR 702.143a). Emitted only by `ForetellCardHandler`,
+ * once per card foretold; casting a foretold card later doesn't emit it. Drives "Whenever you
+ * foretell a card" triggers (Dream Devourer); see
+ * [com.wingedsheep.sdk.scripting.EventPattern.ForetoldEvent].
+ *
+ * @property playerId The player who foretold.
+ * @property cardId The foretold card, now face down in exile — hidden from opponents, so this is
+ *   an internal signal with no client event (the exile itself is surfaced by its zone change).
+ */
+@Serializable
+@SerialName("ForetoldEvent")
+data class ForetoldEvent(
+    val playerId: EntityId,
+    val cardId: EntityId,
+) : GameEvent
+
+/**
  * A player investigated once (CR 701.16a) — fires
  * [com.wingedsheep.sdk.scripting.EventPattern.InvestigatedEvent]. Emitted only by the
  * `InvestigateExecutor`, one per investigate, so "investigate twice" is two of these and a plain
@@ -589,13 +737,41 @@ data class PermanentExploredEvent(
  * @property connivingPermanentId The permanent that connived (the trigger's subject).
  * @property controllerId The connive effect's controller at connive time.
  * @property sourceName The card/ability that caused the connive (for display).
+ * @property lastKnown The conniving permanent as it last existed on the battlefield, when it had
+ *   already left as it connived (CR 701.50b — a creature that convoked Lethal Scheme and was
+ *   destroyed by it). Trigger subject filters match this instead of the live object. Null for an
+ *   ordinary connive by a permanent still on the battlefield.
  */
 @Serializable
 @SerialName("PermanentConnivedEvent")
 data class PermanentConnivedEvent(
     val connivingPermanentId: EntityId,
     val controllerId: EntityId,
-    val sourceName: String? = null
+    val sourceName: String? = null,
+    val lastKnown: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null
+) : GameEvent
+
+/**
+ * A creature just fought (CR 701.14). Emitted by the fight executor once per creature that fights —
+ * twice per fight, or once when a creature fights itself (CR 701.14c) — and only when the fight
+ * actually happens (CR 701.14b: no event when a fighter is gone, no longer a creature, or an illegal
+ * target). Damage dealt is irrelevant: a 0-power or fully prevented fight still fought. Drives
+ * [com.wingedsheep.sdk.scripting.EventPattern.FoughtEvent] triggers ("whenever a creature you
+ * control fights").
+ *
+ * Internal-only: dropped from the client log (`ClientEventTransformer`) — the fight's damage is
+ * surfaced by its own [DamageDealtEvent]s.
+ *
+ * @property creatureId The creature that fought (the trigger's subject and triggering entity).
+ * @property opponentId The creature it fought (itself when it fought itself).
+ * @property controllerId The fighter's controller as it fought.
+ */
+@Serializable
+@SerialName("CreatureFoughtEvent")
+data class CreatureFoughtEvent(
+    val creatureId: EntityId,
+    val opponentId: EntityId,
+    val controllerId: EntityId
 ) : GameEvent
 
 /**
@@ -666,6 +842,20 @@ data class LibrarySearchedEvent(
 data class CreatureTypeChosenEvent(
     val playerId: EntityId,
     val chosenType: String,
+    val sourceName: String?
+) : GameEvent
+
+/**
+ * A player cast a vote (CR 701.38) for [choice] while [sourceName]'s spell or ability resolved.
+ * Votes are public and cast in turn order, so each one is announced as it happens — a later voter
+ * sees every earlier vote before choosing.
+ */
+@Serializable
+@SerialName("VoteCastEvent")
+data class VoteCastEvent(
+    val playerId: EntityId,
+    val choice: String,
+    val sourceId: EntityId?,
     val sourceName: String?
 ) : GameEvent
 
@@ -768,8 +958,9 @@ data class SpellCastEvent(
      * Mana value of the cast spell (CR 202.3), captured at cast time. Distinct from
      * [totalManaSpent] (actual mana paid, which can differ with cost reductions, alternative
      * costs, or X). Feeds `ContextPropertyKey.TRIGGERING_SPELL_MANA_VALUE` so payoffs that key
-     * off "a spell with equal or lesser mana value" (Kellan, the Kid) read the printed value of
-     * the spell that fired the trigger, not the mana spent on it.
+     * off "a spell with equal or lesser mana value" (Kellan, the Kid) read the mana value of the
+     * spell that fired the trigger — its {X} counted as the chosen X (CR 202.3e) — not the mana
+     * spent on it.
      */
     val manaValue: Int = 0,
     /**
@@ -782,8 +973,7 @@ data class SpellCastEvent(
     val castFromZone: Zone? = null,
     /**
      * Which alternative casting cost paid for this spell (CR 118.9), or null for a normal cast.
-     * Mirrors [com.wingedsheep.engine.state.components.stack.SpellOnStackComponent.alternativeCost];
-     * also descriptive only.
+     * Mirrors [com.wingedsheep.engine.state.components.stack.SpellOnStackComponent.alternativeCost].
      */
     val alternativeCost: AlternativeCostType? = null,
     /**
@@ -822,7 +1012,8 @@ data class AbilityActivatedEvent(
     val abilityEntityId: EntityId? = null,
     val costsTap: Boolean = false,
     val isManaAbility: Boolean = false,
-    val isExhaust: Boolean = false,
+    /** The "activate only once" keyword the ability carries (exhaust / power-up / boast), if any. */
+    val onceOnlyKind: OnceOnlyAbilityKind? = null,
     /** True for a loyalty ability (CR 606) — "whenever you activate a loyalty ability". */
     val isLoyalty: Boolean = false,
     /**
@@ -831,6 +1022,27 @@ data class AbilityActivatedEvent(
      * removed two or more loyalty counters to activate it" (Way of the Mind Sculptor).
      */
     val loyaltyCountersRemoved: Int = 0,
+    /**
+     * The keyword ability the activated ability is (`ActivatedAbility.keyword`) — ninjutsu for a
+     * ninjutsu activation — for "whenever you activate a ninjutsu ability" (Satoru Umezawa).
+     */
+    val keyword: com.wingedsheep.sdk.core.Keyword? = null,
+    /**
+     * The source as it last existed in the zone it was activated from ([sourceZone]), when its own
+     * activation cost took it out of that zone (CR 113.7a) — a cracked fetch land, a sacrificed
+     * Clue or Treasure, a graveyard card exiled to pay for its own embalm or scavenge. Null when the
+     * source stays where it was. Trigger filters are matched
+     * against it as an object in [sourceZone]: "an ability of an artifact, creature, or land on
+     * the battlefield" (Harsh Mentor) still sees the sacrificed fetch land, and "an ability of a
+     * card in your graveyard" (Neerdiv, Devious Diver) still sees the card its embalm exiled.
+     */
+    val sourceLastKnown: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
+    /**
+     * The zone the source was in when the ability was activated (CR 602.2) — battlefield, or the
+     * graveyard / hand / exile / command zone for an ability that functions there. Null when the
+     * emitter didn't record it, which the matcher reads as the battlefield.
+     */
+    val sourceZone: Zone? = null,
 ) : GameEvent
 
 /**
@@ -845,24 +1057,29 @@ data class AbilityTriggeredEvent(
     val description: String,
     val abilityEntityId: EntityId? = null,
     /**
-     * True when this ability was put on the stack because its own source creature was declared as
-     * an attacker — a per-attacker "whenever this creature attacks" ability (SELF-bound
-     * [com.wingedsheep.sdk.scripting.EventPattern.AttackEvent]). Read by the
-     * [com.wingedsheep.sdk.scripting.EventPattern.AbilityTriggeredEvent] `requireAttackCause`
-     * pattern (Firebender Ascension). Defaults false for every other trigger and for ability copies
-     * (which don't re-fire the meta-trigger).
+     * What caused this ability to trigger, when a CR 603.3b meta-trigger can key on it: its own
+     * source creature attacking ([AbilityTriggerCause.ATTACK], Firebender Ascension) or a permanent
+     * entering the battlefield ([AbilityTriggerCause.PERMANENT_ENTERING], Strict Proctor). Read by
+     * the [com.wingedsheep.sdk.scripting.EventPattern.AbilityTriggeredEvent] `cause` pattern. Null
+     * for every other trigger and for ability copies (which don't re-fire the meta-trigger).
      */
-    val causedByAttack: Boolean = false
+    val triggerCause: AbilityTriggerCause? = null
 ) : GameEvent
 
 /**
  * A spell or ability's target was randomly reselected (e.g., by Grip of Chaos).
+ *
+ * The names are the objects' real names; the ids travel with them so the client boundary can
+ * mask a face-down object's name for each viewer who may not see it.
  */
 @Serializable
 @SerialName("TargetReselectedEvent")
 data class TargetReselectedEvent(
+    val spellOrAbilityId: EntityId,
     val spellOrAbilityName: String,
+    val oldTargetId: EntityId?,
     val oldTargetName: String,
+    val newTargetId: EntityId?,
     val newTargetName: String,
     val sourceName: String
 ) : GameEvent
@@ -891,18 +1108,23 @@ data class SpellCopiedEvent(
     val originalSpellId: EntityId? = null,
     val copyIndex: Int? = null,
     val copyTotal: Int? = null,
-    /** The copy's mana value — the original's printed one (CR 707.10), read the same way as [SpellCastEvent.manaValue]. */
+    /** The copy's mana value — the original's (CR 707.10), its X included (CR 202.3e), read the same way as [SpellCastEvent.manaValue]. */
     val manaValue: Int = 0
 ) : GameEvent
 
 /**
  * A spell was countered.
+ *
+ * [countererId] is the controller of the spell or ability that countered it — the "you" of
+ * "whenever a spell or ability you control counters a spell" (Baral, Chief of Compliance). Null
+ * when a game rule rather than a spell or ability did the countering.
  */
 @Serializable
 @SerialName("SpellCounteredEvent")
 data class SpellCounteredEvent(
     val spellEntityId: EntityId,
-    val cardName: String
+    val cardName: String,
+    val countererId: EntityId? = null
 ) : GameEvent
 
 /**
@@ -941,13 +1163,21 @@ data class SpellFizzledEvent(
 ) : GameEvent
 
 /**
- * An ability resolved.
+ * A triggered or activated ability finished resolving and left the stack — the ability-side
+ * counterpart of [ResolvedEvent]. Mana abilities don't use the stack and emit
+ * [ManaAbilityResolvedEvent] instead.
+ *
+ * @property description The ability's text; empty for an activated ability, whose stack component
+ *   carries no rendered text (the same gap [AbilityActivatedEvent] has).
  */
 @Serializable
 @SerialName("AbilityResolvedEvent")
 data class AbilityResolvedEvent(
     val sourceId: EntityId,
-    val description: String
+    val sourceName: String,
+    val controllerId: EntityId,
+    val description: String,
+    val abilityEntityId: EntityId? = null
 ) : GameEvent
 
 /**
@@ -961,6 +1191,9 @@ data class AbilityResolvedEvent(
  * @property chapterNumber Which chapter ability resolved.
  * @property finalChapterNumber The Saga's highest chapter number.
  * @property isFinalChapter Whether [chapterNumber] is the final chapter.
+ * @property sagaSnapshot The Saga as it stood on the battlefield when the chapter ability began
+ *   resolving — "that Saga's mana value" (Narci, Fable Singer) once CR 714.4 has sacrificed it,
+ *   even a token Saga that has since ceased to exist. Null if it had already left.
  */
 @Serializable
 @SerialName("SagaChapterResolvedEvent")
@@ -969,7 +1202,8 @@ data class SagaChapterResolvedEvent(
     val controllerId: EntityId,
     val chapterNumber: Int,
     val finalChapterNumber: Int,
-    val isFinalChapter: Boolean
+    val isFinalChapter: Boolean,
+    val sagaSnapshot: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null
 ) : GameEvent
 
 /**
@@ -1036,6 +1270,19 @@ data class AbilityAutoAnsweredEvent(
 ) : GameEvent
 
 /**
+ * Automatic trigger ordering put [count] of [playerId]'s simultaneous triggered abilities on the
+ * stack in an order they could have chosen differently (CR 603.3b) — the player had not turned on
+ * ordering their own triggers, and the abilities weren't interchangeable copies. It carries no rules
+ * effect; the controller's client uses it to point out, once, that they can choose the order.
+ */
+@Serializable
+@SerialName("TriggersOrderedAutomaticallyEvent")
+data class TriggersOrderedAutomaticallyEvent(
+    val playerId: EntityId,
+    val count: Int
+) : GameEvent
+
+/**
  * A player committed a crime (CR Outlaws of Thunder Junction). Emitted at the same time
  * as [SpellCastEvent], [AbilityActivatedEvent], or [AbilityTriggeredEvent] when at least
  * one initial target is an opponent, a permanent/spell/ability an opponent controls, or
@@ -1086,6 +1333,11 @@ data class TargetsChosenEvent(
  * player-vs-permanent fact is stamped here rather than re-derived downstream.
  * [attackersAgainstBattle] is the battle-defender sibling, backing
  * `AttackPredicate.DefenderIsBattle` ("attacks a battle").
+ *
+ * [attackersAloneAgainstPlayer] is the subset of [attackersAgainstPlayer] that are the only
+ * creature declared as attacking their player — "attacks a player alone" (CR 506.6). It backs
+ * `AttackPredicate.AloneAgainstPlayer`; it needs every attacker's defender, which the event
+ * doesn't otherwise carry, so it's stamped here too.
  */
 @Serializable
 @SerialName("AttackersDeclaredEvent")
@@ -1095,7 +1347,8 @@ data class AttackersDeclaredEvent(
     val attackingPlayerId: EntityId? = null,
     val firstTimeAttackers: Set<EntityId> = emptySet(),
     val attackersAgainstPlayer: Set<EntityId> = emptySet(),
-    val attackersAgainstBattle: Set<EntityId> = emptySet()
+    val attackersAgainstBattle: Set<EntityId> = emptySet(),
+    val attackersAloneAgainstPlayer: Set<EntityId> = emptySet()
 ) : GameEvent
 
 /**
@@ -1112,6 +1365,10 @@ data class BlockersDeclaredEvent(
     override val blockers: Map<EntityId, List<EntityId>>,  // blocker -> blocked attackers
     override val blockerNames: Map<EntityId, String> = emptyMap(),
     override val attackerNames: Map<EntityId, String> = emptyMap(),
+    /**
+     * The defending player submitting this declaration (for the whole side under shared team
+     * turns). Separate defending sides declare in turn; null only on hand-built events.
+     */
     val blockingPlayerId: EntityId? = null
 ) : GameEvent, BlockingRelationshipsEvent {
     override val newBlockers: Set<EntityId> get() = blockers.keys
@@ -1215,6 +1472,34 @@ data class GameRestartedEvent(
 ) : GameEvent
 
 /**
+ * A Magic subgame began (CR 729.2): the main game is discontinued and everything after this event,
+ * up to the matching [SubgameEndedEvent], belongs to the subgame. [startingPlayerId] was chosen at
+ * random to go first; [depth] is 1 for a subgame of the main game, 2 for a subgame of that one
+ * (CR 729.6). [sourceName] is the spell that created it.
+ */
+@Serializable
+@SerialName("SubgameStartedEvent")
+data class SubgameStartedEvent(
+    val startingPlayerId: EntityId,
+    val depth: Int,
+    val sourceName: String? = null,
+) : GameEvent
+
+/**
+ * A Magic subgame ended (CR 729.5) and its main game resumed. [winnerIds] won it — empty for a
+ * draw — and [nonWinnerIds] are the players who didn't. Everything after this event belongs to the
+ * main game again.
+ */
+@Serializable
+@SerialName("SubgameEndedEvent")
+data class SubgameEndedEvent(
+    val winnerIds: List<EntityId>,
+    val nonWinnerIds: List<EntityId>,
+    val depth: Int,
+    val sourceName: String? = null,
+) : GameEvent
+
+/**
  * An effect ended the turn (CR 724.1 — Ultima, Time Stop). Emitted once the expedited process has
  * reached the cleanup step, just before the next turn begins. Triggered abilities that triggered
  * before this point never go on the stack (CR 724.1a), so [com.wingedsheep.engine.core.Settler]
@@ -1304,14 +1589,17 @@ data class TappedEvent(
 
 /**
  * A permanent was exerted (CR 701.43a) — it won't untap during its controller's next untap step.
- * Lets animations and "whenever you exert a permanent" reactions (none printed yet) fire instead
- * of the state changing silently.
+ * Lets animations and "whenever you exert a creature" triggers (Vizier of the True) react instead
+ * of the state changing silently. Emitted for every exert, including re-exerting an
+ * already-exerted permanent (CR 701.43b): the player still exerted it.
  */
 @Serializable
 @SerialName("ExertedEvent")
 data class ExertedEvent(
     val entityId: EntityId,
     val entityName: String,
+    /** The player who exerted it — "whenever **you** exert a creature". */
+    val exertedBy: EntityId,
     /**
      * True when the exert was chosen as an optional cost to attack ("you may exert this creature
      * as it attacks", CR 701.43d / 508.1g) — the only exert that fires the linked "when you do"
@@ -1339,6 +1627,22 @@ data class BecameSaddledEvent(
 ) : GameEvent
 
 /**
+ * A Vehicle became crewed — one of its crew abilities resolved (CR 702.122e). Lets "whenever this
+ * Vehicle becomes crewed" triggers react.
+ *
+ * [firstThisTurn] is true when no earlier crew ability of this permanent resolved this turn
+ * (counted on [com.wingedsheep.engine.state.components.battlefield.CrewSaddleContributorsComponent.crewResolutions]);
+ * drives the "becomes crewed for the first time each turn" rider.
+ */
+@Serializable
+@SerialName("BecameCrewedEvent")
+data class BecameCrewedEvent(
+    val entityId: EntityId,
+    val entityName: String,
+    val firstThisTurn: Boolean = true
+) : GameEvent
+
+/**
  * A Case became solved (CR 719.3b) — its "To solve" trigger resolved with the condition met.
  * Fires once per permanent: the designation is sticky, and the trigger's intervening-if stops an
  * already-solved Case from triggering again, so there is no "already solved" flag to carry.
@@ -1358,6 +1662,20 @@ data class CaseSolvedEvent(
      * have been sacrificed by its own Solved ability.
      */
     val controllerId: EntityId
+) : GameEvent
+
+/**
+ * A player took the companion special action (CR 702.139a, 116.2g): paid {3} and put their revealed
+ * companion from outside the game into their hand. The card's own move is a separate
+ * [ZoneChangeEvent] (sideboard → hand); this one carries what the log announces, since a move
+ * between two hidden zones names no card — but a revealed companion is public.
+ */
+@Serializable
+@SerialName("CompanionPutIntoHandEvent")
+data class CompanionPutIntoHandEvent(
+    val playerId: EntityId,
+    val cardId: EntityId,
+    val cardName: String,
 ) : GameEvent
 
 /**
@@ -1397,7 +1715,12 @@ data class BecameMonstrousEvent(
     val entityId: EntityId,
     val entityName: String,
     /** The monstrous permanent's controller as the ability resolved, for "you control" filters. */
-    val controllerId: EntityId
+    val controllerId: EntityId,
+    /**
+     * The X of the "monstrosity X" ability that made it monstrous (CR 701.37c), read by its
+     * becomes-monstrous triggers as their own X. Null for a fixed "monstrosity N".
+     */
+    val xValue: Int? = null
 ) : GameEvent
 
 /**
@@ -1459,19 +1782,43 @@ data class PermanentUnattachedEvent(
 ) : GameEvent
 
 /**
- * A player tapped a land for mana (a land's mana ability resolved).
+ * A player tapped a permanent for mana (a mana ability with {T} in its cost resolved) — a land, an
+ * artifact like Sol Ring or a Treasure, a creature.
  *
- * Drives the "Whenever a player taps a land for mana" trigger family
- * ([com.wingedsheep.sdk.scripting.EventPattern.LandTappedForMana]). Emitted by the manual
+ * Drives the "Whenever a player taps a [permanent] for mana" trigger family
+ * ([com.wingedsheep.sdk.scripting.EventPattern.PermanentTappedForMana]); the land triggers
+ * (Forbidden Orchard, Manabarbs) are the same pattern narrowed to lands. Emitted by the manual
  * mana-ability pipeline and, through [tapForMana], by every auto-pay / explicit-source path, so the
  * trigger fires however the player paid.
  */
 @Serializable
-@SerialName("LandTappedForManaEvent")
-data class LandTappedForManaEvent(
+@SerialName("PermanentTappedForManaEvent")
+data class PermanentTappedForManaEvent(
     val tapperId: EntityId,
-    val landId: EntityId,
-    val landName: String
+    val permanentId: EntityId,
+    val permanentName: String,
+    /**
+     * The colors of the mana the permanent's mana ability produced — "the mana that land produced"
+     * (C.A.M.P.). Empty for colorless mana, and on the few legacy auto-pay paths that tap a source
+     * without knowing what it was credited with.
+     */
+    val producedColors: Set<Color> = emptySet(),
+) : GameEvent
+
+/**
+ * A mana ability of [sourceId] resolved, producing [amount] mana for [playerId] — "whenever a mana
+ * ability of this creature resolves" ([com.wingedsheep.sdk.scripting.EventPattern.ManaAbilityResolved]).
+ * Emitted by the manual mana-ability pipeline for every mana ability (with or without {T}) and,
+ * through [tapForMana], by every auto-pay path that taps the source. A source sacrificed to pay
+ * (a Treasure) is gone before its ability resolves, so nothing of its can trigger. [amount] is what the ability itself produced, after
+ * replacements (Damping Sphere) and before separate triggered mana abilities (Mana Flare).
+ */
+@Serializable
+@SerialName("ManaAbilityResolvedEvent")
+data class ManaAbilityResolvedEvent(
+    val playerId: EntityId,
+    val sourceId: EntityId,
+    val amount: Int,
 ) : GameEvent
 
 /**
@@ -1565,7 +1912,16 @@ data class CountersAddedEvent(
      * `null` for the few paths that don't attribute a placer (saga lore counters, poison counters on
      * players); a null placer never matches a placer-restricted trigger.
      */
-    val placedBy: EntityId? = null
+    val placedBy: EntityId? = null,
+    /**
+     * How many [counterType] counters [entityId] had immediately after *this* placement, or null
+     * when the emitter didn't record it. Read by the ordinal "when the Nth counter is put on"
+     * template ([com.wingedsheep.sdk.scripting.EventPattern.CountersPlacedEvent.nth]); like
+     * [CountersRemovedEvent.remainingCount] it can't be re-derived at detection time when one
+     * resolution makes several placements on the same permanent, so the matcher falls back to the
+     * live count only when this is null.
+     */
+    val totalCount: Int? = null
 ) : GameEvent
 
 /**
@@ -1596,18 +1952,15 @@ data class CountersRemovedEvent(
      * opponent's effect, which the printed wording excludes. It is a property of the removal, not
      * of the permanent, so it rides the event rather than living in state.
      */
-    val byDamagePrevention: Boolean = false
-) : GameEvent
-
-/**
- * Loyalty on a planeswalker changed (due to ability activation).
- */
-@Serializable
-@SerialName("LoyaltyChangedEvent")
-data class LoyaltyChangedEvent(
-    val entityId: EntityId,
-    val entityName: String,
-    val change: Int
+    val byDamagePrevention: Boolean = false,
+    /**
+     * The player who *removed* these counters — the controller of the effect that removed them,
+     * or the player who paid a remove-counters cost. Drives "When **you** remove the last
+     * intervention counter" ([com.wingedsheep.sdk.scripting.EventPattern.CountersRemovedEvent.removedBy]).
+     * `null` for removals no player made (state-based actions, damage removing counters); a null
+     * remover never matches a remover-restricted trigger.
+     */
+    val removedBy: EntityId? = null
 ) : GameEvent
 
 // =============================================================================
@@ -1627,12 +1980,18 @@ data class CardsDrawnEvent(
     /** Additional players entitled to this identity at the moment of the draw. */
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val identityViewers: Set<EntityId> = emptySet(),
+    /** The card whose cycling ability caused these draws (`EventPattern.DrawEvent.cyclingOf`), else null. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val cycledCardId: EntityId? = null,
 ) : GameEvent
 
 /**
  * A card was revealed from the first draw of a turn.
  * Emitted when a permanent with RevealFirstDrawEachTurn is on the battlefield
  * and the controller draws their first card of a turn.
+ *
+ * [revealedBy] lists the permanents whose reveal applied to this draw; a "whenever you reveal
+ * … this way" trigger only fires for its own source (CR 607.1).
  */
 @Serializable
 @SerialName("CardRevealedFromDrawEvent")
@@ -1640,7 +1999,8 @@ data class CardRevealedFromDrawEvent(
     val playerId: EntityId,
     val cardEntityId: EntityId,
     val cardName: String,
-    val isCreature: Boolean
+    val isCreature: Boolean,
+    val revealedBy: List<EntityId> = emptyList()
 ) : GameEvent
 
 /**
@@ -1663,16 +2023,53 @@ data class CardsDiscardedEvent(
     val cardIds: List<EntityId>,
     val cardNames: List<String> = emptyList(),
     /**
-     * True when the discard is the cost of a cycling/typecycling ability (CR 702.29a). Triggers
-     * ignore this — cycling really is a discard and "whenever you discard" payoffs must see it —
-     * but the client suppresses the "You discarded X" log line, because the accompanying
-     * [CardCycledEvent] already narrates the same action.
+     * True when the discard is the cost of a cycling/typecycling ability (CR 702.29a). Cycling
+     * really is a discard, so "whenever you discard" triggers still fire on it; only a
+     * `DiscardEvent(cause = ZoneChangeCause.NotCycled)` trigger skips it. The client suppresses the
+     * "You discarded X" log line, because the accompanying [CardCycledEvent] already narrates the
+     * same action.
      */
     val asCyclingCost: Boolean = false,
     /** Unrevealed hidden-zone discard replacements leave characteristics undefined. */
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val undefinedCharacteristics: Set<EntityId> = emptySet(),
+    /**
+     * How many cards [playerId] had discarded earlier this turn — the length of the
+     * `CardsDiscardedThisTurnComponent.history` prefix before this event's cards. Stamped at the
+     * discard site, so "for the first time each turn" stays exact even when one resolution emits
+     * several discard events (detection reads the post-batch history).
+     */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val priorDiscardsThisTurn: Int = 0,
+    /**
+     * Controller of the spell or ability that caused this discard — null for a discard paid as a
+     * cost and for the cleanup-step hand-size discard (CR 514.1), neither of which a spell or
+     * ability causes. Read by `EventPattern.DiscardEvent.cause` and, as "that player", by
+     * `Player.ControllerOfCause` (Psychic Purge). Stamped here rather than looked up later because
+     * the cause has usually left the stack by the time the trigger resolves.
+     */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val causeControllerId: EntityId? = null,
 ) : GameEvent
+
+/**
+ * Cards were milled (CR 701.17) — emitted once per mill instruction, after its zone changes, with
+ * every card it moved out of a library, in order. One instruction can make several players mill
+ * ("each player mills a card"); each card's owner is the player who milled it. A card a
+ * replacement sent elsewhere (exile instead of the graveyard) is still a milled card (CR 701.17c).
+ * Only a real mill emits this: surveil and other top-of-library moves don't.
+ */
+@Serializable
+@SerialName("CardsMilledEvent")
+data class CardsMilledEvent(
+    val cardIds: List<EntityId>,
+    val ownerIds: List<EntityId>,
+    val cardNames: List<String> = emptyList(),
+) : GameEvent {
+    init {
+        require(ownerIds.size == cardIds.size) { "ownerIds must parallel cardIds" }
+    }
+}
 
 /**
  * A player needs to discard cards during cleanup.
@@ -1758,7 +2155,7 @@ data class ExploitedEvent(
 
 /**
  * A creature trained (CR 702.149c): a resolving training ability put one or more +1/+1 counters on
- * this creature. Emitted by `EmitTrainedEventExecutor` — the tail of the `training()` ability's
+ * this creature. Emitted by `EmitKeywordCounterEventExecutor` — the tail of the `training()` ability's
  * composite, right after its `AddCountersEffect` — but **only when the counter actually landed**
  * (the ability places nothing under a "can't have counters put on it" prohibition, and then no event
  * fires, faithful to "puts one or more +1/+1 counters"). Drives "When this creature trains" payoffs
@@ -1779,6 +2176,27 @@ data class ExploitedEvent(
 @SerialName("TrainedEvent")
 data class TrainedEvent(
     val trainedId: EntityId,
+    val controllerId: EntityId,
+    val counters: Int,
+    val sourceName: String
+) : GameEvent
+
+/**
+ * A creature evolved (CR 702.100b): one or more +1/+1 counters were put on it as a result of its
+ * evolve ability resolving. The evolve twin of [TrainedEvent], emitted by
+ * `EmitKeywordCounterEventExecutor` at the tail of `evolveTriggeredAbility()` only when the counter
+ * actually landed. Drives "Whenever this creature evolves" payoffs
+ * ([com.wingedsheep.sdk.scripting.EventPattern.EvolvedEvent], e.g. Watchful Radstag).
+ *
+ * @property evolvedId The creature that evolved (the trigger's subject).
+ * @property controllerId The evolved creature's controller at evolve time.
+ * @property counters How many +1/+1 counters the evolve ability placed (>= 1).
+ * @property sourceName The evolved creature's name (for display / logging).
+ */
+@Serializable
+@SerialName("EvolvedEvent")
+data class EvolvedEvent(
+    val evolvedId: EntityId,
     val controllerId: EntityId,
     val counters: Int,
     val sourceName: String
@@ -1856,7 +2274,12 @@ data class DecisionSubmittedEvent(
     val decisionId: String,
     val playerId: EntityId,
     /** Human-readable description of what was decided, for the game log */
-    val description: String? = null
+    val description: String? = null,
+    /**
+     * The name of a private decision source ([DecisionContext.sourceIsPrivate]), which only the
+     * deciding player's log line prefixes; every other seat reads [description] alone.
+     */
+    val privateSourceName: String? = null,
 ) : GameEvent
 
 // =============================================================================
@@ -1886,7 +2309,7 @@ enum class GameEndReason {
     COMMANDER_DAMAGE,
     /** Two-Headed Giant: a player lost with their team (CR 810.8a). */
     TEAM_DEFEATED,
-    /** Rule 104.4c — SBAs never stabilized, treated as an unbreakable infinite loop. */
+    /** Rule 104.4b — SBAs never stabilized, treated as an unbreakable infinite loop. */
     INFINITE_LOOP,
     UNKNOWN
 }
@@ -2075,6 +2498,23 @@ data class TurnFaceUpEvent(
 ) : GameEvent
 
 /**
+ * A mutating creature spell merged with [permanentId] (CR 702.140c–d) — "whenever this creature
+ * mutates". [mutatingCardId] is the spell's card, now a component of the permanent; [onTop] is
+ * whether it went over the creature (true) or under it.
+ */
+@Serializable
+@SerialName("MutatedEvent")
+data class MutatedEvent(
+    val permanentId: EntityId,
+    val mutatingCardId: EntityId,
+    val controllerId: EntityId,
+    val mutatingCardName: String,
+    /** The creature's name as it was before the merge. */
+    val targetName: String,
+    val onTop: Boolean,
+) : GameEvent
+
+/**
  * A creature was turned face down (e.g., by Backslide).
  */
 @Serializable
@@ -2130,6 +2570,21 @@ data class ControlChangedEvent(
     val newControllerId: EntityId
 ) : GameEvent
 
+/**
+ * A card's owner changed — something only the ante cards can do (CR 407.3): Darkpact's "You own
+ * target card in the ante", Bronze Tablet's swap. The card stays where it is; [zone] is where it
+ * sat when it changed hands.
+ */
+@Serializable
+@SerialName("OwnershipChangedEvent")
+data class OwnershipChangedEvent(
+    val cardId: EntityId,
+    val cardName: String,
+    val zone: Zone,
+    val oldOwnerId: EntityId,
+    val newOwnerId: EntityId
+) : GameEvent
+
 // =============================================================================
 // Targeting Events
 // =============================================================================
@@ -2150,7 +2605,7 @@ data class ControlChangedEvent(
  * [targetIsPlayer] is its player counterpart — true when the chosen target is a player
  * (Loki, God of Mischief: "a player or permanent becomes the target"). Like spell targets,
  * player targets are opt-in on the trigger side (`EventPattern.BecomesTargetEvent
- * .includePlayerTargets`), so the permanent-only wordings already in the card pool don't
+ * .playerTargets`), so the permanent-only wordings already in the card pool don't
  * start firing on them.
  */
 @Serializable
@@ -2179,6 +2634,8 @@ data class BecomesTargetEvent(
  *   cost (Webstrike Elite's "Cycling {X}{G}{G}"). A "when you cycle this card" trigger reads it as
  *   `DynamicAmount.XValue` via `TriggerContext.xValue`, so "destroy … with mana value X" and
  *   "create X tokens" resolve against the X that was actually paid. Null for ordinary cycling.
+ * @property firstThisTurn true when this is [playerId]'s first cycle this turn — read before
+ *   the cycle marks `CycledThisTurnComponent`; backs `CycleEvent.firstTimeEachTurn`.
  */
 @Serializable
 @SerialName("CardCycledEvent")
@@ -2186,7 +2643,8 @@ data class CardCycledEvent(
     val playerId: EntityId,
     val cardId: EntityId,
     val cardName: String,
-    val xValue: Int? = null
+    val xValue: Int? = null,
+    val firstThisTurn: Boolean = true
 ) : GameEvent
 
 /**
@@ -2248,6 +2706,28 @@ data class CardExiledWithMadnessEvent(
 ) : GameEvent
 
 // =============================================================================
+// Miracle Events
+// =============================================================================
+
+/**
+ * A player chose to reveal a card with miracle (CR 702.94a) as they drew it as their first card of
+ * the turn.
+ *
+ * Emitted alongside the [CardsRevealedEvent] that shows the card to the table. This event is what
+ * the trigger detector turns into the miracle triggered ability ("when you reveal this card this
+ * way, you may cast it by paying [cost] rather than its mana cost"). [cost] is the miracle cost the
+ * card had as it was revealed (printed, or granted in hand) and only labels the trigger.
+ */
+@Serializable
+@SerialName("CardRevealedForMiracleEvent")
+data class CardRevealedForMiracleEvent(
+    val playerId: EntityId,
+    val cardId: EntityId,
+    val cardName: String,
+    val cost: com.wingedsheep.sdk.core.ManaCost
+) : GameEvent
+
+// =============================================================================
 // Gift Events
 // =============================================================================
 
@@ -2298,27 +2778,24 @@ data class CoinFlipEvent(
 ) : GameEvent
 
 /**
- * One die was rolled (CR 706). Emitted by every die roll a game instruction asks for, so a future
- * "whenever you roll a die" / "whenever you roll a natural 20" trigger can match on it without
- * touching the executors.
+ * A card was flipped onto the battlefield (Chaos Orb) and came to rest at [landing] on [table].
+ * Carries the whole table so every client can replay the flip as it happened, not as the
+ * battlefield looks after the destruction it caused.
  *
- * @property playerId The player who rolled.
- * @property sides Faces on the die (CR 706.1a — a d20 has 20).
- * @property naturalResult The face that came up, before any modifier (CR 706.2).
- * @property result The natural result after every applicable modifier — the number a results
- *   table and "the result" read (CR 706.2, 706.3a). Equals [naturalResult] when unmodified.
- * @property sourceId The object whose instruction caused the roll.
- * @property sourceName That object's name, for the log.
+ * @property touched Every permanent the landed card overlaps, eligible or not
+ * @property affected The touched permanents the flip counts — empty when it didn't turn over
  */
 @Serializable
-@SerialName("DieRolledEvent")
-data class DieRolledEvent(
+@SerialName("CardFlippedOntoBattlefieldEvent")
+data class CardFlippedOntoBattlefieldEvent(
     val playerId: EntityId,
-    val sides: Int,
-    val naturalResult: Int,
-    val result: Int,
-    val sourceId: EntityId,
-    val sourceName: String
+    val sourceId: EntityId?,
+    val sourceName: String,
+    val sourceImageUri: String?,
+    val table: com.wingedsheep.engine.mechanics.dexterity.FlipTable,
+    val landing: com.wingedsheep.engine.mechanics.dexterity.FlipLanding,
+    val touched: List<EntityId>,
+    val affected: List<EntityId>,
 ) : GameEvent
 
 /**
@@ -2390,7 +2867,7 @@ data class DoorLockedEvent(
     val controllerId: EntityId
 ) : GameEvent
 
-/** A resolving effect removed or converted unspent mana without paying a cost. */
+/** A resolving effect added, removed or converted unspent mana without paying a cost. */
 @Serializable
 @SerialName("ManaPoolChangedEvent")
 data class ManaPoolChangedEvent(val playerId: EntityId) : GameEvent
@@ -2399,6 +2876,11 @@ data class ManaPoolChangedEvent(val playerId: EntityId) : GameEvent
 @Serializable
 @SerialName("TextChangedEvent")
 data class TextChangedEvent(val targetId: EntityId, val fromWord: String, val toWord: String) : GameEvent
+
+/** Two permanents exchanged text boxes (CR 612.5) — each now has the other's rules text. */
+@Serializable
+@SerialName("TextBoxesExchangedEvent")
+data class TextBoxesExchangedEvent(val firstId: EntityId, val secondId: EntityId) : GameEvent
 
 @Serializable
 @SerialName("PlayerActionPermissionsChangedEvent")
@@ -2437,6 +2919,12 @@ interface BlockingRelationshipsEvent {
     val newlyBlockedAttackers: Set<EntityId>
     val previousBlockedCounts: Map<EntityId, Int>
     val blockedCounts: Map<EntityId, Int>
+    /**
+     * Blockers in [blockers] that were put onto the battlefield blocking (CR 509.4): they are
+     * blocking but never "blocked", so blocker-side triggers skip them (CR 509.3a-b) while the
+     * attacker's becomes-blocked triggers still see the pair (CR 509.3c-d). Never in [newBlockers].
+     */
+    val enteredBlockers: Set<EntityId> get() = emptySet()
 }
 
 @Serializable
@@ -2449,6 +2937,7 @@ data class BlocksCreatedEvent(
     override val blockedCounts: Map<EntityId, Int>,
     override val blockerNames: Map<EntityId, String> = emptyMap(),
     override val attackerNames: Map<EntityId, String> = emptyMap(),
+    override val enteredBlockers: Set<EntityId> = emptySet(),
 ) : GameEvent, BlockingRelationshipsEvent
 
 /** Combat removal changes live relationships without undoing previously triggered abilities. */
@@ -2481,3 +2970,58 @@ data class ResolutionControlEvent(
     @Serializable
     enum class Stage { GRANTED, STARTED, ENDED }
 }
+
+/** One enlist attack cost was paid by tapping [enlistedId]. */
+@Serializable
+@SerialName("EnlistedEvent")
+data class EnlistedEvent(
+    val attackerId: EntityId,
+    val attackerName: String,
+    val enlistedId: EntityId,
+    val enlistedName: String,
+    val controllerId: EntityId,
+) : GameEvent
+
+/** The optional attack payment was declined; declaration taps and their queued triggers were rolled back. */
+@Serializable
+@SerialName("AttackDeclarationCancelledEvent")
+data class AttackDeclarationCancelledEvent(val playerId: EntityId) : GameEvent
+
+/**
+ * One final numerical die roll. Results are public; the immutable RNG advances once per die.
+ * [ignored] marks a roll a [com.wingedsheep.sdk.scripting.RollAdditionalDice] replacement
+ * discarded: it is reported so the log shows it, but it never happened (CR 706.6) and triggers
+ * nothing. [result] is the die's result after the instruction's modifier ("subtract the number
+ * of cards in your hand"), which every observer reads; [natural] is the face that came up (CR 706.2).
+ */
+@Serializable
+@SerialName("DieRolledEvent")
+data class DieRolledEvent(
+    val playerId: EntityId,
+    val sides: Int,
+    val result: Int,
+    val sourceId: EntityId? = null,
+    val sourceName: String = "Ability",
+    val ignored: Boolean = false,
+    val natural: Int = result,
+) : GameEvent
+
+/**
+ * One roll instruction finished for [playerId]: every die it rolled for them, emitted once after
+ * that player's [DieRolledEvent]s. The "whenever you roll one or more dice" trigger observes this,
+ * so it fires once per instruction however many dice were rolled. Not animated — the per-die
+ * events already are.
+ */
+@Serializable
+@SerialName("DiceRolledEvent")
+data class DiceRolledEvent(
+    val playerId: EntityId,
+    val sides: Int,
+    val results: List<Int>,
+    val sourceId: EntityId? = null,
+) : GameEvent
+
+/** A partial team block choice was saved, or an illegal combined choice restarted. */
+@Serializable
+@SerialName("TeamBlockerChoiceEvent")
+data class TeamBlockerChoiceEvent(val playerId: EntityId, val description: String) : GameEvent

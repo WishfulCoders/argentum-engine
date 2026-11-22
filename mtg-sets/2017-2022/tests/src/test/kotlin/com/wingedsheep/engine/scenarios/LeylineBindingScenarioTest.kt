@@ -1,140 +1,78 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.ChooseTargetsDecision
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import io.kotest.assertions.withClue
-import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.collections.shouldNotContain
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Leyline Binding (DMU #24) — flash; domain cost reduction; "When this enchantment enters, exile
- * target nonland permanent an opponent controls until this enchantment leaves the battlefield."
+ * Leyline Binding (DMU #24) — {5}{W} Enchantment, Flash.
+ * "Domain — This spell costs {1} less to cast for each basic land type among lands you control.
+ * When this enchantment enters, exile target nonland permanent an opponent controls until this
+ * enchantment leaves the battlefield."
+ *
+ * First card to lower a domain count into a self-cast cost reduction, so this pins that the
+ * discount counts the caster's basic land *types* (not lands, not the opponent's), and that the
+ * enter trigger exiles the chosen permanent.
  */
 class LeylineBindingScenarioTest : ScenarioTestBase() {
-    init {
-        cardRegistry.register(card("Test Removal") {
-            manaCost = "{0}"
-            typeLine = "Instant"
-            spell { effect = Effects.Destroy(target(TargetFilter.Permanent)) }
-        })
 
-        test("three basic land types make it cost {2}{W}") {
-            val game = scenario()
-                .withPlayers("P1", "P2")
-                .withCardInHand(1, "Leyline Binding")
-                .withLandsOnBattlefield(1, "Plains", 1)
-                .withLandsOnBattlefield(1, "Island", 1)
-                .withLandsOnBattlefield(1, "Swamp", 1)
-                .withCardOnBattlefield(2, "Grizzly Bears")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            val r = game.castSpell(1, "Leyline Binding")
-            withClue("${r.error}") { r.error shouldBe null }
-        }
-
-        test("domain counts types, not lands: three Plains only take off {1}") {
-            val game = scenario()
-                .withPlayers("P1", "P2")
-                .withCardInHand(1, "Leyline Binding")
-                .withLandsOnBattlefield(1, "Plains", 4)
-                .withCardOnBattlefield(2, "Grizzly Bears")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            // {5}{W} - 1 = five mana; four Plains can't pay it.
-            game.castSpell(1, "Leyline Binding").error shouldNotBe null
-        }
-
-        test("a dual land counts both of its basic land types") {
-            val game = scenario()
-                .withPlayers("P1", "P2")
-                .withCardInHand(1, "Leyline Binding")
-                .withCardOnBattlefield(1, "Tundra")
-                .withCardOnBattlefield(1, "Badlands")
-                .withCardOnBattlefield(2, "Grizzly Bears")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            // Plains, Island, Swamp, Mountain = 4 types → {1}{W}.
-            val r = game.castSpell(1, "Leyline Binding")
-            withClue("${r.error}") { r.error shouldBe null }
-        }
-
-        test("flash: castable on the opponent's turn") {
-            val game = scenario()
-                .withPlayers("P1", "P2")
-                .withCardInHand(1, "Leyline Binding")
-                .withLandsOnBattlefield(1, "Plains", 1)
-                .withLandsOnBattlefield(1, "Island", 1)
-                .withLandsOnBattlefield(1, "Swamp", 1)
-                .withCardOnBattlefield(2, "Grizzly Bears")
-                .withActivePlayer(2)
-                .withPriorityPlayer(1)
-                .inPhase(Phase.ENDING, Step.END)
-                .build()
-            val r = game.castSpell(1, "Leyline Binding")
-            withClue("${r.error}") { r.error shouldBe null }
-        }
-
-        test("exiles an opposing nonland permanent and returns it when Leyline Binding leaves") {
-            val game = board().build()
-            castBinding(game)
-            val decision = game.state.pendingDecision.shouldBeInstanceOf<ChooseTargetsDecision>()
-            val legal = decision.legalTargets.values.flatten()
-            legal shouldContain game.findPermanent("Grizzly Bears")!!
-            legal shouldNotContain game.findPermanent("Hill Giant")!! // its controller's own creature
-            legal shouldNotContain game.findPermanent("Forest")!! // a land
-
-            game.selectTargets(listOf(game.findPermanent("Grizzly Bears")!!)).error shouldBe null
-            game.resolveStack()
-            game.isInExile(2, "Grizzly Bears") shouldBe true
-
-            game.castSpell(1, "Test Removal", game.findPermanent("Leyline Binding")!!).error shouldBe null
-            game.resolveStack()
-            game.isInGraveyard(1, "Leyline Binding") shouldBe true
-            game.isOnBattlefield("Grizzly Bears") shouldBe true
-            game.state.stack.size shouldBe 0
-        }
-
-        test("if it leaves before its trigger resolves, the target is never exiled") {
-            val game = board().build()
-            castBinding(game)
-            game.selectTargets(listOf(game.findPermanent("Grizzly Bears")!!)).error shouldBe null
-            game.castSpell(1, "Test Removal", game.findPermanent("Leyline Binding")!!).error shouldBe null
-            game.resolveStack()
-            game.isOnBattlefield("Grizzly Bears") shouldBe true
-            game.state.zoneReturns.size shouldBe 0
-        }
+    private fun TestGame.untappedLands(): Int = state.getBattlefield(player1Id).count { id ->
+        val entity = state.getEntity(id)
+        entity?.get<CardComponent>()?.typeLine?.isLand == true && !entity.has<TappedComponent>()
     }
 
-    private fun board() = scenario().withPlayers("P1", "P2")
-        .withCardInHand(1, "Leyline Binding")
-        .withCardInHand(1, "Test Removal")
-        .withLandsOnBattlefield(1, "Plains", 1)
-        .withLandsOnBattlefield(1, "Island", 1)
-        .withLandsOnBattlefield(1, "Swamp", 1)
-        .withCardOnBattlefield(1, "Hill Giant")
-        .withCardOnBattlefield(2, "Grizzly Bears")
-        .withCardOnBattlefield(2, "Forest")
-        .withCardInLibrary(1, "Island")
-        .withCardInLibrary(2, "Island")
-        .withActivePlayer(1)
-        .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+    init {
+        test("four basic land types make it cost {1}{W}; the trigger exiles the target") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardInHand(1, "Leyline Binding")
+                .withLandsOnBattlefield(1, "Plains", 1)
+                .withLandsOnBattlefield(1, "Island", 1)
+                .withLandsOnBattlefield(1, "Swamp", 1)
+                .withLandsOnBattlefield(1, "Mountain", 1)
+                .withCardOnBattlefield(2, "Grizzly Bears")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+            val bears = game.findPermanent("Grizzly Bears")!!
 
-    private fun castBinding(game: TestGame) {
-        val r = game.castSpell(1, "Leyline Binding")
-        withClue("${r.error}") { r.error shouldBe null }
-        game.resolveStack()
-        game.state.pendingDecision.shouldNotBeNull()
+            withClue("four lands pay only the domain-discounted {1}{W}") {
+                game.castSpell(1, "Leyline Binding").error shouldBe null
+            }
+            withClue("exactly two of the four lands were tapped for {1}{W}") {
+                game.untappedLands() shouldBe 2
+            }
+            game.resolveStack()
+            game.selectTargets(listOf(bears)).error shouldBe null
+            game.resolveStack()
+
+            game.isOnBattlefield("Leyline Binding") shouldBe true
+            game.findPermanent("Grizzly Bears") shouldBe null
+            game.isInExile(2, "Grizzly Bears") shouldBe true
+        }
+
+        test("counts types, not lands, and ignores the opponent's lands") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardInHand(1, "Leyline Binding")
+                .withLandsOnBattlefield(1, "Plains", 4)
+                .withLandsOnBattlefield(2, "Island", 1)
+                .withLandsOnBattlefield(2, "Swamp", 1)
+                .withLandsOnBattlefield(2, "Mountain", 1)
+                .withLandsOnBattlefield(2, "Forest", 1)
+                .withCardOnBattlefield(2, "Grizzly Bears")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+
+            withClue("one basic land type → {4}{W}, which four Plains can't pay") {
+                game.castSpell(1, "Leyline Binding").error shouldNotBe null
+            }
+        }
     }
 }

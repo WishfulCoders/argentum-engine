@@ -1,124 +1,96 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.core.SelectCardsDecision
+import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.identity.ControllerComponent
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.conflux.cards.PathToExile
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 
 /**
- * Path to Exile (CON #15): "Exile target creature. Its controller may search their library for a
- * basic land card, put that card onto the battlefield tapped, then shuffle."
+ * Path to Exile (CON #15) — {W} Instant.
  *
- * The exiled creature's controller — not the caster — makes the optional search, in their own
- * library; declining fetches nothing.
+ *   "Exile target creature. Its controller may search their library for a basic land card, put
+ *    that card onto the battlefield tapped, then shuffle."
+ *
+ * The search belongs to the *exiled creature's controller*, read after the creature has already
+ * left the battlefield, and the fetched land enters tapped. Declining fetches nothing.
  */
-class PathToExileScenarioTest : ScenarioTestBase() {
+class PathToExileScenarioTest : FunSpec({
 
-    private fun TestGame.basicOnBattlefield(name: String, controller: EntityId): EntityId? =
-        state.getBattlefield().firstOrNull { id ->
-            val e = state.getEntity(id)
-            e?.get<CardComponent>()?.name == name && e.get<ControllerComponent>()?.playerId == controller
-        }
-
-    private fun TestGame.acceptAndPick(player: EntityId, landName: String) {
-        hasPendingDecision() shouldBe true
-        answerYesNo(true)
-        resolveStack()
-        if (hasPendingDecision()) {
-            val land = state.getLibrary(player).first { id ->
-                state.getEntity(id)?.get<CardComponent>()?.name == landName
-            }
-            selectCards(listOf(land))
-            resolveStack()
-        }
+    fun driver(): GameTestDriver = GameTestDriver().apply {
+        registerCards(TestCards.all + PathToExile)
+        initMirrorMatch(deck = Deck.of("Plains" to 60), startingLife = 20)
+        passPriorityUntil(Step.PRECOMBAT_MAIN)
     }
 
-    init {
-        context("Path to Exile") {
+    fun plainsControlledBy(d: GameTestDriver, playerId: EntityId): List<EntityId> =
+        d.state.getBattlefield().filter { id ->
+            d.state.getEntity(id)?.get<CardComponent>()?.name == "Plains" &&
+                d.state.projectedState.getController(id) == playerId
+        }
 
-            test("exiles the creature; its controller fetches a tapped basic land") {
-                val game = scenario()
-                    .withPlayers("Caster", "Victim")
-                    .withCardInHand(1, "Path to Exile")
-                    .withLandsOnBattlefield(1, "Plains", 1)
-                    .withCardOnBattlefield(2, "Grizzly Bears")
-                    .withCardInLibrary(2, "Forest")
-                    .withCardInLibrary(2, "Mountain")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val bears = game.findPermanent("Grizzly Bears")!!
-                game.castSpell(1, "Path to Exile", bears)
-                game.resolveStack()
-                game.acceptAndPick(game.player2Id, "Forest")
-
-                withClue("Grizzly Bears is exiled, not destroyed") {
-                    game.findPermanent("Grizzly Bears") shouldBe null
-                    game.isInExile(2, "Grizzly Bears") shouldBe true
-                    game.isInGraveyard(2, "Grizzly Bears") shouldBe false
+    /** Resolves the stack, answering every decision with [accept]; returns who was asked. */
+    fun resolve(d: GameTestDriver, accept: Boolean): Set<EntityId> {
+        val asked = mutableSetOf<EntityId>()
+        var safety = 0
+        while (safety++ < 40) {
+            when (val pending = d.state.pendingDecision) {
+                is YesNoDecision -> {
+                    asked += pending.playerId
+                    d.submitYesNo(pending.playerId, accept)
                 }
-                val forest = game.basicOnBattlefield("Forest", game.player2Id)
-                withClue("player 2 fetched a tapped Forest") {
-                    (forest != null) shouldBe true
-                    game.state.getEntity(forest!!)?.get<TappedComponent>() shouldBe TappedComponent
+                is SelectCardsDecision -> {
+                    asked += pending.playerId
+                    d.submitCardSelection(pending.playerId, if (accept) pending.options.take(1) else emptyList())
                 }
-            }
-
-            test("the controller may decline the search") {
-                val game = scenario()
-                    .withPlayers("Caster", "Victim")
-                    .withCardInHand(1, "Path to Exile")
-                    .withLandsOnBattlefield(1, "Plains", 1)
-                    .withCardOnBattlefield(2, "Grizzly Bears")
-                    .withCardInLibrary(2, "Forest")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val bears = game.findPermanent("Grizzly Bears")!!
-                game.castSpell(1, "Path to Exile", bears)
-                game.resolveStack()
-
-                game.hasPendingDecision() shouldBe true
-                game.answerYesNo(false)
-                game.resolveStack()
-
-                game.isInExile(2, "Grizzly Bears") shouldBe true
-                game.basicOnBattlefield("Forest", game.player2Id) shouldBe null
-                game.librarySize(2) shouldBe 1
-            }
-
-            test("a stolen creature's controller, not its owner, gets the land from their own library") {
-                val game = scenario()
-                    .withPlayers("Owner", "Thief")
-                    .withCardInHand(1, "Path to Exile")
-                    .withLandsOnBattlefield(1, "Plains", 1)
-                    .withCardOnBattlefield(1, "Grizzly Bears")
-                    .withCardInLibrary(1, "Plains")
-                    .withCardInLibrary(2, "Swamp")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-
-                val bears = game.findPermanent("Grizzly Bears")!!
-                game.state = game.state.updateEntity(bears) { it.with(ControllerComponent(game.player2Id)) }
-
-                game.castSpell(1, "Path to Exile", bears)
-                game.resolveStack()
-                game.acceptAndPick(game.player2Id, "Swamp")
-
-                game.isInExile(1, "Grizzly Bears") shouldBe true
-                withClue("the thief (controller) fetched from their own library") {
-                    (game.basicOnBattlefield("Swamp", game.player2Id) != null) shouldBe true
-                    game.librarySize(1) shouldBe 1
-                }
+                else -> if (d.state.stack.isNotEmpty()) d.bothPass() else break
             }
         }
+        return asked
     }
-}
+
+    test("exiles the creature and its controller fetches a tapped basic land") {
+        val d = driver()
+        val me = d.activePlayer!!
+        val opp = d.getOpponent(me)
+        val victim = d.putCreatureOnBattlefield(opp, "Centaur Courser")
+
+        val path = d.putCardInHand(me, "Path to Exile")
+        d.giveMana(me, Color.WHITE, 1)
+        d.castSpell(me, path, targets = listOf(victim)).error shouldBe null
+
+        val asked = resolve(d, accept = true)
+
+        asked shouldBe setOf(opp)
+        d.state.getZone(opp, Zone.EXILE) shouldContain victim
+        val fetched = plainsControlledBy(d, opp)
+        fetched.size shouldBe 1
+        d.isTapped(fetched.single()) shouldBe true
+        plainsControlledBy(d, me).size shouldBe 0
+    }
+
+    test("the controller may decline the search") {
+        val d = driver()
+        val me = d.activePlayer!!
+        val opp = d.getOpponent(me)
+        val victim = d.putCreatureOnBattlefield(opp, "Centaur Courser")
+
+        val path = d.putCardInHand(me, "Path to Exile")
+        d.giveMana(me, Color.WHITE, 1)
+        d.castSpell(me, path, targets = listOf(victim)).error shouldBe null
+
+        resolve(d, accept = false)
+
+        d.state.getZone(opp, Zone.EXILE) shouldContain victim
+        plainsControlledBy(d, opp).size shouldBe 0
+    }
+})

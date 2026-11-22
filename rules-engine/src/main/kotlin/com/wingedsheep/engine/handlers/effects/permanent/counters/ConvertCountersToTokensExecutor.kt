@@ -42,6 +42,7 @@ class ConvertCountersToTokensExecutor(
         val sourceName = sourceEntity.get<CardComponent>()?.name ?: "this permanent"
 
         val continuation = ConvertCountersToTokensContinuation(
+            programOrigin = context.programOrigin,
             sourceId = sourceId,
             controllerId = context.controllerId,
             counterType = effect.counterType,

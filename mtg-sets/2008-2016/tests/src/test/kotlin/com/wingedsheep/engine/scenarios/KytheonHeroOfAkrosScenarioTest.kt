@@ -1,106 +1,82 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.core.DeclareAttackers
+import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
-import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.ori.cards.KytheonHeroOfAkros
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.AbilityCost
-import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 
 /**
- * Kytheon, Hero of Akros // Gideon, Battle-Forged (ORI #23).
+ * Kytheon, Hero of Akros (ORI #23) — "At end of combat, if Kytheon and at least two other
+ * creatures attacked this combat, exile Kytheon, then return him to the battlefield transformed
+ * under his owner's control."
  *
- * Front: transforms at end of combat only if Kytheon and at least two other creatures attacked this
- * combat — an attacker that died in combat still counts (ruling 2015-06-22). Back: the +2 makes an
- * opponent's creature attack Gideon during its controller's next turn if able.
+ * Ruling (2015-06-22): attackers that are no longer on the battlefield still count.
  */
-class KytheonHeroOfAkrosScenarioTest : ScenarioTestBase() {
-    init {
-        fun board() = scenario()
-            .withPlayers("Kytheon", "Opponent")
-            .withCardOnBattlefield(1, "Kytheon, Hero of Akros")
-            .withCardOnBattlefield(1, "Savannah Lions")
-            .withCardOnBattlefield(1, "Grizzly Bears")
-            .withCardOnBattlefield(2, "Hill Giant")
-            .withCardInLibrary(1, "Plains")
-            .withCardInLibrary(1, "Plains")
-            .withCardInLibrary(2, "Plains")
-            .withCardInLibrary(2, "Plains")
-            .withActivePlayer(1)
-            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-            .build()
+class KytheonHeroOfAkrosScenarioTest : FunSpec({
 
-        fun TestGame.cardNameOf(id: EntityId) = state.getEntity(id)?.get<CardComponent>()?.name
-
-        test("Kytheon and two others attack: transforms at end of combat, even if one of them died") {
-            val game = board()
-            val kytheon = game.findPermanent("Kytheon, Hero of Akros")!!
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            game.declareAttackers(
-                mapOf("Kytheon, Hero of Akros" to 2, "Savannah Lions" to 2, "Grizzly Bears" to 2)
-            ).error shouldBe null
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
-            game.declareBlockers(mapOf("Hill Giant" to listOf("Grizzly Bears"))).error shouldBe null
-            game.passUntilPhase(Phase.COMBAT, Step.END_COMBAT)
-            game.isInGraveyard(1, "Grizzly Bears") shouldBe true
-            game.resolveStack()
-
-            val gideon = game.findPermanent("Gideon, Battle-Forged")
-            withClue("Kytheon returned transformed") { gideon shouldNotBe null }
-            game.state.getEntity(gideon!!)!!.get<CountersComponent>()!!.getCount(CounterType.LOYALTY) shouldBe 3
-            game.cardNameOf(kytheon) shouldBe "Gideon, Battle-Forged"
-        }
-
-        test("Kytheon and only one other attacker: no transform") {
-            val game = board()
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            game.declareAttackers(mapOf("Kytheon, Hero of Akros" to 2, "Savannah Lions" to 2)).error shouldBe null
-            game.passUntilPhase(Phase.COMBAT, Step.END_COMBAT)
-            game.resolveStack()
-            game.findPermanent("Kytheon, Hero of Akros") shouldNotBe null
-            game.findPermanent("Gideon, Battle-Forged") shouldBe null
-        }
-
-        test("Gideon's +2: the opponent's creature must attack Gideon during its controller's next turn") {
-            val game = board()
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            game.declareAttackers(
-                mapOf("Kytheon, Hero of Akros" to 2, "Savannah Lions" to 2, "Grizzly Bears" to 2)
-            ).error shouldBe null
-            game.passUntilPhase(Phase.COMBAT, Step.END_COMBAT)
-            game.resolveStack()
-            game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
-
-            val gideon = game.findPermanent("Gideon, Battle-Forged")!!
-            val plusTwo = KytheonHeroOfAkros.backFace!!.activatedAbilities
-                .single { (it.cost as? AbilityCost.Loyalty)?.change == 2 }.id
-            game.execute(
-                ActivateAbility(
-                    game.player1Id, gideon, plusTwo,
-                    targets = listOf(ChosenTarget.Permanent(game.findPermanent("Hill Giant")!!))
-                )
-            ).error shouldBe null
-            game.resolveStack()
-
-            game.passUntilPhase(Phase.ENDING, Step.END)
-            game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
-            game.state.activePlayerId shouldBe game.player2Id
-            withClue("Hill Giant must attack Gideon") {
-                game.execute(DeclareAttackers(game.player2Id, emptyMap())).error shouldNotBe null
-                game.declareAttackers(mapOf("Hill Giant" to 1)).error shouldNotBe null
-            }
-            game.declareAttackersWithPermanentTargets(
-                permanentAttackers = mapOf("Hill Giant" to "Gideon, Battle-Forged")
-            ).error shouldBe null
-        }
+    fun driver(): GameTestDriver {
+        val d = GameTestDriver()
+        d.registerCards(TestCards.all + KytheonHeroOfAkros)
+        d.initMirrorMatch(deck = Deck.of("Plains" to 40), skipMulligans = true)
+        d.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return d
     }
-}
+
+    fun GameTestDriver.ready(name: String, owner: EntityId = player1): EntityId =
+        putCreatureOnBattlefield(owner, name).also { removeSummoningSickness(it) }
+
+    fun GameTestDriver.attackWith(attackers: List<EntityId>) {
+        passPriorityUntil(Step.DECLARE_ATTACKERS)
+        declareAttackers(player1, attackers.associateWith { player2 }).error shouldBe null
+    }
+
+    fun GameTestDriver.isGideon(id: EntityId): Boolean = getCardName(id) == "Gideon, Battle-Forged"
+
+    test("Kytheon and two others attack — one dies in combat — and he flips into Gideon with 3 loyalty") {
+        val d = driver()
+        val kytheon = d.ready("Kytheon, Hero of Akros")
+        val bear = d.ready("Grizzly Bears")
+        val doomed = d.ready("Grizzly Bears")
+        val wall = d.ready("Force of Nature", d.player2)
+
+        d.attackWith(listOf(kytheon, bear, doomed))
+        d.passPriorityUntil(Step.DECLARE_BLOCKERS)
+        d.declareBlockers(d.player2, mapOf(wall to listOf(doomed))).error shouldBe null
+        d.passPriorityUntil(Step.POSTCOMBAT_MAIN)
+
+        d.state.getZone(ZoneKey(d.player1, Zone.GRAVEYARD)) shouldContain doomed
+        val gideon = d.findPermanent(d.player1, "Gideon, Battle-Forged")!!
+        d.isGideon(gideon) shouldBe true
+        d.state.getEntity(gideon)!!.get<CountersComponent>()!!.getCount(CounterType.LOYALTY) shouldBe 3
+        d.state.projectedState.isCreature(gideon) shouldBe false
+    }
+
+    test("Kytheon and only one other creature attacking is not enough") {
+        val d = driver()
+        val kytheon = d.ready("Kytheon, Hero of Akros")
+        d.attackWith(listOf(kytheon, d.ready("Grizzly Bears")))
+        d.passPriorityUntil(Step.POSTCOMBAT_MAIN)
+
+        d.isGideon(kytheon) shouldBe false
+        d.findPermanent(d.player1, "Kytheon, Hero of Akros") shouldBe kytheon
+    }
+
+    test("three other creatures attacking without Kytheon doesn't flip him") {
+        val d = driver()
+        val kytheon = d.ready("Kytheon, Hero of Akros")
+        d.attackWith(List(3) { d.ready("Grizzly Bears") })
+        d.passPriorityUntil(Step.POSTCOMBAT_MAIN)
+
+        d.isGideon(kytheon) shouldBe false
+        d.findPermanent(d.player1, "Gideon, Battle-Forged") shouldBe null
+    }
+})

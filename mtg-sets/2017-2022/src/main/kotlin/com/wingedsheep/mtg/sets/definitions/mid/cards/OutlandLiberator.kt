@@ -8,25 +8,18 @@ import com.wingedsheep.sdk.dsl.daybound
 import com.wingedsheep.sdk.dsl.nightbound
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Outland Liberator // Frenzied Trapbreaker (Innistrad: Midnight Hunt)
  * {1}{G}
  * Creature — Human Werewolf // Creature — Werewolf
  *
- * Front — Outland Liberator (2/2): "{1}, Sacrifice this creature: Destroy target artifact or
- * enchantment." Daybound.
- * Back  — Frenzied Trapbreaker (3/3): the same sacrifice ability, plus "Whenever this creature
- * attacks, destroy target artifact or enchantment defending player controls." Nightbound.
- *
- * "Defending player" in the attack trigger is the player this creature attacks (CR 506.2,
- * 802.2a), read off the source's own combat — [Player.DefendingPlayer] through a referenced-player
- * controller scope, as on Necrite — so in a multiplayer game an opponent it isn't attacking
- * isn't a legal choice. The back face has no mana cost; its colour comes from a colour indicator.
+ * Front — Outland Liberator (2/2): {1}, Sacrifice this creature: Destroy target artifact or
+ *         enchantment. Daybound.
+ * Back  — Frenzied Trapbreaker (3/3): {1}, Sacrifice this creature: Destroy target artifact or
+ *         enchantment. Whenever this creature attacks, destroy target artifact or enchantment
+ *         defending player controls. Nightbound.
  */
 private val OutlandLiberatorFront = card("Outland Liberator") {
     manaCost = "{1}{G}"
@@ -41,8 +34,8 @@ private val OutlandLiberatorFront = card("Outland Liberator") {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
         val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Destroy(t)
-        description = "{1}, Sacrifice this creature: Destroy target artifact or enchantment."
     }
+
     daybound()
 
     metadata {
@@ -69,20 +62,14 @@ private val FrenziedTrapbreaker = card("Frenzied Trapbreaker") {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
         val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Destroy(t)
-        description = "{1}, Sacrifice this creature: Destroy target artifact or enchantment."
     }
 
     triggeredAbility {
         trigger = Triggers.self.attacks()
-        val t = target(
-            TargetFilter(
-                GameObjectFilter.ArtifactOrEnchantment
-                    .targetPlayerControls(EffectTarget.PlayerRef(Player.DefendingPlayer))
-            )
-        )
+        val t = target(TargetFilter.ArtifactOrEnchantment.defendingPlayerControls())
         effect = Effects.Destroy(t)
-        description = "Whenever this creature attacks, destroy target artifact or enchantment defending player controls."
     }
+
     nightbound()
 
     metadata {

@@ -9,14 +9,17 @@ import { isLaneDecision, notePendingDecision, plannedOrderFor } from './libraryL
 import { LibrarySearchUI } from './LibrarySearchUI'
 import { ReorderCardsUI } from './ReorderCardsUI'
 import { OrderBlockersUI } from './OrderBlockersUI'
+import { OrderTriggersUI } from './OrderTriggersUI'
 import { CombatDamageAssignmentModal } from './CombatDamageAssignmentModal'
 import { CombatResolutionBoard } from './CombatResolutionBoard'
 import { YesNoDecisionUI } from './YesNoDecisionUI'
 import { BatchYesNoDecisionUI } from './BatchYesNoDecisionUI'
 import { ChooseNumberDecisionUI } from './ChooseNumberDecisionUI'
 import { ChooseOptionDecisionUI } from './ChooseOptionDecisionUI'
+import { DungeonChoiceDecisionUI, dungeonChoiceKind } from './DungeonChoiceDecisionUI'
 import { ChooseReplacementDecisionUI } from './ChooseReplacementDecisionUI'
 import { BudgetModalDecisionUI } from './BudgetModalDecisionUI'
+import { FlipDecisionOverlay } from '../dexterity/FlipDecisionOverlay'
 import { ChooseColorDecisionUI } from './ChooseColorDecisionUI'
 import { CardSelectionDecision } from './CardSelectionDecisionUI'
 import { BattlefieldSelectionUI } from './BattlefieldSelectionUI'
@@ -85,6 +88,7 @@ function PlannedOrderSubmit({ decisionId, order }: { decisionId: string; order: 
 function DecisionRouter() {
   const pendingDecision = useGameStore((state) => state.pendingDecision)
   const gameState = useGameStore((state) => state.gameState)
+  const flipShow = useGameStore((state) => state.flipShow)
   const responsive = useResponsive()
   const [decisionMinimized, setDecisionMinimized] = useState(false)
 
@@ -122,6 +126,11 @@ function DecisionRouter() {
     return <ReorderCardsUI key={pendingDecision.id} decision={pendingDecision} responsive={responsive} />
   }
 
+  // Put your own simultaneous triggers on the stack in the order you choose (CR 603.3b)
+  if (pendingDecision.type === 'OrderTriggersDecision') {
+    return <OrderTriggersUI key={pendingDecision.id} decision={pendingDecision} />
+  }
+
   // Handle OrderObjectsDecision (e.g., damage assignment order for blockers)
   if (pendingDecision.type === 'OrderObjectsDecision') {
     // The server supplies labels for other ordered zones, including graveyards.
@@ -135,7 +144,7 @@ function DecisionRouter() {
   // Handle YesNoDecision (e.g., "You may shuffle your library")
   if (pendingDecision.type === 'YesNoDecision') {
     // Cards like Dragon Shadow set inlineOnTrigger to render yes/no on the triggering creature
-    if (pendingDecision.context.inlineOnTrigger && pendingDecision.context.triggeringEntityId) {
+    if (pendingDecision.context.inlineOnTrigger && pendingDecision.context.triggeringEntityId && pendingDecision.yesAvailable !== false) {
       const triggeringCard = gameState?.cards[pendingDecision.context.triggeringEntityId]
       if (triggeringCard?.zone?.zoneType === ZoneType.BATTLEFIELD) {
         return null
@@ -212,6 +221,10 @@ function DecisionRouter() {
 
   // Handle ChooseOptionDecision (e.g., "Choose a creature type")
   if (pendingDecision.type === 'ChooseOptionDecision') {
+    // Venturing into the dungeon (CR 701.49): pick a dungeon card, or a room on the map.
+    if (dungeonChoiceKind(pendingDecision) !== null) {
+      return <DungeonChoiceDecisionUI key={pendingDecision.id} decision={pendingDecision} />
+    }
     return (
       <ChooseOptionDecisionUI key={pendingDecision.id} decision={pendingDecision} />
     )
@@ -222,6 +235,13 @@ function DecisionRouter() {
     return (
       <ChooseReplacementDecisionUI key={pendingDecision.id} decision={pendingDecision} />
     )
+  }
+
+  // Dexterity flip (Chaos Orb): the table mini-game. Once thrown, the flight overlay
+  // (FlipShowOverlay) owns the screen until the landing is shown.
+  if (pendingDecision.type === 'FlipOntoBattlefieldDecision') {
+    if (flipShow) return null
+    return <FlipDecisionOverlay key={pendingDecision.id} decision={pendingDecision} />
   }
 
   // Handle BudgetModalDecision (Bloomburrow Season cycle pawprint modes)

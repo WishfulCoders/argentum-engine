@@ -3,6 +3,7 @@ package com.wingedsheep.sdk.scripting.values
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.scripting.references.Player
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -27,6 +28,63 @@ sealed interface EntityNumericProperty {
         override val description: String = "damage dealt this turn"
     }
 
+    /**
+     * How many times this object's counted abilities have resolved this turn — "where X is the
+     * number of times this ability has resolved this turn" (Bronze Cudgels), and, compared with
+     * `EQ`, "if this is the second time this ability has resolved this turn" (Harvestrite Host).
+     * The ability counts itself by running `IncrementAbilityResolutionCountEffect` as it resolves,
+     * so a read after that step includes the current resolution. Turn-scoped, kept per permanent
+     * object: a zone change starts a new object at zero.
+     */
+    @SerialName("AbilityResolutionsThisTurn")
+    @Serializable
+    data object AbilityResolutionsThisTurn : EntityNumericProperty {
+        override val description: String = "the number of times this ability has resolved this turn"
+    }
+
+    /**
+     * How many times this creature has been declared as an attacker this turn (CR 508.1) — "gets
+     * +1/+0 for each time it has attacked this turn" (Moraug, Fury of Akoum). Each combat phase it
+     * is declared in counts once, so a creature that attacks in the natural combat and in an added
+     * one has attacked twice; being removed from combat afterwards doesn't undo it, and a creature
+     * put onto the battlefield attacking was never declared and doesn't count. Turn-scoped and kept
+     * per permanent object: a zone change starts a new object at zero (CR 400.7). The count-valued
+     * sibling of the `StatePredicate.AttackedThisTurn` filter; the attack is stamped as it is
+     * declared, before any trigger or the damage step of that combat, so a layer-7 static fed this
+     * amount already counts the combat in progress.
+     */
+    @SerialName("TimesAttackedThisTurn")
+    @Serializable
+    data object TimesAttackedThisTurn : EntityNumericProperty {
+        override val description: String = "the number of times it has attacked this turn"
+    }
+
+    /**
+     * How many times this permanent has mutated — the number of mutating creature spells that have
+     * merged with it (CR 702.140c), whether each went over or under. "Where X is the number of times
+     * this creature has mutated" (Porcuparrot, Huntmaster Liger, the Ikoria mutate payoffs). Read
+     * inside a "whenever this creature mutates" trigger it already counts the merge that triggered
+     * it. A permanent that never mutated is 0, and a mutated permanent that changes zones is a new
+     * object that hasn't mutated (CR 400.7). The count-valued sibling of `Triggers.self.mutates()`.
+     */
+    @SerialName("TimesMutated")
+    @Serializable
+    data object TimesMutated : EntityNumericProperty {
+        override val description: String = "the number of times it has mutated"
+    }
+
+    /**
+     * Paid enlist instances for this rules object during the current combat. Unlike
+     * [DamageDealtThisTurn], this is combat-scoped and records optional attack costs rather than
+     * damage; [PermanentsSacrificedToCast] records spell costs, not a permanent's attack costs.
+     * Survives removal from combat and departure for captured references; a new object starts at zero.
+     */
+    @SerialName("EnlistmentsThisCombat")
+    @Serializable
+    data object EnlistmentsThisCombat : EntityNumericProperty {
+        override val description: String = "the number of creatures it enlisted this combat"
+    }
+
     @SerialName("Power")
     @Serializable
     data object Power : EntityNumericProperty {
@@ -40,10 +98,11 @@ sealed interface EntityNumericProperty {
     }
 
     /**
-     * The entity's printed **base** power — its power before counters, Auras, Equipment, anthems,
-     * and any other continuous modification. Reads the fixed
-     * [com.wingedsheep.sdk.model.CreatureStats.basePower] assigned when the card was printed; a
-     * creature with characteristic-defining `*`/CDA power has no fixed base and reads 0.
+     * The entity's **base** power — its power after copy effects, characteristic-defining abilities
+     * and effects that set power (layers 1–7b), before counters, Auras, Equipment, anthems and any
+     * other modification. Off the battlefield it is the printed (or CDA-evaluated) power, except
+     * that a departed object read through a last-known reference (the triggering entity of a dies
+     * trigger, a sacrificed cost) reads its base power as it last existed on the battlefield.
      *
      * This is the *same* notion of "base power" that [com.wingedsheep.sdk.scripting.predicates
      * .CardPredicate.PowerGreaterThanBase] tests against, so pairing the two stays consistent:
@@ -58,8 +117,7 @@ sealed interface EntityNumericProperty {
     }
 
     /**
-     * The entity's printed **base** toughness — the toughness sibling of [BasePower]. Reads the
-     * fixed [com.wingedsheep.sdk.model.CreatureStats.baseToughness]; `*`/CDA toughness reads 0.
+     * The entity's **base** toughness — the toughness sibling of [BasePower], read the same way.
      */
     @SerialName("BaseToughness")
     @Serializable
@@ -91,6 +149,20 @@ sealed interface EntityNumericProperty {
     }
 
     /**
+     * The number of permanents sacrificed to pay the costs of casting a spell on the stack — the
+     * snapshots recorded on its `SpellOnStackComponent` as the cost was paid. The sibling of
+     * [ManaSpent]: a cast record read off a specific spell, so a "when you cast this spell"
+     * trigger can read it off `EffectTarget.TriggeringEntity` (Plumb the Forbidden's "copy this
+     * spell for each creature sacrificed this way"). Returns 0 if the entity is not a spell on
+     * the stack. A copy inherits the original's snapshots (CR 707.10), so it reads the same count.
+     */
+    @SerialName("PermanentsSacrificedToCast")
+    @Serializable
+    data object PermanentsSacrificedToCast : EntityNumericProperty {
+        override val description: String = "the number of permanents sacrificed to cast it"
+    }
+
+    /**
      * The number the entity's controller chose as it entered the battlefield — Nameless Race's
      * "the life paid as it entered", read back by its characteristic-defining power and toughness.
      * Zero for a permanent that recorded no such choice.
@@ -114,16 +186,30 @@ sealed interface EntityNumericProperty {
      * [AttachmentKind]. [AttachmentKind.ANY] (the default) counts every attachment — Auras,
      * Equipment, and Fortifications alike — matching the historical behaviour;
      * [AttachmentKind.EQUIPMENT] / [AttachmentKind.AURA] count only that kind (Shagrat, Loot
-     * Bearer: "X is the number of Equipment attached to Shagrat").
+     * Bearer: "X is the number of Equipment attached to Shagrat"); [AttachmentKind.CURSE] counts
+     * the Curses, the Auras that enchant players (Curse of Surveillance: "the number of
+     * Curses attached to that player" — read off `EffectTarget.EnchantedPermanent`, the player the
+     * source Curse is attached to, since players carry attachments too).
+     *
+     * [controller] narrows the count to attachments controlled by the named player(s) — "for each
+     * Aura **you controlled** that was attached to it" (Hateful Eidolon). [Player.Any] (the
+     * default) counts every attachment regardless of controller. On a permanent that has left the
+     * battlefield the count is read from last-known information (CR 608.2h): the attachments and
+     * their controllers as the permanent last existed there, since the unattached-Aura state-based
+     * action has usually swept them off before the trigger reads it.
      */
     @SerialName("AttachmentCount")
     @Serializable
-    data class AttachmentCount(val kind: AttachmentKind = AttachmentKind.ANY) : EntityNumericProperty {
+    data class AttachmentCount(
+        val kind: AttachmentKind = AttachmentKind.ANY,
+        val controller: Player = Player.Any,
+    ) : EntityNumericProperty {
         override val description: String = when (kind) {
-            AttachmentKind.ANY -> "the number of Auras and Equipment attached"
-            AttachmentKind.EQUIPMENT -> "the number of Equipment attached"
-            AttachmentKind.AURA -> "the number of Auras attached"
-        }
+            AttachmentKind.ANY -> "the number of Auras and Equipment"
+            AttachmentKind.EQUIPMENT -> "the number of Equipment"
+            AttachmentKind.AURA -> "the number of Auras"
+            AttachmentKind.CURSE -> "the number of Curses"
+        } + (if (controller == Player.Any) "" else " ${controller.description} control") + " attached"
     }
 
     @SerialName("BlockerCount")
@@ -234,7 +320,8 @@ sealed interface EntityNumericProperty {
 /**
  * Which kind of attachment [EntityNumericProperty.AttachmentCount] counts. The set is the
  * small closed family of MTG attachment types; [ANY] preserves the original
- * "all attachments" semantics.
+ * "all attachments" semantics. [CURSE] narrows [AURA] to the Aura subtype players are enchanted
+ * by (CR 303.4 lets an Aura enchant a player; Curses are the Auras that do).
  */
 @Serializable
-enum class AttachmentKind { ANY, EQUIPMENT, AURA }
+enum class AttachmentKind { ANY, EQUIPMENT, AURA, CURSE }

@@ -13,7 +13,7 @@ val NarsetParterOfVeilsReprint = Printing(
     collectorNumber = "76",
     scryfallId = "a609f37f-4466-45eb-93b1-01b649f8a0a1",
     artist = "Adam Vehige",
-    imageUri = "https://cards.scryfall.io/normal/front/a/6/a609f37f-4466-45eb-93b1-01b649f8a0a1.jpg?1783910714",
+    imageUri = "https://cards.scryfall.io/normal/front/a/6/a609f37f-4466-45eb-93b1-01b649f8a0a1.jpg",
     releaseDate = "2024-08-02",
     rarity = Rarity.RARE,
 )

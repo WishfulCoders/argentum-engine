@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
+import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -58,6 +59,8 @@ class PestbroodSlothScenarioTest : ScenarioTestBase() {
                 }
 
                 // Attack with one Pest; its attack trigger gains 1 life.
+                // The Pests were created this turn; let one attack in this turn's combat.
+                game.state = game.state.updateEntity(pests.first()) { it.without<SummoningSicknessComponent>() }
                 game.passUntilPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
                 game.declareAttackers(mapOf("Pest Token" to 2))
                 game.resolveStack()

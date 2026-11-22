@@ -35,7 +35,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * into the decision prompt (a [CombatResolutionDecision] would never be reached).
  *
  * The names on the board nodes here are the *real* card names — per-viewer face-down masking is
- * applied downstream at delivery time (game-server `DecisionEnricher`), covered by
+ * applied downstream at delivery time (`DecisionMasker`, called by `DecisionEnricher`), covered by
  * `CombatDamageMaskingEnricherTest`. This test locks that the engine itself does not mask, so there
  * is a single masking point.
  */

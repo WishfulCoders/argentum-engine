@@ -43,20 +43,111 @@ sealed interface ProtectionScope {
     @Serializable
     data object Multicolored : ProtectionScope
 
-    /** Protection from a card type — "from creatures". */
+    /**
+     * From monocolored — matches a source with exactly one color (CR 105.2a), the twin of
+     * [Multicolored]. Engine-wired for *hexproof*, printed ([KeywordAbility.Hexproof]) or granted
+     * (Dragonfire Blade, via [GrantHexproofFromToGroup]), and for player protection; creature
+     * *protection* from monocolored is not projected, and [KeywordAbility.Protection] rejects it.
+     */
+    @SerialName("ProtectionScope.Monocolored")
+    @Serializable
+    data object Monocolored : ProtectionScope
+
+    /**
+     * Protection from a card type — "from creatures". [controller] narrows the quality to objects
+     * of that type controlled by a particular player, relative to the protected object (or player):
+     * [com.wingedsheep.sdk.scripting.predicates.ControllerPredicate.ControlledByOpponent] is "from
+     * creatures your opponents control" (Crypsis), which a creature its own controller controls
+     * doesn't match. Null matches the card type whoever controls it. Only
+     * `ControlledByOpponent` is supported; the controller is read when protection is checked, so a
+     * creature that changes hands changes whether it matches.
+     *
+     * An axis here rather than a sibling scope: the quality is still a card type, only scoped by
+     * controller — the same way [Subtype] and [Supertype] narrow by card type. Granted protection
+     * only (one-shot grants, `GrantProtectionFromToGroup`, player protection); a printed
+     * [KeywordAbility.Protection] rejects it. On hexproof it is redundant (hexproof already ignores
+     * its controller's own sources, CR 702.11d) and reads as the plain card type.
+     */
     @SerialName("ProtectionScope.CardType")
     @Serializable
-    data class CardType(val cardType: String) : ProtectionScope
+    data class CardType(
+        val cardType: String,
+        val controller: com.wingedsheep.sdk.scripting.predicates.ControllerPredicate? = null
+    ) : ProtectionScope {
+        init {
+            require(controller == null ||
+                controller == com.wingedsheep.sdk.scripting.predicates.ControllerPredicate.ControlledByOpponent
+            ) { "ProtectionScope.CardType supports only ControlledByOpponent as its controller, not $controller" }
+        }
 
-    /** Protection from a creature subtype — "from Goblins". */
+        /**
+         * The projected keyword this protection is enforced through: `PROTECTION_FROM_CARDTYPE_<TYPE>`,
+         * or `PROTECTION_FROM_OPPONENTS_CARDTYPE_<TYPE>` when scoped to opponents' objects.
+         */
+        fun protectionKeyword(): String =
+            (if (controller == null) KEYWORD_PREFIX else OPPONENTS_KEYWORD_PREFIX) + cardType.uppercase()
+
+        companion object {
+            const val KEYWORD_PREFIX = "PROTECTION_FROM_CARDTYPE_"
+            const val OPPONENTS_KEYWORD_PREFIX = "PROTECTION_FROM_OPPONENTS_CARDTYPE_"
+        }
+    }
+
+    /**
+     * Protection from the card type the **granting permanent chose as it entered** — "As Serra's
+     * Emissary enters, choose a card type. You and creatures you control have protection from the
+     * chosen card type." Late-bound: the engine reads the source's durable choice under [slot]
+     * (a card-type display name such as "Artifact" or "Instant") wherever the protection is
+     * applied, so it behaves exactly like [CardType] of that type, and protects from nothing
+     * until a type is chosen. Only meaningful on statics a permanent grants —
+     * `GrantProtectionFromToGroup` and `GrantProtectionToController`; it has no fixed keyword, so
+     * a printed `Protection` keyword or a one-shot grant of it protects from nothing.
+     *
+     * @property slot The source's cast-choices slot holding the chosen type. An as-enters
+     *   `EntersWithChoice(ChoiceType.MODE)` over card-type ids writes [ChoiceSlot.MODE] (Serra's
+     *   Emissary); `Effects.ChooseCardTypeForSource` writes [ChoiceSlot.CARD_TYPE].
+     */
+    @SerialName("ProtectionScope.ChosenCardType")
+    @Serializable
+    data class ChosenCardType(val slot: ChoiceSlot = ChoiceSlot.CARD_TYPE) : ProtectionScope
+
+    /**
+     * Protection from the card name the **granting permanent chose as it entered** — "As Runed
+     * Halo enters, choose a card name. You have protection from the chosen card name." The name
+     * twin of [ChosenCardType]: late-bound, the engine reads the source's durable choice under
+     * [slot] wherever the protection is applied and matches a source whose (projected) name equals
+     * it — a token only when it carries that name, a face-down permanent never (it has no name).
+     * With no name chosen it protects from nothing.
+     *
+     * Engine-wired for player protection only — [GrantProtectionToController]; there is no
+     * creature-protection keyword for a name, so the printed keywords, the one-shot grants and the
+     * group grants reject it.
+     *
+     * @property slot The source's cast-choices slot holding the chosen name;
+     *   `EntersWithChoice(ChoiceType.CARD_NAME)` writes [ChoiceSlot.CARD_NAME].
+     */
+    @SerialName("ProtectionScope.ChosenCardName")
+    @Serializable
+    data class ChosenCardName(val slot: ChoiceSlot = ChoiceSlot.CARD_NAME) : ProtectionScope
+
+    /**
+     * Protection from a subtype — "from Goblins". [cardType] narrows the quality to objects that
+     * are also of that card type — "from God creatures" (Sigrid, God-Favored): a God that isn't
+     * currently a creature (a Theros God below its devotion) doesn't match. Null matches the
+     * subtype alone.
+     */
     @SerialName("ProtectionScope.Subtype")
     @Serializable
-    data class Subtype(val subtype: String) : ProtectionScope
+    data class Subtype(val subtype: String, val cardType: String? = null) : ProtectionScope
 
-    /** Protection from a supertype — "from legendary creatures" (Tsabo Tavoc). */
+    /**
+     * Protection from a supertype, optionally narrowed to a [cardType] — "from legendary
+     * creatures" (Tsabo Tavoc) is `Supertype("Legendary", "Creature")`, which a legendary
+     * artifact or land doesn't match.
+     */
     @SerialName("ProtectionScope.Supertype")
     @Serializable
-    data class Supertype(val supertype: String) : ProtectionScope
+    data class Supertype(val supertype: String, val cardType: String? = null) : ProtectionScope
 
     /** Protection from everything (Rule 702.16i). */
     @SerialName("ProtectionScope.Everything")
@@ -100,6 +191,17 @@ sealed interface ProtectionScope {
     data object PermanentsCastThisTurn : ProtectionScope
 
     /**
+     * From Ring-bearers — a battlefield source that is its controller's Ring-bearer (CR 701.54).
+     * The designation is information about the object, so it is a quality protection can name
+     * (CR 702.16a). Enforced like [PermanentsCastThisTurn]: damage, enchanting/equipping,
+     * blocking, and targeting by abilities whose source is a Ring-bearer (CR 702.16b). Lord of
+     * the Nazgûl ("Wraiths you control have protection from Ring-bearers").
+     */
+    @SerialName("ProtectionScope.RingBearers")
+    @Serializable
+    data object RingBearers : ProtectionScope
+
+    /**
      * From activated abilities — only the targeting leg applies, since an ability never deals
      * damage, blocks, or enchants on its own (its *source* does). Volatile Stormdrake's "hexproof
      * from activated and triggered abilities" is this plus [TriggeredAbilities] (CR 702.11f).
@@ -112,4 +214,47 @@ sealed interface ProtectionScope {
     @SerialName("ProtectionScope.TriggeredAbilities")
     @Serializable
     data object TriggeredAbilities : ProtectionScope
+
+    /**
+     * From each mana value of a [parity] — "protection from each mana value of the chosen
+     * quality" (Lavabrink Venturer, with one conditional grant per choice). Mana value is a
+     * characteristic (CR 202.3), so this covers every leg of protection (CR 702.16b–f): spells
+     * whose mana value has the quality (a spell's {X} counts as the number chosen for it, CR
+     * 202.3e), abilities from sources whose mana value does, and damage, enchanting/equipping and
+     * blocking by such objects. Zero is even, so tokens that aren't copies and face-down
+     * permanents (mana value 0, CR 708.2a and 202.3a) are even. A source with no mana value at all — an
+     * emblem — never matches.
+     *
+     * Its own type rather than an axis on [CardType] or [Subtype], which name type-line words,
+     * or on [Monocolored]/[Multicolored], which are colour counts.
+     */
+    @SerialName("ProtectionScope.ManaValueParity")
+    @Serializable
+    data class ManaValueParity(val parity: Parity) : ProtectionScope
+
+    /**
+     * From each mana value other than [value] — "protection from each mana value other than the
+     * chosen number" (Haktos the Unscarred, with one conditional grant per number it can choose).
+     * Covers every leg of protection exactly as [ManaValueParity] does (CR 702.16b–f): a spell's
+     * {X} counts as the number chosen for it (CR 202.3e), and tokens that aren't copies and
+     * face-down permanents have mana value 0, so they match unless [value] is 0. A source with no
+     * mana value at all — an emblem — never matches.
+     *
+     * Its own type rather than an axis on [ManaValueParity]: a parity names half of all mana
+     * values, this names all but one, and neither is a type-line word ([CardType], [Subtype]).
+     * Granted statics only — `GrantProtectionFromToGroup` and `GrantProtectionToController`; a
+     * printed [KeywordAbility.Protection] and every hexproof spelling reject it.
+     */
+    @SerialName("ProtectionScope.ManaValueOtherThan")
+    @Serializable
+    data class ManaValueOtherThan(val value: Int) : ProtectionScope
+}
+
+/** Odd or even — "choose odd or even. (Zero is even.)" */
+@Serializable
+enum class Parity(val displayName: String) {
+    ODD("odd"),
+    EVEN("even");
+
+    fun matches(value: Int): Boolean = (value % 2 == 0) == (this == EVEN)
 }

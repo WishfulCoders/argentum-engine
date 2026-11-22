@@ -189,7 +189,8 @@ internal class JevActions(
         sacrificedPermanents = a.sacrificedPermanents + b.sacrificedPermanents,
         discardedCards = a.discardedCards + b.discardedCards,
         exiledCards = a.exiledCards + b.exiledCards,
-        variableCostPermanents = a.variableCostPermanents + b.variableCostPermanents,
+        variableCostPermanents = if (a.variableCostPermanents == null && b.variableCostPermanents == null) null
+            else a.variableCostPermanents.orEmpty() + b.variableCostPermanents.orEmpty(),
         beheldCards = a.beheldCards + b.beheldCards,
         revealedCards = a.revealedCards + b.revealedCards,
         tappedPermanents = a.tappedPermanents + b.tappedPermanents,

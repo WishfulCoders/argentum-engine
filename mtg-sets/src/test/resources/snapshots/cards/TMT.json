@@ -1365,7 +1365,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a card to put into your hand",
+                                    "selectedLabel": "Put into your hand"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -1474,7 +1476,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a Food card to put into your hand",
+                                    "selectedLabel": "Put into your hand"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -2369,6 +2373,7 @@
                     "from": "Battlefield",
                     "to": "Graveyard"
                 },
+                "binding": "ANY",
                 "effect": {
                     "type": "MoveAllLastKnownCounters",
                     "target": {
@@ -2747,7 +2752,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -5605,19 +5612,22 @@
                                 "counterType": "PLUS_ONE_PLUS_ONE",
                                 "count": 1,
                                 "target": "Self"
-                            }
+                            },
+                            "description": "Put a +1/+1 counter on this creature"
                         },
                         {
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Food"
-                            }
+                            },
+                            "description": "Create a Food token"
                         },
                         {
                             "effect": {
                                 "type": "Scry",
                                 "count": 1
-                            }
+                            },
+                            "description": "Scry 1"
                         }
                     ],
                     "excludePreviouslyChosenModes": true,
@@ -7217,7 +7227,9 @@
                             "amount": 2
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for up to two basic land cards to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -7260,6 +7272,7 @@
                     "filter": "creature ctrl:you",
                     "from": "Battlefield"
                 },
+                "binding": "ANY",
                 "effect": {
                     "type": "ForEach",
                     "space": {
@@ -9603,10 +9616,7 @@
         "staticAbilities": [
             {
                 "type": "TransformPermanent",
-                "setCardTypes": [
-                    "CREATURE"
-                ],
-                "setSubtypes": [
+                "setCreatureSubtypes": [
                     "Turtle"
                 ]
             },
@@ -10954,7 +10964,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -12803,7 +12815,8 @@
                         "zone": "Library"
                     }
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },

@@ -13,7 +13,7 @@ val AltarOfDementiaReprint = Printing(
     collectorNumber = "196",
     scryfallId = "c16b08f8-9c26-450d-ad97-b7734e4f5bc4",
     artist = "Brom",
-    imageUri = "https://cards.scryfall.io/normal/front/c/1/c16b08f8-9c26-450d-ad97-b7734e4f5bc4.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/c/1/c16b08f8-9c26-450d-ad97-b7734e4f5bc4.jpg?1783939337",
     releaseDate = "2014-06-06",
     rarity = Rarity.RARE,
 )

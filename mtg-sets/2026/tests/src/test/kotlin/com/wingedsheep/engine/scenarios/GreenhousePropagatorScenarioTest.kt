@@ -25,7 +25,6 @@ class GreenhousePropagatorScenarioTest : ScenarioTestBase() {
             game.castSpell(2, "Spectral Sailor").error shouldBe null
             game.resolveStack()
             game.getLifeTotal(1) shouldBe 20
-            game.passPriority()
             game.castSpell(1, "Grizzly Bears").error shouldBe null
             game.resolveStack()
             game.getLifeTotal(1) shouldBe 21

@@ -323,7 +323,8 @@ internal fun PendingDecision.toStructuredDecisionPayload(): StructuredDecisionPa
                 maxTargets = requirement.maxTargets,
                 legalTargetIds = legalTargets[requirement.index].orEmpty(),
                 sameOwner = requirement.sameOwner,
-                totalManaValueAtMost = requirement.totalManaValueAtMost,
+                // Upstream generalised the mana-value cap into `totalCap` + `totalCapLabel` (power, …).
+                totalManaValueAtMost = requirement.totalCap.takeIf { requirement.totalCapLabel == "mana value" },
                 differentNames = requirement.differentNames,
                 differentControllers = requirement.differentControllers,
             )
@@ -468,4 +469,6 @@ internal fun PendingDecision.toStructuredDecisionPayload(): StructuredDecisionPa
     // A forced play's options are the card's ordinary cast / land-play actions, emitted as
     // LegalActionView entries (isDecisionOption); the card is the view's subjectEntityId.
     is com.wingedsheep.engine.core.PlayCardDecision -> null
+    // Upstream decisions added in the 2026-11-22 merge; no structured payload yet.
+    is com.wingedsheep.engine.core.FlipOntoBattlefieldDecision, is com.wingedsheep.engine.core.OrderTriggersDecision -> null
 }

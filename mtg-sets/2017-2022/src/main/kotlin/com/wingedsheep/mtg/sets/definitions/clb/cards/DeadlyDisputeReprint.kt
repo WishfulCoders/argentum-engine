@@ -13,7 +13,7 @@ val DeadlyDisputeReprint = Printing(
     collectorNumber = "124",
     scryfallId = "f5172be3-4379-43fc-98bd-e77c579dea55",
     artist = "Irina Nordsol",
-    imageUri = "https://cards.scryfall.io/normal/front/f/5/f5172be3-4379-43fc-98bd-e77c579dea55.jpg?1783922765",
+    imageUri = "https://cards.scryfall.io/normal/front/f/5/f5172be3-4379-43fc-98bd-e77c579dea55.jpg",
     releaseDate = "2022-06-10",
     rarity = Rarity.COMMON,
 )

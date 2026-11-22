@@ -38,6 +38,36 @@ class QuickGameLobbyCommanderAiTest : GameServerTestBase() {
             client.allErrors() shouldBe emptyList()
         }
 
+        test("a seat on the Random tab is flagged randomDeck so a joining guest can follow it") {
+            val host = createClient()
+            host.connectAs("Random Host")
+            host.send(ClientMessage.CreateQuickGameLobby())
+            val lobbyId = eventually(5.seconds) {
+                host.messages.filterIsInstance<ServerMessage.QuickGameLobbyState>().last().lobbyId
+            }
+            // An empty list is the Random tab's "roll me one".
+            host.send(ClientMessage.SubmitQuickGameLobbyDeck(deckList = emptyMap()))
+
+            val guest = createClient()
+            guest.connectAs("Guest")
+            guest.send(ClientMessage.JoinQuickGameLobby(lobbyId))
+            eventually(5.seconds) {
+                val players = guest.messages.filterIsInstance<ServerMessage.QuickGameLobbyState>().last().players
+                players shouldHaveSize 2
+                players.single { it.playerName == "Random Host" }.randomDeck shouldBe true
+                // Nothing chosen is not the same as a rolled deck.
+                players.single { it.playerName == "Guest" }.randomDeck shouldBe false
+            }
+
+            guest.send(ClientMessage.SubmitQuickGameLobbyDeck(deckList = mapOf("Plains" to 40)))
+            eventually(5.seconds) {
+                guest.messages.filterIsInstance<ServerMessage.QuickGameLobbyState>().last()
+                    .players.single { it.playerName == "Guest" }.randomDeck shouldBe false
+            }
+            host.allErrors() shouldBe emptyList()
+            guest.allErrors() shouldBe emptyList()
+        }
+
         test("AI quick lobby starts Commander with a host-supplied commander deck") {
             val client = createClient()
             client.connectAs("Commander Host")

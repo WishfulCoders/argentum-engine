@@ -7,9 +7,12 @@ import com.wingedsheep.engine.event.TriggerProcessor
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.replacement.ReplacementRiders
 import com.wingedsheep.engine.mechanics.StateBasedActionChecker
+import com.wingedsheep.engine.mechanics.TriggerOrdering
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.nameVisibleToAll
+import com.wingedsheep.engine.state.components.player.CleanupCheckPendingComponent
 import com.wingedsheep.engine.state.components.player.EndTheTurnRequestedComponent
-import com.wingedsheep.engine.state.components.player.MulliganStateComponent
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.EventPattern
 
@@ -33,14 +36,23 @@ import com.wingedsheep.sdk.scripting.EventPattern
  * 3. **Drain.** Perform state-based actions and queue the triggers they cause. Then put the whole
  *    queue on the stack in APNAP order (CR 603.3b). Repeat until nothing is left.
  *
+ * A player who orders their own triggers is asked for that order before the wave is placed
+ * ([TriggerOrdering]); otherwise each player's abilities keep the order they triggered in.
+ *
+ * Putting a wave on the stack can stop for a choice (the order, a trigger's targets or modes). The rest of
+ * that wave waits in [GameState.triggersBeingPlaced], and the drain after the answer places it
+ * first, before any state-based action. Triggers that trigger in the meantime (ward, on the
+ * answer's targets) join [GameState.pendingTriggers], the next wave, so they end up above it.
+ *
  * Handlers only set who receives priority afterwards: an actor keeps it (CR 117.3c), and a
  * resolved stack object hands it on. Settling after it placed triggers only resets the passes,
  * because an object joined the stack (CR 117.4).
  *
  * Detection is single-pass: the events of putting abilities on the stack aren't scanned again. The
- * exception is CR 603.3b's second part, abilities that trigger on an attack-caused ability
- * triggering (Firebender Ascension). That wave is scoped by `causedByAttack`, which is what makes
- * it terminate.
+ * exception is CR 603.3b's second part, abilities that trigger on an attack- or entry-caused
+ * ability or a Saga's final chapter ability triggering (Firebender Ascension, Strict Proctor,
+ * Historian's Boon). That wave is scoped by
+ * `triggerCause`, which is what makes it terminate: the meta-triggers themselves carry no cause.
  *
  * Because every action's and every SBA's events pass through here, turn history that no single
  * emitter owns is recorded alongside detection: [CounterHistory] credits counters removed from
@@ -58,10 +70,26 @@ class Settler(
      */
     private val effectExecutor: ((GameState, Effect, EffectContext) -> EffectResult)? = null,
     /** Carries out a "restart the game" once the resolution that asked for it is over (CR 727). */
-    private val gameRestarter: GameRestarter? = null
+    private val gameRestarter: GameRestarter? = null,
+    /** Starts a subgame once the effect that created it has run, and ends it when it's over (CR 729). */
+    private val subgames: Subgames? = null
 ) {
 
+    /**
+     * Settle [executed] in its game. A subgame that is over hands its result to the main game it
+     * was created from (CR 729.5), and the main game settles in turn: its own triggers and
+     * state-based actions only see the events of its own game. The events returned are every
+     * game's, in order, for the players to see.
+     */
     fun settle(executed: ExecutionResult): ExecutionResult {
+        val settled = settleThisGame(executed)
+        if (settled.outcome is Outcome.Rejected || !settled.state.gameOver) return settled
+        val ended = subgames?.takeIf { settled.state.mainGame != null }?.end(settled.state) ?: return settled
+        val main = settle(ended)
+        return main.copy(events = settled.events + main.events)
+    }
+
+    private fun settleThisGame(executed: ExecutionResult): ExecutionResult {
         if (executed.outcome is Outcome.Rejected) return executed
         if (executed.state.gameOver) return executed.copy(state = executed.state.withoutPendingTriggers())
         val current = restartIfRequested(executed)
@@ -73,11 +101,17 @@ class Settler(
         val raw = runReplacementRiders(endTheTurnIfRequested(current))
         val result = com.wingedsheep.engine.mechanics.GraveyardOrdering.finish(raw)
         if (result.outcome is Outcome.Rejected) return result
-        val state = result.state
+        // An action that entered permanents outside an effect instruction (a resolving permanent
+        // spell, a land play) is one event: a "the next time …" grant it spent is done. A paused
+        // action may still be mid-event, so its grants wait for the answer to settle.
+        val state = if (result.state.pendingDecision == null) {
+            com.wingedsheep.engine.replacement.ActiveReplacements.purgeSpent(result.state)
+        } else result.state
         // A lone priority pass changes nothing on the board, so there is nothing to detect,
         // check, or put on the stack. Skip the full SBA and poll sweep on the engine's most
         // frequent action.
-        if (state.pendingTriggers.isEmpty() && result.events.all { it is PriorityChangedEvent }) return result
+        if (state.pendingTriggers.isEmpty() && state.triggersBeingPlaced.isEmpty() &&
+            result.events.all { it is PriorityChangedEvent }) return result
 
         // Once the triggers are queued, a Siege's defeat trigger spares it on its own (CR 704.5v);
         // the pre-detection marker combat damage armed is spent.
@@ -87,16 +121,50 @@ class Settler(
         if (detected.pendingDecision != null) {
             return ExecutionResult.propagatePause(detected, result.events)
         }
-        return drain(detected, result.events)
+        if (detected.pendingSubgame != null && subgames != null) return startSubgame(detected, result.events)
+        return finishCleanupStep(drain(detected, result.events), result.events.size)
+    }
+
+    /**
+     * Every cleanup step is finished here ([CleanupCheckPendingComponent]), because only this
+     * boundary sees what its turn-based actions — the hand-size discard, effects ending — and an
+     * "end the turn" process triggered. CR 514.3a: if a state-based action was performed or a
+     * triggered ability was put on the stack, the active player gets priority in this cleanup step,
+     * and another cleanup step begins once the stack is empty and all players pass
+     * ([TurnManager.advanceStep]). Otherwise no player gets priority and the turn passes; the next
+     * turn's start settles on its own events only, since [drained]'s were already detected. A
+     * marker found outside a cleanup step is stale and only removed.
+     */
+    private fun finishCleanupStep(drained: ExecutionResult, eventsBeforeDrain: Int): ExecutionResult {
+        val state = drained.state
+        if (drained.outcome !is Outcome.Done || state.pendingDecision != null || state.gameOver) return drained
+        val activePlayer = state.activePlayerId ?: return drained
+        if (state.getEntity(activePlayer)?.has<CleanupCheckPendingComponent>() != true) return drained
+        val checked = state.updateEntity(activePlayer) { it.without<CleanupCheckPendingComponent>() }
+        if (checked.step != Step.CLEANUP) return drained.copy(state = checked)
+        val acted = checked.stack.isNotEmpty() || drained.events.size > eventsBeforeDrain
+        if (acted) return drained.copy(state = checked.withPriority(activePlayer))
+        val nextTurn = settleThisGame(turnManager.passTurn(checked))
+        return nextTurn.copy(events = drained.events + nextTurn.events)
+    }
+
+    /**
+     * The resolving spell created a subgame (CR 729). The main game is discontinued mid-resolution,
+     * so it performs no state-based action and puts no waiting trigger on the stack — those wait in
+     * it until it resumes. The subgame starts and settles as a game of its own.
+     */
+    private fun startSubgame(main: GameState, mainEvents: List<GameEvent>): ExecutionResult {
+        val started = subgames!!.start(main)
+        val sub = settleThisGame(started)
+        return sub.copy(events = mainEvents + sub.events)
     }
 
     /**
      * A player is still deciding on a mulligan. Only a player who has a mulligan record and hasn't
      * kept counts. A game set up past the opening hands, such as a test scenario, has no records.
      */
-    private fun mulligansInProgress(state: GameState): Boolean = state.turnOrder.any { playerId ->
-        state.getEntity(playerId)?.get<MulliganStateComponent>()?.hasKept == false
-    }
+    private fun mulligansInProgress(state: GameState): Boolean =
+        com.wingedsheep.engine.handlers.MulliganHandler.openingHandsPending(state)
 
     /**
      * An "end the turn" effect (CR 724.1) marks the active player while its spell or ability
@@ -144,7 +212,18 @@ class Settler(
     /** Queue every trigger [events] caused, including those of a step they began. */
     private fun detect(state: GameState, events: List<GameEvent>): GameState {
         var working = ControlHistory.record(CounterHistory.record(state, events), events)
-        val triggers = triggerDetector.detectTriggers(working, events).toMutableList()
+        val checkpoint = state.attackDeclarationCheckpoint()
+        val declarationEvents = checkpoint?.events.orEmpty().toSet()
+        val provisional = events.filter { it in declarationEvents }
+        val triggers = if (provisional.isEmpty()) {
+            triggerDetector.detectTriggers(working, events).toMutableList()
+        } else {
+            // No priority occurs before payment; keep these triggers queued but individually
+            // reversible, without erasing triggers from later mana abilities on cancellation.
+            (triggerDetector.detectTriggers(working, provisional).map {
+                it.copy(attackDeclarationId = checkpoint!!.id)
+            } + triggerDetector.detectTriggers(working, events.filter { it !in declarationEvents })).toMutableList()
+        }
 
         val stepChanged = events.filterIsInstance<StepChangedEvent>().lastOrNull()
         if (stepChanged != null) {
@@ -164,37 +243,53 @@ class Settler(
         var placedAny = false
 
         while (true) {
-            val sba = sbaChecker.checkAndApply(
-                state,
-                state.pendingTriggers.mapNotNull { it.objectReferences.origin }.toSet()
-            )
-            events += sba.events
-            state = sba.state
-            // SBA-caused triggers join the queue whether or not the SBA stopped for a choice (the
-            // legend rule); the ones already waiting stay put until the choice is answered.
-            state = ControlHistory.record(CounterHistory.record(state, sba.events), sba.events)
-            state = state.enqueue(triggerDetector.detectTriggers(state, sba.events))
-            if (sba.pendingDecision != null) return ExecutionResult.propagatePause(state, events)
-            if (state.gameOver) return ExecutionResult.success(state.withoutPendingTriggers(), events)
+            // The rest of a wave whose placement stopped for a choice goes on the stack before
+            // anything else happens: it was already ordered, and no player has received priority.
+            val resuming = state.triggersBeingPlaced.isNotEmpty()
+            if (!resuming) {
+                val sba = sbaChecker.checkAndApply(
+                    state,
+                    state.pendingTriggers.mapNotNull { it.objectReferences.origin }.toSet()
+                )
+                events += sba.events
+                state = sba.state
+                // SBA-caused triggers join the queue whether or not the SBA stopped for a choice (the
+                // legend rule); the ones already waiting stay put until the choice is answered.
+                state = ControlHistory.record(CounterHistory.record(state, sba.events), sba.events)
+                state = state.enqueue(triggerDetector.detectTriggers(state, sba.events))
+                if (sba.outcome is Outcome.Rejected) return ExecutionResult(state, events, sba.outcome)
+                if (sba.pendingDecision != null) return ExecutionResult.propagatePause(state, events)
+                if (state.gameOver) return ExecutionResult.success(state.withoutPendingTriggers(), events)
 
-            val poll = stateTriggerPoller.poll(state)
-            state = poll.newState.enqueue(poll.pendingTriggers)
+                val poll = stateTriggerPoller.poll(state)
+                state = poll.newState.enqueue(poll.pendingTriggers)
 
-            if (state.pendingTriggers.isEmpty()) break
+                if (state.pendingTriggers.isEmpty()) break
+            }
 
-            val waiting = apnapOrder(state, state.pendingTriggers)
-            val placementState = state.withoutPendingTriggers()
+            val waiting = if (resuming) state.triggersBeingPlaced
+                else TriggerOrdering.suggested(apnapOrder(state, state.pendingTriggers))
+            if (!resuming) {
+                // A player who orders their own triggers (CR 603.3b) is asked before any of them
+                // chooses targets; the wave waits, in APNAP order, until every answer is in.
+                // Players who leave the order to the game hear that it chose one where it could matter.
+                events += TriggerOrdering.automaticallyOrdered(state, waiting)
+                val ordering = TriggerOrdering.ask(state.copy(pendingTriggers = emptyList(), triggersBeingPlaced = waiting))
+                if (ordering != null) return ExecutionResult.propagatePause(ordering.state, events + ordering.events)
+            }
+            val placementState =
+                if (resuming) state.copy(triggersBeingPlaced = emptyList()) else state.copy(pendingTriggers = emptyList())
             val placed = triggerProcessor.processTriggers(placementState, waiting)
             events += placed.events
             if (placed.outcome is Outcome.Rejected) return ExecutionResult(placed.state, events, placed.outcome)
             placedAny = true
             state = placed.state
 
-            // CR 603.3b, second part: abilities that trigger on an attack-caused ability
-            // triggering go on the stack after the first wave.
-            val attackCaused = placed.events.filter { it is AbilityTriggeredEvent && it.causedByAttack }
-            if (attackCaused.isNotEmpty()) {
-                state = state.enqueue(triggerDetector.detectTriggers(state, attackCaused))
+            // CR 603.3b, second part: abilities that trigger on an attack- or entry-caused ability,
+            // or a final Saga chapter, triggering go on the stack after the first wave.
+            val causeStamped = placed.events.filter { it is AbilityTriggeredEvent && it.triggerCause != null }
+            if (causeStamped.isNotEmpty()) {
+                state = state.enqueue(triggerDetector.detectTriggers(state, causeStamped))
             }
             if (placed.pendingDecision != null) return ExecutionResult.propagatePause(state, events)
             // An automatically removed state trigger immediately fires again. With no state
@@ -226,9 +321,19 @@ class Settler(
         }
     }
 
+    /**
+     * Queue [triggers], naming each by what every player may see of its source. A face-down
+     * permanent's ward (CR 702.168a disguise, 701.58a cloak) is the one ability a hidden card can
+     * trigger, and a trigger carrying the card's real name kept that name in the state on the
+     * stack object — where nothing but the client masking stood between it and the opponent.
+     */
     private fun GameState.enqueue(triggers: List<PendingTrigger>): GameState =
-        if (triggers.isEmpty()) this else copy(pendingTriggers = pendingTriggers + triggers)
+        if (triggers.isEmpty()) this else copy(pendingTriggers = pendingTriggers + triggers.map { trigger ->
+            val publicName = nameVisibleToAll(this, trigger.sourceId, trigger.sourceName)
+            if (publicName == trigger.sourceName) trigger else trigger.copy(sourceName = publicName)
+        })
 
     private fun GameState.withoutPendingTriggers(): GameState =
-        if (pendingTriggers.isEmpty()) this else copy(pendingTriggers = emptyList())
+        if (pendingTriggers.isEmpty() && triggersBeingPlaced.isEmpty()) this
+        else copy(pendingTriggers = emptyList(), triggersBeingPlaced = emptyList())
 }

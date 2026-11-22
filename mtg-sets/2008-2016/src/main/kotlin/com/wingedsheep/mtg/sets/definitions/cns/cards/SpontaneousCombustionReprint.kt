@@ -13,7 +13,7 @@ val SpontaneousCombustionReprint = Printing(
     collectorNumber = "194",
     scryfallId = "55d50177-736a-44d6-a2a3-f6892d7037b3",
     artist = "Jason Rainville",
-    imageUri = "https://cards.scryfall.io/normal/front/5/5/55d50177-736a-44d6-a2a3-f6892d7037b3.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/5/5/55d50177-736a-44d6-a2a3-f6892d7037b3.jpg?1783939338",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

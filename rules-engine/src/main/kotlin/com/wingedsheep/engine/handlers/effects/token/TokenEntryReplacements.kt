@@ -1,10 +1,16 @@
 package com.wingedsheep.engine.handlers.effects.token
 
 import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.handlers.effects.EntersWithReplacements
+import com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils
+import com.wingedsheep.engine.mechanics.ReadAheadSynthesis
 import com.wingedsheep.engine.mechanics.RiotSynthesis
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.ReceivedCountersThisTurnComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 
@@ -33,6 +39,50 @@ import com.wingedsheep.sdk.scripting.EntersWithChoice
  * triggers.
  */
 object TokenEntryReplacements {
+
+    /**
+     * Give a just-placed token the counters its creating effect says it is created / enters with —
+     * "create a … token with a +1/+1 counter on it" ([com.wingedsheep.sdk.scripting.effects.CreateTokenEffect.initialCounters]),
+     * "the token enters with half that many +1/+1 counters on it"
+     * ([com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect.initialCounters]).
+     *
+     * CR 122.6 counts those as counters being *put on* it, and CR 122.6a makes its controller the
+     * player putting them there. So the counter-placement replacements apply (Hardened Scales,
+     * Doubling Season), read against the battlefield as it stood before the tokens were created
+     * ([preCreationState]) and the token's own prospective characteristics (CR 614.12), like any
+     * other entrant. Stamps the same per-permanent history marker the ordinary placement paths do,
+     * so counter-history readings (Kid Loki's "you've put one or more +1/+1 counters on this turn")
+     * see the token and a later placement on it reports firstThisTurn = false. No
+     * CountersAddedEvent is emitted: the counters arrive as part of the token's creation, not as a
+     * separate placement event. Non-positive amounts put nothing.
+     */
+    fun applyInitialCounters(
+        state: GameState,
+        tokenId: EntityId,
+        preCreationState: GameState,
+        controllerId: EntityId,
+        initialCounters: Map<CounterType, Int>,
+        predicateEvaluator: PredicateEvaluator,
+    ): GameState {
+        if (initialCounters.values.none { it > 0 }) return state
+        val prospective = EntersWithReplacements.prospectiveEntryView(state, tokenId, preCreationState)
+        var counters = state.getEntity(tokenId)?.get<CountersComponent>() ?: CountersComponent()
+        var history = ReceivedCountersThisTurnComponent()
+        for ((counterType, amount) in initialCounters) {
+            if (amount <= 0) continue
+            val placed = ReplacementEffectUtils.applyCounterPlacementModifiers(
+                prospective, tokenId, counterType, amount, placerId = controllerId,
+                predicateEvaluator = predicateEvaluator, replacementSourceState = preCreationState, byEffect = true
+            )
+            if (placed <= 0) continue
+            counters = counters.withAdded(counterType, placed)
+            history = history.with(counterType, byController = true)
+        }
+        return state.updateEntity(tokenId) { c ->
+            val withCounters = c.with(counters)
+            if (history.counterTypes.isNotEmpty()) withCounters.with(history) else withCounters
+        }
+    }
 
     /**
      * The [EntersWithChoice] a just-placed token owes as it enters, together with the granted-riot
@@ -76,7 +126,8 @@ object TokenEntryReplacements {
             state, tokenId, cardRegistry, predicateEvaluator
         )
         val syntheticRiotChoice = if (grantedRiotCount > 0) RiotSynthesis.RIOT_CHOICE else null
-        val firstChoice = (printedChoices + listOfNotNull(syntheticRiotChoice))
+        val readAheadChoice = ReadAheadSynthesis.grantedChoice(state, tokenId, cardDef, cardRegistry, predicateEvaluator)
+        val firstChoice = (printedChoices + listOfNotNull(syntheticRiotChoice, readAheadChoice))
             .sortedBy { it.choiceType.ordinal }
             .firstOrNull() ?: return null
         val isSynthetic = firstChoice === syntheticRiotChoice

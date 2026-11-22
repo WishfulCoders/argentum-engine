@@ -50,6 +50,15 @@ export interface SavedDeck {
    */
   commanderPrinting?: PrintingRef
   /**
+   * Optional — the second commander of a partner pair (Partner, "Partner with", Choose a
+   * Background, Doctor's companion; CR 702.124). Only meaningful alongside `commander`, and
+   * stored outside `cards` just like it. Absent on every deck saved before partner support,
+   * which load unchanged.
+   */
+  secondCommander?: string
+  /** Optional — pinned printing for [secondCommander]. */
+  secondCommanderPrinting?: PrintingRef
+  /**
    * Optional v2 — per-entry rows that pin specific printings. When present, this is
    * authoritative over `cards` for the deckbuilder picker (which renders by entry, not
    * by name) and gets sent over the wire as `cardEntries`. The flat `cards` map is kept
@@ -64,12 +73,58 @@ export interface SavedDeck {
    * server-side, CR 100.4b.)
    */
   sideboard?: Record<string, number>
+  /**
+   * Optional — the deck's companion (CR 702.139): the name of a `sideboard` card with a companion
+   * ability that the deck reveals before the game. Sent over the wire as `companion`; the server
+   * validates the condition and the engine puts it outside the game, revealed.
+   */
+  companion?: string
+  /** Optional — a short line the owner writes about the deck ("aggro, weak to fliers"). */
+  note?: string
+  /**
+   * Optional — the card whose art represents the deck in every deck gallery and picker. When
+   * absent (or no longer in the deck) the tile falls back to the deck's rarest card.
+   */
+  coverCard?: string
+  /**
+   * Optional — the cover card's image URL as chosen (the pinned printing's art, when one is
+   * pinned). Lets a picker paint the cover without loading the card catalogue.
+   */
+  coverImageUri?: string
   updatedAt: number
+}
+
+/** The deck fields a "details" edit touches — none of them change what gets played. */
+export interface DeckDetailsPatch {
+  name?: string
+  note?: string | null
+  coverCard?: string | null
+  coverImageUri?: string | null
+}
+
+/** Longest note a deck can carry: one line in a tile caption, two at most. */
+export const DECK_NOTE_MAX_LENGTH = 120
+
+/** Apply a details patch to a deck, dropping fields cleared to null / blank. */
+export function applyDeckDetails<T extends SavedDeck>(deck: T, patch: DeckDetailsPatch): T {
+  const next: T = { ...deck }
+  if (patch.name !== undefined) next.name = patch.name.trim() || deck.name
+  const assign = (key: 'note' | 'coverCard' | 'coverImageUri', value: string | null | undefined) => {
+    if (value === undefined) return
+    const trimmed = value?.trim()
+    if (trimmed) next[key] = trimmed
+    else delete next[key]
+  }
+  assign('note', patch.note === undefined ? undefined : (patch.note ?? '').slice(0, DECK_NOTE_MAX_LENGTH))
+  assign('coverCard', patch.coverCard)
+  assign('coverImageUri', patch.coverImageUri)
+  if (patch.coverCard === null) delete next.coverImageUri
+  return next
 }
 
 interface DeckLibraryStorageV1 {
   version: 1
-  decks: Array<Omit<SavedDeck, 'entries' | 'commanderPrinting'>>
+  decks: Array<Omit<SavedDeck, 'entries' | 'commanderPrinting' | 'secondCommander' | 'secondCommanderPrinting'>>
 }
 
 interface DeckLibraryStorageV2 {
@@ -89,7 +144,7 @@ interface DeckLibraryState {
   hydrate: () => void
   saveDeck: (input: Omit<SavedDeck, 'id' | 'updatedAt'> & { id?: string }) => SavedDeck
   deleteDeck: (id: string) => void
-  renameDeck: (id: string, newName: string) => void
+  updateDetails: (id: string, patch: DeckDetailsPatch) => void
   getDeck: (id: string) => SavedDeck | undefined
 }
 
@@ -125,39 +180,62 @@ function generateId(): string {
 }
 
 /**
- * Merge a designated commander into a card map. Used when reading a `SavedDeck`
+ * The deck's designated commanders, first then (for a partner pair) second. Empty when the deck
+ * has none. A `secondCommander` without a `commander` is ignored — it's never written that way.
+ */
+export function commandersOf(deck: {
+  readonly commander?: string | null | undefined
+  readonly secondCommander?: string | null | undefined
+}): string[] {
+  if (!deck.commander) return []
+  return deck.secondCommander && deck.secondCommander !== deck.commander
+    ? [deck.commander, deck.secondCommander]
+    : [deck.commander]
+}
+
+/**
+ * Merge the designated commander(s) into a card map. Used when reading a `SavedDeck`
  * for gameplay or rendering: storage keeps the commander out of `cards` (per the
  * `SavedDeck.commander` contract — and matching the server's `Deck.cards`
  * convention, CR 903.6a), so any consumer that just wants "the full deck list"
  * needs to put it back.
  *
  * Idempotent — won't double-count if the commander is already in `cards` (e.g.
- * legacy decks saved before the strip-on-save convention landed).
+ * legacy decks saved before the strip-on-save convention landed). Pass both commanders of a
+ * partner pair; null/undefined entries are skipped.
  */
 export function mergeCommanderIntoCards(
   cards: Record<string, number>,
-  commander: string | null | undefined,
+  ...commanders: ReadonlyArray<string | null | undefined>
 ): Record<string, number> {
-  if (!commander) return cards
-  if (cards[commander]) return cards
-  return { ...cards, [commander]: 1 }
+  let out = cards
+  for (const commander of commanders) {
+    if (!commander || out[commander]) continue
+    out = { ...out, [commander]: 1 }
+  }
+  return out
 }
 
 /**
  * Inverse of [mergeCommanderIntoCards]: subtract the designated commander from
  * a card map. Used at storage / server boundaries where `cards` must exclude the
- * commander. Idempotent — does nothing when the commander isn't present.
+ * commander(s). Idempotent — does nothing for a commander that isn't present. Removes one
+ * copy per commander passed (both halves of a partner pair).
  */
 export function stripCommanderFromCards(
   cards: Record<string, number>,
-  commander: string | null | undefined,
+  ...commanders: ReadonlyArray<string | null | undefined>
 ): Record<string, number> {
-  if (!commander || !(commander in cards)) return cards
-  const next = { ...cards }
-  const remaining = (next[commander] ?? 0) - 1
-  if (remaining > 0) next[commander] = remaining
-  else delete next[commander]
-  return next
+  let out = cards
+  for (const commander of commanders) {
+    if (!commander || !(commander in out)) continue
+    const next = { ...out }
+    const remaining = (next[commander] ?? 0) - 1
+    if (remaining > 0) next[commander] = remaining
+    else delete next[commander]
+    out = next
+  }
+  return out
 }
 
 /**
@@ -254,10 +332,18 @@ export const useDeckLibrary = create<DeckLibraryState>((set, get) => ({
       ...(input.setCode !== undefined ? { setCode: input.setCode } : {}),
       ...(input.commander !== undefined ? { commander: input.commander } : {}),
       ...(input.commanderPrinting !== undefined ? { commanderPrinting: input.commanderPrinting } : {}),
+      ...(input.secondCommander !== undefined ? { secondCommander: input.secondCommander } : {}),
+      ...(input.secondCommanderPrinting !== undefined
+        ? { secondCommanderPrinting: input.secondCommanderPrinting }
+        : {}),
       ...(input.entries !== undefined ? { entries: input.entries } : {}),
       ...(input.sideboard !== undefined && Object.keys(input.sideboard).length > 0
         ? { sideboard: input.sideboard }
         : {}),
+      ...(input.companion ? { companion: input.companion } : {}),
+      ...(input.note?.trim() ? { note: input.note.trim().slice(0, DECK_NOTE_MAX_LENGTH) } : {}),
+      ...(input.coverCard ? { coverCard: input.coverCard } : {}),
+      ...(input.coverCard && input.coverImageUri ? { coverImageUri: input.coverImageUri } : {}),
       updatedAt: now,
     }
     const decks = existing
@@ -274,9 +360,9 @@ export const useDeckLibrary = create<DeckLibraryState>((set, get) => ({
     set({ decks })
   },
 
-  renameDeck: (id, newName) => {
+  updateDetails: (id, patch) => {
     const decks = get().decks.map((d) =>
-      d.id === id ? { ...d, name: newName, updatedAt: Date.now() } : d
+      d.id === id ? { ...applyDeckDetails(d, patch), updatedAt: Date.now() } : d
     )
     persist(decks)
     set({ decks })

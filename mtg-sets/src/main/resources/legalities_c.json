@@ -1545,6 +1545,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -4407,6 +4408,7 @@
   "Case of the Uneaten Feast": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -5912,6 +5914,7 @@
   "Cavern of Souls": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "FUTURE",
     "GLADIATOR",
     "HISTORIC",
@@ -7771,7 +7774,8 @@
     "OATHBREAKER",
     "PREDH",
     "TIMELESS",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Chalice of the Void // Chalice of the Void": [],
   "Chalk Outline": [
@@ -8825,15 +8829,20 @@
   "Chandra, Spark Hunter // Chandra, Spark Hunter": [],
   "Chandra, Spark Hunter Emblem": [],
   "Chandra, Torch of Defiance": [
+    "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
+    "FUTURE",
     "GLADIATOR",
     "HISTORIC",
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
     "PIONEER",
+    "STANDARD",
+    "STANDARDBRAWL",
     "TIMELESS",
     "VINTAGE"
   ],
@@ -8983,7 +8992,8 @@
     "VINTAGE"
   ],
   "Channel": [
-    "GLADIATOR"
+    "GLADIATOR",
+    "VINTAGE_RESTRICTED"
   ],
   "Channel Harm": [
     "COMMANDER",
@@ -13290,6 +13300,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -17267,6 +17278,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -18191,6 +18203,7 @@
   "Concealed Courtyard": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -18198,7 +18211,6 @@
     "LEGACY",
     "MODERN",
     "OATHBREAKER",
-    "PENNY",
     "PIONEER",
     "STANDARD",
     "STANDARDBRAWL",
@@ -19590,6 +19602,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -22305,6 +22318,25 @@
     "VINTAGE"
   ],
   "Counters": [],
+  "Countersculpt": [
+    "ALCHEMY",
+    "BRAWL",
+    "COMMANDER",
+    "COMPETITIVEBRAWL",
+    "DUEL",
+    "FUTURE",
+    "GLADIATOR",
+    "HISTORIC",
+    "LEGACY",
+    "MODERN",
+    "OATHBREAKER",
+    "PIONEER",
+    "STANDARD",
+    "STANDARDBRAWL",
+    "TIMELESS",
+    "TLR",
+    "VINTAGE"
+  ],
   "Counterspell": [
     "BRAWL",
     "COMMANDER",

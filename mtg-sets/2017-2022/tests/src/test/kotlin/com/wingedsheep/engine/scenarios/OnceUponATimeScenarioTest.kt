@@ -3,91 +3,111 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.SelectCardsDecision
-import com.wingedsheep.engine.state.components.battlefield.TappedComponent
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.eld.cards.OnceUponATime
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Once Upon a Time (ELD #169): free if it's the first spell you've cast this game; dig five for a
- * creature or land, the rest to the bottom in a random order.
+ * Once Upon a Time — "If this spell is the first spell you've cast this game, you may cast it
+ * without paying its mana cost. Look at the top five cards of your library. You may reveal a
+ * creature or land card from among them and put it into your hand. Put the rest on the bottom of
+ * your library in a random order."
+ *
+ * Pins the free-cast gate: offered while you've cast nothing this game, gone (and refused on
+ * authorization) once you have, and blind to the opponent's spells. The counter's own rules
+ * (countered spells count, it never resets) live in `SpellsCastThisGameTest`.
  */
-class OnceUponATimeScenarioTest : ScenarioTestBase() {
+class OnceUponATimeScenarioTest : FunSpec({
 
-    init {
-        context("Once Upon a Time") {
-            test("as the first spell of the game it is free, and digs a creature or land out of the top five") {
-                val builder = scenario()
-                    .withPlayers("Player", "Opponent")
-                    .withCardInHand(1, "Once Upon a Time")
-                    .withLandsOnBattlefield(1, "Forest", 2)
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                listOf("Lightning Bolt", "Grizzly Bears", "Counterspell", "Forest", "Divination", "Hill Giant")
-                    .forEach { builder.withCardInLibrary(1, it) }
-                builder.withCardInLibrary(2, "Island")
-                val game = builder.build()
+    fun setup(): Pair<GameTestDriver, EntityId> {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(OnceUponATime))
+        driver.initMirrorMatch(deck = Deck.of("Forest" to 40), skipMulligans = true)
+        val you = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver to you
+    }
 
-                val ouat = game.findCardsInHand(1, "Once Upon a Time").single()
-                withClue("the free cast is offered") {
-                    game.getLegalActions(1).any {
-                        (it.action as? CastSpell)?.let { a -> a.cardId == ouat && a.useAlternativeCost } == true
-                    } shouldBe true
-                }
-                game.execute(
-                    CastSpell(game.player1Id, ouat, useAlternativeCost = true, alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE)
-                ).error shouldBe null
-                withClue("no land was tapped") {
-                    game.findPermanents("Forest").none { game.state.getEntity(it)?.has<TappedComponent>() == true } shouldBe true
-                }
-                game.resolveStack()
+    fun freeCast(you: EntityId, card: EntityId) = CastSpell(
+        playerId = you,
+        cardId = card,
+        useAlternativeCost = true,
+        alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE,
+    )
 
-                val decision = game.getPendingDecision().shouldBeInstanceOf<SelectCardsDecision>()
-                val bears = game.findCardsInLibrary(1, "Grizzly Bears").single()
-                val forest = game.findCardsInLibrary(1, "Forest").single()
-                withClue("only the creature and the land among the top five are eligible") {
-                    decision.options shouldContainExactlyInAnyOrder listOf(bears, forest)
-                }
-                game.selectCards(listOf(bears))
-                game.resolveStack()
-                game.isInHand(1, "Grizzly Bears") shouldBe true
-                withClue("the other four went to the bottom, under Hill Giant") {
-                    game.state.getLibrary(game.player1Id).first() shouldBe game.findCardsInLibrary(1, "Hill Giant").single()
-                    game.librarySize(1) shouldBe 5
-                }
-            }
+    fun GameTestDriver.freeCastOffered(you: EntityId, card: EntityId): Boolean =
+        legalActions(you).any { legal: LegalAction ->
+            val action = legal.action
+            action is CastSpell && action.cardId == card && action.useAlternativeCost &&
+                action.alternativeCostType == AlternativeCostType.SELF_ALTERNATIVE
+        }
 
-            test("after another spell this game, it costs its mana cost") {
-                val game = scenario()
-                    .withPlayers("Player", "Opponent")
-                    .withCardInHand(1, "Once Upon a Time")
-                    .withCardInHand(1, "Giant Growth")
-                    .withCardOnBattlefield(1, "Grizzly Bears")
-                    .withLandsOnBattlefield(1, "Forest", 3)
-                    .withCardInLibrary(1, "Forest")
-                    .withCardInLibrary(2, "Island")
-                    .withActivePlayer(1)
-                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                    .build()
-                game.castSpell(1, "Giant Growth", game.findPermanent("Grizzly Bears")).error shouldBe null
-                game.resolveStack()
-
-                val ouat = game.findCardsInHand(1, "Once Upon a Time").single()
-                withClue("no free cast is offered any more") {
-                    game.getLegalActions(1).none {
-                        (it.action as? CastSpell)?.let { a -> a.cardId == ouat && a.useAlternativeCost } == true
-                    } shouldBe true
-                }
-                game.execute(
-                    CastSpell(game.player1Id, ouat, useAlternativeCost = true, alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE)
-                ).error shouldNotBe null
-                game.castSpell(1, "Once Upon a Time").error shouldBe null
+    fun GameTestDriver.resolveTakingFirst() {
+        var guard = 0
+        while (guard++ < 20) {
+            val pending = state.pendingDecision
+            when {
+                pending is SelectCardsDecision -> submitCardSelection(pending.playerId, pending.options.take(1))
+                stackSize > 0 -> bothPass()
+                else -> return
             }
         }
     }
-}
+
+    test("as your first spell this game it is cast for free and puts a land into your hand") {
+        val (driver, you) = setup()
+        val once = driver.putCardInHand(you, "Once Upon a Time")
+        val handBefore = driver.getHand(you).size
+
+        withClue("the free cast is offered with no mana available") { driver.freeCastOffered(you, once) shouldBe true }
+        driver.submit(freeCast(you, once)).error shouldBe null
+        driver.resolveTakingFirst()
+
+        withClue("the spell left the hand and a Forest from the top five joined it") {
+            driver.getHand(you).size shouldBe handBefore
+            driver.getHand(you).count { driver.getCardName(it) == "Forest" } shouldBe handBefore
+        }
+        driver.getGraveyardCardNames(you).contains("Once Upon a Time") shouldBe true
+    }
+
+    test("once you've cast another spell this game the free cast is gone, but {1}{G} still works") {
+        val (driver, you) = setup()
+        val opponent = driver.getOpponent(you)
+        val bolt = driver.putCardInHand(you, "Lightning Bolt")
+        driver.giveMana(you, Color.RED, 1)
+        driver.castSpell(you, bolt, listOf(opponent)).error shouldBe null
+        driver.bothPass()
+
+        val once = driver.putCardInHand(you, "Once Upon a Time")
+        driver.freeCastOffered(you, once) shouldBe false
+        withClue("authorization refuses it too, not just the enumerator") {
+            driver.submit(freeCast(you, once)).error shouldBe
+                "Alternative cost is not available: ${OnceUponATime.script.selfAlternativeCost!!.condition!!.description}"
+        }
+
+        driver.giveMana(you, Color.GREEN, 2)
+        driver.castSpell(you, once).error shouldBe null
+    }
+
+    test("the opponent's spells don't use up your first spell") {
+        val (driver, you) = setup()
+        val opponent = driver.getOpponent(you)
+        val bolt = driver.putCardInHand(opponent, "Lightning Bolt")
+        driver.giveMana(opponent, Color.RED, 1)
+        driver.passPriority(you)
+        driver.castSpell(opponent, bolt, listOf(you)).error shouldBe null
+        driver.bothPass()
+        withClue("the opponent's Bolt resolved") { driver.getLifeTotal(you) shouldBe 17 }
+
+        val once = driver.putCardInHand(you, "Once Upon a Time")
+        driver.freeCastOffered(you, once) shouldBe true
+    }
+})

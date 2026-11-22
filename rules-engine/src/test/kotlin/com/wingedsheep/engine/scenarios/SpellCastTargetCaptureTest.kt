@@ -111,9 +111,8 @@ class SpellCastTargetCaptureTest : FunSpec({
 
     /**
      * A spell that targets *a spell on the stack* and leaves it alone. Casting it at a creature
-     * spell fires a `youCastSpellTargeting(Creature)` trigger — a creature card on the stack
-     * satisfies `IsCreature`, which is pre-existing behaviour shared with Mockingbird and Iron
-     * Fist — so it is the probe for what such a trigger may capture.
+     * spell must not fire a `youCastSpellTargeting(Creature)` trigger: a creature spell is not
+     * "a creature" (CR 109.2), so it is the probe for what such a trigger may gate on.
      */
     val spellNudge = card("Test Spell Nudge") {
         manaCost = "{U}"
@@ -254,7 +253,7 @@ class SpellCastTargetCaptureTest : FunSpec({
         d.plusOneCounters(bear) shouldBe 0
     }
 
-    test("a creature *spell* on the stack is not one of \"those creatures\"") {
+    test("a creature *spell* on the stack is not \"a creature\" — the trigger does not fire") {
         val d = driver()
         val me = d.activePlayer!!
 
@@ -266,7 +265,7 @@ class SpellCastTargetCaptureTest : FunSpec({
         d.giveMana(me, Color.BLUE, 1)
 
         // A creature spell goes on the stack, and I respond with a spell that targets the *spell*.
-        // A creature card on the stack matches IsCreature, so my observer triggers off it.
+        // CR 109.2: "a creature" with no zone means a creature permanent, so my observer stays quiet.
         d.castSpell(me, bearsCard).error shouldBe null
         val creatureSpell = d.state.stack.first()
         d.submit(
@@ -277,14 +276,14 @@ class SpellCastTargetCaptureTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         ).error shouldBe null
-        withClue("the creature spell, my spell, and the observer's trigger are all on the stack") {
-            d.stackSize shouldBe 3
+        withClue("only the creature spell and my spell are on the stack — no observer trigger") {
+            d.stackSize shouldBe 2
         }
         d.resolveStack()
 
         val bears = d.findPermanent(me, "Grizzly Bears")
         withClue("the creature spell resolved") { bears shouldNotBe null }
-        withClue("a permanent spell keeps its entity id, so capturing it would grant the keyword to the permanent it becomes") {
+        withClue("the permanent the spell became gains nothing") {
             d.state.projectedState.hasKeyword(bears!!, Keyword.FLYING) shouldBe false
         }
     }

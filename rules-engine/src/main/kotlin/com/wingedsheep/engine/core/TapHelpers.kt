@@ -4,13 +4,17 @@ import com.wingedsheep.engine.mechanics.FaceUpInstead
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.state.nameVisibleToAll
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.HasBecomeTappedComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.EntryTapStateComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.state.components.battlefield.UntapCountComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.sdk.core.AbilityFlag
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.TapReason
@@ -71,7 +75,8 @@ import com.wingedsheep.sdk.scripting.TapReason
  * never tell them apart. It defaults to [TapReason.UNSPECIFIED] and stays there for every tap site
  * the engine has not been taught to name: an unclassified cause must never masquerade as a
  * classified one, because a card reading that cause would then fire wrongly. Only the teamwork
- * additional-cost payment classifies itself today; see [TapReason] for how to add the next cause.
+ * additional-cost payment and the declare-attackers tap classify themselves today; see [TapReason]
+ * for how to add the next cause.
  *
  * **First time each turn.** Every tap through this atom increments the permanent's
  * [HasBecomeTappedComponent] count for the current turn, and [TappedEvent.firstThisTurn] records
@@ -123,7 +128,8 @@ fun tap(
     // Read the "first time this turn" answer *before* counting this tap onto the marker.
     val priorTapsThisTurn = becameTappedTimesThisTurn(state, entityId)
     val newState = state.updateEntity(entityId) {
-        it.with(TappedComponent)
+        it.withEntryTapState(enteredTapped = false)
+            .with(TappedComponent)
             .with(HasBecomeTappedComponent(state.turnNumber, priorTapsThisTurn + 1))
     }
     return TapOutcome(newState, TappedEvent(entityId, cardName, tapper, reason, priorTapsThisTurn == 0), turnedFaceUp)
@@ -147,11 +153,12 @@ class TapOutcome(
 }
 
 /**
- * Tap [sourceId] as the cost of its mana ability — the [tap] atom plus, when the source is a land,
- * the [LandTappedForManaEvent] that "whenever you tap a land for mana" triggers watch (Forbidden
- * Orchard). Every path that taps a source to pay mana routes through here — the manual activation
+ * Tap [sourceId] as the cost of its mana ability — the [tap] atom plus
+ * the [PermanentTappedForManaEvent] that "whenever you tap a [permanent] for mana" triggers watch
+ * (Forbidden Orchard, Treasure Nabber), and the [ManaAbilityResolvedEvent] for the mana ability it resolved ([producedAmount]
+ * mana). Every path that taps a source to pay mana routes through here — the manual activation
  * pipeline, the solver's auto-pay, explicit source lists and the source-selection prompt — so the
- * trigger fires the same way however the player paid. Land-ness is read off projected state.
+ * trigger fires the same way however the player paid. Which permanents a trigger cares about (lands, artifacts…) is its pattern's filter, read off projected state.
  *
  * Returns `state` and no events when the source was already tapped (see [tap]).
  */
@@ -159,11 +166,13 @@ fun tapForMana(
     state: GameState,
     sourceId: EntityId,
     tapperId: EntityId,
+    producedColors: Set<Color>,
+    producedAmount: Int,
     paymentProjection: ProjectedState? = null,
 ): Pair<GameState, List<GameEvent>> {
     // A payment taps its sources one after another, so every source after the first is tapped on
     // a state nobody has projected yet, and reading its controller and land-ness used to project
-    // the whole board once per source. [paymentProjection] is the projection of the state the
+    // the whole board once per source. [paymentProjection] (optional, named) is the projection of the state the
     // payment started from, which the solver that picked these sources already built. Tapping
     // other sources for mana changes no permanent's controller or card types.
     val outcome = if (paymentProjection == null) tap(state, sourceId) else tap(
@@ -175,34 +184,38 @@ fun tapForMana(
     val tapped = outcome.state
     // Tapping for mana activates the source's mana ability, so auto-pay marks it "activated this
     // turn" exactly as the manual activation pipeline does.
-    val stamped = tapped.updateEntity(sourceId) { c ->
-        c.with((c.get<AbilityActivatedThisTurnComponent>() ?: AbilityActivatedThisTurnComponent()).withAnyActivated())
-    }
-    // A source turned face up as it was tapped ([FaceUpInstead]) changed characteristics, so the
-    // payment's projection no longer describes it.
-    val landProjection = if (outcome.turnedFaceUp == null) paymentProjection ?: state.projectedState
-        else state.projectedState
+    // ...and records it on the tapper's per-turn activation memory (Tezzeret, Betrayer of Flesh
+    // counts a mana ability as an artifact's first activated ability), snapshotted before the tap.
+    val stamped = recordPermanentActivation(
+        tapped.updateEntity(sourceId) { c ->
+            c.with((c.get<AbilityActivatedThisTurnComponent>() ?: AbilityActivatedThisTurnComponent()).withAnyActivated())
+        },
+        tapperId,
+        activationSourceSnapshot(state, sourceId),
+    )
     return stamped to listOfNotNull(
-        outcome.turnedFaceUp,
-        tapEvent,
-        landTappedForManaEvent(state, sourceId, tapperId, landProjection),
+        outcome.turnedFaceUp, tapEvent, permanentTappedForManaEvent(state, sourceId, tapperId, producedColors),
+        // The auto-payer resolved the source's mana ability ("whenever a mana ability of this
+        // creature resolves" — Tyvar the Bellicose), crediting [producedAmount] mana.
+        ManaAbilityResolvedEvent(playerId = tapperId, sourceId = sourceId, amount = producedAmount),
     )
 }
 
 /**
- * The [LandTappedForManaEvent] for [tapperId] tapping [sourceId] for mana, or null when the source
- * isn't a land. Split out for the manual mana-ability pipeline, which taps as part of paying the
- * ability's cost and emits this once the mana has been added.
+ * The [PermanentTappedForManaEvent] for [tapperId] tapping [sourceId] for mana, or null when the
+ * source has no card to name. Split out for the manual mana-ability pipeline, which taps as part of
+ * paying the ability's cost and emits this once the mana has been added.
  */
-fun landTappedForManaEvent(
+fun permanentTappedForManaEvent(
     state: GameState,
     sourceId: EntityId,
     tapperId: EntityId,
-    projected: ProjectedState = state.projectedState,
-): LandTappedForManaEvent? {
-    if (!projected.hasType(sourceId, "LAND")) return null
+    producedColors: Set<Color> = emptySet(),
+): PermanentTappedForManaEvent? {
     val name = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: return null
-    return LandTappedForManaEvent(tapperId = tapperId, landId = sourceId, landName = name)
+    return PermanentTappedForManaEvent(
+        tapperId = tapperId, permanentId = sourceId, permanentName = name, producedColors = producedColors,
+    )
 }
 
 /**
@@ -301,7 +314,10 @@ fun untapOrConsumeStun(
         }
         val newState = state.updateEntity(entityId) { c ->
             val counters = c.get<CountersComponent>() ?: CountersComponent()
-            c.with(counters.withRemoved(CounterType.PLUS_ONE_PLUS_ONE, 1)).without<TappedComponent>()
+            c.with(counters.withRemoved(CounterType.PLUS_ONE_PLUS_ONE, 1))
+                .withEntryTapState(enteredTapped = true)
+                .without<TappedComponent>()
+                .withUntapCounted()
         }
         return newState to listOf(
             CountersRemovedEvent(entityId, CounterType.PLUS_ONE_PLUS_ONE, 1, cardName),
@@ -309,9 +325,29 @@ fun untapOrConsumeStun(
         )
     }
 
-    val newState = state.updateEntity(entityId) { it.without<TappedComponent>() }
+    val newState = state.updateEntity(entityId) {
+        it.withEntryTapState(enteredTapped = true).without<TappedComponent>().withUntapCounted()
+    }
     return newState to listOf(UntappedEvent(entityId, cardName))
 }
+
+/**
+ * Whether the permanent in [container] entered the battlefield tapped (CR 110.5b: a permanent's
+ * status as it enters). The answer frozen by the first tap/untap transition of this visit
+ * ([EntryTapStateComponent]); before any, its current tap state is still its entry state.
+ */
+fun enteredBattlefieldTapped(container: ComponentContainer): Boolean =
+    container.get<EntryTapStateComponent>()?.enteredTapped ?: container.has<TappedComponent>()
+
+/** The permanent's [UntapCountComponent] clock — how many times it has untapped this battlefield visit. */
+fun untapCount(container: ComponentContainer?): Int = container?.get<UntapCountComponent>()?.count ?: 0
+
+private fun ComponentContainer.withUntapCounted(): ComponentContainer =
+    with(UntapCountComponent(untapCount(this) + 1))
+
+/** Freeze [enteredTapped] as the entry tap state, unless an earlier transition already did. */
+private fun ComponentContainer.withEntryTapState(enteredTapped: Boolean): ComponentContainer =
+    if (has<EntryTapStateComponent>()) this else with(EntryTapStateComponent(enteredTapped))
 
 /** Marker for the events [untapOrConsumeStun] may emit ([UntappedEvent], [CountersRemovedEvent]). */
 typealias UntappedOrConsumeEvent = GameEvent
@@ -320,9 +356,11 @@ typealias UntappedOrConsumeEvent = GameEvent
  * True if [entityId] must be skipped by an untap step (CR 502.3) — either the narrow
  * [AbilityFlag.DOESNT_UNTAP] ("doesn't untap during your untap step") or the stronger
  * [AbilityFlag.CANT_BECOME_UNTAPPED], which also blocks untap *effects* and therefore
- * subsumes the untap-step behavior. Use this at every untap-step gate in
- * [BeginningPhaseManager] so both restrictions drop the permanent from the untap list
- * (and from the MAY_NOT_UNTAP / untap-limit choice pools). Universal untap enforcement
+ * subsumes the untap-step behavior. Use this at every gate of the *active* player's own
+ * untap step in [BeginningPhaseManager] so both restrictions drop the permanent from the
+ * untap list (and from the MAY_NOT_UNTAP / untap-limit choice pools). Not for "during each
+ * other player's untap step" untaps (Seedborn Muse): DOESNT_UNTAP is controller-scoped and
+ * doesn't apply there. Universal untap enforcement
  * still lives in [untapOrConsumeStun]; this is the untap-step-only convenience.
  */
 fun ProjectedState.doesntUntapDuringUntapStep(entityId: EntityId): Boolean =

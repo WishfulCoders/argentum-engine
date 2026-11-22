@@ -341,7 +341,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Island or Swamp card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -759,12 +761,12 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "optional": true,
                 "filter": {
                     "baseFilter": "artifact"
                 },
                 "id": "t0",
-                "dynamicMaxCount": "XValue"
+                "dynamicMaxCount": "XValue",
+                "dynamicMinCount": "XValue"
             }
         ]
     },
@@ -1346,6 +1348,40 @@
     ]
 }
 
+// Dissipate
+{
+    "name": "Dissipate",
+    "manaCost": "{1}{U}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Counter target spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.",
+    "script": {
+        "spellEffect": {
+            "type": "Counter",
+            "counterDestination": "CounterDestination.Exile"
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "61",
+        "rarity": "UNCOMMON",
+        "artist": "Richard Kane Ferguson",
+        "flavorText": "\"If you weren't born with it, you don't need it.\"\n—Grahilah, former trader of Amiqat",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/6/36d9271d-6dbf-4640-9222-721a7a3ccc08.jpg?1783947110"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Divine Retribution
 {
     "name": "Divine Retribution",
@@ -1652,7 +1688,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for an artifact or enchantment card to put on top of your library",
+                    "selectedLabel": "Put on top of your library"
                 },
                 "ShuffleLibrary",
                 {
@@ -2142,7 +2180,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Plains or Island card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -2422,7 +2462,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Forest or Plains card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -3005,7 +3047,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Mountain or Forest card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -3088,7 +3132,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for an instant or sorcery card to put on top of your library",
+                    "selectedLabel": "Put on top of your library"
                 },
                 "ShuffleLibrary",
                 {
@@ -3225,6 +3271,47 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Pacifism
+{
+    "name": "Pacifism",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nEnchanted creature can't attack or block.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "CantAttack",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "AttachedTo"
+                }
+            },
+            {
+                "type": "CantBlock",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "AttachedTo"
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "artist": "Robert Bliss",
+        "flavorText": "For the first time in his life, Grakk felt a little warm and fuzzy inside.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/8/c891df1b-bae6-4d6d-85ee-42901c149f98.jpg?1783947119"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }
 
@@ -3640,7 +3727,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -3746,7 +3835,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Swamp or Mountain card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -4048,7 +4139,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -4542,50 +4636,6 @@
             "n": 4
         }
     ],
-    "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Teeka's Dragon:1",
-                "trigger": "BecomesBlockedEvent",
-                "effect": {
-                    "type": "ModifyStats",
-                    "powerModifier": {
-                        "type": "Multiply",
-                        "amount": {
-                            "type": "Subtract",
-                            "left": {
-                                "type": "EntityProperty",
-                                "entity": "TriggeringEntity",
-                                "numericProperty": "BlockerCount"
-                            },
-                            "right": {
-                                "type": "Fixed",
-                                "amount": 1
-                            }
-                        },
-                        "multiplier": 4
-                    },
-                    "toughnessModifier": {
-                        "type": "Multiply",
-                        "amount": {
-                            "type": "Subtract",
-                            "left": {
-                                "type": "EntityProperty",
-                                "entity": "TriggeringEntity",
-                                "numericProperty": "BlockerCount"
-                            },
-                            "right": {
-                                "type": "Fixed",
-                                "amount": 1
-                            }
-                        },
-                        "multiplier": 4
-                    },
-                    "target": "TriggeringEntity"
-                }
-            }
-        ]
-    },
     "metadata": {
         "collectorNumber": "320",
         "rarity": "RARE",
@@ -4862,7 +4912,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -5470,7 +5523,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a creature card to put on top of your library",
+                    "selectedLabel": "Put on top of your library"
                 },
                 "ShuffleLibrary",
                 {

@@ -1,5 +1,6 @@
 import { EntityId } from './entities'
 import { DayNight } from './enums'
+import type { FlipLanding, FlipTable } from './messages'
 
 /**
  * Client-facing game events.
@@ -9,9 +10,15 @@ import { DayNight } from './enums'
  * driving animations and displaying game log.
  */
 export type ClientEvent =
+  | CreatureEnlistedEvent
+  | AttackCancelledEvent
   | LifeChangedEvent
   | SpeedChangedEvent
   | DayNightChangedEvent
+  | MonarchChangedEvent
+  | InitiativeTakenEvent
+  | VenturedIntoDungeonEvent
+  | DungeonCompletedEvent
   | DamageDealtEvent
   | StatsModifiedEvent
   | CardDrawnEvent
@@ -26,7 +33,9 @@ export type ClientEvent =
   | SpellCounteredEvent
   | AbilityTriggeredEvent
   | AbilityActivatedEvent
+  | AbilityResolvedEvent
   | AbilityAutoAnsweredEvent
+  | TriggersOrderedAutomaticallyEvent
   | PermanentTappedEvent
   | PermanentUntappedEvent
   | CounterAddedEvent
@@ -38,12 +47,17 @@ export type ClientEvent =
   | HandRevealedEvent
   | CardsRevealedEvent
   | TurnedFaceUpEvent
+  | MutatedEvent
   | TransformedEvent
-  | CoinFlippedEvent
   | DieRolledEvent
+  | CoinFlippedEvent
+  | CardFlippedOntoBattlefieldEvent
   | TurnChangedEvent
   | GameRestartedEvent
+  | SubgameStartedEvent
+  | SubgameEndedEvent
   | ControlChangedEvent
+  | OwnershipChangedEvent
   | CardCycledEvent
   | LibraryShuffledEvent
   | AbilityFizzledEvent
@@ -88,6 +102,57 @@ export interface DayNightChangedEvent {
   readonly oldDesignation: DayNight | null
   readonly newDesignation: DayNight
   readonly sourceName: string
+  readonly description: string
+}
+
+/**
+ * The monarch changed hands (CR 725). `newMonarchId` is null only when the monarch left the game and
+ * nobody still in it could take the title (CR 725.4). The crown itself is the player's active-effect badge.
+ */
+export interface MonarchChangedEvent {
+  readonly type: 'monarchChanged'
+  readonly previousMonarchId: EntityId | null
+  readonly newMonarchId: EntityId | null
+  readonly sourceName: string
+  readonly isYours?: boolean
+  readonly description: string
+}
+
+/**
+ * A player took the initiative (CR 726) — from an effect, by combat damage, or by inheritance when
+ * the holder left. `previousHolderId === newHolderId` when they took it again (CR 726.5).
+ */
+export interface InitiativeTakenEvent {
+  readonly type: 'initiativeTaken'
+  readonly previousHolderId: EntityId | null
+  readonly newHolderId: EntityId
+  readonly sourceName: string
+  readonly playerName?: string | null
+  readonly previousHolderName?: string | null
+  readonly isYours?: boolean
+  readonly description: string
+}
+
+/** A player ventured into the dungeon and moved their marker into `roomName` (CR 701.49). */
+export interface VenturedIntoDungeonEvent {
+  readonly type: 'venturedIntoDungeon'
+  readonly playerId: EntityId
+  readonly dungeonName: string
+  readonly roomName: string
+  readonly enteredDungeon: boolean
+  readonly playerName?: string | null
+  readonly isYours?: boolean
+  readonly description: string
+}
+
+/** A player completed a dungeon (CR 309.7). */
+export interface DungeonCompletedEvent {
+  readonly type: 'dungeonCompleted'
+  readonly playerId: EntityId
+  readonly dungeonName: string
+  readonly completedCount: number
+  readonly playerName?: string | null
+  readonly isYours?: boolean
   readonly description: string
 }
 
@@ -228,12 +293,38 @@ export interface AbilityActivatedEvent {
   readonly description: string
 }
 
+/**
+ * A triggered or activated ability finished resolving (the ability-side `spellResolved`).
+ * `abilityId` is the stack object that just left; `abilityDescription` is empty for an activated
+ * ability. Delivered per update only — the server keeps it out of the persistent game log.
+ */
+export interface AbilityResolvedEvent {
+  readonly type: 'abilityResolved'
+  readonly sourceId: EntityId
+  readonly sourceName: string
+  readonly abilityDescription: string
+  readonly abilityId?: EntityId
+  readonly controllerId?: EntityId
+  readonly isYours?: boolean
+  readonly description: string
+}
+
 /** A "you may" may-question was auto-resolved from the viewer's persistent yield (backlog §C). */
 export interface AbilityAutoAnsweredEvent {
   readonly type: 'abilityAutoAnswered'
   readonly sourceId: EntityId
   readonly sourceName: string
   readonly answer: boolean
+  readonly description: string
+}
+
+/**
+ * Automatic ordering put [count] of the viewer's simultaneous triggers on the stack in an order
+ * they could have chosen (CR 603.3b). Sent only to that player.
+ */
+export interface TriggersOrderedAutomaticallyEvent {
+  readonly type: 'triggersOrderedAutomatically'
+  readonly count: number
   readonly description: string
 }
 
@@ -350,6 +441,28 @@ export interface TransformedEvent {
 }
 
 // ============================================================================
+// Dexterity flip (Chaos Orb)
+// ============================================================================
+
+/** A card was flipped onto the battlefield; carries the table so every client can replay it. */
+export interface CardFlippedOntoBattlefieldEvent {
+  readonly type: 'cardFlippedOntoBattlefield'
+  readonly playerId: EntityId
+  readonly sourceId: EntityId | null
+  readonly sourceName: string
+  readonly sourceImageUri: string | null
+  readonly table: FlipTable
+  readonly landing: FlipLanding
+  readonly turnedOver: boolean
+  /** Every permanent the landed card overlaps. */
+  readonly touched: readonly EntityId[]
+  /** The touched permanents the flip counts (destroyed, for Chaos Orb). */
+  readonly affected: readonly EntityId[]
+  readonly isYours: boolean | null
+  readonly description: string
+}
+
+// ============================================================================
 // Coin Flip Events
 // ============================================================================
 
@@ -368,25 +481,20 @@ export interface CoinFlippedEvent {
 }
 
 // ============================================================================
-// Die Roll Events
-// ============================================================================
-
-/** A die was rolled (CR 706). `result` is after modifiers; `naturalResult` is the face rolled. */
-export interface DieRolledEvent {
-  readonly type: 'dieRolled'
-  readonly playerId: EntityId
-  readonly sides: number
-  readonly naturalResult: number
-  readonly result: number
-  readonly sourceId: EntityId
-  readonly sourceName: string
-  readonly isYours?: boolean
-  readonly description: string
-}
-
-// ============================================================================
 // Morph Events
 // ============================================================================
+
+/** A mutating creature spell merged with a creature — over (`onTop`) or under it. */
+export interface MutatedEvent {
+  readonly type: 'mutated'
+  readonly cardId: EntityId
+  readonly mutatingCardId: EntityId
+  readonly mutatingCardName: string
+  readonly targetName: string
+  readonly controllerId: EntityId
+  readonly onTop: boolean
+  readonly description: string
+}
 
 export interface TurnedFaceUpEvent {
   readonly type: 'turnedFaceUp'
@@ -415,6 +523,29 @@ export interface GameRestartedEvent {
   readonly description: string
 }
 
+/** A Magic subgame began (Shahrazad, CR 729); the state now shows it. */
+export interface SubgameStartedEvent {
+  readonly type: 'subgameStarted'
+  readonly startingPlayerId: EntityId
+  /** 1 for a subgame of the main game, 2 for one within it (CR 729.6). */
+  readonly depth: number
+  readonly sourceName?: string | null
+  readonly isYourTurn: boolean | null
+  readonly description: string
+}
+
+/** A Magic subgame ended (CR 729.5) and its main game resumed. */
+export interface SubgameEndedEvent {
+  readonly type: 'subgameEnded'
+  /** Empty for a draw. */
+  readonly winnerIds: readonly EntityId[]
+  readonly nonWinnerIds: readonly EntityId[]
+  readonly depth: number
+  readonly sourceName?: string | null
+  readonly youWon: boolean | null
+  readonly description: string
+}
+
 // ============================================================================
 // Control Events
 // ============================================================================
@@ -424,6 +555,18 @@ export interface ControlChangedEvent {
   readonly permanentName: string
   readonly newControllerId: EntityId
   readonly isYours: boolean | null
+  readonly description: string
+}
+
+/**
+ * A card permanently changed owner — an ante effect such as Darkpact or Bronze Tablet (CR 407).
+ * Unlike [ControlChangedEvent] this outlives the game; `description` reads "You now own …".
+ */
+export interface OwnershipChangedEvent {
+  readonly type: 'ownershipChanged'
+  readonly cardName: string
+  readonly newOwnerId: EntityId
+  readonly isYours?: boolean | null
   readonly description: string
 }
 
@@ -479,8 +622,11 @@ export interface PermanentsSacrificedEvent {
 
 export interface TargetReselectedEvent {
   readonly type: 'targetReselected'
+  readonly spellOrAbilityId: EntityId
   readonly spellOrAbilityName: string
+  readonly oldTargetId: EntityId | null
   readonly oldTargetName: string
+  readonly newTargetId: EntityId | null
   readonly newTargetName: string
   readonly sourceName: string
   readonly description: string
@@ -543,4 +689,36 @@ export function isPermanentUntappedEvent(event: ClientEvent): event is Permanent
 
 export function isHandLookedAtEvent(event: ClientEvent): event is HandLookedAtEvent {
   return event.type === 'handLookedAt'
+}
+
+/** An attacker paid one enlist cost. Selection uses the existing battlefield decision UI. */
+export interface CreatureEnlistedEvent {
+  readonly type: 'creatureEnlisted'
+  readonly attackerId: string
+  readonly enlistedId: string
+  readonly description: string
+}
+
+export interface AttackCancelledEvent {
+  readonly type: 'attackCancelled'
+  readonly playerId: string
+  readonly description: string
+}
+
+/** Public numerical dice, fully resolved by the server. */
+export interface DieRolledEvent {
+  readonly type: 'dieRolled'
+  readonly playerId: EntityId
+  readonly sides: number
+  readonly result: number
+  readonly sourceId: EntityId | null
+  readonly sourceName: string
+  readonly isYours?: boolean
+  /** True when a "roll that many dice plus one and ignore the lowest" replacement (Pixie Guide) discarded this roll. */
+  readonly ignored?: boolean
+  /** The face that came up; differs from `result` when the instruction modifies the roll ("subtract X"). */
+  readonly natural?: number
+  /** Fork's name for [natural], kept while the server may still send it. */
+  readonly naturalResult?: number
+  readonly description: string
 }

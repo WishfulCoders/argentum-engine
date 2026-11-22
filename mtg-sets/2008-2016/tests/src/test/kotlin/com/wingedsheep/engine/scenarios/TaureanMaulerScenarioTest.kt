@@ -72,6 +72,7 @@ class TaureanMaulerScenarioTest : FunSpec({
 
         d.castSpell(p2, d.putCardInHand(p2, "Zap")).error shouldBe null
         resolveStack(d)
+        d.passPriority(p1) // p1 is active and receives priority after the resolution (CR 117.3b)
         d.castSpell(p2, d.putCardInHand(p2, "Zap")).error shouldBe null
         resolveStack(d)
 

@@ -3,6 +3,7 @@ package com.wingedsheep.sdk.scripting.predicates
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.events.DamageType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -32,11 +33,54 @@ sealed interface StatePredicate {
     @Serializable
     sealed interface History : StatePredicate
 
-    /** A battlefield permanent currently has a mana ability, whether or not it can be activated. */
+    /**
+     * The object has a mana ability, whether or not it can be activated. A permanent answers from
+     * its current state; a card in another zone from its printed abilities and printed basic land
+     * types ("an artifact card with a mana ability" — Moonsilver Key).
+     */
     @SerialName("HasManaAbility")
     @Serializable
     data object HasManaAbility : Entity {
         override val description: String = "with a mana ability"
+    }
+
+    /**
+     * The object currently has at least [atLeast] activated abilities — printed, copied, keyword
+     * (cycling, crew, saddle, class levels), intrinsic basic-land mana abilities, and every ability
+     * an effect, static ability or emblem grants it — whether or not any of them can be activated
+     * right now, or even from this zone. Abilities a lose-all-abilities effect removed, and a face-down
+     * permanent's own abilities, don't count. [excludeManaAbilities] narrows the count to "activated
+     * abilities that aren't mana abilities".
+     *
+     * "Has another activated ability" in an ability's own activation restriction is `atLeast = 2`:
+     * the ability being activated is always one of its source's own, so a second one is "another"
+     * (Tazri, Stalwart Survivor's granted mana ability — `Conditions.SourceHasAnotherActivatedAbility`).
+     *
+     * Neither neighbour takes this axis: [HasManaAbility] also counts triggered mana abilities and
+     * answers only yes/no, and `CardPredicate.HasActivatedAbility` / `HasNonManaActivatedAbility`
+     * are precomputed printed-only flags (readable without a game, as companion checks need), blind
+     * to keyword, granted and removed abilities.
+     */
+    @SerialName("HasActivatedAbilities")
+    @Serializable
+    data class HasActivatedAbilities(
+        val atLeast: Int = 1,
+        val excludeManaAbilities: Boolean = false,
+    ) : Entity {
+        init {
+            require(atLeast >= 1) { "atLeast must be positive, was $atLeast" }
+        }
+
+        override val description: String
+            get() {
+                val what = if (atLeast == 1) "an activated ability" else "$atLeast or more activated abilities"
+                val nonMana = when {
+                    !excludeManaAbilities -> ""
+                    atLeast == 1 -> " that isn't a mana ability"
+                    else -> " that aren't mana abilities"
+                }
+                return "with $what$nonMana"
+            }
     }
 
     // =============================================================================
@@ -176,7 +220,7 @@ sealed interface StatePredicate {
      *
      * Deliberately wider than the player-only scoping of
      * [com.wingedsheep.sdk.scripting.EventPattern.CreaturesAttackYouEvent]'s default: that trigger
-     * implements CR 509.1b for Orim's Prayer, where an attacker pointed at your planeswalker does
+     * implements CR 508.3b for Orim's Prayer, where an attacker pointed at your planeswalker does
      * *not* count. Cards that print "you and/or planeswalkers you control" want both, and this is
      * the predicate that says so. A creature attacking a *battle* you protect is not included —
      * "planeswalkers you control" is literal.
@@ -192,6 +236,25 @@ sealed interface StatePredicate {
         val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity
     ) : Entity {
         override val description: String = "attacking the defender of ${reference.description}"
+    }
+
+    /**
+     * Attacking [player] themself — "target nontoken creature that's attacking **that player**"
+     * (Echoing Assault, with `PlayerRef(Player.TriggeringPlayer)` bound by a per-attacked-player
+     * `YouAttackEvent`). The player-only sibling of [IsAttackingDefenderOf], which also matches
+     * attackers aimed at the reference's planeswalkers, battles and teammates; and the
+     * reference-parameterised form of [IsAttackingEnchantedPlayer], which resolves its player from
+     * the source's attachment during projection (where no trigger context exists).
+     *
+     * No last-known fallback, for [IsAttackingAnOpponent]'s reason. Fails closed when [player]
+     * resolves to nothing.
+     */
+    @SerialName("IsAttackingPlayer")
+    @Serializable
+    data class IsAttackingPlayer(
+        val player: com.wingedsheep.sdk.scripting.targets.EffectTarget
+    ) : Entity {
+        override val description: String = "attacking ${player.description}"
     }
 
     @SerialName("IsAttackingYouOrYourPlaneswalkers")
@@ -268,6 +331,19 @@ sealed interface StatePredicate {
     }
 
     /**
+     * Creature the effect's source is blocking — an attacker in the source's blocked-attacker set,
+     * read live from combat state (CR 509). The reverse direction of [IsBlockingSource].
+     * Source-relative; yields false with no source context, outside combat, or once the source
+     * stops blocking. "Prevent all damage that would be dealt to this creature by creatures it's
+     * blocking" (Wall of Vapor, Wall of Shadows) as the source filter of a static `PreventDamage`.
+     */
+    @SerialName("IsBlockedBySource")
+    @Serializable
+    data object IsBlockedBySource : Entity {
+        override val description: String = "this creature is blocking"
+    }
+
+    /**
      * Creature that is blocking the effect's source **or** being blocked by it — the live CR 509
      * pairing in either direction, read off the blocked-attacker sets rather than a snapshot.
      * Source-relative; yields false with no source context or outside combat.
@@ -315,6 +391,26 @@ sealed interface StatePredicate {
     }
 
     /**
+     * The candidate **is** the object [reference] names — an identity test, so negated with [Not]
+     * it reads "other than it" against a role the ability names rather than its source: Torment of
+     * Venom's "its controller loses 3 life unless they sacrifice **another** nonland permanent",
+     * where "another" means other than the spell's target creature
+     * ([com.wingedsheep.sdk.scripting.targets.EffectTarget.ContextTarget]). The source-, granter-
+     * and triggering-entity roles keep their own predicates ([IsSource], [IsGrantingPermanent],
+     * [IsTriggeringEntity]); this is the general form for every other reference.
+     *
+     * A reference that resolves to nothing matches nothing (so `Not(IsEntity(..))` excludes
+     * nothing). Inert in group/projection and trigger-gating contexts, which carry no references.
+     */
+    @SerialName("IsEntity")
+    @Serializable
+    data class IsEntity(
+        val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity
+    ) : Entity {
+        override val description: String = reference.description
+    }
+
+    /**
      * A token that was *created by the effect's source permanent* — its provenance creator id (the
      * `CreatedByComponent` stamped when a `CreateTokenEffect` with `stampCreator = true` made it)
      * equals the source entity supplied in the evaluation context. Source-relative; yields false
@@ -356,11 +452,23 @@ sealed interface StatePredicate {
     // Summoning Sickness (Entity)
     // =============================================================================
 
-    /** Entered the battlefield this turn (has summoning sickness if creature) */
+    /**
+     * Entered the battlefield this turn (has summoning sickness if creature).
+     *
+     * [underYourControl] narrows it to "entered the battlefield **under your control** this turn"
+     * (Shaile, Dean of Radiance), as the object it is now; "you" is the effect source's controller.
+     * Who controls it now doesn't matter: a creature that entered under your control and was then
+     * stolen still matches, one that entered under an opponent's control and was then gained by you
+     * doesn't (the card's ruling). A permanent that left and returned is a new object (CR 400.7) and
+     * matches only if that later entry was under your control. It reads the per-player entry log, so
+     * unlike the plain form it has no last-known answer once the permanent has left.
+     */
     @SerialName("EnteredThisTurn")
     @Serializable
-    data object EnteredThisTurn : Entity {
-        override val description: String = "entered the battlefield this turn"
+    data class EnteredThisTurn(val underYourControl: Boolean = false) : Entity {
+        override val description: String =
+            if (underYourControl) "entered the battlefield under your control this turn"
+            else "entered the battlefield this turn"
     }
 
     /**
@@ -466,11 +574,23 @@ sealed interface StatePredicate {
         override val description: String = "with the same name as a spell cast this turn"
     }
 
-    /** Has been dealt damage this turn */
+    /**
+     * Has been dealt damage this turn. [damageType] narrows the kind: [DamageType.Any] (default) is
+     * the bare "was dealt damage this turn" (Rooftop Assassin); [DamageType.NonCombat] is "if it
+     * was dealt noncombat damage this turn" (Grisly Sigil); [DamageType.Combat] reads "was dealt
+     * combat damage this turn". One per-turn marker on the permanent records both kinds, so every
+     * window reads the same fact. Resets when the permanent changes zones (CR 400.7).
+     */
     @SerialName("WasDealtDamageThisTurn")
     @Serializable
-    data object WasDealtDamageThisTurn : History {
-        override val description: String = "was dealt damage this turn"
+    data class WasDealtDamageThisTurn(
+        val damageType: DamageType = DamageType.Any
+    ) : History {
+        override val description: String = buildString {
+            append("was dealt ")
+            if (damageType.description.isNotEmpty()) append(damageType.description).append(' ')
+            append("damage this turn")
+        }
     }
 
     /**
@@ -498,28 +618,34 @@ sealed interface StatePredicate {
      * recipient — "Ruric Thar has hexproof as long as they haven't dealt combat damage yet" (Ruric
      * Thar, Magecrusher), via `Conditions.SourceHasDealtCombatDamage`. The same marker records the
      * turn of the most recent *combat* damage beside the turn of the most recent damage of any kind,
-     * so both windows work for both types. The recipient-scoped combat predicates
-     * ([HasDealtCombatDamageToPlayer], [DealtCombatDamageToSourceControllerThisTurn]) stay separate
-     * because they also scope by who was dealt the damage.
+     * so both windows work for both types.
+     *
+     * [recipient] narrows *what kind of object* was dealt the damage: [DamageRecipientKind.Any]
+     * (default) counts every recipient; [DamageRecipientKind.Creature] only creatures — "if equipped
+     * creature didn't deal combat damage to a creature this turn" (Thirsting Axe); and
+     * [DamageRecipientKind.Player] only players. The marker keeps a stamp pair per recipient kind
+     * beside the any-recipient one, so every combination of the three axes reads the same record. The
+     * source-relative combat predicates ([DealtCombatDamageToSourceControllerThisTurn],
+     * [ControllerDealtCombatDamageBySourceThisTurn]) stay separate because they scope by *which*
+     * player, not by kind of recipient.
      */
     @SerialName("HasDealtDamage")
     @Serializable
     data class HasDealtDamage(
         val thisTurnOnly: Boolean = false,
-        val combatOnly: Boolean = false
+        val combatOnly: Boolean = false,
+        val recipient: DamageRecipientKind = DamageRecipientKind.Any
     ) : History {
         override val description: String = buildString {
             append(if (thisTurnOnly) "dealt " else "has dealt ")
             append(if (combatOnly) "combat damage" else "damage")
+            when (recipient) {
+                DamageRecipientKind.Any -> {}
+                DamageRecipientKind.Creature -> append(" to a creature")
+                DamageRecipientKind.Player -> append(" to a player")
+            }
             if (thisTurnOnly) append(" this turn")
         }
-    }
-
-    /** Has dealt combat damage to a player (ever, since entering the battlefield) */
-    @SerialName("HasDealtCombatDamageToPlayer")
-    @Serializable
-    data object HasDealtCombatDamageToPlayer : History {
-        override val description: String = "has dealt combat damage to a player"
     }
 
     /**
@@ -586,28 +712,89 @@ sealed interface StatePredicate {
     }
 
     /**
-     * Was dealt damage this turn by a source **you controlled** — "a creature dealt damage this turn
-     * by a source you controlled" (Etching of Kumano). "You" is the evaluating ability's controller;
-     * "controlled" is past tense, so the source's controller is the one it had *when it dealt the
-     * damage* (last-known information, CR 608.2h), and the source need not still be on the
-     * battlefield, nor still be yours. Combat and noncombat damage both count, from any kind of
-     * source — a creature, a resolving spell, an ability's source.
+     * **Dealt** damage this turn to the effect's *source* — the active-voice mirror of
+     * [WasDealtDamageBySourceThisTurn]: "each creature that dealt damage to it this turn" (Brine
+     * Hag). Reads the *candidate's* own per-turn record of the creatures it damaged, so it keeps
+     * matching after the source has died — which is the only time Brine Hag's dies trigger asks.
+     * The record is dropped when the candidate leaves the battlefield (CR 400.7). Source-relative
+     * and inert with no source context.
      *
-     * Unlike [WasDealtDamageBySourceThisTurn] this is not source-relative: it reads the damaged
-     * creature's own per-turn record of the sources that hit it, which belongs to that object and is
-     * forgotten when it changes zones (CR 400.7) and at cleanup. Inert with no controller in scope.
+     * Closest types: [WasDealtDamageBySourceThisTurn] is the opposite direction and reads the
+     * *source's* record, deliberately dropped when the source leaves the battlefield (Kumano's
+     * rulings need that), so a direction axis on it could not give this one the lifetime it needs;
+     * [WasDealtDamageThisTurnBy] filters the candidate's damage *sources*, not its recipients.
      */
-    @SerialName("WasDealtDamageBySourceYouControlledThisTurn")
+    @SerialName("DealtDamageToSourceThisTurn")
     @Serializable
-    data object WasDealtDamageBySourceYouControlledThisTurn : History {
-        override val description: String = "dealt damage this turn by a source you controlled"
+    data object DealtDamageToSourceThisTurn : History {
+        override val description: String = "that dealt damage to it this turn"
     }
 
-    /** Controlled by its current controller without interruption since this turn began, regardless of haste. */
-    @SerialName("ControlledSinceTurnBegan")
+    /**
+     * Was dealt damage this turn by a source matching [sourceFilter], judged as that source stood
+     * *when it dealt the damage* — "a creature dealt damage this turn by a source you controlled"
+     * (Etching of Kumano: `GameObjectFilter.Any.youControl()`). Reads the candidate's own per-turn
+     * record of the sources that damaged it, each frozen at damage time, so a source that has since
+     * left the battlefield or changed control still counts as it was then. "You" in the filter is
+     * the effect source's controller.
+     *
+     * The record holds each source's controller, whether it was a creature, an instant or a
+     * sorcery, its subtypes and its name, so [sourceFilter] may use `youControl()` /
+     * `opponentControls()`, `Creature`, `InstantOrSorcery` (the house reading of "a spell" that
+     * deals damage), `withSubtype(...)`, `named(...)` and `or` unions of them — the same reading
+     * Shelob's "dealt damage this turn by a Spider you controlled" trigger gives its source filter.
+     * Anything else fails closed. Creatures and planeswalkers both keep the record, and a damage
+     * trigger's recipient filter reads it as of that damage, the hit included — "is dealt excess
+     * damage, if a Giant, Wizard, or spell you controlled dealt damage to it this turn" (Aegar, the
+     * Freezing Flame) still matches a permanent that damage destroyed.
+     *
+     * Closest types: [WasDealtDamageBySourceThisTurn] names one specific source and reads that
+     * source's record, which is dropped when it leaves the battlefield (its cards' rulings need
+     * that); [WasDealtDamageThisTurn] has no source axis at all. Source-relative and inert with no
+     * source context.
+     */
+    @SerialName("WasDealtDamageThisTurnBy")
     @Serializable
-    data object ControlledSinceTurnBegan : History {
-        override val description: String = "controlled continuously since the beginning of the turn"
+    data class WasDealtDamageThisTurnBy(val sourceFilter: GameObjectFilter) : History {
+        override val description: String = "dealt damage this turn by a ${sourceFilter.description} source"
+    }
+
+    /**
+     * Was on the battlefield **untapped when this turn began**, as the same object it is now — "if
+     * Rasputin started the turn untapped". Read off a snapshot of untapped permanents taken at turn
+     * start, before the untap step, so untapping during it doesn't count; a permanent that entered
+     * this turn (or left and returned) never matches, and tapping or untapping it later in the turn
+     * doesn't change the answer. A phased-out permanent is treated as though it doesn't exist
+     * then, so it didn't start the turn untapped. Control changes don't matter.
+     *
+     * Closest types: [ControlledContinuouslySince] reads the same turn-start identity snapshot but asks
+     * about control continuity, which a control change breaks and tapping doesn't; [IsTapped] is the
+     * live state, which the untap step has already rewritten by the upkeep.
+     */
+    @SerialName("StartedTurnUntapped")
+    @Serializable
+    data object StartedTurnUntapped : History {
+        override val description: String = "started the turn untapped"
+    }
+
+    /**
+     * Controlled by its current controller without interruption from the moment [since] names — as this same object,
+     * so entering, blinking or any control interruption breaks it and regaining control doesn't
+     * restore it; haste doesn't matter. [ControlMark.TURN_BEGAN] is Nettling Imp's "continuously
+     * controlled since the beginning of the turn"; [ControlMark.YOUR_LAST_UPKEEP] is the negation of
+     * echo's "came under your control since the beginning of your last upkeep" (CR 702.30a), where
+     * during its controller's upkeep "last" means the upkeep before this one.
+     *
+     * Closest types: [EnteredThisTurn] asks about entering, which a control change doesn't touch;
+     * [StartedTurnUntapped] reads the turn-start snapshot for tap state, not control.
+     */
+    @SerialName("ControlledContinuouslySince")
+    @Serializable
+    data class ControlledContinuouslySince(val since: ControlMark) : History {
+        override val description: String = when (since) {
+            ControlMark.TURN_BEGAN -> "controlled continuously since the beginning of the turn"
+            ControlMark.YOUR_LAST_UPKEEP -> "controlled continuously since the beginning of its controller's last upkeep"
+        }
     }
 
     /**
@@ -776,44 +963,145 @@ sealed interface StatePredicate {
     }
 
     /**
-     * This creature blocked, or was blocked by, a legendary creature at some point during the
-     * current turn. Used as a target predicate:
+     * This card is currently in a graveyard *and* got there by being milled (CR 701.17) this
+     * turn — Raul, Trouble Shooter's "cards in your graveyard that were milled this turn", Tato
+     * Farmer's "target land card in a graveyard that was milled this turn". A card put there from
+     * the library any other way (surveil, "put the top card into your graveyard") doesn't count.
      *
-     *  - You Cannot Pass! (LTR): "Destroy target creature that blocked or was blocked by a
-     *    legendary creature this turn."
-     *
-     * Backed by the `BlockedOrWasBlockedByLegendaryThisTurnComponent` marker on the creature
-     * entity. The marker is stamped at block-declaration time (so the legendary partner's
-     * status is captured at pairing time and the predicate keeps matching even if that
-     * legendary creature later leaves the battlefield or stops being legendary, per the card's
-     * ruling), and cleared at end-of-turn cleanup. Distinct from the combat-only
-     * [IsBlocking]/[IsBlocked] predicates, which only hold during the combat phase.
+     * The mill-restricted sibling of [PutIntoGraveyardThisTurn]: same
+     * `PutIntoGraveyardThisTurnComponent` and lifecycle, additionally requiring its `milled` flag.
      */
-    @SerialName("BlockedOrWasBlockedByLegendaryThisTurn")
+    @SerialName("MilledThisTurn")
     @Serializable
-    data object BlockedOrWasBlockedByLegendaryThisTurn : History {
-        override val description: String = "that blocked or was blocked by a legendary creature this turn"
+    data object MilledThisTurn : History {
+        override val description: String = "milled this turn"
     }
 
     /**
-     * This creature blocked, or was blocked by, the creature [reference] names at some point
-     * during the current turn — "destroy all creatures that blocked or were blocked by **it** this
-     * turn" (Gaze of the Gorgon). The relational sibling of [BlockedOrWasBlockedByLegendaryThisTurn].
+     * This card is currently in a graveyard *and* its owner discarded it this turn — Shadow of the
+     * Grave's "all cards in your graveyard that you cycled or discarded this turn". Any discard
+     * counts (a cycling cost, an opponent's discard effect); so does a madness card its owner
+     * discarded into exile and didn't cast, which then went to the graveyard (CR 400.7k).
+     * A discarded card that later left the graveyard and came back, or was cast, is a new object
+     * and doesn't count (CR 400.7).
+     *
+     * The discard-route sibling of [MilledThisTurn], but read off the discarder's per-turn discard
+     * record (the one that gates Mayhem) rather than the graveyard stamp, because the madness route
+     * reaches the graveyard by a non-discard move.
+     */
+    @SerialName("DiscardedThisTurn")
+    @Serializable
+    data object DiscardedThisTurn : History {
+        override val description: String = "discarded this turn"
+    }
+
+    /**
+     * This card is currently in a graveyard *and* was put there during the current combat phase
+     * (CR 506.1: beginning of combat through end of combat step), from any zone — Storrev,
+     * Devkarin Lich's "target creature or planeswalker card in your graveyard that wasn't put
+     * there this combat" (negated with [Not]). A card that arrived during an earlier combat
+     * phase of the same turn doesn't count.
+     *
+     * The combat-scoped sibling of [PutIntoGraveyardThisTurn]: same
+     * `PutIntoGraveyardThisTurnComponent` and lifecycle, additionally requiring its
+     * `duringCombat` flag, which is set when the arrival happens in the combat phase and
+     * cleared when that combat phase ends.
+     */
+    @SerialName("PutIntoGraveyardThisCombat")
+    @Serializable
+    data object PutIntoGraveyardThisCombat : History {
+        override val description: String = "put into a graveyard this combat"
+    }
+
+    /**
+     * This card is currently in a hand *and* got there by being drawn (CR 121.1) this turn —
+     * Sylvan Library's "choose two cards in your hand drawn this turn". A card put into a hand any
+     * other way (a bounce, a tutor, a replaced draw) doesn't count, and neither does a drawn card
+     * that left the hand and came back (CR 400.7 — it is a new object).
+     *
+     * The hand-side sibling of [MilledThisTurn]: a per-card `DrawnThisTurnComponent` stamped by
+     * every draw and pinned to the hand object it produced (any later zone change mints a new
+     * object, so the stamp stops matching), and wiped from every card at the start of each turn.
+     */
+    @SerialName("DrawnThisTurn")
+    @Serializable
+    data object DrawnThisTurn : History {
+        override val description: String = "drawn this turn"
+    }
+
+    /**
+     * This creature was paired in a block, in the given [direction], with a creature that matched
+     * [partner] at the moment of the pairing, at some point during the current turn. Used as a
+     * target predicate:
+     *
+     *  - You Cannot Pass! (LTR): "Destroy target creature that blocked or was blocked by a
+     *    legendary creature this turn." (`partner = Creature.legendary()`)
+     *  - Time to Reflect (AKH): "Exile target creature that blocked or was blocked by a Zombie this
+     *    turn." (`partner = Creature.withSubtype("Zombie")`)
+     *
+     * Backed by the turn-scoped `CombatPartnersThisTurnComponent`, which freezes each partner's
+     * characteristics (types, subtypes, supertypes, colours, controller, token-ness) at block
+     * declaration, so the predicate keeps matching after that partner has left the battlefield —
+     * an embalmed Zombie token included — or stopped matching [partner] (You Cannot Pass!'s
+     * ruling), and is cleared at end-of-turn cleanup. The filter is read against that snapshot:
+     * card predicates and "you control" read as they stood then; state predicates the snapshot
+     * can't answer fail closed. Distinct from the combat-only [IsBlocking]/[IsBlocked] predicates,
+     * and from [BlockPairedWithEntityThisTurn], which names one specific partner.
+     */
+    @SerialName("BlockPairedWithMatchingThisTurn")
+    @Serializable
+    data class BlockPairedWithMatchingThisTurn(
+        val partner: GameObjectFilter,
+        val direction: BlockDirection = BlockDirection.EITHER
+    ) : History {
+        override val description: String
+            get() {
+                val noun = partner.description
+                val partnerText = (if (noun.firstOrNull()?.lowercaseChar() in VOWELS) "an " else "a ") + noun
+                return when (direction) {
+                    BlockDirection.EITHER -> "that blocked or was blocked by $partnerText this turn"
+                    BlockDirection.BLOCKED -> "that blocked $partnerText this turn"
+                    BlockDirection.BLOCKED_BY -> "that was blocked by $partnerText this turn"
+                }
+            }
+
+        private companion object {
+            val VOWELS = setOf('a', 'e', 'i', 'o', 'u')
+        }
+    }
+
+    /**
+     * This creature was paired in a block with the creature [reference] names at some point during
+     * the current turn, in the given [direction] — the relational sibling of
+     * [BlockPairedWithMatchingThisTurn]:
+     *
+     *  - [BlockDirection.EITHER] — "all creatures that blocked or were blocked by **it** this turn"
+     *    (Gaze of the Gorgon).
+     *  - [BlockDirection.BLOCKED_BY] — "all creatures that were blocked by **that creature** this
+     *    turn" (Glyph of Doom), "target creature that **target Wall** blocked this turn" (Glyph of
+     *    Delusion).
+     *  - [BlockDirection.BLOCKED] — "creatures that blocked **it** this turn".
      *
      * Backed by the turn-scoped `CombatPartnersThisTurnComponent`, stamped on both creatures of a
-     * blocking pair at block declaration and cleared at end-of-turn cleanup, so it covers blocks
-     * made before the spell was cast and keeps matching after the referenced creature has left the
-     * battlefield (the card's own ruling). A reference that resolves to nothing matches nothing.
+     * blocking pair at block declaration (each side recording which way the block went) and cleared
+     * at end-of-turn cleanup, so it covers blocks made before the spell was cast and keeps matching
+     * after the referenced creature has left the battlefield. A reference that resolves to nothing
+     * matches nothing.
      *
      * In a delayed trigger, [EffectTarget.TriggeringEntity] names the trigger's watched entity — a
      * step-based `CreateDelayedTriggerEffect` exposes its baked `watchedTarget` that way.
      */
-    @SerialName("BlockedOrWasBlockedByEntityThisTurn")
+    @SerialName("BlockPairedWithEntityThisTurn")
     @Serializable
-    data class BlockedOrWasBlockedByEntityThisTurn(
-        val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity
+    data class BlockPairedWithEntityThisTurn(
+        val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity,
+        val direction: BlockDirection = BlockDirection.EITHER
     ) : History {
-        override val description: String = "that blocked or was blocked by ${reference.description} this turn"
+        override val description: String = when (direction) {
+            BlockDirection.EITHER -> "that blocked or was blocked by ${reference.description} this turn"
+            BlockDirection.BLOCKED -> "that blocked ${reference.description} this turn"
+            BlockDirection.BLOCKED_BY -> "that was blocked by ${reference.description} this turn"
+        }
     }
 
     // =============================================================================
@@ -832,6 +1120,23 @@ sealed interface StatePredicate {
     @Serializable
     data object IsFaceUp : Entity {
         override val description: String = "face-up"
+    }
+
+    // =============================================================================
+    // Commander designation (Entity)
+    // =============================================================================
+
+    /**
+     * Is a **commander** — any player's (CR 903.3). Being a commander is "not a characteristic of
+     * the object represented by the card; rather, it is an attribute of the card itself", so it
+     * survives zone changes and face-down status, and a copy of a commander (token or Clone) is
+     * not one. Compose with a zone: "you control a commander" is a battlefield permanent that is a
+     * commander (CR 903.3d) — `Conditions.YouControlACommander`.
+     */
+    @SerialName("IsCommander")
+    @Serializable
+    data object IsCommander : Entity {
+        override val description: String = "commander"
     }
 
     /**
@@ -1106,18 +1411,56 @@ sealed interface StatePredicate {
     }
 
     /**
-     * The candidate's *controller* controls at least one permanent matching [filter] — "target
-     * creature whose controller controls an Island" (Seasinger). The nested filter is evaluated
-     * against projected battlefield state, and its "you" is bound to the candidate's controller
-     * rather than to the ability's controller, which is the whole point: the constraint is about
-     * the creature's owner-of-the-moment, not about who is casting.
+     * Has at least one permanent attached that matches [filter] — the inverse direction of
+     * [AttachedTo]: the candidate is the *host*, and [filter] is evaluated against each Aura,
+     * Equipment or Fortification attached to it (read from the candidate's `AttachmentsComponent`).
+     * [IsEquipped] and [IsEnchanted] are the fixed-filter special cases; use this one when the
+     * attachment itself needs a constraint the adjectives can't spell.
+     *
+     * Chains through two attachments: with [filter] = `IsAttachedToBySource`, the candidate is
+     * "the permanent that the permanent this source is attached to is attached to" — Artificer's
+     * Hex's "if enchanted Equipment is attached to a creature, destroy that creature" is the
+     * creature matching `Creature.hasAttached(Any.attachedToBySource())`.
+     *
+     * The "you" of any controller predicate in [filter] is the controller supplied in the
+     * evaluation context. False if nothing is attached to the candidate. Not evaluated during
+     * group-static layer projection (like [AttachedTo]); target, condition and group-effect
+     * contexts only.
      */
-    @SerialName("ControllerControls")
+    @SerialName("HasAttached")
     @Serializable
-    data class ControllerControls(
-        val filter: com.wingedsheep.sdk.scripting.GameObjectFilter
+    data class HasAttached(val filter: com.wingedsheep.sdk.scripting.GameObjectFilter) : Entity {
+        override val description: String = "with ${filter.description} attached"
+    }
+
+    /**
+     * The candidate's *controller* satisfies [condition] — "target creature whose controller controls
+     * an Island" (Seasinger: `Conditions.YouControl(Island)`), "a creature whose controller has eight
+     * or more cards in their graveyard" (Lullmage's Domination). Every "you" inside [condition] is
+     * bound to the candidate's controller rather than to the ability's controller, which is the whole
+     * point: the clause describes the creature's side of the table, not who is casting.
+     *
+     * Closest neighbours: `Conditions.EntityMatches` asks whether an *object* matches a filter (the
+     * inverse direction), and the `Controlled…` [ControllerPredicate]s only name *which* player
+     * controls the candidate, never a fact about that player.
+     */
+    @SerialName("ControllerMeets")
+    @Serializable
+    data class ControllerMeets(
+        val condition: com.wingedsheep.sdk.scripting.conditions.Condition
     ) : Entity {
-        override val description: String = "whose controller controls ${filter.indefiniteArticle} ${filter.description}"
+        /**
+         * The condition's own text re-voiced for the candidate's controller: "if you control an
+         * Island" reads "whose controller controls an Island", "your graveyard" reads "their".
+         */
+        override val description: String = condition.description.removePrefix("if ")
+            .replace("your ", "their ").let { text ->
+                when {
+                    text.startsWith("you control ") -> "whose controller controls ${text.removePrefix("you control ")}"
+                    text.startsWith("you have ") -> "whose controller has ${text.removePrefix("you have ")}"
+                    else -> "whose controller satisfies: $text"
+                }
+            }
     }
 
     // =============================================================================
@@ -1233,6 +1576,27 @@ sealed interface StatePredicate {
     }
 
     // =============================================================================
+    // Embalmed (Entity)
+    // =============================================================================
+
+    /**
+     * A token that is **embalmed** — "A token is 'embalmed' if it's created by a resolving embalm
+     * ability" (CR 702.128b). Stamped by a `CreateTokenCopyOfTargetEffect` with `embalmed = true`,
+     * which is what [com.wingedsheep.sdk.dsl.embalmAbility] builds (printed embalm and the
+     * Cursecloth Wrappings grant alike).
+     *
+     * Provenance, not a characteristic: it is not a copiable value, so a copy of an embalmed token
+     * is not embalmed, and it stays with the token for as long as the token exists — including
+     * through the token entering as a copy of something else. Read by "if this creature was
+     * embalmed" (Vizier of Many Faces' copy exception, `Conditions.SourceWasEmbalmed`).
+     */
+    @SerialName("IsEmbalmed")
+    @Serializable
+    data object IsEmbalmed : Entity {
+        override val description: String = "embalmed"
+    }
+
+    // =============================================================================
     // Saddle (Entity)
     // =============================================================================
 
@@ -1298,6 +1662,35 @@ sealed interface StatePredicate {
     }
 
     /**
+     * A **foretold card** (CR 702.143): a card in exile that its owner exiled face down with the
+     * foretell special action. Matches the `ForetoldComponent` the engine stamps on the card when
+     * it is foretold and strips the moment the card leaves exile, so a foretold card that is cast
+     * (or otherwise moved) is no longer foretold, and a card exiled face down by any other effect
+     * never was. Compose with an exile-zone count for "each foretold card you own in exile"
+     * (Alrund, God of the Cosmos; Niko Defies Destiny).
+     */
+    @SerialName("IsForetold")
+    @Serializable
+    data object IsForetold : Entity {
+        override val description: String = "foretold"
+    }
+
+    /**
+     * A **suspended card** (CR 702.62b): a card in the exile zone that has suspend and has a time
+     * counter on it. "Has suspend" reads the engine's suspended marker — the same marker that grants
+     * the countdown and cast triggers, set by the suspend special action, `Effects.Suspend`
+     * (Taigam, Master Opportunist) and a spell that exiles itself with time counters — so the
+     * predicate and the card's actual suspend lifecycle never disagree. A card whose last time
+     * counter is gone is no longer suspended, even while it lingers in exile. Union it with a
+     * battlefield clause for "target permanent or suspended card" (Clockspinning).
+     */
+    @SerialName("IsSuspended")
+    @Serializable
+    data object IsSuspended : Entity {
+        override val description: String = "suspended"
+    }
+
+    /**
      * Permanent on the battlefield that was cast for its warp cost (CR 702.185).
      * Matches the `WarpedComponent` marker the engine writes when a warped spell
      * resolves — the permanent-side bookkeeping equivalent of 702.185c's "a spell
@@ -1314,20 +1707,31 @@ sealed interface StatePredicate {
     }
 
     /**
-     * A spell on the stack whose cast-origin zone is [zone] — reads the
-     * `SpellOnStackComponent.castFromZone` the engine stamps when the spell is put on the stack
-     * (HAND for a normal cast; GRAVEYARD/EXILE/COMMAND for flashback/forage, plot/foretell,
-     * commander, …). Composes with [Not] for the common "*wasn't* cast from …" phrasing.
+     * A spell on the stack that was cast — from [fromZone] when it is set, from anywhere when it is
+     * null. Reads the `SpellOnStackComponent.castFromZone` the engine stamps when a spell is cast
+     * (HAND for a normal cast; GRAVEYARD/EXILE/COMMAND/LIBRARY for flashback, plot, commander, …).
+     * A copy put directly onto the stack wasn't cast (CR 707.10) and carries no cast origin, so
+     * every reading is false for it; a copy that *is* cast (CR 707.12) has one. Composes with
+     * [Not] for the "*wasn't* cast …" phrasings:
      *
-     * Backs Wash Away's base (bracketed) restriction "counter target spell [that wasn't cast from
-     * its owner's hand]" as `Not(WasCastFromZone(Zone.HAND))`. A spell can only be cast from its
-     * own owner's hand (cards in a hand are owned by that hand's player, CR 108.3), so the
-     * owner-scoped wording collapses to the zone check.
+     *  - Wash Away's "counter target spell that wasn't cast from its owner's hand" is
+     *    `Not(WasCast(Zone.HAND))`. A spell can only be cast from its own owner's hand (cards in a
+     *    hand are owned by that hand's player, CR 108.3), so the owner-scoped wording collapses to
+     *    the zone check.
+     *  - Errant, Street Artist's "copy target spell you control that wasn't cast" is
+     *    `Not(WasCast())`.
+     *
+     *  - Containment Priest's "if a nontoken creature would enter and it wasn't cast" is
+     *    `Not(WasCast())` on a battlefield-entry `RedirectZoneChange`: the entering object is still
+     *    the resolving spell when it was cast, and carries no cast origin otherwise.
+     *
+     * Stack-only: a permanent's "was cast" history is the `WasCast` / `WasCastFromZone`
+     * [com.wingedsheep.sdk.scripting.conditions] family instead.
      */
-    @SerialName("WasCastFromZone")
+    @SerialName("WasCast")
     @Serializable
-    data class WasCastFromZone(val zone: com.wingedsheep.sdk.core.Zone) : Entity {
-        override val description: String = "cast from ${zone.displayName}"
+    data class WasCast(val fromZone: com.wingedsheep.sdk.core.Zone? = null) : Entity {
+        override val description: String = if (fromZone == null) "cast" else "cast from ${fromZone.displayName}"
     }
 
     /**
@@ -1381,19 +1785,18 @@ sealed interface StatePredicate {
     }
 
     /**
-     * The candidate permanent is the entity that fired the resolving triggered ability (read from
-     * the evaluation context's `triggeringEntityId`). Trigger-relative, the way [IsSource] is
-     * source-relative; false with no trigger context.
-     *
-     * Negate with [Not] for "each **other** …" counts around the triggering creature — Shared
-     * Animosity's "it gets +1/+0 for each other attacking creature that shares a creature type
-     * with it", where the triggering attacker is not the ability's source and `excludeSelf` would
-     * exclude the enchantment instead.
+     * The candidate is the *triggering entity* of the resolving triggered ability — the permanent
+     * the trigger's event was about (read from the evaluation context's `triggeringEntityId`).
+     * Negate with [Not] for "other than that permanent" target exclusions on target kinds that
+     * carry a [GameObjectFilter][com.wingedsheep.sdk.scripting.GameObjectFilter] rather than a
+     * `TargetFilter` — Toralf, God of Fury's "any target other than that permanent" (an
+     * `AnyTarget`, whose player half no `TargetFilter` reaches). `TargetFilter`-based requirements
+     * keep their own `excludeTriggeringEntity` flag. False with no trigger context.
      */
     @SerialName("IsTriggeringEntity")
     @Serializable
     data object IsTriggeringEntity : Entity {
-        override val description: String = "it"
+        override val description: String = "that permanent"
     }
 
     /**
@@ -1436,11 +1839,35 @@ sealed interface StatePredicate {
      *
      * Backs "target creature card exiled with ~" reanimation abilities (The Darkness Crystal), where
      * the ability retrieves a specific card from among those its own permanent banished.
+     *
+     * On an emblem's ability, the source is **the object that created the emblem** — "You may play
+     * cards exiled with Tibalt, Cosmic Impostor" (Tibalt's emblem) — and that keeps meaning the
+     * same object after it leaves the battlefield: the cards it exiled (even by an ability that
+     * resolved after it died) stay covered, and a new object made from the same card (CR 400.7) is
+     * a different Tibalt whose exiles are not.
      */
     @SerialName("ExiledWithSource")
     @Serializable
     data object ExiledWithSource : Entity {
         override val description: String = "exiled with this permanent"
+    }
+
+    /**
+     * The candidate card is in exile and was put there by a spell or ability controlled by the asking
+     * player (the evaluation context's controller) — "a card from exile … if it was exiled by an
+     * ability you controlled" (Evelyn, the Covetous). Unlike [ExiledWithSource] it doesn't care
+     * *which* permanent exiled the card, only whose effect it was, so the permission survives the
+     * exiling permanent leaving and covers cards exiled by other sources that player controlled.
+     *
+     * Reads the exiling controller the engine stamps on the card as it enters exile through an
+     * effect; an exile the engine can't attribute (a cost, a rules action) never matches. Not
+     * "ability"-only: no card yet distinguishes a spell from an ability here, and Evelyn's filter
+     * pairs this with a collection counter that only an ability places.
+     */
+    @SerialName("ExiledByYou")
+    @Serializable
+    data object ExiledByYou : Entity {
+        override val description: String = "exiled by an effect you controlled"
     }
 
     // =============================================================================
@@ -1462,6 +1889,57 @@ sealed interface StatePredicate {
     @SerialName("StateNot")
     @Serializable
     data class Not(val predicate: StatePredicate) : StatePredicate {
-        override val description: String = "not ${predicate.description}"
+        // An identity test negates to "other than it" — "a nonland permanent other than target
+        // creature", never "a nonland permanent not target creature".
+        override val description: String =
+            if (predicate is IsEntity) "other than ${predicate.description}" else "not ${predicate.description}"
     }
+}
+
+/**
+ * Which way a block went, read from the candidate creature's side of the pair — the axis of
+ * [StatePredicate.BlockPairedWithEntityThisTurn].
+ */
+@Serializable
+enum class BlockDirection {
+    /** The candidate blocked the referenced creature. */
+    BLOCKED,
+
+    /** The candidate was blocked by the referenced creature. */
+    BLOCKED_BY,
+
+    /** Either way round — the candidate blocked, or was blocked by, the referenced creature. */
+    EITHER
+}
+
+/** The moment [StatePredicate.ControlledContinuouslySince] measures uninterrupted control from. */
+@Serializable
+enum class ControlMark {
+    /** The beginning of the current turn (Nettling Imp). */
+    TURN_BEGAN,
+
+    /**
+     * The beginning of its controller's last upkeep — during that player's upkeep, the one before
+     * it (echo, CR 702.30a).
+     */
+    YOUR_LAST_UPKEEP
+}
+
+/**
+ * The kind of object a permanent dealt damage to, for [StatePredicate.HasDealtDamage]'s recipient
+ * axis — "dealt combat damage to a **creature** this turn" (Thirsting Axe), "has dealt combat damage
+ * to a **player**". A kind, not a filter: the engine records one turn stamp per kind as the damage
+ * lands, so the question stays answerable after the recipient has died or left. A creature that is
+ * also a planeswalker counts as a creature.
+ */
+@Serializable
+enum class DamageRecipientKind {
+    /** Any recipient — player, creature, planeswalker or battle. */
+    Any,
+
+    /** Only creatures. */
+    Creature,
+
+    /** Only players. */
+    Player
 }

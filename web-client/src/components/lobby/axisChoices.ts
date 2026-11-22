@@ -58,7 +58,7 @@ export type RecreateSpec =
        */
       deckTab: DeckPickerTab
     }
-  | { to: 'TOURNAMENT'; format: TournamentFormat; gameMode: LobbyGameMode }
+  | { to: 'TOURNAMENT'; format: TournamentFormat; gameMode: LobbyGameMode; jumpIn?: boolean }
 
 export type ChoiceAvailability =
   | { kind: 'DIRECT' }
@@ -114,6 +114,8 @@ function cardsAvailability(view: UnifiedLobbyView, kind: CardsKind): ChoiceAvail
       case 'RANDOM':
       case 'MOMIR':
         return DIRECT
+      case 'JUMP_IN':
+        return recreate({ to: 'TOURNAMENT', format: 'SEALED', gameMode: 'TOURNAMENT', jumpIn: true })
       case 'SEALED':
         return recreate({ to: 'TOURNAMENT', format: 'SEALED', gameMode: 'TOURNAMENT' })
       case 'DRAFT':
@@ -124,6 +126,7 @@ function cardsAvailability(view: UnifiedLobbyView, kind: CardsKind): ChoiceAvail
   // Tournament-backed.
   switch (kind) {
     case 'BRING_A_DECK':
+    case 'JUMP_IN':
     case 'SEALED':
     case 'DRAFT':
       return DIRECT
@@ -222,7 +225,7 @@ const BRACKET_IS_1V1_ONLY =
   'Bracket play is 1v1 only today. A multiplayer table plays one shared game.'
 
 const LIMITED_IS_ALWAYS_A_BRACKET =
-  'A limited lobby always runs as a bracket, because the pool it builds is meant to be played more than once. With two players that is one matchup — set “Games per matchup” to 1 and it is a single game.'
+  'A limited lobby always runs as a bracket, because the pool it builds is meant to be played more than once. With two players that is one match — set Match to “Best of 1” and it is a single game.'
 
 export function eventChoices(view: UnifiedLobbyView): AxisChoice<EventAxis>[] {
   return (['SINGLE_GAME', 'ROUND_ROBIN'] as const).map((event) => ({

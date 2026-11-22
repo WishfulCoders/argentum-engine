@@ -23,8 +23,8 @@ import com.wingedsheep.sdk.core.Step
  * At the beginning of each opponent's upkeep, you may discard a card. If you do, draw a card.
  *
  * The miracle grant is a [GrantMiracleToCardsInHand]; when one of your instant/sorcery cards is
- * the first card you draw in a turn, the engine opens its miracle window so you may cast it for
- * {2} that turn.
+ * the first card you draw in a turn, you may reveal it, and its miracle trigger lets you cast it
+ * for {2} as it resolves.
  */
 val LoreholdTheHistorian = card("Lorehold, the Historian") {
     manaCost = "{3}{R}{W}"

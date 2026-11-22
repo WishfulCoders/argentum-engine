@@ -44,7 +44,9 @@ val DisturbingMirth = card("Disturbing Mirth") {
                 val permanentToSacrifice = selectTarget(
                     TargetObject(
                         filter = TargetFilter.CreatureOrEnchantment.youControl().other()
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose another enchantment or creature to sacrifice"
                 )
                 run(Effects.SacrificeTarget(permanentToSacrifice.asTarget))
             },

@@ -13,7 +13,7 @@ val NecromanticThirstReprint = Printing(
     collectorNumber = "119",
     scryfallId = "8c934b09-726a-49c7-88fa-8b2e7ebf87b7",
     artist = "Brandon Kitkouski",
-    imageUri = "https://cards.scryfall.io/normal/front/8/c/8c934b09-726a-49c7-88fa-8b2e7ebf87b7.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/8/c/8c934b09-726a-49c7-88fa-8b2e7ebf87b7.jpg?1783939355",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

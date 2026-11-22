@@ -13,7 +13,7 @@ val RecklessScholarReprint = Printing(
     collectorNumber = "104",
     scryfallId = "1d55bf66-0ba7-4bd5-a491-5ca98f22606c",
     artist = "Steve Prescott",
-    imageUri = "https://cards.scryfall.io/normal/front/1/d/1d55bf66-0ba7-4bd5-a491-5ca98f22606c.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/1/d/1d55bf66-0ba7-4bd5-a491-5ca98f22606c.jpg?1783939358",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

@@ -4,7 +4,8 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn
+import com.wingedsheep.sdk.scripting.RestrictCardsDrawnPerTurn
+import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -16,10 +17,6 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Each opponent can't draw more than one card each turn.
  * −2: Look at the top four cards of your library. You may reveal a noncreature, nonland card from
  * among them and put it into your hand. Put the rest on the bottom of your library in a random order.
- *
- * The static line is [RestrictDrawsPerTurn] — a "can't" effect (CR 614.17), checked before any
- * replacement effect sees an opponent's draw, so a draw it forbids can't be dredged or otherwise
- * replaced (CR 614.17c, the fourth ruling). The −2 is Wandering Mind's dig at four cards.
  */
 val NarsetParterOfVeils = card("Narset, Parter of Veils") {
     manaCost = "{1}{U}{U}"
@@ -27,19 +24,17 @@ val NarsetParterOfVeils = card("Narset, Parter of Veils") {
     typeLine = "Legendary Planeswalker — Narset"
     startingLoyalty = 5
     oracleText = "Each opponent can't draw more than one card each turn.\n" +
-        "−2: Look at the top four cards of your library. You may reveal a noncreature, nonland card " +
-        "from among them and put it into your hand. Put the rest on the bottom of your library in a " +
-        "random order."
+        "−2: Look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in a random order."
 
     staticAbility {
-        ability = RestrictDrawsPerTurn(maxPerTurn = 1, affected = Player.EachOpponent)
+        ability = RestrictCardsDrawnPerTurn(affected = Player.EachOpponent, maxPerTurn = 1)
     }
 
     loyaltyAbility(-2) {
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
             count = 4,
-            filter = GameObjectFilter.Noncreature and GameObjectFilter.Nonland,
-            prompt = "You may reveal a noncreature, nonland card and put it into your hand"
+            filter = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsNoncreature, CardPredicate.IsNonland)),
+            prompt = "You may reveal a noncreature, nonland card from among them and put it into your hand"
         )
     }
 

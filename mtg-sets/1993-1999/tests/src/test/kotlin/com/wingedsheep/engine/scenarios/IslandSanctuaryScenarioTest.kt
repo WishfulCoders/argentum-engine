@@ -55,9 +55,7 @@ class IslandSanctuaryScenarioTest : FunSpec({
         d.passPriorityUntil(Step.DRAW)
         d.submitYesNo(opp, true).error shouldBe null
         d.getHandSize(opp) shouldBe before
-        d.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        d.activePlayer shouldBe me
+        d.passPriorityUntil(Step.DECLARE_ATTACKERS, me)
         d.currentStep shouldBe Step.DECLARE_ATTACKERS
         d.state.grantedStaticAbilities.isNotEmpty() shouldBe true
         d.declareAttackers(me, listOf(bear), opp).error!! shouldContain "can't attack:"
@@ -74,9 +72,7 @@ class IslandSanctuaryScenarioTest : FunSpec({
         d.replaceState(destroyed.state)
         val bear = d.putCreatureOnBattlefield(me, "Grizzly Bears").also(d::removeSummoningSickness)
         d.putCreatureOnBattlefield(me, flier.name).also(d::removeSummoningSickness)
-        d.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        d.activePlayer shouldBe me
+        d.passPriorityUntil(Step.DECLARE_ATTACKERS, me)
         d.currentStep shouldBe Step.DECLARE_ATTACKERS
         d.state.grantedStaticAbilities.isNotEmpty() shouldBe true
         d.declareAttackers(me, listOf(bear), opp).error!! shouldContain "can't attack:"

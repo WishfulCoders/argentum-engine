@@ -1,0 +1,51 @@
+package com.wingedsheep.mtg.sets.definitions.ltc
+
+import com.wingedsheep.mtg.sets.discovery.CardDiscovery
+import com.wingedsheep.sdk.model.CardDefinition
+import com.wingedsheep.sdk.model.MtgSet
+import com.wingedsheep.sdk.model.Printing
+import com.wingedsheep.sdk.model.TokenPrinting
+
+/**
+ * Tales of Middle-earth Commander (2023)
+ *
+ * Commander preconstructed decks released alongside The Lord of the Rings: Tales of Middle-earth.
+ *
+ * Set Code: LTC
+ * Release Date: June 23, 2023
+ */
+object TalesOfMiddleEarthCommanderSet : MtgSet {
+
+    override val code = "LTC"
+    override val displayName = "Tales of Middle-earth Commander"
+    override val releaseDate = "2023-06-23"
+    override val sealedSupported = false
+    override val incomplete = true
+
+    override val cards: List<CardDefinition> by lazy {
+        CardDiscovery.findIn(CARDS_PACKAGE)
+    }
+
+    override val printings: List<Printing> by lazy {
+        CardDiscovery.findPrintingsIn(CARDS_PACKAGE)
+    }
+
+    override val tokenArt: List<TokenPrinting> = listOf(
+        // tltc #7 — Lord of the Nazgûl's 3/3 black Wraith with menace.
+        TokenPrinting(
+            name = "Wraith",
+            imageUri = "https://cards.scryfall.io/normal/front/9/a/9afb58e8-f5a7-49f9-8287-77757bd3268c.jpg?1783916058",
+            power = 3,
+            toughness = 3,
+        ),
+        // tltc #? — Wake the Dragon's 6/6 black and red Dragon with flying and menace.
+        TokenPrinting(
+            name = "Dragon",
+            imageUri = "https://cards.scryfall.io/normal/front/1/1/11335886-a422-42ff-be14-226602202603.jpg?1783916054",
+            power = 6,
+            toughness = 6,
+        ),
+    )
+
+    private const val CARDS_PACKAGE = "com.wingedsheep.mtg.sets.definitions.ltc.cards"
+}

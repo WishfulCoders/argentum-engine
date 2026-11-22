@@ -2129,39 +2129,26 @@
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "Gated",
-                    "gate": "Gate.MayDecide",
-                    "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "SacrificeTarget",
-                                "target": {
-                                    "type": "BoundVariable",
-                                    "name": "t0"
-                                }
-                            },
-                            {
-                                "type": "ModifyStats",
-                                "powerModifier": {
-                                    "type": "Fixed",
-                                    "amount": 2
-                                },
-                                "toughnessModifier": {
-                                    "type": "Fixed",
-                                    "amount": 0
-                                },
-                                "target": "Self"
-                            }
-                        ]
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "filter": {
-                        "baseFilter": "creature|artifact ctrl:you",
-                        "excludeSelf": true
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "Sacrifice",
+                            "filter": "creature|artifact",
+                            "excludeSource": true
+                        }
                     },
-                    "id": "t0"
+                    "then": {
+                        "type": "ModifyStats",
+                        "powerModifier": {
+                            "type": "Fixed",
+                            "amount": 2
+                        },
+                        "toughnessModifier": {
+                            "type": "Fixed",
+                            "amount": 0
+                        },
+                        "target": "Self"
+                    }
                 }
             }
         ]
@@ -3448,6 +3435,14 @@
                     }
                 },
                 {
+                    "type": "GrantKeyword",
+                    "keyword": "VIGILANCE",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
                     "type": "DealDamage",
                     "amount": {
                         "type": "EntityProperty",
@@ -3642,7 +3637,8 @@
                                                 }
                                             ]
                                         }
-                                    ]
+                                    ],
+                                    "controllerPredicate": "ControlledByYou"
                                 }
                             },
                             "id": "t0"
@@ -7022,7 +7018,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for an Equipment card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -8429,7 +8427,9 @@
                                                 "amount": 2
                                             }
                                         },
-                                        "storeSelected": "found"
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library for up to two basic land cards to put onto the battlefield tapped",
+                                        "selectedLabel": "Put onto the battlefield tapped"
                                     },
                                     {
                                         "type": "MoveCollection",
@@ -8692,7 +8692,11 @@
                                 "type": "GrantMayPlayFromExile",
                                 "from": "selected1",
                                 "expiry": "Permanent",
-                                "landEntersTapped": true
+                                "entersTapped": {
+                                    "cardPredicates": [
+                                        "IsLand"
+                                    ]
+                                }
                             },
                             {
                                 "type": "GrantPlayWithCostIncrease",
@@ -8791,7 +8795,7 @@
     "script": {
         "replacementEffects": [
             {
-                "type": "DoubleCounterPlacement",
+                "type": "ScaleCounterPlacement",
                 "appliesTo": {
                     "type": "CounterPlacementEvent",
                     "recipient": {
@@ -11248,71 +11252,20 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "Gated",
-                    "gate": {
-                        "type": "Gate.WhenCondition",
-                        "condition": {
-                            "type": "SourceInZone",
-                            "zones": [
-                                "Battlefield"
-                            ]
+                    "type": "MoveUntilSourceLeaves",
+                    "target": {
+                        "type": "GroupRef",
+                        "filter": {
+                            "baseFilter": "artifact|creature mv<=2"
                         }
                     },
-                    "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "BattlefieldMatching",
-                                    "filter": "artifact|creature mv<=2",
-                                    "excludeSelf": true
-                                },
-                                "storeAs": "linked_exile"
-                            },
-                            {
-                                "type": "MoveCollection",
-                                "from": "linked_exile",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Exile"
-                                },
-                                "linkToSource": true
-                            }
-                        ]
-                    }
-                }
-            },
-            {
-                "id": "Pinnacle Starcage:2",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "from": "Battlefield"
-                },
-                "effect": {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "GatherCards",
-                            "source": "FromLinkedExile",
-                            "storeAs": "linked_return"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "linked_return",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Battlefield"
-                            },
-                            "underOwnersControl": true
-                        }
-                    ]
+                    "destination": "Exile"
                 }
             }
         ],
         "activatedAbilities": [
             {
-                "id": "Pinnacle Starcage:3",
+                "id": "Pinnacle Starcage:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -12890,7 +12843,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an artifact card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -12981,9 +12936,12 @@
                     "zone": "Graveyard"
                 },
                 "id": "t0",
-                "totalManaValueAtMost": {
-                    "type": "Fixed",
-                    "amount": 3
+                "totalAtMost": {
+                    "property": "MANA_VALUE",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 3
+                    }
                 }
             }
         ]
@@ -14629,7 +14587,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land Plains or creature card with mana value 1 or less to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -15213,9 +15173,13 @@
                 "interveningIf": {
                     "type": "Compare",
                     "left": {
-                        "type": "AggregateBattlefield",
-                        "player": "EachOpponent",
-                        "filter": "land"
+                        "type": "GreatestAmongPlayers",
+                        "players": "EachOpponent",
+                        "inner": {
+                            "type": "AggregateBattlefield",
+                            "player": "You",
+                            "filter": "land"
+                        }
                     },
                     "operator": "GT",
                     "right": {
@@ -15472,7 +15436,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         },
                         {
@@ -15756,34 +15723,21 @@
                 "trigger": "TapEvent",
                 "effect": {
                     "type": "Gated",
-                    "gate": "Gate.MayDecide",
-                    "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "SacrificeTarget",
-                                "target": {
-                                    "type": "BoundVariable",
-                                    "name": "t0"
-                                }
-                            },
-                            {
-                                "type": "DrawCards",
-                                "count": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                }
-                            }
-                        ]
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "filter": {
-                        "baseFilter": "creature|artifact ctrl:you",
-                        "excludeSelf": true
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "Sacrifice",
+                            "filter": "creature|artifact",
+                            "excludeSource": true
+                        }
                     },
-                    "id": "t0"
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
                 },
                 "descriptionOverride": "Whenever this creature becomes tapped, you may sacrifice another creature or artifact. If you do, draw a card."
             }
@@ -16418,8 +16372,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 2
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
                                 }
                             },
                             "then": {
@@ -17066,7 +17029,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for an artifact card with mana value 1 or less to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -17657,7 +17622,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a creature legendary card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -17869,7 +17836,10 @@
                 "type": "AdditionalAtom",
                 "atom": {
                     "type": "AtomPayLife",
-                    "amount": 2
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
                 }
             },
             "fromGraveyard": true
@@ -19415,7 +19385,12 @@
                                 "filter": {
                                     "cardPredicates": [
                                         "IsCreature",
-                                        "ToughnessAtMostX"
+                                        {
+                                            "type": "CompareNumericProperty",
+                                            "property": "TOUGHNESS",
+                                            "operator": "LTE",
+                                            "amount": "XValue"
+                                        }
                                     ]
                                 }
                             },

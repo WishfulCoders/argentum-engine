@@ -17,7 +17,8 @@
 import { useCallback } from 'react'
 import type { LobbyState } from '@/store/slices/types'
 import type { QuickGameLobbyStateMessage } from '@/types'
-import { cubeCardNames } from '@/store/cubeLibrary'
+import type { SharedCube } from '@/api/account'
+import { recipeCubeOf } from '@/components/cube/cubeModel'
 import { useUnifiedCubes } from '@/store/useUnifiedCubes'
 import { recipeFromLobby, type LobbyRecipe, type RecipeCube, type RecipeDeck } from './lobbyRecipe'
 import type { UnifiedLobbyView } from './lobbyViewModel'
@@ -29,6 +30,7 @@ export function useCaptureRecipe(
   quickLobby: QuickGameLobbyStateMessage | null,
   deckTab: DeckPickerTab | undefined,
   savedDeckName: string | null,
+  exampleName: string | null = null,
 ): () => { recipe: LobbyRecipe; notes: string[] } {
   const { cubes } = useUnifiedCubes()
 
@@ -38,14 +40,19 @@ export function useCaptureRecipe(
       view,
       lobbyState,
       quickLobby,
-      deckRefFor(deckTab, savedDeckName),
+      deckRefFor(
+        deckTab,
+        savedDeckName,
+        exampleName,
+        quickLobby?.players.find((p) => p.playerId === quickLobby.youPlayerId)?.setCodes ?? [],
+      ),
       cubeByName(
         cubes,
         lobbyState?.settings.cubeName ?? null,
         lobbyState?.settings.cubePoolPlay ?? false,
       ),
     )
-  }, [view, lobbyState, quickLobby, deckTab, savedDeckName, cubes])
+  }, [view, lobbyState, quickLobby, deckTab, savedDeckName, exampleName, cubes])
 }
 
 /**
@@ -55,14 +62,23 @@ export function useCaptureRecipe(
  * everything else is either a named saved deck or nothing worth recording (a pasted list has no
  * identity to bring back, and a pool built inside the event isn't chosen at all).
  */
-function deckRefFor(tab: DeckPickerTab | undefined, savedDeckName: string | null): RecipeDeck {
-  if (tab === 'random') return { kind: 'RANDOM' }
+function deckRefFor(
+  tab: DeckPickerTab | undefined,
+  savedDeckName: string | null,
+  exampleName: string | null,
+  /** The sets your Random tab is rolling from; empty = any set. */
+  randomSetCodes: readonly string[],
+): RecipeDeck {
+  if (tab === 'random') {
+    return randomSetCodes.length > 0 ? { kind: 'RANDOM', setCodes: [...randomSetCodes] } : { kind: 'RANDOM' }
+  }
+  if (tab === 'examples' && exampleName) return { kind: 'EXAMPLE', name: exampleName }
   if (savedDeckName) return { kind: 'SAVED', name: savedDeckName }
   return { kind: 'NONE' }
 }
 
 function cubeByName(
-  cubes: ReadonlyArray<{ name: string; cards: readonly { name: string; count: number }[]; basicLandSetCode: string; packSize: number }>,
+  cubes: readonly SharedCube[],
   cubeName: string | null,
   /** Pool Play is a lobby setting, not a property of the cube — so it comes from the lobby. */
   poolPlay: boolean,
@@ -70,11 +86,5 @@ function cubeByName(
   if (!cubeName) return undefined
   const match = cubes.find((c) => c.name.trim().toLowerCase() === cubeName.trim().toLowerCase())
   if (!match) return undefined
-  return {
-    name: match.name,
-    cards: cubeCardNames(match.cards),
-    basicLandSetCode: match.basicLandSetCode,
-    packSize: match.packSize,
-    poolPlay,
-  }
+  return recipeCubeOf(match, poolPlay)
 }

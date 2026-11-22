@@ -56,6 +56,142 @@
     ]
 }
 
+// Abundance
+{
+    "name": "Abundance",
+    "manaCost": "{2}{G}{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "If you would draw a card, you may instead choose land or nonland and reveal cards from the top of your library until you reveal a card of the chosen kind. Put that card into your hand and put all other cards revealed this way on the bottom of your library in any order.",
+    "script": {
+        "replacementEffects": [
+            {
+                "type": "ReplaceDrawWith",
+                "replacementEffect": {
+                    "type": "ChooseAction",
+                    "choices": [
+                        {
+                            "label": "Land",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherUntilMatch",
+                                        "filter": "land",
+                                        "storeMatch": "ignored",
+                                        "storeRevealed": "revealed"
+                                    },
+                                    {
+                                        "type": "RevealCollection",
+                                        "from": "revealed"
+                                    },
+                                    {
+                                        "type": "FilterCollection",
+                                        "from": "revealed",
+                                        "filter": "land",
+                                        "storeMatching": "matchedToHand",
+                                        "storeNonMatching": "rest"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "matchedToHand",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "rest",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Library",
+                                            "placement": "Bottom"
+                                        },
+                                        "order": "ControllerChooses"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "label": "Nonland",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherUntilMatch",
+                                        "filter": "nonland",
+                                        "storeMatch": "ignored",
+                                        "storeRevealed": "revealed"
+                                    },
+                                    {
+                                        "type": "RevealCollection",
+                                        "from": "revealed"
+                                    },
+                                    {
+                                        "type": "FilterCollection",
+                                        "from": "revealed",
+                                        "filter": "nonland",
+                                        "storeMatching": "matchedToHand",
+                                        "storeNonMatching": "rest"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "matchedToHand",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        },
+                                        "revealed": true
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "rest",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Library",
+                                            "placement": "Bottom"
+                                        },
+                                        "order": "ControllerChooses"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "optional": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "229",
+        "rarity": "RARE",
+        "artist": "Rebecca Guay",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/6/f6d051fa-bd3a-4c94-ae41-34d89a7bb77d.jpg?1783946322",
+        "rulings": [
+            {
+                "date": "2007-07-15",
+                "text": "If your library is empty, Abundance can prevent you from losing the game for being unable to draw a card. If an effect or turn-based action would cause you to draw a card, you can replace that draw with Abundance's replacement effect."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "This replacement effect replaces the draw, so nothing that triggers on a draw will trigger."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If you use this on a multi-card draw, each replaced draw is handled separately. In a multi-card draw you do not have to choose how many of those draws will be replaced before you do any drawing or use of this card."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If no card of the chosen type is found before your library empties, you don't get a card, but you do get to order all the cards in your library any way you choose."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Abyssal Horror
 {
     "name": "Abyssal Horror",
@@ -1140,6 +1276,53 @@
     ]
 }
 
+// Congregate
+{
+    "name": "Congregate",
+    "manaCost": "{3}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Target player gains 2 life for each creature on the battlefield.",
+    "script": {
+        "spellEffect": {
+            "type": "GainLife",
+            "amount": {
+                "type": "Multiply",
+                "amount": {
+                    "type": "AggregateBattlefield",
+                    "player": "Each",
+                    "filter": "creature"
+                },
+                "multiplier": 2
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetPlayer",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "8",
+        "artist": "Mark Zug",
+        "flavorText": "\"In the gathering there is strength for all who founder, renewal for all who languish, love for all who sing.\"\n—*Song of All*, canto 642",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/0/80b7923b-eb1c-49ce-8250-a1ea6efbb56e.jpg?1783946377",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "Count the number of creatures as Congregate resolves to determine how much life is gained."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Coral Merfolk
 {
     "name": "Coral Merfolk",
@@ -1157,6 +1340,74 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Corrupt
+{
+    "name": "Corrupt",
+    "manaCost": "{5}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Corrupt deals damage to any target equal to the number of Swamps you control. You gain life equal to the damage dealt this way.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land Swamp"
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "damageDealtVariable": "storedNumber0"
+                },
+                {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "VariableReference",
+                        "variableName": "storedNumber0"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "124",
+        "artist": "Vincent Evans",
+        "flavorText": "Yawgmoth brushed Urza's mind, and Urza's world convulsed.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/2/32e1c65c-ced6-484d-b3b4-db913c6bf84b.jpg?1783946347",
+        "rulings": [
+            {
+                "date": "2022-10-14",
+                "text": "Corrupt counts any land you control with the subtype Swamp, not just ones named Swamp."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "The life you gain is equal to the damage dealt by Corrupt, not necessarily to the number of Swamps you control (if some or all of the damage is prevented, for example)."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "The amount of damage dealt to a creature is not bounded by its toughness, and the amount of damage dealt to a player is not bounded by that player's life total. For example, if Corrupt deals 6 damage to a 2/2 creature, you'll gain 6 life."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "The swamps are counted on resolution."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -2039,13 +2290,7 @@
         "rarity": "RARE",
         "artist": "Brian Snõddy",
         "flavorText": "The first explorers found Argoth a storehouse of natural wealth—towering forests grown over rich veins of ore.",
-        "imageUri": "https://cards.scryfall.io/normal/front/2/f/2f09e451-0246-45a2-8bfd-07d3c65ddfe6.jpg?1783946316",
-        "rulings": [
-            {
-                "date": "2022-12-08",
-                "text": "Exploration's ability is cumulative with other effects that allow you to play additional lands, including ones created by other Explorations you control."
-            }
-        ]
+        "imageUri": "https://cards.scryfall.io/normal/front/2/f/2f09e451-0246-45a2-8bfd-07d3c65ddfe6.jpg?1783946316"
     },
     "colorIdentityOverride": [
         "GREEN"
@@ -2112,6 +2357,41 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Fertile Ground
+{
+    "name": "Fertile Ground",
+    "manaCost": "{1}{G}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant land\nWhenever enchanted land is tapped for mana, its controller adds an additional one mana of any color.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "AdditionalManaOnTap",
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 1
+                },
+                "anyColor": true
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "land"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "252",
+        "artist": "Heather Hudson",
+        "flavorText": "The forest was too lush for the brothers to despoil—almost.",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/9/091dda35-59e5-456d-8804-61513a610aed.jpg?1783946315"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -2263,7 +2543,9 @@
                             "amount": 2
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for up to two Forest land cards to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -2356,7 +2638,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -2413,6 +2697,83 @@
     ]
 }
 
+// Goblin Lackey
+{
+    "name": "Goblin Lackey",
+    "manaCost": "{R}",
+    "typeLine": "Creature — Goblin",
+    "oracleText": "Whenever this creature deals damage to a player, you may put a Goblin permanent card from your hand onto the battlefield.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Goblin Lackey:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": "permanent Goblin"
+                            },
+                            "storeAs": "put_candidates"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "put_candidates",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "putting",
+                            "prompt": "Put a Goblin permanent card onto the battlefield?"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "putting",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "190",
+        "rarity": "UNCOMMON",
+        "artist": "Jerry Tiritilli",
+        "flavorText": "All bark, someone else's bite.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/b/9b848caa-aad8-4060-8f86-304a8556de2d.jpg?1783946330",
+        "rulings": [
+            {
+                "date": "2008-08-01",
+                "text": "A Goblin permanent card is an artifact, creature, land, and/or enchantment card with the creature type \"Goblin\". Usually such cards will be creatures in addition to any other types, but they may be kindred instead. For example, you could put Boggart Shenanigans onto the battlefield with this effect."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Goblin Spelunkers
 {
     "name": "Goblin Spelunkers",
@@ -2456,25 +2817,35 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "ForEach",
-                    "space": "IterationSpace.Targets",
-                    "body": {
-                        "type": "TapUntap",
-                        "target": {
-                            "type": "ContextTarget",
-                            "index": 0
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
                         },
-                        "tap": false
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "count": 7,
-                    "optional": true,
-                    "filter": {
-                        "baseFilter": "land"
-                    },
-                    "id": "t0"
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 7
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Choose up to seven lands to untap"
+                        },
+                        {
+                            "type": "TapUntapCollection",
+                            "collectionName": "selected1",
+                            "tap": false
+                        }
+                    ]
                 }
             }
         ]
@@ -2655,6 +3026,42 @@
         "artist": "Dermot Power",
         "flavorText": "A landslide of goblins poured toward the defenders—tumbling, rolling, and bouncing their way down the steep hillside.",
         "imageUri": "https://cards.scryfall.io/normal/front/9/f/9f0db04c-5101-4a43-9109-3964ac66bdab.jpg"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Heat Ray
+{
+    "name": "Heat Ray",
+    "manaCost": "{X}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Heat Ray deals X damage to target creature.",
+    "script": {
+        "spellEffect": {
+            "type": "DealDamage",
+            "amount": "XValue",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "199",
+        "artist": "Brian Snõddy",
+        "flavorText": "It's not known whether the Thran built the device to forge their wonders or to defend them.",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/a/6a27f90e-d156-439c-b5e5-6d53bd510fe7.jpg"
     },
     "colorIdentityOverride": [
         "RED"
@@ -3415,25 +3822,35 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "ForEach",
-                    "space": "IterationSpace.Targets",
-                    "body": {
-                        "type": "TapUntap",
-                        "target": {
-                            "type": "ContextTarget",
-                            "index": 0
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
                         },
-                        "tap": false
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "count": 5,
-                    "optional": true,
-                    "filter": {
-                        "baseFilter": "land"
-                    },
-                    "id": "t0"
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 5
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Choose up to five lands to untap"
+                        },
+                        {
+                            "type": "TapUntapCollection",
+                            "collectionName": "selected1",
+                            "tap": false
+                        }
+                    ]
                 }
             }
         ]
@@ -3906,6 +4323,81 @@
     ]
 }
 
+// Rewind
+{
+    "name": "Rewind",
+    "manaCost": "{2}{U}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Counter target spell. Untap up to four lands.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                "Counter",
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "land"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                }
+                            },
+                            "storeSelected": "selected1"
+                        },
+                        {
+                            "type": "TapUntapCollection",
+                            "collectionName": "selected1",
+                            "tap": false
+                        }
+                    ]
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "93",
+        "artist": "Dermot Power",
+        "flavorText": "\"Time flows like a river. In Tolaria we practice the art of building dams.\"\n—Barrin, master wizard",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/e/9e51c4fb-fb29-4b1c-b78e-1fadf94fc9a5.jpg?1783946357",
+        "rulings": [
+            {
+                "date": "2020-06-23",
+                "text": "Rewind targets only a spell. It doesn't target any lands. The lands are chosen as Rewind resolves."
+            },
+            {
+                "date": "2020-06-23",
+                "text": "You can choose up to four lands, no matter who controls any of them. Those lands untap once."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Sanctum Custodian
 {
     "name": "Sanctum Custodian",
@@ -4264,6 +4756,135 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Shiv's Embrace
+{
+    "name": "Shiv's Embrace",
+    "manaCost": "{2}{R}{R}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nEnchanted creature gets +2/+2 and has flying.\n{R}: Enchanted creature gets +1/+0 until end of turn.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Shiv's Embrace:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{R}"
+                    }
+                },
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 0
+                    },
+                    "target": "EnchantedCreature"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 2,
+                "toughnessBonus": 2
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "FLYING"
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "216",
+        "rarity": "UNCOMMON",
+        "artist": "Bob Eggleton",
+        "flavorText": "\"Wear the foe's form to best it in battle. So sayeth the bey.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c9ba1a3-1de4-4771-b76a-89354bc799d3.jpg?1783946325"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Shivan Gorge
+{
+    "name": "Shivan Gorge",
+    "manaCost": "",
+    "typeLine": "Legendary Land",
+    "oracleText": "{T}: Add {C}.\n{2}{R}, {T}: Shivan Gorge deals 1 damage to each opponent.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Shivan Gorge:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Shivan Gorge:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}{R}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "326",
+        "rarity": "RARE",
+        "artist": "John Matson",
+        "flavorText": "Both forge and pyre.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/5/1531eb8c-af8a-45c6-9058-3337c44e609f.jpg?1783946297",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "The damage has no color. It is not red."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
@@ -5132,6 +5753,60 @@
     ]
 }
 
+// Tolarian Winds
+{
+    "name": "Tolarian Winds",
+    "manaCost": "{1}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Discard all the cards in your hand, then draw that many cards.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand"
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "gathered0",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Discard"
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "VariableReference",
+                        "variableName": "gathered0_count"
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "104",
+        "artist": "Lawrence Snelly",
+        "flavorText": "Afterward, Tolaria's winds were like the whispers of lost wizards, calling for life.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/c/5c29399d-0a59-4dcb-9bd4-f31eea3f39f9.jpg?1783946353",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "It counts how many cards you discard. Since this card will not be in your hand at that time, this card is not counted."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Treetop Rangers
 {
     "name": "Treetop Rangers",
@@ -5589,6 +6264,86 @@
     ]
 }
 
+// Windfall
+{
+    "name": "Windfall",
+    "manaCost": "{2}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "StoreNumber",
+                    "name": "windfallGreatestDiscard",
+                    "amount": {
+                        "type": "GreatestAmongPlayers",
+                        "inner": {
+                            "type": "Count",
+                            "player": "You",
+                            "zone": "Hand"
+                        }
+                    }
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "Each"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand"
+                                },
+                                "storeAs": "discardedHand"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "discardedHand",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Discard"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "Each"
+                    },
+                    "body": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "VariableReference",
+                            "variableName": "windfallGreatestDiscard"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "111",
+        "rarity": "UNCOMMON",
+        "artist": "Pete Venters",
+        "flavorText": "\"To fill your mind with knowledge, we must start by emptying it.\"\n—Barrin, master wizard",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/a/2aef4608-5ba8-4636-b5e7-cac57c5c0608.jpg?1783946351"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Witch Engine
 {
     "name": "Witch Engine",
@@ -5754,7 +6509,7 @@
                     "ability": {
                         "type": "MayCastFromGraveyard",
                         "filter": {},
-                        "playLands": true
+                        "playsLands": true
                     },
                     "target": "Controller"
                 },

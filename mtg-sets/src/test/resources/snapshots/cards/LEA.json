@@ -541,7 +541,7 @@
                                 },
                                 "storeSelected": "selected2",
                                 "storeRemainder": "remainder2",
-                                "prompt": "Choose lands to keep, as many as the player with the fewest lands controls; the rest are sacrificed.",
+                                "prompt": "Choose lands to keep; the rest are sacrificed.",
                                 "selectedLabel": "Keep",
                                 "remainderLabel": "Sacrifice",
                                 "useTargetingUI": true
@@ -586,7 +586,7 @@
                                     "count": {
                                         "type": "LeastAmongPlayers",
                                         "inner": {
-                                            "type": "AggregateZone",
+                                            "type": "Count",
                                             "player": "You",
                                             "zone": "Hand"
                                         }
@@ -594,7 +594,7 @@
                                 },
                                 "storeSelected": "selected7",
                                 "storeRemainder": "remainder7",
-                                "prompt": "Choose cards to keep, as many as the player with the fewest cards in hand has; the rest are discarded.",
+                                "prompt": "Choose cards to keep; the rest are discarded.",
                                 "selectedLabel": "Keep",
                                 "remainderLabel": "Discard"
                             }
@@ -605,33 +605,13 @@
                     }
                 },
                 {
-                    "type": "CaptureControllers",
+                    "type": "MoveCollection",
                     "from": "collected8",
-                    "storeAs": "controllers9"
-                },
-                {
-                    "type": "ForEachCapturedController",
-                    "collection": "collected8",
-                    "originalCollection": "collected8",
-                    "controllerSnapshot": "controllers9",
-                    "countVariable": "count10",
-                    "effects": [
-                        {
-                            "type": "FilterCollection",
-                            "from": "collected8",
-                            "filter": "own:you",
-                            "storeMatching": "matching11"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "matching11",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Graveyard"
-                            },
-                            "moveType": "Discard"
-                        }
-                    ]
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Discard"
                 },
                 {
                     "type": "ForEach",
@@ -648,11 +628,11 @@
                                     "type": "ControlledPermanents",
                                     "filter": "creature"
                                 },
-                                "storeAs": "gathered14"
+                                "storeAs": "gathered11"
                             },
                             {
                                 "type": "SelectFromCollection",
-                                "from": "gathered14",
+                                "from": "gathered11",
                                 "selection": {
                                     "type": "ChooseExactly",
                                     "count": {
@@ -664,9 +644,9 @@
                                         }
                                     }
                                 },
-                                "storeSelected": "selected15",
-                                "storeRemainder": "remainder15",
-                                "prompt": "Choose creatures to keep, as many as the player with the fewest creatures controls; the rest are sacrificed.",
+                                "storeSelected": "selected12",
+                                "storeRemainder": "remainder12",
+                                "prompt": "Choose creatures to keep; the rest are sacrificed.",
                                 "selectedLabel": "Keep",
                                 "remainderLabel": "Sacrifice",
                                 "useTargetingUI": true
@@ -674,12 +654,12 @@
                         ]
                     },
                     "collectCollections": {
-                        "remainder15": "collected16"
+                        "remainder12": "collected13"
                     }
                 },
                 {
                     "type": "MoveCollection",
-                    "from": "collected16",
+                    "from": "collected13",
                     "destination": {
                         "type": "ToZone",
                         "zone": "Graveyard"
@@ -697,15 +677,15 @@
         "rulings": [
             {
                 "date": "2016-06-08",
-                "text": "First the player whose turn it is chooses which lands (if any) to keep, then each other player in turn order does the same. Each player will know the choices made by the players who chose before them. All of the unchosen lands are then sacrificed simultaneously. Then the process is repeated for cards in hand, except that no cards are revealed until all players have chosen what to discard, at which point those cards are all discarded simultaneously. Lastly, the process is repeated for creatures, and players will again know earlier choices made when deciding what to sacrifice. All of the unchosen creatures are then sacrificed simultaneously."
+                "text": "First the player whose turn it is chooses which lands to keep, then each other player in turn order does the same, knowing the choices made before them. All unchosen lands are sacrificed at the same time. The same process is then used for cards in hand, except no cards are revealed until all players have chosen what to discard; then all are discarded at the same time. Lastly the same is done for creatures."
             },
             {
                 "date": "2016-06-08",
-                "text": "Balance doesn't have targets, so permanents that can't be targeted, such as a creature with shroud or protection from white, are valid choices to be sacrificed."
+                "text": "Balance doesn't target any players or permanents. You may sacrifice creatures with shroud or protection, for example."
             },
             {
                 "date": "2016-06-08",
-                "text": "Each type of object is counted during the corresponding part of the process. Cards in hand are counted after lands have been sacrificed, and creatures on the battlefield are counted after cards have been discarded. Thus, a land creature sacrificed to the first part of the spell would not be counted when determining how many creatures are on the battlefield for the last part."
+                "text": "Each type is counted during its own part of the resolution. The number of cards in hand is counted after lands have been sacrificed, and the number of creatures is counted after cards have been discarded. A land creature sacrificed in the first part isn't counted when determining how many creatures to keep."
             }
         ]
     },
@@ -1102,7 +1082,8 @@
         "staticAbilities": [
             {
                 "type": "GrantProtection",
-                "color": "BLACK"
+                "color": "BLACK",
+                "spares": "SELF"
             }
         ],
         "auraTarget": {
@@ -1314,7 +1295,8 @@
         "staticAbilities": [
             {
                 "type": "GrantProtection",
-                "color": "BLUE"
+                "color": "BLUE",
+                "spares": "SELF"
             }
         ],
         "auraTarget": {
@@ -1534,7 +1516,10 @@
                 "type": "PayAtom",
                 "atom": {
                     "type": "AtomPayLife",
-                    "amount": 1
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
                 }
             },
             "effect": {
@@ -1563,6 +1548,98 @@
     "colorIdentityOverride": [
         "GREEN"
     ]
+}
+
+// Chaos Orb
+{
+    "name": "Chaos Orb",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "{1}, {T}: If this artifact is on the battlefield, flip it onto the battlefield from a height of at least one foot. If this artifact turns over completely at least once during the flip, destroy all nontoken permanents it touches. Then destroy this artifact.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Chaos Orb:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "SourceInZone",
+                                    "zones": [
+                                        "Battlefield"
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "FlipOntoBattlefield",
+                                        "storeTouchedAs": "touched0",
+                                        "filter": "permanent nontoken"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "touched0",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Graveyard"
+                                        },
+                                        "moveType": "Destroy"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "MoveToZone",
+                            "target": "Self",
+                            "destination": "Graveyard",
+                            "byDestruction": true
+                        }
+                    ]
+                },
+                "descriptionOverride": "{1}, {T}: If this artifact is on the battlefield, flip it onto the battlefield from a height of at least one foot. If this artifact turns over completely at least once during the flip, destroy all nontoken permanents it touches. Then destroy this artifact."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "235",
+        "rarity": "RARE",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/2/92274971-7c4a-4326-b0fe-75e2d124f718.jpg?1783948669",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "Chaos Orb can only affect permanents. Cards that are in the game but not on the battlefield, such as those in the Library and Graveyard, can't be affected."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "It must flip 360 degrees (that's what \"flip\" means). And this flip must be in the air and not in your hand."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "This is a not a targeted ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Chaoslace
@@ -2133,6 +2210,78 @@
         "imageUri": "https://cards.scryfall.io/normal/front/c/7/c7824e2a-4eff-4f72-9216-0db30a4f4252.jpg"
     },
     "colorIdentityOverride": []
+}
+
+// Contract from Below
+{
+    "name": "Contract from Below",
+    "manaCost": "{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Remove this card from your deck before playing if you're not playing for ante.\nDiscard your hand, ante the top card of your library, then draw seven cards.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand"
+                    },
+                    "storeAs": "discardedHand"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "discardedHand",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Discard"
+                },
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "anted_top"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "anted_top",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Ante"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 7
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "96",
+        "rarity": "RARE",
+        "artist": "Douglas Shuler",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/8/9853b0ce-4763-4877-9741-f9145a3659c6.jpg?1783948698"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
 }
 
 // Control Magic
@@ -2758,6 +2907,75 @@
     ]
 }
 
+// Darkpact
+{
+    "name": "Darkpact",
+    "manaCost": "{B}{B}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Remove this card from your deck before playing if you're not playing for ante.\nYou own target card in the ante. Exchange that card with the top card of your library.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "TopOfLibrary",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "ChangeOwnership",
+                    "card": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Library",
+                    "placement": "Top"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "gathered0",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Ante"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {},
+                    "zone": "Ante"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "99",
+        "rarity": "RARE",
+        "artist": "Quinton Hoover",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/7/e78db688-93a2-47f5-9aa5-9158a72cd973.jpg?1783948697"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Death Ward
 {
     "name": "Death Ward",
@@ -2864,6 +3082,56 @@
         "rarity": "RARE",
         "artist": "Sandra Everingham",
         "imageUri": "https://cards.scryfall.io/normal/front/6/f/6ff1cefc-62cb-4525-b0c5-2b09603b4314.jpg?1783948696"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
+// Demonic Attorney
+{
+    "name": "Demonic Attorney",
+    "manaCost": "{1}{B}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Remove this card from your deck before playing if you're not playing for ante.\nEach player antes the top card of their library.",
+    "script": {
+        "spellEffect": {
+            "type": "ForEach",
+            "space": {
+                "type": "IterationSpace.Players",
+                "players": "ActivePlayerFirst"
+            },
+            "body": {
+                "type": "Composite",
+                "effects": [
+                    {
+                        "type": "GatherCards",
+                        "source": {
+                            "type": "TopOfLibrary",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        "storeAs": "anted_top"
+                    },
+                    {
+                        "type": "MoveCollection",
+                        "from": "anted_top",
+                        "destination": {
+                            "type": "ToZone",
+                            "zone": "Ante"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "102",
+        "rarity": "RARE",
+        "artist": "Daniel Gelon",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/d/fd891fc6-d9d6-494e-ae65-8bea8f44b575.jpg?1783948696"
     },
     "colorIdentityOverride": [
         "BLACK"
@@ -3016,7 +3284,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -4203,6 +4473,95 @@
     ]
 }
 
+// Fireball
+{
+    "name": "Fireball",
+    "manaCost": "{X}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "This spell costs {1} more to cast for each target beyond the first.\nFireball deals X damage divided evenly, rounded down, among any number of targets.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "StoreNumber",
+                    "name": "share",
+                    "amount": {
+                        "type": "Divide",
+                        "numerator": "XValue",
+                        "denominator": {
+                            "type": "ContextProperty",
+                            "key": "TARGET_COUNT"
+                        },
+                        "roundUp": false
+                    }
+                },
+                {
+                    "type": "ForEach",
+                    "space": "IterationSpace.Targets",
+                    "body": {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "VariableReference",
+                            "variableName": "share"
+                        },
+                        "target": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        }
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "id": "t0",
+                "unlimited": true
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifySpellCost",
+                "target": "SelfCast",
+                "modification": {
+                    "type": "IncreaseGenericBy",
+                    "source": {
+                        "type": "ChosenTargets",
+                        "beyond": 1
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "149",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/7/b7623c00-144b-4a8f-9c6c-f5e9e4f65ece.jpg?1783948686",
+        "rulings": [
+            {
+                "date": "2017-11-17",
+                "text": "For example, if you choose three targets and X is 5, Fireball costs {7}{R} to cast. If all three targets are still legal as Fireball resolves, it deals 1 damage to each of them."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "You may cast Fireball with zero targets, regardless of the value you choose for X. If you do, it's not a targeted spell and won't deal any damage."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "Fireball's damage is divided as Fireball resolves, not as it's cast, because there are no choices involved. The division takes into account only targets that are still legal at that time."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "You can choose more targets than X. If the number of legal targets as Fireball resolves is greater than X, none of them are dealt damage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Firebreathing
 {
     "name": "Firebreathing",
@@ -5053,7 +5412,8 @@
         "staticAbilities": [
             {
                 "type": "GrantProtection",
-                "color": "GREEN"
+                "color": "GREEN",
+                "spares": "SELF"
             }
         ],
         "auraTarget": {
@@ -7729,7 +8089,14 @@
         "triggeredAbilities": [
             {
                 "id": "Manabarbs:1",
-                "trigger": "LandTappedForMana",
+                "trigger": {
+                    "type": "PermanentTappedForMana",
+                    "permanentFilter": {
+                        "cardPredicates": [
+                            "IsLand"
+                        ]
+                    }
+                },
                 "binding": "ANY",
                 "effect": {
                     "type": "DealDamage",
@@ -8253,7 +8620,7 @@
                     "type": "Composite",
                     "effects": [
                         {
-                            "type": "MarkMustAttackThisTurn",
+                            "type": "MarkMustAttack",
                             "target": {
                                 "type": "BoundVariable",
                                 "name": "t0"
@@ -8306,7 +8673,10 @@
                                     }
                                 ],
                                 "statePredicates": [
-                                    "ControlledSinceTurnBegan"
+                                    {
+                                        "type": "ControlledContinuouslySince",
+                                        "since": "TURN_BEGAN"
+                                    }
                                 ],
                                 "controllerPredicate": "ControlledByActivePlayer"
                             }
@@ -8321,7 +8691,10 @@
                             "type": "All",
                             "conditions": [
                                 "IsOpponentsTurn",
-                                "BeforeAttackersDeclaredThisTurn"
+                                {
+                                    "type": "BeforeFirstCombatStepThisTurn",
+                                    "step": "DECLARE_ATTACKERS"
+                                }
                             ]
                         }
                     }
@@ -9168,6 +9541,77 @@
     ]
 }
 
+// Power Leak
+{
+    "name": "Power Leak",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant enchantment\nAt the beginning of the upkeep of enchanted enchantment's controller, that player may pay any amount of mana. This Aura deals 2 damage to that player. Prevent X of that damage, where X is the amount of mana that player paid this way.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Power Leak:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "Gated",
+                            "gate": "Gate.MayPayX",
+                            "then": {
+                                "type": "PreventDamageShield",
+                                "target": {
+                                    "type": "PlayerRef",
+                                    "player": "TriggeringPlayer"
+                                },
+                                "amount": "XValue",
+                                "sourceFilter": {
+                                    "type": "PreventFromSpecific",
+                                    "source": "Self"
+                                },
+                                "nextInstanceOnly": true
+                            },
+                            "decisionMaker": {
+                                "type": "PlayerRef",
+                                "player": "TriggeringPlayer"
+                            }
+                        },
+                        {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "TriggeringPlayer"
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "enchantment"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "71",
+        "artist": "Drew Tucker",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/c/ccc982b6-35b2-4e33-ace2-86cb79123e4f.jpg?1783948702"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Power Sink
 {
     "name": "Power Sink",
@@ -9703,7 +10147,8 @@
         "staticAbilities": [
             {
                 "type": "GrantProtection",
-                "color": "RED"
+                "color": "RED",
+                "spares": "SELF"
             }
         ],
         "auraTarget": {
@@ -10809,7 +11254,7 @@
                         }
                     },
                     "body": {
-                        "type": "MarkMustAttackThisTurn",
+                        "type": "MarkMustAttack",
                         "target": "IterationEntity"
                     }
                 },
@@ -10836,7 +11281,10 @@
                                                 "type": "StateNot",
                                                 "predicate": "AttackedThisTurn"
                                             },
-                                            "ControlledSinceTurnBegan"
+                                            {
+                                                "type": "ControlledContinuouslySince",
+                                                "since": "TURN_BEGAN"
+                                            }
                                         ],
                                         "controllerPredicate": "ControlledByActivePlayer"
                                     }
@@ -10864,7 +11312,10 @@
                     "type": "All",
                     "conditions": [
                         "IsOpponentsTurn",
-                        "BeforeAttackersDeclaredThisTurn"
+                        {
+                            "type": "BeforeFirstCombatStepThisTurn",
+                            "step": "DECLARE_ATTACKERS"
+                        }
                     ]
                 }
             }
@@ -11100,7 +11551,12 @@
                 "filter": {
                     "baseFilter": {
                         "cardPredicates": [
-                            "ManaValueEqualsX"
+                            {
+                                "type": "CompareNumericProperty",
+                                "property": "MANA_VALUE",
+                                "operator": "EQ",
+                                "amount": "XValue"
+                            }
                         ]
                     },
                     "zone": "Stack"
@@ -11148,7 +11604,11 @@
             }
         ],
         "staticAbilities": [
-            "SkipUntapStep"
+            {
+                "type": "SkipStepOrPhase",
+                "part": "UNTAP_STEP",
+                "player": "Each"
+            }
         ]
     },
     "metadata": {
@@ -12090,7 +12550,8 @@
                                 "type": "BoundVariable",
                                 "name": "t0"
                             }
-                        }
+                        },
+                        "description": "Tap target artifact, creature, or land"
                     },
                     {
                         "effect": {
@@ -12100,7 +12561,8 @@
                                 "name": "t0"
                             },
                             "tap": false
-                        }
+                        },
+                        "description": "Untap target artifact, creature, or land"
                     }
                 ],
                 "countsAsModalSpell": false
@@ -12611,12 +13073,12 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "optional": true,
                 "filter": {
                     "baseFilter": "land Mountain"
                 },
                 "id": "t0",
-                "dynamicMaxCount": "XValue"
+                "dynamicMaxCount": "XValue",
+                "dynamicMinCount": "XValue"
             }
         ]
     },
@@ -13265,7 +13727,8 @@
         "staticAbilities": [
             {
                 "type": "GrantProtection",
-                "color": "WHITE"
+                "color": "WHITE",
+                "spares": "SELF"
             }
         ],
         "auraTarget": {
@@ -13455,6 +13918,117 @@
         "artist": "Mark Tedin",
         "imageUri": "https://cards.scryfall.io/normal/front/b/c/bcae01a2-171b-47cd-87be-f1e4e5314326.jpg?1783948661"
     }
+}
+
+// Word of Command
+{
+    "name": "Word of Command",
+    "manaCost": "{B}{B}",
+    "typeLine": "Instant",
+    "oracleText": "Look at target opponent's hand and choose a card from it. You control that player until Word of Command finishes resolving. The player plays that card if able. While doing so, the player can activate mana abilities only if they're from lands that player controls and only if mana they produce is spent to activate other mana abilities of lands the player controls and/or to play that card. If the chosen card is cast as a spell, you control the player while that spell is resolving.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ControlPlayerDuringResolution",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "LookAtTargetHand",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand",
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "storeAs": "gathered2"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered2",
+                    "selection": {
+                        "type": "ChooseExactly",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeSelected": "selected3",
+                    "prompt": "Choose a card for that player to play",
+                    "showAllCards": true,
+                    "alwaysPrompt": true
+                },
+                {
+                    "type": "WithManaSpendingObligations",
+                    "effect": {
+                        "type": "WithManaAbilitySources",
+                        "effect": {
+                            "type": "ForcePlay",
+                            "from": "selected3",
+                            "player": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "storePlayedTo": "stored4"
+                        },
+                        "sources": {
+                            "cardPredicates": [
+                                "IsLand"
+                            ],
+                            "controllerPredicate": "ControlledByYou"
+                        },
+                        "player": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "player": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "ControlPlayerDuringResolution",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "resolvingObject": {
+                        "type": "PipelineTarget",
+                        "collectionName": "stored4"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetOpponent",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "136",
+        "rarity": "RARE",
+        "artist": "Jesper Myrfors",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/6/96c21429-98d3-416b-be00-6aa9c4c5a006.jpg?1783948689"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
 }
 
 // Wrath of God

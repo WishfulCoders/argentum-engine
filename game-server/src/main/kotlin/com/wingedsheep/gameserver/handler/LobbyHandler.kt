@@ -25,12 +25,14 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.gameserver.deck.DeckValidator
 import com.wingedsheep.gameserver.deck.SideboardSanitizer
 import com.wingedsheep.gameserver.deck.EasterEggDeckInjector
+import com.wingedsheep.gameserver.cube.CubeBoosterStyle
 import com.wingedsheep.gameserver.cube.CubeCardEntry
 import com.wingedsheep.gameserver.cube.CubeList
 import com.wingedsheep.gameserver.cube.CubeResolution
 import com.wingedsheep.gameserver.cube.CubeResolver
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.model.Rarity
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,6 +41,12 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.WebSocketSession
+
+/** The Jumpstart set a matchmade Jump In game deals from. The home screen lets a player choose theirs. */
+private const val MATCHMADE_JUMP_IN_SET = "J22"
+
+/** Fresh builds an AI premade seat gets when the lobby rejects one — at ~1% rejection, ample. */
+private const val MAX_AI_PREMADE_DECK_ATTEMPTS = 5
 
 @Component
 class LobbyHandler(
@@ -149,7 +157,7 @@ class LobbyHandler(
         when (message) {
             is ClientMessage.CreateSealedGame -> handleCreateSealedGame(session, message)
             is ClientMessage.JoinSealedGame -> handleJoinSealedGame(session, message)
-            is ClientMessage.PickJumpstartPack -> handleJumpstartPick(session, message)
+            is ClientMessage.PickJumpstartPacks -> handleJumpstartPick(session, message)
             is ClientMessage.SubmitSealedDeck -> handleSubmitSealedDeck(session, message)
             is ClientMessage.UnsubmitDeck -> handleUnsubmitDeck(session)
             is ClientMessage.CreateTournamentLobby -> handleCreateTournamentLobby(session, message)
@@ -183,6 +191,12 @@ class LobbyHandler(
             tournamentMatchHandler.handleReadyForNextRound(session)
         }
     }
+
+    fun handleSubmitMatchDeck(session: WebSocketSession, message: ClientMessage.SubmitMatchDeck) =
+        tournamentMatchHandler.handleSubmitMatchDeck(session, message.deck, message.playFirst)
+
+    fun handleEditMatchDeck(session: WebSocketSession) =
+        tournamentMatchHandler.handleEditMatchDeck(session)
 
     fun handleMatchResult(lobbyId: String, gameSessionId: String, winnerId: EntityId?, winnerLifeRemaining: Int) {
         val lobby = lobbyRepository.findLobbyById(lobbyId)
@@ -240,7 +254,7 @@ class LobbyHandler(
         setCodes: List<String>,
         playerCount: Int = 2,
         models: List<String>? = null,
-        heuristicDeckbuilding: Boolean? = null,
+        skipLlmDeckbuilding: Boolean? = null,
         gamesPerMatch: Int? = null,
     ): String {
         require(aiGameManager.isEnabled) { "AI opponent is not enabled on this server" }
@@ -293,12 +307,13 @@ class LobbyHandler(
                     cardPool = playerState.cardPool.map { ConnectionHandler.cardToSealedCardInfo(it) },
                     basicLands = basicLandInfos,
                     poolPlay = lobby.isCubePoolPlay,
+                    maxCopiesPerCard = lobby.limitedCopyCap,
                 ))
             }
         }
 
         // Launch AI deck building in background (handles tournament activation + match start)
-        launchAiDeckBuilding(lobby, heuristicDeckbuilding = heuristicDeckbuilding ?: false)
+        launchAiDeckBuilding(lobby, skipLlmDeckbuilding = skipLlmDeckbuilding ?: false)
 
         lobbyRepository.saveLobby(lobby)
         return lobby.lobbyId
@@ -455,34 +470,57 @@ class LobbyHandler(
         sendSealedPoolToAllPlayers(sealedSession)
     }
 
+    /**
+     * Seat two players the matchmaking queue paired for Jump In: a private two-seat Jump In lobby on
+     * [MATCHMADE_JUMP_IN_SET], started at once so both land on
+     * their pack choice. Picking the second pack is each player's ready signal, and the one-game
+     * match starts when both have. Returns false, creating nothing, when the lobby can't start.
+     */
+    fun createMatchmadeJumpInLobby(identities: List<PlayerIdentity>): Boolean {
+        if (identities.any { identity -> identity.currentLobbyId?.let { lobbyRepository.findLobbyById(it) } != null }) return false
+        val setCode = MATCHMADE_JUMP_IN_SET
+        val setName = boosterGenerator.getSetConfig(setCode)?.setName ?: return false
+        val lobby = TournamentLobby(
+            setCodes = listOf(setCode),
+            setNames = listOf(setName),
+            boosterGenerator = boosterGenerator,
+            format = TournamentFormat.SEALED,
+            useJumpstart = true,
+            maxPlayers = identities.size,
+            gamesPerMatch = 1,
+            gameMode = LobbyGameMode.TOURNAMENT,
+        )
+        identities.forEach { lobby.addPlayer(it) }
+        val host = lobby.hostPlayerId!!
+        if (lobby.jumpstartStartError() != null || !lobby.startJumpstart(host)) {
+            identities.forEach { it.currentLobbyId = null }
+            return false
+        }
+        lobbyRepository.saveLobby(lobby)
+        logger.info("Matchmade Jump In lobby ${lobby.lobbyId}: ${identities.joinToString(" vs ") { it.playerName }}")
+        ctx.broadcastLobbyUpdate(lobby)
+        return true
+    }
+
     private fun finishAiJumpstartPicks(lobby: TournamentLobby) {
         lobby.players.values.filter { it.identity.isAi && !it.hasSubmittedDeck }.forEach { player ->
-            while (lobby.players.getValue(player.identity.playerId).jumpstartOffers.isNotEmpty()) {
-                val current = lobby.players.getValue(player.identity.playerId)
-                lobby.pickJumpstart(player.identity.playerId, current.jumpstartOffers.random(), current.jumpstartSelections.size + 1)
-            }
+            lobby.pickJumpstart(player.identity.playerId, player.jumpstartOffers.random(), player.jumpstartSecondOffers.random())
             val pool = lobby.players.getValue(player.identity.playerId).cardPool
             lobby.submitDeck(player.identity.playerId, pool.groupingBy { it.name }.eachCount())
         }
     }
 
-    private fun handleJumpstartPick(session: WebSocketSession, message: ClientMessage.PickJumpstartPack) {
+    private fun handleJumpstartPick(session: WebSocketSession, message: ClientMessage.PickJumpstartPacks) {
         val playerSession = sessionRegistry.getPlayerSession(session.id) ?: return
         val identity = sessionRegistry.getTokenByWsId(session.id)?.let { sessionRegistry.getIdentityByToken(it) } ?: return
         val lobby = identity.currentLobbyId?.let(lobbyRepository::findLobbyById) ?: return
         synchronized(lobby) {
-            if (!lobby.pickJumpstart(identity.playerId, message.packId, message.pickNumber)) {
+            if (!lobby.pickJumpstart(identity.playerId, message.firstPackId, message.secondPackId)) {
                 sender.sendError(session, ErrorCode.INVALID_ACTION, "That Jumpstart choice is no longer available")
                 return
             }
-            val player = lobby.players.getValue(identity.playerId)
-            if (player.jumpstartSelections.size == 2) {
-                handleLobbyDeckSubmit(session, playerSession, identity, lobby.lobbyId,
-                    player.cardPool.groupingBy { it.name }.eachCount())
-            } else {
-                ctx.broadcastLobbyUpdate(lobby)
-                lobbyRepository.saveLobby(lobby)
-            }
+            handleLobbyDeckSubmit(session, playerSession, identity, lobby.lobbyId,
+                lobby.players.getValue(identity.playerId).cardPool.groupingBy { it.name }.eachCount())
         }
     }
 
@@ -507,6 +545,9 @@ class LobbyHandler(
                 message.cardEntries,
                 message.commanderPrinting,
                 message.sideboard,
+                message.secondCommander,
+                message.secondCommanderPrinting,
+                message.companion,
             )
             return
         }
@@ -583,7 +624,12 @@ class LobbyHandler(
             val deck = EasterEggDeckInjector.maybeInjectEasterEggs(
                 playerState.session.playerName, deckWithLandArt, gameProperties.easterEggs.enabled
             )
-            gameSession.addPlayer(playerState.session, deck, sideboard = playerState.submittedSideboard)
+            gameSession.addPlayer(
+                playerState.session, deck,
+                // The sideboard's basic-land supply wears the same set art as the deck's basics.
+                sideboard = BoosterGenerator.withBasicLandArt(playerState.submittedSideboard, sealedSession.basicLands),
+            )
+            // The legacy two-player sealed flow has no companion field; companions ride the lobby path.
 
             // Store player info for persistence
             val token = sessionRegistry.getTokenByWsId(playerState.session.webSocketSession.id)
@@ -759,6 +805,10 @@ class LobbyHandler(
             maxPlayers = maxPlayers,
             pickTimeSeconds = TournamentLobby.clampPickTimeSeconds(message.pickTimeSeconds, 120),
             picksPerRound = initialPicksPerRound,
+            // A new bracket plays best-of-three matches, each pair meeting once — the Magic Tournament
+            // Rules shape. (The old default, three separate one-game matches per pair, stood in for it.)
+            gamesPerMatch = 1,
+            bestOf = 3,
             isPublic = message.isPublic,
             // Commander formats enable Chaos boosters by default — 20-card commander packs
             // need to mix sets to give a workable pool when multiple sets are selected. A pack-shape
@@ -774,10 +824,13 @@ class LobbyHandler(
                 ),
             aiAssistEnabled = message.aiAssistEnabled,
             gameMode = gameMode,
-            attackMode = runCatching { com.wingedsheep.sdk.core.AttackMode.valueOf(message.attackMode.uppercase()) }
-                .getOrDefault(com.wingedsheep.sdk.core.AttackMode.LEFT),
+            // Unset (or unreadable) leaves the default to the lobby's Rules axis.
+            chosenAttackMode = message.attackMode
+                ?.let { runCatching { com.wingedsheep.sdk.core.AttackMode.valueOf(it.uppercase()) }.getOrNull() },
             // Ranked only applies to a TOURNAMENT-mode bracket (its matches are 1v1).
             ranked = message.ranked && gameMode == LobbyGameMode.TOURNAMENT,
+            // Ranked games are never played for ante (CR 407); ranked wins the conflict.
+            playingForAnte = message.playingForAnte && !(message.ranked && gameMode == LobbyGameMode.TOURNAMENT),
         )
         lobby.addPlayer(identity)
         lobbyRepository.saveLobby(lobby)
@@ -905,6 +958,7 @@ class LobbyHandler(
                     cardPool = poolInfos,
                     basicLands = basicLandInfos,
                     poolPlay = lobby.isCubePoolPlay,
+                    maxCopiesPerCard = lobby.limitedCopyCap,
                 ))
                 ctx.broadcastLobbyUpdate(lobby)
 
@@ -960,6 +1014,7 @@ class LobbyHandler(
             cardPool = poolInfos,
             basicLands = basicLandInfos,
             poolPlay = lobby.isCubePoolPlay,
+            maxCopiesPerCard = lobby.limitedCopyCap,
         ))
         sender.send(session, lobby.buildLobbyUpdate(identity.playerId, aiGameManager::isAiPlayer))
 
@@ -985,6 +1040,7 @@ class LobbyHandler(
             cardPool = poolInfos,
             basicLands = basicLandInfos,
             poolPlay = lobby.isCubePoolPlay,
+            maxCopiesPerCard = lobby.limitedCopyCap,
         ))
         sender.send(session, lobby.buildLobbyUpdate(identity.playerId, aiGameManager::isAiPlayer))
 
@@ -1363,6 +1419,7 @@ class LobbyHandler(
                             cardPool = poolInfos,
                             basicLands = basicLandInfos,
                             poolPlay = lobby.isCubePoolPlay,
+                            maxCopiesPerCard = lobby.limitedCopyCap,
                         ))
                     }
                 }
@@ -1662,44 +1719,53 @@ class LobbyHandler(
         val playerState = lobby.players[aiPlayerId] ?: return
         if (playerState.hasSubmittedDeck) return
 
-        val generated = runCatching {
-            randomDeckResolver.resolve(
-                playerState.aiDeckSpec,
-                lobby.deckFormat,
-                lobby.setCodes,
-                lobby.usesCommanderRules,
-            )
-        }
-            .onFailure { logger.error("Could not generate a deck for AI seat ${aiPlayerId.value}", it) }
-            .getOrNull() ?: return
+        // A generated deck can be one the lobby rejects: a sealed pool is free to hold five or six
+        // copies of a common (about 1 Portal build in 100), which the premade 4-of rule refuses.
+        // Leaving the seat empty would block the host's start gate for good, so roll again — each
+        // build is an independent draw. A host's fixed list is the same every time; no point.
+        val attempts = if (playerState.aiDeckSpec is AiDeckSpec.Fixed) 1 else MAX_AI_PREMADE_DECK_ATTEMPTS
+        repeat(attempts) {
+            val generated = runCatching {
+                randomDeckResolver.resolve(
+                    playerState.aiDeckSpec,
+                    lobby.deckFormat,
+                    lobby.setCodes,
+                    lobby.usesCommanderRules,
+                )
+            }
+                .onFailure { logger.error("Could not generate a deck for AI seat ${aiPlayerId.value}", it) }
+                .getOrNull() ?: return
 
-        val commander = generated.commander?.takeIf { lobby.usesCommanderRules }
-        // Under Commander rules a deck with no commander can't be seated at all, so leave the seat
-        // un-submitted rather than submit one: the lobby's own start gate then blocks on "not every
-        // seat has a deck", which is a state the host can fix by picking a deck for the AI.
-        if (lobby.usesCommanderRules && commander == null) {
-            logger.warn(
-                "No commander for AI seat {} in lobby {}; leaving the seat without a deck",
-                aiPlayerId.value,
-                lobby.lobbyId,
-            )
-            return
-        }
-        // Submitted in wire form — commander counted in, as `LobbyPlayerState.commander` documents
-        // and as the match handlers' strip-at-start expects.
-        val submitted = if (commander != null) generated.submissionList else generated.deckList
-        when (val result = lobby.submitDeck(aiPlayerId, submitted, commander = commander)) {
-            is TournamentLobby.DeckSubmissionResult.Success ->
-                logger.info(
-                    "AI {} brought a generated {} deck ({} cards{}) to premade lobby {}",
-                    playerState.identity.playerName,
-                    lobby.deckFormat?.displayName ?: "sealed",
-                    generated.totalCards,
-                    commander?.let { ", led by $it" } ?: "",
+            val commander = generated.commander?.takeIf { lobby.usesCommanderRules }
+            // Under Commander rules a deck with no commander can't be seated at all, so leave the seat
+            // un-submitted rather than submit one: the lobby's own start gate then blocks on "not every
+            // seat has a deck", which is a state the host can fix by picking a deck for the AI.
+            if (lobby.usesCommanderRules && commander == null) {
+                logger.warn(
+                    "No commander for AI seat {} in lobby {}; leaving the seat without a deck",
+                    aiPlayerId.value,
                     lobby.lobbyId,
                 )
-            is TournamentLobby.DeckSubmissionResult.Error ->
-                logger.warn("Generated AI deck rejected in lobby ${lobby.lobbyId}: ${result.message}")
+                return
+            }
+            // Submitted in wire form — commander counted in, as `LobbyPlayerState.commander` documents
+            // and as the match handlers' strip-at-start expects.
+            val submitted = if (commander != null) generated.submissionList else generated.deckList
+            when (val result = lobby.submitDeck(aiPlayerId, submitted, commander = commander, sideboard = generated.sideboard)) {
+                is TournamentLobby.DeckSubmissionResult.Success -> {
+                    logger.info(
+                        "AI {} brought a generated {} deck ({} cards{}) to premade lobby {}",
+                        playerState.identity.playerName,
+                        lobby.deckFormat?.displayName ?: "sealed",
+                        generated.totalCards,
+                        commander?.let { ", led by $it" } ?: "",
+                        lobby.lobbyId,
+                    )
+                    return
+                }
+                is TournamentLobby.DeckSubmissionResult.Error ->
+                    logger.warn("Generated AI deck rejected in lobby ${lobby.lobbyId}: ${result.message}")
+            }
         }
     }
 
@@ -1743,7 +1809,7 @@ class LobbyHandler(
      * host's WebSocket handler thread. LLM deckbuilding can take 30+ seconds,
      * and blocking would prevent the human player from submitting their own deck.
      */
-    private fun launchAiDeckBuilding(lobby: TournamentLobby, heuristicDeckbuilding: Boolean = false) {
+    private fun launchAiDeckBuilding(lobby: TournamentLobby, skipLlmDeckbuilding: Boolean = false) {
         if (lobby.isJumpstart) {
             finishAiJumpstartPicks(lobby)
             ctx.broadcastLobbyUpdate(lobby)
@@ -1758,7 +1824,7 @@ class LobbyHandler(
         ctx.draftScope.launch(Dispatchers.IO) {
             for ((playerId, playerState) in aiPlayers) {
                 try {
-                    val built = buildAiPoolDeck(lobby, playerState.cardPool, heuristicDeckbuilding)
+                    val built = buildAiPoolDeck(lobby, playerState.cardPool, skipLlmDeckbuilding)
                     val submitted = built.submissionList
                     val result = lobby.submitDeck(playerId, submitted, commander = built.commander)
                     when (result) {
@@ -1903,7 +1969,7 @@ class LobbyHandler(
     private fun buildAiPoolDeck(
         lobby: TournamentLobby,
         pool: List<com.wingedsheep.sdk.model.CardDefinition>,
-        heuristic: Boolean,
+        skipLlm: Boolean,
     ): com.wingedsheep.ai.engine.deck.GeneratedDeck {
         if (lobby.usesCommanderRules) {
             val built = runCatching { commanderDeckGenerator.generateFromPool(pool, lobby.deckSizeMin, lobby.allowDuplicates) }
@@ -1916,25 +1982,36 @@ class LobbyHandler(
                 lobby.lobbyId,
             )
         }
-        return com.wingedsheep.ai.engine.deck.GeneratedDeck(buildAiSealedDeck(pool, heuristic))
+        return com.wingedsheep.ai.engine.deck.GeneratedDeck(buildAiSealedDeck(pool, lobby.setCodes, skipLlm))
     }
 
     /**
-     * Build a 40-card sealed deck from a card pool using the LLM.
-     * Falls back to a color-based heuristic if the LLM fails.
+     * Build a 40-card limited deck from a sealed or drafted pool.
+     *
+     * With an LLM API key configured (and the LLM not skipped by [skipLlm], the server's
+     * `skip-llm-deckbuilding` setting, or the jev AI mode) the LLM builds it; otherwise — and whenever
+     * the LLM fails — it is [com.wingedsheep.ai.engine.buildLimitedDeck], the Draftsim autobuilder
+     * scoped to the lobby's sets, the same engine as the deckbuild "Auto-build" button's default.
      */
-    private fun buildAiSealedDeck(pool: List<com.wingedsheep.sdk.model.CardDefinition>, heuristic: Boolean = false): Map<String, Int> {
-        logger.info("AI building sealed deck from pool of {} cards (heuristic={})", pool.size, heuristic)
+    private fun buildAiSealedDeck(
+        pool: List<com.wingedsheep.sdk.model.CardDefinition>,
+        setCodes: List<String>,
+        skipLlm: Boolean = false,
+    ): Map<String, Int> {
+        logger.info("AI building sealed deck from pool of {} cards (skipLlm={})", pool.size, skipLlm)
 
         val aiProperties = gameProperties.ai
-        val forceHeuristic = heuristic || aiProperties.heuristicDeckbuilding || aiProperties.mode.trim().equals("jev", ignoreCase = true)
-        if (!forceHeuristic && aiProperties.enabled && aiProperties.effectiveApiKey.isNotBlank()) {
+        val noLlm = skipLlm || aiProperties.skipLlmDeckbuilding || aiProperties.mode.trim().equals("jev", ignoreCase = true)
+        if (!noLlm && aiProperties.enabled && aiProperties.effectiveApiKey.isNotBlank()) {
             val llmDeck = tryLlmSealedDeck(pool, aiProperties)
             if (llmDeck != null) return llmDeck
-            logger.info("AI LLM deckbuild failed, falling back to heuristic")
+            logger.info("AI LLM deckbuild failed, falling back to the Draftsim autobuilder")
         }
 
-        return buildHeuristicSealedDeck(pool)
+        val deck = com.wingedsheep.ai.engine.buildLimitedDeck(pool, setCodes)
+        logger.info("AI Draftsim deck ({} cards): {}", deck.values.sum(),
+            deck.entries.sortedByDescending { it.value }.joinToString(", ") { "${it.value}x ${it.key}" })
+        return deck
     }
 
     /**
@@ -1945,7 +2022,7 @@ class LobbyHandler(
         aiProperties: com.wingedsheep.gameserver.config.AiProperties
     ): Map<String, Int>? {
         val nonLands = pool.filter { !it.typeLine.isLand }
-        val poolLands = pool.filter { it.typeLine.isLand && !it.typeLine.isBasicLand }
+        val poolLands = pool.filter { it.typeLine.isLand && !it.typeLine.isFreelyAddedBasicLand }
 
         val prompt = buildString {
             appendLine("You are building a 40-card sealed deck from this card pool.")
@@ -2088,16 +2165,6 @@ class LobbyHandler(
     }
 
     /**
-     * Heuristic fallback: pick the best 2 colors, include on-color cards, add correct basics.
-     */
-    private fun buildHeuristicSealedDeck(pool: List<com.wingedsheep.sdk.model.CardDefinition>): Map<String, Int> {
-        val deck = com.wingedsheep.ai.engine.buildHeuristicSealedDeck(pool)
-        logger.info("AI heuristic deck ({} cards): {}", deck.values.sum(),
-            deck.entries.sortedByDescending { it.value }.joinToString(", ") { "${it.value}x ${it.key}" })
-        return deck
-    }
-
-    /**
      * Guess the primary basic land name from the colors of non-land cards already in the deck.
      */
     private fun guessPrimaryBasicLand(
@@ -2169,11 +2236,7 @@ class LobbyHandler(
 
         logger.info("Player ${identity.playerName} left lobby $lobbyId (cannot rejoin)")
 
-        if (lobby.playerCount == 0) {
-            tournamentResultSink.recordAbandoned(lobbyId)
-            lobbyRepository.removeLobby(lobbyId)
-            logger.info("Lobby $lobbyId removed (empty)")
-        } else {
+        if (!closeIfAbandoned(lobby)) {
             // Auto-adjust grid draft booster count when player count changes
             if (lobby.format == TournamentFormat.GRID_DRAFT && lobby.state == LobbyState.WAITING_FOR_PLAYERS) {
                 lobby.boosterCount = gridDraftHandler.gridDraftDefaultBoosters(lobby.players.size)
@@ -2221,13 +2284,21 @@ class LobbyHandler(
 
         logger.info("Player ${identity.playerName} auto-left lobby $lobbyId")
 
-        if (lobby.playerCount == 0) {
-            tournamentResultSink.recordAbandoned(lobbyId)
-            lobbyRepository.removeLobby(lobbyId)
-            logger.info("Lobby $lobbyId removed (empty)")
-        } else {
-            ctx.broadcastLobbyUpdate(lobby)
-        }
+        if (!closeIfAbandoned(lobby)) ctx.broadcastLobbyUpdate(lobby)
+    }
+
+    /**
+     * Close [lobby] once nobody can use it: no seats at all, or — while still gathering players —
+     * only AI seats left. An AI never starts a lobby, so without this the last human leaving a
+     * lobby they had filled with AIs left it listed as open, "hosted" by one of the AIs.
+     */
+    private fun closeIfAbandoned(lobby: TournamentLobby): Boolean {
+        if (lobby.playerCount > 0 && !lobby.isAbandonedByHumans) return false
+        lobby.vacateSeats().forEach { sessionRegistry.removeIdentity(it.token) }
+        tournamentResultSink.recordAbandoned(lobby.lobbyId)
+        lobbyRepository.removeLobby(lobby.lobbyId)
+        logger.info("Lobby ${lobby.lobbyId} removed (no human players left)")
+        return true
     }
 
     private fun handleStopLobby(session: WebSocketSession) {
@@ -2391,12 +2462,28 @@ class LobbyHandler(
                     sender.sendError(session, ErrorCode.INVALID_ACTION, "Invalid cube basic-land set code: $basicLandSetCode")
                     return
                 }
+                val boosterStyle = CubeBoosterStyle.parse(message.cubeBoosterStyle)
+                if (boosterStyle == null) {
+                    sender.sendError(session, ErrorCode.INVALID_ACTION, "Unknown cube booster style: ${message.cubeBoosterStyle}")
+                    return
+                }
+                val rarities = message.cubeRarities.orEmpty().mapValues { (cardName, raw) ->
+                    Rarity.entries.firstOrNull { it.name == raw.trim().uppercase() } ?: run {
+                        sender.sendError(session, ErrorCode.INVALID_ACTION, "Unknown rarity for $cardName: $raw")
+                        return
+                    }
+                }
+                // The wire carries one name per physical card; fold them back into counted entries
+                // so each card's rarity is stamped once.
                 val cubeList = runCatching {
                     CubeList(
                         name = name,
-                        cards = names.map { CubeCardEntry(it) },
+                        cards = names.groupingBy { it }.eachCount().map { (cardName, count) ->
+                            CubeCardEntry(cardName, count, rarity = rarities[cardName])
+                        },
                         basicLandSetCode = basicLandSetCode,
                         packSize = message.packSize ?: CubeList.DEFAULT_PACK_SIZE,
+                        boosterStyle = boosterStyle,
                     )
                 }.getOrElse {
                     sender.sendError(session, ErrorCode.INVALID_ACTION, it.message ?: "Invalid cube settings")
@@ -2672,6 +2759,8 @@ class LobbyHandler(
             }
         }
         message.gamesPerMatch?.let { lobby.gamesPerMatch = it.coerceIn(1, 5) }
+        // Best of one or best of three — the two match lengths the Magic Tournament Rules use.
+        message.bestOf?.let { lobby.bestOf = if (it >= 3) 3 else 1 }
         message.pickTimeSeconds?.let { lobby.pickTimeSeconds = TournamentLobby.clampPickTimeSeconds(it, 180) }
         message.picksPerRound?.let { lobby.picksPerRound = it.coerceIn(1, 2) }
         message.isPublic?.let { lobby.isPublic = it }
@@ -2706,11 +2795,24 @@ class LobbyHandler(
         }
 
         message.aiAssistEnabled?.let { lobby.aiAssistEnabled = it }
+        message.limitedCopyLimit?.let { lobby.limitedCopyLimit = it }
 
         message.ranked?.let { lobby.ranked = it }
         // Ranked only applies to a TOURNAMENT-mode bracket (1v1 matches); a mode switch in this same
         // update — or one that landed earlier — forces it back off.
         if (!lobby.rankedEligible) lobby.ranked = false
+
+        // Ante (CR 407). Ranked games are never played for ante: turning ranked on clears it, and
+        // asking for ante while ranked is refused. Turning it off un-submits any deck that holds an
+        // ante card (CR 407.3) — only premade decks can be in yet, settings being pre-start only.
+        val anteBefore = lobby.playingForAnte
+        if (message.playingForAnte == true && lobby.ranked) {
+            sender.sendError(session, ErrorCode.INVALID_ACTION, "Ranked games can't be played for ante")
+        } else {
+            message.playingForAnte?.let { lobby.playingForAnte = it }
+        }
+        if (lobby.ranked) lobby.playingForAnte = false
+        if (anteBefore && !lobby.playingForAnte) unsubmitAnteDecks(lobby)
 
         // Re-roll only when an axis that determines the AI deck changed. Under Commander rules,
         // ensureAiPremadeDeck deliberately leaves Auto unsubmitted until the host picks a deck.
@@ -2723,6 +2825,34 @@ class LobbyHandler(
 
         ctx.broadcastLobbyUpdate(lobby)
         lobbyRepository.saveLobby(lobby)
+    }
+
+    /**
+     * Un-submit every deck in [lobby] that holds an ante card ([com.wingedsheep.sdk.model.CardDefinition.requiresAnte])
+     * now that the lobby no longer plays for ante (CR 407.3), telling each affected human why.
+     * The caller broadcasts the lobby update.
+     */
+    private fun unsubmitAnteDecks(lobby: TournamentLobby) {
+        for ((playerId, playerState) in lobby.players.toMap()) {
+            // A Limited sideboard is the derived unused pool, where an ante card may sit harmlessly
+            // (see TournamentLobby.validateDeck); only a constructed sideboard was chosen.
+            val sideboard = if (lobby.format == TournamentFormat.PREMADE_DECKS) playerState.submittedSideboard.keys else emptySet()
+            val cards = playerState.submittedDeck?.keys.orEmpty() + sideboard
+            val anteCard = cards.firstOrNull { cardRegistry.getCard(it)?.requiresAnte == true } ?: continue
+            lobby.discardSubmittedDeck(playerId)
+            if (aiGameManager.isAiPlayer(playerId)) {
+                // An AI seat has nobody to tell; it re-rolls a deck for the lobby as it now stands.
+                ensureAiPremadeDeck(lobby, playerId)
+                continue
+            }
+            playerState.identity.webSocketSession?.takeIf { it.isOpen }?.let {
+                sender.sendError(
+                    it,
+                    ErrorCode.INVALID_DECK,
+                    "The lobby no longer plays for ante — $anteCard can only be played in a game played for ante. Please resubmit your deck.",
+                )
+            }
+        }
     }
 
     // =========================================================================
@@ -2739,6 +2869,9 @@ class LobbyHandler(
         cardEntries: List<com.wingedsheep.gameserver.protocol.DeckEntryDTO>? = null,
         commanderPrinting: com.wingedsheep.sdk.model.PrintingRef? = null,
         sideboard: Map<String, Int> = emptyMap(),
+        secondCommander: String? = null,
+        secondCommanderPrinting: com.wingedsheep.sdk.model.PrintingRef? = null,
+        companion: String? = null,
     ) {
         val lobby = lobbyRepository.findLobbyById(lobbyId)
         if (lobby == null) {
@@ -2753,6 +2886,12 @@ class LobbyHandler(
         val commanderShape = lobby.usesCommanderRules
         val effectiveCommander = if (commanderShape) commander?.takeIf { it.isNotBlank() } else null
         val effectiveCommanderPrinting = if (commanderShape) commanderPrinting else null
+        // The other half of a partner pair (CR 702.124) rides along only beside a first commander.
+        val effectiveSecondCommander = effectiveCommander?.let { secondCommander?.takeIf { it.isNotBlank() } }
+        val effectiveSecondCommanderPrinting = effectiveSecondCommander?.let { secondCommanderPrinting }
+        // A revealed companion (CR 702.139) — any format. In a pool lobby it is a pool card on the
+        // derived sideboard; in a constructed one, a sideboard card (added to it if missing).
+        val effectiveCompanion = companion?.takeIf { it.isNotBlank() }
 
         // A pool-built lobby validates the commander deck against the player's *pool* (its legality
         // universe) rather than against Scryfall legality — so the branch is "Commander rules over a
@@ -2760,26 +2899,11 @@ class LobbyHandler(
         // from the lobby's host configuration.
         if (commanderShape && lobby.format != TournamentFormat.PREMADE_DECKS) {
             val pool = lobby.players[identity.playerId]?.cardPool ?: emptyList()
-            val withoutCommander = effectiveCommander
-                ?.let { stripCommanderFromCards(deckList, it) }
-                ?: deckList
-            val deckCards = withoutCommander.flatMap { (name, count) -> List(count) { name } }
-            val richEntries = cardEntries
-                ?.filterNot { it.name == effectiveCommander && it.printing == effectiveCommanderPrinting }
-                ?.takeIf { it.isNotEmpty() }
-            val deck = if (richEntries != null) {
-                com.wingedsheep.sdk.model.Deck.fromEntries(
-                    entries = richEntries.map { com.wingedsheep.sdk.model.CardEntry(it.name, it.printing) },
-                    commander = effectiveCommander,
-                    commanderPrinting = effectiveCommanderPrinting,
-                )
-            } else {
-                com.wingedsheep.sdk.model.Deck(
-                    cards = deckCards,
-                    commander = effectiveCommander,
-                    commanderPrinting = effectiveCommanderPrinting,
-                )
-            }
+            val deck = commanderDeck(
+                deckList, cardEntries, effectiveCommander, effectiveCommanderPrinting,
+                effectiveSecondCommander, effectiveSecondCommanderPrinting,
+                companion = effectiveCompanion,
+            )
             val validation = deckValidator.validateCommanderLimited(
                 deck = deck,
                 pool = pool,
@@ -2802,39 +2926,55 @@ class LobbyHandler(
             val validation = if (commanderShape) {
                 // Always go through the commander-aware path for commander-shape formats so a
                 // missing commander surfaces as MISSING_COMMANDER instead of silently passing.
-                val withoutCommander = effectiveCommander
-                    ?.let { stripCommanderFromCards(deckList, it) }
-                    ?: deckList
-                val deckCards = withoutCommander.flatMap { (name, count) -> List(count) { name } }
-                val richEntries = cardEntries
-                    ?.filterNot { it.name == effectiveCommander && it.printing == effectiveCommanderPrinting }
-                    ?.takeIf { it.isNotEmpty() }
-                val deck = if (richEntries != null) {
-                    com.wingedsheep.sdk.model.Deck.fromEntries(
-                        entries = richEntries.map {
-                            com.wingedsheep.sdk.model.CardEntry(it.name, it.printing)
-                        },
-                        commander = effectiveCommander,
-                        commanderPrinting = effectiveCommanderPrinting,
-                    )
-                } else {
-                    com.wingedsheep.sdk.model.Deck(
-                        cards = deckCards,
-                        commander = effectiveCommander,
-                        commanderPrinting = effectiveCommanderPrinting,
-                    )
-                }
-                deckValidator.validate(deck, lobby.deckFormat)
+                val deck = commanderDeck(
+                    deckList, cardEntries, effectiveCommander, effectiveCommanderPrinting,
+                    effectiveSecondCommander, effectiveSecondCommanderPrinting,
+                    sideboard = sideboard, companion = effectiveCompanion,
+                )
+                deckValidator.validate(deck, lobby.deckFormat, playingForAnte = lobby.playingForAnte)
+            } else if (effectiveCompanion != null || sideboard.isNotEmpty()) {
+                // The structured path is the one that reads a companion and its sideboard (the
+                // sideboard is checked for ante cards, CR 407.3).
+                deckValidator.validate(
+                    com.wingedsheep.gameserver.protocol.DeckRequestConverter.toDeck(
+                        deckList, cardEntries, sideboard = sideboard, companion = effectiveCompanion,
+                    ),
+                    lobby.deckFormat,
+                    playingForAnte = lobby.playingForAnte,
+                )
             } else {
                 deckValidator.validate(
                     deckList = deckList,
                     format = lobby.deckFormat,
                     cardEntries = cardEntries,
+                    playingForAnte = lobby.playingForAnte,
                 )
             }
             if (!validation.valid) {
                 val msg = validation.errors.firstOrNull()?.message ?: "Invalid deck"
                 sender.sendError(session, ErrorCode.INVALID_DECK, msg)
+                return
+            }
+        }
+
+        // A Limited (pool) lobby without Commander rules: the deck itself was built from the pool,
+        // but its companion must still come from the pool and fit the starting deck (40-card
+        // minimum, CR 100.2b / Yorion's ruling).
+        if (effectiveCompanion != null && !commanderShape && lobby.format != TournamentFormat.PREMADE_DECKS) {
+            val pool = lobby.players[identity.playerId]?.cardPool.orEmpty().map { it.name }
+            val inPool = pool.count { it == effectiveCompanion }
+            val inDeck = deckList[effectiveCompanion] ?: 0
+            val issue = if (inPool <= inDeck) {
+                "Your companion $effectiveCompanion has to be a card from your pool that isn't in your deck"
+            } else {
+                deckValidator.companionIssues(
+                    com.wingedsheep.gameserver.protocol.DeckRequestConverter.toDeck(deckList, cardEntries, companion = effectiveCompanion),
+                    format = null,
+                    minimumDeckSize = lobby.deckSizeMin,
+                ).firstOrNull()?.message
+            }
+            if (issue != null) {
+                sender.sendError(session, ErrorCode.INVALID_DECK, issue)
                 return
             }
         }
@@ -2853,7 +2993,10 @@ class LobbyHandler(
 
         // For a PREMADE_DECKS (constructed) lobby this explicit sideboard is honored; for Limited
         // lobbies TournamentLobby.submitDeck ignores it and derives pool − maindeck (CR 100.4b).
-        val result = lobby.submitDeck(identity.playerId, deckList, effectiveCommander, sanitizedSideboard)
+        val result = lobby.submitDeck(
+            identity.playerId, deckList, effectiveCommander, sanitizedSideboard, effectiveSecondCommander,
+            companion = effectiveCompanion,
+        )
         when (result) {
             is TournamentLobby.DeckSubmissionResult.Success -> {
                 val deckSize = deckList.values.sum()
@@ -2877,6 +3020,23 @@ class LobbyHandler(
                         synchronized(lock) {
                             freeForAllHandler.maybeStartGame(lobby)
                         }
+                    }
+                    lobbyRepository.saveLobby(lobby)
+                    return
+                }
+
+                // Choosing the second pack is the ready signal for Jump In. Keep everyone on
+                // their private pack screen until the whole table has decks, then start round one.
+                if (lobby.isJumpstart) {
+                    if (result.allReady && lobby.state == LobbyState.DECK_BUILDING) {
+                        tournamentMatchHandler.startTournament(lobby)
+                        val tournament = lobbyRepository.findTournamentById(lobbyId)!!
+                        lobby.players.values.filterNot { it.identity.isAi }.forEach { player ->
+                            player.identity.webSocketSession?.takeIf { it.isOpen }?.let {
+                                tournamentMatchHandler.handleReadyForNextRound(it)
+                            }
+                        }
+                        tournamentMatchHandler.autoReadyAiPlayers(lobby, tournament)
                     }
                     lobbyRepository.saveLobby(lobby)
                     return
@@ -2908,17 +3068,27 @@ class LobbyHandler(
     }
 
     /**
-     * Subtract one copy of [commander] from [deckList]. Mirrors the QuickGame helper — the
-     * wire format ships the merged deck (commander counted in `deckList`), but `Deck.cards`
-     * excludes it. Idempotent when the commander isn't present.
+     * The commander-rules [Deck] for a wire submission, whose [deckList] counts each commander once.
+     * With no [commander] the deck has none, so validation reports MISSING_COMMANDER.
      */
-    private fun stripCommanderFromCards(
+    private fun commanderDeck(
         deckList: Map<String, Int>,
-        commander: String,
-    ): Map<String, Int> {
-        val current = deckList[commander] ?: return deckList
-        val next = deckList.toMutableMap()
-        if (current <= 1) next.remove(commander) else next[commander] = current - 1
-        return next
-    }
+        cardEntries: List<com.wingedsheep.gameserver.protocol.DeckEntryDTO>?,
+        commander: String?,
+        commanderPrinting: com.wingedsheep.sdk.model.PrintingRef?,
+        secondCommander: String?,
+        secondCommanderPrinting: com.wingedsheep.sdk.model.PrintingRef?,
+        sideboard: Map<String, Int> = emptyMap(),
+        companion: String? = null,
+    ): com.wingedsheep.sdk.model.Deck =
+        if (commander == null) {
+            com.wingedsheep.gameserver.protocol.DeckRequestConverter.toDeck(
+                deckList, cardEntries, sideboard = sideboard, companion = companion,
+            )
+        } else {
+            com.wingedsheep.gameserver.protocol.DeckRequestConverter.toCommanderDeck(
+                deckList, cardEntries, commander, commanderPrinting, secondCommander, secondCommanderPrinting,
+                sideboard = sideboard, companion = companion,
+            )
+        }
 }

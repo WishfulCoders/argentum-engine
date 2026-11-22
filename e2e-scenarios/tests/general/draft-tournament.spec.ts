@@ -44,9 +44,9 @@ test.describe('Draft Tournament with 4 Players', () => {
     const host = players[0]
     await enterName(host.page, host.name)
 
-    // Booster draft, straight from the wizard. This used to open a sealed lobby and then switch the
+    // Booster draft, straight from the catalogue. This used to open a sealed lobby and then switch the
     // format inside it, because the home screen's only limited entry point was labelled
-    // "Draft & Sealed"; the wizard asks for the draft shape directly.
+    // "Draft & Sealed"; the Draft tile opens on the booster shape directly.
     lobbyId = await createLobby(host.page, GROUP_DRAFT)
     console.log(`Lobby created: ${lobbyId}`)
 

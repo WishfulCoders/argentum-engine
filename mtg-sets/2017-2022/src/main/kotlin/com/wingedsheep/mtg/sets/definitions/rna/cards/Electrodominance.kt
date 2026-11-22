@@ -1,58 +1,43 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
- * Electrodominance
- * {X}{R}{R}
- * Instant
+ * Electrodominance — Ravnica Allegiance #99 (canonical / earliest real printing, 2019)
+ * {X}{R}{R} · Instant
+ *
  * Electrodominance deals X damage to any target. You may cast a spell with mana value X or less
  * from your hand without paying its mana cost.
  *
- * X damage, then Kellan, the Kid's free-cast pipeline with X as the cap: the hand's nonland cards
- * with mana value X or less, at most one chosen, cast during the resolution (so timing restrictions
- * are ignored, rulings) through [Effects.CastFromCollectionWithoutPayingCost]. A lethally damaged
- * target is still on the battlefield while that spell is cast; it dies once Electrodominance has
- * finished resolving. An illegal target fizzles the whole spell, free cast included.
+ * Damage to `Targets.Any`, then Yue / Baral and Kari Zev's free-cast pipeline: gather nonland hand
+ * cards ("a spell" — a land can't be cast, per the ruling) with mana value at most the spell's X
+ * (Villainous Wealth's `manaValueAtMostDynamic(xValue())`), choose up to one ("you may"), and cast
+ * it for free during this spell's resolution, so card-type timing is ignored. An illegal target
+ * fizzles the whole spell, so no cast happens then either.
  */
 val Electrodominance = card("Electrodominance") {
     manaCost = "{X}{R}{R}"
     colorIdentity = "R"
     typeLine = "Instant"
-    oracleText = "Electrodominance deals X damage to any target. You may cast a spell with mana value X or less from your hand without paying its mana cost."
+    oracleText = "Electrodominance deals X damage to any target. You may cast a spell with mana value " +
+        "X or less from your hand without paying its mana cost."
 
     spell {
         val t = target(Targets.Any)
-        effect = Effects.Composite(listOf(
-            Effects.DealDamage(DynamicAmount.XValue, t),
-            GatherCardsEffect(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Nonland), "hand"),
-            FilterCollectionEffect(
-                from = "hand",
-                filter = GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmount.XValue),
-                storeMatching = "castable"
-            ),
-            SelectFromCollectionEffect(
-                from = "castable",
-                selection = SelectionMode.ChooseSpell,
-                storeSelected = "spellToCast",
-                showAllCards = true,
-                prompt = "You may cast a spell with mana value X or less without paying its mana cost",
-                selectedLabel = "Cast for free"
-            ),
-            Effects.CastFromCollectionWithoutPayingCost("spellToCast")
-        ))
+        effect = Effects.DealDamage(DynamicAmounts.xValue(), t) then Effects.Pipeline {
+            val inHand = gather(CardSource.FromZone(Zone.HAND, Player.You, filter = GameObjectFilter.Nonland))
+            val candidates = filter(inHand, GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmounts.xValue()))
+            val chosen = chooseUpTo(1, from = candidates, selectedLabel = "Cast without paying its mana cost")
+            run(Effects.CastFromCollectionWithoutPayingCost(chosen))
+        }
     }
 
     metadata {

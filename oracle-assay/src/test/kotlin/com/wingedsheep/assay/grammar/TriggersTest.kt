@@ -57,6 +57,24 @@ class TriggersTest : StringSpec({
         ).forEach { roundTrips(it) }
     }
 
+    "you attack prefixes preserve their distinct SDK trigger semantics" {
+        val attack = "Whenever you attack, draw a card."
+        val attackPlayer = "Whenever you attack a player, draw a card."
+
+        ability(attack).let {
+            it.trigger shouldBe SdkTriggers.you.attacks().event
+            it.binding shouldBe SdkTriggers.you.attacks().binding
+        }
+
+        ability(attackPlayer).let {
+            it.trigger shouldBe SdkTriggers.you.attacksAPlayer().event
+            it.binding shouldBe SdkTriggers.you.attacksAPlayer().binding
+        }
+
+        roundTrips(attack)
+        roundTrips(attackPlayer)
+    }
+
     // A `TriggeredAbility` keeps its target on the ability rather than on the script, so the lift
     // out of `Steps` has to move it there — and the differential compares the result against cards
     // that write `target("target", …)` inside `triggeredAbility { }`.

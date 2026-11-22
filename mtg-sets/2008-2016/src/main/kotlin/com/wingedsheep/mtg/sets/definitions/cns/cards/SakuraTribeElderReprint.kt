@@ -13,7 +13,7 @@ val SakuraTribeElderReprint = Printing(
     collectorNumber = "177",
     scryfallId = "c421ee5a-dbd0-4f54-918c-a9029af10548",
     artist = "Carl Critchlow",
-    imageUri = "https://cards.scryfall.io/normal/front/c/4/c421ee5a-dbd0-4f54-918c-a9029af10548.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/c/4/c421ee5a-dbd0-4f54-918c-a9029af10548.jpg?1783939342",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

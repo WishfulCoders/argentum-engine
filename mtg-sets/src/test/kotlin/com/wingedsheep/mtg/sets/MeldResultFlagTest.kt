@@ -44,11 +44,35 @@ class MeldResultFlagTest : FunSpec({
         }
     }
 
+    // The meld action (Effects.Meld) only combines the pair a result declares (CR 701.42b), so a
+    // result without `meldOf`, or one naming the wrong card, would silently never meld.
+    test("every authored meld result declares its pair, including the part that melds into it") {
+        assertSoftly {
+            for (card in allCards.filter { it.meldResult }) {
+                withClue("${card.name} must declare its two meld parts with meldOf(...)") {
+                    card.meldParts.size shouldBe 2
+                }
+            }
+            for (part in allCards) {
+                for (m in meldsInto.findAll(part.oracleText)) {
+                    val result = byName[m.groupValues[1]] ?: continue
+                    withClue("${result.name}'s meldOf must name ${part.name}, which melds into it") {
+                        (part.name in result.meldParts) shouldBe true
+                    }
+                }
+            }
+        }
+    }
+
     // The inverse: nothing that *is* a real card gets flagged. A flagged card drops out of every
     // pool a player can draw a deck from, so a stray flag would silently delete a draftable card.
     test("only meld results are flagged") {
         assertSoftly {
             for (card in allCards.filter { it.meldResult }) {
+                // A result may be authored before the front that carries the meld instruction.
+                // The pair-shape test above still checks it; the inverse becomes provable once
+                // both fronts exist in the corpus (e.g. Urza, Lord Protector follows Urza).
+                if (card.meldParts.any { it !in byName }) continue
                 withClue("${card.name} is flagged meldResult but no meld part melds into it") {
                     (card.name in namedResults) shouldBe true
                 }

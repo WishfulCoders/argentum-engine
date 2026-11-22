@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
+import { takeQueuedCubePlay } from '../cube/playCube'
+import { useApplyRecipe } from '../lobby/useApplyRecipe'
 import { LobbyScreen } from '../lobby/LobbyScreen'
 import { TournamentOverlay } from '../tournament/TournamentOverlay'
 import { FreeForAllOverlay } from '../tournament/FreeForAllOverlay'
@@ -14,6 +17,11 @@ import { HomeScreen } from './HomeScreen'
  * Note there is **one** lobby branch, not two. The server still has two unrelated lobby
  * implementations and the store still has a slice for each, but which one is populated no longer
  * picks a screen — `LobbyScreen` reads whichever it is through `lobbyViewModel.ts`.
+ *
+ * It is also where a "Play this cube" launch from the cube pages lands (`cube/playCube.ts`): here
+ * rather than on the home screen, so a host who is still sitting in an old lobby gets the new one
+ * instead of a launch that waits for them to leave. Never mid-event — a pool or a bracket in progress
+ * is not something a click on another page should abandon.
  */
 export function GameUI() {
   const connectionStatus = useGameStore((state) => state.connectionStatus)
@@ -24,6 +32,14 @@ export function GameUI() {
   const ffaState = useGameStore((state) => state.ffaState)
   const lobbyState = useGameStore((state) => state.lobbyState)
   const quickGameLobbyState = useGameStore((state) => state.quickGameLobbyState)
+  const applyRecipe = useApplyRecipe()
+
+  const midEvent = Boolean(deckBuildingState || tournamentState || ffaState || sessionId)
+  useEffect(() => {
+    if (connectionStatus !== 'connected' || midEvent) return
+    const recipe = takeQueuedCubePlay()
+    if (recipe) applyRecipe(recipe)
+  }, [connectionStatus, midEvent, applyRecipe])
 
   // Don't show connection overlay if actively building deck (but show during 'waiting' phase)
   // Exception: always show if tournamentState/ffaState exists (for the standings overlays)

@@ -1,12 +1,18 @@
 /**
- * The admin dashboard landing page: a hub that routes to the admin areas (Stats, Activity,
- * Players). It's the starting point a signed-in admin lands on; the bootstrap-password login also
+ * The admin dashboard landing page: a hub that routes to the admin areas (Stats, AI vs humans, Live overview,
+ * Activity, Players). It's the starting point a signed-in admin lands on; the bootstrap-password login also
  * arrives here after authenticating.
  */
 import type React from 'react'
 import { AdminScreen, adminTheme } from './adminUi'
 
-export type AdminArea = 'stats' | 'activity' | 'players'
+const AREAS = ['stats', 'ai', 'live', 'activity', 'players'] as const
+export type AdminArea = (typeof AREAS)[number]
+
+/** Each area is also its URL segment: `/admin/<area>`. */
+export function isAdminArea(s: string): s is AdminArea {
+  return (AREAS as readonly string[]).includes(s)
+}
 
 interface HubItem {
   area: AdminArea
@@ -17,25 +23,23 @@ interface HubItem {
 
 const ITEMS: HubItem[] = [
   { area: 'stats', icon: '📊', title: 'Stats', description: 'Global activity, decks, cards, win rates and geography.' },
+  { area: 'ai', icon: '🤖', title: 'AI vs humans', description: 'The built-in AI’s win rate against human players — over time, per build and per mode. Watch it improve.' },
+  { area: 'live', icon: '🟢', title: 'Live overview', description: 'Who is online and what they are doing, plus every game and tournament running — check before maintenance, or watch any game.' },
   { area: 'activity', icon: '🏆', title: 'Activity', description: 'Recent games and tournaments across every player — click through to replays and standings.' },
   { area: 'players', icon: '👥', title: 'Players', description: 'Registered accounts, their games, and admin access.' },
 ]
 
 export function AdminHub({
   onNavigate,
-  onExit,
   authLabel,
 }: {
   onNavigate: (area: AdminArea) => void
-  onExit: () => void
   authLabel: string
 }) {
   return (
     <AdminScreen
-      title="Admin Dashboard"
+      title="Admin dashboard"
       subtitle={authLabel}
-      onBack={onExit}
-      backLabel="← Home"
     >
       <div style={styles.grid}>
         {ITEMS.map((item) => (
@@ -68,13 +72,16 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: adminTheme.panel,
     border: `1px solid ${adminTheme.border}`,
     borderRadius: 16,
+    backdropFilter: 'blur(18px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
     padding: '22px 20px 18px',
+    font: 'inherit',
     color: adminTheme.text,
     cursor: 'pointer',
     transition: 'border-color 120ms ease, transform 120ms ease',
   },
   icon: { fontSize: 30, lineHeight: 1 },
-  cardTitle: { fontSize: 18, fontWeight: 700, marginTop: 4 },
+  cardTitle: { fontFamily: 'var(--font-display)', fontSize: 21, fontWeight: 600, marginTop: 4 },
   cardDesc: { fontSize: 13, color: adminTheme.textSecondary, lineHeight: 1.45 },
   cardArrow: { marginTop: 6, fontSize: 13, fontWeight: 600, color: adminTheme.accent },
 }

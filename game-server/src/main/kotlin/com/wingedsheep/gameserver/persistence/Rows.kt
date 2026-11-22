@@ -30,6 +30,10 @@ data class UserRow(
     val hidePresence: Boolean = false,
     /** Learn to Play progress — the client's JSON, stored verbatim; null until the course is started. */
     val learnProgress: String? = null,
+    /** Player preferences — the client's JSON, stored verbatim; null until first saved. */
+    val preferences: String? = null,
+    /** Chosen preset avatar id (see `profile.Avatars`); null shows the display name's initial. */
+    val avatar: String? = null,
     val createdAt: Instant = Instant.now(),
 )
 
@@ -68,6 +72,8 @@ data class CubeRow(
     val data: String,
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now(),
+    /** Unguessable public link code; null while the cube is private. */
+    val shareCode: String? = null,
 )
 
 @Table("match_results")
@@ -111,6 +117,13 @@ data class MatchParticipantRow(
     val isAi: Boolean = false,
     /** Raw connecting IP, admin-only; never sent to clients. Null for AI / unknown. */
     val clientIp: String? = null,
+    /**
+     * The seat made a play of its own past the mulligan — see
+     * [com.wingedsheep.gameserver.stats.StatsEligibility]. Null = recorded before this was tracked.
+     */
+    val tookAction: Boolean? = null,
+    /** This seat's result counts toward win/loss stats — see [com.wingedsheep.gameserver.stats.StatsEligibility]. */
+    val countsInStats: Boolean = true,
     /** This seat's deck contents — one row per distinct card — for card-level stats. */
     @MappedCollection(idColumn = "participant_id")
     val cards: Set<MatchCardRow> = emptySet(),
@@ -121,6 +134,8 @@ data class MatchCardRow(
     @Id val id: Long? = null,
     val cardName: String,
     val copies: Int,
+    /** The printing these copies were played as (`"SET-CN"`); null = the card's default printing. */
+    val printing: String? = null,
 )
 
 /**
@@ -216,6 +231,10 @@ data class TournamentParticipantRow(
     val wins: Int = 0,
     val losses: Int = 0,
     val draws: Int = 0,
+    /** Of [wins], the matches won because the opponent left the tournament — never played. */
+    val forfeitWins: Int = 0,
+    /** Of [losses], the matches lost because this player left the tournament — never played. */
+    val forfeitLosses: Int = 0,
 )
 
 /**
@@ -225,6 +244,22 @@ data class TournamentParticipantRow(
  *
  * Declining, cancelling, and unfriending all delete the row.
  */
+/**
+ * One card a signed-in player won or lost in a game played for ante (CR 407), from their side of
+ * the table — see `V19__ante_spoils.sql`.
+ */
+@Table("ante_spoils")
+data class AnteSpoilRow(
+    @Id val id: Long? = null,
+    val userId: UUID,
+    val gameId: String,
+    val won: Boolean,
+    val cardName: String,
+    val imageUri: String? = null,
+    val opponentName: String,
+    val createdAt: Instant = Instant.now(),
+)
+
 @Table("friendships")
 data class FriendshipRow(
     @Id val id: UUID? = null,
@@ -236,6 +271,57 @@ data class FriendshipRow(
 )
 
 enum class FriendshipStatus { PENDING, ACCEPTED }
+
+/** [blockerId] blocked [blockedId]. Effects are mutual; see `V14__user_blocks.sql`. */
+@Table("user_blocks")
+data class UserBlockRow(
+    @Id val id: UUID? = null,
+    val blockerId: UUID,
+    val blockedId: UUID,
+    val createdAt: Instant = Instant.now(),
+)
+
+/**
+ * A direct-message thread between two accounts, stored once per pair in a canonical order. See
+ * `V15__direct_messages.sql` for the request / read / clear semantics.
+ */
+@Table("dm_threads")
+data class DmThreadRow(
+    @Id val id: UUID? = null,
+    val userLow: UUID,
+    val userHigh: UUID,
+    val initiatorId: UUID,
+    val accepted: Boolean = false,
+    val createdAt: Instant,
+    val lastMessageAt: Instant,
+    val lowReadAt: Instant? = null,
+    val highReadAt: Instant? = null,
+    val lowClearedAt: Instant? = null,
+    val highClearedAt: Instant? = null,
+) {
+    fun other(userId: UUID): UUID = if (userId == userLow) userHigh else userLow
+    fun readAt(userId: UUID): Instant? = if (userId == userLow) lowReadAt else highReadAt
+    fun clearedAt(userId: UUID): Instant? = if (userId == userLow) lowClearedAt else highClearedAt
+    fun withReadAt(userId: UUID, at: Instant) =
+        if (userId == userLow) copy(lowReadAt = at) else copy(highReadAt = at)
+    fun withClearedAt(userId: UUID, at: Instant) =
+        if (userId == userLow) copy(lowClearedAt = at) else copy(highClearedAt = at)
+
+    companion object {
+        /** The pair in its stored order — by text form, which is how Postgres orders UUIDs too. */
+        fun ordered(a: UUID, b: UUID): Pair<UUID, UUID> = if (a.toString() < b.toString()) a to b else b to a
+    }
+}
+
+/** One message in a [DmThreadRow]. */
+@Table("dm_messages")
+data class DmMessageRow(
+    @Id val id: UUID? = null,
+    val threadId: UUID,
+    val senderId: UUID,
+    val body: String,
+    val createdAt: Instant,
+)
 
 /**
  * A signed-in account's current ELO rating in one ranked [mode] (RankedMode name). Created lazily on

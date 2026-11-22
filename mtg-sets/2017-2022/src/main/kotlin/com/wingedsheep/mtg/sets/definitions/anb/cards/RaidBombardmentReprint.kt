@@ -13,7 +13,7 @@ val RaidBombardmentReprint = Printing(
     collectorNumber = "82",
     scryfallId = "ce45801e-2fca-435c-833f-dd1b8f11f308",
     artist = "Matt Cavotta",
-    imageUri = "https://cards.scryfall.io/normal/front/c/e/ce45801e-2fca-435c-833f-dd1b8f11f308.jpg?1783929800",
+    imageUri = "https://cards.scryfall.io/normal/front/c/e/ce45801e-2fca-435c-833f-dd1b8f11f308.jpg",
     releaseDate = "2020-08-13",
     rarity = Rarity.UNCOMMON,
 )

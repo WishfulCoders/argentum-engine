@@ -13,7 +13,7 @@ val SyphonSoulReprint = Printing(
     collectorNumber = "127",
     scryfallId = "dc308882-1c12-4da0-8eae-caf4cc3d43e1",
     artist = "Ron Spears",
-    imageUri = "https://cards.scryfall.io/normal/front/d/c/dc308882-1c12-4da0-8eae-caf4cc3d43e1.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/c/dc308882-1c12-4da0-8eae-caf4cc3d43e1.jpg?1783939352",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

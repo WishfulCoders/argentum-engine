@@ -93,16 +93,27 @@
     ],
     "continuationStack": [
         {
-            "type": "com.wingedsheep.engine.core.EffectContinuation",
-            "remainingEffects": [
-                {
-                    "type": "GainLife",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 5
+            "type": "com.wingedsheep.engine.core.EffectProgram",
+            "root": {
+                "type": "Composite",
+                "effects": [
+                    {
+                        "type": "GainLife",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 5
+                        }
                     }
-                }
-            ],
+                ]
+            },
+            "origin": null,
+            "cursor": {
+                "steps": [
+                    {
+                        "type": "com.wingedsheep.engine.core.CursorStep.Start"
+                    }
+                ]
+            },
             "effectContext": {
                 "sourceId": null,
                 "controllerId": "player-1"

@@ -18,6 +18,7 @@ import { rarityColor } from '@/components/draft/RarityBadge'
 import { COLOR_DOT } from '@/components/ui/DeckSummary'
 import { labelForFormat } from '@/utils/deckLegality'
 import { getCdnArtCropUrl, getScryfallArtCropUrl } from '@/utils/cardImages'
+import { commandersOf, mergeCommanderIntoCards } from '@/store/deckLibrary'
 import styles from './DeckTile.module.css'
 
 /**
@@ -49,6 +50,8 @@ export interface DeckTileProps {
   formatTitle?: string | undefined
   /** Optional flavour line under the name — used for example decks' descriptions. */
   description?: string | undefined
+  /** The owner's note on a saved deck, set in italics under the name. */
+  note?: string | undefined
   /** Draws the accent ring: this tile is the current selection. */
   selected?: boolean
   /** Corner ribbon text ("Editing" / "Selected"). Fades on hover so `actions` can take over. */
@@ -61,6 +64,8 @@ export interface DeckTileProps {
   onClick: () => void
   /** Hover-revealed corner buttons. Build them with {@link DeckTileActionButton}. */
   actions?: ReactNode
+  /** Extra chips after the format chip — a cube's pack style, a "Shared" or warning flag. */
+  chips?: ReactNode
 }
 
 export function DeckTile({
@@ -71,6 +76,7 @@ export function DeckTile({
   format = null,
   formatTitle,
   description,
+  note,
   selected = false,
   badge,
   storage,
@@ -78,14 +84,12 @@ export function DeckTile({
   disabled = false,
   onClick,
   actions,
+  chips,
 }: DeckTileProps) {
   // Hero art = the deck's rarest card as a wide Scryfall art crop. Derive it straight
   // from the card's CDN image URL (no rate-limited api.scryfall.com lookup) when we have
   // one, falling back to the by-name API lookup otherwise.
-  const artUrl = useMemo(
-    () => (hero ? (getCdnArtCropUrl(hero.imageUri) ?? getScryfallArtCropUrl(hero.name)) : null),
-    [hero],
-  )
+  const artUrl = useMemo(() => heroArtUrl(hero), [hero])
   const gradient = useMemo(() => deckBannerGradient(colors), [colors])
 
   return (
@@ -111,6 +115,7 @@ export function DeckTile({
             {name}
           </span>
           {description && <span className={styles.description}>{description}</span>}
+          {note && <span className={styles.note}>{note}</span>}
           <span className={styles.metaRow}>
             {format && (
               <span
@@ -121,6 +126,7 @@ export function DeckTile({
                 {labelForFormat(format)}
               </span>
             )}
+            {chips}
             <span className={styles.pips}>
               {colors.length > 0 ? (
                 colors.map((c) => <ManaSymbol key={c} symbol={COLOR_PIP_SYMBOL[c] ?? 'C'} size={15} />)
@@ -190,8 +196,71 @@ export function DeckTileActionButton({
   )
 }
 
+/** What a deck needs to describe itself as a tile: its list plus the optional chosen cover. */
+export interface DeckTileSource {
+  cards: Record<string, number>
+  commander?: string | null | undefined
+  /** The second commander of a partner pair; like `commander`, kept out of `cards` when saved. */
+  secondCommander?: string | null | undefined
+  coverCard?: string | null | undefined
+  coverImageUri?: string | null | undefined
+}
+
+export interface DeckTileModel<T extends DeckTileCard> {
+  /** Total cards, commander included. */
+  total: number
+  colors: string[]
+  /** The card whose art paints the tile — the chosen cover, else the rarest card. */
+  hero: T | null
+}
+
+/**
+ * Everything a {@link DeckTile} shows that is derived from the deck: total, colours and hero.
+ * The one place the cover rule lives — every gallery and picker goes through it so a deck looks
+ * the same wherever it is chosen.
+ *
+ * The chosen cover wins while the card is still in the deck (removing it falls back to the
+ * rarest card rather than to a picture of something you no longer play). Its stored image URL
+ * — the pinned printing's art — overrides the catalogue's default printing.
+ */
+export function deckTileModel<T extends DeckTileCard>(
+  deck: DeckTileSource,
+  catalog: Record<string, T>,
+): DeckTileModel<T> {
+  const full = mergeCommanderIntoCards(deck.cards, ...commandersOf(deck))
+  const total = Object.values(full).reduce((a, b) => a + b, 0)
+  return { total, colors: deckColors(full, catalog), hero: deckCover(deck, catalog) }
+}
+
+/** The deck's cover card: the chosen one while it's still in the deck, else {@link rarestCard}. */
+export function deckCover<T extends DeckTileCard>(
+  deck: DeckTileSource,
+  catalog: Record<string, T>,
+): T | null {
+  const cover = deck.coverCard
+  if (cover && (deck.cards[cover] || commandersOf(deck).includes(cover))) {
+    const known = catalog[cover]
+    if (known) return deck.coverImageUri ? { ...known, imageUri: deck.coverImageUri } : known
+    // Catalogue not loaded (or the card left it): the stored art is still enough to paint it.
+    if (deck.coverImageUri) {
+      return {
+        name: cover, cmc: 0, colors: [], cardTypes: [], basicLand: false, rarity: 'COMMON',
+        imageUri: deck.coverImageUri,
+      } as DeckTileCard as T
+    }
+  }
+  const full = mergeCommanderIntoCards(deck.cards, ...commandersOf(deck))
+  return rarestCard(full, catalog, deck.commander ?? null)
+}
+
+/** The landscape art-crop URL for a hero card, or null when there is none. */
+export function heroArtUrl(hero: DeckTileCard | null): string | null {
+  if (!hero) return null
+  return getCdnArtCropUrl(hero.imageUri) ?? getScryfallArtCropUrl(hero.name)
+}
+
 /** Mana-pip symbol per colour key, matching the deckbuilder's colour token order. */
-const COLOR_PIP_SYMBOL: Record<string, string> = {
+export const COLOR_PIP_SYMBOL: Record<string, string> = {
   WHITE: 'W',
   BLUE: 'U',
   BLACK: 'B',
@@ -260,7 +329,7 @@ export function deckColors(
 }
 
 /** Colour-identity gradient used when a deck has no catalogued non-land card to show art for. */
-function deckBannerGradient(colors: string[]): string {
+export function deckBannerGradient(colors: string[]): string {
   if (colors.length === 0) {
     return 'linear-gradient(135deg, rgba(120,120,140,0.5), rgba(60,60,80,0.6))'
   }
@@ -295,11 +364,14 @@ const FORMAT_ACCENT: Record<string, string> = {
   COMMANDER: '#e0b15a',
   BRAWL: '#e0b15a',
   STANDARD_BRAWL: '#e0b15a',
+  HIGHLANDER: '#5fd1b8',
+  CANADIAN_HIGHLANDER: '#ff6b6b',
+  PRIMORDIAL: '#c9a35c',
   HISTORIC: '#ff8aa8',
   CUSTOM_DECKS: '#7be0a8',
 }
 
-function formatAccent(format: string): string {
+export function formatAccent(format: string): string {
   return FORMAT_ACCENT[format.toUpperCase()] ?? '#9aa6b8'
 }
 

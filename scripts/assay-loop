@@ -98,6 +98,9 @@ command -v "$HARNESS" >/dev/null || { echo "assay-loop: $HARNESS is not installe
 REPO=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
 RUNS="$REPO/.claude/loop-runs"
 mkdir -p "$RUNS"
+# shellcheck source=loop-lib.sh
+source "$(dirname "$0")/loop-lib.sh"
+loop_maybe_tui assay "$0" "$(loop_model_arg)" ${FOCUS:+"$FOCUS"}
 
 FOCUS_LINE="Focus: none — take whatever the probe ranks highest."
 [ -z "$FOCUS" ] || FOCUS_LINE="Focus: '$FOCUS' — PICK prefers families in this theme or SDK family while any in-scope one is left, then falls back to the full ranking."
@@ -132,17 +135,10 @@ Never touch a PR, branch or worktree without our prefix. Work on our PR in its w
 \`git worktree add\` if missing). Never work in the main checkout. Every oracle-assay binary you run must be
 built from that worktree (\`just assay …\` recipes rebuild it) — a stale binary makes before/after meaningless.
 
-1. PR open, CI failed -> read only the failing log tail (\`gh run view <id> --log-failed | tail -200\`),
-   fix it, re-run the affected gate per the verify skill, push. A known-flaky test: \`gh run rerun --failed\` instead.
-2. PR open, has merge conflicts -> rebase on origin/main. Grammar conflicts: resolve by hand, then re-run
-   \`just assay-gate\`. The verdict ledger (game-server/src/main/resources/coverage/assay-verdicts.json) and
-   card goldens: never hand-merge — take main's and regenerate with \`just assay-bake\` / \`just rebless-cards\`.
-   Gate, push.
-3. PR open, CI green, not yet reviewed (no 'loop-reviewed' comment) -> review it with the review-changes skill,
-   fix what holds up (re-bake if the grammar changed), gate, push, and post a PR comment starting
-   'loop-reviewed' listing fixes and declines.
-4. PR open, CI green, reviewed, nothing pushed since -> \`gh pr merge --squash --delete-branch\` (from $REPO, after
-   \`git worktree remove\` of its worktree), mark the band [x] in the ledger.
+1-4. Our PR is open -> follow the PR LIFECYCLE below (CI failed, conflicts, unreviewed, or ready to merge).
+   Merge bookkeeping: mark the band [x] in the ledger. On conflicts, grammar files are resolved by hand then
+   \`just assay-gate\` re-run; the verdict ledger (game-server/src/main/resources/coverage/assay-verdicts.json) and
+   card goldens are never hand-merged — take main's and regenerate with \`just assay-bake\` / \`just rebless-cards\`.
 5. No PR open -> build the next band. \`git fetch\`, new worktree + 'loop-assay-' branch from origin/main.
    a. PICK. Run \`just assay-report --implemented --rank tail --top 40\`. Skip every family already in the
       ledger (any status) and every out-of-scope one (record those as [-]). For the ~8 best remaining,
@@ -169,13 +165,11 @@ built from that worktree (\`just assay …\` recipes rebuild it) — a stale bin
    e. Add a short band section to oracle-assay/README.md in the house style: the family, probe vs delivered,
       what it found. Commit by explicit path, never \`git add -A\`: grammar + tests + README; then card fixes +
       goldens (if any); then \`just assay-bake\` and the verdict ledger JSON in its own commit.
-   f. Gate: \`just build\`. Push, open a PR titled '[agent-loop: $MODEL] Assay: <band> band' whose body gives the
+   f. Gate: \`just loop-gate\`, review, push, open a PR titled '[agent-loop: $MODEL] Assay: <band> band' whose body gives the
       family and tail key, probe vs delivered, whole cards before -> after, differential before -> after with
       the classification counts, any card bugs fixed by name, that it came from an agentic loop driven by
       $MODEL, and that fixed cards were not play-tested beyond their existing tests.
 
-PR open, CI still pending or running -> do nothing; don't poll or wait on it — the loop waits for CI
-between sessions. Answer WAITING_CI.
 
 If a step fails twice for the same PR, comment on it, mark the band [!] in the ledger, and move on. When PICK
 finds no in-scope family whose probe finishes at least one whole card, or the last three PICKs all ended
@@ -184,6 +178,8 @@ Follow AGENTS.md; mtgish is irrelevant here and never blocks. Never revert or st
 An unrelated failure on origin/main (a test in a module your change doesn't touch) is NOT a reason to answer
 STUCK: run the gates for the modules you changed, note the unrelated failure in the ledger and the PR body,
 and carry on. Only answer STUCK when the failure is inside code your band changed or depends on.
+
+$LOOP_PR_PROTOCOL
 
 A human watches your text live, one line at a time, so keep them posted in short lines (under 150 chars each):
 - once you know which step you're taking: 'Working on: <step and band, e.g. step 5, kicker condition band>'
@@ -211,44 +207,50 @@ fi
 LOGDIR="$RUNS/assay-logs"
 mkdir -p "$LOGDIR"
 exec > >(tee -a "$RUNS/assay.log") 2>&1
+loop_clear_stale_stop "$RUNS/assay.stop" "$RUNS/assay.pid"
+# `just loops` reads this to tell a running loop from a finished one.
+echo $$ > "$RUNS/assay.pid"
+trap 'rm -f "$RUNS/assay.pid"' EXIT
 log() { echo "[$(date '+%F %T')] $*"; }
 
-# One line per action the session takes, streamed live: its messages and each tool call.
-PRETTY='select(.type == "assistant") | .message.content[]? |
+# Streamed live: the milestones the session reports (Working on / Finding / Summary), nothing else.
+# LOOP_VERBOSE=1 adds its other messages and every tool call. `just loops` is the at-a-glance view.
+[ -n "${LOOP_VERBOSE:-}" ] && VERBOSE=true || VERBOSE=false
+MILESTONE='def milestone: (if startswith("Working on") then "   🔨 " elif startswith("Finding") then "   🔎 " else "   📋 " end) + .[0:200];'
+PRETTY="$MILESTONE"'select(.type == "assistant") | .message.content[]? |
   (if .type == "text" then
      ([.text | split("\n")[] | select(test("^(Working on|Finding|Summary):"))]) as $m
-     | if ($m | length) > 0 then $m[]
-         | (if startswith("Working on") then "   🔨 " elif startswith("Finding") then "   🔎 " else "   📋 " end) + .[0:200]
-       else "   💬 " + (.text | split("\n")[0] | .[0:160]) end
-   elif .type == "tool_use" then "   → " + .name + ": " +
+     | if ($m | length) > 0 then $m[] | milestone
+       elif $verbose then "   💬 " + (.text | split("\n")[0] | .[0:160]) else empty end
+   elif .type == "tool_use" and $verbose then "   → " + .name + ": " +
      ((.input.description // .input.command // .input.skill // .input.file_path // .input.pattern
        // .input.prompt // "") | tostring | split("\n")[0] | .[0:140])
    else empty end)'
 
 if [ "$HARNESS" = codex ]; then
-  PRETTY='if .type == "item.completed" and .item.type == "agent_message" then
-      .item.text | split("\n")[] | select(length > 0) | "   💬 " + .[0:200]
-    elif .type == "item.started" and .item.type == "command_execution" then
+  PRETTY="$MILESTONE"'if .type == "item.completed" and .item.type == "agent_message" then
+      .item.text | split("\n")[] | select(length > 0)
+      | if test("^(Working on|Finding|Summary):") then milestone elif $verbose then "   💬 " + .[0:200] else empty end
+    elif .type == "item.started" and .item.type == "command_execution" and $verbose then
       "   → " + (.item.command | split("\n")[0] | .[0:140])
     elif .type == "error" or .type == "turn.failed" then
       "   ! " + (.message // .error.message // "Codex turn failed")
     else empty end'
 fi
 
+# Stamp each rendered line when received, using the same local clock as launcher events.
+PRETTY="($PRETTY)"' | "[" + (now | strflocaltime("%Y-%m-%d %H:%M:%S")) + "] " + .'
+
 log "assay-loop started${FOCUS:+ (focus: $FOCUS)} (harness $HARNESS, model $MODEL, log $RUNS/assay.log)"
 N=0
 while [ ! -e "$RUNS/assay.stop" ]; do
   N=$((N + 1))
-  # Wait on CI for free instead of spending a session on it.
-  PR=$(gh pr list --author @me --state open --json number,headRefName \
-        --jq "[.[] | select(.headRefName | startswith(\"loop-assay-\"))][0].number // empty")
-  if [ -n "$PR" ]; then
-    log "waiting for CI on PR #$PR"
-    sleep 60
-    gh pr checks "$PR" --watch >/dev/null 2>&1
-    log "CI on PR #$PR: $(gh pr checks "$PR" --json bucket --jq '[.[].bucket] | group_by(.) | map("\(.[0])=\(length)") | join(" ")' 2>/dev/null)"
-  fi
+  loop_await_turn "loop-assay-"
+  PR=$LOOP_PRS
+  [ -e "$RUNS/assay.stop" ] && break
 
+  loop_session_acquire "$RUNS/assay.stop" || break
+  SESSION_START=$SECONDS
   TRANSCRIPT="$LOGDIR/$(date '+%Y%m%d-%H%M%S')-iter$N.jsonl"
   log "iteration $N (PR: ${PR:-none}) — transcript $TRANSCRIPT"
   if [ "$HARNESS" = codex ]; then
@@ -257,25 +259,34 @@ while [ ! -e "$RUNS/assay.stop" ]; do
     rm -f "$FINAL_FILE"
     (cd "$REPO" && codex exec --model "$MODEL" --approve-for-me --json \
         --output-last-message "$FINAL_FILE" "$PROMPT" 2>&1) \
-      | tee "$TRANSCRIPT" | jq -Rr --unbuffered "fromjson? | $PRETTY"
+      | tee "$TRANSCRIPT" | jq -Rr --unbuffered --argjson verbose "$VERBOSE" "fromjson? | $PRETTY"
     SESSION_STATUS=$?
     RESULT=$(cat "$FINAL_FILE" 2>/dev/null || true)
     FINAL=$RESULT
     STATS="exit $SESSION_STATUS"
   else
-    (cd "$REPO" && claude -p "$PROMPT" --model "$MODEL" --permission-mode "${PERMISSION_MODE:-auto}" \
+    (cd "$REPO" && loop_run_reaped "$TRANSCRIPT" ASSAY_COMPLETE \
+        claude -p "$PROMPT" --model "$MODEL" --permission-mode "${PERMISSION_MODE:-auto}" \
         --output-format stream-json --verbose 2>&1) \
-      | tee "$TRANSCRIPT" | jq -Rr --unbuffered "fromjson? | $PRETTY"
+      | tee "$TRANSCRIPT" | jq -Rr --unbuffered --argjson verbose "$VERBOSE" "fromjson? | $PRETTY"
+    loop_note_reaped "$TRANSCRIPT"
 
     FINAL=$(jq -Rc 'fromjson? | select(.type == "result")' "$TRANSCRIPT" 2>/dev/null | tail -1)
     RESULT=$(echo "$FINAL" | jq -r '.result // empty' 2>/dev/null)
 
-    STATS=$(echo "$FINAL" | jq -r '"\(.num_turns // "?") turns, \((.duration_ms // 0) / 60000 | floor) min"' 2>/dev/null)
+    # A session reports a result each time it wakes for a background task, so the last one's
+    # duration is only its tail: time the session by the wall clock instead.
+    STATS=$(echo "$FINAL" | jq -r '"$\(.total_cost_usd // 0 | . * 100 | round / 100) at API prices"' 2>/dev/null)
   fi
   LAST=$(echo "$RESULT" | tail -1)
+  STATS="$(( (SECONDS - SESSION_START) / 60 )) min, $STATS"
   log "iteration $N finished: ${LAST:-<no result>} ($STATS)"
+  loop_session_release
 
-  if grep -qiE 'usage limit|session limit|hit your limit|rate limit|overloaded|quota exceeded' <<<"$RESULT$(tail -5 "$TRANSCRIPT")"; then
+  # A session that ended on its protocol line finished its step; any "rate limit" in its text is
+  # its own prose (e.g. a Scryfall 429 it reported), not the harness stopping it.
+  if ! grep -qE '^(STEP [0-9]+ DONE|WAITING_CI|[A-Z]+_COMPLETE|STUCK)' <<<"$LAST" &&
+     grep -qiE 'usage limit|session limit|hit your limit|rate limit|overloaded|quota exceeded' <<<"$RESULT$(tail -5 "$TRANSCRIPT")"; then
     log "limit reached — waiting 15 min"; sleep 900; continue
   fi
   if [ "$HARNESS" = codex ] && { [ "$SESSION_STATUS" -ne 0 ] || [ -z "$FINAL" ]; }; then

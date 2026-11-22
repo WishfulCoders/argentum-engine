@@ -33,17 +33,24 @@ class LkiPolicyTest : FunSpec({
 
     test("references that only ever name a live permanent never fall back to LKI") {
         listOf(
-            EffectTarget.ContextTarget(0),
-            EffectTarget.BoundVariable("creature"),
             EffectTarget.SpecificEntity(EntityId("e1")),
             EffectTarget.RingBearer(),
             EffectTarget.AffectedEntity,
-            EffectTarget.IterationEntity,
             EffectTarget.AmassedArmy,
             EffectTarget.ChosenCreature,
             EffectTarget.AttachedToTriggeringPermanent,
         ).forEach { ref ->
             lkiPolicyFor(ref) shouldBe LkiPolicy.LIVE_ONLY
+        }
+    }
+
+    test("a loop's object and a chosen target read LKI only from this resolution's own move off the battlefield") {
+        listOf(
+            EffectTarget.IterationEntity,
+            EffectTarget.ContextTarget(0),
+            EffectTarget.BoundVariable("creature"),
+        ).forEach { ref ->
+            lkiPolicyFor(ref) shouldBe LkiPolicy.LIVE_THEN_OWN_MOVE_LKI
         }
     }
 

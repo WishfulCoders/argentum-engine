@@ -37,7 +37,8 @@ import java.time.Instant
  * total card count are denormalized out of it for cheap list views. Resolution against the card
  * registry deliberately does *not* happen here: a cube is a list of names until a lobby resolves it
  * (`CubeResolver`), so a cube can be saved while some of its cards are still unimplemented and stays
- * valid as more sets land. All operations are scoped to the authenticated user.
+ * valid as more sets land. All operations are scoped to the authenticated user; the one public read
+ * — a cube by its share code — is [SharedCubeController].
  */
 @RestController
 @RequestMapping("/api/account/cubes")
@@ -108,6 +109,33 @@ class AccountCubeController(
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(saved.toDetailJson())
     }
 
+    /**
+     * Mint (or return the existing) public link code for a cube. Idempotent, so the share dialog can
+     * call it every time it opens without invalidating a link already handed out.
+     */
+    @PostMapping("/{id}/share", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun share(
+        @PathVariable id: Long,
+        @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) auth: String?,
+    ): ResponseEntity<Any> {
+        val userId = authSupport.requireUser(auth).userId
+        val existing = cubes.findByIdAndUserId(id, userId) ?: return ResponseEntity.notFound().build()
+        val code = existing.shareCode ?: cubes.save(existing.copy(shareCode = CubeShareCodes.next())).shareCode
+        return ResponseEntity.ok(mapOf("shareCode" to code))
+    }
+
+    /** Revoke a cube's public link; links already handed out stop resolving. */
+    @DeleteMapping("/{id}/share")
+    fun unshare(
+        @PathVariable id: Long,
+        @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) auth: String?,
+    ): ResponseEntity<Any> {
+        val userId = authSupport.requireUser(auth).userId
+        val existing = cubes.findByIdAndUserId(id, userId) ?: return ResponseEntity.notFound().build()
+        if (existing.shareCode != null) cubes.save(existing.copy(shareCode = null))
+        return ResponseEntity.noContent().build()
+    }
+
     @DeleteMapping("/{id}")
     fun delete(
         @PathVariable id: Long,
@@ -142,6 +170,7 @@ class AccountCubeController(
         put("name", name)
         put("cardCount", cardCount)
         put("updatedAt", updatedAt.toString())
+        put("shareCode", shareCode)
         put("cube", json.parseToJsonElement(data))
     }
 

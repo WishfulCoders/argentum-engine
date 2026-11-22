@@ -12,18 +12,18 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
 
 /**
- * Elite Spellbinder — Strixhaven: School of Mages #17
+ * Elite Spellbinder — Strixhaven: School of Mages #17 (canonical printing)
  * {2}{W} · Creature — Human Cleric · 3/1
  *
  * Flying
- * When this creature enters, look at target opponent's hand. You may exile a nonland card from it.
- * For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2}
- * more to cast.
+ * When this creature enters, look at target opponent's hand. You may exile a nonland card from
+ * it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs
+ * {2} more to cast.
  *
- * The enters trigger is word-for-word Invasion of Gobakhan's, so it is that card's composition:
- * look at the hand, `chooseUpTo(1)` nonland card (the "you may"), then
- * [Effects.ExileAndGrantOwnerPlayPermission] exiles it and grants its owner a lasting play
- * permission with the {2} tax. Playing it follows normal timing (printed ruling).
+ * The same ETB as Invasion of Gobakhan: a hand look, an optional `chooseUpTo(1)` nonland pick,
+ * then [Effects.ExileAndGrantOwnerPlayPermission] for the owner's permanent play permission and
+ * the {2} tax. The tax is scoped to opponents of the Spellbinder's controller, which is every
+ * caster here — the card came from a target opponent's hand, so its owner is never you.
  */
 val EliteSpellbinder = card("Elite Spellbinder") {
     manaCost = "{2}{W}"
@@ -72,5 +72,11 @@ val EliteSpellbinder = card("Elite Spellbinder") {
         flavorText = "Paulo Vitor Damo da Rosa, World Champion XXVI"
         imageUri = "https://cards.scryfall.io/normal/front/9/d/9d3a7998-ccac-45ad-a4e9-3a2cb057f63b.jpg?1783927390"
         ruling("2021-04-16", "Playing the exiled card follows all normal timing restrictions.")
+        ruling(
+            "2021-04-16",
+            "If the exiled card is a modal double-faced card and its back face is a land, its " +
+                "owner may play it as a land. (Note that if the front face is also a land, you " +
+                "couldn't have exiled it to begin with.)"
+        )
     }
 }

@@ -30,6 +30,11 @@ import com.wingedsheep.sdk.model.Deck
  *
  * Sideboard and Companion sections are recognised but currently dropped — there's no place to
  * put them in [Deck] yet.
+ *
+ * Not the import path players use: pasted lists are parsed client-side by
+ * `web-client/src/components/deckbuilder/parseArenaDeck.ts`, which also reads the Archidekt /
+ * TappedOut / deckstats markers and infers an MTGO-style sideboard commander. Nothing in
+ * `main` calls this object; if a server endpoint ever does, port those rules here first.
  */
 object MtgaDeckFormat {
 
@@ -44,7 +49,7 @@ object MtgaDeckFormat {
     fun parse(text: String, format: DeckFormat? = null): Deck {
         var section = Section.DECK
         val cards = mutableListOf<String>()
-        var commander: String? = null
+        val commanders = mutableListOf<String>()
         var sawCommanderSection = false
 
         for (raw in text.lineSequence()) {
@@ -55,7 +60,7 @@ object MtgaDeckFormat {
             // is silently ignored.
             when (line.lowercase()) {
                 "deck", "main", "mainboard" -> { section = Section.DECK; continue }
-                "commander" -> { section = Section.COMMANDER; sawCommanderSection = true; continue }
+                "commander", "commanders" -> { section = Section.COMMANDER; sawCommanderSection = true; continue }
                 "sideboard" -> { section = Section.SIDEBOARD; continue }
                 "companion" -> { section = Section.COMPANION; continue }
             }
@@ -64,8 +69,9 @@ object MtgaDeckFormat {
             val name = stripSetSuffix(m.groupValues[2])
             when (section) {
                 Section.DECK -> repeat(count) { cards += name }
-                // Single commander only — last write wins if multiple are listed.
-                Section.COMMANDER -> commander = name
+                // One commander, or two for a partner pair (CR 702.124) — whether the two may
+                // actually be paired is the deck validator's call, not the parser's.
+                Section.COMMANDER -> if (name !in commanders) commanders += name
                 Section.SIDEBOARD, Section.COMPANION -> Unit
             }
         }
@@ -73,28 +79,31 @@ object MtgaDeckFormat {
         // First-card fallback for commander-shaped formats imported without a section header.
         // Only applied when the format definitively requires a commander; suppresses for unknown
         // format and for lists that already had an (empty) Commander header.
-        if (commander == null && !sawCommanderSection &&
+        if (commanders.isEmpty() && !sawCommanderSection &&
             format != null && format.isCommanderShape && cards.isNotEmpty()
         ) {
-            commander = cards.removeAt(0)
+            commanders += cards.removeAt(0)
         }
 
-        return Deck(cards = cards, commander = commander)
+        // No partner ability allows more than two commanders (CR 702.124g); a third listed one
+        // goes back into the deck rather than vanishing, so the validator still sees all 100.
+        cards += commanders.drop(2)
+        return Deck(cards = cards, commander = commanders.getOrNull(0), secondCommander = commanders.getOrNull(1))
     }
 
     /**
      * Render [deck] as MTGA-format text. Always emits a `Deck` section; emits a `Commander`
-     * section only when [Deck.commander] is set.
+     * section — one line per commander — only when [Deck.commanders] is non-empty.
      */
     fun serialize(deck: Deck): String = buildString {
         appendLine("Deck")
         deck.cards.groupingBy { it }.eachCount().forEach { (name, n) ->
             appendLine("$n $name")
         }
-        if (deck.commander != null) {
+        if (deck.commanders.isNotEmpty()) {
             appendLine()
             appendLine("Commander")
-            appendLine("1 ${deck.commander}")
+            deck.commanders.forEach { appendLine("1 $it") }
         }
     }
 

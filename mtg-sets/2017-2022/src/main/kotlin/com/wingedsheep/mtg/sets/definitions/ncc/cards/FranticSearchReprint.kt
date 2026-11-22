@@ -13,7 +13,7 @@ val FranticSearchReprint = Printing(
     collectorNumber = "222",
     scryfallId = "57ab2d8f-6804-46fb-9dec-5fd230333ffd",
     artist = "Mitchell Malloy",
-    imageUri = "https://cards.scryfall.io/normal/front/5/7/57ab2d8f-6804-46fb-9dec-5fd230333ffd.jpg?1783923282",
+    imageUri = "https://cards.scryfall.io/normal/front/5/7/57ab2d8f-6804-46fb-9dec-5fd230333ffd.jpg",
     releaseDate = "2022-04-29",
     rarity = Rarity.COMMON,
 )

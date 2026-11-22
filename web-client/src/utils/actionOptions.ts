@@ -40,7 +40,7 @@ export interface ActionOption {
   /** The legal action info if available */
   action: LegalActionInfo | null
   /** Action type for coloring */
-  actionType: 'cast' | 'castFaceDown' | 'castWithKicker' | 'cycle' | 'plot' | 'suspend' | 'playLand' | 'activate' | 'turnFaceUp'
+  actionType: 'cast' | 'castFaceDown' | 'castWithKicker' | 'cycle' | 'plot' | 'foretell' | 'suspend' | 'companion' | 'playLand' | 'activate' | 'turnFaceUp'
   /**
    * Signed loyalty change for planeswalker loyalty abilities (+1, -2, -8, 0).
    * When present, the button renders a mana-font loyalty icon instead of a text prefix.
@@ -53,6 +53,13 @@ export interface ActionOption {
    * impending. Undefined for every other option.
    */
   impendingTime?: number
+  /**
+   * Which printed face of a double-faced card this option puts onto the stack or battlefield.
+   * Set only when the card offers its back face somewhere in the menu — a back-face land play
+   * (Mystic Peak behind Pinnacle Monk, CR 712.12) or a back-face cast (CR 712.8c) — so the menu
+   * can show the face being chosen instead of always the front. Undefined for every other card.
+   */
+  face?: 'front' | 'back'
 }
 
 /**
@@ -76,7 +83,7 @@ const PLAY_ACTION_TYPES: ReadonlySet<ActionOption['actionType']> = new Set([
  * battlefield, not to a decision about playing the card.
  */
 const LADDER_ACTION_TYPES: ReadonlySet<ActionOption['actionType']> = new Set([
-  'cast', 'castFaceDown', 'castWithKicker', 'cycle', 'plot', 'suspend', 'playLand',
+  'cast', 'castFaceDown', 'castWithKicker', 'cycle', 'plot', 'foretell', 'suspend', 'playLand',
 ])
 
 /**
@@ -213,7 +220,7 @@ function reductionHintFor(action: LegalActionInfo): { hint: string } | null {
  */
 export interface KeywordAlternativeCost {
   /** Option key, also the discriminator the tests and the menu identify the row by. */
-  readonly key: 'impending' | 'evoke' | 'bestow'
+  readonly key: 'impending' | 'evoke' | 'bestow' | 'mutate'
   /** Button label. */
   readonly label: string
   /** The alternative mana cost, e.g. "{2}{U}". */
@@ -231,6 +238,9 @@ export interface KeywordAlternativeCost {
  * card carries two of these keywords, and a second one would need its own row rather than a
  * different shape of this one.
  */
+/** "Exile a Goblin card…" → "exile a Goblin card…": only the sentence case changes. */
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1)
+
 export function keywordAlternativeCostFor(cardInfo: ClientCard): KeywordAlternativeCost | null {
   if (cardInfo.bestow) {
     return {
@@ -239,6 +249,15 @@ export function keywordAlternativeCostFor(cardInfo: ClientCard): KeywordAlternat
       cost: cardInfo.bestow.cost || '{0}',
       alternativeCostType: 'BESTOW',
       hint: ['cast as an Aura enchanting a creature', cardInfo.bestow.additionalCostDescription].filter(Boolean).join(' — '),
+    }
+  }
+  if (cardInfo.mutate) {
+    return {
+      key: 'mutate',
+      label: `Mutate ${cardInfo.name}`,
+      cost: cardInfo.mutate,
+      alternativeCostType: 'MUTATE',
+      hint: 'put over or under a non-Human creature you own — they merge into one',
     }
   }
   if (cardInfo.impending) {
@@ -251,18 +270,19 @@ export function keywordAlternativeCostFor(cardInfo: ClientCard): KeywordAlternat
     }
   }
   if (cardInfo.evoke) {
+    // `evokeAdditionalCost` is the fork's older field for the same text, read as a fallback.
+    const evokeExtra = cardInfo.evoke.additionalCostDescription ?? cardInfo.evokeAdditionalCost
     return {
       key: 'evoke',
       label: `Evoke ${cardInfo.name}`,
-      cost: cardInfo.evoke,
+      cost: cardInfo.evoke.cost || '{0}',
       alternativeCostType: 'EVOKE',
       // The sacrifice is the whole point of the cheaper price, and it is the half a player who
       // dragged the card out to hard-cast it needs to see before clicking. A non-mana evoke cost
-      // ("exile a white card from your hand") is named too, since the mana cost alone reads {0}.
-      hint: [
-        'evoke — sacrificed as it enters, keeping only its ETB',
-        cardInfo.evokeAdditionalCost?.replace(/^./, (c) => c.toLowerCase()),
-      ].filter(Boolean).join(' — '),
+      // (Endurance's "exile a green card from your hand") leads, since it is the price itself.
+      hint: evokeExtra
+        ? `${lowerFirst(evokeExtra)} — sacrificed as it enters`
+        : 'evoke — sacrificed as it enters, keeping only its ETB',
     }
   }
   return null
@@ -290,9 +310,13 @@ export function buildActionOptions(
   // "Kicked {G}" / "Kicked {1}{U}" / both — so every one the server offers gets its own option.
   const kickerActions = legalActions.filter((a) => a.actionType === 'CastWithKicker')
   const morphAction = legalActions.find((a) => a.actionType === 'CastFaceDown')
-  const cycleAction = legalActions.find((a) => a.action.type === 'CycleCard')
+  // A card can hold printed cycling plus cycling granted in hand (Rhet-Tomb Mystic), one action
+  // per distinct cost — so this is a filter, not a find.
+  const cycleActions = legalActions.filter((a) => a.action.type === 'CycleCard')
+  const cycleAction = cycleActions[0] ?? null
   const typecycleAction = legalActions.find((a) => a.action.type === 'TypecycleCard')
   const plotAction = legalActions.find((a) => a.action.type === 'PlotCard')
+  const foretellAction = legalActions.find((a) => a.action.type === 'ForetellCard')
   const suspendAction = legalActions.find((a) => a.action.type === 'SuspendCardFromHand')
   // A modal double-faced land (the Zendikar Rising Pathway cycle) sends *two* PlayLand actions
   // for one card — one per land face, CR 712.12 — so this is a filter, not a find.
@@ -407,16 +431,21 @@ export function buildActionOptions(
       })
     })
   } else if (castAction) {
-    // 1c. Normal cast (for non-land, non-modal cards). When the *only* offered cast is an
-    // alternative-cost one (emerge with the hard cast unaffordable), the server's description names
-    // the mechanic — "Cast X" would hide that the cast eats a creature. Likewise a cast of one
-    // specific face (a prepare-spell copy in exile, an adventure-only permission) is named by the
-    // server after that face: "Cast Bloodline Recollector" would hide that it casts Ancestral Craving.
+    // 1c. Normal cast (for non-land, non-modal cards). When the *only* offered cast is a keyword or
+    // alternative-cost one (emerge with the hard cast unaffordable, flashback or disturb out of the
+    // graveyard), the server's description names the mechanic — "Cast X" would hide that the cast
+    // eats a creature, or that it's the graveyard cast at all. Likewise a cast of one specific face
+    // is named by the server after that face: a disturb cast or a modal DFC's back (CR 712.8c) puts
+    // the back on the stack, so "Cast Mischievous Catgeist" would hide that it casts Catlike
+    // Curiosity; a prepare-spell copy in exile or an adventure-only permission, that it casts
+    // Ancestral Craving rather than Bloodline Recollector.
     const castFaceIndex = (castAction.action as { faceIndex?: number | null }).faceIndex
+    const castFused = (castAction.action as { castFused?: boolean }).castFused === true
     const castPrototyped = (castAction.action as { castPrototyped?: boolean }).castPrototyped === true
     options.push({
       key: 'cast',
-      label: castAction.actionType === 'CastWithAlternativeCost' || castFaceIndex != null || castPrototyped
+      label: castAction.actionType !== 'CastSpell' || castAction.castsTransformed === true ||
+        castFaceIndex != null || castPrototyped || castFused
         ? castAction.description
         : `Cast ${cardInfo.name}`,
       ...costFieldsFor(castAction, cardInfo.manaCost),
@@ -424,7 +453,20 @@ export function buildActionOptions(
       action: castAction,
       actionType: 'cast',
     })
-  } else if ((cycleAction || typecycleAction || plotAction || suspendAction) && !cardInfo.cardTypes.includes('LAND')) {
+  } else if (playLandActions.some(playsBackFace) && !cardInfo.cardTypes.includes('LAND')) {
+    // A spell-front // land-back modal DFC (Pinnacle Monk // Mystic Peak) whose front the player
+    // can't cast right now: the server sends only the back-face land play. Keep the front in the
+    // menu, grayed out, so the land play reads as one of the card's two faces rather than as the
+    // only thing the card does.
+    options.push({
+      key: 'cast',
+      label: `Cast ${cardInfo.name}`,
+      manaCost: cardInfo.manaCost || null,
+      isAvailable: false,
+      action: null,
+      actionType: 'cast',
+    })
+  } else if ((cycleAction || typecycleAction || plotAction || foretellAction || suspendAction) && !cardInfo.cardTypes.includes('LAND')) {
     // Non-land card with cycling/plot but no CastSpell action — show grayed-out cast option
     // so the action menu always presents both choices
     options.push({
@@ -443,9 +485,12 @@ export function buildActionOptions(
       options.push({
         // One entry per land face. The server's description already names the face being
         // played ("Play Lavaglide Pathway"), which is the only thing telling the two apart —
-        // `cardInfo.name` is the front face's name for both.
+        // `cardInfo.name` is the front face's name for both. A lone back-face play (Mystic Peak,
+        // with Pinnacle Monk's front unaffordable) needs it just as much.
         key: index === 0 ? 'playLand' : `playLand-${index}`,
-        label: playLandActions.length > 1 ? playLandAction.description : `Play ${cardInfo.name}`,
+        label: playLandActions.length > 1 || playsBackFace(playLandAction)
+          ? playLandAction.description
+          : `Play ${cardInfo.name}`,
         manaCost: null,
         isAvailable: playLandAction.isAffordable !== false,
         action: playLandAction,
@@ -493,16 +538,16 @@ export function buildActionOptions(
   })
 
   // 4. Cycling
-  if (cycleAction) {
+  cycleActions.forEach((action, index) => {
     options.push({
-      key: 'cycle',
+      key: index === 0 ? 'cycle' : `cycle-${index}`,
       label: 'Cycle',
-      manaCost: cycleAction.manaCostString || null,
-      isAvailable: cycleAction.isAffordable !== false,
-      action: cycleAction,
+      manaCost: action.manaCostString || null,
+      isAvailable: action.isAffordable !== false,
+      action,
       actionType: 'cycle',
     })
-  }
+  })
 
   // 4b. Typecycling (e.g., Islandcycling, Swampcycling)
   if (typecycleAction) {
@@ -528,6 +573,18 @@ export function buildActionOptions(
     })
   }
 
+  // 4c'. Foretell (CR 702.143) — the {2} exile-face-down special action; sits alongside the cast option.
+  if (foretellAction) {
+    options.push({
+      key: 'foretell',
+      label: 'Foretell',
+      manaCost: foretellAction.manaCostString || null,
+      isAvailable: foretellAction.isAffordable !== false,
+      action: foretellAction,
+      actionType: 'foretell',
+    })
+  }
+
   // 4d. Suspend (CR 702.62) — special action; sits alongside the (often unavailable) cast option.
   if (suspendAction) {
     options.push({
@@ -537,6 +594,19 @@ export function buildActionOptions(
       isAvailable: suspendAction.isAffordable !== false,
       action: suspendAction,
       actionType: 'suspend',
+    })
+  }
+
+  // 4e. Companion (CR 702.139a) — the {3} special action on a companion waiting outside the game.
+  const companionAction = legalActions.find((a) => a.action.type === 'PutCompanionIntoHand')
+  if (companionAction) {
+    options.push({
+      key: 'companion',
+      label: 'Put into your hand',
+      manaCost: companionAction.manaCostString || null,
+      isAvailable: companionAction.isAffordable !== false,
+      action: companionAction,
+      actionType: 'companion',
     })
   }
 
@@ -558,7 +628,8 @@ export function buildActionOptions(
       options.push({
         key: `pw-${pw.abilityId}-${index}`,
         label: pw.description,
-        manaCost: null,
+        // A loyalty tax (Eidolon of Obstruction) adds mana to the loyalty cost; untaxed it's null.
+        manaCost: match?.manaCostString || null,
         isAvailable: match !== undefined && match.isAffordable !== false,
         action: match ?? null,
         actionType: 'activate',
@@ -576,9 +647,10 @@ export function buildActionOptions(
       key: `activate-${index}`,
       label: activateAction.description,
       manaCost: activateAction.manaCostString || null,
-      isAvailable: activateAction.isAffordable !== false,
+      isAvailable: activateAction.isAffordable !== false && activateAction.inertReason == null,
       action: activateAction,
       actionType: 'activate',
+      ...(activateAction.inertReason != null && { hint: activateAction.inertReason }),
     })
   })
 
@@ -634,5 +706,34 @@ export function buildActionOptions(
     })
   })
 
-  return options
+  return tagFaces(cardInfo, options)
+}
+
+/**
+ * Whether [action] plays or casts the card's **back** face: a modal DFC's back-face land play
+ * (CR 712.12) or a cast the server flags as putting the card on the stack back face up
+ * (CR 712.8c — a modal DFC's permanent back, or disturb). Server-decided either way.
+ */
+function playsBackFace(action: LegalActionInfo): boolean {
+  return (action.action.type === 'PlayLand' && action.action.asBackFace === true) ||
+    (action.action.type === 'CastSpell' && action.castsTransformed === true)
+}
+
+/**
+ * Marks which face each cast / land-play option is for, once any option reaches the back face.
+ * A spell-front // land-back card otherwise reads as two unrelated buttons under one picture of
+ * the front — "Cast Pinnacle Monk" next to "Play Mystic Peak" with nothing saying the land is
+ * the same card turned over. The hint names the face and its type line; the menu swaps the image.
+ */
+function tagFaces(cardInfo: ClientCard, options: ActionOption[]): ActionOption[] {
+  const isBack = (o: ActionOption) => o.action != null && playsBackFace(o.action)
+  if (!options.some(isBack)) return options
+  return options.map((o) => {
+    if (o.actionType !== 'cast' && o.actionType !== 'playLand' && o.actionType !== 'castWithKicker') return o
+    const face = isBack(o) ? 'back' : 'front'
+    const typeLine = face === 'back' ? cardInfo.backFaceTypeLine : cardInfo.typeLine
+    const faceLabel = face === 'back' ? 'Back face' : 'Front face'
+    const faceHint = typeLine ? `${faceLabel} — ${typeLine}` : faceLabel
+    return { ...o, face, hint: o.hint ? `${faceHint} · ${o.hint}` : faceHint }
+  })
 }

@@ -8,37 +8,59 @@
   flex-direction: column;
   gap: var(--space-3);
   width: 100%;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
 }
 
+/* A segmented control rather than underlined text tabs: the picker always lives inside a dialog,
+   and a framed track reads as "choose where the deck comes from" at a glance. */
 .tabs {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tab {
-  flex: 1;
+  min-height: 38px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 9px;
   color: var(--text-muted);
-  padding: var(--space-2) var(--space-3);
+  padding: 0 var(--space-2);
   cursor: pointer;
+  font: inherit;
   font-size: 0.85rem;
-  border-bottom: 2px solid transparent;
-  transition: color 0.1s, border-color 0.1s;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.1s, background 0.1s;
 }
 
 .tab:hover:not(:disabled) {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .tabActive {
   color: var(--text-primary);
-  border-bottom-color: var(--accent-primary, #6aa3ff);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.tab:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+
+.tabCount {
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .tab:disabled {
@@ -61,10 +83,13 @@
  * fit it — the tiles' `aspect-ratio` height overflows its row and every tile's caption
  * lands on the row below. Keeping the grid content-sized avoids that. */
 .deckGridScroll {
-  max-height: 360px;
+  max-height: min(440px, 48vh);
   overflow-y: auto;
   /* Room for the tiles' hover lift + shadow, which the scroll container would clip. */
   padding: 3px 2px;
+  scrollbar-width: thin;
+  /* Tiles size their caption to the gallery, not the viewport (DeckTile.module.css). */
+  container-type: inline-size;
 }
 
 .deckGrid {
@@ -73,6 +98,37 @@
   gap: var(--space-2);
   align-content: start;
 }
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md);
+}
+
+.emptyState strong { color: var(--text-primary); font-size: 0.95rem; }
+
+.emptyActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 6px; }
+
+.emptyAction {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.emptyAction:hover { background: rgba(255, 255, 255, 0.12); }
 
 .textarea {
   width: 100%;
@@ -183,4 +239,32 @@
 .saveButton:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ── Compact: phones and short laptop screens ─────────────────────────────
+ * The dialog itself scrolls (sticky header and footer), so the gallery stops being a second
+ * scroller inside it — two nested scroll areas on a 768px-tall screen left a ~250px peephole of
+ * tiles. Tiles shrink to two columns on a phone, and the summary drops its curve chart to one
+ * line, so the selection and the commit button stay in view together.
+ */
+@media (max-width: 640px), (max-height: 820px) {
+  .deckGridScroll { max-height: none; overflow: visible; }
+  .panel { min-height: 160px; }
+  .summaryWrapper { position: relative; }
+}
+
+@media (max-width: 640px) {
+  .tabs { gap: 2px; padding: 3px; }
+  .tab { min-height: 40px; font-size: 0.8rem; padding: 0 4px; }
+  .tabCount { display: none; }
+  .deckGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .textarea { min-height: 180px; font-size: 16px; }
+  .nameInput { font-size: 16px; min-height: 40px; }
+  .saveButton { min-height: 40px; }
+  .actionsRow { flex-wrap: wrap; }
+  .randomSetRow { flex-direction: column; gap: var(--space-2); }
+}
+
+@media (max-width: 400px) {
+  .tab { font-size: 0.74rem; letter-spacing: -0.01em; padding: 0 2px; }
 }

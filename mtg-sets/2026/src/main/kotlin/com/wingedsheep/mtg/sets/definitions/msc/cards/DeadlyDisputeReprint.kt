@@ -13,7 +13,7 @@ val DeadlyDisputeReprint = Printing(
     collectorNumber = "794",
     scryfallId = "d86fa72c-25c1-43ef-9cb0-fe76f7568ed3",
     artist = "John Thacker",
-    imageUri = "https://cards.scryfall.io/normal/front/d/8/d86fa72c-25c1-43ef-9cb0-fe76f7568ed3.jpg?1783903013",
+    imageUri = "https://cards.scryfall.io/normal/front/d/8/d86fa72c-25c1-43ef-9cb0-fe76f7568ed3.jpg",
     releaseDate = "2026-06-26",
     rarity = Rarity.COMMON,
 )

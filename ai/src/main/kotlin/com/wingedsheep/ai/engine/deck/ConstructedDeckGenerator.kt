@@ -95,6 +95,14 @@ class ConstructedDeckGenerator(
     fun generate(format: DeckFormat): Map<String, Int> = generate(emptyList(), format)
 
     /**
+     * [generate] in the [GeneratedDeck] shape the server's lobbies read since the 2026-11-22
+     * upstream merge. Upstream's version also draws a fifteen-card wishboard; this fork kept its
+     * own deck builder (upstream's needs its card-reading layer), so the sideboard is empty.
+     */
+    fun generateDeck(setCodes: List<String>, format: DeckFormat): GeneratedDeck =
+        GeneratedDeck(deckList = generate(setCodes, format))
+
+    /**
      * Autobuild [pool] with Draftsim at the constructed shape, or null when it can't fill a deck.
      *
      * Two things have to be bridged to get a limited autobuilder onto a constructed pool:

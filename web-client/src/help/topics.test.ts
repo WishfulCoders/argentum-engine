@@ -5,7 +5,7 @@
  * scattered `title=` tooltips suffered from, so it gets a test instead of a convention.
  */
 import { describe, it, expect } from 'vitest'
-import { HELP_TOPICS, HELP_SECTIONS, topicById, topicsInSection } from './topics'
+import { HELP_TOPICS, HELP_SECTIONS, START_HERE_TOPIC_IDS, topicById, topicsInSection } from './topics'
 import { SHORTCUTS } from './shortcuts'
 import {
   CARDS_KINDS,
@@ -57,6 +57,23 @@ describe('help topic registry', () => {
 
   it('gives every topic a summary the popover can show', () => {
     expect(HELP_TOPICS.filter((t) => !t.summary.trim()).map((t) => t.id)).toEqual([])
+  })
+
+  it('resolves every wiki-home "Start here" topic', () => {
+    expect(START_HERE_TOPIC_IDS.filter((id) => !topicById(id))).toEqual([])
+  })
+
+  it('gives every section at least one topic', () => {
+    expect(HELP_SECTIONS.filter((s) => topicsInSection(s.id).length === 0).map((s) => s.id)).toEqual([])
+  })
+
+  it('keeps every table row as wide as its header', () => {
+    const ragged = HELP_TOPICS.flatMap((t) =>
+      (t.body ?? []).flatMap((b) =>
+        b.kind === 'table' ? b.rows.filter((r) => r.length !== b.head.length).map((r) => `${t.id}: ${r[0]}`) : [],
+      ),
+    )
+    expect(ragged).toEqual([])
   })
 })
 

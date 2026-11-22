@@ -157,7 +157,8 @@ class TrivialDecisionsTest : FunSpec({
                 TargetRequirementInfo(
                     index = 0,
                     description = "target with limited total mana value",
-                    totalManaValueAtMost = 0,
+                    totalCap = 0,
+                    totalCapLabel = "mana value",
                 ),
             ),
             legalTargets = mapOf(0 to listOf(first)),

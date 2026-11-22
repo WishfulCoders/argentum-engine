@@ -7,13 +7,16 @@
  * ≤ cube size` is the one cube-specific rule a host has to plan around, so it's shown as a sentence
  * rather than discovered when Start refuses.
  *
+ * A cube in one of the booster styles prints its packs by rarity, with replacement, like a real set —
+ * so it has no capacity to plan around, and the sentence says that instead.
+ *
  * Server-authoritative: this component only sends `updateLobbySettings`. The server resolves the cube
  * against the card registry, re-checks capacity, and remains the authority on both.
  */
 import { useMemo, useState } from 'react'
 import type { SharedCube } from '@/api/account'
 import { CubeEditor } from '@/components/cube/CubeEditor'
-import { cubeCardNames } from '@/store/cubeLibrary'
+import { boosterStyleInfo, cubeLobbyUpdate, isBoosterStyle } from '@/components/cube/cubeModel'
 import { type UnifiedCube, useUnifiedCubes } from '@/store/useUnifiedCubes'
 import type { LobbySettings } from '@/types/messages'
 import styles from './CubePanel.module.css'
@@ -25,12 +28,7 @@ interface CubePanelProps {
    * The lobby's settings sender. Typed as the whole settings bag (rather than just the cube keys) so
    * this stays assignable from the store's action under `exactOptionalPropertyTypes`.
    */
-  readonly updateLobbySettings: (settings: {
-    cubeCards?: string[]
-    cubeName?: string
-    packSize?: number
-    cubeBasicLandSetCode?: string
-  }) => void
+  readonly updateLobbySettings: (settings: ReturnType<typeof cubeLobbyUpdate>) => void
 }
 
 /**
@@ -49,6 +47,8 @@ export function CubePanel({ settings, playerCount, updateLobbySettings }: CubePa
   const activeCubeName = settings.cubeName ?? null
   const cubeCards = settings.cubeCardCount ?? 0
   const packSize = settings.packSize ?? 15
+  const boosterStyle = settings.cubeBoosterStyle ?? 'SHUFFLED'
+  const printsBoosters = isBoosterStyle(boosterStyle)
 
   /** The library entry backing the lobby's cube, when the host picked it from the library. */
   const activeCube = useMemo(
@@ -69,12 +69,7 @@ export function CubePanel({ settings, playerCount, updateLobbySettings }: CubePa
   )
 
   function useCube(cube: SharedCube) {
-    updateLobbySettings({
-      cubeCards: cubeCardNames(cube.cards),
-      cubeName: cube.name,
-      packSize: cube.packSize,
-      cubeBasicLandSetCode: cube.basicLandSetCode,
-    })
+    updateLobbySettings(cubeLobbyUpdate(cube))
     setShowLibrary(false)
     setEditing(null)
   }
@@ -84,6 +79,9 @@ export function CubePanel({ settings, playerCount, updateLobbySettings }: CubePa
     if (settings.format === 'PREMADE_DECKS') return null
     if (settings.cubePoolPlay && settings.format === 'SEALED') {
       return { ok: true, text: `${cubeCards} cards — every player builds from all of them` }
+    }
+    if (printsBoosters) {
+      return { ok: true, text: `Packs are printed by rarity like a real set, so the cube never runs out` }
     }
     const shared = usesSharedPool(settings.format)
     const seats = Math.max(2, playerCount)
@@ -105,7 +103,7 @@ export function CubePanel({ settings, playerCount, updateLobbySettings }: CubePa
       ok: true,
       text: `${cubeCards} cards — seats ${maxSeats} player${maxSeats === 1 ? '' : 's'} at ${settings.boosterCount}×${packSize}`,
     }
-  }, [activeCubeName, cubeCards, packSize, playerCount, settings.boosterCount, settings.format, settings.cubePoolPlay])
+  }, [activeCubeName, cubeCards, packSize, printsBoosters, playerCount, settings.boosterCount, settings.format, settings.cubePoolPlay])
 
   return (
     <div className={styles.panel}>
@@ -114,7 +112,8 @@ export function CubePanel({ settings, playerCount, updateLobbySettings }: CubePa
           <>
             <span className={styles.cubeName}>{activeCubeName}</span>
             <span className={styles.meta}>
-              {cubeCards} cards · {packSize}-card packs
+              {cubeCards} cards ·{' '}
+              {printsBoosters ? boosterStyleInfo(boosterStyle).label : `${packSize}-card packs`}
             </span>
           </>
         ) : (
@@ -161,6 +160,7 @@ export function CubePanel({ settings, playerCount, updateLobbySettings }: CubePa
                     <span className={styles.libraryMeta}>
                       {cube.online && <span className={styles.onlineBadge}>online</span>}
                       {cube.cards.reduce((sum, e) => sum + e.count, 0)} cards
+                      {isBoosterStyle(cube.boosterStyle) && ` · ${boosterStyleInfo(cube.boosterStyle).label}`}
                     </span>
                   </button>
                   <button

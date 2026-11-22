@@ -10,18 +10,16 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 
 /**
- * Mishra's Bauble — Coldsnap #138
- * {0} · Artifact · Uncommon
- *
+ * Mishra's Bauble
+ * {0}
+ * Artifact
  * {T}, Sacrifice this artifact: Look at the top card of target player's library. Draw a card at
  * the beginning of the next turn's upkeep.
  *
- * The look is the Callous Deceiver shape aimed at another library (Eye Spy): a lone,
- * non-destructive gather of that player's top card, shown to the activator only. The draw is a
- * step-based one-shot delayed trigger at [Step.UPKEEP] with [DelayedTriggerTiming.NEXT_TURN] and
- * no `fireOnPlayer` — "the next turn's upkeep" is whoever's turn comes next, never the current
- * turn even when activated during an upkeep. The delayed trigger belongs to the activator, so the
- * Bauble's controller draws.
+ * The look is a lone non-destructive gather of the target player's top card (shown to the
+ * activator only, nothing moves — the Callous Deceiver shape). The draw is a step-based delayed
+ * trigger on the next turn's upkeep (`timing = NEXT_TURN`, no `fireOnPlayer`, so whoever's turn
+ * comes next — Arcane Denial's shape); the ability's controller draws.
  */
 val MishrasBauble = card("Mishra's Bauble") {
     manaCost = "{0}"
@@ -37,8 +35,8 @@ val MishrasBauble = card("Mishra's Bauble") {
             gather(CardSource.TopOfLibrary(1, player.asPlayer))
         } then Effects.CreateDelayedTrigger(
             step = Step.UPKEEP,
-            effect = Effects.DrawCards(1),
-            timing = DelayedTriggerTiming.NEXT_TURN
+            timing = DelayedTriggerTiming.NEXT_TURN,
+            effect = Effects.DrawCards(1)
         )
         description = "{T}, Sacrifice this artifact: Look at the top card of target player's library. " +
             "Draw a card at the beginning of the next turn's upkeep."

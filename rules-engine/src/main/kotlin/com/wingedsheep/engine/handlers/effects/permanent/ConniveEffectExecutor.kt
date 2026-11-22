@@ -7,6 +7,9 @@ import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.KeywordActionReplacements
 import com.wingedsheep.engine.handlers.effects.ReplaceableKeywordAction
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.stack.EntitySnapshot
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
+import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.ConniveEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
@@ -70,11 +73,15 @@ class ConniveEffectExecutor(
             return EffectResult.success(state)
         }
 
-        // An unresolvable subject (the permanent left the battlefield before the connive ran) still
-        // draws and discards — that is what the bare pipeline did before it was wrapped, and CR
-        // 701.50b keeps the connive happening off last known information. What is skipped is the
-        // part that genuinely needs a live permanent to match against: the replacement lookup and
-        // the connive event. LKI-based matching for those is unmodeled; no printed card needs it.
+        // A creature that convoked the resolving spell and has since left the battlefield still
+        // connives, as the object it last was (CR 701.50b — Lethal Scheme).
+        departedConvoker(state, effect.subject, context)?.let { (departedId, lastKnown) ->
+            return conniveByLastKnownInformation(state, effect, context, departedId, lastKnown)
+        }
+
+        // Any other unresolvable subject (a targeted permanent that left before the connive ran)
+        // still draws and discards — the bare pipeline, with the counter going nowhere. It has no
+        // last-known information captured to match a replacement or a connive trigger against.
         val connivingId = context.resolveTarget(effect.subject, state)
             ?: return recurse(state, effect.body, context)
         val subject = EffectTarget.SpecificEntity(connivingId)
@@ -96,6 +103,70 @@ class ConniveEffectExecutor(
             state,
             CompositeEffect(listOf(effect.body, EmitConnivedEventEffect(subject))),
             context
+        )
+    }
+
+    /**
+     * The departed convoker [subject] names, with its last-known information — when the resolving
+     * spell recorded one for it (`SpellOnStackComponent.convokedLastKnown`, stamped as it left).
+     * Only a loop over [com.wingedsheep.sdk.scripting.effects.CardSource.CreaturesThatConvokedSource]
+     * hands connive such a creature, so only [EffectTarget.IterationEntity] (and this executor's own
+     * [EffectTarget.SpecificEntity] re-issue) is consulted.
+     */
+    private fun departedConvoker(
+        state: GameState,
+        subject: EffectTarget,
+        context: EffectContext
+    ): Pair<EntityId, EntitySnapshot>? {
+        val id = when (subject) {
+            EffectTarget.IterationEntity -> context.iterationEntityId
+            is EffectTarget.SpecificEntity -> subject.entityId
+            else -> null
+        } ?: return null
+        val departed = context.sourceId?.let { state.getEntity(it) }
+            ?.get<SpellOnStackComponent>()?.convokedLastKnown
+            ?: return null
+        return departed[id]?.let { id to it }
+    }
+
+    /**
+     * CR 701.50b: a permanent no longer on the battlefield as it is instructed to connive still
+     * connives — its last known information decides which object connived and who controlled it.
+     * That player draws and discards; the +1/+1 counter has nowhere to go; a replacement and a
+     * "whenever … connives" trigger match the object as it last existed.
+     *
+     * The loop's binding is dropped for the body, so [EffectTarget.IterationEntity] — the counter's
+     * recipient — names nothing rather than the card the convoker became in its new zone.
+     */
+    private fun conniveByLastKnownInformation(
+        state: GameState,
+        effect: ConniveEffect,
+        context: EffectContext,
+        departedId: EntityId,
+        lastKnown: EntitySnapshot
+    ): EffectResult {
+        val departedContext = context.copy(
+            controllerId = lastKnown.controllerId ?: context.controllerId,
+            objectReferences = context.objectReferences.copy(iteration = null)
+        )
+        val subject = EffectTarget.SpecificEntity(departedId)
+        if (!effect.replacementsApplied) {
+            val prefixEffects = KeywordActionReplacements.collectPrefixes(
+                state, departedId, ReplaceableKeywordAction.CONNIVE,
+                predicateEvaluator = predicateEvaluator,
+                lastKnown = lastKnown
+            )
+            if (prefixEffects.isNotEmpty()) {
+                val composite = CompositeEffect(
+                    prefixEffects + effect.copy(subject = subject, replacementsApplied = true)
+                )
+                return recurse(state, composite, departedContext)
+            }
+        }
+        return recurse(
+            state,
+            CompositeEffect(listOf(effect.body, EmitConnivedEventEffect(subject))),
+            departedContext
         )
     }
 }

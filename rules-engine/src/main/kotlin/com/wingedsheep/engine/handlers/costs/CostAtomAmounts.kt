@@ -1,7 +1,12 @@
 package com.wingedsheep.engine.handlers.costs
 
+import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.mechanics.ManaValues
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.LifePaymentPurpose
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.CommanderRegistryComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.costs.CostAtom
@@ -11,12 +16,13 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 /**
  * The one place a [DynamicAmount] carried by a **cost atom** is turned into a number.
  *
- * A cost is priced *before* anything resolves, so it can't go through
- * [com.wingedsheep.engine.handlers.DynamicAmountEvaluator] — there is no `EffectContext` yet, only
- * the half-announced spell or ability the cost belongs to. What that half-announcement does carry
- * is exactly the two things a printed cost is ever priced from: the X the caster chose, and the
- * targets they announced (CR 601.2b–c, both settled before the total cost is determined at
- * 601.2f). Everything else evaluates to 0.
+ * A cost is priced *before* anything resolves, so there is no resolving `EffectContext` yet, only
+ * the half-announced spell or ability the cost belongs to. What that half-announcement carries is
+ * the X the caster chose and the targets they announced (CR 601.2b–c, both settled before the total
+ * cost is determined at 601.2f). The few amounts read off the payer's own state alone (a life cost's
+ * commander-identity count or count of the payer's objects) go through
+ * [com.wingedsheep.engine.handlers.DynamicAmountEvaluator] with a payer-only context. Everything
+ * else evaluates to 0.
  *
  * Before this existed the same `Fixed` / `XValue` `when` was hand-written in six places, which is
  * why the seventh shape — Urgent Necropsy's "collect evidence X, where X is the total mana value of
@@ -43,6 +49,14 @@ object CostAtomAmounts {
      *   mana value" amount ([CostAtom.PayPlayerCounters.SOURCE_MANA_VALUE]); without one — every
      *   activated-ability site — that amount can't be priced and is **unpayable** ([UNPRICEABLE])
      *   rather than free.
+     * @param payerId the player paying the cost. Prices the amounts read off the payer's own game
+     *   state ([DynamicAmount.CommanderColorIdentityCount] — War Room's "the number of colors in your commanders'
+     *   color identity"; a [DynamicAmount.Count] of the payer's objects — Hand of Vecna's "for each card in your
+     *   hand"); without a payer, or without [predicateEvaluator], those are
+     *   [UNPRICEABLE] rather than free.
+     * @param predicateEvaluator the engine's evaluator graph, through whose
+     *   [com.wingedsheep.engine.handlers.DynamicAmountEvaluator] a state-read amount is priced —
+     *   so a cost and an effect reading the same amount always agree.
      */
     fun evaluate(
         state: GameState,
@@ -50,6 +64,8 @@ object CostAtomAmounts {
         xValue: Int? = null,
         targets: List<ChosenTarget> = emptyList(),
         sourceId: EntityId? = null,
+        payerId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator? = null,
     ): Int = when (amount) {
         is DynamicAmount.Fixed -> amount.amount
         is DynamicAmount.XValue -> xValue ?: 0
@@ -65,14 +81,52 @@ object CostAtomAmounts {
             // which exists while a cost is being priced.
             else -> 0
         }
+        // Priced from the payer's commanders, through the same identity read an effect uses.
+        // "The number of colors in your commanders' color identity" is undefined for a player with
+        // no commander, and a cost referring to it is unpayable (CR 903.4f; War Room's ruling) —
+        // unlike a colorless commander, which prices it at 0. A registry-free evaluator can't read
+        // identity at all, so it can't price the cost either: unpayable, never free.
+        is DynamicAmount.CommanderColorIdentityCount -> when {
+            payerId == null || predicateEvaluator == null -> UNPRICEABLE
+            !hasCommander(state, payerId) -> UNPRICEABLE
+            else -> predicateEvaluator.commanderColorIdentity(state, payerId)?.size ?: UNPRICEABLE
+        }
+        // "1 life for each card in your hand" (Hand of Vecna) — a count of the payer's own objects,
+        // read now through the same evaluator an effect uses, with the payer as "you" and the cost's
+        // source as "this". Only `Player.You` counts are admitted into a cost (CostAtom.PayLife's
+        // whitelist), so no other player binding is ever asked for.
+        is DynamicAmount.Count -> when {
+            payerId == null || predicateEvaluator == null -> UNPRICEABLE
+            else -> predicateEvaluator.amounts.evaluate(state, amount, EffectContext(sourceId = sourceId, controllerId = payerId))
+        }
         else -> 0
     }
 
     /**
-     * Whether [amount] can only be priced once the object's targets are announced — the signal an
-     * enumerator uses to publish a *deferred* cost rather than a wrong one, and an affordability
-     * check uses to withhold judgement instead of failing closed on a price it hasn't got yet.
+     * Whether [playerId] can pay [amount] life for [purpose] — [GameState.canPayLife], except that
+     * an [UNPRICEABLE] price (or a sum containing one) is never payable, whatever the life total.
+     * Every life-cost affordability check goes through here, so the sentinel is never compared
+     * against a life total as if it were a real price.
      */
+    fun canPayLife(state: GameState, playerId: EntityId, amount: Int, purpose: LifePaymentPurpose): Boolean =
+        amount < UNPRICEABLE && state.canPayLife(playerId, amount, purpose)
+
+    private fun hasCommander(state: GameState, playerId: EntityId): Boolean =
+        state.getEntity(playerId)?.get<CommanderRegistryComponent>()?.commanderIds?.isNotEmpty() == true
+
+    /**
+     * The life a [CostAtom.PayLife] asks [payerId] for right now — the one pricing of a life cost,
+     * shared by the legal-action enumerators, the activation validator, the payment itself and
+     * the mana solver, so "offered", "accepted" and "charged" can never disagree.
+     */
+    fun life(
+        state: GameState,
+        atom: CostAtom.PayLife,
+        payerId: EntityId,
+        predicateEvaluator: PredicateEvaluator,
+        sourceId: EntityId? = null,
+    ): Int = evaluate(state, atom.amount, sourceId = sourceId, payerId = payerId, predicateEvaluator = predicateEvaluator)
+
     /**
      * The price of a source-dependent amount evaluated with no source to read. Large enough that no
      * player holds that many counters (so every affordability check fails closed), small enough that
@@ -80,6 +134,11 @@ object CostAtomAmounts {
      */
     const val UNPRICEABLE: Int = 1_000_000
 
+    /**
+     * Whether [amount] can only be priced once the object's targets are announced — the signal an
+     * enumerator uses to publish a *deferred* cost rather than a wrong one, and an affordability
+     * check uses to withhold judgement instead of failing closed on a price it hasn't got yet.
+     */
     fun dependsOnTargets(amount: DynamicAmount): Boolean =
         amount is DynamicAmount.ContextProperty &&
             amount.key == ContextPropertyKey.TARGETS_TOTAL_MANA_VALUE
@@ -103,6 +162,6 @@ object CostAtomAmounts {
             is ChosenTarget.Spell -> target.spellEntityId
             is ChosenTarget.Player -> return 0
         }
-        return state.getEntity(entityId)?.get<CardComponent>()?.manaValue ?: 0
+        return ManaValues.of(state, entityId)
     }
 }

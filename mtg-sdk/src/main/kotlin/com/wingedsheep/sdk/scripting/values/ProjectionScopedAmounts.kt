@@ -31,8 +31,8 @@ import kotlinx.serialization.json.encodeToJsonElement
  *    `context.targets`, so they are chosen-target reads despite naming no target type.
  *  - `VariableReference` reads the resolution pipeline's stored numbers, which the projector has no
  *    copy of.
- * And three that look unsafe but are not, so they are deliberately absent: `DistinctColorsManaSpent`,
- * `ManaSpentFromSubtype` and `SnowManaSpent` read components stamped on the source entity, not the
+ * And four that look unsafe but are not, so they are deliberately absent: `DistinctColorsManaSpent`,
+ * `ManaOfColorSpent`, `ManaSpentFromSubtype` and `SnowManaSpent` read components stamped on the source entity, not the
  * context, as do the `CraftedMaterials*` amounts.
  */
 private val CONTEXT_SCOPED_SERIAL_NAMES: Set<String> = setOf(
@@ -43,8 +43,8 @@ private val CONTEXT_SCOPED_SERIAL_NAMES: Set<String> = setOf(
     "TotalPowerSacrificedThisWay", "CountersRemovedAsCost", "StationCharge",
     "LastKnownSourceCounters", "LastKnownDamageDealtToSource",
     // EffectTarget
-    "ContextTarget", "BoundVariable", "TriggeringEntity", "AttachedToTriggeringPermanent",
-    "SacrificedAsCost", "TappedAsCost", "DiscardedAsCost", "RevealedAsCost", "PipelineTarget", "AmassedArmy",
+    "ContextTarget", "BoundVariable", "TriggeringEntity", "AttachedToTriggeringPermanent", "AttackedBy",
+    "SacrificedAsCost", "TappedAsCost", "ExiledAsCost", "DiscardedAsCost", "RevealedAsCost", "PipelineTarget", "AmassedArmy",
     "IterationEntity", "GrantingSource",
     // Player
     "TargetPlayer", "TargetOpponent", "ContextPlayer", "TriggeringPlayer", "ControllerOf", "OwnerOf",

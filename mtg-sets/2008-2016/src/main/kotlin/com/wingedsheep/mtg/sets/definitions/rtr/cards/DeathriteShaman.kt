@@ -11,19 +11,18 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Deathrite Shaman
- * {B/G}
- * Creature — Elf Shaman
- * 1/2
+ * Deathrite Shaman — Return to Ravnica #213 (canonical printing)
+ * {B/G} · Creature — Elf Shaman · 1/2
  *
  * {T}: Exile target land card from a graveyard. Add one mana of any color.
+ * (Activate only as an instant.)
  * {B}, {T}: Exile target instant or sorcery card from a graveyard. Each opponent loses 2 life.
  * {G}, {T}: Exile target creature card from a graveyard. You gain 2 life.
  *
- * The first ability targets, so it is **not** a mana ability (CR 605.1a): it is an ordinary activated
- * ability that uses the stack, and the mana is added on resolution (Witch Engine's shape). It stays
- * `manaAbility = false` so the engine never offers it during mana payment. If its target is gone on
- * resolution, the whole ability fizzles and no mana is added (ruling 2016-06-08).
+ * The first ability targets, so it is NOT a mana ability (CR 605.1a): it is a plain
+ * `activatedAbility`, uses the stack and can be responded to — the same shape as Witch Engine.
+ * Each ability's effects all hang off its single target, so an illegal target on resolution
+ * fizzles the whole ability (no mana, no life change).
  */
 val DeathriteShaman = card("Deathrite Shaman") {
     manaCost = "{B/G}"
@@ -39,14 +38,14 @@ val DeathriteShaman = card("Deathrite Shaman") {
     activatedAbility {
         cost = Costs.Tap
         val land = target(TargetFilter(GameObjectFilter.Land, zone = Zone.GRAVEYARD))
-        effect = Effects.Exile(land, fromZone = Zone.GRAVEYARD) then Effects.AddAnyColorMana(1)
+        effect = Effects.Exile(land) then Effects.AddAnyColorMana()
         description = "{T}: Exile target land card from a graveyard. Add one mana of any color."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
         val spellCard = target(TargetFilter.InstantOrSorceryInGraveyard)
-        effect = Effects.Exile(spellCard, fromZone = Zone.GRAVEYARD) then
+        effect = Effects.Exile(spellCard) then
             Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
         description = "{B}, {T}: Exile target instant or sorcery card from a graveyard. Each opponent loses 2 life."
     }
@@ -54,7 +53,7 @@ val DeathriteShaman = card("Deathrite Shaman") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.Tap)
         val creatureCard = target(TargetFilter.CreatureInGraveyard)
-        effect = Effects.Exile(creatureCard, fromZone = Zone.GRAVEYARD) then Effects.GainLife(2)
+        effect = Effects.Exile(creatureCard) then Effects.GainLife(2)
         description = "{G}, {T}: Exile target creature card from a graveyard. You gain 2 life."
     }
 

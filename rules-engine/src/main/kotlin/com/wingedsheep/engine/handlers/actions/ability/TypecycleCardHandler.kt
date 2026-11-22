@@ -24,14 +24,17 @@ import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.player.CardsCycledThisGameComponent
+import com.wingedsheep.engine.state.components.player.CycledThisTurnComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventCycling
 import kotlin.reflect.KClass
 import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.engine.state.components.identity.faceUpCardDefinition
 
 /**
  * Handler for the TypecycleCard action.
@@ -92,7 +95,7 @@ class TypecycleCardHandler(
                     return "Mana source is already tapped: $sourceId"
                 }
             }
-        } else if (!manaSolver.canPay(state, action.playerId, variant.cost)) {
+        } else if (!manaSolver.canPay(state, action.playerId, reduced(state, action, variant.cost))) {
             return "Not enough mana to typecycle this card"
         }
 
@@ -126,11 +129,13 @@ class TypecycleCardHandler(
             red = poolComponent.red,
             green = poolComponent.green,
             colorless = poolComponent.colorless,
+            restrictedMana = poolComponent.restrictedMana,
             snowMana = poolComponent.snowMana,
+            manaUnits = poolComponent.manaUnits,
             snowColorless = poolComponent.snowColorless
         ).withSpendingColors(currentState, action.playerId)
 
-        val partialResult = pool.payPartial(variant.cost)
+        val partialResult = pool.payPartial(reduced(state, action, variant.cost))
         val poolAfterPayment = partialResult.newPool
         val remainingCost = partialResult.remainingCost
         val manaSpentFromPool = partialResult.manaSpent
@@ -151,7 +156,9 @@ class TypecycleCardHandler(
                     red = poolAfterPayment.red,
                     green = poolAfterPayment.green,
                     colorless = poolAfterPayment.colorless,
+                    restrictedMana = poolAfterPayment.restrictedMana,
                     snowMana = poolAfterPayment.snowMana,
+                    manaUnits = poolAfterPayment.manaUnits,
                     snowColorless = poolAfterPayment.snowColorless
                 )
             )
@@ -160,8 +167,9 @@ class TypecycleCardHandler(
         // Tap lands for remaining cost
         if (!remainingCost.isEmpty()) {
             if (action.paymentStrategy is PaymentStrategy.Explicit) {
+                val credited = manaSolver.creditExplicitSources(currentState, action.playerId, action.paymentStrategy.manaAbilitiesToActivate, remainingCost)
                 for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                    val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(zones, currentState, sourceId, action.playerId)
+                    val (tappedState, tapEvents) = ManaAbilityLifeCost.tapForManaPayingLife(zones, currentState, sourceId, action.playerId, credited[sourceId])
                     currentState = tappedState
                     events.addAll(tapEvents)
                 }
@@ -210,13 +218,16 @@ class TypecycleCardHandler(
         events.addAll(discardResult.events)
 
         // "Cycled a card named X N times this game" (Yidaro, Wandering Monster) — counted before
-        // the event so a "when you cycle" trigger already sees this cycle.
+        // the event so a "when you cycle" trigger already sees this cycle. "For the first time each
+        // turn" (Valiant Rescuer) is read before this cycle marks the player.
+        val firstCycleThisTurn = currentState.getEntity(action.playerId)?.has<CycledThisTurnComponent>() != true
         currentState = currentState.updateEntity(action.playerId) { player ->
             player.with((player.get<CardsCycledThisGameComponent>() ?: CardsCycledThisGameComponent()).record(cardComponent.name))
+                .with(CycledThisTurnComponent)
         }
 
         // Emit cycling event (typecycling triggers cycling abilities per MTG rules)
-        events.add(CardCycledEvent(action.playerId, action.cardId, cardComponent.name))
+        events.add(CardCycledEvent(action.playerId, action.cardId, cardComponent.name, firstThisTurn = firstCycleThisTurn))
 
         currentState = currentState.tick()
 
@@ -230,6 +241,7 @@ class TypecycleCardHandler(
         val effectContext = EffectContext(
             sourceId = action.cardId,
             controllerId = action.playerId,
+            programOrigin = com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter.startedBy(TypecycleCardHandler::class),
         )
 
         val searchResult = effectExecutorRegistry.execute(currentState, searchEffect, effectContext)
@@ -271,13 +283,24 @@ class TypecycleCardHandler(
 
     private fun isCyclingPrevented(state: GameState): Boolean {
         for (entityId in state.getBattlefield()) {
-            val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card) ?: continue
+            val cardDef = state.getEntity(entityId)?.faceUpCardDefinition(cardRegistry) ?: continue
             if (cardDef.script.staticAbilities.any { it is PreventCycling }) {
                 return true
             }
         }
         return false
+    }
+
+    /**
+     * [cost] after the board's activated-ability cost reductions — typecycling is an activated
+     * ability of the card in hand (CR 702.29a), so Zirda's "abilities you activate" reaches it.
+     */
+    private fun reduced(state: GameState, action: TypecycleCard, cost: ManaCost): ManaCost {
+        val utils = castPermissionUtils ?: return cost
+        // Typecycling is cycling (CR 702.29e): a free-cycling grant (New Perspectives) swaps the
+        // printed cost for {0} before the reductions apply.
+        val base = utils.cyclingBaseCost(cost, null, state, action.playerId)
+        return utils.applyActivatedAbilityCostReduction(base, state, action.cardId, action.playerId)
     }
 
     companion object {

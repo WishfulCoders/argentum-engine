@@ -1,10 +1,9 @@
 /**
- * Your saved setups, above the wizard.
+ * Your saved setups, above the mode catalogue.
  *
- * The wizard is excellent once and tedious the fifth time. It is deliberately explicit — three
- * questions, one at a time, with every answer named — which is exactly right for someone who has
- * never opened Argentum and exactly wrong for someone who plays the same 8-player cube draft every
- * Thursday. This rail is the answer to the second case without compromising the first.
+ * The mode catalogue is two clicks with every option at its default — right for someone choosing a
+ * game, and still too many for someone who plays the same 8-player cube draft every Thursday with
+ * its own sets, timer and ban list. This rail is the answer to the second case.
  *
  * **It does not render at all until you have played something.** A new player sees precisely the
  * screen they saw before; the fast path appears only once there is something to be fast about.
@@ -64,7 +63,7 @@ export function SetupRail({
 
   return (
     <div className={styles.setupRail} data-testid="setup-rail">
-      <div className={styles.setupRailHeading}>Your setups</div>
+      <div className={styles.setupRailHeading}>Jump back in</div>
       <div className={styles.setupRailChips}>
         {usable.map((setup) => (
           <div key={setup.id} className={styles.setupChipWrap}>

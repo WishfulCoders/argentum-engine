@@ -19,9 +19,12 @@ class AssayLoopTest(unittest.TestCase):
         self.bin.mkdir()
         (self.root / ".git").mkdir()
         shutil.copy(Path(__file__).with_name("assay-loop"), self.bin / "assay-loop")
+        shutil.copy(Path(__file__).with_name("loop-lib.sh"), self.bin / "loop-lib.sh")
         self.stub("git", 'echo "$TEST_ROOT/.git"')
         self.stub("gh", "exit 0")
-        self.stub("sleep", 'echo "$1" >> "$TEST_ROOT/sleeps"; touch "$TEST_ROOT/.claude/loop-runs/assay.stop"')
+        # The session reaper ticks every LOOP_REAP_TICK seconds; those aren't the loop's waits.
+        self.stub("sleep", '[ "$1" = "$LOOP_REAP_TICK" ] && exit 0; '
+                           'echo "$1" >> "$TEST_ROOT/sleeps"; touch "$TEST_ROOT/.claude/loop-runs/assay.stop"')
         self.stub("claude", """
 printf '%s\\n' "$@" > "$TEST_ROOT/args"
 echo "{\\"type\\":\\"result\\",\\"result\\":\\"$VERDICT\\",\\"num_turns\\":1,\\"duration_ms\\":1000}"
@@ -34,7 +37,7 @@ echo "{\\"type\\":\\"result\\",\\"result\\":\\"$VERDICT\\",\\"num_turns\\":1,\\"
 
     def run_loop(self, *args, verdict="ASSAY_COMPLETE"):
         env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}",
-                   TEST_ROOT=str(self.root), MODEL="", VERDICT=verdict)
+                   TEST_ROOT=str(self.root), HOME=str(self.root), LOOP_REAP_TICK="1", MODEL="", VERDICT=verdict)
         return subprocess.run(["bash", str(self.bin / "assay-loop"), *args],
                               cwd=self.root, env=env, capture_output=True, text=True, timeout=10)
 

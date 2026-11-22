@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
@@ -17,38 +18,28 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Kumano Faces Kakkazan // Etching of Kumano — Kamigawa: Neon Dynasty #152
- * {R} · Enchantment — Saga // Enchantment Creature — Human Shaman 2/2 · Uncommon
+ * Kumano Faces Kakkazan // Etching of Kumano
+ * {R} — Enchantment — Saga // Enchantment Creature — Human Shaman 2/2
  *
  * Front — Kumano Faces Kakkazan:
- *   (As this Saga enters and after your draw step, add a lore counter.)
  *   I — This Saga deals 1 damage to each opponent and each planeswalker they control.
  *   II — When you next cast a creature spell this turn, that creature enters with an additional
  *        +1/+1 counter on it.
  *   III — Exile this Saga, then return it to the battlefield transformed under your control.
  *
- * Back — Etching of Kumano (red color indicator):
+ * Back — Etching of Kumano:
  *   Haste
  *   If a creature dealt damage this turn by a source you controlled would die, exile it instead.
  *
- * Modeling notes:
- *  - Chapter I is untargeted group damage, the End the Festivities shape: each opponent, then each
- *    planeswalker those opponents control, with the Saga as the source.
- *  - Chapter II is the Summon: Fenrir shape — a one-shot delayed trigger for the rest of the turn on
- *    your next creature spell, putting the +1/+1 counter on the spell so it enters with it.
- *  - Chapter III is the standard transforming-Saga final chapter
- *    ([Effects.ExileAndReturnTransformed]); the returned permanent is a new object (CR 400.7).
- *  - Etching's replacement reads `wasDealtDamageBySourceYouControlledThisTurn()`: the dying
- *    creature's own record of the sources that damaged it this turn and who controlled each one
- *    *when it dealt the damage* (CR 608.2h). Any creature counts, yours included, and any death — not
- *    just death from that damage. The source may have left the battlefield since (a burn spell, a
- *    creature that traded), and Etching itself need only be on the battlefield when the creature
- *    would die. "You" is Etching's controller (CR 614.1a — a replacement, not a trigger).
+ * Chapter II is Long List of the Ents' one-shot delayed cast trigger: the counter goes on the spell
+ * on the stack and travels with it onto the battlefield. Etching's replacement reads each dying
+ * creature's own record of who controlled the sources that damaged it this turn
+ * (`wasDealtDamageThisTurnBy(Any.youControl())`), so the source needn't still be on the battlefield.
  */
 private val EtchingOfKumano = card("Etching of Kumano") {
     manaCost = ""
-    colorIdentity = "R"
     colorIndicator = "R"
+    colorIdentity = "R"
     typeLine = "Enchantment Creature — Human Shaman"
     oracleText = "Haste\n" +
         "If a creature dealt damage this turn by a source you controlled would die, exile it instead."
@@ -61,7 +52,7 @@ private val EtchingOfKumano = card("Etching of Kumano") {
         RedirectZoneChange(
             newDestination = Zone.EXILE,
             appliesTo = EventPattern.ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.wasDealtDamageBySourceYouControlledThisTurn(),
+                filter = GameObjectFilter.Creature.wasDealtDamageThisTurnBy(GameObjectFilter.Any.youControl()),
                 from = Zone.BATTLEFIELD,
                 to = Zone.GRAVEYARD,
             ),
@@ -87,27 +78,20 @@ private val KumanoFacesKakkazanFront = card("Kumano Faces Kakkazan") {
         "+1/+1 counter on it.\n" +
         "III — Exile this Saga, then return it to the battlefield transformed under your control."
 
-    // I — This Saga deals 1 damage to each opponent and each planeswalker they control.
     sagaChapter(1) {
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Planeswalker.opponentControls()),
-                Effects.DealDamage(1, EffectTarget.IterationEntity)
-            )
+            Patterns.Group.dealDamageToAll(1, GroupFilter(GameObjectFilter.Planeswalker.opponentControls()))
     }
 
-    // II — When you next cast a creature spell this turn, that creature enters with an additional
-    // +1/+1 counter on it.
     sagaChapter(2) {
         effect = Effects.CreateDelayedTrigger(
             trigger = Triggers.you.casts(GameObjectFilter.Creature),
             fireOnce = true,
             expiry = DelayedTriggerExpiry.EndOfTurn,
-            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity),
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
         )
     }
 
-    // III — Exile this Saga, then return it to the battlefield transformed under your control.
     sagaChapter(3) {
         effect = Effects.ExileAndReturnTransformed()
     }

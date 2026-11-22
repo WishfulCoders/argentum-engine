@@ -19,7 +19,7 @@ test('simultaneous graveyard entries use top-first labels and accept owner order
   await expect(player1.page.getByRole('heading', { name: 'Order Graveyard' })).toBeVisible()
   await expect(player1.page.getByText('TOP OF GRAVEYARD', { exact: true })).toBeVisible()
   await expect(player1.page.getByText('BOTTOM OF NEW CARDS', { exact: true })).toBeVisible()
-  await expect(player1.page.getByText('Order the cards entering your graveyard (top card first)', { exact: true })).toBeVisible()
+  await expect(player1.page.getByText('Order the cards Wrath of God put into your graveyard (top card first)', { exact: true })).toBeVisible()
   await player1.page.getByTitle('Move later in the order').first().click()
   await player1.page.getByRole('button', { name: 'Confirm Order', exact: true }).click()
   await expect(player1.page.getByRole('heading', { name: 'Order Graveyard' })).toBeHidden()

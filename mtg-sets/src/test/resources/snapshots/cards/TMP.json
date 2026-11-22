@@ -2002,7 +2002,8 @@
                 "filter": {
                     "baseFilter": "permanent",
                     "scope": "AttachedTo"
-                }
+                },
+                "spares": "SELF"
             }
         ],
         "replacementEffects": [
@@ -2612,7 +2613,9 @@
                             "amount": 2
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for up to two basic land cards to put onto the battlefield",
+                    "selectedLabel": "Put onto the battlefield"
                 },
                 {
                     "type": "MoveCollection",
@@ -3045,6 +3048,85 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Living Death
+{
+    "name": "Living Death",
+    "manaCost": "{3}{B}{B}",
+    "typeLine": "Sorcery",
+    "oracleText": "Each player exiles all creature cards from their graveyard, then sacrifices all creatures they control, then puts all cards they exiled this way onto the battlefield.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Graveyard",
+                        "player": "Each",
+                        "filter": "creature"
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "gathered0",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Exile"
+                    },
+                    "storeMovedAs": "moved1"
+                },
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "BattlefieldMatching",
+                        "filter": "creature"
+                    },
+                    "storeAs": "gathered2"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "gathered2",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Sacrifice"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "moved1",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
+                    },
+                    "underOwnersControl": true
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "142",
+        "rarity": "RARE",
+        "artist": "Charles Gillespie",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/c/6c820476-fbda-4073-baf6-51e71f45ed58.jpg?1783946637",
+        "rulings": [
+            {
+                "date": "2018-03-16",
+                "text": "As Living Death resolves, all players exile their creature cards from graveyards at the same time. Then all players sacrifice all creatures they control at the same time. Then all players put all creatures they exiled onto the battlefield at the same time."
+            },
+            {
+                "date": "2018-03-16",
+                "text": "Only cards exiled by Living Death's first instruction are put onto the battlefield. If a replacement effect (such as that of Leyline of the Void) causes any of the sacrificed creatures to be exiled instead of put into a graveyard, those cards aren't returned to the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -4437,16 +4519,8 @@
             "type": "Composite",
             "effects": [
                 {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "destination": "Battlefield",
-                    "controllerOverride": "Controller"
-                },
-                {
-                    "type": "LoseLife",
+                    "type": "StoreNumber",
+                    "name": "mana_value",
                     "amount": {
                         "type": "EntityProperty",
                         "entity": {
@@ -4454,6 +4528,23 @@
                             "name": "t0"
                         },
                         "numericProperty": "ManaValue"
+                    }
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Battlefield",
+                    "controllerOverride": "Controller",
+                    "fromZone": "Graveyard"
+                },
+                {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "VariableReference",
+                        "variableName": "mana_value"
                     },
                     "target": "Controller"
                 }
@@ -4484,14 +4575,6 @@
             {
                 "date": "2025-09-19",
                 "text": "If a card in a graveyard has {X} in its mana cost, X is 0."
-            },
-            {
-                "date": "2025-09-19",
-                "text": "You lose life after the creature is already on the battlefield. Any abilities it has that interact with loss of life, such as that of Platinum Emperion, apply to that loss of life."
-            },
-            {
-                "date": "2025-09-19",
-                "text": "If any abilities trigger on the creature entering the battlefield, those abilities resolve after you lose life. If losing life results in you losing the game, those abilities won't resolve."
             }
         ]
     },
@@ -4562,6 +4645,69 @@
     ]
 }
 
+// Reflecting Pool
+{
+    "name": "Reflecting Pool",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "{T}: Add one mana of any type that a land you control could produce.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Reflecting Pool:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "colorSet": {
+                        "type": "ManaColorSet.LandsCouldProduce",
+                        "scope": "YOU"
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "descriptionOverride": "{T}: Add one mana of any color that a land you control could produce."
+            },
+            {
+                "id": "Reflecting Pool:2",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "restrictions": [
+                    {
+                        "type": "ActivationOnlyIfCondition",
+                        "condition": {
+                            "type": "Exists",
+                            "player": "You",
+                            "zone": "Battlefield",
+                            "filter": {
+                                "cardPredicates": [
+                                    "IsLand",
+                                    "CouldProduceColorlessMana"
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "isManaAbility": true,
+                "descriptionOverride": "{T}: Add {C}. Activate only if a land you control could produce colorless mana."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "322",
+        "rarity": "RARE",
+        "artist": "Adam Rex",
+        "flavorText": "\"The reflection of land interests me far more than its reality.\"\n—Volrath",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/b/7b633ac2-bf98-42bd-8c26-8737a7d8edc7.jpg?1783946597"
+    }
+}
+
 // Respite
 {
     "name": "Respite",
@@ -4595,6 +4741,52 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Rolling Thunder
+{
+    "name": "Rolling Thunder",
+    "manaCost": "{X}{R}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Rolling Thunder deals X damage divided as you choose among any number of targets.",
+    "script": {
+        "spellEffect": {
+            "type": "DividedDamage",
+            "totalDamage": 0,
+            "dynamicTotal": "XValue"
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "minCount": 0,
+                "unlimited": true,
+                "dynamicMaxCount": "XValue"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "198",
+        "artist": "Richard Thomas",
+        "flavorText": "\"Such rage,\" thought Vhati, gazing up at the thunderhead from the *Predator*. \"It is Greven's mind manifest.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/b/0bb07402-d526-4938-89a3-9174d5b5a4de.jpg?1783946627",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "If X is 0, you can't choose any targets."
+            },
+            {
+                "date": "2015-08-25",
+                "text": "You choose how many targets Rolling Thunder has and how the damage is divided as you cast the spell. Each target must receive at least 1 damage."
+            },
+            {
+                "date": "2015-08-25",
+                "text": "If some, but not all, of the targets become illegal by the time Rolling Thunder tries to resolve, the original division of damage still applies, but no damage is dealt to illegal targets. If all the targets are illegal, the spell won't resolve."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 
@@ -5053,6 +5245,108 @@
     "colorIdentityOverride": [
         "BLACK"
     ]
+}
+
+// Scroll Rack
+{
+    "name": "Scroll Rack",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "{1}, {T}: Exile any number of cards from your hand face down. Put that many cards from the top of your library into your hand. Then look at the exiled cards and put them on top of your library in any order.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Scroll Rack:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": "ChooseAnyNumber",
+                            "storeSelected": "selected1",
+                            "prompt": "Exile any number of cards from your hand face down",
+                            "selectedLabel": "Exile face down"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Exile"
+                            },
+                            "faceDown": "HIDDEN",
+                            "lookableInExile": true,
+                            "storeMovedAs": "moved2"
+                        },
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "VariableReference",
+                                    "variableName": "moved2_count"
+                                }
+                            },
+                            "storeAs": "gathered3"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered3",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "moved2",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "placement": "Top"
+                            },
+                            "order": "ControllerChooses"
+                        }
+                    ]
+                },
+                "descriptionOverride": "{1}, {T}: Exile any number of cards from your hand face down. Put that many cards from the top of your library into your hand. Then look at the exiled cards and put them on top of your library in any order."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "308",
+        "rarity": "RARE",
+        "artist": "Heather Hudson",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/f/5f7346d8-1aef-4618-88e6-74bd8865e0f3.jpg?1783946601",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "If there are not enough cards in the library, you do not lose. This is not a draw effect. You just get as many cards as are there, even if there are zero cards in the library."
+            }
+        ]
+    }
 }
 
 // Sea Monster
@@ -5709,7 +6003,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 3
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
                     }
                 },
                 "effect": {
@@ -5964,6 +6261,44 @@
         ]
     },
     "colorIdentityOverride": []
+}
+
+// Static Orb
+{
+    "name": "Static Orb",
+    "manaCost": "{3}",
+    "typeLine": "Artifact",
+    "oracleText": "As long as this artifact is untapped, players can't untap more than two permanents during their untap steps.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "UntapLimitPerStep",
+                    "filter": "permanent",
+                    "max": 2
+                },
+                "condition": {
+                    "type": "EntityMatches",
+                    "entity": "Self",
+                    "filter": "untapped"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "310",
+        "rarity": "RARE",
+        "artist": "Dermot Power",
+        "flavorText": "Time passes, time crawls;\nTime doesn't move at all.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/5/3574d758-9143-4a2b-9ebd-ed8dab238251.jpg?1783946599",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "If there are two of these on the battlefield, they do not add together. The result is that only two permanents can be untapped."
+            }
+        ]
+    }
 }
 
 // Staunch Defenders

@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * If a card would be put into your graveyard from anywhere this turn, exile that card instead.
  *
  * Both halves outlive the sorcery, so both are anchored off the battlefield:
- *  - The permission is a [MayCastFromGraveyard] with `playLands = true` granted to the *player*
+ *  - The permission is a [MayCastFromGraveyard] with `playsLands = true` granted to the *player*
  *    ([EffectTarget.Controller]) until end of turn — "play lands" through the land-play special
  *    action (CR 305.1, a land drop as usual) and "cast spells" at their normal timing and cost. The
  *    filter is [GameObjectFilter.Any]: a land is never cast (CR 305.9), it is played.
@@ -37,7 +37,7 @@ val YawgmothsWill = card("Yawgmoth's Will") {
 
     spell {
         effect = Effects.GrantStaticAbility(
-            ability = MayCastFromGraveyard(filter = GameObjectFilter.Any, playLands = true),
+            ability = MayCastFromGraveyard(filter = GameObjectFilter.Any, playsLands = true),
             target = EffectTarget.Controller,
             duration = Duration.EndOfTurn,
         ) then Effects.GrantReplacementEffect(

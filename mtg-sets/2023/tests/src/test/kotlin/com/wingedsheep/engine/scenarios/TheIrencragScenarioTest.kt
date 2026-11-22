@@ -2,6 +2,7 @@ package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.SelectManaSourcesDecision
+import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CardType
@@ -51,6 +52,18 @@ class TheIrencragScenarioTest : ScenarioTestBase() {
                 resolveStack()
                 answerYesNo(accept)
                 resolveStack()
+            }
+
+            test("the yes/no reads 'you may have The Irencrag become …'") {
+                val game = board()
+                game.castSpell(1, "Obyra, Dreaming Duelist")
+                if (game.getPendingDecision() is SelectManaSourcesDecision) game.submitManaSourcesAutoPay()
+                game.resolveStack()
+
+                val prompt = (game.getPendingDecision() as YesNoDecision).prompt
+                withClue(prompt) {
+                    prompt.startsWith("You may have The Irencrag become Equipment artifact named Everflame") shouldBe true
+                }
             }
 
             test("declining the trigger leaves The Irencrag a plain legendary artifact") {

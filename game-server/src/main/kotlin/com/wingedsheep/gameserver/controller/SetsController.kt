@@ -4,6 +4,7 @@ import com.wingedsheep.ai.engine.deck.SetArchetypes
 import com.wingedsheep.engine.limited.BoosterGenerator
 import com.wingedsheep.gameserver.coverage.SetCoverageService
 import com.wingedsheep.mtg.sets.MtgSetCatalog
+import com.wingedsheep.sdk.model.CardDefinition
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -18,8 +19,12 @@ import org.springframework.web.server.ResponseStatusException
  * - `GET /api/sets/booster-ready`         — subset draftable for sealed/draft (booster generation).
  * - `GET /api/sets/coverage`              — per-set card-implementation coverage (Set Completion view).
  * - `GET /api/sets/coverage/summary`      — project-wide distinct + printing rollup (Set Completion banner).
+ * - `GET /api/sets/coverage/ai-reading`   — per-set AI-reading score: authored cards the engine AI reads fully.
+ * - `GET /api/sets/{code}/ai-reading`     — one set's unread cards, grouped by the effect type the AI misses.
  * - `GET /api/sets/progress`              — distinct-cards-over-time series (Set Completion chart).
  * - `GET /api/sets/{setCode}/archetypes`  — limited archetype synergies for a single set.
+ * - `GET /api/sets/{setCode}/cube-cards`  — a set's implemented cards with their rarity in it, for
+ *   building a cube from a set (the cube editor's "Add a set").
  *
  * The bare `/api/sets` used to mean "draftable" — that intent now lives at the
  * `booster-ready` path so the bare resource matches the deckbuilder's
@@ -45,6 +50,8 @@ class SetsController(
         val setName: String,
         val implementedCount: Int,
         val incomplete: Boolean,
+        val releaseDate: String? = null,
+        val extensionSet: Boolean = false,
     )
 
     data class ArchetypeDTO(
@@ -73,7 +80,9 @@ class SetsController(
                     setCode = config.setCode,
                     setName = config.setName,
                     implementedCount = config.distinctCardCount,
-                    incomplete = config.incomplete
+                    incomplete = config.incomplete,
+                    releaseDate = config.releaseDate,
+                    extensionSet = config.extensionSet,
                 )
             }
 
@@ -92,6 +101,9 @@ class SetsController(
     @GetMapping("/coverage/summary")
     fun getCoverageSummary(): SetCoverageService.CoverageSummaryDTO = setCoverageService.summary()
 
+    // The `/coverage/ai-reading` and `/{setCode}/ai-reading` routes were left out in the 2026-11-22
+    // upstream merge: they read upstream's AI card-reading audit, and this fork kept its own `:ai`.
+
     /**
      * One set's full canonical card list, each card marked implemented / missing
      * (booster cards + completionist extras). Drives the set detail view. 404 if the
@@ -108,6 +120,54 @@ class SetsController(
      */
     @GetMapping("/progress")
     fun getProgress(): List<SetCoverageService.ProgressPointDTO> = setCoverageService.progress()
+
+    /**
+     * One implemented card of a set, as the cube editor imports it. [rarity] is the card's rarity *in
+     * this set* (a reprint's canonical rarity is its first printing's); [reprint] is true when the card
+     * was first printed elsewhere, which is how "Bloomburrow Commander's new cards" is told apart from
+     * the staples its decks reprint; [product] is null for the set's booster pool and names the
+     * optional product otherwise.
+     */
+    data class CubeSetCardDTO(
+        val name: String,
+        val rarity: String,
+        val reprint: Boolean,
+        val product: String?,
+    )
+
+    data class CubeSetDTO(
+        val code: String,
+        val name: String,
+        val releaseDate: String?,
+        val cards: List<CubeSetCardDTO>,
+    )
+
+    @GetMapping("/{setCode}/cube-cards")
+    fun getCubeCards(@PathVariable setCode: String): CubeSetDTO {
+        val code = setCode.uppercase()
+        val config = boosterGenerator.getSetConfig(code)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No card pool for set $setCode")
+        val ownNames = MtgSetCatalog.byCode(code)?.cards?.mapTo(hashSetOf()) { it.name }.orEmpty()
+        fun dto(card: CardDefinition, product: String?) = CubeSetCardDTO(
+            name = card.name,
+            rarity = card.metadata.rarity.name,
+            reprint = card.name !in ownNames,
+            product = product,
+        )
+        val boosterCards = config.cards.map { dto(it, product = null) }
+        val boosterNames = boosterCards.mapTo(hashSetOf()) { it.name }
+        // A card can sit in several optional products; list it once, under the first.
+        val productCards = config.extraCardsByProduct.entries
+            .flatMap { (product, cards) -> cards.map { dto(it, product) } }
+            .filter { it.name !in boosterNames }
+            .distinctBy { it.name }
+        return CubeSetDTO(
+            code = config.setCode,
+            name = config.setName,
+            releaseDate = config.releaseDate,
+            cards = boosterCards + productCards,
+        )
+    }
 
     @GetMapping("/{setCode}/archetypes")
     fun getArchetypes(@PathVariable setCode: String): SetSynergiesDTO? {

@@ -17,7 +17,7 @@ import com.wingedsheep.engine.core.Outcome
  * Rise of the Witch-king (LTR).
  *
  * Symmetric "each player sacrifices a creature of their choice" — both `ForceSacrifice`
- * legs capture a `EntitySnapshot` and inject it into the underlying `EffectContinuation`
+ * legs capture a `EntitySnapshot` and inject it into the underlying `EffectProgram`
  * (the snapshot-threading hook), so the `YouSacrificedThisWay` rider can gate on whether
  * the cast's controller actually sacrificed. The rider's reanimation is *not* a target —
  * the oracle has no "target" word — so the player picks a permanent card from their

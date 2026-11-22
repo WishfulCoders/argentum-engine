@@ -4,6 +4,7 @@ import type { EntityId, SelectCardsDecision } from '@/types'
 import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
 import { DecisionCard, DecisionCardPreview } from './DecisionComponents'
+import { CardPoolBrowser, LARGE_POOL_THRESHOLD, type PoolCard } from './CardPoolBrowser'
 import styles from './DecisionUI.module.css'
 import { useDecisionHotkeys } from '@/hooks/useDecisionHotkeys.ts'
 
@@ -127,7 +128,9 @@ export function CardSelectionDecision({
   // Calculate card size that fits all cards
   const availableWidth = responsive.viewportWidth - responsive.containerPadding * 2 - 32
   const gap = responsive.isMobile ? 4 : 8
-  const maxCardWidth = decisionCardMaxWidth(responsive)
+  // Height caps it too: on a landscape phone the card plus the source banner pushed the confirm
+  // buttons off the bottom of the screen.
+  const maxCardWidth = Math.min(decisionCardMaxWidth(responsive), Math.floor((responsive.viewportHeight * 0.32) / 1.4))
   const nonSelectableOptions = decision.nonSelectableOptions ?? []
   const totalCardCount = decision.options.length + nonSelectableOptions.length
   const cardWidth = calculateFittingCardWidth(
@@ -137,6 +140,11 @@ export function CardSelectionDecision({
     maxCardWidth,
     45
   )
+
+  // A big pool (a sideboard, "a card from outside the game") can't fit one screen at a readable
+  // size, so it gets a scrolling, searchable browser instead of ever-shrinking cards.
+  const isLargePool = totalCardCount > LARGE_POOL_THRESHOLD
+  const poolCardWidth = responsive.isMobile ? 76 : 118
 
   /** A card's card types, from the decision's card info (hidden zones) or gameState. */
   const cardTypesFor = (cardId: EntityId): string[] =>
@@ -219,6 +227,13 @@ export function CardSelectionDecision({
     return manaValueFromCost(typeof cost === 'string' ? cost : '')
   }
 
+  // OnePerManaValue: the mana values already claimed by selected cards.
+  const claimedManaValues = useMemo(() => {
+    if (!decision.onePerManaValue) return new Set<number>()
+    return new Set(selectedCards.map(manaValueForCard))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decision.onePerManaValue, decision.cardInfo, selectedCards, gameState?.cards])
+
   // Running sum of selected cards' mana values — used by both the `maxTotalManaValue` cap
   // (Scout for Survivors) and the `minTotalManaValue` floor (collect evidence N, CR 701.59a).
   const totalManaValueSelected = useMemo(() => {
@@ -281,17 +296,24 @@ export function CardSelectionDecision({
       // A card with no fixed power can't be kept; one sharing a claimed power is blocked.
       if (power == null || claimedPowers.has(power)) return true
     }
+    if (decision.onePerManaValue && claimedManaValues.has(manaValueForCard(cardId))) return true
     return false
   }
+
+  const hasRestrictions =
+    decision.onePerCardType || decision.onePerCardName || decision.onePerColor ||
+    decision.onePerBasicLandType || decision.onePerPower || decision.onePerManaValue ||
+    decision.maxTotalManaValue != null || decision.maxTotalPower != null
 
   const toggleCard = (cardId: EntityId) => {
     setSelectedCards((prev) => {
       if (prev.includes(cardId)) {
         return prev.filter((id) => id !== cardId)
       }
-      // Don't allow selecting more than max
+      // Don't allow selecting more than max — except a single pick, where clicking another card
+      // swaps it in (restrictions are judged against the current pick, so they keep the old rule).
       if (prev.length >= decision.maxSelections) {
-        return prev
+        return decision.maxSelections === 1 && !hasRestrictions ? [cardId] : prev
       }
       // Block cards an active restriction (e.g. OnePerCardType) rules out
       if (isCardDisabled(cardId)) {
@@ -300,6 +322,15 @@ export function CardSelectionDecision({
       return [...prev, cardId]
     })
   }
+
+  const poolCardFor = (cardId: EntityId, nonSelectable: boolean): PoolCard => ({
+    id: cardId,
+    name: nameForCard(cardId) ?? 'Unknown Card',
+    typeLine: decision.cardInfo?.[cardId]?.typeLine ?? gameState?.cards[cardId]?.typeLine ?? '',
+    imageUri: decision.cardInfo?.[cardId]?.imageUri || gameState?.cards[cardId]?.imageUri,
+    manaValue: manaValueForCard(cardId),
+    nonSelectable,
+  })
 
   const handleConfirm = () => {
     submitDecision(decision.id, selectedCards)
@@ -339,7 +370,7 @@ export function CardSelectionDecision({
         <img
           src={sourceCardImageUrl}
           alt={`Source: ${sourceCardName ?? 'card'}`}
-          className={styles.bannerCardImage}
+          className={isLargePool ? styles.bannerCardImageSmall : styles.bannerCardImage}
           onMouseEnter={() => setIsHoveringSource(true)}
           onMouseLeave={() => setIsHoveringSource(false)}
         />
@@ -361,7 +392,7 @@ export function CardSelectionDecision({
           : conditionalMinimums.length > 0
           ? `Selected: ${selectedCards.length} / ${requiredMinimum}; fewer is allowed if the selection matches the requirement`
           : decision.minSelections === 0
-          ? `Select up to ${decision.maxSelections}`
+          ? `Selected: ${selectedCards.length} / ${decision.maxSelections}`
           : `Selected: ${selectedCards.length} / ${decision.minSelections}${decision.minSelections !== decision.maxSelections ? ` - ${decision.maxSelections}` : ''}`
         }
       </p>
@@ -470,6 +501,21 @@ export function CardSelectionDecision({
       )}
 
       {/* Card options */}
+      {isLargePool ? (
+        <CardPoolBrowser
+          cards={[
+            ...decision.options.map((id) => poolCardFor(id, false)),
+            ...nonSelectableOptions.map((id) => poolCardFor(id, true)),
+          ]}
+          selectedCards={selectedCards}
+          isDisabled={isCardDisabled}
+          onAdd={toggleCard}
+          onRemove={(id) => setSelectedCards((prev) => prev.filter((c) => c !== id))}
+          cardWidth={poolCardWidth}
+          isMobile={responsive.isMobile}
+          onHover={setHoveredCardId}
+        />
+      ) : (
       <div className={styles.cardContainer} style={{ gap }}>
         {decision.options.map((cardId) => {
           // For hidden cards (e.g., opponent's library), use cardInfo from decision
@@ -515,6 +561,7 @@ export function CardSelectionDecision({
           )
         })}
       </div>
+      )}
 
       {/* Action buttons */}
       <div className={styles.optionButtonRow}>
@@ -530,7 +577,7 @@ export function CardSelectionDecision({
           className={styles.confirmButton}
         >
           {decision.minSelections === 0 && selectedCards.length === 0
-            ? 'Select None'
+            ? (decision.declineLabel ?? 'Select None')
             : 'Confirm Selection'}
         </button>
       </div>

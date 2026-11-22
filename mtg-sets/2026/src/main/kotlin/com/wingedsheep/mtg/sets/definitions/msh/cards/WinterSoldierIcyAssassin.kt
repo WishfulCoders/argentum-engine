@@ -82,7 +82,9 @@ val WinterSoldierIcyAssassin = card("Winter Soldier, Icy Assassin") {
                             filter = TargetFilter(
                                 GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
                             )
-                        )
+                        ),
+                        nonTargeting = true,
+                        prompt = "Choose an Equipment you control to attach to Winter Soldier"
                     )
                     run(Effects.AttachTargetEquipmentToCreature(
                         equipmentTarget = winterSoldierEquipment.asTarget,

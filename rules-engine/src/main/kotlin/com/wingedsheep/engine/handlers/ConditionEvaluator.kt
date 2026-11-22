@@ -18,7 +18,7 @@ import com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnCompon
 import com.wingedsheep.engine.state.components.battlefield.LastKnownPermanentComponent
 import com.wingedsheep.engine.state.components.battlefield.EnteredViaAbilityComponent
 import com.wingedsheep.engine.state.components.battlefield.chosenOpponent
-import com.wingedsheep.engine.state.components.battlefield.HasDealtCombatDamageToPlayerComponent
+import com.wingedsheep.engine.state.components.battlefield.chosenPlayer
 import com.wingedsheep.engine.state.components.battlefield.CastRecordComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
@@ -40,8 +40,9 @@ import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.RingBearerComponent
-import com.wingedsheep.engine.state.components.player.InAdditionalCombatPhaseComponent
+import com.wingedsheep.engine.state.components.player.CombatPhaseEndedThisTurnComponent
 import com.wingedsheep.engine.state.components.player.InAdditionalEndStepComponent
+import com.wingedsheep.engine.state.components.player.UpkeepStepEndedThisTurnComponent
 import com.wingedsheep.engine.state.components.player.LandDropsComponent
 import com.wingedsheep.engine.state.components.player.PlayerTurnsTakenComponent
 import com.wingedsheep.engine.state.components.player.CombatDamageReceivedThisTurnComponent
@@ -53,7 +54,6 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.*
 import com.wingedsheep.sdk.scripting.conditions.APlayerControlsMostOfSubtype
-import com.wingedsheep.sdk.scripting.conditions.AnOpponentLifeAtMost
 import com.wingedsheep.sdk.scripting.conditions.IsDay
 import com.wingedsheep.sdk.scripting.conditions.IsNight
 import com.wingedsheep.sdk.scripting.conditions.PermanentEnteredFaceDownThisTurn
@@ -64,8 +64,7 @@ import com.wingedsheep.sdk.scripting.conditions.PlayerPlayedLandThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PlayerTurnedPermanentFaceUpThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PutCounterKindOnCreatureThisTurn
 import com.wingedsheep.sdk.scripting.conditions.CounterPutOnPermanentYouControlledThisTurn
-import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityHadCardType
-import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityHadSubtype
+import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityWas
 import com.wingedsheep.sdk.scripting.conditions.TriggeringSpellCastWithoutPayingMana
 import com.wingedsheep.sdk.scripting.conditions.TriggeringSpellManaSpentAtLeast
 import com.wingedsheep.sdk.scripting.conditions.YouWonTheClash
@@ -74,8 +73,6 @@ import com.wingedsheep.sdk.scripting.conditions.AllConditions
 import com.wingedsheep.sdk.scripting.conditions.AnyCondition
 import com.wingedsheep.sdk.scripting.conditions.ExiledAsCostHadSubtype
 import com.wingedsheep.sdk.scripting.conditions.ThisAbilityActivatedThisTurnAtLeast
-import com.wingedsheep.sdk.scripting.conditions.APlayerLifeAtMost
-import com.wingedsheep.sdk.scripting.conditions.EachPlayerLifeAtMost
 import com.wingedsheep.sdk.scripting.conditions.AnyPlayerDealtCombatDamageThisTurnAtLeast
 import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.NumberMatches
@@ -92,7 +89,9 @@ import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.conditions.IsInPhase
 import com.wingedsheep.sdk.scripting.conditions.IsInStep
 import com.wingedsheep.sdk.scripting.conditions.IsFirstCombatPhaseOfTurn
+import com.wingedsheep.sdk.scripting.conditions.IsExtraTurn
 import com.wingedsheep.sdk.scripting.conditions.IsFirstEndStepOfTurn
+import com.wingedsheep.sdk.scripting.conditions.IsFirstUpkeepStepOfTurn
 import com.wingedsheep.sdk.scripting.conditions.IsNotYourTurn
 import com.wingedsheep.sdk.scripting.conditions.IsOpponentsTurn
 import com.wingedsheep.sdk.scripting.conditions.IsPlayersTurn
@@ -106,7 +105,6 @@ import com.wingedsheep.sdk.scripting.conditions.SourceIsModified
 import com.wingedsheep.sdk.scripting.conditions.SourceChosenModeIs
 import com.wingedsheep.sdk.scripting.conditions.CastChoiceMade
 import com.wingedsheep.sdk.scripting.conditions.CastChoiceIs
-import com.wingedsheep.sdk.scripting.conditions.CastTimeFlagSet
 import com.wingedsheep.engine.state.components.battlefield.CastForImpendingComponent
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.conditions.WasCast
@@ -128,8 +126,9 @@ import com.wingedsheep.sdk.scripting.conditions.TargetIsTapped
 import com.wingedsheep.sdk.scripting.conditions.TargetIsSource
 import com.wingedsheep.sdk.scripting.conditions.TargetSharesMostCommonColor
 import com.wingedsheep.sdk.scripting.conditions.ColorIsMostCommon
+import com.wingedsheep.engine.mechanics.ManaValues
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
-import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityEnteredOrWasCastFromGraveyard
+import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityEnteredOrWasCastFrom
 import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityHadCounters
 import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityHadMinusOneMinusOneCounter
 import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityWasHistoric
@@ -139,10 +138,9 @@ import com.wingedsheep.sdk.scripting.conditions.TriggeringSpellHasSingleTarget
 import com.wingedsheep.sdk.scripting.conditions.CollectionContainsMatch
 import com.wingedsheep.sdk.scripting.conditions.CollectionSharesCardType
 import com.wingedsheep.sdk.scripting.conditions.IsFirstSpellPaidWithTreasureManaCastThisTurn
-import com.wingedsheep.sdk.scripting.conditions.SourceAbilityResolvedNTimesThisTurn
 import com.wingedsheep.sdk.scripting.conditions.ManaSpentToCastIncludes
 import com.wingedsheep.sdk.scripting.conditions.NoManaSpentToCast
-import com.wingedsheep.sdk.scripting.conditions.AnyEnteredOrWasCastFromExile
+import com.wingedsheep.sdk.scripting.conditions.AnyEnteredOrWasCastFrom
 import com.wingedsheep.sdk.scripting.conditions.NoManaSpentToCastEntered
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.scripting.conditions.BlightWasPaid
@@ -157,18 +155,19 @@ import com.wingedsheep.sdk.scripting.conditions.YouControlSource
 import com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PermanentLeftBattlefieldThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PermanentTypeEnteredBattlefieldThisTurn
+import com.wingedsheep.sdk.scripting.conditions.PermanentPutIntoZoneFromBattlefieldThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PlayerCastSpellsThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PlayerCommittedCrimeThisTurn
 import com.wingedsheep.sdk.scripting.conditions.PlayerHasCitysBlessing
+import com.wingedsheep.sdk.scripting.conditions.PlayerHasDesignation
 import com.wingedsheep.sdk.scripting.conditions.PlayerHasEnduringStory
-import com.wingedsheep.sdk.scripting.conditions.PlayerControlsMostPermanents
-import com.wingedsheep.sdk.scripting.conditions.PlayerHasMostLife
-import com.wingedsheep.sdk.scripting.conditions.TriggeringPlayerIs
+import com.wingedsheep.sdk.scripting.conditions.PlayerHasMost
+import com.wingedsheep.sdk.scripting.conditions.PlayerIs
 import com.wingedsheep.sdk.scripting.conditions.RingHasTemptedPlayerAtLeast
 import com.wingedsheep.sdk.scripting.conditions.CreatureDiedThisTurnCondition
 import com.wingedsheep.sdk.scripting.conditions.ControlledCreatureDiedThisTurnCondition
-import com.wingedsheep.sdk.scripting.conditions.CreatureWithSubtypeDiedThisTurn
-import com.wingedsheep.engine.state.components.player.CreatureSubtypesDiedThisTurnComponent
+import com.wingedsheep.sdk.scripting.conditions.CreatureDiedThisTurnMatching
+import com.wingedsheep.engine.state.components.player.CreatureDeathsThisTurnComponent
 import com.wingedsheep.sdk.scripting.conditions.SourcePlottedOnPriorTurn
 import com.wingedsheep.sdk.scripting.conditions.SourceForetoldOnPriorTurn
 import com.wingedsheep.sdk.scripting.conditions.YouDiscardedThisCardThisTurn
@@ -208,6 +207,16 @@ internal fun compareAmounts(left: Int, operator: ComparisonOperator, right: Int)
         ComparisonOperator.GT -> left > right
         ComparisonOperator.GTE -> left >= right
     }
+
+/**
+ * The cast-choice slots a spell still on the stack answers from the alternative cost it was cast
+ * for (`SpellOnStackComponent.alternativeCost`) — its own resolving rider reads them before any
+ * permanent carries the stamped bag. A copy inherits the original's alternative cost (CR 707.10).
+ */
+private val ALTERNATIVE_COST_SLOTS: Map<ChoiceSlot, AlternativeCostType> = mapOf(
+    ChoiceSlot.SELF_ALTERNATIVE_COST_PAID to AlternativeCostType.SELF_ALTERNATIVE,
+    ChoiceSlot.SURGE_CAST to AlternativeCostType.SURGE,
+)
 
 /**
  * Evaluates conditions from the SDK against the game state.
@@ -295,39 +304,39 @@ class ConditionEvaluator(
             // Not a count, so there is nothing to show. A new condition that counts toward a
             // threshold belongs above, reusing the counting code its boolean branch runs.
             is APlayerControlsMostOfSubtype,
-            is APlayerLifeAtMost,
             is AllConditions,
-            is AnOpponentLifeAtMost,
             is AnotherPermanentWithSameNameAsTarget,
             is AnyCondition,
-            AnyEnteredOrWasCastFromExile,
+            is AnyEnteredOrWasCastFrom,
             is AnyPlayerDealtCombatDamageThisTurnAtLeast,
             BlightWasPaid,
             is CastChoiceIs,
             is CastChoiceMade,
-            is CastTimeFlagSet,
             is CollectionContainsMatch,
             is CollectionSharesCardType,
             is ColorIsMostCommon,
             ControlledCreatureDiedThisTurnCondition,
             is ControllerTurnsTakenAtMost,
             CreatureDiedThisTurnCondition,
-            is CreatureWithSubtypeDiedThisTurn,
-            is EachPlayerLifeAtMost,
+            is CreatureDiedThisTurnMatching,
             is EnchantedCreatureHasSubtype,
             EnchantedCreatureIsLegendary,
             is EntityMatches,
             is ExiledAsCostHadSubtype,
             IsDay,
-            com.wingedsheep.sdk.scripting.conditions.BeforeAttackersDeclaredThisTurn,
+            is com.wingedsheep.sdk.scripting.conditions.BeforeFirstCombatStepThisTurn,
+            com.wingedsheep.sdk.scripting.conditions.AfterCombatThisTurn,
             IsFirstCombatPhaseOfTurn,
+            IsExtraTurn,
             IsFirstEndStepOfTurn,
+            IsFirstUpkeepStepOfTurn,
             IsFirstSpellPaidWithTreasureManaCastThisTurn,
             is IsInPhase,
             is IsInStep,
             IsNight,
             IsNotYourTurn,
             IsOpponentsTurn,
+            is com.wingedsheep.sdk.scripting.conditions.CouldCastSorcery,
             is IsPlayersTurn,
             IsYourTurn,
             is ManaSpentToCastIncludes,
@@ -341,15 +350,16 @@ class ConditionEvaluator(
             is PermanentEnteredFaceDownThisTurn,
             is PermanentLeftBattlefieldThisTurn,
             is PermanentTypeEnteredBattlefieldThisTurn,
+            is PermanentPutIntoZoneFromBattlefieldThisTurn,
             is PlayerActivatedExhaustAbilitiesThisTurn,
             is PlayerAttackedPlayerThisTurn,
             is PlayerCommittedCrimeThisTurn,
-            is PlayerControlsMostPermanents,
             is PlayerDrewCardsThisTurn,
             is com.wingedsheep.sdk.scripting.conditions.PlayerCouldCastSorcery,
             is PlayerHasCitysBlessing,
+            is PlayerHasDesignation,
             is PlayerHasEnduringStory,
-            is PlayerHasMostLife,
+            is PlayerHasMost,
             is PlayerPlayedLandThisTurn,
             is PlayerTurnedPermanentFaceUpThisTurn,
             is PutCounterKindOnCreatureThisTurn,
@@ -361,7 +371,6 @@ class ConditionEvaluator(
             SacrificedPermanentWasLegendary,
             SacrificedPermanentWasSuspected,
             SneakCostWasPaid,
-            is SourceAbilityResolvedNTimesThisTurn,
             SourceCastForImpending,
             is SourceChosenModeIs,
             SourceForetoldOnPriorTurn,
@@ -369,6 +378,7 @@ class ConditionEvaluator(
             is SourceIsBlockingOrBlockedBySubtype,
             SourceIsModified,
             is com.wingedsheep.sdk.scripting.conditions.SourceDealtDamageToPlayerThisTurn,
+            is com.wingedsheep.sdk.scripting.conditions.SourceAttackedPlayerThisTurn,
             SourceIsRingBearer,
             SourcePlottedOnPriorTurn,
             SourceReturnedAsEnchantment,
@@ -380,15 +390,14 @@ class ConditionEvaluator(
             is TargetMarkedDamageExceedsToughness,
             is TargetSharesMostCommonColor,
             is ThisAbilityActivatedThisTurnAtLeast,
-            TriggeringEntityEnteredOrWasCastFromGraveyard,
-            is TriggeringEntityHadCardType,
+            is TriggeringEntityEnteredOrWasCastFrom,
             TriggeringEntityHadCounters,
             TriggeringEntityHadMinusOneMinusOneCounter,
-            is TriggeringEntityHadSubtype,
-            TriggeringEntityWasCast,
+            is TriggeringEntityWas,
+            is TriggeringEntityWasCast,
             TriggeringEntityWasHistoric,
             TriggeringEntityWasNotPutByThisSource,
-            is TriggeringPlayerIs,
+            is PlayerIs,
             TriggeringSpellCastWithoutPayingMana,
             TriggeringSpellHasSingleTarget,
             is TriggeringSpellManaSpentAtLeast,
@@ -405,6 +414,7 @@ class ConditionEvaluator(
             YouDiscardedThisCardThisTurn,
             YouSacrificedPermanentThisWay,
             YouWereAttackedThisStep,
+            is com.wingedsheep.sdk.scripting.conditions.TriggeringAttackersAttackedPlayer,
             YouWonTheClash -> null
         }
     }
@@ -436,9 +446,21 @@ class ConditionEvaluator(
             // Pure zone-membership lookup, so it reads the same in both modes.
             is SourceInZone -> evaluateSourceInZone(state, condition, ctx)
 
+            // "If you cast it" / "as long as it was cast" (The Tarrasque): a resolving spell knows
+            // its cast zone; a permanent carries the cast-origin marker stamped as it resolved, so
+            // a static gate reads the same answer under projection.
+            is WasCast -> evaluateWasCast(state, ctx.castFromZone(), ctx.sourceId, ctx.departedSourceSnapshot())
+            is WasCastFromHand -> evaluateWasCastFromZone(state, Zone.HAND, ctx.castFromZone(), ctx.sourceId, ctx.departedSourceSnapshot())
+            is WasCastFromZone -> evaluateWasCastFromZone(state, condition.zone, ctx.castFromZone(), ctx.sourceId, ctx.departedSourceSnapshot())
+
             // CR 805 — "your turn" is the active team's turn for every member of that team.
             is IsYourTurn -> ctx.controllerId?.let { state.isActiveTurnFor(it) } ?: false
             is IsNotYourTurn -> ctx.controllerId?.let { !state.isActiveTurnFor(it) } ?: false
+            // CR 307.5 — "any time you could cast a sorcery": a main phase of your (team's) turn with
+            // an empty stack. Priority is implied by whoever is asking (the player casting).
+            is com.wingedsheep.sdk.scripting.conditions.CouldCastSorcery -> ctx.controllerId?.let {
+                state.step.isMainPhase && state.stack.isEmpty() && state.isActiveTurnFor(it)
+            } ?: false
             // "An opponent's turn" — the active player is an opponent, so a teammate's turn is not one.
             is IsOpponentsTurn -> ctx.controllerId?.let { cid ->
                 state.activePlayerId?.let { state.isOpponentOf(it, cid) }
@@ -476,6 +498,10 @@ class ConditionEvaluator(
                 else state.step in condition.steps
             }
 
+            // The turn began as an extra turn (CR 500.7). Board-derived — a turn-scoped game flag —
+            // so it reads the same at resolution and under projection.
+            is IsExtraTurn -> state.isExtraTurn
+
             // True while we're in the turn's *natural* end step — i.e. an end step the active player
             // hasn't yet marked as an inserted extra (AddAdditionalEndStepsEffect). Board-derived, so
             // it reads the same at resolution and under projection. The loop guard for Y'shtola Rhul.
@@ -486,25 +512,37 @@ class ConditionEvaluator(
                     } != true
             }
 
-            // True while we're in the turn's *natural* combat phase — i.e. a combat phase the active
-            // player hasn't yet marked as an inserted extra (AddCombatPhaseEffect). Board-derived, so
-            // it reads the same at resolution and under projection. The loop guard for the
-            // "additional combat phase" riders (Balthier and Fran, Genji Glove, Raph & Leo).
-            // Before the declare attackers step of the turn's *first* combat (Master Warcraft's
-            // ruling): the step order puts every earlier step of the turn below DECLARE_ATTACKERS,
-            // and an inserted extra combat's beginning step is excluded by its marker.
-            is com.wingedsheep.sdk.scripting.conditions.BeforeAttackersDeclaredThisTurn -> {
-                state.step.ordinal < Step.DECLARE_ATTACKERS.ordinal &&
+            // True in an upkeep step while no upkeep step has ended yet this turn — the natural one, not
+            // an extra one added after it (Paradox Haze) or after a later phase (Obeka). Board-derived.
+            is IsFirstUpkeepStepOfTurn -> {
+                state.step == Step.UPKEEP &&
                     state.activePlayerId?.let {
-                        state.getEntity(it)?.has<InAdditionalCombatPhaseComponent>()
+                        state.getEntity(it)?.has<UpkeepStepEndedThisTurnComponent>()
                     } != true
             }
 
+            // Before the given step of the turn's *first* combat (Master Warcraft's and Rapid Fire's
+            // rulings): the step order puts every earlier step of the turn below it, and once any
+            // combat phase has ended (CombatPhaseEndedThisTurnComponent) the first combat is past
+            // that step — whether that combat was natural or inserted.
+            is com.wingedsheep.sdk.scripting.conditions.BeforeFirstCombatStepThisTurn -> {
+                state.step.ordinal < condition.step.ordinal && !combatPhaseEndedThisTurn(state)
+            }
+
+            // "After combat" (Glyph of Reincarnation): a combat phase has ended this turn and we're
+            // not inside one — so a main phase between two combats counts, the end of combat step
+            // (still part of combat) doesn't, and a turn whose combat was skipped never gets there.
+            is com.wingedsheep.sdk.scripting.conditions.AfterCombatThisTurn -> {
+                state.phase != Phase.COMBAT && combatPhaseEndedThisTurn(state)
+            }
+
+            // True during the turn's first combat phase — no combat phase has ended yet this turn.
+            // An inserted combat phase that comes before the natural one (Grim Reaper's Sprint cast
+            // precombat) is the first. Board-derived, so it reads the same at resolution and under
+            // projection. The loop guard for the "additional combat phase" riders (Balthier and Fran,
+            // Genji Glove, Raph & Leo).
             is IsFirstCombatPhaseOfTurn -> {
-                state.phase == Phase.COMBAT &&
-                    state.activePlayerId?.let {
-                        state.getEntity(it)?.has<InAdditionalCombatPhaseComponent>()
-                    } != true
+                state.phase == Phase.COMBAT && !combatPhaseEndedThisTurn(state)
             }
 
             // Reads the controller's PlayerTurnsTakenComponent (incremented in
@@ -597,14 +635,33 @@ class ConditionEvaluator(
             is SourceIsModified -> evaluateSourceIsModifiedCtx(state, ctx)
 
             // The source's per-recipient damage memory, stamped with the turn of its latest damage
-            // to each player; stripped on a zone change, so a returned permanent has no history.
+            // (of each kind) to each player; stripped on a zone change, so a returned permanent has
+            // no history.
             is com.wingedsheep.sdk.scripting.conditions.SourceDealtDamageToPlayerThisTurn -> {
                 val playerId = resolvePlayer(state, condition.player, ctx)
                 val sourceId = ctx.sourceId
                 playerId != null && sourceId != null &&
                     state.getEntity(sourceId)
                         ?.get<com.wingedsheep.engine.state.components.battlefield.DealtDamageToThisGameComponent>()
-                        ?.dealtDamageToOnTurn(playerId, state.turnNumber) == true
+                        ?.dealtDamageToOnTurn(playerId, state.turnNumber, condition.damageType) == true
+            }
+
+            // The source's per-turn attack record. On the battlefield it must describe the current
+            // object (CR 400.7); off it, the record re-attached as the source left is its last
+            // known information (CR 608.2h) and is dropped on any further zone change.
+            is com.wingedsheep.sdk.scripting.conditions.SourceAttackedPlayerThisTurn -> {
+                val playerId = resolvePlayer(state, condition.player, ctx)
+                val sourceId = ctx.sourceId
+                val record = sourceId?.let { state.getEntity(it) }
+                    ?.get<com.wingedsheep.engine.state.components.combat.TimesAttackedThisTurnComponent>()
+                val attacked = when {
+                    sourceId == null || record == null -> emptySet()
+                    sourceId in state.getBattlefield() ->
+                        record.attackedPlayersFor(state.turnNumber, state.objectRef(sourceId))
+                    record.turnNumber == state.turnNumber -> record.attackedPlayerIds
+                    else -> emptySet()
+                }
+                playerId != null && playerId in attacked
             }
 
             is SourceIsBlockingOrBlockedBySubtype -> evaluateSourceIsBlockingOrBlockedBySubtypeCtx(state, condition, ctx)
@@ -730,25 +787,36 @@ class ConditionEvaluator(
                 count > 0
             }
             is PlayerHasCitysBlessing -> evaluateHasCitysBlessingCtx(state, condition, ctx)
+            // CR 725.3 / 726.3 — one holder at most; "an opponent" is existential over every opponent.
+            is PlayerHasDesignation -> {
+                val holder = when (condition.designation) {
+                    com.wingedsheep.sdk.core.PlayerDesignation.MONARCH -> state.monarch
+                    com.wingedsheep.sdk.core.PlayerDesignation.INITIATIVE -> state.initiative
+                }
+                if (holder == null) false else when (condition.player) {
+                    Player.AnOpponent, Player.EachOpponent -> {
+                        val controller = ctx.controllerId
+                        controller != null && holder in state.getOpponents(controller)
+                    }
+                    else -> resolvePlayer(state, condition.player, ctx) == holder
+                }
+            }
             is PlayerHasEnduringStory -> evaluateHasEnduringStoryCtx(state, condition, ctx)
 
-            is TriggeringPlayerIs -> {
-                val triggeringPlayer = resolvePlayer(state, Player.TriggeringPlayer, ctx)
-                val expected = resolvePlayer(state, condition.player, ctx)
-                triggeringPlayer != null && expected != null && triggeringPlayer == expected
-            }
-
-            is PlayerHasMostLife -> {
-                val playerId = resolvePlayer(state, condition.player, ctx)
-                if (playerId == null) false else {
-                    val life = state.lifeTotal(playerId)
-                    // Most life or tied for most: no player has strictly more.
-                    state.turnOrder.all { state.lifeTotal(it) <= life }
+            is PlayerIs -> {
+                val subject = resolvePlayer(state, condition.subject, ctx)
+                when (val expected = condition.player) {
+                    is Player.InCollection -> ifResolution { context ->
+                        subject != null && subject in context.pipeline.storedCollections[expected.collection].orEmpty()
+                    }
+                    else -> {
+                        val expectedId = resolvePlayer(state, expected, ctx)
+                        subject != null && expectedId != null && subject == expectedId
+                    }
                 }
             }
 
-            is PlayerControlsMostPermanents ->
-                evaluatePlayerControlsMostPermanentsCtx(state, condition, ctx)
+            is PlayerHasMost -> evaluatePlayerHasMostCtx(state, condition, ctx)
 
             is RingHasTemptedPlayerAtLeast -> {
                 val playerId = resolvePlayer(state, condition.player, ctx)
@@ -759,6 +827,19 @@ class ConditionEvaluator(
             }
             is PermanentTypeEnteredBattlefieldThisTurn ->
                 evaluatePermanentTypeEnteredBattlefieldThisTurnCtx(state, condition, ctx)
+            is PermanentPutIntoZoneFromBattlefieldThisTurn -> {
+                val player = resolvePlayer(state, condition.player, ctx)?.let { state.getEntity(it) }
+                val types = when (condition.toZone) {
+                    Zone.HAND -> player
+                        ?.get<com.wingedsheep.engine.state.components.player.CardTypesReturnedToHandFromBattlefieldThisTurnComponent>()
+                        ?.types
+                    Zone.GRAVEYARD -> player
+                        ?.get<com.wingedsheep.engine.state.components.player.CardTypesPutIntoGraveyardFromBattlefieldThisTurnComponent>()
+                        ?.types
+                    else -> null
+                }.orEmpty()
+                condition.cardType?.let { it in types } ?: types.isNotEmpty()
+            }
             is PermanentLeftBattlefieldThisTurn ->
                 evaluatePermanentLeftBattlefieldThisTurnCtx(state, condition, ctx)
 
@@ -774,35 +855,27 @@ class ConditionEvaluator(
             is com.wingedsheep.sdk.scripting.conditions.IsNight ->
                 state.dayNight == com.wingedsheep.sdk.core.DayNight.NIGHT
 
-            // Global, subtype-filtered death tracker — matched against each dying creature's
-            // last-known subtypes recorded across every player. present=true: some dead creature
+            // Subtype-filtered death tracker — matched against each dying creature's last-known
+            // subtypes, recorded under its last-known controller. present=true: some dead creature
             // had the subtype; present=false: some dead creature lacked it ("a non-Zombie died").
-            is CreatureWithSubtypeDiedThisTurn -> state.turnOrder.any { playerId ->
-                val died = state.getEntity(playerId)
-                    ?.get<CreatureSubtypesDiedThisTurnComponent>()
-                    ?.diedSubtypeSets.orEmpty()
-                died.any { subtypes -> (condition.subtype in subtypes) == condition.present }
-            }
-
-            // Existential over all players: some player has at most [threshold] life.
-            // Reads each player's LifeTotalComponent from state.turnOrder.
-            is APlayerLifeAtMost -> state.turnOrder.any { playerId ->
-                // CR 810.9a — read the team's shared total; existential so teams don't double-count.
-                state.lifeTotal(playerId) <= condition.threshold
-            }
-
-            is EachPlayerLifeAtMost -> state.turnOrder.all { playerId ->
-                state.lifeTotal(playerId) <= condition.threshold
-            }
-
-            // Existential over the controller's opponents. The controller's own low life total must
-            // not satisfy cards such as Bloodghast; team games use the shared team life total.
-            is com.wingedsheep.sdk.scripting.conditions.AnOpponentLifeAtMost ->
-                ctx.controllerId?.let { controllerId ->
-                    state.getOpponents(controllerId).any { opponentId ->
-                        state.lifeTotal(opponentId) <= condition.threshold
+            // Player.Each reads every player's records; a single player reads only theirs, so one
+            // death must meet both the subtype test and the controller scope.
+            is CreatureDiedThisTurnMatching -> {
+                val players = when (condition.player) {
+                    Player.Each, Player.Any -> state.turnOrder
+                    else -> listOfNotNull(resolvePlayer(state, condition.player, ctx))
+                }
+                val deaths = players.flatMap { playerId ->
+                    state.getEntity(playerId)?.get<CreatureDeathsThisTurnComponent>()?.deaths.orEmpty()
+                }
+                if (deaths.isEmpty()) false else {
+                    val predicateContext = when (ctx) {
+                        is Resolution -> PredicateContext.fromEffectContext(ctx.effectContext)
+                        is Projection -> PredicateContext(controllerId = ctx.controllerId ?: ctx.sourceId, sourceId = ctx.sourceId)
                     }
-                } ?: false
+                    deaths.any { predicates.matchesSnapshot(state, it, condition.filter, predicateContext) }
+                }
+            }
 
             // Board-derived only — no targets/triggering/kicker — so it works identically in
             // resolution and projection (required for the djinn `ConditionalStaticAbility` gate).
@@ -820,9 +893,6 @@ class ConditionEvaluator(
             is APlayerControlsMostOfSubtype -> ifResolution { evaluateAPlayerControlsMostOfSubtype(state, condition) }
             is YouControlMostOfChosenType -> ifResolution { evaluateYouControlMostOfChosenType(state, condition, it) }
             is YouControlSource -> ifResolution { evaluateYouControlSource(state, it) }
-            is WasCast -> ifResolution { evaluateWasCast(state, it) }
-            is WasCastFromHand -> ifResolution { evaluateWasCastFromHand(state, it) }
-            is WasCastFromZone -> ifResolution { evaluateWasCastFromZone(state, condition, it) }
             is WasKicked -> ifResolution { evaluateWasKicked(state, it) }
             is SneakCostWasPaid -> ifResolution { evaluateSneakCostWasPaid(state, it) }
             is WebSlungCostWasPaid -> ifResolution { evaluateWebSlungCostWasPaid(state, it) }
@@ -832,7 +902,7 @@ class ConditionEvaluator(
             is ManaSpentToCastIncludes -> ifResolution { evaluateManaSpentToCastIncludes(state, condition, it) }
             is NoManaSpentToCast -> ifResolution { evaluateNoManaSpentToCast(state, it) }
             is NoManaSpentToCastEntered -> ifResolution { evaluateNoManaSpentToCastEntered(state, it) }
-            is AnyEnteredOrWasCastFromExile -> ifResolution { evaluateAnyEnteredOrWasCastFromExile(state, it) }
+            is AnyEnteredOrWasCastFrom -> ifResolution { evaluateAnyEnteredOrWasCastFrom(state, condition.zone, it) }
             // Escape (CR 702.138b): dual-mode so an "escapes with [ability]" static (CR 702.138d)
             // reads it in projection as well as an enters trigger at resolution. A resolved
             // permanent carries the durable flag; a spell still on the stack answers from the
@@ -871,9 +941,22 @@ class ConditionEvaluator(
                 } else if (sourceId?.let { state.getEntity(it) }?.get<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>()
                     ?.additionalCostChoices?.containsKey(condition.slot) == true) {
                     true
+                } else if (ALTERNATIVE_COST_SLOTS[condition.slot]?.let { paid ->
+                        sourceId?.let { state.getEntity(it) }?.get<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>()
+                            ?.alternativeCost == paid
+                    } == true) {
+                    // A spell still on the stack (its own resolving rider) answers from the
+                    // alternative cost it was cast for; a copy inherited it (CR 707.10).
+                    true
                 } else if (selfCastChoice != null) {
                     selfCastChoice
                 } else if (declaredThisCast == condition.slot) {
+                    true
+                } else if (condition.slot == ChoiceSlot.MADNESS_CAST && sourceId != null &&
+                    com.wingedsheep.engine.mechanics.MadnessGrants.castPaysMadnessCost(state, sourceId)) {
+                    // Still being cast: X, the target count and a division are announced before
+                    // the spell's choice rail exists (CR 601.2b–d) — Avacyn's Judgment's madness
+                    // total and target cap are read here.
                     true
                 } else {
                     sourceId != null &&
@@ -891,17 +974,6 @@ class ConditionEvaluator(
                     sourceId != null && castChoiceMatches(state.getEntity(sourceId), condition.slot, condition.value)
                 }
             }
-            is CastTimeFlagSet -> {
-                // The "as you cast this spell" capture, frozen onto the spell on the stack at cast
-                // (CR 601.2i). Read here at resolution so the answer reflects the cast-time board
-                // even after a later change (Steer Clear). The spell entity keeps its id across the
-                // hand→stack boundary, so the resolving effect's sourceId locates it.
-                val sourceId = ctx.sourceId
-                sourceId != null &&
-                    state.getEntity(sourceId)
-                        ?.get<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>()
-                        ?.castTimeFlags?.contains(condition.flag) == true
-            }
             is SacrificedPermanentHadSubtype -> ifResolution { evaluateSacrificedPermanentHadSubtype(condition, it) }
             is ExiledAsCostHadSubtype -> ifResolution { evaluateExiledAsCostHadSubtype(state, condition, it) }
             is ThisAbilityActivatedThisTurnAtLeast ->
@@ -910,29 +982,23 @@ class ConditionEvaluator(
             is SacrificedPermanentWasSuspected -> ifResolution { evaluateSacrificedPermanentWasSuspected(it) }
             is YouSacrificedPermanentThisWay -> ifResolution { evaluateYouSacrificedPermanentThisWay(it) }
             is TriggeringEntityWasHistoric -> ifResolution { evaluateTriggeringEntityWasHistoric(state, it) }
-            is TriggeringEntityWasCast -> ifResolution { evaluateTriggeringEntityWasCast(state, it) }
+            is TriggeringEntityWasCast -> ifResolution { evaluateTriggeringEntityWasCast(state, it, condition.zone) }
             is com.wingedsheep.sdk.scripting.conditions.TriggeringSpellCastWithoutPayingMana ->
                 ifResolution { evaluateTriggeringSpellCastWithoutPayingMana(state, it) }
             is com.wingedsheep.sdk.scripting.conditions.TriggeringSpellManaSpentAtLeast ->
                 ifResolution { evaluateTriggeringSpellManaSpentAtLeast(state, condition.amount, it) }
-            is TriggeringEntityEnteredOrWasCastFromGraveyard ->
-                ifResolution { evaluateTriggeringEntityEnteredOrWasCastFromGraveyard(state, it) }
+            is TriggeringEntityEnteredOrWasCastFrom ->
+                ifResolution { evaluateTriggeringEntityEnteredOrWasCastFrom(state, condition.zone, it) }
             is TriggeringEntityHadMinusOneMinusOneCounter ->
                 ifResolution { (it.triggerContext?.minusOneMinusOneCounterCount ?: 0) > 0 }
             is TriggeringEntityHadCounters ->
                 ifResolution { (it.triggerContext?.totalCounterCount ?: 0) > 0 }
-            is com.wingedsheep.sdk.scripting.conditions.TriggeringEntityHadSubtype ->
-                // Subtype names are captured in projected form (e.g. "Demon"); compare
-                // case-insensitively so card authors can pass either Subtype.X.value or a literal.
+            // "If it was …" against the departure-time type line the trigger carries (CR 603.10),
+            // not the card's graveyard characteristics.
+            is TriggeringEntityWas ->
                 ifResolution { ctx ->
-                    ctx.triggerContext?.lastKnownSubtypes.orEmpty().any { it.equals(condition.subtype, ignoreCase = true) }
-                }
-            is com.wingedsheep.sdk.scripting.conditions.TriggeringEntityHadCardType ->
-                // Card-type names are captured from the projected TypeLine's enum names (e.g.
-                // "CREATURE"); compare case-insensitively so card authors can pass either
-                // CardType.X.name or a literal.
-                ifResolution { ctx ->
-                    ctx.triggerContext?.lastKnownCardTypes.orEmpty().any { it.equals(condition.cardType, ignoreCase = true) }
+                    val snapshot = ctx.triggerContext?.lastKnownTypeLineSnapshot() ?: return@ifResolution false
+                    predicates.matchesSnapshot(state, snapshot, condition.filter, PredicateContext.fromEffectContext(ctx))
                 }
             // CR 701.30d — "if you won" on a "Whenever you clash" trigger. The clash is over by the
             // time the ability resolves, so the outcome travels as trigger context; a null (this
@@ -954,9 +1020,18 @@ class ConditionEvaluator(
                 ifResolution { evaluateAnotherPermanentWithSameNameAsTarget(state, condition, it) }
             is IsInPhase -> ifResolution { evaluateIsInPhase(state, condition, it) }
             is YouWereAttackedThisStep -> ifResolution { evaluateYouWereAttackedThisStep(state, it) }
+            // Whom the trigger's counted attackers were declared attacking, frozen as it fired: a
+            // player only when chosen directly (CR 508.1b), and removing an attacker in response
+            // changes nothing (Firemane Commando's rulings).
+            is com.wingedsheep.sdk.scripting.conditions.TriggeringAttackersAttackedPlayer -> {
+                val playerId = resolvePlayer(state, condition.player, ctx)
+                ifResolution { effectContext ->
+                    playerId != null &&
+                        effectContext.triggerContext?.capturedAttackerDefenders?.containsValue(playerId) == true
+                }
+            }
             is IsFirstSpellPaidWithTreasureManaCastThisTurn ->
                 ifResolution { evaluateFirstSpellPaidWithTreasureMana(state, it) }
-            is SourceAbilityResolvedNTimesThisTurn -> ifResolution { evaluateSourceAbilityResolvedNTimes(state, condition, it) }
             is OpponentSpellOnStack -> ifResolution { evaluateOpponentSpellOnStack(state, it) }
             is CollectionContainsMatch -> ifResolution { evaluateCollectionContainsMatch(state, condition, it) }
             is CollectionSharesCardType -> ifResolution { evaluateCollectionSharesCardType(state, condition, it) }
@@ -1017,6 +1092,9 @@ class ConditionEvaluator(
             is NumberProperty.MultipleOf -> property.divisor != 0 && value % property.divisor == 0
         }
     }
+
+    private fun combatPhaseEndedThisTurn(state: GameState): Boolean =
+        state.activePlayerId?.let { state.getEntity(it)?.has<CombatPhaseEndedThisTurnComponent>() } == true
 
     /** Standard primality test: 0 and 1 are not prime; 2 is the only even prime (CR-agnostic). */
     private fun isPrime(n: Int): Boolean {
@@ -1138,6 +1216,18 @@ class ConditionEvaluator(
                 )
             } ?: false
         }
+        // An engine-pinned object (cipher's encoded card: "if it's still in exile, copy it") — read
+        // like a target: projected characteristics on the battlefield, printed ones elsewhere.
+        is EffectTarget.SpecificEntity -> {
+            val context = when (ctx) {
+                is Resolution -> ctx.effectContext
+                is Projection -> ctx.controllerId?.let { EffectContext(controllerId = it, sourceId = ctx.sourceId) }
+            }
+            context != null && predicates.matches(
+                state, ctx.projectedStateFor(state), entity.entityId, condition.filter,
+                PredicateContext.fromEffectContext(context)
+            )
+        }
         is EffectTarget.LinkedExiledCard ->
             evaluateLinkedExiledCardFilterMatch(state, condition.filter, entity.index, ctx)
         // The object a ForEach loop is visiting ("…if it's a creature, …"), read like a target:
@@ -1161,6 +1251,8 @@ class ConditionEvaluator(
         EffectTarget.ChosenCreature,
         EffectTarget.Controller,
         EffectTarget.ControllerOfDamageSource,
+        EffectTarget.DamageSource,
+        EffectTarget.DamageRecipient,
         is EffectTarget.ControllerOfPipelineTarget,
         EffectTarget.ControllerOfTriggeringEntity,
         EffectTarget.EachDamagedBySourceThisGame,
@@ -1171,8 +1263,8 @@ class ConditionEvaluator(
         is EffectTarget.PlayerRef,
         is EffectTarget.RingBearer,
         is EffectTarget.SacrificedAsCost,
-        is EffectTarget.SpecificEntity,
         is EffectTarget.TappedAsCost,
+        is EffectTarget.ExiledAsCost,
         EffectTarget.TargetController,
         EffectTarget.TargetingSource -> false
     }
@@ -1278,14 +1370,18 @@ class ConditionEvaluator(
         val playerIds: List<EntityId> = when (condition.player) {
             is Player.You -> controllerId?.let { listOf(it) } ?: emptyList()
             is Player.EachOpponent -> controllerId?.let { state.getOpponents(it) } ?: emptyList()
+            is Player.EachOtherPlayer -> controllerId?.let { state.getOtherPlayers(it) } ?: emptyList()
             is Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders
                 .allDefendingPlayersInApnapOrder(state)
+            is Player.EachAttackedPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders
+                .attackedPlayersInApnapOrder(state)
             is Player.Each -> state.activePlayers
             is Player.Any -> state.activePlayers
             is Player.Candidate -> listOfNotNull((ctx as? Resolution)?.effectContext?.candidatePlayerId)
             is Player.ChosenOpponent -> listOfNotNull(
                 ctx.sourceId?.let { state.getEntity(it)?.chosenOpponent() }
             )
+            is Player.ChosenPlayer -> listOfNotNull(ctx.sourceId?.let { state.getEntity(it)?.chosenPlayer() })
             // Defender-relative conditions (CantAttackUnless "defending player controls…"):
             // the defender is bound into the EffectContext by the attack legality check, or
             // read from the source's attack assignment once combat is underway. No defender
@@ -1333,39 +1429,41 @@ class ConditionEvaluator(
     }
 
     /**
-     * "Controls the most [filter], or is tied for the most" — the board-count sibling of
-     * [PlayerHasMostLife]. Counts every player's matching permanents off the *projected*
-     * battlefield (so an animated land counts as a creature) and returns true when nobody has
-     * strictly more than the named player. `state.turnOrder` is the comparison set, matching
-     * [PlayerHasMostLife]; a player with zero matches still qualifies when everyone has zero,
-     * exactly as "the most" reads with an empty board.
+     * [PlayerHasMost]: measures the amount once per player still in the game, rebinding the
+     * context's controller to that player (the [DynamicAmount.GreatestAmongPlayers] rebinding), and
+     * compares the named player's value against every other player's — `>=` each of them for "the
+     * most or tied for the most", `>` each of them for "more than each other player".
      */
-    private fun evaluatePlayerControlsMostPermanentsCtx(
+    private fun evaluatePlayerHasMostCtx(
         state: GameState,
-        condition: PlayerControlsMostPermanents,
+        condition: PlayerHasMost,
         ctx: ConditionEvaluationContext
     ): Boolean {
         val playerId = resolvePlayer(state, condition.player, ctx) ?: return false
-        val projected = ctx.projectedStateFor(state)
-        val predicateContext = when (ctx) {
-            is Resolution -> PredicateContext.fromEffectContext(ctx.effectContext)
-            is Projection -> PredicateContext(controllerId = playerId, sourceId = ctx.sourceId)
+        val effectCtx = when (ctx) {
+            is Resolution -> ctx.effectContext
+            is Projection -> syntheticEffectContext(state, ctx) ?: return false
         }
-
-        val counts = state.getBattlefield()
-            .filter { entityId ->
-                predicates.matches(state, projected, entityId, condition.filter, predicateContext)
-            }
-            .groupingBy { entityId -> projected.getController(entityId) }
-            .eachCount()
-
-        val mine = counts[playerId] ?: 0
-        return state.turnOrder.all { (counts[it] ?: 0) <= mine }
+        val projected = ctx.projectedStateFor(state)
+        fun measure(id: EntityId) = amounts.evaluate(state, condition.amount, effectCtx.copy(controllerId = id), projected)
+        val mine = measure(playerId)
+        return state.activePlayers.all { other ->
+            other == playerId || measure(other).let { if (condition.includeTies) it <= mine else it < mine }
+        }
     }
 
     private fun evaluateSourceIsModifiedCtx(state: GameState, ctx: ConditionEvaluationContext): Boolean {
         val sourceId = ctx.sourceId ?: return false
+        // Last-known information (CR 608.2h): once the source has left the battlefield, an
+        // intervening-if rechecked on resolution (CR 603.4) reads it as it last existed — Ian the
+        // Reckless's "if it's modified" (ruling 2024-03-08). The ability's own departure snapshot
+        // comes first, so a source that blinked back as a new object isn't read live.
+        if (ctx is Resolution) {
+            ctx.effectContext.lastKnownSourceSnapshot?.takeIf { it.entityId == sourceId }
+                ?.let { return it.wasModified }
+        }
         val entity = state.getEntity(sourceId) ?: return false
+        entity.get<LastKnownPermanentComponent>()?.snapshot?.let { return it.wasModified }
         val controllerId = ctx.controllerId
 
         val counters = entity.get<com.wingedsheep.engine.state.components.battlefield.CountersComponent>()
@@ -1460,9 +1558,14 @@ class ConditionEvaluator(
         ctx: ConditionEvaluationContext
     ): Boolean {
         val sourceId = ctx.sourceId ?: return false
-        val attached = state.getEntity(sourceId)?.get<AttachedToComponent>()?.targetId
+        val source = state.getEntity(sourceId)
+        val attached = source?.get<AttachedToComponent>()?.targetId
         val permanentId = attached ?: when (ctx) {
-            is Resolution -> sourceId  // resolution-mode fallback (granted-ability scope)
+            // An Aura/Equipment that left the battlefield before its ability resolved is read as it
+            // last existed: its host is the creature it was attached to when it left — the same
+            // last-known host [EffectTarget.EquippedCreature] resolves to for the effect itself
+            // (Blade of the Bloodchief ruling). Otherwise fall back to the source (granted-ability scope).
+            is Resolution -> source?.get<LastKnownPermanentComponent>()?.snapshot?.attachedTo ?: sourceId
             is Projection -> return false
         }
         val projected = ctx.projectedStateFor(state)
@@ -1487,9 +1590,12 @@ class ConditionEvaluator(
      * - [Player.AnOpponent]: a non-targeted opponent of the controller. Returns the first opponent
      *   in turn order — sufficient for per-player tracker reads where each player has
      *   its own bucket.
-     * - [Player.TriggeringPlayer]: only resolvable in resolution mode.
-     * - Other relational forms are not currently supported by the player-relative
-     *   conditions and return `null`.
+     * - [Player.TriggeringPlayer]: only resolvable in resolution mode — the bound triggering
+     *   player, else the triggering entity when that entity is a player.
+     * - [Player.ActivePlayer]: the active player, in both modes.
+     * - [Player.Any] ("any player") has no single answer and returns `null`.
+     * - Every other single-player reference resolves at resolution exactly as an effect's does
+     *   ([TargetResolutionUtils.resolvePlayerRef]); under projection it returns `null`.
      */
     private fun resolvePlayer(state: GameState, player: Player, ctx: ConditionEvaluationContext): EntityId? {
         return when (player) {
@@ -1499,7 +1605,14 @@ class ConditionEvaluator(
                 val c = ctx.controllerId ?: return null
                 state.getOpponents(c).firstOrNull()
             }
-            is Player.TriggeringPlayer -> (ctx as? Resolution)?.effectContext?.triggeringPlayerId
+            // A trigger that binds its player as the triggering *entity* ("deals combat damage to a
+            // player" — that player) is read the way effects read it (TargetResolutionUtils), but
+            // only when that entity is a player.
+            is Player.TriggeringPlayer -> (ctx as? Resolution)?.effectContext?.let { ec ->
+                ec.triggeringPlayerId ?: ec.triggeringEntityId?.takeIf { it in state.turnOrder }
+            }
+            is Player.ActivePlayer -> state.activePlayerId
+            is Player.Any -> null
             // The attacked player for the source's attack assignment (read from its
             // AttackingComponent by resolveDefendingPlayer) — Preacher of the Schism's "attacks the
             // player with the most life".
@@ -1510,7 +1623,17 @@ class ConditionEvaluator(
             is Player.ChosenOpponent -> ctx.sourceId?.let { sourceId ->
                 state.getEntity(sourceId)?.chosenOpponent()
             }
-            else -> null
+            is Player.ChosenPlayer -> ctx.sourceId?.let { state.getEntity(it)?.chosenPlayer() }
+            // The player the source Curse is attached to — "any number of target players other than
+            // that player" (Curse of Surveillance) restricts its targets against it.
+            is Player.EnchantedPlayer -> TargetResolutionUtils.enchantedPlayer(
+                ctx.sourceId, state, (ctx as? Resolution)?.effectContext?.lastKnownSourceSnapshot
+            )
+            // Everything else resolves at resolution exactly as an effect's player reference does
+            // (targets, bound variables, "its controller"); there is no single answer under projection.
+            else -> (ctx as? Resolution)?.effectContext?.let {
+                TargetResolutionUtils.resolvePlayerRef(player, it, state)
+            }
         }
     }
 
@@ -1540,7 +1663,10 @@ class ConditionEvaluator(
         condition: PlayerAttackedWithCreaturesThisTurn,
         ctx: ConditionEvaluationContext,
         cap: Int
-    ): Int = countRecordedAttackersCtx(state, condition.player, condition.filter, ctx, cap) { container ->
+    ): Int = countRecordedAttackersCtx(
+        state, condition.player, condition.filter, ctx, cap,
+        declaredAs = { it.get<PlayerAttackersThisTurnComponent>()?.declaredAs.orEmpty() },
+    ) { container ->
         container.get<PlayerAttackersThisTurnComponent>()?.attackerIds
     }
 
@@ -1554,13 +1680,20 @@ class ConditionEvaluator(
         condition: com.wingedsheep.sdk.scripting.conditions.PlayerAttackedWithCreaturesThisCombat,
         ctx: ConditionEvaluationContext,
         cap: Int
-    ): Int = countRecordedAttackersCtx(state, condition.player, condition.filter, ctx, cap) { container ->
+    ): Int = countRecordedAttackersCtx(
+        state, condition.player, condition.filter, ctx, cap,
+        declaredAs = { emptyList() },
+    ) { container ->
         container.get<com.wingedsheep.engine.state.components.combat.PlayerAttackersThisCombatComponent>()?.attackerIds
     }
 
     /**
      * Count the creatures in [player]'s attack record (read by [record] off each scoped player)
-     * that match [filter], stopping once [cap] are found.
+     * that match [filter], stopping once [cap] are found. Where the scoped player's record carries
+     * the creature as it was declared ([declaredAs]), the filter reads that snapshot, so "attacked
+     * with a Rogue" survives the creature dying, its token ceasing to exist, or the effect that made
+     * it a Rogue ending; any recorded attacker without a snapshot (an older serialized game, or a
+     * record kept without them) falls back to the live projected read.
      */
     private inline fun countRecordedAttackersCtx(
         state: GameState,
@@ -1568,6 +1701,7 @@ class ConditionEvaluator(
         filter: com.wingedsheep.sdk.scripting.GameObjectFilter,
         ctx: ConditionEvaluationContext,
         cap: Int,
+        declaredAs: (com.wingedsheep.engine.state.ComponentContainer) -> List<com.wingedsheep.engine.state.components.stack.EntitySnapshot>,
         record: (com.wingedsheep.engine.state.ComponentContainer) -> Set<EntityId>?
     ): Int {
         if (cap <= 0) return 0
@@ -1578,19 +1712,24 @@ class ConditionEvaluator(
         val playerIds = when (player) {
             is Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders
                 .allDefendingPlayersInApnapOrder(state)
+            is Player.EachAttackedPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders
+                .attackedPlayersInApnapOrder(state)
             is Player.Each, is Player.Any -> state.activePlayers
             is Player.EachOpponent -> {
                 val controller = resolvePlayer(state, Player.You, ctx) ?: return 0
                 state.getOpponents(controller)
             }
+            is Player.EachOtherPlayer -> {
+                val controller = resolvePlayer(state, Player.You, ctx) ?: return 0
+                state.getOtherPlayers(controller)
+            }
             else -> listOfNotNull(resolvePlayer(state, player, ctx))
         }
         if (playerIds.isEmpty()) return 0
+        val containers = playerIds.mapNotNull { state.getEntity(it) }
         // Attackers are recorded per declaring player, so the union is the set of creatures that
-        // attacked at all this turn — a creature counts once even if two scopes both name it.
-        val attackerIds = playerIds.flatMapTo(mutableSetOf()) { playerId ->
-            state.getEntity(playerId)?.let(record) ?: emptySet()
-        }
+        // attacked at all — a creature counts once even if two scopes both name it.
+        val attackerIds = containers.flatMapTo(mutableSetOf()) { record(it) ?: emptySet() }
         if (attackerIds.isEmpty()) return 0
         val predicateContext = when (ctx) {
             is Resolution -> PredicateContext.fromEffectContext(ctx.effectContext)
@@ -1600,15 +1739,30 @@ class ConditionEvaluator(
                 controllerId = resolvePlayer(state, Player.You, ctx) ?: playerIds.first()
             )
         }
-        val projected = ctx.projectedStateFor(state)
-        var matches = 0
-        for (id in attackerIds) {
-            if (predicates.matches(state, projected, id, filter, predicateContext)) {
-                matches++
-                if (matches >= cap) return matches
+        val matched = mutableSetOf<EntityId>()
+        val snapshotted = mutableSetOf<EntityId>()
+        for (container in containers) {
+            for (snapshot in declaredAs(container)) {
+                if (snapshot.entityId !in attackerIds) continue
+                snapshotted += snapshot.entityId
+                if (snapshot.entityId in matched) continue
+                if (predicates.matchesSnapshot(state, snapshot, filter, predicateContext, zone = com.wingedsheep.sdk.core.Zone.BATTLEFIELD)) {
+                    matched += snapshot.entityId
+                    if (matched.size >= cap) return matched.size
+                }
             }
         }
-        return matches
+        val legacy = attackerIds - snapshotted - matched
+        if (legacy.isNotEmpty()) {
+            val projected = ctx.projectedStateFor(state)
+            for (id in legacy) {
+                if (predicates.matches(state, projected, id, filter, predicateContext)) {
+                    matched += id
+                    if (matched.size >= cap) return matched.size
+                }
+            }
+        }
+        return matched.size
     }
 
     private fun evaluateAttackedPlayerThisTurnCtx(
@@ -1730,22 +1884,36 @@ class ConditionEvaluator(
         return context.controllerId == sourceController
     }
 
-    private fun evaluateWasCast(state: GameState, context: EffectContext): Boolean {
-        // For spells resolving, any non-null castFromZone means the spell is being cast
-        if (context.castFromZone != null) return true
-        // For permanents (e.g., ETB triggers), check the cast-from-zone markers added
-        // when the spell resolved. Reanimated, token, and "put onto battlefield"
-        // permanents lack these markers and are correctly excluded.
-        val sourceId = context.sourceId ?: return false
-        return state.getEntity(sourceId)?.has<WasCastComponent>() == true
-    }
+    /** The zone a resolving spell was cast from; null under projection, which only sees permanents. */
+    private fun ConditionEvaluationContext.castFromZone(): Zone? =
+        (this as? ConditionEvaluationContext.Resolution)?.effectContext?.castFromZone
 
-    private fun evaluateWasCastFromHand(state: GameState, context: EffectContext): Boolean {
-        // For spells resolving, check context.castFromZone (set from SpellOnStackComponent)
-        if (context.castFromZone == Zone.HAND) return true
-        // For permanents (triggered abilities), fall back to battlefield component
-        val sourceId = context.sourceId ?: return false
-        return state.getEntity(sourceId)?.has<CastFromHandComponent>() == true
+    /**
+     * The resolving ability's snapshot of its source as it left the battlefield, when it has left
+     * since the ability triggered or was activated (CR 608.2h); null while the source is still the
+     * same object, and under projection.
+     */
+    private fun ConditionEvaluationContext.departedSourceSnapshot() =
+        (this as? ConditionEvaluationContext.Resolution)?.effectContext?.lastKnownSourceSnapshot
+            ?.takeIf { it.entityId == sourceId }
+
+    private fun evaluateWasCast(
+        state: GameState,
+        castFromZone: Zone?,
+        sourceId: EntityId?,
+        departed: com.wingedsheep.engine.state.components.stack.EntitySnapshot?
+    ): Boolean {
+        // For spells resolving, any non-null castFromZone means the spell is being cast
+        if (castFromZone != null) return true
+        // An "if you cast it" intervening-if rechecked on resolution (CR 603.4) after its source
+        // left reads last-known information: the marker was stripped by the zone change, so a
+        // Retriever Phoenix that died with its trigger on the stack still learns (ruling).
+        departed?.let { return it.wasCast }
+        // For permanents (ETB triggers, static gates), check the cast marker added when the spell
+        // resolved. Reanimated, token, and "put onto battlefield" permanents lack it and are
+        // correctly excluded; it is stripped when the permanent changes zones (CR 400.7).
+        sourceId ?: return false
+        return state.getEntity(sourceId)?.has<WasCastComponent>() == true
     }
 
     /**
@@ -1765,15 +1933,28 @@ class ConditionEvaluator(
         return state.zones.any { (key, ids) -> key.zoneType in condition.zones && sourceId in ids }
     }
 
-    private fun evaluateWasCastFromZone(state: GameState, condition: WasCastFromZone, context: EffectContext): Boolean {
-        // For spells resolving, check context.castFromZone (set from SpellOnStackComponent)
-        if (context.castFromZone == condition.zone) return true
+    private fun evaluateWasCastFromZone(
+        state: GameState,
+        zone: Zone,
+        castFromZone: Zone?,
+        sourceId: EntityId?,
+        departed: com.wingedsheep.engine.state.components.stack.EntitySnapshot?
+    ): Boolean {
+        // For spells resolving, check castFromZone (set from SpellOnStackComponent)
+        if (castFromZone == zone) return true
+        // Source gone since the ability went on the stack: its last-known cast origin (see evaluateWasCast).
+        departed?.let { return it.castFromZone == zone }
         // For permanents (e.g. an entering creature's own "enters with a counter if cast from
-        // graveyard" replacement, or a triggered ability), fall back to the cast-origin marker
-        // component stamped on the permanent as it resolved onto the battlefield.
-        val sourceId = context.sourceId ?: return false
+        // graveyard" replacement, a triggered ability, or a static gate), fall back to the
+        // cast-origin marker component stamped on the permanent as it resolved onto the battlefield.
+        sourceId ?: return false
         val entity = state.getEntity(sourceId) ?: return false
-        return when (condition.zone) {
+        return castFromMarker(entity, zone)
+    }
+
+    /** The cast-origin marker stamped on a permanent as it resolved from a spell cast from [zone]. */
+    private fun castFromMarker(entity: com.wingedsheep.engine.state.ComponentContainer, zone: Zone): Boolean =
+        when (zone) {
             Zone.HAND -> entity.has<CastFromHandComponent>()
             Zone.GRAVEYARD -> entity.has<CastFromGraveyardComponent>()
             Zone.LIBRARY -> entity.has<CastFromLibraryComponent>()
@@ -1782,7 +1963,6 @@ class ConditionEvaluator(
                 >()
             else -> false
         }
-    }
 
     /**
      * "if it wasn't cast or no mana was spent to cast it." The engine stamps a
@@ -1816,19 +1996,23 @@ class ConditionEvaluator(
     }
 
     /**
-     * "If one or more of them entered from exile or was cast from exile" — an *any* over the
-     * batch-enters capture, the exile twin of
-     * [evaluateTriggeringEntityEnteredOrWasCastFromGraveyard]. An empty capture is false: nothing
-     * entered from exile.
+     * "If one or more of them entered from [zone] or was cast from [zone]" — an *any* over the
+     * batch-enters capture; the batch counterpart of
+     * [evaluateTriggeringEntityEnteredOrWasCastFrom], reading the same provenance markers.
+     * An empty capture is false: nothing entered from [zone].
      */
-    private fun evaluateAnyEnteredOrWasCastFromExile(state: GameState, context: EffectContext): Boolean {
+    private fun evaluateAnyEnteredOrWasCastFrom(state: GameState, zone: Zone, context: EffectContext): Boolean {
         val captured = context.pipeline.storedCollections[PipelineState.TRIGGER_CAPTURED_COLLECTION].orEmpty()
         return captured.any { entityId ->
             val entity = state.getEntity(entityId) ?: return@any false
-            entity.has<com.wingedsheep.engine.state.components.battlefield.CastFromExileComponent>() ||
-                entity.has<com.wingedsheep.engine.state.components.battlefield.EnteredFromExileComponent>()
+            enteredOrWasCastFrom(entity, zone)
         }
     }
+
+    /** Whether [entity] carries the entered-from or cast-from provenance marker for [zone]. */
+    private fun enteredOrWasCastFrom(entity: com.wingedsheep.engine.state.ComponentContainer, zone: Zone): Boolean =
+        castFromMarker(entity, zone) ||
+            entity.get<com.wingedsheep.engine.state.components.battlefield.EnteredFromZoneComponent>()?.zone == zone
 
     /**
      * Triggering-entity counterpart of [evaluateNoManaSpentToCast] for a spell still on the stack
@@ -2123,19 +2307,29 @@ class ConditionEvaluator(
      * it" triggers where the source is a separate permanent. Tokens, reanimated, and
      * "put onto the battlefield" permanents lack these markers and are correctly excluded.
      */
-    private fun evaluateTriggeringEntityWasCast(state: GameState, context: EffectContext): Boolean {
+    private fun evaluateTriggeringEntityWasCast(state: GameState, context: EffectContext, zone: Zone?): Boolean {
         val entityId = context.triggeringEntityId ?: return false
-        return state.getEntity(entityId)?.has<WasCastComponent>() == true
+        val entity = state.getEntity(entityId) ?: return false
+        if (!entity.has<WasCastComponent>()) return false
+        return zone == null || castFromMarker(entity, zone)
     }
 
-    private fun evaluateTriggeringEntityEnteredOrWasCastFromGraveyard(
+    private fun evaluateTriggeringEntityEnteredOrWasCastFrom(
         state: GameState,
+        zone: Zone,
         context: EffectContext
     ): Boolean {
         val entityId = context.triggeringEntityId ?: return false
+        // The triggering permanent may have left since the ability triggered (Fblthp shuffled
+        // away in response to its own enters trigger): the zone change stripped its provenance
+        // markers, so read the last-known record frozen for it (CR 608.2h).
+        val departed = context.triggerContext?.triggeringLastKnownSnapshot?.takeIf { it.entityId == entityId }
+            ?: context.lastKnownSourceSnapshot?.takeIf { it.entityId == entityId }
+        departed?.let {
+            return it.castFromZone == zone || it.enteredFromZone == zone
+        }
         val entity = state.getEntity(entityId) ?: return false
-        return entity.has<com.wingedsheep.engine.state.components.battlefield.CastFromGraveyardComponent>() ||
-            entity.has<com.wingedsheep.engine.state.components.battlefield.EnteredFromGraveyardComponent>()
+        return enteredOrWasCastFrom(entity, zone)
     }
 
     private fun evaluateTriggeringEntityWasNotPutByThisSource(
@@ -2282,8 +2476,8 @@ class ConditionEvaluator(
         val marked = state.getEntity(entityId)
             ?.get<com.wingedsheep.engine.state.components.battlefield.DamageComponent>()
             ?.amount ?: 0
-        val toughness = projected.getToughness(entityId) ?: return false
-        return marked > toughness
+        // Past lethal: toughness, or power under a lethal-damage-by-power rule (Zilortha).
+        return marked > projected.lethalDamageThreshold(entityId)
     }
 
     /**
@@ -2363,8 +2557,9 @@ class ConditionEvaluator(
         val card = entity.get<CardComponent>() ?: return false
         val triggeringRecord = CastSpellRecord(
             typeLine = card.typeLine,
-            manaValue = card.manaValue,
-            colors = card.colors,
+            // On the stack an {X} counts as its chosen X (CR 202.3e), matching the SpellCastEvent.
+            manaValue = ManaValues.of(state, triggeringId, card),
+            colors = state.projectedState.colorSetOf(triggeringId),
             isFaceDown = entity.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>(),
             name = card.name
         )
@@ -2378,18 +2573,6 @@ class ConditionEvaluator(
         val records = state.spellsCastThisTurnByPlayer[context.controllerId] ?: return false
         return records.count { com.wingedsheep.sdk.core.Subtype.TREASURE in it.spentManaSubtypes } == 1 &&
             records.lastOrNull()?.spentManaSubtypes?.contains(com.wingedsheep.sdk.core.Subtype.TREASURE) == true
-    }
-
-    private fun evaluateSourceAbilityResolvedNTimes(
-        state: GameState,
-        condition: SourceAbilityResolvedNTimesThisTurn,
-        context: EffectContext
-    ): Boolean {
-        val sourceId = context.sourceId ?: return false
-        val component = state.getEntity(sourceId)
-            ?.get<com.wingedsheep.engine.state.components.battlefield.AbilityResolutionCountThisTurnComponent>()
-            ?: return false
-        return component.count == condition.count
     }
 
     private fun evaluateCollectionContainsMatch(
@@ -2423,11 +2606,19 @@ class ConditionEvaluator(
         context: EffectContext
     ): Boolean {
         val collection = context.pipeline.storedCollections[condition.collection] ?: return false
-        if (collection.size < 2) return false
-        val seenTypes = mutableSetOf<com.wingedsheep.sdk.core.CardType>()
         val unknown = context.pipeline.storedCollections[
             com.wingedsheep.engine.handlers.effects.EffectDiscardDestinations.UNDEFINED + ":" + condition.collection
         ].orEmpty().toSet()
+        if (condition.all) {
+            // "All of those cards share a card type": one card type common to every card.
+            val typeSets = collection.filter { it !in unknown }.map { entityId ->
+                state.getEntity(entityId)?.get<CardComponent>()?.typeLine?.cardTypes.orEmpty()
+            }
+            if (typeSets.isEmpty()) return false
+            return typeSets.reduce { acc, types -> acc intersect types }.isNotEmpty()
+        }
+        if (collection.size < 2) return false
+        val seenTypes = mutableSetOf<com.wingedsheep.sdk.core.CardType>()
         for (entityId in collection) {
             if (entityId in unknown) continue
             val cardTypes = state.getEntity(entityId)?.get<CardComponent>()?.typeLine?.cardTypes ?: continue

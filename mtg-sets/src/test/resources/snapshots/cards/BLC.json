@@ -178,101 +178,126 @@
     ]
 }
 
-// Arcane Signet
+// Arthur, Marigold Knight
 {
-    "name": "Arcane Signet",
-    "manaCost": "{2}",
-    "typeLine": "Artifact",
-    "oracleText": "{T}: Add one mana of any color in your commander's color identity.",
+    "name": "Arthur, Marigold Knight",
+    "manaCost": "{2}{U}{R}{W}",
+    "typeLine": "Legendary Creature — Mouse Knight",
+    "oracleText": "Haste\nWhenever Arthur and at least one other creature attack, look at the top six cards of your library. You may put a creature card from among them onto the battlefield tapped and attacking. Put the rest on the bottom of your library in a random order. Return that creature to its owner's hand at end of combat.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 5
+    },
+    "keywords": [
+        "HASTE"
+    ],
     "script": {
-        "activatedAbilities": [
+        "triggeredAbilities": [
             {
-                "id": "Arcane Signet:1",
-                "cost": "CostTap",
-                "effect": {
-                    "type": "AddManaOfChoice",
-                    "colorSet": "ManaColorSet.CommanderIdentity"
+                "id": "Arthur, Marigold Knight:1",
+                "trigger": {
+                    "type": "AttackEvent",
+                    "requires": [
+                        {
+                            "type": "AttackerCountAtLeast",
+                            "n": 2
+                        }
+                    ]
                 },
-                "timing": "ManaAbility",
-                "isManaAbility": true
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 6
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "creature",
+                            "storeSelected": "selected1",
+                            "storeRemainder": "remainder1",
+                            "prompt": "You may put a creature card onto the battlefield tapped and attacking",
+                            "selectedLabel": "Put onto the battlefield tapped and attacking",
+                            "remainderLabel": "Put on the bottom of your library",
+                            "showAllCards": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield",
+                                "placement": "TappedAndAttacking"
+                            },
+                            "storeMovedAs": "moved2"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "remainder1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "placement": "Bottom"
+                            },
+                            "order": "Random"
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Collection",
+                                "collection": "moved2"
+                            },
+                            "body": {
+                                "type": "CreateDelayedTrigger",
+                                "step": "END_COMBAT",
+                                "effect": {
+                                    "type": "MoveToZone",
+                                    "target": "IterationEntity",
+                                    "destination": "Hand"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever Arthur and at least one other creature attack, look at the top six cards of your library. You may put a creature card from among them onto the battlefield tapped and attacking. Put the rest on the bottom of your library in a random order. Return that creature to its owner's hand at end of combat."
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "127",
-        "artist": "Ioannis Fiore",
-        "flavorText": "The dark nights of Valley hold no horrors for batfolk clerics and warriors.",
-        "imageUri": "https://cards.scryfall.io/normal/front/2/8/28180667-cc1e-4f64-9a69-00425ef85ba0.jpg?1721428800",
+        "collectorNumber": "5",
+        "rarity": "MYTHIC",
+        "artist": "Steven Belledin",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/b/9b3603aa-58a2-41d4-a58f-2b3306876e35.jpg?1783910738",
         "rulings": [
             {
-                "date": "2020-11-10",
-                "text": "If your commander is a card that has no colors in its color identity, Arcane Signet's ability produces no mana. It doesn't produce {C}."
+                "date": "2024-07-26",
+                "text": "You choose the player, planeswalker, or battle the creature you put onto the battlefield is attacking. It doesn't have to be the same player, planeswalker, or battle that Arthur or any other attacking creatures are attacking."
             },
             {
-                "date": "2020-11-10",
-                "text": "If you have two commanders, the ability adds one mana of any color in their combined color identities."
-            },
-            {
-                "date": "2020-11-10",
-                "text": "If you don't have a commander, Arcane Signet's ability produces no mana."
+                "date": "2024-07-26",
+                "text": "Although the creature you put onto the battlefield is attacking, it was never declared as an attacking creature. Abilities that trigger whenever a creature attacks won't trigger when that creature enters attacking."
             }
         ]
-    },
-    "colorIdentityOverride": []
-}
-
-// Beast Within
-{
-    "name": "Beast Within",
-    "manaCost": "{2}{G}",
-    "typeLine": "Instant",
-    "oracleText": "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
-    "script": {
-        "spellEffect": {
-            "type": "Composite",
-            "effects": [
-                {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "destination": "Graveyard",
-                    "byDestruction": true
-                },
-                {
-                    "type": "CreateToken",
-                    "power": 3,
-                    "toughness": 3,
-                    "colors": [
-                        "GREEN"
-                    ],
-                    "creatureTypes": [
-                        "Beast"
-                    ],
-                    "imageUri": "https://cards.scryfall.io/normal/front/d/9/d93d0098-2147-4e84-af15-91dec8b98d21.jpg?1721427669",
-                    "controller": "TargetController"
-                }
-            ]
-        },
-        "targetRequirements": [
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "permanent"
-                },
-                "id": "t0"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "206",
-        "rarity": "UNCOMMON",
-        "artist": "Efflam Mercier",
-        "imageUri": "https://cards.scryfall.io/normal/front/6/0/601c59cf-f3df-4003-9ae9-613a1d4a620b.jpg?1721429205"
     },
     "colorIdentityOverride": [
-        "GREEN"
+        "BLUE",
+        "RED",
+        "WHITE"
     ]
 }
 
@@ -1023,175 +1048,199 @@
     ]
 }
 
-// Decimate
+// Communal Brewing
 {
-    "name": "Decimate",
-    "manaCost": "{2}{R}{G}",
-    "typeLine": "Sorcery",
-    "oracleText": "Destroy target artifact, target creature, target enchantment, and target land. (You can't cast this spell unless you have legal choices for all its targets.)",
-    "script": {
-        "spellEffect": {
-            "type": "Composite",
-            "effects": [
-                {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    },
-                    "destination": "Graveyard",
-                    "byDestruction": true
-                },
-                {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t1"
-                    },
-                    "destination": "Graveyard",
-                    "byDestruction": true
-                },
-                {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t2"
-                    },
-                    "destination": "Graveyard",
-                    "byDestruction": true
-                },
-                {
-                    "type": "MoveToZone",
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t3"
-                    },
-                    "destination": "Graveyard",
-                    "byDestruction": true
-                }
-            ]
-        },
-        "targetRequirements": [
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "artifact"
-                },
-                "id": "t0"
-            },
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "creature"
-                },
-                "id": "t1"
-            },
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "enchantment"
-                },
-                "id": "t2"
-            },
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "land"
-                },
-                "id": "t3"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "251",
-        "rarity": "RARE",
-        "artist": "Zoltan Boros",
-        "flavorText": "Anarchy comes in many forms: social, individual, Gruul . . .",
-        "imageUri": "https://cards.scryfall.io/normal/front/e/d/ed38da33-c230-4eec-b7c7-3b0c5cdf727a.jpg?1721429459"
-    },
-    "colorIdentityOverride": [
-        "RED",
-        "GREEN"
-    ]
-}
-
-// Etali, Primal Storm
-{
-    "name": "Etali, Primal Storm",
-    "manaCost": "{4}{R}{R}",
-    "typeLine": "Legendary Creature — Elder Dinosaur",
-    "oracleText": "Whenever Etali, Primal Storm attacks, exile the top card of each player's library, then you may cast any number of spells from among those cards without paying their mana costs.",
-    "creatureStats": {
-        "power": 6,
-        "toughness": 6
-    },
+    "name": "Communal Brewing",
+    "manaCost": "{2}{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "When this enchantment enters, any number of target opponents each draw a card. Put an ingredient counter on this enchantment, then put an ingredient counter on it for each card drawn this way.\nWhenever you cast a creature spell, that creature enters with X additional +1/+1 counters on it, where X is the number of ingredient counters on this enchantment.",
     "script": {
         "triggeredAbilities": [
             {
-                "id": "Etali, Primal Storm:1",
-                "trigger": "AttackEvent",
+                "id": "Communal Brewing:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
                 "effect": {
                     "type": "Composite",
                     "effects": [
                         {
-                            "type": "GatherCards",
-                            "source": {
-                                "type": "TopOfLibrary",
+                            "type": "StoreNumber",
+                            "name": "number0",
+                            "amount": {
+                                "type": "TurnTracking",
+                                "player": "EachOpponent",
+                                "tracker": "CARDS_DRAWN"
+                            }
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": "IterationSpace.Targets",
+                            "body": {
+                                "type": "DrawCards",
                                 "count": {
                                     "type": "Fixed",
                                     "amount": 1
                                 },
-                                "player": "Each"
-                            },
-                            "storeAs": "gathered0"
-                        },
-                        {
-                            "type": "MoveCollection",
-                            "from": "gathered0",
-                            "destination": {
-                                "type": "ToZone",
-                                "zone": "Exile"
+                                "target": {
+                                    "type": "ContextTarget",
+                                    "index": 0
+                                }
                             }
                         },
                         {
-                            "type": "FilterCollection",
-                            "from": "gathered0",
-                            "filter": "nonland",
-                            "storeMatching": "matching2"
+                            "type": "AddCounters",
+                            "counterType": "INGREDIENT",
+                            "count": 1,
+                            "target": "Self"
                         },
                         {
-                            "type": "CastAnyNumberFromCollectionWithoutPayingCost",
-                            "from": "matching2"
+                            "type": "AddDynamicCounters",
+                            "counterType": "INGREDIENT",
+                            "amount": {
+                                "type": "Subtract",
+                                "left": {
+                                    "type": "TurnTracking",
+                                    "player": "EachOpponent",
+                                    "tracker": "CARDS_DRAWN"
+                                },
+                                "right": {
+                                    "type": "VariableReference",
+                                    "variableName": "number0"
+                                }
+                            },
+                            "target": "Self"
                         }
                     ]
+                },
+                "targetRequirement": {
+                    "type": "TargetOpponent",
+                    "unlimited": true,
+                    "id": "t0"
+                }
+            },
+            {
+                "id": "Communal Brewing:2",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsCreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddDynamicCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "amount": {
+                        "type": "EntityProperty",
+                        "entity": "Self",
+                        "numericProperty": {
+                            "type": "CounterCount",
+                            "counterType": "INGREDIENT"
+                        }
+                    },
+                    "target": "TriggeringEntity"
                 }
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "196",
+        "collectorNumber": "29",
         "rarity": "RARE",
-        "artist": "Raymond Swanland",
-        "flavorText": "The storm rages and the earth breaks.",
-        "imageUri": "https://cards.scryfall.io/normal/front/8/d/8dd1b0e5-b197-4e8a-a34f-e0b16a928fb0.jpg?1721429153",
+        "artist": "Andreia Ugrai",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/c/acf6399f-f389-4b13-8563-a078a5d198f4.jpg?1783910728",
         "rulings": [
             {
-                "date": "2021-03-19",
-                "text": "If you cast any of the exiled cards, you do so as part of the resolution of the triggered ability. You can't wait to cast them later in the turn."
+                "date": "2024-07-26",
+                "text": "You don't have to choose any target opponents for Communal Brewing's first ability. However, if you do, and all of those targets are illegal as the ability tries to resolve, it won't resolve and none of its effects will happen. No players will draw cards, and you won't put any ingredient counters on Communal Brewing."
             },
             {
-                "date": "2021-03-19",
-                "text": "If you cast a card \"without paying its mana cost,\" you can't pay any alternative costs. You can, however, pay additional costs."
+                "date": "2024-07-26",
+                "text": "The value of X is calculated as Communal Brewing's last ability resolves."
             },
             {
-                "date": "2021-03-19",
-                "text": "Any cards not cast, including land cards, remain in exile. They can't be cast on later turns, even if Etali attacks again."
-            },
-            {
-                "date": "2021-03-19",
-                "text": "Because all attacking creatures are chosen at once, a creature cast this way can't attack during the same combat as Etali, even if it has haste."
+                "date": "2024-07-26",
+                "text": "If Communal Brewing leaves the battlefield before its last ability resolves, use the number of ingredient counters that were on it as it last existed on the battlefield to determine the value of X."
             }
         ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Echoing Assault
+{
+    "name": "Echoing Assault",
+    "manaCost": "{4}{R}",
+    "typeLine": "Enchantment",
+    "oracleText": "Creature tokens you control have menace.\nWhenever you attack a player, choose target nontoken creature that's attacking that player. Create a token that's a copy of that creature, except it's 1/1. The token enters tapped and attacking that player. Sacrifice it at the beginning of the next end step.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Echoing Assault:1",
+                "trigger": {
+                    "type": "YouAttackEvent",
+                    "attackedPlayer": "Each"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateTokenCopyOfTarget",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "overridePower": 1,
+                    "overrideToughness": 1,
+                    "tapped": true,
+                    "attacking": true,
+                    "sacrificeAtStep": "END",
+                    "attackedPlayer": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsCreature",
+                                "IsNontoken"
+                            ],
+                            "statePredicates": [
+                                {
+                                    "type": "IsAttackingPlayer",
+                                    "player": {
+                                        "type": "PlayerRef",
+                                        "player": "TriggeringPlayer"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "id": "t0"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantKeyword",
+                "keyword": "MENACE",
+                "filter": {
+                    "baseFilter": "creature token ctrl:you"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "24",
+        "rarity": "RARE",
+        "artist": "Bram Sels",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/2/3213bfee-c0a0-49a2-9080-cdaa09b414c5.jpg?1783910732"
     },
     "colorIdentityOverride": [
         "RED"
@@ -1424,7 +1473,10 @@
             "effects": [
                 {
                     "type": "PlayAdditionalLands",
-                    "count": 1
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
                 },
                 {
                     "type": "DrawCards",
@@ -1461,131 +1513,963 @@
     ]
 }
 
-// Grothama, All-Devouring
+// Fisher's Talent
 {
-    "name": "Grothama, All-Devouring",
-    "manaCost": "{3}{G}{G}",
-    "typeLine": "Legendary Creature — Wurm",
-    "oracleText": "Other creatures have \"Whenever this creature attacks, you may have it fight Grothama, All-Devouring.\"\nWhen Grothama, All-Devouring leaves the battlefield, each player draws cards equal to the amount of damage dealt to Grothama this turn by sources they controlled.",
-    "creatureStats": {
-        "power": 10,
-        "toughness": 8
-    },
+    "name": "Fisher's Talent",
+    "manaCost": "{2}{G}{U}",
+    "typeLine": "Enchantment — Class",
+    "oracleText": "(Gain the next level as a sorcery to add its ability.)\nAt the beginning of your upkeep, look at the top card of your library. You may reveal it if it's a land card. Create a 1/1 blue Fish creature token if you revealed it this way. Then draw a card.\n{G}{U}: Level 2\nIf you would create a Fish token, create a 3/3 blue Shark creature token instead.\n{2}{G}{U}: Level 3\nIf you would create a Shark token, create an 8/8 blue Octopus creature token instead.",
     "script": {
         "triggeredAbilities": [
             {
-                "id": "Grothama, All-Devouring:2",
+                "id": "Fisher's Talent:1",
                 "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "from": "Battlefield"
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
                 },
-                "effect": "EachPlayerDrawsForDamageDealtToSource"
-            }
-        ],
-        "staticAbilities": [
-            {
-                "type": "GrantTriggeredAbility",
-                "ability": {
-                    "id": "Grothama, All-Devouring:1",
-                    "trigger": "AttackEvent",
-                    "effect": {
-                        "type": "Gated",
-                        "gate": "Gate.MayDecide",
-                        "then": {
-                            "type": "Fight",
-                            "target1": "Self",
-                            "target2": {
-                                "type": "BoundVariable",
-                                "name": "t0"
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "filter": "land",
+                            "storeSelected": "selected1",
+                            "prompt": "You may reveal the top card of your library if it's a land card",
+                            "selectedLabel": "Reveal",
+                            "showAllCards": true
+                        },
+                        {
+                            "type": "RevealCollection",
+                            "from": "selected1",
+                            "revealToSelf": false
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "CollectionContainsMatch",
+                                    "collection": "selected1",
+                                    "filter": "land"
+                                }
+                            },
+                            "then": {
+                                "type": "CreateToken",
+                                "power": 1,
+                                "toughness": 1,
+                                "colors": [
+                                    "BLUE"
+                                ],
+                                "creatureTypes": [
+                                    "Fish"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/d/e/de0d6700-49f0-4233-97ba-cef7821c30ed.jpg?1721431109"
+                            }
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
                             }
                         }
-                    },
-                    "targetRequirement": {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature name:Grothama, All-Devouring"
-                        },
-                        "id": "t0"
-                    }
+                    ]
                 },
-                "filter": {
-                    "baseFilter": "creature",
-                    "excludeSelf": true
-                }
+                "descriptionOverride": "At the beginning of your upkeep, look at the top card of your library. You may reveal it if it's a land card. Create a 1/1 blue Fish creature token if you revealed it this way. Then draw a card."
+            }
+        ],
+        "classLevels": [
+            {
+                "level": 2,
+                "cost": "{G}{U}",
+                "replacementEffects": [
+                    {
+                        "type": "ReplaceTokenCreationWithToken",
+                        "tokens": [
+                            {
+                                "type": "CreateToken",
+                                "power": 3,
+                                "toughness": 3,
+                                "colors": [
+                                    "BLUE"
+                                ],
+                                "creatureTypes": [
+                                    "Shark"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/f/9/f9424ef2-d271-4929-83e0-12775420bac3.jpg?1783909757"
+                            }
+                        ],
+                        "appliesTo": {
+                            "type": "TokenCreationEvent",
+                            "tokenFilter": "Fish"
+                        }
+                    }
+                ]
+            },
+            {
+                "level": 3,
+                "cost": "{2}{G}{U}",
+                "replacementEffects": [
+                    {
+                        "type": "ReplaceTokenCreationWithToken",
+                        "tokens": [
+                            {
+                                "type": "CreateToken",
+                                "power": 8,
+                                "toughness": 8,
+                                "colors": [
+                                    "BLUE"
+                                ],
+                                "creatureTypes": [
+                                    "Octopus"
+                                ],
+                                "imageUri": "https://cards.scryfall.io/normal/front/9/f/9fc10475-5eaf-47ea-a45c-3948a632f365.jpg?1783909757"
+                            }
+                        ],
+                        "appliesTo": {
+                            "type": "TokenCreationEvent",
+                            "tokenFilter": "Shark"
+                        }
+                    }
+                ]
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "224",
+        "collectorNumber": "36",
         "rarity": "RARE",
-        "artist": "Filip Burburan",
-        "imageUri": "https://cards.scryfall.io/normal/front/0/8/08b5301b-9f3c-4fb2-a308-a47a16c08fc0.jpg?1721429302"
+        "artist": "Allen Douglas",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/7/47f0e0b9-d137-46ac-a6e4-13a529e30bb5.jpg?1783910727",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "You don't have to reveal the card if it's a land card. (Maybe you're not in the mood for fish. That's okay.)"
+            },
+            {
+                "date": "2024-07-26",
+                "text": "The level 2 and level 3 class abilities of Fisher's Talent will replace any Fish or Shark tokens you create, not just ones created by the abilities of Fisher's Talent."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "Gaining a level won't remove abilities that a Class had at a previous level."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE"
+    ]
+}
+
+// Flubs, the Fool
+{
+    "name": "Flubs, the Fool",
+    "manaCost": "{G}{U}{R}",
+    "typeLine": "Legendary Creature — Frog Scout",
+    "oracleText": "You may play an additional land on each of your turns.\nWhenever you play a land or cast a spell, draw a card if you have no cards in hand. Otherwise, discard a card.",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 5
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Flubs, the Fool:1",
+                "trigger": "LandPlayedEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Exists",
+                            "player": "You",
+                            "zone": "Hand",
+                            "negate": true
+                        }
+                    },
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "otherwise": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand"
+                                },
+                                "storeAs": "hand"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "hand",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "discarded",
+                                "prompt": "Choose 1 card to discard"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "discarded",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Discard"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "Flubs, the Fool:2",
+                "trigger": "SpellCastEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Exists",
+                            "player": "You",
+                            "zone": "Hand",
+                            "negate": true
+                        }
+                    },
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "otherwise": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "FromZone",
+                                    "zone": "Hand"
+                                },
+                                "storeAs": "hand"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "hand",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "discarded",
+                                "prompt": "Choose 1 card to discard"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "discarded",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Discard"
+                            }
+                        ]
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            "GrantAdditionalLandDrop"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "356",
+        "rarity": "MYTHIC",
+        "artist": "Adam Rex",
+        "flavorText": "He knows exactly where he's going and exactly how he isn't getting there.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/1/41e58eb8-e5b9-4ef6-be1f-00e28cebb998.jpg?1783910621"
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE",
+        "RED"
+    ]
+}
+
+// Fortune Teller's Talent
+{
+    "name": "Fortune Teller's Talent",
+    "manaCost": "{U}",
+    "typeLine": "Enchantment — Class",
+    "oracleText": "(Gain the next level as a sorcery to add its ability.)\nYou may look at the top card of your library any time.\n{3}{U}: Level 2\nAs long as you've cast a spell this turn, you may play cards from the top of your library.\n{2}{U}: Level 3\nSpells you cast from anywhere other than your hand cost {2} less to cast.",
+    "script": {
+        "staticAbilities": [
+            "LookAtTopOfLibrary"
+        ],
+        "classLevels": [
+            {
+                "level": 2,
+                "cost": "{3}{U}",
+                "staticAbilities": [
+                    {
+                        "type": "ConditionalStaticAbility",
+                        "ability": {
+                            "type": "PlayLandsAndCastFilteredFromTopOfLibrary",
+                            "spellFilter": {}
+                        },
+                        "condition": {
+                            "type": "PlayerCastSpellsThisTurn",
+                            "atLeast": 1
+                        }
+                    }
+                ]
+            },
+            {
+                "level": 3,
+                "cost": "{2}{U}",
+                "staticAbilities": [
+                    {
+                        "type": "ModifySpellCost",
+                        "target": {
+                            "type": "YouCastFromZones",
+                            "zones": [
+                                "Library",
+                                "Graveyard",
+                                "Exile",
+                                "Command"
+                            ]
+                        },
+                        "modification": {
+                            "type": "ReduceGeneric",
+                            "amount": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "14",
+        "rarity": "RARE",
+        "artist": "Jarel Threat",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/1/a1d43877-20ab-4e84-a597-4b5e03a6bf90.jpg?1783910734",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "You must pay all costs and follow all timing rules for lands played and spells cast from the top of your library this way."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "The cost reduction applies only to generic mana in the total cost of spells you cast from anywhere other than your hand."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "Gaining a level won't remove abilities that a Class had at a previous level."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Gourmand's Talent
+{
+    "name": "Gourmand's Talent",
+    "manaCost": "{G}",
+    "typeLine": "Enchantment — Class",
+    "oracleText": "(Gain the next level as a sorcery to add its ability.)\nDuring your turn, artifacts you control are Foods in addition to their other types and have \"{2}, {T}, Sacrifice this artifact: You gain 3 life.\"\n{2}{G}: Level 2\nWhenever you gain life for the first time each turn, create a 3/3 green Raccoon creature token.\n{3}{G}: Level 3\nWhenever you gain life for the first time each turn, put a +1/+1 counter on each creature you control.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantAdditionalTypesToGroup",
+                    "filter": {
+                        "baseFilter": "artifact ctrl:you"
+                    },
+                    "addSubtypes": [
+                        "Food"
+                    ]
+                },
+                "condition": "IsYourTurn"
+            },
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantActivatedAbility",
+                    "ability": {
+                        "id": "Gourmand's Talent:1",
+                        "cost": {
+                            "type": "CostComposite",
+                            "costs": [
+                                {
+                                    "type": "CostAtomWrapper",
+                                    "atom": {
+                                        "type": "AtomMana",
+                                        "cost": "{2}"
+                                    }
+                                },
+                                "CostTap",
+                                "CostSacrificeSelf"
+                            ]
+                        },
+                        "effect": {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 3
+                            }
+                        }
+                    },
+                    "filter": {
+                        "baseFilter": "artifact ctrl:you"
+                    }
+                },
+                "condition": "IsYourTurn"
+            }
+        ],
+        "classLevels": [
+            {
+                "level": 2,
+                "cost": "{2}{G}",
+                "triggeredAbilities": [
+                    {
+                        "id": "Gourmand's Talent:2",
+                        "trigger": {
+                            "type": "LifeGainEvent",
+                            "firstTimeEachTurn": true
+                        },
+                        "binding": "ANY",
+                        "effect": {
+                            "type": "CreateToken",
+                            "power": 3,
+                            "toughness": 3,
+                            "colors": [
+                                "GREEN"
+                            ],
+                            "creatureTypes": [
+                                "Raccoon"
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "level": 3,
+                "cost": "{3}{G}",
+                "triggeredAbilities": [
+                    {
+                        "id": "Gourmand's Talent:3",
+                        "trigger": {
+                            "type": "LifeGainEvent",
+                            "firstTimeEachTurn": true
+                        },
+                        "binding": "ANY",
+                        "effect": {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Group",
+                                "filter": {
+                                    "baseFilter": "creature ctrl:you"
+                                }
+                            },
+                            "body": {
+                                "type": "AddCounters",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                "count": 1,
+                                "target": "IterationEntity"
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "31",
+        "rarity": "RARE",
+        "artist": "Fiona Hsieh",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/9/89670a1b-a6f1-491d-bbb4-92e3382da653.jpg?1783910728",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "Gaining a level is a normal activated ability. It uses the stack and can be responded to."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "Gaining a level won't remove abilities that a Class had at a previous level."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "The artifacts retain any types, subtypes, supertypes, and abilities they have."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If Gourmand's Talent somehow becomes an artifact, it will also be a Food during your turn."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "The level 2 and level 3 class abilities of Gourmand's Talent won't trigger if you already gained life earlier in the turn on which it gained those levels, even if you gain life again later in the turn."
+            }
+        ]
     },
     "colorIdentityOverride": [
         "GREEN"
     ]
 }
 
-// Grumgully, the Generous
+// Hazel of the Rootbloom
 {
-    "name": "Grumgully, the Generous",
-    "manaCost": "{1}{R}{G}",
-    "typeLine": "Legendary Creature — Goblin Shaman",
-    "oracleText": "Each other non-Human creature you control enters with an additional +1/+1 counter on it.",
+    "name": "Hazel of the Rootbloom",
+    "manaCost": "{2}{B}{G}",
+    "typeLine": "Legendary Creature — Squirrel Druid",
+    "oracleText": "{T}, Pay 2 life, Tap X untapped tokens you control: Add X mana in any combination of colors.\nAt the beginning of your end step, create a token that's a copy of target token you control. If that token is a Squirrel, instead create two tokens that are copies of it.",
     "creatureStats": {
         "power": 3,
-        "toughness": 3
+        "toughness": 5
     },
     "script": {
-        "replacementEffects": [
+        "triggeredAbilities": [
             {
-                "type": "EntersWithDynamicCounters",
-                "count": {
-                    "type": "Fixed",
-                    "amount": 1
+                "id": "Hazel of the Rootbloom:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END"
                 },
-                "otherOnly": true,
-                "appliesTo": {
-                    "type": "ZoneChangeEvent",
-                    "filter": {
-                        "cardPredicates": [
-                            "IsCreature",
-                            {
-                                "type": "NotSubtype",
-                                "subtype": "Human"
-                            }
-                        ],
-                        "controllerPredicate": "ControlledByYou"
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateTokenCopyOfTarget",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
+                    "count": {
+                        "type": "Conditional",
+                        "condition": {
+                            "type": "EntityMatches",
+                            "entity": {
+                                "type": "ContextTarget",
+                                "index": 0
+                            },
+                            "filter": "Squirrel"
+                        },
+                        "ifTrue": {
+                            "type": "Fixed",
+                            "amount": 2
+                        },
+                        "ifFalse": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "token ctrl:you"
+                    },
+                    "id": "t0"
+                }
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Hazel of the Rootbloom:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomPayLife",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            }
+                        },
+                        {
+                            "type": "CostTapXPermanents",
+                            "filter": "token"
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "AddDynamicMana",
+                    "amountSource": "XValue",
+                    "allowedColors": [
+                        "WHITE",
+                        "BLUE",
+                        "BLACK",
+                        "RED",
+                        "GREEN"
+                    ]
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "2",
+        "rarity": "MYTHIC",
+        "artist": "Anna Pavleeva",
+        "flavorText": "\"May all your caches be full.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/2/1269ca79-907e-4932-9e77-a9a5d2929060.jpg?1783910738",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "You can tap any untapped tokens you control, including creature tokens you control that you haven't controlled continuously since the beginning of your most recent turn, to pay the cost of Hazel of the Rootbloom's activated ability."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "The token (or tokens) you create copies the original characteristics of the token as stated by the effect that created that token (unless that token is copying something else; see below). It doesn't copy whether that token is tapped or untapped, whether it has any counters on it or Auras and Equipment attached to it, or any non-copy effects that have changed its power, toughness, types, color, or so on."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If the copied token is copying something else (for example, if the copied token is one previously created by this ability), then the token enters as whatever that token copied."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If the copied token has {X} in its mana cost, X is 0."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN"
+    ]
+}
+
+// Hazel's Brewmaster
+{
+    "name": "Hazel's Brewmaster",
+    "manaCost": "{3}{B}",
+    "typeLine": "Creature — Squirrel Warlock",
+    "oracleText": "Menace\nWhenever this creature enters or attacks, exile up to one target card from a graveyard and create a Food token.\nFoods you control have all activated abilities of all creature cards exiled with this creature.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "keywords": [
+        "MENACE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Hazel's Brewmaster:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
                     "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "destination": "Exile",
+                            "linkToSource": true
+                        },
+                        {
+                            "type": "CreatePredefinedToken",
+                            "tokenType": "Food"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": {},
+                        "zone": "Graveyard"
+                    },
+                    "id": "t0"
+                }
+            },
+            {
+                "id": "Hazel's Brewmaster:2",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "MoveToZone",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            },
+                            "destination": "Exile",
+                            "linkToSource": true
+                        },
+                        {
+                            "type": "CreatePredefinedToken",
+                            "tokenType": "Food"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": {},
+                        "zone": "Graveyard"
+                    },
+                    "id": "t1"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "HasAllActivatedAbilitiesOfCards",
+                "donors": "LinkedExile",
+                "cardFilter": "creature",
+                "receivedBy": {
+                    "baseFilter": "artifact Food ctrl:you"
                 }
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "253",
-        "rarity": "UNCOMMON",
-        "artist": "Milivoj Ćeran",
-        "flavorText": "\"Does it matter what it is? Take it and be grateful!\"",
-        "imageUri": "https://cards.scryfall.io/normal/front/d/8/d8d7ac51-450e-473e-93e1-3fa9b3b6e2d4.jpg?1721429470",
+        "collectorNumber": "17",
+        "rarity": "RARE",
+        "artist": "Simon Dominic",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/2/52af8b70-a9c8-40d7-99da-fa51dc293688.jpg?1783910733",
         "rulings": [
             {
-                "date": "2019-10-04",
-                "text": "A non-Human creature you control that would enter the battlefield with no +1/+1 counters on it enters with one +1/+1 counter on it."
+                "date": "2024-07-26",
+                "text": "You don't have to choose a target for Hazel's Brewmaster's second ability. However, if you do, and that target is illegal as the ability tries to resolve, it won't resolve and none of its effects will happen. You won't create a Food token."
             },
             {
-                "date": "2019-10-04",
-                "text": "Any other non-Human creatures that enter the battlefield at the same time as Grumgully won't get a +1/+1 counter."
+                "date": "2024-07-26",
+                "text": "Hazel's Brewmaster's last ability grants only activated abilities. It doesn't grant keyword abilities (unless those keyword abilities are activated), triggered abilities, or static abilities."
             },
             {
-                "date": "2019-10-04",
-                "text": "If a non-Human creature enters the battlefield as a copy of a Human creature, it won't get a +1/+1 counter. Similarly, if a Human enters as a non-Human creature, it will get a +1/+1 counter."
+                "date": "2024-07-26",
+                "text": "The granted abilities effectively use \"this permanent\" rather than \"[that card's name],\" so you treat the abilities as though they were printed on the permanent that gained the ability."
             }
         ]
     },
     "colorIdentityOverride": [
-        "RED",
-        "GREEN"
+        "BLACK"
+    ]
+}
+
+// Insatiable Frugivore
+{
+    "name": "Insatiable Frugivore",
+    "manaCost": "{3}{B}",
+    "typeLine": "Creature — Rat Berserker",
+    "oracleText": "When this creature enters, create a Food token, then you may exile three cards from your graveyard. If you do, repeat this process.\n{3}{B}, Sacrifice X Foods: Creatures you control get +X/+0 and gain menace until end of turn.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Insatiable Frugivore:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "RepeatWhile",
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "CreatePredefinedToken",
+                                "tokenType": "Food"
+                            },
+                            {
+                                "type": "Gated",
+                                "gate": {
+                                    "type": "Gate.WhenCondition",
+                                    "condition": {
+                                        "type": "Compare",
+                                        "left": {
+                                            "type": "Count",
+                                            "player": "You",
+                                            "zone": "Graveyard"
+                                        },
+                                        "operator": "GTE",
+                                        "right": {
+                                            "type": "Fixed",
+                                            "amount": 3
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "type": "Gated",
+                                    "gate": {
+                                        "type": "Gate.MayDecide",
+                                        "prompt": "Exile three cards from your graveyard to repeat this process?"
+                                    },
+                                    "then": {
+                                        "type": "Composite",
+                                        "effects": [
+                                            {
+                                                "type": "GatherCards",
+                                                "source": {
+                                                    "type": "FromZone",
+                                                    "zone": "Graveyard"
+                                                },
+                                                "storeAs": "gathered0"
+                                            },
+                                            {
+                                                "type": "SelectFromCollection",
+                                                "from": "gathered0",
+                                                "selection": {
+                                                    "type": "ChooseExactly",
+                                                    "count": {
+                                                        "type": "Fixed",
+                                                        "amount": 3
+                                                    }
+                                                },
+                                                "storeSelected": "frugivoreExiled",
+                                                "selectedLabel": "Exile"
+                                            },
+                                            {
+                                                "type": "MoveCollection",
+                                                "from": "frugivoreExiled",
+                                                "destination": {
+                                                    "type": "ToZone",
+                                                    "zone": "Exile"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "repeatCondition": {
+                        "type": "WhileCondition",
+                        "condition": {
+                            "type": "CollectionContainsMatch",
+                            "collection": "frugivoreExiled"
+                        }
+                    }
+                },
+                "descriptionOverride": "When this creature enters, create a Food token, then you may exile three cards from your graveyard. If you do, repeat this process."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Insatiable Frugivore:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{3}{B}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomVariablePermanents",
+                                "filter": "artifact Food",
+                                "minCount": 0,
+                                "excludeSelf": false,
+                                "action": "SACRIFICE",
+                                "xMeasure": "COUNT"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Group",
+                        "filter": {
+                            "baseFilter": "creature ctrl:you"
+                        }
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "ModifyStats",
+                                "powerModifier": "XValue",
+                                "toughnessModifier": {
+                                    "type": "Fixed",
+                                    "amount": 0
+                                },
+                                "target": "IterationEntity"
+                            },
+                            {
+                                "type": "GrantKeyword",
+                                "keyword": "MENACE",
+                                "target": "IterationEntity"
+                            }
+                        ]
+                    }
+                },
+                "descriptionOverride": "{3}{B}, Sacrifice X Foods: Creatures you control get +X/+0 and gain menace until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "18",
+        "rarity": "RARE",
+        "artist": "Ben Wootten",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/e/2ef58a8f-ce72-40c2-b032-818cc16267ce.jpg?1783910731",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "The process in Insatiable Frugivore's first ability is repeated until you decline to exile three cards from your graveyard. You can't try to exile three cards from your graveyard if you don't have at least three cards in your graveyard."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "You can choose 0 for the value of X in the cost of Insatiable Frugivore's last ability. If you do, creatures you control will just gain menace until end of turn."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -1691,6 +2575,9 @@
     },
     "keywords": [
         "REACH"
+    ],
+    "keywordAbilities": [
+        "Partner"
     ],
     "script": {
         "triggeredAbilities": [
@@ -1836,6 +2723,559 @@
     ]
 }
 
+// Mr. Foxglove
+{
+    "name": "Mr. Foxglove",
+    "manaCost": "{2}{G}{W}{U}",
+    "typeLine": "Legendary Creature — Fox Rogue",
+    "oracleText": "Lifelink\nWhenever Mr. Foxglove attacks, draw cards equal to the number of cards in defending player's hand minus the number of cards in your hand. If you didn't draw cards this way, you may put a creature card from your hand onto the battlefield.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 5
+    },
+    "keywords": [
+        "LIFELINK"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mr. Foxglove:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "StoreNumber",
+                            "name": "number0",
+                            "amount": {
+                                "type": "TurnTracking",
+                                "player": "You",
+                                "tracker": "CARDS_DRAWN"
+                            }
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "IfPositive",
+                                "amount": {
+                                    "type": "Subtract",
+                                    "left": {
+                                        "type": "Count",
+                                        "player": "DefendingPlayer",
+                                        "zone": "Hand"
+                                    },
+                                    "right": {
+                                        "type": "Count",
+                                        "player": "You",
+                                        "zone": "Hand"
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "Subtract",
+                                        "left": {
+                                            "type": "TurnTracking",
+                                            "player": "You",
+                                            "tracker": "CARDS_DRAWN"
+                                        },
+                                        "right": {
+                                            "type": "VariableReference",
+                                            "variableName": "number0"
+                                        }
+                                    },
+                                    "operator": "LTE",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 0
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "GatherCards",
+                                        "source": {
+                                            "type": "FromZone",
+                                            "zone": "Hand",
+                                            "filter": "creature"
+                                        },
+                                        "storeAs": "put_candidates"
+                                    },
+                                    {
+                                        "type": "SelectFromCollection",
+                                        "from": "put_candidates",
+                                        "selection": {
+                                            "type": "ChooseUpTo",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        "storeSelected": "putting"
+                                    },
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "putting",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Battlefield"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "6",
+        "rarity": "MYTHIC",
+        "artist": "Anna Podedworna",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/b/cba58beb-9524-46d4-ac63-119f19d9d44f.jpg?1783910737",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "If the number of cards in defending player's hand minus the number of cards in your hand is 0 or less, you won't draw any cards."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "WHITE",
+        "BLUE"
+    ]
+}
+
+// Ms. Bumbleflower
+{
+    "name": "Ms. Bumbleflower",
+    "manaCost": "{1}{G}{W}{U}",
+    "typeLine": "Legendary Creature — Rabbit Citizen",
+    "oracleText": "Vigilance\nWhenever you cast a spell, target opponent draws a card. Put a +1/+1 counter on target creature. It gains flying until end of turn. If this is the second time this ability has resolved this turn, you draw two cards.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 5
+    },
+    "keywords": [
+        "VIGILANCE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ms. Bumbleflower:1",
+                "trigger": "SpellCastEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "AddCounters",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
+                            "count": 1,
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            }
+                        },
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "FLYING",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            }
+                        },
+                        "IncrementAbilityResolutionCount",
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "DrawCards",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetOpponent",
+                    "id": "t0"
+                },
+                "additionalTargetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature"
+                        },
+                        "id": "t1"
+                    }
+                ],
+                "descriptionOverride": "Whenever you cast a spell, target opponent draws a card. Put a +1/+1 counter on target creature. It gains flying until end of turn. If this is the second time this ability has resolved this turn, you draw two cards."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "3",
+        "rarity": "MYTHIC",
+        "artist": "Marta Nael",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/2/42bbedc1-6b83-46b4-8b3b-a4e05ce77d87.jpg?1783910739",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "Ms. Bumbleflower's last ability resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "WHITE",
+        "BLUE"
+    ]
+}
+
+// Murmuration
+{
+    "name": "Murmuration",
+    "manaCost": "{4}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "Birds you control get +1/+1 and have vigilance.\nAt the beginning of your end step, for each spell you've cast this turn, create a 1/2 blue Bird creature token with flying named Storm Crow.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Murmuration:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateToken",
+                    "count": "SpellsCastThisTurn",
+                    "power": 1,
+                    "toughness": 2,
+                    "colors": [
+                        "BLUE"
+                    ],
+                    "creatureTypes": [
+                        "Bird"
+                    ],
+                    "keywords": [
+                        "FLYING"
+                    ],
+                    "name": "Storm Crow",
+                    "imageUri": "https://cards.scryfall.io/normal/front/d/4/d4498fac-e345-4cea-8d7e-7e0759600f33.jpg?1783909758"
+                },
+                "descriptionOverride": "At the beginning of your end step, for each spell you've cast this turn, create a 1/2 blue Bird creature token with flying named Storm Crow."
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "ModifyStats",
+                "powerBonus": 1,
+                "toughnessBonus": 1,
+                "filter": {
+                    "baseFilter": "creature Bird ctrl:you"
+                }
+            },
+            {
+                "type": "GrantKeyword",
+                "keyword": "VIGILANCE",
+                "filter": {
+                    "baseFilter": "creature Bird ctrl:you"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "10",
+        "rarity": "RARE",
+        "artist": "Xabi Gaztelua",
+        "flavorText": "Once the crow birdfolk realized augurs were using the shapes of their murmurations for divination, they decided to have some fun with it.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/6/561c9c4e-942e-40e8-b5f2-ac709a502f18.jpg?1783910736"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Octomancer
+{
+    "name": "Octomancer",
+    "manaCost": "{3}{G}{U}",
+    "typeLine": "Creature — Frog Druid",
+    "oracleText": "Gift an Octopus (You may promise an opponent a gift as you cast this spell. If you do, when it enters, they create an 8/8 blue Octopus creature token.)\nAt the beginning of each end step, create a token that's a copy of target creature token that entered the battlefield this turn.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywordAbilities": [
+        {
+            "type": "Gift",
+            "kind": "OCTOPUS"
+        }
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Octomancer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "CreateToken",
+                            "power": 8,
+                            "toughness": 8,
+                            "colors": [
+                                "BLUE"
+                            ],
+                            "creatureTypes": [
+                                "Octopus"
+                            ],
+                            "controller": {
+                                "type": "PlayerRef",
+                                "player": "ChosenOpponent"
+                            }
+                        },
+                        "GiftGiven"
+                    ]
+                },
+                "interveningIf": {
+                    "type": "CastChoiceMade",
+                    "slot": "GIFT_PROMISED"
+                },
+                "descriptionOverride": "When this creature enters, if the gift was promised, the chosen player creates an 8/8 blue Octopus creature token."
+            },
+            {
+                "id": "Octomancer:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END",
+                    "player": "Each"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreateTokenCopyOfTarget",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsCreature",
+                                "IsToken"
+                            ],
+                            "statePredicates": [
+                                "EnteredThisTurn"
+                            ]
+                        }
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "37",
+        "rarity": "RARE",
+        "artist": "Justin Gerard",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/2/f260197a-0297-4673-96de-dee915d79353.jpg?1783910726",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "The token you create copies the original characteristics of the token as stated by the effect that created that token (unless that token is copying something else). It doesn't copy whether that token is tapped or untapped, whether it has any counters on it or Auras and Equipment attached to it, or any non-copy effects that have changed its power, toughness, types, color, or so on."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If the copied token is copying something else (for example, if the copied token is one previously created by this ability), then the token enters as whatever that token copied."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE"
+    ]
+}
+
+// Perch Protection
+{
+    "name": "Perch Protection",
+    "manaCost": "{4}{W}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Gift an extra turn (You may promise an opponent a gift as you cast this spell. If you do, they take an extra turn after this one.)\nCreate four 2/2 blue Bird creature tokens with flying. If the gift was promised, all permanents you control phase out, and until your next turn, your life total can't change and you gain protection from everything.\nExile Perch Protection.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "CreateToken",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 4
+                        },
+                        "power": 2,
+                        "toughness": 2,
+                        "colors": [
+                            "BLUE"
+                        ],
+                        "creatureTypes": [
+                            "Bird"
+                        ],
+                        "keywords": [
+                            "FLYING"
+                        ],
+                        "imageUri": "https://cards.scryfall.io/normal/front/e/0/e0796ccd-b8ba-49c9-b76b-4fce55c242dc.jpg?1783909759"
+                    },
+                    "description": "Don't promise a gift — create four 2/2 blue Bird tokens with flying"
+                },
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "ChooseOpponentForSource",
+                                "prompt": "Choose an opponent to receive the gift"
+                            },
+                            {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "TakeExtraTurn",
+                                        "target": {
+                                            "type": "PlayerRef",
+                                            "player": "ChosenOpponent"
+                                        }
+                                    },
+                                    {
+                                        "type": "CreateToken",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 4
+                                        },
+                                        "power": 2,
+                                        "toughness": 2,
+                                        "colors": [
+                                            "BLUE"
+                                        ],
+                                        "creatureTypes": [
+                                            "Bird"
+                                        ],
+                                        "keywords": [
+                                            "FLYING"
+                                        ],
+                                        "imageUri": "https://cards.scryfall.io/normal/front/e/0/e0796ccd-b8ba-49c9-b76b-4fce55c242dc.jpg?1783909759"
+                                    },
+                                    {
+                                        "type": "ForEach",
+                                        "space": {
+                                            "type": "IterationSpace.Group",
+                                            "filter": {
+                                                "baseFilter": "permanent ctrl:you"
+                                            }
+                                        },
+                                        "body": {
+                                            "type": "PhaseOut",
+                                            "target": "IterationEntity"
+                                        }
+                                    },
+                                    {
+                                        "type": "LockLifeGain",
+                                        "target": "Controller",
+                                        "duration": "UntilYourNextTurn"
+                                    },
+                                    {
+                                        "type": "LockLifeLoss",
+                                        "target": "Controller",
+                                        "duration": "UntilYourNextTurn"
+                                    },
+                                    "GrantPlayerProtection",
+                                    "GiftGiven"
+                                ]
+                            }
+                        ]
+                    },
+                    "description": "Promise a gift — an opponent takes an extra turn; create four Birds, phase out your permanents, and until your next turn your life total can't change and you have protection from everything"
+                }
+            ],
+            "countsAsModalSpell": false
+        },
+        "selfExileOnResolve": true
+    },
+    "metadata": {
+        "collectorNumber": "11",
+        "rarity": "RARE",
+        "artist": "Edgar Sánchez Hidalgo",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/f/1f81d6ea-9a76-43b9-b030-d40c5cfbeefe.jpg?1783910735",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "For instants and sorceries with gift, the gift is given to the appropriate opponent as part of the resolution of the spell. This happens before any of the spell's other effects would take place."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "Gaining protection from everything causes a spell or ability on the stack to have an illegal target if it targets you."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If a token is phased out, it will phase in as your next untap step begins."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If your untap step is somehow skipped as your next turn begins, your phased-out permanents won't phase in until the next untap step you actually have, but you'll no longer have protection from everything and your life total can change again."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Pollywog Prodigy
 {
     "name": "Pollywog Prodigy",
@@ -1860,10 +3300,19 @@
                 },
                 "binding": "ANY",
                 "effect": {
-                    "type": "AddCounters",
-                    "counterType": "PLUS_ONE_PLUS_ONE",
-                    "count": 1,
-                    "target": "Self"
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddCounters",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
+                            "count": 1,
+                            "target": "Self"
+                        },
+                        {
+                            "type": "EmitKeywordCounterEvent",
+                            "keyword": "EVOLVE"
+                        }
+                    ]
                 },
                 "interveningIf": {
                     "type": "Any",
@@ -2307,69 +3756,161 @@
     "colorIdentityOverride": []
 }
 
-// Simic Ascendancy
+// Rootcast Apprenticeship
 {
-    "name": "Simic Ascendancy",
-    "manaCost": "{G}{U}",
-    "typeLine": "Enchantment",
-    "oracleText": "{1}{G}{U}: Put a +1/+1 counter on target creature you control.\nWhenever one or more +1/+1 counters are put on a creature you control, put that many growth counters on Simic Ascendancy.\nAt the beginning of your upkeep, if Simic Ascendancy has twenty or more growth counters on it, you win the game.",
+    "name": "Rootcast Apprenticeship",
+    "manaCost": "{3}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose three. You may choose the same mode more than once.\n• Put two +1/+1 counters on target creature.\n• Create a token that's a copy of target token you control.\n• Target player creates a 1/1 green Squirrel creature token.\n• Target opponent sacrifices a nontoken artifact of their choice.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "AddCounters",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
+                        "count": 2,
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        }
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "creature"
+                            },
+                            "id": "t0"
+                        }
+                    ],
+                    "description": "Put two +1/+1 counters on target creature"
+                },
+                {
+                    "effect": {
+                        "type": "CreateTokenCopyOfTarget",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t1"
+                        }
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "filter": {
+                                "baseFilter": "token ctrl:you"
+                            },
+                            "id": "t1"
+                        }
+                    ],
+                    "description": "Create a token that's a copy of target token you control"
+                },
+                {
+                    "effect": {
+                        "type": "CreateToken",
+                        "power": 1,
+                        "toughness": 1,
+                        "colors": [
+                            "GREEN"
+                        ],
+                        "creatureTypes": [
+                            "Squirrel"
+                        ],
+                        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5a6ec62e-0e9b-4312-bfe8-cc85d76fd9e0.jpg?1783909765",
+                        "controller": {
+                            "type": "BoundVariable",
+                            "name": "t2"
+                        }
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetPlayer",
+                            "id": "t2"
+                        }
+                    ],
+                    "description": "Target player creates a 1/1 green Squirrel creature token"
+                },
+                {
+                    "effect": {
+                        "type": "ForceSacrifice",
+                        "filter": "artifact nontoken",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "t3"
+                        }
+                    },
+                    "targetRequirements": [
+                        {
+                            "type": "TargetOpponent",
+                            "id": "t3"
+                        }
+                    ],
+                    "description": "Target opponent sacrifices a nontoken artifact of their choice"
+                }
+            ],
+            "chooseCount": 3,
+            "allowRepeat": true
+        }
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "rarity": "RARE",
+        "artist": "Andreia Ugrai",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/0/00756441-a734-4960-9c69-f03a508a1522.jpg?1783910728",
+        "rulings": [
+            {
+                "date": "2024-07-26",
+                "text": "You can select a mode only if there's a legal target available for that mode. Ignore the targeting requirements for modes you don't choose. Each time you select that mode, you can choose a different target, or you can choose the same target."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "No matter which combination of modes you choose, you always follow the instructions in the order they are written."
+            },
+            {
+                "date": "2024-07-26",
+                "text": "If all targets for the chosen modes become illegal before Rootcast Apprenticeship resolves, the spell will be countered and none of its effects will happen. If at least one target is still legal, the spell will resolve but will have no effect on any illegal targets."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Scurry of Squirrels
+{
+    "name": "Scurry of Squirrels",
+    "manaCost": "{2}{G}",
+    "typeLine": "Creature — Squirrel Scout",
+    "oracleText": "Myriad, myriad (Whenever this creature attacks, for each opponent other than defending player, you may create a token that's a copy of this creature that's tapped and attacking that player or a planeswalker they control. Then do it again. Exile the tokens at end of combat.)\nWhenever this creature deals combat damage to a player, put a +1/+1 counter on target creature you control.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "MYRIAD"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Simple",
+            "keyword": "MYRIAD"
+        },
+        {
+            "type": "Simple",
+            "keyword": "MYRIAD"
+        }
+    ],
     "script": {
         "triggeredAbilities": [
             {
-                "id": "Simic Ascendancy:2",
+                "id": "Scurry of Squirrels:1",
                 "trigger": {
-                    "type": "CountersPlacedEvent",
-                    "counterType": "PLUS_ONE_PLUS_ONE",
-                    "filter": "creature ctrl:you"
-                },
-                "binding": "ANY",
-                "effect": {
-                    "type": "AddDynamicCounters",
-                    "counterType": "GROWTH",
-                    "amount": {
-                        "type": "ContextProperty",
-                        "key": "TRIGGER_COUNTERS_PLACED_AMOUNT"
-                    },
-                    "target": "Self"
-                }
-            },
-            {
-                "id": "Simic Ascendancy:3",
-                "trigger": {
-                    "type": "StepEvent",
-                    "step": "UPKEEP"
-                },
-                "binding": "ANY",
-                "effect": {
-                    "type": "WinGame",
-                    "message": "Simic Ascendancy reached 20 growth counters."
-                },
-                "interveningIf": {
-                    "type": "Compare",
-                    "left": {
-                        "type": "EntityProperty",
-                        "entity": "Self",
-                        "numericProperty": {
-                            "type": "CounterCount",
-                            "counterType": "GROWTH"
-                        }
-                    },
-                    "operator": "GTE",
-                    "right": {
-                        "type": "Fixed",
-                        "amount": 20
-                    }
-                }
-            }
-        ],
-        "activatedAbilities": [
-            {
-                "id": "Simic Ascendancy:1",
-                "cost": {
-                    "type": "CostAtomWrapper",
-                    "atom": {
-                        "type": "AtomMana",
-                        "cost": "{1}{G}{U}"
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
                     }
                 },
                 "effect": {
@@ -2381,45 +3922,24 @@
                         "name": "t0"
                     }
                 },
-                "targetRequirements": [
-                    {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature ctrl:you"
-                        },
-                        "id": "t0"
-                    }
-                ]
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you"
+                    },
+                    "id": "t0"
+                }
             }
         ]
     },
     "metadata": {
-        "collectorNumber": "260",
+        "collectorNumber": "33",
         "rarity": "RARE",
         "artist": "Izzy",
-        "imageUri": "https://cards.scryfall.io/normal/front/9/3/9300abb9-2750-4de8-8c1d-dbae48a86037.jpg?1721429509",
-        "rulings": [
-            {
-                "date": "2019-01-25",
-                "text": "An ability that triggers when counters are put on a permanent will trigger if that permanent somehow enters the battlefield with those counters."
-            },
-            {
-                "date": "2019-01-25",
-                "text": "If Simic Ascendancy doesn't have twenty or more growth counters on it as your upkeep begins, its last ability won't trigger. You can't take any actions during your turn before your upkeep begins."
-            },
-            {
-                "date": "2019-01-25",
-                "text": "If the last ability does trigger, but counters are removed from Simic Ascendancy so it has fewer than twenty remaining on it, you won't win the game."
-            },
-            {
-                "date": "2019-01-25",
-                "text": "If the last ability does trigger, but Simic Ascendancy leaves the battlefield, use the number of counters it had on it immediately before it left the battlefield to determine whether you win the game."
-            }
-        ]
+        "imageUri": "https://cards.scryfall.io/normal/front/c/3/c343b965-af2b-45c3-babb-9242736cf1e5.jpg?1783910727"
     },
     "colorIdentityOverride": [
-        "GREEN",
-        "BLUE"
+        "GREEN"
     ]
 }
 
@@ -2905,69 +4425,6 @@
     ]
 }
 
-// Tendershoot Dryad
-{
-    "name": "Tendershoot Dryad",
-    "manaCost": "{4}{G}",
-    "typeLine": "Creature — Dryad",
-    "oracleText": "Ascend (If you control ten or more permanents, you get the city's blessing for the rest of the game.)\nAt the beginning of each upkeep, create a 1/1 green Saproling creature token.\nSaprolings you control get +2/+2 as long as you have the city's blessing.",
-    "creatureStats": {
-        "power": 2,
-        "toughness": 2
-    },
-    "keywords": [
-        "ASCEND"
-    ],
-    "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Tendershoot Dryad:1",
-                "trigger": {
-                    "type": "StepEvent",
-                    "step": "UPKEEP",
-                    "player": "Each"
-                },
-                "binding": "ANY",
-                "effect": {
-                    "type": "CreateToken",
-                    "power": 1,
-                    "toughness": 1,
-                    "colors": [
-                        "GREEN"
-                    ],
-                    "creatureTypes": [
-                        "Saproling"
-                    ],
-                    "imageUri": "https://cards.scryfall.io/normal/front/5/9/590abe94-9c71-4429-b1b5-8b5de877de03.jpg?1721427861"
-                }
-            }
-        ],
-        "staticAbilities": [
-            {
-                "type": "ConditionalStaticAbility",
-                "ability": {
-                    "type": "ModifyStats",
-                    "powerBonus": 2,
-                    "toughnessBonus": 2,
-                    "filter": {
-                        "baseFilter": "permanent Saproling ctrl:you"
-                    }
-                },
-                "condition": "PlayerHasCitysBlessing"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "242",
-        "rarity": "RARE",
-        "artist": "Yongjae Choi",
-        "imageUri": "https://cards.scryfall.io/normal/front/3/a/3a60bdb4-53b3-46f2-b7a1-7954117b42a1.jpg?1721429404"
-    },
-    "colorIdentityOverride": [
-        "GREEN"
-    ]
-}
-
 // The Odd Acorn Gang
 {
     "name": "The Odd Acorn Gang",
@@ -3394,5 +4851,64 @@
     "colorIdentityOverride": [
         "RED",
         "GREEN"
+    ]
+}
+
+// Zinnia, Valley's Voice
+{
+    "name": "Zinnia, Valley's Voice",
+    "manaCost": "{U}{R}{W}",
+    "typeLine": "Legendary Creature — Bird Bard",
+    "oracleText": "Flying\nZinnia gets +X/+0, where X is the number of other creatures you control with base power 1.\nCreature spells you cast gain offspring {2} as you cast them. (You may pay an additional {2} as you cast a creature spell. If you do, when that creature enters, create a 1/1 token copy of it.)",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantDynamicStats",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "Self"
+                },
+                "powerBonus": {
+                    "type": "AggregateBattlefield",
+                    "player": "You",
+                    "filter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "BasePowerEquals",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "excludeSelf": true
+                },
+                "toughnessBonus": {
+                    "type": "Fixed",
+                    "amount": 0
+                }
+            },
+            {
+                "type": "GrantOffspringToOwnSpells",
+                "cost": "{2}"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "4",
+        "rarity": "MYTHIC",
+        "artist": "Aldo Domínguez",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/f/dfe36901-5841-4942-8b61-c273111f715e.jpg?1783910737"
+    },
+    "colorIdentityOverride": [
+        "BLUE",
+        "RED",
+        "WHITE"
     ]
 }

@@ -25,6 +25,9 @@ enum class ChoiceSlot {
     /** A creature type chosen as the object entered (e.g. Riptide Replicator "choose a creature type"). */
     CREATURE_TYPE,
 
+    /** A planeswalker type chosen as the object entered (e.g. Deification "choose a planeswalker type"). */
+    PLANESWALKER_TYPE,
+
     /** A basic land type chosen as the object entered (e.g. Phantasmal Terrain). */
     LAND_TYPE,
 
@@ -123,12 +126,29 @@ enum class ChoiceSlot {
     TEAMWORK,
 
     /**
+     * Whether a **granted** offspring cost was paid when cast (CR 702.175a) — "Creature spells you
+     * cast gain offspring {2} as you cast them" ([GrantOffspringToOwnSpells], Zinnia, Valley's
+     * Voice). A present value means the granted cost was declared and paid; the permanent the spell
+     * becomes then has the offspring trigger (`Offspring.tokenCopyAbility`), synthesized by the
+     * engine because no card prints it.
+     *
+     * Deliberately distinct from [KICKED], where a *printed* offspring rides: CR 702.175b pays each
+     * instance of offspring separately and triggers off its own payment only, and a creature spell
+     * with a printed kicker that gains offspring must not read as kicked when only the offspring
+     * cost was paid.
+     */
+    OFFSPRING,
+
+    /**
      * Whether the spell's **replicate** cost was paid at least once (CR 702.56a). The number of
      * payments rides on the cast itself (`CastSpell.declaredCostTimes`), because only the cast
      * trigger that copies the spell reads it. Distinct from [KICKED] so a replicated spell never
      * reads as kicked to "whenever you cast a kicked spell" payoffs.
      */
     REPLICATED,
+
+    /** Number of times the squad additional cost was paid. Distinct from kicker. */
+    SQUAD,
 
     /**
      * Whether the spell's sneak cost was paid when cast (CR 702.190, e.g. Leonardo, Leader
@@ -175,6 +195,47 @@ enum class ChoiceSlot {
      */
     ESCAPED,
 
+    /**
+     * Whether the spell was cast by paying its own printed alternative cost
+     * ([com.wingedsheep.sdk.model.CardScript.selfAlternativeCost], CR 118.9 — "You may pay {1}{B}
+     * rather than pay this spell's mana cost"). A present value means "that cost was paid". Read back
+     * through [com.wingedsheep.sdk.dsl.Conditions.SelfAlternativeCostWasPaid] for the Strixhaven
+     * Mastery cycle's "If the {1}{B} cost was paid, …" riders. The engine answers it from the spell
+     * on the stack while it resolves (a copy keeps the original's answer, CR 707.10) and stamps it on
+     * a permanent the spell becomes.
+     */
+    SELF_ALTERNATIVE_COST_PAID,
+
+    /**
+     * Whether the spell **was foretold** (CR 702.143c) — it was a foretold card in exile before it
+     * was cast, whatever cost it was then cast for. Stamped by the engine as the spell is cast, never
+     * declared by the player. Read back through [com.wingedsheep.sdk.dsl.Conditions.WasForetold] for
+     * the Kaldheim "If this spell was foretold, …" riders (Poison the Cup, Starnheim Unleashed), from
+     * the spell while it resolves and from the permanent a permanent spell becomes.
+     */
+    FORETOLD,
+
+    /**
+     * Whether the spell's **madness cost was paid** (CR 702.35) — it was cast from exile, by the
+     * madness trigger, for its madness cost rather than its mana cost. Stamped by the engine as the
+     * spell is cast, never declared by the player. Read back through
+     * [com.wingedsheep.sdk.dsl.Conditions.MadnessCostWasPaid] for the Shadows over Innistrad
+     * "If this spell's madness cost was paid, …" riders (From Under the Floorboards, Welcome to the
+     * Fold), from the spell while it resolves and from the permanent a permanent spell becomes.
+     */
+    MADNESS_CAST,
+
+    /**
+     * Whether the spell's **surge cost was paid** (CR 702.117a) — it was cast for its
+     * [Surge][com.wingedsheep.sdk.scripting.KeywordAbility.Surge] cost rather than its mana cost.
+     * Stamped by the engine from the alternative cost the spell was cast for, never declared by the
+     * player. Read back through [com.wingedsheep.sdk.dsl.Conditions.SurgeCostWasPaid] for the Oath of
+     * the Gatewatch "if its surge cost was paid, …" riders (Reckless Bushwhacker, Crush of
+     * Tentacles), from the spell while it resolves (a copy keeps the original's answer, CR 707.10)
+     * and from the permanent a permanent spell becomes.
+     */
+    SURGE_CAST,
+
     /** The X declared for a `blight X` additional cost when cast (e.g. Soul Immolation). */
     BLIGHT_AMOUNT,
 
@@ -192,6 +253,21 @@ enum class ChoiceSlot {
      * are still that same object, for "each creature that convoked it" (Zephyr Singer).
      */
     CONVOKED_CREATURES,
+
+    /**
+     * The cards exiled from the graveyard to pay the spell's **delve** (CR 702.66a — each exiled
+     * card pays for one generic mana in the spell's total cost), recorded as the delve
+     * payment is made and carried onto the resolving permanent, each with the object generation it
+     * had in exile. Absent when delve paid nothing. A permanent that leaves the battlefield and
+     * returns is a new object (CR 400.7) with no record.
+     *
+     * Read by [com.wingedsheep.sdk.scripting.GainKeywordsOfCards] with
+     * [com.wingedsheep.sdk.scripting.KeywordCardPool.CREATURE_CARDS_EXILED_WITH_DELVE] — "if a
+     * creature card with flying was exiled with this creature's delve ability, this creature has
+     * flying" (Soulflayer) — and counted by [com.wingedsheep.sdk.scripting.values.DynamicAmount.CastChoice]
+     * as "the number of cards exiled with its delve ability".
+     */
+    DELVED_CARDS,
 
     /**
      * Whether the spell's optional **waterbend** additional cost was paid when cast (Avatar: The
@@ -221,6 +297,14 @@ enum class ChoiceSlot {
     OPPONENT,
 
     /**
+     * A player — any player, not only an opponent — recorded as the object entered, stored as a
+     * [ChoiceValue.EntityChoice] carrying the player entity id (Takklemaggot returning as a
+     * non-Aura enchantment that hurts "that player"). Read back through
+     * [com.wingedsheep.sdk.scripting.references.Player.ChosenPlayer].
+     */
+    PLAYER,
+
+    /**
      * A general-purpose chosen number stored durably on the permanent and re-settable over its
      * lifetime (e.g. Shapeshifter "as this enters and at each upkeep, choose a number between 0
      * and 7; its power is that number and its toughness is 7 minus it"). Written at entry by the
@@ -235,6 +319,59 @@ enum class ChoiceSlot {
      */
     CHOSEN_NUMBER,
 
+    /**
+     * A number *noted* for the permanent rather than chosen — "note your life total" (Sigarda's
+     * Splendor). Written by [com.wingedsheep.sdk.scripting.effects.NoteNumberForSourceEffect]
+     * (at entry inside an [OnEnterRun], and again by later abilities — the last note wins) and read
+     * back as "the last noted …" through
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.CastChoice].
+     */
+    NOTED_NUMBER,
+
     /** Zero-based branch of a declared additional-cost choice. */
     ADDITIONAL_COST_BRANCH,
+
+    /**
+     * Whether the spell's **unnamed optional additional cost** was paid when cast — the plain
+     * "As an additional cost to cast this spell, you may <cost>" that no keyword names (Kamigawa:
+     * Neon Dynasty's Voltage Surge: "you may sacrifice an artifact … If this spell's additional
+     * cost was paid, …"). A present value means the cost was declared and paid. Declared through
+     * [com.wingedsheep.sdk.scripting.KeywordAbility.Companion.optionalAdditionalCost] and read back
+     * through [com.wingedsheep.sdk.dsl.Conditions.AdditionalCostWasPaid].
+     *
+     * Deliberately distinct from [KICKED], [BARGAINED] and [EVIDENCE_COLLECTED] even though all ride
+     * the same optional-additional-cost rail
+     * ([com.wingedsheep.sdk.scripting.KeywordAbility.OptionalAdditionalCost.declaredSlot]): the
+     * spell is neither kicked nor bargained, so it must not satisfy "whenever you cast a kicked
+     * spell" payoffs.
+     */
+    ADDITIONAL_COST_PAID,
+
+    /**
+     * Whether the spell's **buyback** cost was paid when cast (CR 702.27a — "You may pay an
+     * additional [cost] as you cast this spell" and "If the buyback cost was paid, put this spell
+     * into its owner's hand instead of into that player's graveyard as it resolves"). A present
+     * value means the spell was bought back; `NonPermanentSpellResolver` reads it off the resolving
+     * spell's declared slot and returns the card to its owner's hand. Declared through
+     * [com.wingedsheep.sdk.scripting.KeywordAbility.Companion.buyback].
+     *
+     * Deliberately distinct from [KICKED] even though both ride the same optional-additional-cost
+     * rail ([com.wingedsheep.sdk.scripting.KeywordAbility.OptionalAdditionalCost.declaredSlot]): a
+     * bought-back spell is not kicked, so it must not satisfy "whenever you cast a kicked spell".
+     */
+    BOUGHT_BACK,
+
+    /**
+     * Whether the spell's **entwine** cost was paid when cast (CR 702.42a — "You may choose all
+     * modes of this spell instead of just the number specified. If you do, you pay an additional
+     * [cost]."). A present value means the entwine cost was declared, so the spell's modal effect
+     * takes every mode. Declared through the `entwine(cost)` DSL helper and read back through
+     * [com.wingedsheep.sdk.dsl.Conditions.WasEntwined] — the mode count of `entwineModal { }`
+     * branches on it at cast time.
+     *
+     * Deliberately distinct from [KICKED] even though both ride the same optional-additional-cost
+     * rail ([com.wingedsheep.sdk.scripting.KeywordAbility.OptionalAdditionalCost.declaredSlot]): an
+     * entwined spell is not kicked, so it must not satisfy "whenever you cast a kicked spell".
+     */
+    ENTWINED,
 }

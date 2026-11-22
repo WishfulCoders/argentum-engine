@@ -70,7 +70,7 @@ export function MobilePoolView({
                 style={{
                   width: '100%',
                   height: count > 0 ? Math.max(2, (count / stats.maxCurve) * 16) : 0,
-                  backgroundColor: '#4fc3f7',
+                  backgroundColor: '#f2b45c',
                   borderRadius: '1px 1px 0 0',
                 }}
               />
@@ -300,8 +300,10 @@ export function MobileDraftTabBar({
       style={{
         display: 'flex',
         flexShrink: 0,
-        backgroundColor: '#202020',
-        borderTop: '1px solid #3a3a3a',
+        backgroundColor: 'rgba(10, 12, 20, 0.86)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        backdropFilter: 'blur(18px)',
+        WebkitBackdropFilter: 'blur(18px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
@@ -323,7 +325,7 @@ export function MobileDraftTabBar({
               padding: '7px 0 8px',
               border: 'none',
               background: 'none',
-              color: active ? '#4fc3f7' : '#888',
+              color: active ? '#f2c97a' : '#9aa3b8',
               fontSize: 11,
               fontWeight: 600,
               cursor: 'pointer',

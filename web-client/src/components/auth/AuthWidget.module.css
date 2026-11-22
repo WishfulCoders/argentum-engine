@@ -1,111 +1,239 @@
-/**
- * Landing-screen account widget: the right-hand half of the landing top bar (`.landingTopBar` in
- * `GameUI.module.css`), opposite the fullscreen and help controls. Frosted pills matching the app's
- * other overlay controls, kept visually distinct from the navigation row.
+/*
+ * The account menu: one frosted trigger in the landing top bar, opening a small menu of the
+ * account-scoped pages. Glass to match the top bar's navigation and the panels below it.
  */
-/* Sized by its content and right-aligned, so the pills hug the top-right corner however many of
-   them there are — four signed in, five as an admin. Wraps rather than overflowing when the
-   viewport is too narrow to seat the row beside the fullscreen/help cluster. */
-.widget {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: stretch;
-  gap: var(--space-2);
-  min-width: 0;
+
+.root {
+  position: relative;
 }
 
-/* Shared frosted-pill base for every control in the widget. */
-.identity,
-.login,
-.logout,
-.action {
+.trigger,
+.login {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  gap: 8px;
+  min-height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 12, 20, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #eef0f6;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color 0.12s, border-color 0.12s;
 }
 
-/* Signed-in identity: a small status dot + a two-line "Signed in as / Name" label. */
-.identity {
-  padding: var(--space-1) var(--space-3);
-  text-align: left;
-}
+.trigger { padding: 3px 10px 3px 4px; }
+.login { padding: 0 16px; }
 
-.identity:hover {
-  background-color: rgba(255, 255, 255, 0.16);
+.trigger:hover,
+.login:hover,
+.trigger[aria-expanded='true'] {
+  background: rgba(30, 33, 46, 0.75);
   border-color: rgba(255, 255, 255, 0.22);
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
+.trigger:focus-visible,
+.login:focus-visible,
+.item:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.avatar {
+  position: relative;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background-color: var(--color-success-light);
-  box-shadow: 0 0 6px var(--color-success-light);
-  flex-shrink: 0;
-}
-
-.labels {
   display: flex;
-  flex-direction: column;
-  line-height: 1.15;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(140deg, #f2b45c, #c9803a);
+  color: #1d1405;
+  font-weight: 700;
+  font-size: 14px;
 }
 
-.muted {
-  font-size: var(--font-xs);
-  color: var(--text-muted);
+.avatar[data-portrait='true'] {
+  background: #10131c;
+  box-shadow: 0 0 0 1.5px rgba(242, 180, 92, 0.75);
 }
 
 .name {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Navigation pills: Friends, Stats, and Admin for admin accounts. Neutral hover — these used to
-   borrow the Log out pill's styling and so lit up red, which reads as destructive. */
-.action {
-  position: relative;
-  padding: var(--space-2) var(--space-3);
+/* Name, with a quiet "N online" line under it when friends are online. */
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.15;
 }
 
-.action:hover {
-  background-color: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: var(--text-primary);
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.logout {
-  padding: var(--space-2) var(--space-3);
+.presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8fd49b;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.logout:hover {
-  background-color: rgba(255, 68, 68, 0.16);
-  border-color: rgba(255, 68, 68, 0.4);
-  color: var(--text-primary);
+.presence .onlineDot { width: 6px; height: 6px; }
+
+/* Pending friend requests, in the menu's request colour so the two read as the same thing. */
+.pending {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(225, 91, 110, 0.18);
+  color: #f2a0ab;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Anonymous: a single inviting "Log in" pill in the accent color. */
-.login {
-  padding: var(--space-2) var(--space-4);
-  background-color: var(--color-accent-dark);
-  border-color: var(--color-accent);
+/* Counts on the avatar — only where the status line is hidden (narrow screens). */
+.avatarOnline,
+.avatarRequests {
+  display: none;
+  position: absolute;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #3fae55;
+  border: 2px solid #12141c;
   color: #fff;
-  font-weight: var(--font-weight-semibold);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 11px;
+  text-align: center;
+  box-sizing: border-box;
 }
 
-.login:hover {
-  background-color: var(--color-accent);
+.avatarOnline { bottom: -3px; }
+.avatarRequests { top: -4px; background: #e15b6e; }
+
+.chevron { color: #9aa3b5; flex: none; }
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  min-width: 220px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(14, 16, 25, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  animation: menuIn 0.12s ease-out;
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.menuHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menuMuted { font-size: 12px; color: #8f98ac; }
+.menuName { font-size: 15px; font-weight: 600; color: #eef0f6; overflow: hidden; text-overflow: ellipsis; }
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #d9dde8;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+.itemMeta { display: inline-flex; align-items: center; gap: 8px; }
+
+.online {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5bd16e;
+}
+
+.onlineDot { width: 7px; height: 7px; border-radius: 50%; background: #5bd16e; }
+
+.requests {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e15b6e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.unreadCount {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f2b45c;
+  color: #1d1405;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.separator { height: 1px; margin: 4px 6px; background: rgba(255, 255, 255, 0.08); }
+
+.logout { color: #f0a3ad; }
+.logout:hover { color: #ffc1c8; background: rgba(225, 91, 110, 0.12); }
+
+@media (max-width: 560px) {
+  .identity, .chevron { display: none; }
+  .trigger { padding: 3px; }
+  .avatarOnline,
+  .avatarRequests { display: block; }
 }

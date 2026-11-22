@@ -65,3 +65,24 @@ For a constrained split, `pileOptions` limits the cards eligible for each pile a
 server-validated plan for automated responders. After randomized assignment, these fields let the
 player choose a legal subset on the battlefield without rerolling or enumerating every combination.
 The continuation also checks the resulting combat restrictions before committing any block.
+
+### Repeated battlefield selections
+
+A `SelectCardsDecision` with `selectionLimits` assigns a maximum number of units to each
+offered permanent. A response repeats its entity ID once per unit; typed counter-removal
+payments use this to distribute a fixed cost across permanents. The engine validates each
+capacity and requires the full `maxSelections` total or an empty response to decline.
+The client renders allocation controls on the battlefield, using only these supplied limits.
+Absent `selectionLimits`, ordinary selection behavior is unchanged.
+
+### Suggested selections
+
+A `SelectCardsDecision` may carry `recommendedSelection` — a legal subset of `options` the engine
+suggests for the deciding player. It is advice only: validation ignores it and the player may submit
+any legal subset. The battlefield selection banner offers it as a one-click **Recommended** pick next
+to **All** (shown when every option fits under `maxSelections` and no per-type, colour, name, power
+or mana-value constraint couples the picks) and **Clear**; the player adjusts on the board before
+confirming. Proliferate fills it (`ProliferateExecutor.recommendedRecipients`): you, your permanents
+and a teammate's unless they carry a counter that hurts their holder (-1/-1, stun, poison, rad, age,
+defense), and opponents and their permanents only when they carry such a counter and none that helps
+them (+1/+1, loyalty, shield, keyword counters).

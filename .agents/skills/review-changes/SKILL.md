@@ -124,6 +124,18 @@ to you, the review still happens per area:
 - **Driven by an orchestrator (split mode).** The caller asks for one phase at a time and
   dispatches the area reviewers itself. Everything goes through a scratch directory the
   caller names (`<review-dir>`, gitignored — e.g. `<worktree>/.claude/loop-runs/review-pr-<N>/`):
+  - **Keep the fan-out small.** Every phase is a fresh context that re-reads the diff, so
+    each extra agent costs a full read. Split mode spawns at most **three** area reviewers:
+    fold an area with under ~100 changed lines into its nearest neighbour (or into
+    WEIGH's own cross-area check), and split an area into sub-areas only past ~3000
+    changed lines, not the ~1500 of §2.
+  - **Single pass** — when TRIAGE finds one area (typically Cards & tests only: card
+    definitions, their tests, backlog and goldens, no new SDK vocabulary) under ~1500
+    changed lines, it does the review itself instead of writing briefs: that area's §3
+    brief, then §4, with the findings written to `<review-dir>/review.md` (posted as a PR
+    comment if the caller asked for one). It returns `AREAS: none (single pass)` plus the
+    WEIGH return fields, and the caller skips AREA and WEIGH. The "Reviewed by" line says
+    "single pass".
   - **TRIAGE** — do §1 and §2 as written, but instead of spawning, write one brief per
     reviewer to `<review-dir>/<area>.brief.md` (areas and sub-areas named as in §2, e.g.
     `engine-combat`). Each brief is the full prompt from §3: workspace, base, owned files,
@@ -182,10 +194,15 @@ ask:
    acting), or bundle a pipeline that should be composed from atoms
    (`docs/architecture-principles.md` §1.5)? Would the *next* card of this family need a
    new field, or does it slot in?
-5. **Name matches semantics?** `CreatureTypeCount` that counts all subtypes is a name
+5. **Could an existing type have taken the axis?** The order is compose → add an axis to
+   the closest existing type → new type (`sdk-design-principles.md`, "Extend before you
+   add"). Check the new type's `sdk-surface-baseline.txt` line: its two named neighbours
+   and the reason are the claim to test. And if the change adds a general primitive, did
+   it migrate and delete the narrow type it subsumes? A left-behind fossil is a finding.
+6. **Name matches semantics?** `CreatureTypeCount` that counts all subtypes is a name
    lie — rename and document the gap. One spelling per concept: flag a second way to
    say something the SDK already says.
-6. **Surface hygiene.** Cards reach it through facades (`Effects.*`, `Patterns.*`), not
+7. **Surface hygiene.** Cards reach it through facades (`Effects.*`, `Patterns.*`), not
    raw constructors (`FacadeBoundaryTest`); `docs/card-sdk-language-reference.md` is
    updated in the same change; the SDK holds data only — no execution logic.
 
@@ -295,7 +312,9 @@ body documents why that's out of scope.
 (`https://api.scryfall.com/cards/named?exact=<card>` — fetch with Python `urllib` if
 `WebFetch` is blocked); the PR may implement pre-errata wording. Spell out the rules path
 for corner cases (Changeling, copyable values, layer interactions, "as ~ enters",
-protection / hexproof / ward).
+protection / hexproof / ward). **Blocking:** any card whose KDoc, comments or PR body admits
+an approximation ("known approximation", "slightly wider than the printed text", "close
+enough") — the fix is to implement it faithfully or drop the card, never to keep the note.
 
 **Tests — every cited rule must be exercised.**
 

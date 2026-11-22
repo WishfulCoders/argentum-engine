@@ -14,6 +14,7 @@
  * share is everything after "here are the frames" — which is all of this file.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type React from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import { SpectatorContext } from '../../contexts/SpectatorContext'
 import { GameBoard } from '../game/GameBoard'
@@ -23,9 +24,15 @@ import type { PublicReplayData, SpectatorStateUpdate } from '@/replay/reconstruc
 import { buildReplayScenarioUrl } from '../scenario/shareScenario'
 import { useViewportSize } from '@/hooks/useResponsive.ts'
 import { replayExportUrl } from '@/replay/replayFile.ts'
+import styles from './Replay.module.css'
+import { BrandMark, PLAIN_BACKDROP } from '../ui/PageShell'
+import { SeatPortrait } from '../game/SeatPortrait'
 
 const HEADER_HEIGHT = 55
 const AUTOPLAY_INTERVAL_MS = 1000
+
+/** The HUD life orbs' 1v1 colours: player 1 (bottom, blue), player 2 (top, orange). */
+const DUEL_RINGS = ['rgba(74, 154, 234, 0.85)', 'rgba(255, 158, 70, 0.85)'] as const
 
 export type ReplayMetadata = PublicReplayData['metadata']
 
@@ -35,6 +42,7 @@ export function ReplayPlayer({
   metadata,
   fromFile = false,
   onExit,
+  onHome,
 }: {
   snapshots: readonly SpectatorStateUpdate[]
   /** Replay id, used to build the share/scenario links and fetch a frame's full state. */
@@ -48,6 +56,8 @@ export function ReplayPlayer({
   fromFile?: boolean
   /** Back button and Escape. The route navigates home; the overlay returns to its game list. */
   onExit: () => void
+  /** The Argentum mark — straight back to the landing screen, as on every other page. */
+  onHome: () => void
 }) {
   const [currentStep, setCurrentStep] = useState(0)
   const [autoPlay, setAutoPlay] = useState(false)
@@ -62,6 +72,8 @@ export function ReplayPlayer({
    */
   const [primed, setPrimed] = useState(false)
   const setSpectatingState = useGameStore((s) => s.setSpectatingState)
+  const setSeatTeams = useGameStore((s) => s.setSeatTeams)
+  const setSeatAvatars = useGameStore((s) => s.setSeatAvatars)
 
   const writeSnapshotToStore = useCallback(
     (snapshot: SpectatorStateUpdate) => {
@@ -93,13 +105,26 @@ export function ReplayPlayer({
     setCurrentStep(0)
     setAutoPlay(false)
     const hasFrames = snapshots.length > 0
+    // Stamp the per-seat facts that only ride in the seat roster — team membership and each
+    // seat's avatar. Live play and spectating stamp them in their message handlers; replay frames
+    // go straight into the store and bypass those, so without this a replay showed every seat as
+    // a bare life orb and a team game as a free-for-all.
+    const roster = snapshots[0]?.players ?? []
+    const teams: Record<string, number> = {}
+    for (const p of roster) if (p.teamIndex != null) teams[p.playerId] = p.teamIndex
+    setSeatTeams(teams, roster.some((p) => p.teamSharedLife), roster.some((p) => p.teamSharedTurns))
+    setSeatAvatars(roster)
     if (hasFrames) writeSnapshotToStore(snapshots[0]!)
     setPrimed(hasFrames)
-  }, [snapshots, writeSnapshotToStore])
+  }, [snapshots, writeSnapshotToStore, setSeatTeams, setSeatAvatars])
 
   useEffect(() => {
-    return () => { setSpectatingState(null) }
-  }, [setSpectatingState])
+    return () => {
+      setSpectatingState(null)
+      setSeatTeams({})
+      setSeatAvatars([])
+    }
+  }, [setSpectatingState, setSeatTeams, setSeatAvatars])
 
   const goToStep = useCallback(
     (step: number) => {
@@ -223,44 +248,57 @@ export function ReplayPlayer({
         player2Name: snapshot.player2Name ?? 'Player 2',
       }}
     >
-      <div style={styles.replayContainer}>
-        <div ref={headerRef} style={styles.replayHeader}>
-          <button onClick={onExit} style={styles.backButton}>
-            Back
+      <div className={styles.container} style={{ background: PLAIN_BACKDROP }}>
+        <div ref={headerRef} className={styles.toolbar}>
+          <button type="button" onClick={onHome} className={styles.brand} aria-label="Argentum — home" title="Home">
+            <BrandMark size={28} />
           </button>
-          <div style={styles.replayControls}>
-            <button onClick={() => goToStep(currentStep - 1)} disabled={currentStep === 0} style={styles.controlButton} title="Previous (Left Arrow)">
-              Prev
+          <button type="button" onClick={onExit} className={styles.back} aria-label="Back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+            <span className={styles.backLabel}>Back</span>
+          </button>
+          <div className={styles.transport}>
+            <button type="button" onClick={() => goToStep(currentStep - 1)} disabled={currentStep === 0} className={styles.iconButton} title="Previous (Left Arrow)" aria-label="Previous step">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M6 6h2v12H6zM9.5 12l8.5 6V6z" /></svg>
             </button>
-            <button onClick={() => setAutoPlay(!autoPlay)} style={styles.controlButton} title="Play/Pause (Space)">
-              {autoPlay ? 'Pause' : 'Play'}
+            <button type="button" onClick={() => setAutoPlay(!autoPlay)} className={styles.playButton} title="Play/Pause (Space)" aria-label={autoPlay ? 'Pause' : 'Play'}>
+              {autoPlay
+                ? <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>}
             </button>
-            <button onClick={() => goToStep(currentStep + 1)} disabled={currentStep >= snapshots.length - 1} style={styles.controlButton} title="Next (Right Arrow)">
-              Next
+            <button type="button" onClick={() => goToStep(currentStep + 1)} disabled={currentStep >= snapshots.length - 1} className={styles.iconButton} title="Next (Right Arrow)" aria-label="Next step">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z" /></svg>
             </button>
           </div>
-          <div style={styles.scrubberContainer}>
+          <div className={styles.scrubberWrap}>
             <input
               type="range"
               min={0}
               max={snapshots.length - 1}
               value={currentStep}
               onChange={(e) => goToStep(Number(e.target.value))}
-              style={styles.scrubber}
+              className={styles.scrubber}
+              aria-label="Replay position"
+              style={{ '--progress': `${snapshots.length > 1 ? (currentStep / (snapshots.length - 1)) * 100 : 100}%` } as React.CSSProperties}
             />
-            <span style={styles.stepCounter}>
-              {currentStep + 1} / {snapshots.length}
+            <span className={styles.stepCounter}>
+              {currentStep + 1}<span className={styles.stepTotal}> / {snapshots.length}</span>
             </span>
           </div>
-          <div style={styles.replayInfo}>
-            <span style={styles.replayLabel}>
+          <div className={styles.identity}>
+            <SeatFaces
+              playerIds={isMultiplayerReplay
+                ? allSeats.map((p) => p.playerId)
+                : [snapshot.player1Id, snapshot.player2Id].filter((id): id is string => id != null)}
+            />
+          <div className={styles.info}>
+            <span className={styles.kicker}>
               {isMultiplayerReplay ? `Replay · ${allSeats.length} players` : 'Replay'}
               {fromFile ? ' · from file' : ''}
+              {metadata?.winnerName && <span className={styles.winner}> · {metadata.winnerName} won</span>}
             </span>
-            <span style={styles.matchupText}>{matchupLabel}</span>
-            {metadata?.winnerName && (
-              <span style={styles.winnerText}>Winner: {metadata.winnerName}</span>
-            )}
+            <span className={styles.matchup} title={matchupLabel}>{matchupLabel}</span>
+          </div>
           </div>
           {/*
             Something about these frames isn't the plain case, and the badge says which. DIVERGED:
@@ -272,24 +310,26 @@ export function ReplayPlayer({
             the scenario buttons keep working and only the ending is missing.
           */}
           {metadata?.degradedReason && (
-            <span style={styles.archivedBadge} title={metadata.degradedReason}>
+            <span className={styles.badge} title={metadata.degradedReason}>
               {metadata.fidelity === 'DIVERGED' ? 'From archive' : 'Partial recording'}
             </span>
           )}
-          {!isMobile && (
-            <>
+          {!isMobile && (stateReproducible || !fromFile) && (
+            <div className={styles.actions}>
               {stateReproducible && (
                 <>
                   <button
+                    type="button"
                     onClick={() => void handleShareAsScenario()}
-                    style={styles.scenarioButton}
+                    className={styles.action}
                     title="Copy a short link that drops you into this exact position — full board, hands, libraries, stack, targets and mana — to play it out yourself or against the AI."
                   >
                     {scenarioCopied ? 'Copied!' : 'Share as scenario'}
                   </button>
                   <button
+                    type="button"
                     onClick={() => void handleDownloadSnapshot()}
-                    style={styles.scenarioButton}
+                    className={styles.action}
                     title="Download this exact position as a snapshot file you can reload later from the Scenario Builder ('Load file')."
                   >
                     {downloadError ? 'Failed' : downloaded ? 'Saved!' : 'Save snapshot'}
@@ -302,20 +342,20 @@ export function ReplayPlayer({
                   <a
                     href={replayExportUrl(gameId)}
                     download
-                    style={styles.exportButton}
+                    className={styles.action}
                     title="Download this game's replay file — its seed, decks and every action — to keep, or to watch later with 'Open replay file'."
                   >
-                    Export replay
+                    Export
                   </a>
-                  <button onClick={() => void handleShareReplay()} style={styles.shareButton} title="Copy a link to this replay">
-                    {replayCopied ? 'Copied!' : 'Share replay'}
+                  <button type="button" onClick={() => void handleShareReplay()} className={styles.actionPrimary} title="Copy a link to this replay">
+                    {replayCopied ? 'Link copied' : 'Share replay'}
                   </button>
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
-        <div style={styles.gameBoardContainer}>
+        <div className={styles.board}>
           <GameBoard spectatorMode topOffset={headerHeight} />
         </div>
       </div>
@@ -324,152 +364,27 @@ export function ReplayPlayer({
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  replayContainer: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#0a0a12',
-    display: 'flex',
-    flexDirection: 'column',
-    zIndex: 1500,
-  },
-  replayHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    rowGap: 8,
-    padding: '10px 16px',
-    borderBottom: '1px solid #1a1a25',
-    backgroundColor: '#0d0d15',
-    flexShrink: 0,
-    zIndex: 1600,
-    gap: 10,
-  },
-  backButton: {
-    padding: '8px 16px',
-    fontSize: 13,
-    backgroundColor: 'transparent',
-    color: '#888',
-    border: '1px solid #333',
-    borderRadius: 6,
-    cursor: 'pointer',
-    flexShrink: 0,
-  },
-  replayControls: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
-  controlButton: {
-    padding: '6px 14px',
-    fontSize: 13,
-    backgroundColor: '#1a1a2e',
-    color: '#ccc',
-    border: '1px solid #2a2a3e',
-    borderRadius: 4,
-    cursor: 'pointer',
-  },
-  scrubberContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-    minWidth: 0,
-  },
-  scrubber: {
-    flex: 1,
-    minWidth: 80,
-    height: 4,
-    appearance: 'none' as const,
-    WebkitAppearance: 'none' as const,
-    background: '#2a2a3e',
-    borderRadius: 2,
-    outline: 'none',
-    cursor: 'pointer',
-    accentColor: '#4fc3f7',
-  },
-  stepCounter: {
-    color: '#888',
-    fontSize: 13,
-    minWidth: 70,
-    flexShrink: 0,
-  },
-  replayInfo: {
-    textAlign: 'right',
-    flexShrink: 1,
-    minWidth: 0,
-    overflow: 'hidden',
-  },
-  replayLabel: {
-    display: 'block',
-    color: '#666',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-  },
-  matchupText: {
-    display: 'block',
-    color: '#aaa',
-    fontSize: 13,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-  winnerText: {
-    display: 'block',
-    color: '#4fc3f7',
-    fontSize: 11,
-  },
-  archivedBadge: {
-    padding: '4px 8px',
-    fontSize: 11,
-    color: '#fbbf24',
-    border: '1px solid #78550f',
-    borderRadius: 4,
-    backgroundColor: '#2a2008',
-    whiteSpace: 'nowrap',
-    cursor: 'help',
-  },
-  shareButton: {
-    padding: '7px 10px',
-    fontSize: 12,
-    backgroundColor: '#1e40af',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-    flexShrink: 0,
-    whiteSpace: 'nowrap',
-  },
-  exportButton: {
-    padding: '7px 10px',
-    fontSize: 12,
-    backgroundColor: '#1a1a2e',
-    color: '#ccc',
-    border: '1px solid #2a2a3e',
-    borderRadius: 6,
-    cursor: 'pointer',
-    flexShrink: 0,
-    whiteSpace: 'nowrap',
-    textDecoration: 'none',
-  },
-  scenarioButton: {
-    padding: '7px 10px',
-    fontSize: 12,
-    backgroundColor: '#6d28d9',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-    flexShrink: 0,
-    whiteSpace: 'nowrap',
-  },
-  gameBoardContainer: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-  },
+/**
+ * The players' faces, overlapping like a hand of cards, ahead of the "A vs B" line — so a replay
+ * says *who* played before it says anything else. Seats without a portrait simply drop out; with
+ * none at all the row renders nothing and the header is the text it always was.
+ */
+function SeatFaces({ playerIds }: { playerIds: readonly string[] }) {
+  // A duel's two faces wear their life orbs' colours (player 1 sits at the bottom, blue); a pod's
+  // overlap on a dark ring that keeps neighbours apart.
+  const duel = playerIds.length === 2
+  return (
+    <span className={styles.faces}>
+      {playerIds.map((id, i) => (
+        <SeatPortrait
+          key={id}
+          playerId={id}
+          size={30}
+          ringColor={duel ? DUEL_RINGS[i]! : 'rgba(12, 14, 22, 0.95)'}
+          ringWidth={2}
+          style={{ zIndex: playerIds.length - i }}
+        />
+      ))}
+    </span>
+  )
 }

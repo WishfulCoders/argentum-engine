@@ -3,6 +3,8 @@ package com.wingedsheep.gameserver.auth
 import com.wingedsheep.gameserver.controller.AdminUsersController
 import com.wingedsheep.gameserver.controller.AuthController
 import com.wingedsheep.gameserver.stats.AdminUserStat
+import com.wingedsheep.gameserver.stats.PlayerRecord
+import com.wingedsheep.gameserver.stats.WinLoss
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.string.shouldContain
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter
@@ -30,8 +32,8 @@ class UserDtoSerializationTest : FunSpec({
 
     test("AdminUsersController.UserDetailDto serializes the admin flag as isAdmin") {
         val dto = AdminUsersController.UserDetailDto(
-            id = id, email = "a@b.com", displayName = "A", isAdmin = true, createdAt = "now",
-            stats = AdminUsersController.StatsDto(0, 0, 0, 0.0),
+            id = id, email = "a@b.com", displayName = "A", isAdmin = true, avatar = null, createdAt = "now",
+            stats = PlayerRecord(0, 0, 0, 0.0, WinLoss.of(0, 0), WinLoss.of(0, 0), notCounted = 0),
             colors = emptyList(), modes = emptyList(), opponents = emptyList(),
             topCards = emptyList(), tournaments = emptyList(), recentGames = emptyList(),
         )
@@ -40,7 +42,7 @@ class UserDtoSerializationTest : FunSpec({
 
     test("AdminUserStat serializes the admin flag as isAdmin") {
         val dto = AdminUserStat(
-            id = id, email = "a@b.com", displayName = "A", isAdmin = true, createdAt = "now",
+            id = id, email = "a@b.com", displayName = "A", isAdmin = true, avatar = null, createdAt = "now",
             games = 0, wins = 0, lastPlayed = null,
         )
         mapper.writeValueAsString(dto) shouldContain "\"isAdmin\":true"

@@ -5,23 +5,22 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.SelfAlternativeCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * Snuff Out — Mercadian Masques #162
- * {3}{B} · Instant · Common
- *
+ * Snuff Out
+ * {3}{B}
+ * Instant
  * If you control a Swamp, you may pay 4 life rather than pay this spell's mana cost.
  * Destroy target nonblack creature. It can't be regenerated.
  *
- * The alternative cost is a [SelfAlternativeCost] of {0} plus a 4-life additional cost (the
- * Fireblast shape), gated by its own availability [SelfAlternativeCost.condition] — "if you control
- * a Swamp" is checked when the spell is cast, against any land with the Swamp subtype (Blasphemous
- * Edict's conditional alternative). The spell is the Terror shape without the nonartifact clause.
+ * The pitch cost is a [SelfAlternativeCost] of {0} plus 4 life, offered only while you control a
+ * permanent with the Swamp land subtype (Force of Negation's conditional shape). Its mana value
+ * stays 4 whichever cost is paid.
  */
 val SnuffOut = card("Snuff Out") {
     manaCost = "{3}{B}"
@@ -33,7 +32,7 @@ val SnuffOut = card("Snuff Out") {
     selfAlternativeCost = SelfAlternativeCost(
         manaCost = ManaCost.parse("{0}"),
         additionalCosts = listOf(Costs.additional.PayLife(4)),
-        condition = Conditions.YouControl(Filters.SwampCard)
+        condition = Conditions.YouControl(GameObjectFilter.Land.withSubtype("Swamp")),
     )
 
     spell {

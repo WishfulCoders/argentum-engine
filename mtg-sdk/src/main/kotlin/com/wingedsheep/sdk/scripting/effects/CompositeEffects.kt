@@ -24,8 +24,9 @@ import kotlinx.serialization.Serializable
 /**
  * Multiple effects that happen together.
  *
- * By default, [description] and [runtimeDescription] concatenate each sub-effect's
- * own text with ". ". For cards whose pipeline produces a verbose or implementation-leaking
+ * By default, [description] and [runtimeDescription] join each sub-effect's own text with
+ * ". ", fusing the runs that only read as one sentence (a library search; a battlefield gather
+ * and the step that consumes it; see [describeSteps]). For cards whose pipeline produces a verbose or implementation-leaking
  * join (e.g., intermediate `StoreNumber` steps), supply [descriptionOverride] to render
  * a single hand-written sentence instead. Use `{0}`, `{1}`, ... placeholders paired with
  * [descriptionAmounts] to interpolate evaluated dynamic values at runtime — the static
@@ -40,7 +41,7 @@ data class CompositeEffect(
     val descriptionAmounts: List<DynamicAmount> = emptyList()
 ) : Effect {
     override val description: String =
-        descriptionOverride ?: effects.joinToString(". ") { it.description }
+        descriptionOverride ?: describeSteps(effects) { it.description }
 
     /** No override, no early stop: a sequence [Effect.then] may extend in place. */
     internal fun isPlainSequence(): Boolean =
@@ -48,7 +49,7 @@ data class CompositeEffect(
 
     override fun runtimeDescription(resolver: (DynamicAmount) -> Int?): String {
         val template = descriptionOverride
-            ?: return effects.joinToString(". ") { it.runtimeDescription(resolver) }
+            ?: return describeSteps(effects) { it.runtimeDescription(resolver) }
         var rendered = template
         descriptionAmounts.forEachIndexed { index, amount ->
             // Undeterminable slot: substitute the amount's own wording rather than a bogus "0".
@@ -85,6 +86,14 @@ data class CompositeEffect(
 data class Mode(
     val effect: Effect,
     val targetRequirements: List<TargetRequirement> = emptyList(),
+    /**
+     * Always written. The default is re-derived from [effect] on decode, and a bound target's
+     * noun ([EffectTarget.BoundVariable.requirementDescription]) is display-only state the JSON
+     * doesn't carry — so an omitted description would come back as "Destroy target" where the
+     * card said "Destroy target artifact" (a replay pin, a loaded card).
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.ALWAYS)
     val description: String = effect.description,
     val additionalManaCost: String? = null,
     val additionalCosts: List<AdditionalCost>? = null
@@ -233,11 +242,48 @@ data class ModalEffect(
      * `SpellCastPredicate.IsModal` and `ContextPropertyKey.MODES_CHOSEN_ON_TRIGGERING_SPELL`
      * see only true modal spells.
      */
-    val countsAsModalSpell: Boolean = true
+    val countsAsModalSpell: Boolean = true,
+    /**
+     * "You **may** choose two" (Shadrix Silverquill): the controller may pick no modes at all,
+     * but once they pick one they are held to the printed `[minChooseCount, chooseCount]`. So
+     * `chooseCount = 2` with this set allows exactly zero or two modes — never one, which
+     * `minChooseCount = 0` alone would allow (Shadrix's ruling). Choosing none removes the
+     * ability from the stack (CR 603.3c). Read where a modal *triggered* ability announces its
+     * modes (`TriggerProcessor`); every printed card with this wording is a triggered ability.
+     */
+    val mayChooseNone: Boolean = false,
+    /**
+     * "Each mode must target a different player" (Shadrix Silverquill, Vindictive Lich, Balor, the
+     * TMNT duos): no object or player may be a target of more than one chosen mode. The engine
+     * only offers a mode when the modes picked so far plus it can still be given distinct targets
+     * (and enough of them to reach the minimum), and narrows each later mode's legal targets to
+     * the ones the earlier modes didn't take — so with one opponent, Vindictive Lich can choose
+     * only one of its opponent modes. Read on the triggered-ability announcement path, like
+     * [mayChooseNone].
+     */
+    val eachModeTargetsDifferent: Boolean = false,
+    /**
+     * "Choose one at random" (Summon: Magus Sisters, Outlaws' Merriment, Umaro, Raging Yeti): the
+     * controller doesn't pick — the engine draws the mode uniformly from the game's seeded RNG as
+     * the ability goes onto the stack, before targets are chosen, so players respond knowing it
+     * (CR 603.3c; Magus Sisters' rulings). Only modes that could legally be chosen are in the draw:
+     * a mode with no legal target is excluded, and if none can be chosen the ability is removed
+     * from the stack. Exactly one mode is drawn, so [chooseCount] must be 1. Read where a modal
+     * *triggered* ability announces its modes (`TriggerProcessor`), like [mayChooseNone]; every
+     * printed card with this wording is a triggered ability. Use [chooseOneAtRandom].
+     */
+    val chooseAtRandom: Boolean = false
 ) : Effect {
+    init {
+        require(!chooseAtRandom || (chooseCount == 1 && minChooseCount == 1 && dynamicChooseCount == null)) {
+            "chooseAtRandom draws exactly one mode: chooseCount and minChooseCount must be 1, with no dynamicChooseCount"
+        }
+    }
+
     override val description: String = buildString {
-        append("Choose ")
+        append(if (mayChooseNone) "You may choose " else "Choose ")
         when {
+            chooseAtRandom -> append("one at random")
             excludeModesChosenThisTurn -> append("one that hasn't been chosen this turn")
             excludePreviouslyChosenModes -> append("one that hasn't been chosen")
             dynamicChooseCount != null -> {
@@ -252,6 +298,15 @@ data class ModalEffect(
                 3 -> append("three")
                 else -> append(chooseCount)
             }
+        }
+        if (eachModeTargetsDifferent) {
+            val allPlayers = modes.all { mode ->
+                mode.targetRequirements.all {
+                    it is com.wingedsheep.sdk.scripting.targets.TargetPlayer ||
+                        it is com.wingedsheep.sdk.scripting.targets.TargetOpponent
+                }
+            }
+            append(if (allPlayers) ". Each mode must target a different player" else ". Each mode must have a different target")
         }
         append(" —\n")
         modes.forEachIndexed { index, mode ->
@@ -328,6 +383,14 @@ data class ModalEffect(
                 excludeModesChosenThisTurn = true,
                 countsAsModalSpell = false
             )
+
+        /**
+         * Create a "choose one at random" modal effect (Summon: Magus Sisters). The engine draws
+         * the mode from the modes that could legally be chosen as the triggered ability goes onto
+         * the stack; the controller makes no choice. See [ModalEffect.chooseAtRandom].
+         */
+        fun chooseOneAtRandom(vararg modes: Mode): ModalEffect =
+            ModalEffect(modes = modes.toList(), chooseCount = 1, chooseAtRandom = true)
 
         /**
          * Create a choose-two modal effect (Cryptic Command style).
@@ -527,6 +590,21 @@ sealed interface SuccessCriterion {
     @SerialName("SuccessCriterion.TurnedFaceUp")
     @Serializable
     data object TurnedFaceUp : SuccessCriterion
+
+    /**
+     * Action succeeded iff the gated action actually *transformed a permanent* — a
+     * `TransformedEvent` was emitted during the action (CR 701.27). Transforming is not a zone move,
+     * so [Auto] can't infer it, and [Always] would report success for the cases the rules call
+     * failures: a permanent that isn't a transforming double-faced permanent (a single-faced
+     * token, or a single-faced permanent that became a copy of one) doesn't transform (CR 701.27c), and a daybound/nightbound permanent can't
+     * transform except by its own keyword.
+     *
+     * Enduring Angel: "instead transform this creature and your life total becomes 3. Then if this
+     * creature didn't transform this way, you lose the game."
+     */
+    @SerialName("SuccessCriterion.Transformed")
+    @Serializable
+    data object Transformed : SuccessCriterion
 }
 
 /**
@@ -737,6 +815,39 @@ enum class DelayedTriggerTiming {
 }
 
 /**
+ * Which beginnings a step-based [CreateDelayedTriggerEffect] waits for: its [step][CreateDelayedTriggerEffect.step]
+ * exactly, or any step of the same kind. A separate axis from [DelayedTriggerTiming] (the earliest
+ * *turn*) and [CreateDelayedTriggerEffect.fireOnPlayer] (*whose* turn), because it decides which
+ * *step* of a turn qualifies.
+ */
+@Serializable
+enum class DelayedTriggerStepScope {
+    /** Only the beginning of the named step itself — "at the beginning of the next end step". */
+    @SerialName("Step")
+    STEP,
+
+    /**
+     * The beginning of whichever main phase comes next — "at the beginning of your next main
+     * phase". The precombat and postcombat main phases are individually and collectively "the main
+     * phase" (CR 505.1), and an additional main phase is a postcombat main phase (CR 505.1a), so
+     * cast during your precombat main phase or your combat phase, the trigger fires in that turn's
+     * postcombat main phase (Mana Drain's ruling). The `step` it pairs with must be a main phase.
+     */
+    @SerialName("AnyMainPhase")
+    ANY_MAIN_PHASE;
+
+    /**
+     * Whether the beginning of [current] fires a trigger scheduled for [scheduled] under this scope.
+     * [ANY_MAIN_PHASE] ignores [scheduled]; [CreateDelayedTriggerEffect]'s `init` guard is what
+     * keeps it a main phase.
+     */
+    fun matches(scheduled: com.wingedsheep.sdk.core.Step, current: com.wingedsheep.sdk.core.Step): Boolean = when (this) {
+        STEP -> scheduled == current
+        ANY_MAIN_PHASE -> current.isMainPhase
+    }
+}
+
+/**
  * Create a delayed triggered ability that fires at a specific step.
  *
  * When executed, bakes any context-dependent target references (ContextTarget)
@@ -773,7 +884,9 @@ data class CreateDelayedTriggerEffect(
      * For event-based delayed triggers: the entity that scopes the trigger.
      * The trigger only fires for events sourced from this entity. Context
      * references (e.g. ContextTarget(0)) are baked into a concrete entity id
-     * at creation time by CreateDelayedTriggerExecutor.
+     * at creation time by CreateDelayedTriggerExecutor. On a spell-cast trigger the watched
+     * entity is a player — the **caster** it waits on ("that player … whenever they cast a
+     * spell", Nuka-Nuke Launcher); the spell remains the triggering entity.
      *
      * For step-based delayed triggers (no [trigger]) there is no event to scope, so the baked
      * entity instead becomes the fired trigger's *triggering entity* — reachable from the effect
@@ -817,6 +930,11 @@ data class CreateDelayedTriggerEffect(
      * trigger fires on (not *which* turn is the earliest eligible one).
      */
     val timing: DelayedTriggerTiming = DelayedTriggerTiming.CURRENT_TURN_OR_LATER,
+    /**
+     * Which step beginnings fire this step-based delayed trigger: [step] exactly (default), or any
+     * main phase ("your next main phase"). See [DelayedTriggerStepScope].
+     */
+    val stepScope: DelayedTriggerStepScope = DelayedTriggerStepScope.STEP,
     /**
      * Target requirement chosen *each time* the delayed trigger fires. Used for delayed
      * triggers whose effect targets, e.g. "Whenever you cast a noncreature spell this turn,
@@ -874,10 +992,17 @@ data class CreateDelayedTriggerEffect(
      */
     val alsoAtSteps: List<Step> = emptyList()
 ) : Effect {
+    init {
+        require(stepScope != DelayedTriggerStepScope.ANY_MAIN_PHASE || step?.isMainPhase == true) {
+            "DelayedTriggerStepScope.ANY_MAIN_PHASE needs a main-phase step, got $step"
+        }
+    }
+
     override val description: String = when {
         trigger != null -> "create a delayed trigger that fires on ${trigger.event::class.simpleName}"
         step != null && alsoAtSteps.isNotEmpty() ->
             "create a delayed trigger at the beginning of the next ${delayedStepsName(listOf(step) + alsoAtSteps)}"
+        stepScope == DelayedTriggerStepScope.ANY_MAIN_PHASE -> "create a delayed trigger at the beginning of the next main phase"
         step != null -> "create a delayed trigger at the beginning of the next ${step.displayName}"
         else -> "create a delayed trigger"
     }
@@ -926,6 +1051,23 @@ sealed interface DelayedTriggerExpiry {
     data object UntilControllersNextTurn : DelayedTriggerExpiry
 
     /**
+     * Remove the delayed trigger during the cleanup step of [player]'s **next** turn — "until the
+     * end of *defending player's* next turn, whenever …" (Nuka-Nuke Launcher). The delayed-trigger
+     * analogue of [com.wingedsheep.sdk.scripting.Duration.EndOfYourNextTurn], with the player made
+     * an axis: [player] is resolved to a concrete player when the trigger is created, and the
+     * current turn never counts, even when it is that player's.
+     *
+     * Not [UntilControllersNextTurn]: that one ends at the *beginning* of the turn (after its untap
+     * step) and is keyed to the trigger's controller; this one lasts through the whole turn, of
+     * any player. If [player] leaves the game the trigger is removed with them.
+     */
+    @SerialName("DelayedTriggerExpiry.EndOfPlayersNextTurn")
+    @Serializable
+    data class EndOfPlayersNextTurn(
+        val player: EffectTarget = EffectTarget.PlayerRef(Player.You)
+    ) : DelayedTriggerExpiry
+
+    /**
      * Remove the delayed trigger when the current combat phase ends — the scope of a "this combat"
      * rider, which [EndOfTurn] is too coarse for once a turn has more than one combat phase.
      *
@@ -959,7 +1101,15 @@ sealed interface DelayedTriggerExpiry {
  * carried into whichever consequence fires, so a consequence can reference a collection built
  * earlier in the same resolution (e.g. "return the discarded card this way").
  *
- * Supported costs: [PayCost.Sacrifice] (card selection) and [PayCost.PayLife] (yes/no).
+ * Supported costs: [PayCost.Sacrifice] / tap (card selection) and [PayCost.PayLife] (yes/no).
+ * A null [cost] is a **free choice** — "any opponent may have you put that card into your
+ * graveyard" (Sin Prodder): nothing is paid, each asked player simply answers [prompt] yes or
+ * no, and the first yes runs [consequence] exactly as a payment would.
+ *
+ * [storePayerAs] stores the player who paid (or said yes) in a pipeline collection that
+ * [consequence] reads with `EffectTarget.PipelineTarget(storePayerAs)` — "if a player does, this
+ * deals damage to *that player*". Only [consequence] sees it; [consequenceIfNonePaid] has no such
+ * player.
  *
  * [eligiblePlayers] scopes *which* players are offered the choice, relative to the source's
  * controller: [Player.Each] (default) asks every player, [Player.EachOpponent] asks only the
@@ -967,26 +1117,37 @@ sealed interface DelayedTriggerExpiry {
  * multi-player group references are meaningful here; single-player refs fall back to that one
  * player.
  *
- * @property cost The cost any player may choose to pay
+ * @property cost The cost any player may choose to pay; null for a free choice (see above)
  * @property consequence The effect that happens if a player pays (null = nothing)
  * @property consequenceIfNonePaid The effect that happens if no player pays (null = nothing)
  * @property eligiblePlayers Which players are offered the choice, relative to the controller
+ * @property prompt The yes/no question put to each asked player, in their words. Required for a
+ *   free choice (null [cost]); a payment's prompt is built from the cost itself.
+ * @property storePayerAs Pipeline collection [consequence] reads the paying player from
+ *   (`EffectTarget.PipelineTarget(storePayerAs)`); null when the consequence never names them.
  */
 @SerialName("AnyPlayerMayPay")
 @Serializable
 data class AnyPlayerMayPayEffect(
-    val cost: PayCost,
+    val cost: PayCost?,
     val consequence: Effect? = null,
     val consequenceIfNonePaid: Effect? = null,
-    val eligiblePlayers: Player = Player.Each
+    val eligiblePlayers: Player = Player.Each,
+    val prompt: String? = null,
+    val storePayerAs: String? = null,
 ) : Effect {
+    init {
+        require(cost != null || prompt != null) { "A free-choice AnyPlayerMayPay (null cost) needs a prompt" }
+    }
+
     override val description: String = buildString {
         val who = if (eligiblePlayers == Player.EachOpponent) "opponent" else "player"
+        val offer = cost?.description ?: "accept"
         when {
             consequenceIfNonePaid != null && consequence == null ->
-                append("${consequenceIfNonePaid.description} unless any $who ${cost.description}")
+                append("${consequenceIfNonePaid.description} unless any $who ${if (cost == null) "accepts" else offer}")
             else -> {
-                append("Any $who may ${cost.description}.")
+                append("Any $who may $offer.")
                 if (consequence != null) append(" If a player does, ${consequence.description}.")
                 if (consequenceIfNonePaid != null) append(" If no player does, ${consequenceIfNonePaid.description}.")
             }
@@ -994,7 +1155,7 @@ data class AnyPlayerMayPayEffect(
     }
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
-        val newCost = cost.applyTextReplacement(replacer)
+        val newCost = cost?.applyTextReplacement(replacer)
         val newConsequence = consequence?.applyTextReplacement(replacer)
         val newConsequenceIfNonePaid = consequenceIfNonePaid?.applyTextReplacement(replacer)
         return if (newCost !== cost || newConsequence !== consequence || newConsequenceIfNonePaid !== consequenceIfNonePaid)
@@ -1122,16 +1283,23 @@ data class FlipCoinsEffect(
  *
  * Used by Fiery Gambit ("Flip a coin until you lose a flip or choose to stop flipping"), whose three
  * payoff tiers are then plain `Compare(VariableReference(storeWinsAs), GTE, Fixed(n))` gates over the
- * one tally.
+ * one tally, and — with [mayStop] `false` — by Mirror March ("flip a coin until you lose a flip"),
+ * whose run has no stop option at all: a won flip is followed by the next flip with no prompt.
  *
  * @property storeWinsAs Pipeline `storedNumbers` key the won-flip tally is written to.
+ * @property mayStop Whether the flipper is offered "stop flipping" after each won flip ("…or choose
+ *   to stop flipping"). `false` is the mandatory form: only a lost flip ends the run (bounded by the
+ *   engine's coin-flip backstop when a forced-win effect means no flip can be lost).
  */
 @SerialName("FlipCoinsUntilLoss")
 @Serializable
 data class FlipCoinsUntilLossEffect(
-    val storeWinsAs: String = "wins"
+    val storeWinsAs: String = "wins",
+    val mayStop: Boolean = true
 ) : Effect {
-    override val description: String = "Flip a coin until you lose a flip or choose to stop flipping"
+    override val description: String =
+        if (mayStop) "Flip a coin until you lose a flip or choose to stop flipping"
+        else "Flip a coin until you lose a flip"
 }
 
 // =============================================================================
@@ -1229,6 +1397,10 @@ sealed interface RepeatCondition {
      * @property prompt Text shown in the yes/no decision
      * @property yesText Label for the "repeat" button
      * @property noText Label for the "stop" button
+     * @property onlyIf When set, the offer is made only after a pass where this condition holds,
+     *   read like [WhileCondition] against that pass's own outputs; otherwise the loop stops
+     *   without asking. "15—20 | Create one of those tokens. You may roll again." (Delina, Wild
+     *   Mage) is the roll's row gating the choice. Null (the default) asks after every pass.
      */
     @SerialName("PlayerChooses")
     @Serializable
@@ -1236,7 +1408,8 @@ sealed interface RepeatCondition {
         val decider: EffectTarget,
         val prompt: String,
         val yesText: String = "Repeat",
-        val noText: String = "Stop"
+        val noText: String = "Stop",
+        val onlyIf: Condition? = null
     ) : RepeatCondition
 
     /**
@@ -1296,7 +1469,10 @@ data class RepeatWhileEffect(
         append(body.description)
         append(". Repeat this process")
         when (repeatCondition) {
-            is RepeatCondition.PlayerChooses -> append(" as many times as ${repeatCondition.decider.description} chooses")
+            is RepeatCondition.PlayerChooses -> {
+                append(" as many times as ${repeatCondition.decider.description} chooses")
+                repeatCondition.onlyIf?.let { append(" while ${it.description}") }
+            }
             is RepeatCondition.WhileCondition -> append(" while ${repeatCondition.condition.description}")
         }
     }
@@ -1360,13 +1536,21 @@ data class RepeatDynamicTimesEffect(
 sealed interface FeasibilityCheck {
 
     /**
-     * The player controls at least [count] permanents matching [filter].
+     * The player controls at least [count] permanents matching [filter] — or, when [dynamicCount]
+     * is set, at least that many, evaluated when the question is asked.
+     *
+     * [dynamicCount] is what lets a punisher offer "sacrifice that many permanents" as a payment
+     * whose size is only known at resolution (Archfiend of Spite: "that source's controller loses
+     * that much life unless they sacrifice that many permanents"). It mirrors
+     * [ForceSacrificeEffect.dynamicCount], so a choice pairing the two agrees about how many are
+     * needed; [count] stays the fallback, which keeps every fixed-count card unchanged.
      */
     @SerialName("ControlsPermanentMatching")
     @Serializable
     data class ControlsPermanentMatching(
         val filter: GameObjectFilter,
-        val count: Int = 1
+        val count: Int = 1,
+        val dynamicCount: DynamicAmount? = null
     ) : FeasibilityCheck
 
     /**
@@ -1394,7 +1578,9 @@ sealed interface FeasibilityCheck {
 /**
  * A labeled option in a [ChooseActionEffect].
  *
- * @property label Human-readable label shown in the UI (e.g., "Sacrifice a nonland permanent")
+ * @property label Human-readable label shown in the UI (e.g., "Sacrifice a nonland permanent").
+ *   Inside a counter-kind loop (`ForEachCounterKindOn` / `ForEachCounterKindAmong`), `{counter}`
+ *   is replaced by the visited kind's printed name ("Put another {counter} counter on it").
  * @property effect The effect executed when this option is chosen
  * @property feasibilityCheck Optional check — if non-null and the check fails, this option is hidden
  */

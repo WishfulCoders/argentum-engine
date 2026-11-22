@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.effects.combat
 
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.engine.handlers.CapturedObjectBinding
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.DecisionContext
@@ -11,11 +13,15 @@ import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.ResolutionFilterBaker
 import com.wingedsheep.engine.mechanics.layers.Layer
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
+import com.wingedsheep.engine.mechanics.layers.addFloatingEffects
+import com.wingedsheep.engine.mechanics.layers.createFloatingEffect
+import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
 import com.wingedsheep.engine.state.GameState
-import com.wingedsheep.engine.state.components.battlefield.chosenCreatureType
+import com.wingedsheep.engine.state.components.battlefield.chosenSubtype
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.EntityId
@@ -53,32 +59,149 @@ class PreventDamageExecutor(
         // A chosen source needs a player decision before the shield exists.
         is PreventionSourceFilter.Chosen -> handleChosenSource(state, effect, sources.eligible, context)
         is PreventionSourceFilter.Matching -> {
-            val filter = bindChosenValues(state, sources.filter, context)
+            // The shield outlives this resolution, so a player the filter names through the
+            // resolving context — "creatures target opponent controls" (Encircling Fissure) — is
+            // pinned now; which creatures that player controls stays live at damage time.
+            val baked = ResolutionFilterBaker.bake(sources.filter, context, state)
+            val filter = bindChosenValues(state, baked, context)
             if (filter == null) {
-                EffectResult.error(state, "No chosen creature type on source ${context.sourceId} for a prevention shield")
+                EffectResult.error(state, "No chosen creature type or color for a prevention shield from ${context.sourceId}")
             } else {
                 createFloatingEffect(state, effect, filter, context)
             }
         }
         PreventionSourceFilter.AnySource -> createFloatingEffect(state, effect, sourceFilter = null, context)
+        is PreventionSourceFilter.Specific -> handleSpecificSource(state, effect, sources.source, context)
+        PreventionSourceFilter.TargetingRecipient -> handleTargetingRecipient(state, effect, context)
+    }
+
+    /**
+     * "If a spell or ability that targets that creature would cause a source to deal damage to
+     * that creature this turn, prevent that damage" (Silhouette): an all-damage shield on one
+     * recipient that only fires while the damage's cause — the innermost resolving spell or
+     * ability — targets that recipient. Only the single-recipient, prevent-all shape lowers.
+     */
+    private fun handleTargetingRecipient(
+        state: GameState,
+        effect: PreventDamageEffect,
+        context: EffectContext
+    ): EffectResult {
+        if (effect.direction != PreventionDirection.ToTarget || effect.amount != null ||
+            effect.recipientGroup != null || effect.recipientGroupIncludesController ||
+            effect.onPrevented != null || effect.gainLifeFromPrevented || effect.gainLifeFromColors.isNotEmpty() ||
+            effect.toPlayersOnly || !effect.preventDamage || effect.halvePreventedDamage ||
+            effect.nextInstanceOnly || effect.scope != PreventionScope.AllDamage
+        ) {
+            return EffectResult.error(
+                state,
+                "PreventDamageEffect with TargetingRecipient supports only a prevent-all shield on one recipient"
+            )
+        }
+        val targetId = context.resolveTarget(effect.target, state) ?: return EffectResult.success(state)
+        state.getEntity(targetId) ?: return EffectResult.success(state)
+        val newState = state.addFloatingEffect(
+            layer = Layer.ABILITY,
+            modification = SerializableModification.PreventAllDamageTo(onlyCausedByObjectTargetingIt = true),
+            affectedEntities = setOf(targetId),
+            duration = effect.duration,
+            context = context,
+            timestamp = state.timestamp
+        )
+        return EffectResult.success(newState)
+    }
+
+    /**
+     * A shield on one recipient covering only the one object [source] names, bound to its id now:
+     * - all damage from it for the shield's duration — "prevent all damage that would be dealt to
+     *   this creature by target creature this turn" (Stonewise Fortifier);
+     * - with `nextInstanceOnly`, the next instance only, capped at [PreventDamageEffect.amount] when
+     *   given and spent either way — "~ deals 2 damage to that player. Prevent X of that damage"
+     *   (Power Leak, `source = Self`).
+     * Anything else fails rather than guess a scope. No object (a target that vanished) — no shield.
+     */
+    private fun handleSpecificSource(
+        state: GameState,
+        effect: PreventDamageEffect,
+        source: EffectTarget,
+        context: EffectContext
+    ): EffectResult {
+        val allFromSource = !effect.nextInstanceOnly && effect.amount == null
+        if ((!effect.nextInstanceOnly && !allFromSource) || effect.direction != PreventionDirection.ToTarget ||
+            effect.recipientGroup != null || effect.recipientGroupIncludesController ||
+            effect.onPrevented != null || effect.gainLifeFromPrevented || effect.gainLifeFromColors.isNotEmpty() ||
+            effect.toPlayersOnly || !effect.preventDamage || effect.halvePreventedDamage ||
+            effect.scope != PreventionScope.AllDamage
+        ) {
+            return EffectResult.error(
+                state,
+                "PreventDamageEffect with a Specific source supports only an all-damage or next-instance shield on one recipient"
+            )
+        }
+        // The source is read as a value, not acted on: a source that has already left (Power
+        // Leak's Aura destroyed in response) still deals its damage through last-known
+        // information, so the shield must still name it.
+        val sourceId = (source as? EffectTarget.SingleEntity)?.let { TargetResolutionUtils.resolveEntity(it, context, state) }
+            ?: context.resolveTarget(source, state)
+            ?: return EffectResult.success(state)
+        val targetId = context.resolveTarget(effect.target, state)
+            ?: return EffectResult.success(state)
+        val modification = if (allFromSource) {
+            SerializableModification.PreventAllDamageFromSource(damageSourceId = sourceId)
+        } else {
+            val amount = effect.amount?.let { amountEvaluator.evaluate(state, it, context) }
+            if (amount != null && amount <= 0) return EffectResult.success(state)
+            SerializableModification.PreventNextDamageInstanceFromSource(damageSourceId = sourceId, maxAmount = amount)
+        }
+        // Pin the shield to the object (CR 400.7). The ability's own source is the incarnation
+        // the ability came from — the identity its damage carries (DealDamageExecutor), even
+        // after it has left — and anything else is the object as it is now.
+        val sourceRef = (if (source == EffectTarget.Self) context.objectReferences.origin else null)
+            ?: state.objectRef(sourceId)
+        val (effectId, withId) = state.newEntity()
+        val floating = withId.createFloatingEffect(
+            id = effectId,
+            layer = Layer.ABILITY,
+            modification = modification,
+            affectedEntities = setOf(targetId),
+            duration = effect.duration,
+            context = context,
+            timestamp = state.timestamp
+        )
+        val pinned = floating.copy(
+            referencedObjects = floating.referencedObjects.filter { it.entityId != sourceId } + listOfNotNull(sourceRef)
+        )
+        return EffectResult.success(withId.addFloatingEffects(listOf(pinned)))
     }
 
     /**
      * A [PreventionSourceFilter.Matching] filter outlives the resolution that installs it, so a
-     * predicate reading a choice off the ability's source — "a creature of the chosen type"
-     * (Circle of Solace) — is bound to that choice now, and the shield keeps working after the
-     * source leaves the battlefield. Null when the filter asks for a choice the source never made.
+     * predicate reading a choice is bound to that choice now and the shield keeps working after
+     * the resolving context (and the ability's source) is gone:
+     * - "a creature of the chosen type" (Circle of Solace) reads the type chosen off the source;
+     * - "sources of the color of your choice" (Avacyn, Guardian Angel) reads the color chosen while
+     *   this effect resolves (an enclosing `ChooseColorThen`). Only the color is pinned: whether
+     *   a source has it is read when the damage would be dealt, so a source that turns that
+     *   color later is covered.
+     * Null when the filter asks for a choice that was never made.
      */
     private fun bindChosenValues(
         state: GameState,
         filter: GameObjectFilter,
         context: EffectContext
     ): GameObjectFilter? {
-        if (CardPredicate.HasChosenSubtype !in filter.cardPredicates) return filter
-        val chosenType = context.sourceId?.let { state.getEntity(it) }?.chosenCreatureType() ?: return null
+        val predicates = filter.cardPredicates
+        val needsType = CardPredicate.HasChosenSubtype in predicates
+        val needsColor = CardPredicate.HasChosenColor in predicates
+        if (!needsType && !needsColor) return filter
+        val chosenType = if (needsType) context.sourceId?.let { state.getEntity(it) }?.chosenSubtype() ?: return null else null
+        val chosenColor = if (needsColor) context.chosenColor ?: return null else null
         return filter.copy(
-            cardPredicates = filter.cardPredicates.map {
-                if (it == CardPredicate.HasChosenSubtype) CardPredicate.HasSubtype(Subtype(chosenType)) else it
+            cardPredicates = predicates.map {
+                when {
+                    it == CardPredicate.HasChosenSubtype && chosenType != null -> CardPredicate.HasSubtype(Subtype(chosenType))
+                    it == CardPredicate.HasChosenColor && chosenColor != null -> CardPredicate.HasColor(chosenColor)
+                    else -> it
+                }
             }
         )
     }
@@ -142,10 +265,18 @@ class PreventDamageExecutor(
             // resolve and `effect.target` is irrelevant.
             val silenceChosenSource =
                 effect.direction == PreventionDirection.FromTarget && effect.amount == null
+            // Only the source-side silence shield can tell combat from noncombat damage; the
+            // recipient shields would prevent both, so a combat-only one fails instead.
+            if (effect.scope == PreventionScope.CombatOnly && !silenceChosenSource) {
+                return EffectResult.error(
+                    state,
+                    "PreventDamageEffect with a Chosen source supports CombatOnly only as a FromTarget, prevent-all shield"
+                )
+            }
             val targetId = if (silenceChosenSource) {
                 controllerId
             } else {
-                context.resolveTarget(effect.target)
+                context.resolveTarget(effect.target, state)
                     ?: return EffectResult.error(state, "Could not resolve target for PreventDamageEffect with ChosenSource")
             }
             val amount = effect.amount?.let { amountEvaluator.evaluate(state, it, context) }
@@ -161,7 +292,8 @@ class PreventDamageExecutor(
             objectReferences = context.objectReferences,
                 sourceName = context.sourceId?.let { state.getEntity(it)?.get<CardComponent>()?.name },
                 nextInstanceOnly = effect.nextInstanceOnly,
-                halvePreventedDamage = effect.halvePreventedDamage
+                halvePreventedDamage = effect.halvePreventedDamage,
+                combatOnly = effect.scope == PreventionScope.CombatOnly
             )
             return EffectResult.from(state.suspendForDecision(decision, continuation))
         }
@@ -177,8 +309,15 @@ class PreventDamageExecutor(
         sourceFilter: GameObjectFilter?,
         context: EffectContext
     ): EffectResult {
-        if (effect.direction == PreventionDirection.FromTarget && effect.onPrevented != null) {
-            val targetId = context.resolveTarget(effect.target)
+        // A targeted source shield: "the next time target creature would deal damage this turn,
+        // prevent that damage", with a linked reaction (Awe Strike) or without one (Dazzling
+        // Reflection). Spent by the source's next damage event, whichever recipients it hits.
+        val plainNextInstanceFromTarget = effect.onPrevented == null && effect.nextInstanceOnly &&
+            sourceFilter == null && effect.amount == null && effect.preventDamage &&
+            !effect.halvePreventedDamage && !effect.gainLifeFromPrevented && effect.gainLifeFromColors.isEmpty() &&
+            effect.recipientGroup == null && !effect.recipientGroupIncludesController
+        if (effect.direction == PreventionDirection.FromTarget && (effect.onPrevented != null || plainNextInstanceFromTarget)) {
+            val targetId = context.resolveTarget(effect.target, state)
                 ?: return EffectResult.success(state)
             state.getEntity(targetId) ?: return EffectResult.success(state)
             val newState = state.installPreventAndReactShield(
@@ -202,7 +341,7 @@ class PreventDamageExecutor(
         if (effect.toPlayersOnly) {
             return EffectResult.error(
                 state,
-                "PreventDamageEffect.toPlayersOnly needs direction = FromTarget with an onPrevented reaction"
+                "PreventDamageEffect.toPlayersOnly needs direction = FromTarget with nextInstanceOnly or an onPrevented reaction"
             )
         }
 
@@ -217,6 +356,18 @@ class PreventDamageExecutor(
             // affected entity is stored; the recipient filter is evaluated against projected state at
             // damage time with the shield controller as "you".
             effect.recipientGroup != null || effect.recipientGroupIncludesController -> {
+                // The group shield prevents all covered damage and nothing else; a reaction riding
+                // it must not hide a shape it would silently ignore (Eye for an Eye's "still
+                // deals that damage", a capped amount, a next-instance or halving shield).
+                if (effect.onPrevented != null && (!effect.preventDamage || effect.amount != null ||
+                        effect.nextInstanceOnly || effect.halvePreventedDamage || effect.gainLifeFromPrevented)
+                ) {
+                    return EffectResult.error(
+                        state,
+                        "A recipient-side shield with onPrevented prevents all covered damage; " +
+                            "preventDamage = false, amount, nextInstanceOnly, halvePreventedDamage and gainLifeFromPrevented aren't supported"
+                    )
+                }
                 affectedEntities = emptySet()
                 modification = SerializableModification.PreventAllDamageToGroup(
                     filter = effect.recipientGroup,
@@ -224,7 +375,14 @@ class PreventDamageExecutor(
                     includesController = effect.recipientGroupIncludesController,
                     // "… by creatures" — a Matching source filter narrows the shield to matching
                     // damage sources.
-                    sourceFilter = sourceFilter
+                    sourceFilter = sourceFilter,
+                    // "For each 1 damage prevented this way, …" (Inkshield).
+                    onPrevented = effect.onPrevented,
+                    // "… you may have Channel Harm deal that much damage to target creature": the
+                    // rest names targets chosen as the spell was cast, so they ride the shield.
+                    onPreventedTargets = if (effect.onPrevented != null) context.targets else emptyList(),
+                    onPreventedNamedTargets = if (effect.onPrevented != null) context.pipeline.namedTargets else emptyMap(),
+                    onPreventedBound = if (effect.onPrevented == null) emptyList() else frozenBindings(state, context),
                 )
             }
 
@@ -233,10 +391,31 @@ class PreventDamageExecutor(
             // spent by the first damage from any matching source.
             sourceFilter != null && effect.nextInstanceOnly &&
             effect.direction == PreventionDirection.ToTarget -> {
-                val targetId = context.resolveTarget(effect.target)
+                val targetId = context.resolveTarget(effect.target, state)
                     ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
                 modification = SerializableModification.PreventNextDamageFromMatching(sourceFilter)
+            }
+
+            // "Prevent all damage that would be dealt to that creature this turn by colorless
+            // sources" (Lithomancer's Focus): a prevent-all shield on one recipient that only
+            // covers damage from matching sources. The recipient is pinned now; which sources match
+            // is read at damage time.
+            sourceFilter != null && effect.direction == PreventionDirection.ToTarget &&
+            effect.amount == null && !effect.nextInstanceOnly && effect.preventDamage &&
+            !effect.halvePreventedDamage && !effect.gainLifeFromPrevented &&
+            effect.gainLifeFromColors.isEmpty() && effect.onPrevented == null &&
+            // The Controller default is Fog's untargeted shape; "to you by <sources>" is
+            // `alsoToYou`, so it stays an error here rather than a second spelling.
+            effect.target != EffectTarget.Controller -> {
+                val targetId = context.resolveTarget(effect.target, state)
+                    ?: return EffectResult.success(state)
+                state.getEntity(targetId) ?: return EffectResult.success(state)
+                affectedEntities = setOf(targetId)
+                modification = SerializableModification.PreventAllDamageTo(
+                    combatOnly = effect.scope == PreventionScope.CombatOnly,
+                    sourceFilter = sourceFilter
+                )
             }
 
             // Prevent all damage — not just combat damage — that a group of sources would deal,
@@ -260,14 +439,13 @@ class PreventDamageExecutor(
                 modification = SerializableModification.PreventCombatDamageFromGroup(sourceFilter)
             }
 
-            // A Matching filter over one recipient has no lowering: its recipients are named by
-            // `recipientGroup` / `recipientGroupIncludesController` ("to you by attacking
-            // creatures"). Fail rather than guess a scope.
+            // Any other Matching shape over one recipient (a capped amount, a halving or
+            // life-gaining shield) has no lowering. Fail rather than guess a scope.
             sourceFilter != null -> {
                 return EffectResult.error(
                     state,
                     "PreventDamageEffect with a Matching source filter needs a recipient group, " +
-                        "the controller as recipient, FromTarget, or nextInstanceOnly"
+                        "the controller as recipient, FromTarget, nextInstanceOnly, or a prevent-all shield on one target"
                 )
             }
 
@@ -288,7 +466,7 @@ class PreventDamageExecutor(
             effect.scope == PreventionScope.CombatOnly &&
             effect.direction == PreventionDirection.ToTarget &&
             effect.amount == null -> {
-                val targetId = context.resolveTarget(effect.target)
+                val targetId = context.resolveTarget(effect.target, state)
                     ?: return EffectResult.success(state)
                 state.getEntity(targetId) ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
@@ -297,7 +475,7 @@ class PreventDamageExecutor(
 
             // Bidirectional combat damage prevention (to and by target)
             effect.direction == PreventionDirection.Both -> {
-                val targetId = context.resolveTarget(effect.target)
+                val targetId = context.resolveTarget(effect.target, state)
                     ?: return EffectResult.success(state)
                 state.getEntity(targetId) ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
@@ -307,32 +485,52 @@ class PreventDamageExecutor(
             // Prevent all damage FROM target (silencing)
             effect.direction == PreventionDirection.FromTarget &&
             effect.amount == null -> {
-                val targetId = context.resolveTarget(effect.target)
+                val targetId = context.resolveTarget(effect.target, state)
                     ?: return EffectResult.success(state)
                 state.getEntity(targetId) ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
-                modification = SerializableModification.PreventAllDamageDealtBy
+                modification = SerializableModification.PreventAllDamageDealtBy(
+                    combatOnly = effect.scope == PreventionScope.CombatOnly
+                )
             }
 
             // Amount-based prevention (prevent next N damage to target), optionally gaining the
-            // controller life for what it prevents (Candles' Glow).
+            // controller life for what it prevents (Candles' Glow), optionally combat-only
+            // (Decorated Griffin).
             effect.amount != null -> {
-                val targetId = context.resolveTarget(effect.target)
+                val targetId = context.resolveTarget(effect.target, state)
                     ?: return EffectResult.success(state)
                 val effectAmount = effect.amount!!
                 val amount = amountEvaluator.evaluate(state, effectAmount, context)
                 if (amount <= 0) return EffectResult.success(state)
+                // A reaction on the amount shield must not hide a shape it would ignore.
+                if (effect.onPrevented != null && (!effect.preventDamage || effect.nextInstanceOnly ||
+                        effect.halvePreventedDamage || effect.direction != PreventionDirection.ToTarget)
+                ) {
+                    return EffectResult.error(
+                        state,
+                        "An amount shield with onPrevented prevents the next N damage to its target; " +
+                            "preventDamage = false, nextInstanceOnly, halvePreventedDamage and FromTarget aren't supported"
+                    )
+                }
                 affectedEntities = setOf(targetId)
                 modification = SerializableModification.PreventNextDamage(
                     amount,
-                    controllerGainsLife = effect.gainLifeFromPrevented
+                    controllerGainsLife = effect.gainLifeFromPrevented,
+                    combatOnly = effect.scope == PreventionScope.CombatOnly,
+                    // "If damage is prevented this way, Acolyte's Reward deals that much damage to
+                    // any target": the reaction names targets chosen as the spell was cast.
+                    onPrevented = effect.onPrevented,
+                    onPreventedTargets = if (effect.onPrevented != null) context.targets else emptyList(),
+                    onPreventedNamedTargets = if (effect.onPrevented != null) context.pipeline.namedTargets else emptyMap(),
+                    onPreventedBound = if (effect.onPrevented == null) emptyList() else frozenBindings(state, context),
                 )
             }
 
             // Prevent all damage TO target.
             effect.direction == PreventionDirection.ToTarget &&
             effect.scope == PreventionScope.AllDamage -> {
-                val targetId = context.resolveTarget(effect.target)
+                val targetId = context.resolveTarget(effect.target, state)
                     ?: return EffectResult.success(state)
                 state.getEntity(targetId) ?: return EffectResult.success(state)
                 affectedEntities = setOf(targetId)
@@ -342,6 +540,18 @@ class PreventDamageExecutor(
             else -> {
                 return EffectResult.error(state, "Unsupported PreventDamageEffect configuration")
             }
+        }
+
+        // A reaction only runs where the lowering keeps it; any other shape would drop it silently
+        // and the card would read as a plain prevention.
+        val keepsReaction = (modification as? SerializableModification.PreventAllDamageToGroup)?.onPrevented != null ||
+            (modification as? SerializableModification.PreventNextDamage)?.onPrevented != null
+        if (effect.onPrevented != null && !keepsReaction) {
+            return EffectResult.error(
+                state,
+                "PreventDamageEffect.onPrevented needs a Chosen source, FromTarget, a recipient-side shield (to you / to a group), " +
+                    "or an amount shield on one target"
+            )
         }
 
         val newState = state.addFloatingEffect(
@@ -355,4 +565,10 @@ class PreventDamageExecutor(
 
         return EffectResult.success(newState)
     }
+
+    /** Pins each battlefield target the reaction may name to the object it is now (CR 400.7). */
+    private fun frozenBindings(state: GameState, context: EffectContext): List<CapturedObjectBinding> =
+        (context.targets + context.pipeline.namedTargets.values).mapNotNull { t ->
+            (t as? ChosenTarget.Permanent)?.entityId?.takeIf { it in state.getBattlefield() }
+        }.distinct().map { CapturedObjectBinding(it, state.objectRef(it)) }
 }

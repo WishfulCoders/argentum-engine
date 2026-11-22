@@ -144,6 +144,7 @@ class CantAttackGroupTest : FunSpec({
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
 
         val creature = driver.putCreatureOnBattlefield(p1, "Test Warrior")
+        driver.removeSummoningSickness(creature)
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
 

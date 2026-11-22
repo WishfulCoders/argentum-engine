@@ -43,7 +43,7 @@ class DjinniWindseerScenarioTest : ScenarioTestBase() {
         submitDecision(CardsSelectedResponse(decision.id, emptyList()))
         (getPendingDecision() as? ReorderLibraryDecision)?.let { submitDecision(OrderedResponse(it.id, it.cards)) }
         rolls += resolveStack().flatMap { it.events }.filterIsInstance<DieRolledEvent>()
-        rolls.map { it.naturalResult } shouldBe listOf(natural)
+        rolls.map { it.natural } shouldBe listOf(natural)
         isOnBattlefield("Djinni Windseer") shouldBe true
         return looked
     }

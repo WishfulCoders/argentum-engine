@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.ProtectionScope
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
@@ -15,15 +14,13 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * {2}{B}{B}
  * Legendary Creature — Human Cleric
  * 2/4
- *
  * Protection from Humans
- * Pay 1 life, Sacrifice another creature: Put a -1/-1 counter on up to one target creature and draw
- * a card.
+ * Pay 1 life, Sacrifice another creature: Put a -1/-1 counter on up to one target creature and
+ * draw a card.
  * {B}{B}, Discard a card: Proliferate.
  *
- * "Up to one target" is an optional target: with no target chosen the ability still draws; with a
- * target that becomes illegal, the whole ability fizzles (ruling 2021-03-19), which is the engine's
- * default for a targeted ability whose only chosen target is gone.
+ * The first ability may be activated with no target (you just draw); if a chosen target becomes
+ * illegal the whole ability fizzles and no card is drawn.
  */
 val YawgmothThranPhysician = card("Yawgmoth, Thran Physician") {
     manaCost = "{2}{B}{B}"
@@ -36,14 +33,15 @@ val YawgmothThranPhysician = card("Yawgmoth, Thran Physician") {
         "{B}{B}, Discard a card: Proliferate. (Choose any number of permanents and/or players, then give each " +
         "another counter of each kind already there.)"
 
-    keywordAbility(KeywordAbility.Protection(ProtectionScope.Subtype("Human")))
+    keywordAbility(KeywordAbility.protectionFromSubtype("Human"))
 
     activatedAbility {
         cost = Costs.Composite(Costs.PayLife(1), Costs.SacrificeAnother(GameObjectFilter.Creature))
-        val t = target(TargetFilter.Creature, optional = true)
-        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, t) then
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, creature) then
             Effects.DrawCards(1)
-        description = "Pay 1 life, Sacrifice another creature: Put a -1/-1 counter on up to one target creature and draw a card."
+        description = "Pay 1 life, Sacrifice another creature: Put a -1/-1 counter on up to one target " +
+            "creature and draw a card."
     }
 
     activatedAbility {

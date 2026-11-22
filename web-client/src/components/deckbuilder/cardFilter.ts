@@ -1,23 +1,17 @@
 /**
- * cardFilter — public facade for the deckbuilder's query language and filter chip helpers.
+ * cardFilter — the deckbuilder's card shape plus the query language's entry points.
  *
- * The actual grammar / lexer / parser / evaluator live in `./query/`. This file:
+ * The query language itself is the Kotlin `:mtg-search` module compiled to JavaScript (see
+ * `./query`). This file:
  *   - re-exports the user-facing entry points,
- *   - declares the `CardSummary` shape (mirrors `DecksController.CardSummaryDTO`),
- *   - keeps the legacy chip helpers (`addToken`/`removeToken`/`hasToken`/`toggleToken`)
- *     that the menu-style filter panel uses to round-trip top-level atoms with the
- *     free-text bar.
- *
- * The chip helpers operate on whitespace-separated terms in the raw string. They are
- * not aware of `or` / parens — when the query becomes "advanced" (uses any feature
- * the chips can't represent), the filter panel switches to read-only and stops
- * calling these helpers. See `isAdvancedQuery` in `./query`.
+ *   - declares the `CardSummary` shape (mirrors `CardsController.CardSummaryDTO`),
+ *   - keeps the chip helpers (`addToken`/`removeToken`/`hasToken`/`toggleToken`/`appendTerm`)
+ *     the filter panel uses to round-trip its chips with the free-text bar. They work on the
+ *     query's top-level terms as the parser reads them, so they stay correct for any query.
  */
-import { parseQuery as parseQueryFull } from './query'
-import type { CardPredicate, ParseResult } from './query'
 
 // ---------------------------------------------------------------------------
-// Card shape — mirrors `DecksController.CardSummaryDTO` on the backend.
+// Card shape — mirrors `CardsController.CardSummaryDTO` on the backend.
 // ---------------------------------------------------------------------------
 
 export interface PrintedNamePrinting {
@@ -61,8 +55,11 @@ export interface CardSummary {
    */
   printedNamePrintings?: PrintedNamePrinting[]
   oracleText?: string | null
+  /** Printed power as text — `"2"`, `"*"`, `"1+*"`. */
   power?: string | null
   toughness?: string | null
+  /** Printed starting loyalty of a planeswalker; drives `loy:`. */
+  loyalty?: string | null
   imageUri?: string | null
   keywords?: string[]
   /** Server-stamped legal formats (uppercase: STANDARD, MODERN, COMMANDER, …). */
@@ -81,72 +78,76 @@ export interface CardSummary {
    * hover preview rotates it to landscape; a flipped battle's back face stays portrait.
    */
   isLandscape?: boolean
+  /**
+   * Whether the card can be a commander on its own (the server's `CommanderEligibility`: a
+   * legendary creature, or a card that says it can be your commander). Absent on legacy fixtures.
+   */
+  canBeCommander?: boolean
+  /**
+   * The card's printed partner abilities (CR 702.124) — "Partner", "Partner—Friends forever",
+   * "Partner with <name>", "Choose a Background", "Doctor's companion". Empty or absent when none.
+   */
+  partnerAbilities?: string[]
+  /**
+   * The card's companion condition (CR 702.139) as printed after "Companion —"; absent when it has
+   * no companion ability. Its presence lets the sideboard offer to make it the deck's companion.
+   */
+  companionCondition?: string
 }
+
+import { queryStructure } from './query'
 
 export type { CardPredicate, ParseResult, ParseError } from './query'
-export { isAdvancedQuery, ALL_KEYS } from './query'
-
-/**
- * Parse a query string into a card predicate plus diagnostics.
- *
- * Backwards-compatible overload: many call-sites (and the chip-detection regexes)
- * just want the predicate. Pass `{ withErrors: true }` to get the full
- * `ParseResult` including parse errors with character spans.
- */
-export function parseQuery(query: string): CardPredicate
-export function parseQuery(query: string, opts: { withErrors: true }): ParseResult
-export function parseQuery(query: string, opts?: { withErrors: boolean }): CardPredicate | ParseResult {
-  const result = parseQueryFull(query)
-  if (opts?.withErrors) return result
-  return result.predicate
-}
+export { isAdvancedQuery, parseQuery } from './query'
 
 // ---------------------------------------------------------------------------
 // Menu ↔ query helpers
 //
-// The FilterPanel toggles call these to keep the text query in sync with the
-// chips. They operate on the raw string so a user typing "t:creature -t:goblin"
-// can still see the menu reflect the dominant choices.
-//
-// Token comparison is whole-term, whitespace-separated. These helpers do not
-// understand `or` / parens — when the query is advanced (per `isAdvancedQuery`),
-// the FilterPanel switches to read-only and stops calling them.
+// The filter panel toggles call these to keep the text query in sync with the chips. They work
+// on the query's *top-level* terms, as the shared parser reads them: in
+// `t:goblin (c:r or c:g)` the terms are `t:goblin` and `(c:r or c:g)`, so a chip never reaches
+// inside a group the user wrote. Adding a term to a query with `or` at the top brackets it first
+// — `t:elf or t:goblin` + `c:g` is `(t:elf or t:goblin) c:g` — so a chip always narrows the
+// whole search, and the panel works whatever was typed.
 // ---------------------------------------------------------------------------
 
-function splitTerms(query: string): string[] {
-  const out: string[] = []
-  let buf = ''
-  let inQuote = false
-  for (let i = 0; i < query.length; i++) {
-    const ch = query[i]!
-    if (ch === '"') {
-      inQuote = !inQuote
-      buf += ch
-      continue
-    }
-    if (!inQuote && /\s/.test(ch)) {
-      if (buf) { out.push(buf); buf = '' }
-      continue
-    }
-    buf += ch
-  }
-  if (buf) out.push(buf)
-  return out
+interface TermSpan { start: number; end: number; text: string }
+
+function topLevelTerms(query: string): TermSpan[] {
+  return queryStructure(query).terms.map((t) => ({ ...t, text: query.slice(t.start, t.end) }))
+}
+
+/** The query's top-level AND terms, as typed. */
+export function queryTerms(query: string): string[] {
+  return topLevelTerms(query).map((t) => t.text)
+}
+
+/** AND [term] onto the whole query, bracketing it first when `or` sits at the top. */
+export function appendTerm(query: string, term: string): string {
+  const q = query.trim()
+  if (!q) return term
+  return queryStructure(q).isConjunction ? `${q} ${term}` : `(${q}) ${term}`
 }
 
 export function addToken(query: string, token: string): string {
-  const terms = splitTerms(query)
-  if (terms.includes(token)) return query
-  return terms.length === 0 ? token : `${terms.join(' ')} ${token}`
+  return hasToken(query, token) ? query : appendTerm(query, token)
+}
+
+/** Remove every top-level term matching [matches] (default: equal to a token). */
+export function removeTerms(query: string, matches: (term: string) => boolean): string {
+  let next = query
+  for (const t of topLevelTerms(query).reverse()) {
+    if (matches(t.text)) next = next.slice(0, t.start) + next.slice(t.end)
+  }
+  return next.replace(/\s+/g, ' ').trim()
 }
 
 export function removeToken(query: string, token: string): string {
-  const terms = splitTerms(query).filter((t) => t !== token)
-  return terms.join(' ')
+  return removeTerms(query, (t) => t === token)
 }
 
 export function hasToken(query: string, token: string): boolean {
-  return splitTerms(query).includes(token)
+  return queryTerms(query).includes(token)
 }
 
 export function toggleToken(query: string, token: string): string {

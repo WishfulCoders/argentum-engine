@@ -13,24 +13,17 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Intrepid Adversary — Innistrad: Midnight Hunt #25
- * {1}{W} · Creature — Human Scout · Mythic · 3/1
+ * {1}{W} · Creature — Human Scout · 3/1
  *
  * Lifelink
- * When this creature enters, you may pay {1}{W} any number of times. When you pay this cost one or
- * more times, put that many valor counters on this creature.
+ * When this creature enters, you may pay {1}{W} any number of times. When you pay this cost one
+ * or more times, put that many valor counters on this creature.
  * Creatures you control get +1/+1 for each valor counter on this creature.
  *
- * Modeling notes:
- *  - The enters trigger resolves with no choices; on resolution the controller may pay {1}{W} any
- *    number of times ([Effects.PayRepeatedly] with no cap — the offered count is capped only by what
- *    they can afford). Paying at least once fires the CR 603.12 reflexive ability **once**, however
- *    many times the cost was paid (CR 603.12a), and players may respond to it before the counters
- *    arrive (the ruling). Declining, or being unable to pay even once, fires nothing.
- *  - "That many" is [DynamicAmounts.timesPaid], carried from the payment into the reflexive
- *    ability's resolution.
- *  - The anthem is a layer-7c [GrantDynamicStats] over every creature you control — this one
- *    included — sized by the live valor count on this creature ([CounterType.VALOR]), so counters
- *    added or removed later change it immediately, and it ends when the creature leaves.
+ * The repeated payment is [Effects.PayRepeatedly] under an optional reflexive trigger (CR 603.12:
+ * the reflexive half triggers once, sized by the repetition count read back with
+ * [DynamicAmounts.timesPaid]). The anthem is a live static over the valor counters currently on
+ * the Adversary, so it includes the Adversary itself and shrinks if counters are removed.
  */
 val IntrepidAdversary = card("Intrepid Adversary") {
     manaCost = "{1}{W}"
@@ -53,7 +46,7 @@ val IntrepidAdversary = card("Intrepid Adversary") {
             reflexiveEffect = Effects.AddDynamicCounters(
                 CounterType.VALOR,
                 DynamicAmounts.timesPaid(),
-                EffectTarget.Self,
+                EffectTarget.Self
             ),
             descriptionOverride = "You may pay {1}{W} any number of times. When you pay this cost " +
                 "one or more times, put that many valor counters on this creature."
@@ -67,7 +60,7 @@ val IntrepidAdversary = card("Intrepid Adversary") {
         ability = GrantDynamicStats(
             filter = GroupFilter.AllCreaturesYouControl,
             powerBonus = valor,
-            toughnessBonus = valor,
+            toughnessBonus = valor
         )
     }
 
@@ -76,10 +69,5 @@ val IntrepidAdversary = card("Intrepid Adversary") {
         collectorNumber = "25"
         artist = "Viktor Titov"
         imageUri = "https://cards.scryfall.io/normal/front/7/7/773199f9-c83b-4a77-8342-9f1552ecf595.jpg?1783925657"
-        ruling(
-            "2021-09-24",
-            "After you pay the {1}{W} cost one or more times, a second ability triggers and players " +
-                "may respond to it. As that ability resolves, the Intrepid Adversary gets its valor counters."
-        )
     }
 }

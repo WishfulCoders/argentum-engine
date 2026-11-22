@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn
+import com.wingedsheep.sdk.scripting.RestrictCardsDrawnPerTurn
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -38,14 +38,13 @@ val LeovoldEmissaryOfTrest = card("Leovold, Emissary of Trest") {
         "opponent controls, you may draw a card."
 
     staticAbility {
-        ability = RestrictDrawsPerTurn(maxPerTurn = 1, affected = Player.EachOpponent)
+        ability = RestrictCardsDrawnPerTurn(affected = Player.EachOpponent, maxPerTurn = 1)
     }
 
     triggeredAbility {
         trigger = Triggers.a(GameObjectFilter.Permanent.youControl()).becomesTarget(
             byOpponent = true,
-            includePlayerTargets = true,
-            targetPlayer = Player.You,
+            players = Player.You,
         )
         effect = Effects.May(Effects.DrawCards(1))
     }

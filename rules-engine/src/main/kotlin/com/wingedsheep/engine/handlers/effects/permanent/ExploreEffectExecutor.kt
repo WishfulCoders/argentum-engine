@@ -179,13 +179,13 @@ class ExploreEffectExecutor(
         creatureId: EntityId,
         context: EffectContext
     ): Pair<GameState, List<GameEvent>> {
-        if (!state.projectedState.canReceiveCounters(creatureId)) {
+        if (!state.projectedState.canReceiveCounters(creatureId, CounterType.PLUS_ONE_PLUS_ONE)) {
             return state to emptyList()
         }
         val current = state.getEntity(creatureId)?.get<CountersComponent>() ?: CountersComponent()
         val count = ReplacementEffectUtils.applyCounterPlacementModifiers(
             state, creatureId, CounterType.PLUS_ONE_PLUS_ONE, 1, placerId = context.controllerId,
-            predicateEvaluator = zones.predicateEvaluator
+            predicateEvaluator = zones.predicateEvaluator, byEffect = true
         )
         val updated = state.updateEntity(creatureId) {
             it.with(current.withAdded(CounterType.PLUS_ONE_PLUS_ONE, count))

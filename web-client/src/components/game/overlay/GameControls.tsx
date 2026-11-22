@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
+import { useAuthStore } from '@/store/authStore'
 import { useIsSharedLifeTeamGame } from '@/store/selectors'
 import { useResponsiveContext } from '../board/shared'
+import { GearIcon, PreferencesDialog } from '@/components/preferences/PreferencesDialog'
 
 /**
  * Concede button with confirmation, positioned top-right.
@@ -17,6 +19,9 @@ export function ConcedeButton() {
   // Rides inside the button so the confirm row keeps its width — beside the buttons it ran into
   // the top-right board's name plate, below them into that cell's collapse button.
   const podNote = teamConcedes ? 'your team is out' : isPod ? 'the others play on' : null
+  // During a Magic subgame (Shahrazad, CR 729) there are two games to give up: the subgame alone —
+  // the main game then resumes, and losing it costs what the spell says — or the whole game.
+  const inSubgame = useGameStore((state) => state.gameState?.subgame != null)
   const [confirming, setConfirming] = useState(false)
   const responsive = useResponsiveContext()
 
@@ -30,29 +35,41 @@ export function ConcedeButton() {
   }
 
   if (confirming) {
+    const confirmStyle: React.CSSProperties = {
+      padding: responsive.isMobile ? '6px 10px' : '8px 14px',
+      fontSize: responsive.fontSize.small,
+      background: 'var(--gradient-danger)',
+      color: 'white',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+      borderRadius: 'var(--chrome-radius)',
+      cursor: 'pointer',
+      fontWeight: 600,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      lineHeight: 1.15,
+    }
+    const note = (text: string | null) => text && !responsive.isMobile && (
+      <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.85 }}>{text}</span>
+    )
     return (
       <div style={base}>
+        {inSubgame && (
+          <button
+            onClick={() => { concede(true); setConfirming(false) }}
+            style={{ ...confirmStyle, background: 'linear-gradient(150deg, #8a6a2c 0%, #5b3f14 100%)' }}
+            data-testid="concede-subgame"
+          >
+            <span>Concede subgame</span>
+            {note('the main game resumes')}
+          </button>
+        )}
         <button
           onClick={() => { concede(); setConfirming(false) }}
-          style={{
-            padding: responsive.isMobile ? '6px 10px' : '8px 14px',
-            fontSize: responsive.fontSize.small,
-            background: 'var(--gradient-danger)',
-            color: 'white',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 6,
-            cursor: 'pointer',
-            fontWeight: 600,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            lineHeight: 1.15,
-          }}
+          style={confirmStyle}
         >
-          <span>{confirmLabel}</span>
-          {podNote && !responsive.isMobile && (
-            <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.85 }}>{podNote}</span>
-          )}
+          <span>{inSubgame ? 'Concede the game' : confirmLabel}</span>
+          {note(inSubgame ? 'leave the main game too' : podNote)}
         </button>
         <button
           onClick={() => setConfirming(false)}
@@ -60,9 +77,11 @@ export function ConcedeButton() {
             padding: responsive.isMobile ? '6px 10px' : '8px 14px',
             fontSize: responsive.fontSize.small,
             backgroundColor: 'var(--chrome-bg)',
+            backdropFilter: 'var(--chrome-blur)',
+            WebkitBackdropFilter: 'var(--chrome-blur)',
             color: 'var(--chrome-text)',
             border: '1px solid var(--chrome-border)',
-            borderRadius: 6,
+            borderRadius: 'var(--chrome-radius)',
             cursor: 'pointer',
           }}
         >
@@ -80,9 +99,11 @@ export function ConcedeButton() {
           padding: responsive.isMobile ? '6px 10px' : '8px 14px',
           fontSize: responsive.fontSize.small,
           backgroundColor: 'var(--chrome-bg)',
+          backdropFilter: 'var(--chrome-blur)',
+          WebkitBackdropFilter: 'var(--chrome-blur)',
           color: 'var(--chrome-danger-text)',
           border: '1px solid var(--chrome-danger-border)',
-          borderRadius: 6,
+          borderRadius: 'var(--chrome-radius)',
           cursor: 'pointer',
         }}
       >
@@ -98,6 +119,8 @@ export function ConcedeButton() {
  */
 export function StandaloneConcedeButton() {
   const concede = useGameStore((state) => state.concede)
+  // A subgame's own mulligan (CR 729): conceding the subgame and the whole game are different.
+  const inSubgame = useGameStore((state) => state.gameState?.subgame != null)
   const [confirming, setConfirming] = useState(false)
 
   const base: React.CSSProperties = {
@@ -110,22 +133,31 @@ export function StandaloneConcedeButton() {
   }
 
   if (confirming) {
+    const confirmStyle: React.CSSProperties = {
+      padding: '8px 14px',
+      fontSize: 13,
+      background: 'var(--gradient-danger)',
+      color: 'white',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+      borderRadius: 'var(--chrome-radius)',
+      cursor: 'pointer',
+      fontWeight: 600,
+    }
     return (
       <div style={base}>
+        {inSubgame && (
+          <button
+            onClick={() => { concede(true); setConfirming(false) }}
+            style={{ ...confirmStyle, background: 'linear-gradient(150deg, #8a6a2c 0%, #5b3f14 100%)' }}
+          >
+            Concede subgame
+          </button>
+        )}
         <button
           onClick={() => { concede(); setConfirming(false) }}
-          style={{
-            padding: '8px 14px',
-            fontSize: 13,
-            background: 'var(--gradient-danger)',
-            color: 'white',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 6,
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
+          style={confirmStyle}
         >
-          Confirm
+          {inSubgame ? 'Concede the game' : 'Confirm'}
         </button>
         <button
           onClick={() => setConfirming(false)}
@@ -133,9 +165,11 @@ export function StandaloneConcedeButton() {
             padding: '8px 14px',
             fontSize: 13,
             backgroundColor: 'var(--chrome-bg)',
+            backdropFilter: 'var(--chrome-blur)',
+            WebkitBackdropFilter: 'var(--chrome-blur)',
             color: 'var(--chrome-text)',
             border: '1px solid var(--chrome-border)',
-            borderRadius: 6,
+            borderRadius: 'var(--chrome-radius)',
             cursor: 'pointer',
           }}
         >
@@ -153,9 +187,11 @@ export function StandaloneConcedeButton() {
           padding: '8px 14px',
           fontSize: 13,
           backgroundColor: 'var(--chrome-bg)',
+          backdropFilter: 'var(--chrome-blur)',
+          WebkitBackdropFilter: 'var(--chrome-blur)',
           color: 'var(--chrome-danger-text)',
           border: '1px solid var(--chrome-danger-border)',
-          borderRadius: 6,
+          borderRadius: 'var(--chrome-radius)',
           cursor: 'pointer',
         }}
       >
@@ -178,6 +214,8 @@ export function SpectatorCountBadge() {
   const spectatorNames = useGameStore((state) => state.spectatorNames)
   const responsive = useResponsiveContext()
   const [hovered, setHovered] = useState(false)
+  // A signed-in player has the chat button after the gear; sit after that too.
+  const chatButton = useAuthStore((state) => state.accountsEnabled && state.status === 'authenticated')
 
   if (spectatorCount <= 0) return null
 
@@ -188,10 +226,9 @@ export function SpectatorCountBadge() {
       style={{
         position: 'absolute',
         top: responsive.isMobile ? 8 : 12,
-        // Sits to the right of FullscreenButton (which is at left: 8/12).
-        // The button is roughly 90–110px wide depending on label, so 110/130
-        // gives a safe visual gap without measuring.
-        left: responsive.isMobile ? 110 : 130,
+        // Sits to the right of the icon-only FullscreenButton (30/34px at left 8/12), the
+        // GamePreferencesButton beside it, and the ChatButton after that when signed in.
+        left: (responsive.isMobile ? 84 : 96) + (chatButton ? (responsive.isMobile ? 38 : 42) : 0),
         // Above the multiplayer opponent rail (z 120): the name popover drops down
         // into the rail column, and the seat chips would otherwise paint over it.
         // The badge itself sits above the rail's first chip, so nothing is hidden.
@@ -211,7 +248,7 @@ export function SpectatorCountBadge() {
           backgroundColor: 'rgba(0, 0, 0, 0.35)',
           color: '#9aa6b2',
           border: '1px solid #2c333d',
-          borderRadius: 6,
+          borderRadius: 'var(--chrome-radius)',
           userSelect: 'none',
           opacity: 0.85,
           cursor: 'default',
@@ -237,7 +274,7 @@ export function SpectatorCountBadge() {
             backgroundColor: 'rgba(0, 0, 0, 0.95)',
             color: '#d4dae1',
             border: '1px solid #2c333d',
-            borderRadius: 6,
+            borderRadius: 'var(--chrome-radius)',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
@@ -288,6 +325,9 @@ export function FullscreenButton() {
     }
   }
 
+  const size = responsive.isMobile ? 30 : 34
+  const title = isFullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen'
+  // Icon-only, like the landing and lobby top bars — the label cost a card's width in the corner.
   return (
     <button
       onClick={toggleFullscreen}
@@ -296,20 +336,72 @@ export function FullscreenButton() {
         top: responsive.isMobile ? 8 : 12,
         left: responsive.isMobile ? 8 : 12,
         zIndex: 100,
-        padding: responsive.isMobile ? '6px 10px' : '8px 14px',
-        fontSize: responsive.fontSize.small,
+        width: size,
+        height: size,
+        padding: 0,
         backgroundColor: 'var(--chrome-bg)',
+        backdropFilter: 'var(--chrome-blur)',
+        WebkitBackdropFilter: 'var(--chrome-blur)',
         color: 'var(--chrome-text)',
         border: '1px solid var(--chrome-border)',
-        borderRadius: 6,
+        borderRadius: 'var(--chrome-radius)',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
-        gap: 4,
+        justifyContent: 'center',
       }}
-      title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen'}
+      title={title}
+      aria-label={title}
     >
-      {isFullscreen ? '⛶' : '⛶'} {isFullscreen ? 'Exit' : 'Fullscreen'}
+      <svg viewBox="0 0 24 24" width={responsive.isMobile ? 15 : 17} height={responsive.isMobile ? 15 : 17} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        {isFullscreen
+          ? <path d="M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5" />
+          : <path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5" />}
+      </svg>
     </button>
+  )
+}
+
+/**
+ * In-game preferences: a gear beside the fullscreen button that opens the preferences dialog over
+ * the board — stacking, stops, auto-tap and motion, without leaving the game.
+ */
+export function GamePreferencesButton() {
+  const [open, setOpen] = useState(false)
+  const responsive = useResponsiveContext()
+  const size = responsive.isMobile ? 30 : 34
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          position: 'absolute',
+          top: responsive.isMobile ? 8 : 12,
+          // To the right of the FullscreenButton (30/34px at left 8/12).
+          left: responsive.isMobile ? 46 : 54,
+          zIndex: 100,
+          width: size,
+          height: size,
+          padding: 0,
+          backgroundColor: 'var(--chrome-bg)',
+          backdropFilter: 'var(--chrome-blur)',
+          WebkitBackdropFilter: 'var(--chrome-blur)',
+          color: 'var(--chrome-text)',
+          border: '1px solid var(--chrome-border)',
+          borderRadius: 'var(--chrome-radius)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        title="Preferences"
+        aria-label="Preferences"
+        data-testid="game-preferences-button"
+      >
+        <GearIcon size={responsive.isMobile ? 15 : 17} />
+      </button>
+      {open && <PreferencesDialog onClose={() => setOpen(false)} />}
+    </>
   )
 }

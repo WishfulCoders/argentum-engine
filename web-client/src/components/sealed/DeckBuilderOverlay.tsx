@@ -8,11 +8,17 @@ import { ManaSymbol, ManaCost } from '../ui/ManaSymbols'
 import { HoverCardPreview } from '../ui/HoverCardPreview'
 import { useDfcHoverFlip } from '../ui/useDfcHoverFlip'
 import { SetSynergiesButton, type Archetype } from '../draft/SetSynergiesOverlay'
-import { DeckbuilderChatPanel } from './DeckbuilderChatPanel'
-import { fetchAdvisors, type AdvisorInfo } from '@/api/aiAssist'
+import { AssistStrip, AssistToolbar, ScoreBadge, useScoresStale } from './AssistControls'
 import { buildArenaDeckList } from './arenaExport'
-import { poolCardToSummary } from './poolCardSummary'
-import { parseQuery } from '../deckbuilder/query'
+import { poolCardCommanderView, poolCardToSummary } from './poolCardSummary'
+import {
+  canCrown,
+  canPairAsCommanders,
+  commanderIdentityOf,
+  isWithinIdentity,
+  toggleCommanderDesignation,
+} from '../deckbuilder/commanderPairing'
+import { applyFix, parseQuery } from '../deckbuilder/query'
 import { SearchHelp } from '../deckbuilder/browser/SearchBar'
 import type { CardSummary } from '../deckbuilder/cardFilter'
 import {
@@ -25,7 +31,6 @@ import {
   summarizeDeckTypes,
   type DeckCardType,
 } from './cardTypes'
-import type { AutoBuildResult } from '@/store/slices/types'
 import {
   detectProducedColors,
   suggestBasicLands,
@@ -34,12 +39,15 @@ import {
   type LandColor,
 } from '@/utils/landSuggestion'
 import { rulesFromLobbySettings } from '../lobby/axes'
+import { randomBackground } from '@/utils/background'
+import ls from '../draft/limitedScreen.module.css'
+import { ChatButton } from '@/components/messages/ChatButton'
 
 /**
- * Hard per-card copy cap while deckbuilding (basic lands exempt, managed via `landCounts`). Mirrors
- * `TournamentLobby.MAX_COPIES_PER_CARD` and the cap enforced in `addCardToDeck`.
+ * Pool Play's per-card copy cap when an older server doesn't send `maxCopiesPerCard`. Mirrors
+ * `TournamentLobby.MAX_COPIES_PER_CARD`.
  */
-const MAX_COPIES_PER_CARD = 4
+const POOL_PLAY_COPY_CAP = 4
 
 /**
  * Deck Builder overlay for sealed draft mode.
@@ -72,7 +80,10 @@ function WaitingForOpponent({ setName }: { setName: string }) {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        backgroundColor: '#07080d',
+        backgroundImage: `linear-gradient(rgba(6, 7, 12, 0.7), rgba(6, 7, 12, 0.8)), url(${randomBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -82,7 +93,7 @@ function WaitingForOpponent({ setName }: { setName: string }) {
         zIndex: 1000,
       }}
     >
-      <h2 style={{ color: 'white', margin: 0, fontSize: responsive.isMobile ? 20 : 28 }}>
+      <h2 className={ls.title} style={{ fontSize: responsive.isMobile ? 22 : 30, whiteSpace: 'normal', textAlign: 'center' }}>
         Sealed Draft - {setName}
       </h2>
       <p style={{ color: '#888', margin: 0, fontSize: responsive.fontSize.large }}>
@@ -90,7 +101,7 @@ function WaitingForOpponent({ setName }: { setName: string }) {
       </p>
       <div
         style={{
-          backgroundColor: '#222',
+          backgroundColor: 'rgba(10, 12, 20, 0.6)',
           padding: '16px 24px',
           borderRadius: 8,
           display: 'flex',
@@ -106,7 +117,7 @@ function WaitingForOpponent({ setName }: { setName: string }) {
           style={{
             color: '#4fc3f7',
             fontSize: responsive.isMobile ? 14 : 18,
-            backgroundColor: '#333',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
             padding: '8px 16px',
             borderRadius: 4,
             fontFamily: 'monospace',
@@ -119,19 +130,7 @@ function WaitingForOpponent({ setName }: { setName: string }) {
           Share this ID with your opponent
         </p>
       </div>
-      <button
-        onClick={cancelGame}
-        style={{
-          marginTop: 8,
-          padding: '10px 20px',
-          fontSize: responsive.fontSize.normal,
-          backgroundColor: '#c0392b',
-          color: 'white',
-          border: 'none',
-          borderRadius: 4,
-          cursor: 'pointer',
-        }}
-      >
+      <button type="button" onClick={cancelGame} className={ls.leave} style={{ marginTop: 8 }}>
         Cancel Game
       </button>
     </div>
@@ -148,8 +147,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
   const removeCardFromDeck = useGameStore((s) => s.removeCardFromDeck)
   const clearDeck = useGameStore((s) => s.clearDeck)
   const setLandCount = useGameStore((s) => s.setLandCount)
-  const setLlmHighlights = useGameStore((s) => s.setLlmHighlights)
-  const setCommander = useGameStore((s) => s.setCommander)
+  const setCommanders = useGameStore((s) => s.setCommanders)
   const submitSealedDeck = useGameStore((s) => s.submitSealedDeck)
   const unsubmitDeck = useGameStore((s) => s.unsubmitDeck)
   const leaveLobby = useGameStore((s) => s.leaveLobby)
@@ -170,6 +168,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
   // hide the controls AND any card score badges that were fetched before the host switched it off.
   const aiAssistEnabled = lobbyState ? lobbyState.settings.aiAssistEnabled : true
   const deckCardScores = aiAssistEnabled ? storedDeckCardScores : null
+  const scoresStale = useScoresStale(state)
 
   const [hoveredCard, setHoveredCard] = useState<SealedCardInfo | null>(null)
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
@@ -181,6 +180,15 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [searchText, setSearchText] = useState('')
   const [searchHelpOpen, setSearchHelpOpen] = useState(false)
+  // Simple = plain substring over name / type line / rules text; Scryfall = the query language.
+  // Remembered per browser so a player who prefers one doesn't re-pick it every draft.
+  const [searchMode, setSearchMode] = useState<SearchMode>(loadSearchMode)
+  const changeSearchMode = (mode: SearchMode) => {
+    setSearchMode(mode)
+    try { localStorage.setItem(SEARCH_MODE_KEY, mode) } catch { /* storage unavailable */ }
+  }
+  // Phones: the sort / filter / search controls fold behind one button so the pool gets the screen.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [creatureTypeFilter, setCreatureTypeFilter] = useState<string | null>(null)
   const [archetypeFilter, setArchetypeFilter] = useState<Archetype | null>(null)
   // Restrict the pool view to cards inside the chosen commander's colour identity. Defaults to
@@ -216,42 +224,59 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
   // state.deck" invariant (see effect below) means state.deck.length already includes the
   // commander once, so don't add another. Guard the !includes path defensively in case the
   // invariant is briefly broken between renders.
-  const commanderAlreadyInDeck =
-    state.commander != null && state.deck.includes(state.commander)
-  const commanderInTotal =
-    isCommanderShape && state.commander != null && !commanderAlreadyInDeck ? 1 : 0
+  // The designated commander(s): one, or a partner pair (CR 702.124).
+  const commanders = useMemo(
+    () => [state.commander, state.commander ? state.secondCommander : null].filter((c): c is string => !!c),
+    [state.commander, state.secondCommander],
+  )
+  const commanderInTotal = isCommanderShape
+    ? commanders.filter((name) => !state.deck.includes(name)).length
+    : 0
   const totalCount = state.deck.length + basicLandCount + commanderInTotal
   const requiredSize = isCommanderShape ? commanderMinDeckSize : 40
   const isValidDeck = totalCount >= requiredSize && (!isCommanderShape || state.commander != null)
 
-  // Pool-filtered eligible commanders for the limited commander formats. Matches the backend's
-  // CommanderEligibility: legendary creature, legendary planeswalker, or any card with an
-  // explicit "can be your commander" override clause in the oracle text. Returned as a Set so
-  // each deck row can check eligibility in O(1) when deciding whether to enable its crown.
-  const eligibleCommanderNames = useMemo<Set<string>>(() => {
-    const out = new Set<string>()
+  // Commander-pairing view of each pool card, by name — the same crown helpers the constructed
+  // deckbuilder uses (`commanderPairing.ts`), fed the server's `canBeCommander` / `partnerAbilities`.
+  const commanderViews = useMemo(() => {
+    const out = new Map<string, ReturnType<typeof poolCardCommanderView>>()
     if (!isCommanderShape) return out
-    const re = /can be your commander/i
     for (const card of state.cardPool) {
-      const tl = card.typeLine.toLowerCase()
-      const isLegendary = tl.includes('legendary')
-      const isCreature = tl.includes('creature')
-      const isPlaneswalker = tl.includes('planeswalker')
-      const override = re.test(card.oracleText ?? '')
-      if ((isLegendary && (isCreature || isPlaneswalker)) || override) {
-        out.add(card.name)
-      }
+      if (!out.has(card.name)) out.set(card.name, poolCardCommanderView(card))
     }
     return out
   }, [state.cardPool, isCommanderShape])
 
-  // The chosen commander's colour identity. Empty = colourless. Null = no commander chosen.
-  // Used to decide which deck rows are off-identity.
+  // Which deck rows offer an active crown: a card that can lead alone, a commander's own crown (to
+  // unset it), or a Background beside a lone "Choose a Background" commander.
+  const eligibleCommanderNames = useMemo<Set<string>>(() => {
+    const out = new Set<string>()
+    const current = commanders.flatMap((name) => commanderViews.get(name) ?? [])
+    for (const [name, view] of commanderViews) {
+      if (canCrown(view, commanders.includes(name), current)) out.add(name)
+    }
+    return out
+  }, [commanderViews, commanders])
+
+  const toggleCommander = useCallback(
+    (name: string) => {
+      setCommanders(
+        toggleCommanderDesignation(commanders, name, (first, candidate) => {
+          const a = commanderViews.get(first)
+          const b = commanderViews.get(candidate)
+          return !!a && !!b && canPairAsCommanders(a, b)
+        }),
+      )
+    },
+    [commanders, commanderViews, setCommanders],
+  )
+
+  // The commanders' combined colour identity (a partner pair unions both). Empty = colourless.
+  // Null = no commander chosen. Used to decide which deck rows are off-identity.
   const commanderIdentity = useMemo<ReadonlySet<string> | null>(() => {
-    if (!isCommanderShape || state.commander == null) return null
-    const card = state.cardPool.find((c) => c.name === state.commander)
-    return new Set(card?.colorIdentity ?? [])
-  }, [state.cardPool, state.commander, isCommanderShape])
+    if (!isCommanderShape || commanders.length === 0) return null
+    return commanderIdentityOf(commanders.flatMap((name) => state.cardPool.find((c) => c.name === name) ?? []))
+  }, [state.cardPool, commanders, isCommanderShape])
 
   // Reset the identity filter to ON whenever a new commander is designated, so picking a
   // commander immediately restricts the pool view. Clearing the commander leaves the toggle's
@@ -260,15 +285,15 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
     if (state.commander != null) setRestrictToCommanderIdentity(true)
   }, [state.commander])
 
-  // If the designated commander is no longer in the deck (the user removed the last copy via
-  // the deck-row click), clear the designation. The identity-filter chip is gated on
-  // [commanderIdentity], so it disappears automatically as soon as state.commander goes null.
+  // If a designated commander is no longer in the deck (the user removed the last copy via the
+  // deck-row click), drop it from the designation; a partner pair's other half moves up. The
+  // identity-filter chip is gated on [commanderIdentity], so it disappears once none is left.
   // Mirrors the standalone /deckbuilder's "clear commander when removed from deckCards" effect.
   useEffect(() => {
-    if (state.commander != null && !state.deck.includes(state.commander)) {
-      setCommander(null)
+    if (commanders.some((name) => !state.deck.includes(name))) {
+      setCommanders(commanders.filter((name) => state.deck.includes(name)))
     }
-  }, [state.commander, state.deck, setCommander])
+  }, [commanders, state.deck, setCommanders])
 
   // Deck cards (and chosen commander) whose colour identity escapes the commander's identity.
   // Matches the server's COLOR_IDENTITY_VIOLATION check; surfaced as a red left border on the
@@ -276,23 +301,14 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
   const offIdentityNames = useMemo<Set<string>>(() => {
     const out = new Set<string>()
     if (!commanderIdentity) return out
-    const namesToCheck = new Set<string>(state.deck)
-    if (state.commander != null) namesToCheck.add(state.commander)
-    for (const name of namesToCheck) {
+    for (const name of new Set<string>(state.deck)) {
+      // The commanders are always within their own (combined) identity — skip them.
+      if (commanders.includes(name)) continue
       const card = state.cardPool.find((c) => c.name === name)
-      if (!card) continue
-      // The commander itself is always within its own identity — skip it.
-      if (name === state.commander) continue
-      const id = card.colorIdentity ?? []
-      for (const color of id) {
-        if (!commanderIdentity.has(color)) {
-          out.add(name)
-          break
-        }
-      }
+      if (card && !isWithinIdentity(card, commanderIdentity)) out.add(name)
     }
     return out
-  }, [state.cardPool, state.deck, state.commander, commanderIdentity])
+  }, [state.cardPool, state.deck, commanders, commanderIdentity])
 
   // Deck analytics
   const deckAnalytics = useMemo(() => {
@@ -386,7 +402,10 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
 
   // The search box speaks the constructed deckbuilder's Scryfall-style query language. Each pool
   // card is adapted to that language's `CardSummary` once per pool, not once per keystroke.
-  const searchQuery = useMemo(() => parseQuery(searchText), [searchText])
+  const searchQuery = useMemo(
+    () => (searchMode === 'scryfall' ? parseQuery(searchText) : EMPTY_QUERY),
+    [searchMode, searchText],
+  )
   const poolSummaries = useMemo(() => {
     const summaries = new Map<string, CardSummary>()
     for (const card of state.cardPool) {
@@ -394,6 +413,19 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
     }
     return summaries
   }, [state.cardPool])
+
+  // Whether the search box is narrowing anything, and the one predicate the pool filter and the
+  // deck-list highlight share.
+  const searchActive = searchMode === 'simple' ? searchText.trim() !== '' : !searchQuery.empty
+  const matchesSearch = useCallback((card: SealedCardInfo): boolean => {
+    if (searchMode === 'simple') {
+      const q = searchText.trim()
+      return !q || matchesSimpleSearch(card, q)
+    }
+    if (searchQuery.empty) return true
+    const summary = poolSummaries.get(card.name)
+    return summary != null && searchQuery.predicate(summary)
+  }, [searchMode, searchText, searchQuery, poolSummaries])
 
   // Group and sort pool cards
   const poolCardGroups = useMemo(() => {
@@ -416,10 +448,12 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
     for (const [name, { card, totalCount }] of Object.entries(poolCardCounts)) {
       const inDeckCount = deckCardCounts[name] || 0
       // In Pool Play the pool is the whole cube and copies are unlimited, so a card is never
-      // consumed — what's left to add is the 4-of cap minus what's already in the deck.
+      // consumed — what's left to add is the copy cap minus what's already in the deck. Otherwise
+      // it is the copies opened, further capped when the lobby limits copies.
+      const copyCap = state.maxCopiesPerCard ?? (state.poolPlay ? POOL_PLAY_COPY_CAP : Infinity)
       const availableCount = state.poolPlay
-        ? MAX_COPIES_PER_CARD - inDeckCount
-        : totalCount - inDeckCount
+        ? copyCap - inDeckCount
+        : Math.min(totalCount, copyCap) - inDeckCount
       if (availableCount > 0) {
         if (archetypeFilter) {
           const cardColors = getCardColors(card)
@@ -445,14 +479,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
         // Commander-identity restriction: every colour in the card's identity must appear in
         // the commander's identity. Mirrors the server's COLOR_IDENTITY_VIOLATION check.
         if (commanderIdentity != null && restrictToCommanderIdentity) {
-          let outside = false
-          for (const color of card.colorIdentity ?? []) {
-            if (!commanderIdentity.has(color)) {
-              outside = true
-              break
-            }
-          }
-          if (outside) continue
+          if (!isWithinIdentity(card, commanderIdentity)) continue
         }
         if (typeFilter) {
           if (!matchesTypeFilter(card, typeFilter)) continue
@@ -460,10 +487,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
         if (creatureTypeFilter) {
           if (!matchesCreatureTypeFilter(card, creatureTypeFilter)) continue
         }
-        if (searchQuery.ast) {
-          const summary = poolSummaries.get(name)
-          if (!summary || !searchQuery.predicate(summary)) continue
-        }
+        if (!matchesSearch(card)) continue
         groups.push({ card, availableCount, inDeckCount })
       }
     }
@@ -477,7 +501,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
         return getRarityOrder(a.card) - getRarityOrder(b.card) || getCmc(a.card) - getCmc(b.card)
       }
     })
-  }, [state.cardPool, state.deck, state.poolPlay, sortBy, colorFilter, colorMode, typeFilter, creatureTypeFilter, searchQuery, poolSummaries, archetypeFilter, commanderIdentity, restrictToCommanderIdentity])
+  }, [state.cardPool, state.deck, state.poolPlay, state.maxCopiesPerCard, sortBy, colorFilter, colorMode, typeFilter, creatureTypeFilter, matchesSearch, archetypeFilter, commanderIdentity, restrictToCommanderIdentity])
 
   // "Cards left to add" is only a meaningful total when the pool is finite. In Pool Play every card
   // is always available, so count distinct cards on offer instead of copies.
@@ -505,12 +529,8 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
     return { MYTHIC: mythic, RARE: rare, UNCOMMON: uncommon, COMMON: common }
   }, [poolCardGroups, sortBy])
 
-  // Cards highlighted by archetype creature types OR by the LLM advisor.
-  // LLM highlights replace archetype highlights when present.
+  // Cards highlighted by the chosen archetype's creature types.
   const highlightedCards = useMemo(() => {
-    if (state.llmHighlightedCards && state.llmHighlightedCards.length > 0) {
-      return new Set(state.llmHighlightedCards)
-    }
     if (!archetypeFilter?.creatureTypes || archetypeFilter.creatureTypes.length === 0) return null
     const types = archetypeFilter.creatureTypes
     const names = new Set<string>()
@@ -526,7 +546,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
       }
     }
     return names
-  }, [state.cardPool, archetypeFilter, state.llmHighlightedCards])
+  }, [state.cardPool, archetypeFilter])
 
   // Group deck cards by name for vertical list
   const deckCardGroups = useMemo(() => {
@@ -545,6 +565,20 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
     return Object.values(groups).sort((a, b) => getCmc(a.card) - getCmc(b.card) || a.card.name.localeCompare(b.card.name))
   }, [state.deck, state.cardPool])
 
+  // The pool is filtered by the search; the deck isn't, so its matching rows are highlighted instead.
+  const deckSearchMatches = useMemo(() => {
+    if (!searchActive) return null
+    const names = new Set<string>()
+    let copies = 0
+    for (const { card, count } of deckCardGroups) {
+      if (matchesSearch(card)) {
+        names.add(card.name)
+        copies += count
+      }
+    }
+    return { names, copies }
+  }, [searchActive, deckCardGroups, matchesSearch])
+
   const isSubmitted = state.phase === 'submitted'
 
   // Max bar height for mana curve
@@ -552,35 +586,11 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
   const totalColorSymbols = Object.values(deckAnalytics.colorSymbols).reduce((a, b) => a + b, 0)
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: '#1a1a1a',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 1000,
-        overflow: 'hidden',
-      }}
-    >
+    <div className={ls.screen}>
       {/* Header */}
-      <div
-        style={{
-          padding: responsive.isMobile ? '6px 12px' : '8px 24px',
-          backgroundColor: '#222',
-          borderBottom: '1px solid #444',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h2 style={{ color: 'white', margin: 0, fontSize: responsive.isMobile ? 16 : 20 }}>
+      <div className={ls.header}>
+        <div className={ls.headerGroup}>
+          <h2 className={ls.title}>
             Deck Builder - {state.setNames.join(' + ')}
             {state.poolPlay ? ' (Pool Play)' : ''}
           </h2>
@@ -588,32 +598,25 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
             setCodes={state.setCodes}
             cardPool={state.cardPool}
             onSelectArchetype={(archetype) => {
-              // Picking an archetype takes over the highlight slot from the LLM advisor.
-              setLlmHighlights(null)
               setArchetypeFilter((prev) => prev?.name === archetype.name ? null : archetype)
             }}
           />
+          {!isSubmitted && aiAssistEnabled && !responsive.isMobile && (
+            <AssistToolbar
+              hasCards={totalCount > 0}
+              compact={responsive.isMobile}
+            />
+          )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className={ls.headerGroup}>
           {state.opponentReady && (
-            <span style={{ color: '#4caf50', fontSize: responsive.fontSize.small }}>
-              Opponent ready
-            </span>
+            <span className={ls.pill} data-tone="good">Opponent ready</span>
           )}
 
-          <div
-            style={{
-              padding: '6px 14px',
-              backgroundColor: isValidDeck ? '#2e7d32' : '#555',
-              borderRadius: 6,
-              color: 'white',
-              fontWeight: 600,
-              fontSize: responsive.fontSize.normal,
-            }}
-          >
+          <span className={ls.pill} data-tone={isValidDeck ? 'good' : undefined} title="Cards in your deck">
             {totalCount} / {requiredSize}
-          </div>
+          </span>
           {isCommanderShape && !isSubmitted && state.commander == null && (
             <div
               title="Click the crown next to a legendary creature in your deck to designate it as your commander."
@@ -632,7 +635,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
           )}
           {isCommanderShape && !isSubmitted && state.commander != null && (
             <div
-              title={`Commander: ${state.commander}`}
+              title={`${commanders.length > 1 ? 'Commanders' : 'Commander'}: ${commanders.join(' and ')}`}
               style={{
                 padding: responsive.isMobile ? '4px 10px' : '6px 14px',
                 fontSize: responsive.isMobile ? 11 : 12,
@@ -647,28 +650,12 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              ♛ {state.commander}
+              ♛ {commanders.join(' + ')}
             </div>
           )}
 
-          {!isSubmitted && aiAssistEnabled && (
-            <AutoBuildControl hasCards={totalCount > 0} responsive={responsive} />
-          )}
-
           {isSubmitted ? (
-            <button
-              onClick={unsubmitDeck}
-              style={{
-                padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: '#ff9800',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
+            <button type="button" onClick={unsubmitDeck} className={ls.button}>
               Edit Deck
             </button>
           ) : (
@@ -682,16 +669,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                   ? 'Designate a commander first — click the crown ♛ on a legendary creature in your deck'
                   : `Deck needs at least ${requiredSize} cards`
               }
-              style={{
-                padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: isValidDeck ? '#4caf50' : '#555',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: isValidDeck ? 'pointer' : 'not-allowed',
-                fontWeight: 600,
-              }}
+              className={ls.primary}
             >
               Submit Deck
             </button>
@@ -707,20 +685,12 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                     basicLands: state.basicLands,
                     landCounts: state.landCounts,
                     commander: state.commander,
+                    secondCommander: commanders[1] ?? null,
                   })
                 )
               }
               title="Copy this deck in MTG Arena format"
-              style={{
-                padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: '#2c5aa0',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
+              className={ls.button}
             >
               Export
             </button>
@@ -728,57 +698,34 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
 
           {isInLobby ? (
             isHost ? (
-              <button
-                onClick={stopLobby}
-                style={{
-                  padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-                  fontSize: responsive.fontSize.normal,
-                  backgroundColor: '#c0392b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
+              <button type="button" onClick={stopLobby} className={ls.leave}>
                 Stop Game
               </button>
             ) : (
-              <button
-                onClick={leaveLobby}
-                style={{
-                  padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-                  fontSize: responsive.fontSize.normal,
-                  backgroundColor: '#c0392b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
+              <button type="button" onClick={leaveLobby} className={ls.leave}>
                 Leave
               </button>
             )
           ) : (
-            <button
-              onClick={cancelGame}
-              style={{
-                padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-                fontSize: responsive.fontSize.normal,
-                backgroundColor: '#c0392b',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
+            <button type="button" onClick={cancelGame} className={ls.leave}>
               Cancel Game
             </button>
           )}
+          <ChatButton className={`${ls.button} ${ls.iconButton}`} />
         </div>
+
+        {/* Phones: the AI group gets its own row so it doesn't squeeze the title. */}
+        {!isSubmitted && aiAssistEnabled && responsive.isMobile && (
+          <div className={ls.headerGroup}>
+            <AssistToolbar
+              hasCards={totalCount > 0}
+              compact={responsive.isMobile}
+            />
+          </div>
+        )}
       </div>
+
+      {!isSubmitted && aiAssistEnabled && <AssistStrip state={state} />}
 
       {/* Main content: Pool (left ~70%) | Deck (right ~30%) */}
       <div
@@ -792,11 +739,11 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
         {/* Card Pool (left) */}
         <div
           style={{
-            flex: responsive.isMobile ? 1 : 7,
+            flex: responsive.isMobile ? 3 : 7,
             display: 'flex',
             flexDirection: 'column',
-            borderRight: responsive.isMobile ? 'none' : '1px solid #444',
-            borderBottom: responsive.isMobile ? '1px solid #444' : 'none',
+            borderRight: responsive.isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: responsive.isMobile ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
             minHeight: 0,
             minWidth: 0,
           }}
@@ -806,14 +753,34 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
             style={{
               position: 'relative',
               padding: '6px 12px',
-              backgroundColor: '#2a2a2a',
-              borderBottom: '1px solid #333',
+              backgroundColor: 'rgba(10, 12, 20, 0.55)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               flexWrap: 'wrap',
             }}
           >
+            {responsive.isMobile && (
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen((v) => !v)}
+                aria-expanded={mobileFiltersOpen}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  backgroundColor: mobileFiltersOpen ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.08)',
+                  color: '#e6e9f1',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                }}
+              >
+                {mobileFiltersOpen ? 'Hide filters ▴' : `Sort & filter${colorFilter.size > 0 || typeFilter || searchText ? ' •' : ''} ▾`}
+              </button>
+            )}
+            {(!responsive.isMobile || mobileFiltersOpen) && (<>
             <span style={{ color: '#888', fontSize: 12 }}>Sort:</span>
             {(['color', 'cmc', 'rarity'] as const).map((option) => (
               <button
@@ -822,7 +789,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 style={{
                   padding: '3px 10px',
                   fontSize: 12,
-                  backgroundColor: sortBy === option ? '#4fc3f7' : '#444',
+                  backgroundColor: sortBy === option ? '#4fc3f7' : 'rgba(255, 255, 255, 0.08)',
                   color: sortBy === option ? '#000' : '#ccc',
                   border: 'none',
                   borderRadius: 4,
@@ -834,7 +801,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
               </button>
             ))}
 
-            <div style={{ width: 1, height: 18, backgroundColor: '#444', margin: '0 4px' }} />
+            <div style={{ width: 1, height: 18, backgroundColor: 'rgba(255, 255, 255, 0.12)', margin: '0 4px' }} />
 
             <span style={{ color: '#888', fontSize: 12 }}>Filter:</span>
             <ColorModeSegmented mode={colorMode} onChange={setColorMode} />
@@ -876,15 +843,15 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 onClick={() => setRestrictToCommanderIdentity((v) => !v)}
                 title={
                   restrictToCommanderIdentity
-                    ? `Showing only cards inside ${state.commander}'s colour identity. Click to show the full pool.`
-                    : `Restrict the pool to cards inside ${state.commander}'s colour identity.`
+                    ? `Showing only cards inside ${commanders.join(' and ')}'s colour identity. Click to show the full pool.`
+                    : `Restrict the pool to cards inside ${commanders.join(' and ')}'s colour identity.`
                 }
                 style={{
                   padding: '3px 10px',
                   fontSize: 11,
-                  backgroundColor: restrictToCommanderIdentity ? '#3a2b00' : '#444',
+                  backgroundColor: restrictToCommanderIdentity ? '#3a2b00' : 'rgba(255, 255, 255, 0.08)',
                   color: restrictToCommanderIdentity ? '#ffd76b' : '#ccc',
-                  border: restrictToCommanderIdentity ? '1px solid #daa520' : '1px solid #555',
+                  border: restrictToCommanderIdentity ? '1px solid #daa520' : '1px solid rgba(255, 255, 255, 0.16)',
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: 600,
@@ -901,7 +868,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                   fontSize: 11,
                   backgroundColor: 'transparent',
                   color: '#888',
-                  border: '1px solid #555',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
                   borderRadius: 4,
                   cursor: 'pointer',
                 }}
@@ -910,7 +877,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
               </button>
             )}
 
-            <div style={{ width: 1, height: 18, backgroundColor: '#444', margin: '0 4px' }} />
+            <div style={{ width: 1, height: 18, backgroundColor: 'rgba(255, 255, 255, 0.12)', margin: '0 4px' }} />
 
             <span style={{ color: '#888', fontSize: 12 }}>Type:</span>
             {TYPE_FILTER_OPTIONS.map(({ key, label }) => (
@@ -920,7 +887,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 style={{
                   padding: '3px 10px',
                   fontSize: 11,
-                  backgroundColor: typeFilter === key ? '#4fc3f7' : '#444',
+                  backgroundColor: typeFilter === key ? '#4fc3f7' : 'rgba(255, 255, 255, 0.08)',
                   color: typeFilter === key ? '#000' : '#ccc',
                   border: 'none',
                   borderRadius: 4,
@@ -931,29 +898,84 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
               </button>
             ))}
 
-            <div style={{ width: 1, height: 18, backgroundColor: '#444', margin: '0 4px' }} />
+            <div style={{ width: 1, height: 18, backgroundColor: 'rgba(255, 255, 255, 0.12)', margin: '0 4px' }} />
 
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            {/* One field: the mode switch is the search box's own prefix, sharing its border. */}
+            <div
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'stretch',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: searchQuery.errors.length > 0
+                  ? '1px solid #d96c5e'
+                  : searchText ? '1px solid #4fc3f7' : '1px solid rgba(255, 255, 255, 0.16)',
+                borderRadius: 4,
+              }}
+            >
+            <div
+              role="radiogroup"
+              aria-label="Search mode"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                padding: '0 3px',
+                borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+                flexShrink: 0,
+              }}
+            >
+              {SEARCH_MODE_OPTIONS.map(({ mode, label, hint }) => {
+                const active = searchMode === mode
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => changeSearchMode(mode)}
+                    title={hint}
+                    style={{
+                      padding: '1px 6px',
+                      fontSize: 11,
+                      lineHeight: '16px',
+                      backgroundColor: active ? 'rgba(79, 195, 247, 0.2)' : 'transparent',
+                      color: active ? '#4fc3f7' : '#888',
+                      fontWeight: active ? 600 : 400,
+                      border: 'none',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search — t:creature cmc<=3 o:flying"
-                title="Scryfall-style search: t:, o:, c:, cmc:, pow:, r:, kw:, is:, or / - / ( ). Click ? for the syntax."
+                placeholder={searchMode === 'scryfall' ? 't:creature cmc<=3 o:flying' : 'Search name, type, or text…'}
+                title={searchMode === 'scryfall'
+                  ? (searchQuery.explanation
+                    ? `Cards where ${searchQuery.explanation}`
+                    : 'Scryfall-style search: t:, o:, c:, cmc:, pow:, r:, kw:, is:, or / - / ( ). Click ? for the syntax.')
+                  : 'Matches card name, type line, or rules text'}
+                aria-label="Search pool"
                 aria-invalid={searchQuery.errors.length > 0}
                 aria-describedby={searchQuery.errors.length > 0 ? 'pool-search-errors' : undefined}
                 style={{
                   padding: '3px 24px 3px 8px',
                   fontSize: 12,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  backgroundColor: '#333',
+                  fontFamily: searchMode === 'scryfall' ? 'var(--font-mono, monospace)' : undefined,
+                  backgroundColor: 'transparent',
                   color: '#ddd',
-                  border: searchQuery.errors.length > 0
-                    ? '1px solid #d96c5e'
-                    : searchText ? '1px solid #4fc3f7' : '1px solid #555',
-                  borderRadius: 4,
+                  border: 'none',
                   outline: 'none',
-                  width: responsive.isMobile ? 170 : 240,
+                  width: responsive.isMobile ? 150 : 220,
                 }}
               />
               {searchText && (
@@ -1006,16 +1028,39 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                       <code style={{ color: '#ffd0c8', flexShrink: 0 }}>
                         {searchText.slice(e.span.start, e.span.end) || '·'}
                       </code>
-                      <span>{e.message}{e.suggestion ? ` ${e.suggestion}` : ''}</span>
+                      <span>{e.message}</span>
+                      {e.fix ? (
+                        <button
+                          type="button"
+                          onClick={() => setSearchText(applyFix(searchText, e.fix!))}
+                          title="Apply this fix"
+                          style={{
+                            marginLeft: 'auto',
+                            flexShrink: 0,
+                            padding: '0 6px',
+                            fontSize: 11,
+                            color: '#eee',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: 3,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Use <code style={{ color: '#4fc3f7' }}>{e.fix.text}</code>
+                        </button>
+                      ) : e.suggestion ? (
+                        <span>{e.suggestion}</span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+            </div>
             <button
               onClick={() => setSearchHelpOpen((v) => !v)}
-              title="Search syntax"
-              aria-label="Show search syntax help"
+              title="How search works"
+              aria-label="Show search help"
               type="button"
               style={{
                 width: 20,
@@ -1025,7 +1070,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 fontSize: 11,
                 fontWeight: 700,
                 fontFamily: 'var(--font-mono, monospace)',
-                backgroundColor: searchHelpOpen ? '#4fc3f7' : '#444',
+                backgroundColor: searchHelpOpen ? '#4fc3f7' : 'rgba(255, 255, 255, 0.08)',
                 color: searchHelpOpen ? '#000' : '#ccc',
                 border: 'none',
                 cursor: 'pointer',
@@ -1035,14 +1080,22 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
               ?
             </button>
             {searchHelpOpen && (
-              <SearchHelp onClose={() => setSearchHelpOpen(false)} onInsert={setSearchText} />
+              <SearchHelp
+                onClose={() => setSearchHelpOpen(false)}
+                onInsert={(t) => {
+                  changeSearchMode('scryfall')
+                  setSearchText(t)
+                }}
+                intro={<SearchModeExplainer />}
+              />
             )}
+            </>)}
 
             <span
               style={{ color: '#666', fontSize: 12, marginLeft: 'auto' }}
               title={
                 state.poolPlay
-                  ? `Pool Play: the whole cube is available, up to ${MAX_COPIES_PER_CARD} copies of any card`
+                  ? `Pool Play: the whole cube is available, up to ${state.maxCopiesPerCard ?? POOL_PLAY_COPY_CAP} copies of any card`
                   : undefined
               }
             >
@@ -1051,12 +1104,12 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
           </div>
 
           {/* Pool creature types and color distribution overview */}
-          {(poolCreatureTypes.length > 0 || poolColorDistribution.total > 0) && (
+          {!responsive.isMobile && (poolCreatureTypes.length > 0 || poolColorDistribution.total > 0) && (
             <div
               style={{
                 padding: '5px 12px',
-                backgroundColor: '#242424',
-                borderBottom: '1px solid #333',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
@@ -1072,11 +1125,11 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                   onClick={() => setCreatureTypeFilter(creatureTypeFilter === type ? null : type)}
                   style={{
                     padding: '1px 6px',
-                    backgroundColor: creatureTypeFilter === type ? '#3a5a2a' : '#2e2e2e',
+                    backgroundColor: creatureTypeFilter === type ? '#3a5a2a' : 'rgba(255, 255, 255, 0.06)',
                     borderRadius: 3,
                     fontSize: 10,
                     color: creatureTypeFilter === type ? '#c5e1a5' : '#999',
-                    border: `1px solid ${creatureTypeFilter === type ? '#8bc34a' : '#3a3a3a'}`,
+                    border: `1px solid ${creatureTypeFilter === type ? '#8bc34a' : 'rgba(255, 255, 255, 0.1)'}`,
                     whiteSpace: 'nowrap',
                     cursor: 'pointer',
                   }}
@@ -1196,6 +1249,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                             highlighted={highlightedCards != null ? highlightedCards.has(card.name) : undefined}
                             score={deckCardScores?.[card.name]?.score ?? null}
                             reason={deckCardScores?.[card.name]?.reason}
+                            scoreStale={scoresStale}
                           />
                         ))}
                       </div>
@@ -1228,6 +1282,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                     highlighted={highlightedCards != null ? highlightedCards.has(card.name) : undefined}
                     score={deckCardScores?.[card.name]?.score ?? null}
                     reason={deckCardScores?.[card.name]?.reason}
+                    scoreStale={scoresStale}
                   />
                 ))}
               </div>
@@ -1238,10 +1293,10 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
         {/* Deck Panel (right) */}
         <div
           style={{
-            flex: responsive.isMobile ? 1 : 3,
+            flex: responsive.isMobile ? 2 : 3,
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#1e1e1e',
+            backgroundColor: 'rgba(255, 255, 255, 0.025)',
             minHeight: 0,
             minWidth: 0,
           }}
@@ -1250,8 +1305,8 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
           <div
             style={{
               padding: '8px 12px',
-              backgroundColor: '#252525',
-              borderBottom: '1px solid #333',
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
             }}
           >
             {/* Card-type distribution — one bucket per card, so the counts sum to the deck size */}
@@ -1259,6 +1314,8 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
 
             {/* Mana curve histogram. The 62px box is the tallest bar (36) plus both 9px labels and
                 their margins — at 48 the count label overflowed upward into whatever sat above. */}
+            {/* An empty deck has no curve to draw — just the axis, which read as a broken chart. */}
+            {deckAnalytics.typeTotal > 0 && (
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 62 }}>
               {[0, 1, 2, 3, 4, 5, 6, 7].map((cmc) => {
                 const count = deckAnalytics.curve[cmc] || 0
@@ -1285,6 +1342,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 )
               })}
             </div>
+            )}
 
             {/* Color distribution bars + mana source counts */}
             {(totalColorSymbols > 0 || Object.values(deckAnalytics.landColors).some((v) => v > 0)) && (
@@ -1326,7 +1384,7 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                     )
                   })}
                   {Object.values(deckAnalytics.landColors).every((v) => v === 0) && (
-                    <div style={{ flex: 1, backgroundColor: '#333' }} />
+                    <div style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
                   )}
                 </div>
                 {/* Per-color counts with mana symbols */}
@@ -1391,8 +1449,8 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
           <div
             style={{
               padding: '6px 12px',
-              backgroundColor: '#222',
-              borderBottom: '1px solid #333',
+              backgroundColor: 'rgba(10, 12, 20, 0.6)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -1404,6 +1462,14 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
             <span style={{ color: '#888', fontSize: 11 }}>
               ({spellCount} spells + {landCount} lands)
             </span>
+            {deckSearchMatches && (
+              <span
+                title="Cards in your deck matching the pool search"
+                style={{ color: '#4fc3f7', fontSize: 11 }}
+              >
+                {deckSearchMatches.copies} match search
+              </span>
+            )}
             {!isSubmitted && totalCount > 0 && (
               <button
                 onClick={clearDeck}
@@ -1411,9 +1477,9 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                   marginLeft: 'auto',
                   padding: '2px 8px',
                   fontSize: 10,
-                  backgroundColor: '#444',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
                   color: '#ef5350',
-                  border: '1px solid #555',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
                   borderRadius: 4,
                   cursor: 'pointer',
                 }}
@@ -1444,17 +1510,19 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                 onHover={handleHover}
                 disabled={isSubmitted}
                 showCommanderControls={isCommanderShape && !isSubmitted}
-                isCommander={state.commander === card.name}
+                isCommander={commanders.includes(card.name)}
                 canBeCommander={eligibleCommanderNames.has(card.name)}
                 offIdentity={offIdentityNames.has(card.name)}
-                onToggleCommander={() => {
-                  setCommander(state.commander === card.name ? null : card.name)
-                }}
+                searchMatch={deckSearchMatches == null ? undefined : deckSearchMatches.names.has(card.name)}
+                score={deckCardScores?.[card.name]?.score ?? null}
+                reason={deckCardScores?.[card.name]?.reason}
+                scoreStale={scoresStale}
+                onToggleCommander={() => toggleCommander(card.name)}
               />
             ))}
 
             {/* Basic lands */}
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #333' }}>
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
               <div style={{ padding: '0 12px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ color: '#666', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
                   Basic Lands
@@ -1465,9 +1533,9 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
                     style={{
                       padding: '2px 8px',
                       fontSize: 10,
-                      backgroundColor: '#444',
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
                       color: '#4fc3f7',
-                      border: '1px solid #555',
+                      border: '1px solid rgba(255, 255, 255, 0.16)',
                       borderRadius: 4,
                       cursor: 'pointer',
                     }}
@@ -1543,7 +1611,6 @@ function DeckBuilder({ state }: { state: DeckBuildingState }) {
         />
       )}
 
-      <DeckbuilderChatPanel state={state} />
     </div>
   )
 }
@@ -1610,9 +1677,9 @@ function ArenaExportModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: '#1e1e1e',
-          border: '1px solid #444',
-          borderRadius: 10,
+          backgroundColor: 'rgba(16, 18, 28, 0.97)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          borderRadius: 14,
           padding: 20,
           width: 'min(560px, 90vw)',
           maxHeight: '80vh',
@@ -1649,9 +1716,9 @@ function ArenaExportModal({
             width: '100%',
             minHeight: 240,
             resize: 'vertical',
-            backgroundColor: '#0f0f0f',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
             color: '#ddd',
-            border: '1px solid #333',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: 6,
             padding: 10,
             fontFamily: 'monospace',
@@ -1666,9 +1733,9 @@ function ArenaExportModal({
             style={{
               padding: '8px 20px',
               fontSize: responsive.fontSize.normal,
-              backgroundColor: '#3a3a3a',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
               color: 'white',
-              border: '1px solid #555',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
               borderRadius: 6,
               cursor: 'pointer',
               fontWeight: 600,
@@ -1700,207 +1767,8 @@ function ArenaExportModal({
 /**
  * Animated ellipsis dots for loading/waiting indicators.
  */
-/**
- * "Auto-build" control for the deckbuild header: an optional engine dropdown (shown when more than
- * one engine is registered) plus a button that builds the deck from the pool. An empty deck builds
- * fresh; a partial deck is completed (existing picks kept). Rendered only when AI assistance is
- * enabled for the tournament.
- */
-function AutoBuildControl({
-  hasCards,
-  responsive,
-}: {
-  hasCards: boolean
-  responsive: ReturnType<typeof useResponsive>
-}) {
-  const autoBuildDeck = useGameStore((s) => s.autoBuildDeck)
-  const applyAutoBuildOption = useGameStore((s) => s.applyAutoBuildOption)
-  const aiAssistBusy = useGameStore((s) => s.aiAssistBusy)
-  const aiAssistError = useGameStore((s) => s.aiAssistError)
-  const autoBuildResult = useGameStore((s) => s.autoBuildResult)
-  const scoreDeckCards = useGameStore((s) => s.scoreDeckCards)
-  const clearDeckCardScores = useGameStore((s) => s.clearDeckCardScores)
-  const hasCardScores = useGameStore((s) => s.deckCardScores != null)
-  // The selected engine lives in the store so it survives this control remounting on every edit.
-  const advisorId = useGameStore((s) => s.deckbuildAdvisorId)
-  const setAdvisorId = useGameStore((s) => s.setDeckbuildAdvisorId)
-
-  const [advisors, setAdvisors] = useState<readonly AdvisorInfo[]>([])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchAdvisors()
-      .then((r) => {
-        if (cancelled) return
-        setAdvisors(r.deckbuild)
-        // Keep the player's saved choice; only fall back to the default if it's unset or stale.
-        const saved = useGameStore.getState().deckbuildAdvisorId
-        if (saved == null || !r.deckbuild.some((a) => a.id === saved)) {
-          setAdvisorId(r.deckbuild[0]?.id ?? null)
-        }
-      })
-      .catch(() => {
-        // Dropdown stays empty; the button still works using the server's default engine.
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [setAdvisorId])
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {advisors.length > 1 && (
-        <select
-          value={advisorId ?? ''}
-          onChange={(e) => setAdvisorId(e.target.value)}
-          title="AI engine"
-          style={{
-            padding: '6px 8px',
-            fontSize: 13,
-            backgroundColor: '#333',
-            color: '#ddd',
-            border: '1px solid #555',
-            borderRadius: 6,
-          }}
-        >
-          {advisors.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-      )}
-      <button
-        onClick={() => void autoBuildDeck(advisorId ?? undefined)}
-        disabled={aiAssistBusy}
-        title={
-          hasCards
-            ? 'Keep your current picks and fill the rest of the deck from the pool'
-            : 'Build the best deck from your pool'
-        }
-        style={{
-          padding: responsive.isMobile ? '6px 14px' : '8px 20px',
-          fontSize: responsive.fontSize.normal,
-          backgroundColor: '#7e57c2',
-          color: 'white',
-          border: 'none',
-          borderRadius: 6,
-          cursor: aiAssistBusy ? 'wait' : 'pointer',
-          fontWeight: 600,
-          opacity: aiAssistBusy ? 0.7 : 1,
-        }}
-      >
-        {aiAssistBusy ? 'Building…' : hasCards ? '🪄 Complete Deck' : '🪄 Auto-build'}
-      </button>
-      <button
-        onClick={() => void scoreDeckCards(advisorId ?? undefined)}
-        disabled={aiAssistBusy}
-        title="Score every card in your pool (badge on each card); uses your current deck for colour context"
-        style={{
-          padding: responsive.isMobile ? '6px 12px' : '8px 16px',
-          fontSize: responsive.fontSize.normal,
-          backgroundColor: '#5e7ec2',
-          color: 'white',
-          border: 'none',
-          borderRadius: 6,
-          cursor: aiAssistBusy ? 'wait' : 'pointer',
-          fontWeight: 600,
-          opacity: aiAssistBusy ? 0.7 : 1,
-        }}
-      >
-        {aiAssistBusy ? 'Scoring…' : hasCardScores ? 'Re-score cards' : '✨ Score cards'}
-      </button>
-      {hasCardScores && !aiAssistBusy && (
-        <button
-          onClick={clearDeckCardScores}
-          title="Hide the per-card score badges"
-          style={{
-            padding: '6px 10px',
-            fontSize: 13,
-            backgroundColor: '#444',
-            color: '#ccc',
-            border: 'none',
-            borderRadius: 6,
-            cursor: 'pointer',
-          }}
-        >
-          Hide scores
-        </button>
-      )}
-      {!aiAssistBusy && autoBuildResult && (
-        <BuildOptionPicker result={autoBuildResult} onPick={applyAutoBuildOption} />
-      )}
-      {aiAssistError && <span style={{ color: '#ff6b6b', fontSize: 12 }}>{aiAssistError}</span>}
-    </div>
-  )
-}
-
-/**
- * The Auto-build outcome: the candidate decks as selectable chips. The recommended deck is applied
- * immediately (highlighted here); clicking another chip swaps the deck to that candidate. With a
- * single candidate (heuristic / completion) it renders one non-interactive score badge.
- */
-function BuildOptionPicker({
-  result,
-  onPick,
-}: {
-  result: AutoBuildResult
-  onPick: (index: number) => void
-}) {
-  const multiple = result.options.length > 1
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      {multiple && <span style={{ color: '#b9a6e0', fontSize: 12, fontWeight: 600 }}>Builds:</span>}
-      {result.options.map((option, i) => {
-        const isApplied = i === result.appliedIndex
-        const scoreText = option.score != null ? formatBuildScore(result.advisorId, option.score) : null
-        return (
-          <button
-            key={i}
-            onClick={() => onPick(i)}
-            disabled={!multiple}
-            title={
-              multiple
-                ? isApplied
-                  ? 'This build is applied to your deck'
-                  : 'Switch your deck to this build'
-                : 'Score of the most recent Auto-build'
-            }
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '4px 10px',
-              fontSize: 13,
-              fontWeight: 600,
-              color: isApplied ? '#e8d9ff' : '#b9a6e0',
-              backgroundColor: isApplied ? 'rgba(126, 87, 194, 0.35)' : 'rgba(126, 87, 194, 0.12)',
-              border: `1px solid ${isApplied ? '#9b7fd4' : 'rgba(126, 87, 194, 0.5)'}`,
-              borderRadius: 6,
-              cursor: multiple ? 'pointer' : 'default',
-            }}
-          >
-            {option.colors.length > 0 && (
-              <span style={{ display: 'inline-flex', gap: 2 }}>
-                {option.colors.map((c) => (
-                  <ManaSymbol key={c} symbol={c} size={14} />
-                ))}
-              </span>
-            )}
-            {option.archetype && <span>{option.archetype}</span>}
-            {scoreText && (
-              <span style={{ color: isApplied ? '#fff' : '#cdbbef', fontWeight: 700 }}>{scoreText}</span>
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-/** Draftsim reports a 0–10 deck score; the heuristic engine a raw rating sum. */
-function formatBuildScore(advisorId: string, score: number): string {
-  return advisorId === 'draftsim' ? `${score.toFixed(1)}/10` : score.toFixed(1)
+function scoreTitle(score: number, reason: string | undefined): string {
+  return reason ? `AI score ${score}/100 — ${reason}` : `AI score ${score}/100`
 }
 
 function AnimatedDots() {
@@ -1928,7 +1796,7 @@ function DeckTypeDistribution({
 }) {
   if (total === 0) {
     return (
-      <div style={{ color: '#666', fontSize: 10, marginBottom: 8 }}>
+      <div style={{ color: '#8f98ac', fontSize: 12, padding: '6px 0' }}>
         Click cards in the pool to build your deck
       </div>
     )
@@ -1989,6 +1857,7 @@ function PoolCard({
   highlighted,
   score = null,
   reason,
+  scoreStale = false,
 }: {
   card: SealedCardInfo
   count: number
@@ -2006,13 +1875,13 @@ function PoolCard({
   score?: number | null
   /** Tooltip justification for the score. */
   reason?: string | undefined
+  /** The deck changed since scoring, so the score's colour context is out of date. */
+  scoreStale?: boolean
 }) {
   const cardWidth = 110
   const cardHeight = Math.round(cardWidth * 1.4)
   const imageUrl = getCardImageUrl(card.name, card.imageUri, 'small')
   const defaultBorder = highlighted ? '2px solid #a78bfa' : '2px solid #444'
-  // Score badge colour: green (great) → amber → grey (weak).
-  const scoreColor = score == null ? '#555' : score >= 70 ? '#4caf50' : score >= 45 ? '#ff9800' : '#777'
 
   return (
     <div
@@ -2020,7 +1889,7 @@ function PoolCard({
       onMouseEnter={(e) => onHover(card, e)}
       onMouseMove={(e) => onHover(card, e)}
       onMouseLeave={() => onHover(null)}
-      title={score != null && reason ? `AI score ${score}/100 — ${reason}` : undefined}
+      title={score != null ? scoreTitle(score, reason) : undefined}
       style={{
         position: 'relative',
         width: cardWidth,
@@ -2091,21 +1960,8 @@ function PoolCard({
             </div>
           )}
       {score != null && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 4,
-            left: 4,
-            backgroundColor: scoreColor,
-            color: '#fff',
-            borderRadius: 4,
-            padding: '1px 5px',
-            fontSize: 12,
-            fontWeight: 700,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-          }}
-        >
-          {score}
+        <div style={{ position: 'absolute', top: 5, left: 5, pointerEvents: 'none' }}>
+          <ScoreBadge score={score} stale={scoreStale} />
         </div>
       )}
     </div>
@@ -2125,6 +1981,10 @@ function DeckListRow({
   isCommander,
   canBeCommander,
   offIdentity,
+  searchMatch,
+  score = null,
+  reason,
+  scoreStale = false,
   onToggleCommander,
 }: {
   card: SealedCardInfo
@@ -2136,9 +1996,18 @@ function DeckListRow({
   isCommander?: boolean
   canBeCommander?: boolean
   offIdentity?: boolean
+  /** Set only while a pool search is active: true highlights the row, false dims it. */
+  searchMatch?: boolean | undefined
+  /** AI per-card score 0–100, or null when scoring is off — so the weakest cards stand out as cuts. */
+  score?: number | null
+  reason?: string | undefined
+  scoreStale?: boolean
   onToggleCommander?: () => void
 }) {
   const cmc = getCmc(card)
+  const restingBackground = offIdentity
+    ? 'rgba(239, 83, 80, 0.06)'
+    : searchMatch ? 'rgba(79, 195, 247, 0.08)' : 'transparent'
 
   return (
     <div
@@ -2152,22 +2021,26 @@ function DeckListRow({
         height: 36,
         padding: '0 8px 0 0',
         cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.8 : 1,
+        opacity: searchMatch === false ? 0.4 : disabled ? 0.8 : 1,
         position: 'relative',
         overflow: 'hidden',
-        borderBottom: '1px solid #2a2a2a',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
         // Off-identity rows get a red left strip + faint red tint, matching the standalone
-        // /deckbuilder's deckRowViolation visual treatment.
-        borderLeft: offIdentity ? '3px solid #ef5350' : '3px solid transparent',
-        backgroundColor: offIdentity ? 'rgba(239, 83, 80, 0.06)' : undefined,
+        // /deckbuilder's deckRowViolation visual treatment. Search matches get a blue one.
+        borderLeft: offIdentity ? '3px solid #ef5350' : searchMatch ? '3px solid #4fc3f7' : '3px solid transparent',
+        backgroundColor: restingBackground,
       }}
       onMouseOver={(e) => {
         if (!disabled) e.currentTarget.style.backgroundColor = 'rgba(79, 195, 247, 0.1)'
       }}
       onMouseOut={(e) => {
-        e.currentTarget.style.backgroundColor = offIdentity ? 'rgba(239, 83, 80, 0.06)' : 'transparent'
+        e.currentTarget.style.backgroundColor = restingBackground
       }}
-      title={offIdentity ? `${card.name} is outside the commander's colour identity` : undefined}
+      title={
+        offIdentity
+          ? `${card.name} is outside the commander's colour identity`
+          : score != null ? scoreTitle(score, reason) : undefined
+      }
     >
       {/* Count */}
       <span
@@ -2228,6 +2101,11 @@ function DeckListRow({
           {formatTypeLine(card.typeLine)}
         </span>
       </span>
+      {score != null && (
+        <span style={{ marginLeft: 6, flexShrink: 0, display: 'inline-flex' }}>
+          <ScoreBadge score={score} stale={scoreStale} />
+        </span>
+      )}
       {/* Commander crown — only in commander-shape lobbies */}
       {showCommanderControls && (
         <button
@@ -2241,7 +2119,7 @@ function DeckListRow({
           aria-label={isCommander ? `Unset ${card.name} as commander` : `Set ${card.name} as commander`}
           title={
             !canBeCommander
-              ? 'Only legendary creatures or planeswalkers can be commanders'
+              ? 'Only a legendary creature (or a card that says so) can be a commander; a Background only beside a "Choose a Background" commander'
               : isCommander
               ? 'Commander — click to unset'
               : 'Set as commander'
@@ -2300,7 +2178,7 @@ function LandRow({
         alignItems: 'center',
         height: 28,
         padding: '0 8px',
-        borderBottom: '1px solid #2a2a2a',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
       }}
     >
       {/* Count */}
@@ -2319,7 +2197,7 @@ function LandRow({
             height: 20,
             borderRadius: 3,
             border: 'none',
-            backgroundColor: count > 0 && !disabled ? '#555' : '#333',
+            backgroundColor: count > 0 && !disabled ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.06)',
             color: count > 0 && !disabled ? 'white' : '#555',
             cursor: count > 0 && !disabled ? 'pointer' : 'not-allowed',
             fontWeight: 600,
@@ -2479,7 +2357,7 @@ function ColorModeSegmented({
     <div
       role="group"
       aria-label="Colour comparison mode"
-      style={{ display: 'inline-flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden' }}
+      style={{ display: 'inline-flex', gap: 0, border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 4, overflow: 'hidden' }}
     >
       {options.map((opt) => {
         const active = mode === opt.op
@@ -2588,6 +2466,50 @@ function suggestLands(
   const result = suggestBasicLands({ entries, availableBasics, minDeckSize: 40 })
 
   for (const land of state.basicLands) setLandCount(land.name, result[land.name] ?? 0)
+}
+
+type SearchMode = 'simple' | 'scryfall'
+
+const SEARCH_MODE_KEY = 'argentum-pool-search-mode'
+
+const SEARCH_MODE_OPTIONS: { mode: SearchMode; label: string; hint: string }[] = [
+  { mode: 'simple', label: 'Simple', hint: 'Plain text: matches name, type line, or rules text' },
+  { mode: 'scryfall', label: 'Scryfall', hint: 'Scryfall query syntax: t:, o:, c:, cmc:, …' },
+]
+
+const EMPTY_QUERY = parseQuery('')
+
+function SearchModeExplainer() {
+  const term = { color: '#4fc3f7', fontWeight: 600 } as const
+  return (
+    <div style={{ fontSize: 12, lineHeight: 1.5, color: '#ccc', margin: '4px 0 8px', display: 'grid', gap: 4 }}>
+      <div>
+        <span style={term}>Simple</span> — finds cards whose name, type line, or rules text contains
+        what you type. <code>flying</code> matches every card that mentions flying.
+      </div>
+      <div>
+        <span style={term}>Scryfall</span> — reads the query syntax below, so you can combine
+        conditions: <code>t:creature cmc&lt;=3 o:flying</code>. Clicking an example switches to it.
+      </div>
+    </div>
+  )
+}
+
+function loadSearchMode(): SearchMode {
+  try {
+    return localStorage.getItem(SEARCH_MODE_KEY) === 'scryfall' ? 'scryfall' : 'simple'
+  } catch {
+    return 'simple'
+  }
+}
+
+function matchesSimpleSearch(card: SealedCardInfo, query: string): boolean {
+  const q = query.toLowerCase()
+  return (
+    card.name.toLowerCase().includes(q) ||
+    card.typeLine.toLowerCase().includes(q) ||
+    (card.oracleText != null && card.oracleText.toLowerCase().includes(q))
+  )
 }
 
 function matchesTypeFilter(card: SealedCardInfo, filter: string): boolean {

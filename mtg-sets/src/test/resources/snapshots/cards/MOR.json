@@ -1,3 +1,47 @@
+// Ambassador Oak
+{
+    "name": "Ambassador Oak",
+    "manaCost": "{3}{G}",
+    "typeLine": "Creature — Treefolk Warrior",
+    "oracleText": "When this creature enters, create a 1/1 green Elf Warrior creature token.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ambassador Oak:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "GREEN"
+                    ],
+                    "creatureTypes": [
+                        "Elf",
+                        "Warrior"
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "113",
+        "artist": "Steve Prescott",
+        "flavorText": "Treefolk and elves share a common interest in the forests, but really the elves just feel at home with the view from above.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/0/904d3416-70bf-4043-8078-f5f033ecfb31.jpg?1783942781"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Ballyrush Banneret
 {
     "name": "Ballyrush Banneret",
@@ -77,7 +121,8 @@
                             "imageUri": "https://cards.scryfall.io/normal/front/1/6/1666cae8-8750-4091-8e45-259e76268db9.jpg?1783942773"
                         }
                     ]
-                }
+                },
+                "descriptionOverride": "At the beginning of your upkeep, you lose 1 life and create a 1/1 black Faerie Rogue creature token with flying."
             }
         ]
     },
@@ -88,6 +133,10 @@
         "flavorText": "In Lorwyn's brief evenings, the sun pauses at the horizon long enough for a certain species of violet to bloom with the fragrance of mischief.",
         "imageUri": "https://cards.scryfall.io/normal/front/8/1/8145fed6-6b51-420a-84cf-4ea5e0aa1883.jpg?1783942795",
         "rulings": [
+            {
+                "date": "2024-06-07",
+                "text": "This card was originally printed with the \"tribal\" card type. That card type has been replaced with \"kindred\". This change does not affect the gameplay function of this card."
+            },
             {
                 "date": "2008-04-01",
                 "text": "The effect is mandatory. You'll lose 1 life even if you have only 1 life left."
@@ -100,6 +149,80 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Bramblewood Paragon
+{
+    "name": "Bramblewood Paragon",
+    "manaCost": "{1}{G}",
+    "typeLine": "Creature — Elf Warrior",
+    "oracleText": "Each other Warrior creature you control enters with an additional +1/+1 counter on it.\nEach creature you control with a +1/+1 counter on it has trample.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantKeyword",
+                "keyword": "TRAMPLE",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature"
+                        ],
+                        "statePredicates": [
+                            {
+                                "type": "HasCounter",
+                                "counterType": "PLUS_ONE_PLUS_ONE"
+                            }
+                        ],
+                        "controllerPredicate": "ControlledByYou"
+                    }
+                }
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithCounters",
+                "count": 1,
+                "otherOnly": true,
+                "appliesTo": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature Warrior ctrl:you",
+                    "to": "Battlefield"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "115",
+        "rarity": "UNCOMMON",
+        "artist": "Jim Murray",
+        "flavorText": "Those who seek to escape her blades succeed only in dying on their stomachs.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/9/3910f5b2-17da-41e4-bf40-1c40b513fa12.jpg?1783942781",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "If a Warrior would normally enter with a certain number of +1/+1 counters on it, it enters with that many +1/+1 counters plus one on it instead. If a Warrior would normally enter with no +1/+1 counters on it, it enters with one +1/+1 counter on it instead."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "The creature gets the counter if it would enter under your control. It doesn't matter who owns the creature or what zone it enters from (such as your opponent's graveyard, for example)."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "The effects from more than one Bramblewood Paragon are cumulative. That is, if you have more than one Bramblewood Paragon on the battlefield, Warrior creatures you control enter with that many additional +1/+1 counters on them."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "If Bramblewood Paragon enters at the same time as another Warrior (due to Living End, for example), that creature doesn't get a +1/+1 counter."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -137,6 +260,135 @@
     "colorIdentityOverride": [
         "BLUE"
     ]
+}
+
+// Distant Melody
+{
+    "name": "Distant Melody",
+    "manaCost": "{3}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Choose a creature type. Draw a card for each permanent you control of that type.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ChooseOption",
+                    "optionType": "CREATURE_TYPE",
+                    "storeAs": "chosen0"
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": {
+                            "cardPredicates": [
+                                "IsPermanent",
+                                {
+                                    "type": "HasSubtypeFromVariable",
+                                    "variableName": "chosen0"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "32",
+        "artist": "Omar Rayyan",
+        "flavorText": "Oona's song is like a twisted dinner chime. All the faeries return home, but it is Oona who feasts—on the stolen dreams and rumors they serve her.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/a/5a28e4f9-3b68-40bb-bf77-850b08c6b096.jpg?1783942800",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "Note that this spell counts the number of permanents you control of the chosen type, not just the number of creatures you control. It will also take your kindred permanents of the chosen type into account."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Door of Destinies
+{
+    "name": "Door of Destinies",
+    "manaCost": "{4}",
+    "typeLine": "Artifact",
+    "oracleText": "As this artifact enters, choose a creature type.\nWhenever you cast a spell of the chosen type, put a charge counter on this artifact.\nCreatures you control of the chosen type get +1/+1 for each charge counter on this artifact.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Door of Destinies:1",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "HasChosenSubtype"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "CHARGE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantDynamicStats",
+                "filter": {
+                    "baseFilter": "creature ctrl:you",
+                    "chosenSubtypeKey": "chosenCreatureType"
+                },
+                "powerBonus": {
+                    "type": "EntityProperty",
+                    "entity": "Self",
+                    "numericProperty": {
+                        "type": "CounterCount",
+                        "counterType": "CHARGE"
+                    }
+                },
+                "toughnessBonus": {
+                    "type": "EntityProperty",
+                    "entity": "Self",
+                    "numericProperty": {
+                        "type": "CounterCount",
+                        "counterType": "CHARGE"
+                    }
+                }
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "CREATURE_TYPE"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "143",
+        "rarity": "RARE",
+        "artist": "Larry MacDougall",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/c/ac4800be-5f77-42f5-914c-2a8e647e3af5.jpg?1783942774",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "If you cast a creature spell of the chosen type, Door of Destinies will get a charge counter before the creature enters. The creature will enter with the additional boost to its power and toughness."
+            },
+            {
+                "date": "2013-07-01",
+                "text": "Creature types, such as Human or Sliver, appear after the dash on the type line of creatures. Notably, artifact is not a creature type. A creature may have more than one creature type, such as Goblin Warrior. Such a creature would benefit from Door of Destinies if the chosen creature type was Goblin or Warrior."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Fertilid
@@ -205,7 +457,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -283,7 +537,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for an enchantment card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -388,6 +644,118 @@
     ]
 }
 
+// Mothdust Changeling
+{
+    "name": "Mothdust Changeling",
+    "manaCost": "{U}",
+    "typeLine": "Creature — Shapeshifter",
+    "oracleText": "Changeling (This card is every creature type.)\nTap an untapped creature you control: This creature gains flying until end of turn.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "CHANGELING"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Mothdust Changeling:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomTapPermanents",
+                        "filter": "creature"
+                    }
+                },
+                "effect": {
+                    "type": "GrantKeyword",
+                    "keyword": "FLYING",
+                    "target": "Self"
+                },
+                "descriptionOverride": "Tap an untapped creature you control: This creature gains flying until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "42",
+        "artist": "Shelly Wan",
+        "flavorText": "\"Ever seen a changeling fly into a lantern?\"\n—Calydd, kithkin farmer",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/5/95da9bc9-6ac5-432d-ac12-04088cc6c74d.jpg?1783942798",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "Since the activated ability doesn't have a tap symbol in its cost, you can tap a creature (including Mothdust Changeling itself) that hasn't been under your control since your most recent turn began to pay the cost."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Mutavault
+{
+    "name": "Mutavault",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "{T}: Add {C}.\n{1}: This land becomes a 2/2 creature with all creature types until end of turn. It's still a land.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Mutavault:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Mutavault:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{1}"
+                    }
+                },
+                "effect": {
+                    "type": "BecomeCreature",
+                    "power": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughness": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "keywords": [
+                        "CHANGELING"
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "148",
+        "rarity": "RARE",
+        "artist": "Fred Fields",
+        "flavorText": "Some changelings born at Velis Vel never return, but their essence never leaves.",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/c/8ca3c48b-f104-4292-9a4e-2ce87a65893c.jpg?1783942774",
+        "rulings": [
+            {
+                "date": "2025-07-25",
+                "text": "If this land becomes a creature but you haven't controlled it continuously since your most recent turn began, you won't be able to activate its mana ability or attack with it that turn."
+            }
+        ]
+    }
+}
+
 // Negate
 {
     "name": "Negate",
@@ -460,6 +828,158 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Preeminent Captain
+{
+    "name": "Preeminent Captain",
+    "manaCost": "{2}{W}",
+    "typeLine": "Creature — Kithkin Soldier",
+    "oracleText": "First strike (This creature deals combat damage before creatures without first strike.)\nWhenever this creature attacks, you may put a Soldier creature card from your hand onto the battlefield tapped and attacking.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "FIRST_STRIKE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Preeminent Captain:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": "creature Soldier"
+                            },
+                            "storeAs": "put_candidates"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "put_candidates",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "putting"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "putting",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield",
+                                "placement": "TappedAndAttacking"
+                            },
+                            "attackDefender": "CONTROLLER_CHOOSES"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "20",
+        "rarity": "RARE",
+        "artist": "Greg Staples",
+        "flavorText": "\"If you need an example to lead others to the front lines, consider the precedent set.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/1/41659773-8b26-41bf-afcc-805f373c0074.jpg?1783942802",
+        "rulings": [
+            {
+                "date": "2014-07-18",
+                "text": "You choose what the Soldier you put onto the battlefield is attacking. It doesn't have to attack the same player or planeswalker as Preeminent Captain."
+            },
+            {
+                "date": "2014-07-18",
+                "text": "Any abilities of the Soldier creature card that trigger \"Whenever [this creature] attacks\" won't trigger because the creature was never declared as an attacking creature."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Scapeshift
+{
+    "name": "Scapeshift",
+    "manaCost": "{2}{G}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Sacrifice any number of lands. Search your library for up to that many land cards, put them onto the battlefield tapped, then shuffle.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "Sacrifice",
+                    "filter": "land",
+                    "any": true
+                },
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library",
+                                "filter": "land"
+                            },
+                            "storeAs": "searchable",
+                            "search": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": "PermanentsSacrificedThisWay"
+                            },
+                            "storeSelected": "found",
+                            "prompt": "Search your library for land cards (up to the number of permanents sacrificed this way) to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield",
+                                "placement": "Tapped"
+                            }
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
+                    ]
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "136",
+        "rarity": "RARE",
+        "artist": "Fred Fields",
+        "flavorText": "\"Changes far greater than the turning of the leaves await us at season's end.\"\n—Colfenor, the Last Yew",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/4/84829605-50eb-455d-a236-ebfa11e883c5.jpg?1783942776",
+        "rulings": [
+            {
+                "date": "2018-07-13",
+                "text": "You sacrifice the lands as part of the resolution of Scapeshift. It isn't an additional cost. If Scapeshift is countered, you won't sacrifice any lands."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -916,5 +1436,127 @@
     },
     "colorIdentityOverride": [
         "WHITE"
+    ]
+}
+
+// Wolf-Skull Shaman
+{
+    "name": "Wolf-Skull Shaman",
+    "manaCost": "{1}{G}",
+    "typeLine": "Creature — Elf Shaman",
+    "oracleText": "Kinship — At the beginning of your upkeep, you may look at the top card of your library. If it shares a creature type with this creature, you may reveal it. If you do, create a 2/2 green Wolf creature token.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Wolf-Skull Shaman:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayDecide",
+                        "prompt": "Look at the top card of your library?"
+                    },
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "TopOfLibrary",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered0",
+                                "selection": {
+                                    "type": "ChooseUpTo",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "filter": {
+                                    "cardPredicates": [
+                                        {
+                                            "type": "SharesCreatureTypeWith",
+                                            "entity": "Self"
+                                        }
+                                    ]
+                                },
+                                "storeSelected": "selected1",
+                                "storeRemainder": "remainder1",
+                                "prompt": "Reveal it to create a 2/2 green Wolf creature token?",
+                                "selectedLabel": "Reveal",
+                                "remainderLabel": "Keep it hidden",
+                                "showAllCards": true
+                            },
+                            {
+                                "type": "ConditionalOnCollection",
+                                "collection": "selected1",
+                                "ifNotEmpty": {
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "RevealCollection",
+                                            "from": "selected1"
+                                        },
+                                        {
+                                            "type": "CreateToken",
+                                            "power": 2,
+                                            "toughness": 2,
+                                            "colors": [
+                                                "GREEN"
+                                            ],
+                                            "creatureTypes": [
+                                                "Wolf"
+                                            ],
+                                            "imageUri": "https://cards.scryfall.io/normal/front/0/2/02a80dc2-0811-4df0-95f1-dd80ce9e24de.jpg?1783942837"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "descriptionOverride": "Kinship — At the beginning of your upkeep, you may look at the top card of your library. If it shares a creature type with this creature, you may reveal it. If you do, create a 2/2 green Wolf creature token."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "140",
+        "rarity": "UNCOMMON",
+        "artist": "Jim Murray",
+        "flavorText": "A chorus of howls answers his call.",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/0/804ef999-0d44-420e-ad0c-a6dcf8e9c392.jpg?1783942775",
+        "rulings": [
+            {
+                "date": "2008-04-01",
+                "text": "You don't have to reveal the top card of your library, even if it shares a creature type with the creature that has the kinship ability."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "After the kinship ability finishes resolving, the card you looked at remains on top of your library."
+            },
+            {
+                "date": "2008-04-01",
+                "text": "If you have multiple creatures with kinship abilities, each triggers and resolves separately. You'll look at the same card for each one, unless you have some method of shuffling your library or moving that card to a different zone."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }

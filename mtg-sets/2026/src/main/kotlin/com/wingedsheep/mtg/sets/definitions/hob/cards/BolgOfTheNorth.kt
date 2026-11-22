@@ -56,7 +56,11 @@ val BolgOfTheNorth = card("Bolg of the North") {
         trigger = Triggers.self.enters()
         effect = Effects.ReflexiveTrigger(
             action = Effects.Pipeline {
-                val toSacrifice = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl.other()))
+                val toSacrifice = selectTarget(
+                    TargetObject(filter = TargetFilter.CreatureYouControl.other()),
+                    nonTargeting = true,
+                    prompt = "Choose another creature to sacrifice"
+                )
                 // Named: the reflexive trigger below reads it once this pipeline has finished.
                 storeNumber(
                     DynamicAmounts.powerOf(toSacrifice.asTarget),

@@ -58,9 +58,10 @@ class InvasionOfShandalarScenarioTest : ScenarioTestBase() {
                 .build()
 
             game.checkStateBasedActions()
-            // Player 1 defeats their own Siege at instant speed during the opponent's turn.
-            game.passPriority()
+            // Player 1 defeats their own Siege at instant speed during the opponent's turn. The
+            // opponent is active and holds priority before each Bolt (CR 117.3b), so they pass first.
             repeat(2) {
+                game.passPriority()
                 game.castSpell(1, "Lightning Bolt", game.findPermanent("Invasion of Shandalar")!!).error shouldBe null
                 game.resolveStack()
             }

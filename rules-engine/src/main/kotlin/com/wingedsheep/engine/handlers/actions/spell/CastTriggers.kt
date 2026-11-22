@@ -1,25 +1,25 @@
 package com.wingedsheep.engine.handlers.actions.spell
 
+import com.wingedsheep.engine.state.components.player.FlashGrantsComponent
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.Outcome
 import com.wingedsheep.engine.event.PendingTrigger
 import com.wingedsheep.engine.event.TriggerContext
-import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.ObjectReferenceEnvironment
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
-import com.wingedsheep.engine.mechanics.layers.Layer
-import com.wingedsheep.engine.mechanics.layers.SerializableModification
-import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
 import com.wingedsheep.engine.mechanics.mana.GrantedKeywordResolver
 import com.wingedsheep.engine.mechanics.stack.StackResolver
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent
 import com.wingedsheep.engine.state.components.identity.CantBeCounteredComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.CommanderRegistryComponent
 import com.wingedsheep.engine.state.components.player.GrantedSpellKeywordsComponent
+import com.wingedsheep.engine.state.components.stack.AdditionalEntryCounters
+import com.wingedsheep.engine.state.components.stack.EntryKeywordGrant
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.sdk.core.Keyword
@@ -31,6 +31,7 @@ import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.CopyTargetSpellEffect
@@ -48,6 +49,8 @@ internal class CastSpellOnStack(
     val cardComponent: CardComponent,
     /** The requirements its targets were chosen against — a copy may choose new ones from them. */
     val targetRequirements: List<TargetRequirement>,
+    /** The zone it was cast from (read before it moved to the stack); `null` when unknown. */
+    val castFromZone: com.wingedsheep.sdk.core.Zone? = null,
 )
 
 /**
@@ -56,10 +59,11 @@ internal class CastSpellOnStack(
  *
  * - copy triggers: storm (CR 702.40), conspire (CR 702.78), casualty (CR 702.153),
  *   replicate (CR 702.56);
- * - riders carried by the mana that paid (Cavern of Souls, Path of Ancestry, Pyromancer's Goggles,
+ * - riders carried by the mana that paid (Cavern of Souls, Path of Ancestry, Pyromancer's Goggles, Scaled Nurturer,
  *   Carnelian Orb of Dragonkind);
  * - "the next spell you cast" riders — copies (Howl of the Horde), can't-be-countered (Mistrise
- *   Village), affinity (Don & Raph), free cast (World War Hulk I).
+ *   Village) and other next-spell stamps (Savage Summoning), affinity (Don & Raph), free cast (World War Hulk I), resolution destination
+ *   (Soulfire Grand Master).
  */
 internal class CastTriggers(
     private val predicateEvaluator: PredicateEvaluator,
@@ -106,6 +110,22 @@ internal class CastTriggers(
     )
 
     /**
+     * Casualty's copy. A printed casualty may carry riders for its copy — "The copy isn't legendary
+     * and has starting loyalty X." (Ob Nixilis, the Adversary) — which the copy-target-spell path
+     * applies (copiable-value exceptions on the stack, starting loyalty on the token, CR 707.10f);
+     * a riderless casualty shares storm's copy.
+     */
+    private fun casualtyCopyEffect(spell: CastSpellOnStack, cardDef: CardDefinition, spellEffect: Effect?): Effect {
+        val printed = cardDef.keywordAbilities.filterIsInstance<KeywordAbility.Casualty>().firstOrNull()
+        if (printed == null || !printed.hasCopyRiders) return copyEffect(spell, spellEffect, 1)
+        return CopyTargetSpellEffect(
+            target = EffectTarget.TriggeringEntity,
+            exceptions = printed.copyExceptions,
+            tokenStartingLoyalty = printed.copyStartingLoyalty
+        )
+    }
+
+    /**
      * Storm, conspire and casualty — each "copy this spell" trigger, reusing [StormCopyEffect] so
      * the retargeting, modal-copy, and stack-object clone plumbing is shared. A face-down spell has
      * no abilities (CR 708.2), so it triggers none.
@@ -134,7 +154,7 @@ internal class CastTriggers(
             listOf(selfTrigger(state, spell, "conspire", copyEffect(spell, spellEffect, 1), "Conspire — copy $name"))
         } else emptyList()
         val casualty = if (action.casualtyCreature != null) {
-            listOf(selfTrigger(state, spell, "casualty", copyEffect(spell, spellEffect, 1), "Casualty — copy $name"))
+            listOf(selfTrigger(state, spell, "casualty", casualtyCopyEffect(spell, cardDef, spellEffect), "Casualty — copy $name"))
         } else emptyList()
         // Replicate (CR 702.56a): "When you cast this spell, if a replicate cost was paid for it,
         // copy it for each time its replicate cost was paid." One trigger making N copies, each
@@ -190,10 +210,12 @@ internal class CastTriggers(
                 makeUncounterableWhenSpent(state, spell, rider.spellFilter) to emptyList()
             is ManaSpellRider.ScryOnSharedTypeWithCommander ->
                 state to scryOnSharedTypeWithCommander(state, spell, rider.amount)
-            is ManaSpellRider.CopySpellWhenSpent ->
-                state to copySpellWhenSpent(state, spell, rider.spellFilter)
+            is ManaSpellRider.TriggersWhenSpent ->
+                state to triggerWhenSpent(state, spell, rider.spellFilter, rider.effect)
             is ManaSpellRider.GrantsKeywordWhenSpent ->
                 grantKeywordWhenSpent(state, spell, rider.keyword, rider.spellFilter, rider.duration) to emptyList()
+            is ManaSpellRider.EntersWithCountersWhenSpent ->
+                oweEntryCountersWhenSpent(state, spell, rider) to emptyList()
         }
 
     private fun spellMatches(state: GameState, action: CastSpell, filter: GameObjectFilter): Boolean =
@@ -210,27 +232,21 @@ internal class CastTriggers(
     }
 
     /**
-     * Carnelian Orb of Dragonkind's rider: if the cast spell matches [spellFilter], float an
-     * end-of-turn grant of [keyword] keyed to the spell. Otherwise no-op (the mana paid for
-     * something else).
+     * Carnelian Orb of Dragonkind's / Hall of the Bandit Lord's rider: if the cast spell matches
+     * [spellFilter], freeze [keyword] onto the spell's [SpellOnStackComponent.entryKeywordGrants]
+     * for [duration]; `PermanentEntry` grants it as the spell becomes a permanent, so haste is live
+     * the instant the permanent exists. Otherwise no-op (the mana paid for something else).
      *
-     * Unlike the copy / scry riders this queues nothing onto the stack — "it gains haste until end
-     * of turn" is a continuous effect the printed card applies without a triggered ability. The
-     * grant is keyed to the spell's entity id, which a permanent spell keeps as it resolves onto the
-     * battlefield, so the keyword is live the instant the permanent exists — exactly what haste
-     * needs.
+     * Unlike the copy / scry riders this queues nothing onto the stack — "it gains haste" is a
+     * continuous effect the printed card applies without a triggered ability.
      *
      * The spell is matched against its stack characteristics at payment time rather than at
      * resolution. That's what the printed rulings require: mana spent on a non-Dragon spell that
      * *becomes* a Dragon later in the turn grants nothing.
      *
-     * The floating effect's source is the spell itself, not the mana's producer — the producer may
-     * already have left the battlefield, and the source is only read for the effect's display name.
-     *
-     * A [Duration.Permanent] grant (Hall of the Bandit Lord) is frozen onto the spell's
-     * [SpellOnStackComponent.entryKeywordGrants] instead; `PermanentEntry` grants it as the spell
-     * becomes a permanent. A floating effect keyed to the stack object would outlive a countered
-     * spell and reach the same card if it were later put onto the battlefield.
+     * Freezing the grant on the stack object rather than floating it at the spell's entity id keeps
+     * a countered spell from carrying the keyword onto the same card if it's put onto the
+     * battlefield later that turn (CR 400.7).
      */
     private fun grantKeywordWhenSpent(
         state: GameState,
@@ -241,40 +257,56 @@ internal class CastTriggers(
     ): GameState {
         val action = spell.action
         if (!spellMatches(state, action, spellFilter)) return state
-        if (duration == Duration.Permanent) {
-            return state.updateEntity(action.cardId) { c ->
-                val onStack = c.get<SpellOnStackComponent>() ?: return@updateEntity c
-                c.with(onStack.copy(entryKeywordGrants = onStack.entryKeywordGrants + keyword))
-            }
+        return state.updateEntity(action.cardId) { c ->
+            val onStack = c.get<SpellOnStackComponent>() ?: return@updateEntity c
+            c.with(onStack.copy(entryKeywordGrants = onStack.entryKeywordGrants + EntryKeywordGrant(keyword, duration)))
         }
-        return state.addFloatingEffect(
-            layer = Layer.ABILITY,
-            modification = SerializableModification.GrantKeyword(keyword),
-            affectedEntities = setOf(action.cardId),
-            duration = Duration.EndOfTurn,
-            context = EffectContext(sourceId = action.cardId, controllerId = action.playerId)
-        )
     }
 
     /**
-     * Pyromancer's Goggles' rider: if the cast spell matches [spellFilter], queue a copy trigger
-     * above the spell. Otherwise no-op (the {R} was spent on something else).
-     *
-     * The trigger resolves *before* the spell it copies, which is the printed behavior — the copy is
-     * put onto the stack above the original and resolves first (CR 707.10). The copy's controller
-     * may choose new targets, handled by [CopyTargetSpellEffect]'s own retarget pause. Matching
-     * reads color/type off the spell's [CardComponent] — projected *battlefield* state doesn't apply
-     * to an object on the stack — and happens now, at payment time, not at trigger resolution.
+     * Guildmages' Forum's rider: if the cast spell matches the rider's filter, owe it the rider's
+     * counters on [SpellOnStackComponent.additionalEntryCounters]; `PermanentEntry` places them as
+     * the permanent enters, so counter-placement replacements apply then. Queues nothing — "that
+     * creature enters with an additional +1/+1 counter" isn't a triggered ability. Matched at
+     * payment time, like the other filtered riders.
      */
-    private fun copySpellWhenSpent(state: GameState, spell: CastSpellOnStack, spellFilter: GameObjectFilter): List<PendingTrigger> {
-        if (!spellMatches(state, spell.action, spellFilter)) return emptyList()
-        return listOf(
-            selfTrigger(
-                state, spell, "copy_when_spent",
-                CopyTargetSpellEffect(target = EffectTarget.TriggeringEntity),
-                "Copy ${spell.cardComponent.name}. You may choose new targets for the copy."
+    private fun oweEntryCountersWhenSpent(
+        state: GameState,
+        spell: CastSpellOnStack,
+        rider: ManaSpellRider.EntersWithCountersWhenSpent,
+    ): GameState {
+        val action = spell.action
+        if (!spellMatches(state, action, rider.spellFilter)) return state
+        return state.updateEntity(action.cardId) { c ->
+            val onStack = c.get<SpellOnStackComponent>() ?: return@updateEntity c
+            c.with(
+                onStack.copy(
+                    additionalEntryCounters = onStack.additionalEntryCounters +
+                        AdditionalEntryCounters(rider.counterType, rider.count)
+                )
             )
-        )
+        }
+    }
+
+    /**
+     * Pyromancer's Goggles' / Scaled Nurturer's rider: if the cast spell matches [spellFilter],
+     * queue a trigger running [effect] above the spell. Otherwise no-op (the mana was spent on
+     * something else).
+     *
+     * The trigger resolves *before* the spell — for Goggles' copy that is the printed behavior (the
+     * copy is put onto the stack above the original and resolves first, CR 707.10), and the copy's
+     * own retarget pause lets its controller choose new targets. Matching reads color/type off the
+     * spell's [CardComponent] — projected *battlefield* state doesn't apply to an object on the
+     * stack — and happens now, at payment time, not at trigger resolution.
+     */
+    private fun triggerWhenSpent(
+        state: GameState,
+        spell: CastSpellOnStack,
+        spellFilter: GameObjectFilter,
+        effect: Effect,
+    ): List<PendingTrigger> {
+        if (!spellMatches(state, spell.action, spellFilter)) return emptyList()
+        return listOf(selfTrigger(state, spell, "trigger_when_spent", effect, effect.description))
     }
 
     /**
@@ -317,10 +349,13 @@ internal class CastTriggers(
             else -> if (copies.outcome !is Outcome.Done) return copies else copies.newState to copies.events
         }
         var newState = afterCopies
-        newState = consumeUncounterableRiders(newState, spell)
+        newState = consumeNextSpellRiderGrants(newState, spell)
         newState = consumeAffinityRiders(newState, spell)
         newState = consumeKeywordRiders(newState, spell)
         newState = consumeFreeCastRiders(newState, spell)
+        newState = consumeNextSpellFlashGrants(newState, spell)
+        newState = consumeResolveDestinationRiders(newState, spell)
+        newState = consumeNextSpellCostModifiers(newState, spell)
         return ExecutionResult.success(newState, events + copyEvents)
     }
 
@@ -348,43 +383,83 @@ internal class CastTriggers(
             predicateEvaluator.matches(state, state.projectedState, action.cardId, pending.spellFilter, copyEvalContext)
         }
         if (matchingCopies.isEmpty()) return null
-        val totalCopies = matchingCopies.sumOf { it.copies }
         // Remove consumed pending copies (keep persistent ones like The Mirari Conjecture Ch. III,
         // and any non-matching entries waiting for a different spell type).
         val newState = state.copy(
             pendingSpellCopies = state.pendingSpellCopies.filter { pending -> pending.persistent || pending !in matchingCopies }
         )
         val spellEffect = spell.cardDef?.script?.spellEffect
-        if (spellEffect == null || totalCopies <= 0) return ExecutionResult.success(newState)
+        if (spellEffect == null) return ExecutionResult.success(newState)
 
         // sourceId must point to the spell being copied (action.cardId), not the originating
         // permanent (e.g., Howl of the Horde). StormCopyEffectExecutor uses sourceId to clone the
         // SpellOnStackComponent via putSpellCopy; the originating permanent may be in the graveyard
         // by the time the trigger resolves.
+        // Each rider is its own delayed trigger and so its own copy instruction: a copy-count
+        // replacement (Twinning Staff) resizes each one, so they aren't merged into one copy effect.
         val self = newState.objectRef(action.cardId)
-        val copyAbility = TriggeredAbilityOnStackComponent(
-            sourceId = action.cardId,
-            objectReferences = ObjectReferenceEnvironment(captured = true, origin = self, source = self),
-            sourceName = spell.cardComponent.name,
-            controllerId = action.playerId,
-            effect = copyEffect(spell, spellEffect, totalCopies),
-            description = "Copy ${spell.cardComponent.name} $totalCopies time(s)"
-        )
-        return stackResolver.putTriggeredAbility(newState, copyAbility)
+        var currentState = newState
+        val events = mutableListOf<GameEvent>()
+        for (rider in matchingCopies) {
+            if (rider.copies <= 0) continue
+            val copyAbility = TriggeredAbilityOnStackComponent(
+                sourceId = action.cardId,
+                objectReferences = ObjectReferenceEnvironment(captured = true, origin = self, source = self),
+                sourceName = spell.cardComponent.name,
+                controllerId = action.playerId,
+                effect = copyEffect(spell, spellEffect, rider.copies),
+                description = "Copy ${spell.cardComponent.name} ${rider.copies} time(s)"
+            )
+            val put = stackResolver.putTriggeredAbility(currentState, copyAbility)
+            if (put.outcome !is Outcome.Done) return put
+            currentState = put.newState
+            events.addAll(put.events)
+        }
+        return ExecutionResult.success(currentState, events)
     }
 
     /**
-     * "Next spell can't be countered" riders (e.g., Mistrise Village). The first matching cast
-     * stamps the spell uncounterable and consumes every matching entry; later spells aren't
-     * protected. Unlike the copy rider, face-down spells aren't excluded — a face-down spell is
-     * still "the next spell you cast", and the default Any filter matches it.
+     * "The next spell you cast this turn gets <rider>" grants (Mistrise Village's can't be countered,
+     * Savage Summoning's additional +1/+1 counter). The first matching cast consumes every matching
+     * entry and applies each one's rider to that spell, exactly as mana carrying the rider would have;
+     * later spells get nothing. Unlike the copy rider, face-down spells aren't excluded — a face-down
+     * spell is still "the next spell you cast", and the default Any filter matches it. A rider that
+     * queues a trigger (`TriggersWhenSpent`) joins the pending-trigger wave like a mana rider's does.
      */
-    private fun consumeUncounterableRiders(state: GameState, spell: CastSpellOnStack): GameState {
-        val matching = state.pendingUncounterableSpells.filter { spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter) }
+    private fun consumeNextSpellRiderGrants(state: GameState, spell: CastSpellOnStack): GameState {
+        val matching = state.pendingNextSpellRiders.filter { spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter) }
         if (matching.isEmpty()) return state
-        return state
-            .copy(pendingUncounterableSpells = state.pendingUncounterableSpells.filter { it !in matching })
-            .updateEntity(spell.action.cardId) { c -> c.with(CantBeCounteredComponent) }
+        val consumed = state.copy(pendingNextSpellRiders = state.pendingNextSpellRiders.filter { it !in matching })
+        val (afterRiders, triggers) = applyManaRiders(consumed, spell, matching.map { it.rider })
+        return if (triggers.isEmpty()) afterRiders
+        else afterRiders.copy(pendingTriggers = afterRiders.pendingTriggers + triggers)
+    }
+
+    /**
+     * "The next time you cast an instant or sorcery spell from your hand this turn, put that card
+     * into your hand instead of into your graveyard as it resolves" riders (Soulfire Grand Master).
+     * The first matching cast consumes every matching entry — several activations all apply to that
+     * one spell — and stamps it with a resolution-only destination: a countered or fizzled spell
+     * still goes to the graveyard, and the rider is spent anyway (Soulfire ruling). "Your graveyard":
+     * a spell cast by someone other than its owner is not redirected. A destination the spell
+     * already carries (a cast-this-way rider that also covers counter and fizzle) is kept.
+     */
+    private fun consumeResolveDestinationRiders(state: GameState, spell: CastSpellOnStack): GameState {
+        val matching = state.pendingNextSpellResolveDestinations.filter {
+            it.allowsCastFrom(spell.castFromZone) &&
+                spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter)
+        }
+        if (matching.isEmpty()) return state
+        val consumed = state.copy(
+            pendingNextSpellResolveDestinations = state.pendingNextSpellResolveDestinations.filter { it !in matching }
+        )
+        val cardId = spell.action.cardId
+        val container = consumed.getEntity(cardId) ?: return consumed
+        if (container.get<CardComponent>()?.ownerId != spell.action.playerId) return consumed
+        if (container.has<AfterResolveDestinationComponent>()) return consumed
+        return consumed.updateEntity(cardId) { c ->
+            c.with(AfterResolveDestinationComponent(destination = matching.first().destination, onlyIfResolved = true))
+        }
     }
 
     /**
@@ -415,12 +490,52 @@ internal class CastTriggers(
      * (World War Hulk I). The permission was already offered while the rider was present. Not gated
      * on `useWithoutPayingManaCost`: the printed text names a spell ("the next red or green creature
      * spell you cast this turn"), so a matching spell cast for full price is that spell and spends
-     * the rider — the same contract as the affinity rider.
+     * the rider — the same contract as the affinity rider. Whole-turn permissions (`nextSpellOnly =
+     * false`, Chandra, Flame's Catalyst) are never consumed.
      */
     private fun consumeFreeCastRiders(state: GameState, spell: CastSpellOnStack): GameState {
-        val matching = state.pendingFreeCastSpells.filter { spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter) }
+        val matching = state.pendingFreeCastSpells.filter {
+            it.nextSpellOnly && it.allowsCastFrom(spell.castFromZone) && spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter)
+        }
         if (matching.isEmpty()) return state
         return state.copy(pendingFreeCastSpells = state.pendingFreeCastSpells.filter { it !in matching })
+    }
+
+    /**
+     * One-shot "the next sorcery spell you cast this turn can be cast as though it had flash" grants
+     * (Quicken). Flash was already honoured at cast legality while the grant was live; the first
+     * matching cast spends every matching one-shot grant — even a spell cast at sorcery speed, per
+     * the Quicken ruling — while whole-duration grants (Borne Upon a Wind) are never consumed.
+     */
+    private fun consumeNextSpellFlashGrants(state: GameState, spell: CastSpellOnStack): GameState {
+        val casterId = spell.action.playerId
+        val component = state.getEntity(casterId)?.get<FlashGrantsComponent>() ?: return state
+        val remaining = component.grants.filterNot {
+            it.nextSpellOnly && spellMatchesRider(state, spell, casterId, null, it.filter)
+        }
+        if (remaining.size == component.grants.size) return state
+        return state.updateEntity(casterId) {
+            if (remaining.isEmpty()) it.without<FlashGrantsComponent>() else it.with(FlashGrantsComponent(remaining))
+        }
+    }
+
+    /**
+     * One-shot "the next spell you cast this turn costs {N} less" modifiers (Peerless Samurai). The
+     * cost calculator already applied them while they were present; consuming every matching one
+     * here means only the *next* matching spell is discounted — several stacked instances all go to
+     * that one spell. Repeating modifiers (`nextSpellOnly = false`) are left alone. A face-down
+     * cast only spends unfiltered entries — the only ones `CostCalculator.calculateFaceDownCost`
+     * applies to it.
+     */
+    private fun consumeNextSpellCostModifiers(state: GameState, spell: CastSpellOnStack): GameState {
+        val faceDown = spell.action.castFaceDown
+        val matching = state.spellCostModifiers.filter {
+            it.nextSpellOnly &&
+                (!faceDown || it.spellFilter == GameObjectFilter.Any) &&
+                spellMatchesRider(state, spell, it.controllerId, it.sourceId, it.spellFilter)
+        }
+        if (matching.isEmpty()) return state
+        return state.copy(spellCostModifiers = state.spellCostModifiers.filter { it !in matching })
     }
 
     /** The rider's own sourceId goes into the context so `EffectTarget.Self` resolves to it. */

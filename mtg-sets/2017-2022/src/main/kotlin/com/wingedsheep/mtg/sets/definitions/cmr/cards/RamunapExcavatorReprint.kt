@@ -13,7 +13,7 @@ val RamunapExcavatorReprint = Printing(
     collectorNumber = "433",
     scryfallId = "8870ef0b-cb1f-463b-8509-fece4743d3d4",
     artist = "Mark Behm",
-    imageUri = "https://cards.scryfall.io/normal/front/8/8/8870ef0b-cb1f-463b-8509-fece4743d3d4.jpg?1783928706",
+    imageUri = "https://cards.scryfall.io/normal/front/8/8/8870ef0b-cb1f-463b-8509-fece4743d3d4.jpg",
     releaseDate = "2020-11-20",
     rarity = Rarity.RARE,
 )

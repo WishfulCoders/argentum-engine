@@ -1,3 +1,48 @@
+// Adrix and Nev, Twincasters
+{
+    "name": "Adrix and Nev, Twincasters",
+    "manaCost": "{2}{G}{U}",
+    "typeLine": "Legendary Creature — Merfolk Wizard",
+    "oracleText": "Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\nIf one or more tokens would be created under your control, twice that many of those tokens are created instead.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "WARD"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Ward",
+            "cost": {
+                "type": "WardCost.Mana",
+                "manaCost": "{2}"
+            }
+        }
+    ],
+    "script": {
+        "replacementEffects": [
+            "MultiplyTokenCreation"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "9",
+        "rarity": "MYTHIC",
+        "artist": "Andrew Mar",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/4/d495e084-92ec-4675-b6aa-8ade2775b796.jpg?1783927610",
+        "rulings": [
+            {
+                "date": "2021-06-18",
+                "text": "Everything that is specified by the effect creating the original token or tokens will also be true about the additional token or tokens created by Adrix and Nev's replacement effect. For example, if an effect tells you to create a token \"tapped and attacking\" the additional tokens will also be tapped and attacking. Similarly, if an effect creates a token and puts counters on it (such as a Fractal token) the additional token will also get those counters."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE"
+    ]
+}
+
 // Angel of the Ruins
 {
     "name": "Angel of the Ruins",
@@ -70,6 +115,291 @@
     ]
 }
 
+// Archaeomancer's Map
+{
+    "name": "Archaeomancer's Map",
+    "manaCost": "{2}{W}",
+    "typeLine": "Artifact",
+    "oracleText": "When this artifact enters, search your library for up to two basic Plains cards, reveal them, put them into your hand, then shuffle.\nWhenever a land an opponent controls enters, if that player controls more lands than you, you may put a land card from your hand onto the battlefield.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Archaeomancer's Map:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library",
+                                "filter": "basicland Plains"
+                            },
+                            "storeAs": "searchable",
+                            "search": true
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
+                            },
+                            "storeSelected": "found",
+                            "prompt": "Search your library for up to two basic Plains cards to put into your hand",
+                            "selectedLabel": "Put into your hand"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            },
+                            "revealed": true
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
+                    ]
+                }
+            },
+            {
+                "id": "Archaeomancer's Map:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "land ctrl:opponent",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": "land"
+                            },
+                            "storeAs": "put_candidates"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "put_candidates",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "putting"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "putting",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        }
+                    ]
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "AggregateBattlefield",
+                        "player": "ControllerOfTriggeringEntity",
+                        "filter": "land"
+                    },
+                    "operator": "GT",
+                    "right": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "12",
+        "rarity": "RARE",
+        "artist": "Ovidio Cartagena",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/0/703d0bdc-01a0-4ba8-8536-e7425dfb3b1f.jpg?1783927609",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "The last ability triggers only if that opponent controls more lands than you after the land enters the battlefield. The ability will check again as it tries to resolve. If that opponent doesn't still control more lands than you at that time, the ability won't resolve."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Breena, the Demagogue
+{
+    "name": "Breena, the Demagogue",
+    "manaCost": "{1}{W}{B}",
+    "typeLine": "Legendary Creature — Bird Warlock",
+    "oracleText": "Flying\nWhenever a player attacks one of your opponents, if that opponent has more life than another of your opponents, that attacking player draws a card and you put two +1/+1 counters on a creature you control.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Breena, the Demagogue:1",
+                "trigger": {
+                    "type": "YouAttackEvent",
+                    "player": "Each",
+                    "attackedPlayer": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "ActivePlayer"
+                            }
+                        },
+                        {
+                            "type": "SelectTarget",
+                            "requirement": {
+                                "type": "TargetObject",
+                                "filter": {
+                                    "baseFilter": "creature ctrl:you"
+                                }
+                            },
+                            "storeAs": "target1",
+                            "nonTargeting": true,
+                            "prompt": "Choose a creature you control to get two +1/+1 counters"
+                        },
+                        {
+                            "type": "AddCounters",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
+                            "count": 2,
+                            "target": {
+                                "type": "PipelineTarget",
+                                "collectionName": "target1"
+                            }
+                        }
+                    ]
+                },
+                "interveningIf": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "LifeTotal",
+                        "player": "TriggeringPlayer"
+                    },
+                    "operator": "GT",
+                    "right": {
+                        "type": "LeastAmongPlayers",
+                        "players": "EachOpponent",
+                        "inner": "YourLifeTotal"
+                    }
+                },
+                "descriptionOverride": "Whenever a player attacks one of your opponents, if that opponent has more life than another of your opponents, that attacking player draws a card and you put two +1/+1 counters on a creature you control."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "1",
+        "rarity": "MYTHIC",
+        "artist": "Simon Dominic",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/c/6cb82b10-d785-4e20-84ac-0660d49be8ad.jpg?1783927617",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "Breena's triggered ability will trigger even if you control no creatures."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If the attacking player is one of your opponents and has less life than the player being attacked, then the condition is satisfied."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "You choose which creature to put +1/+1 counters on as the ability is resolving. Once you make the choice, no player may take actions until the counters are placed."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLACK"
+    ]
+}
+
+// Curiosity Crafter
+{
+    "name": "Curiosity Crafter",
+    "manaCost": "{3}{U}",
+    "typeLine": "Creature — Bird Wizard",
+    "oracleText": "Flying\nYou have no maximum hand size.\nWhenever a creature token you control deals combat damage to a player, draw a card.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Curiosity Crafter:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    },
+                    "sourceFilter": "creature token ctrl:you"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            "NoMaximumHandSize"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "24",
+        "rarity": "RARE",
+        "artist": "Rudy Siswanto",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/4/0452c73b-4522-4808-8f97-0e84e2944ee9.jpg?1783927604"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Cursed Mirror
 {
     "name": "Cursed Mirror",
@@ -107,6 +437,165 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Gyome, Master Chef
+{
+    "name": "Gyome, Master Chef",
+    "manaCost": "{2}{B}{G}",
+    "typeLine": "Legendary Creature — Troll Warlock",
+    "oracleText": "Trample\nAt the beginning of your end step, create a number of Food tokens equal to the number of nontoken creatures you had enter the battlefield under your control this turn.\n{1}, Sacrifice a Food: Target creature gains indestructible until end of turn. Tap it.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 3
+    },
+    "keywords": [
+        "TRAMPLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Gyome, Master Chef:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Food",
+                    "dynamicCount": {
+                        "type": "TurnTracking",
+                        "player": "You",
+                        "tracker": "NONTOKEN_CREATURES_ENTERED_UNDER_CONTROL"
+                    }
+                },
+                "descriptionOverride": "At the beginning of your end step, create a number of Food tokens equal to the number of nontoken creatures you had enter the battlefield under your control this turn."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Gyome, Master Chef:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{1}"
+                            }
+                        },
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomSacrifice",
+                                "filter": "Food"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "INDESTRUCTIBLE",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "TapUntap",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature"
+                        },
+                        "id": "t0"
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "5",
+        "rarity": "MYTHIC",
+        "artist": "Steve Prescott",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/d/5dd7dd1a-6dd1-43c3-8298-7db703d384a1.jpg?1783927614",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "The second ability will count Gyome itself on the turn it enters the battlefield."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "You can activate the last ability even if the creature is already tapped."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "Gyome, Master Chef's second ability counts all nontoken creatures that entered the battlefield under your control this turn, even if some or all of those creatures are no longer on the battlefield, no longer creatures, or no longer under your control."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN"
+    ]
+}
+
+// Inkshield
+{
+    "name": "Inkshield",
+    "manaCost": "{3}{W}{B}",
+    "typeLine": "Instant",
+    "oracleText": "Prevent all combat damage that would be dealt to you this turn. For each 1 damage prevented this way, create a 2/1 white and black Inkling creature token with flying.",
+    "script": {
+        "spellEffect": {
+            "type": "PreventDamageShield",
+            "recipientGroupIncludesController": true,
+            "scope": "CombatOnly",
+            "onPrevented": {
+                "type": "CreateToken",
+                "count": {
+                    "type": "ContextProperty",
+                    "key": "PREVENTED_DAMAGE_AMOUNT"
+                },
+                "power": 2,
+                "toughness": 1,
+                "colors": [
+                    "WHITE",
+                    "BLACK"
+                ],
+                "creatureTypes": [
+                    "Inkling"
+                ],
+                "keywords": [
+                    "FLYING"
+                ]
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "71",
+        "rarity": "RARE",
+        "artist": "Jarel Threat",
+        "flavorText": "Silverquill's elite know how to offer a scathing rebuttal without uttering a word.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/e/5e1c14a0-cd68-45fc-a127-422ca6113048.jpg?1783927586"
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "WHITE"
     ]
 }
 
@@ -202,6 +691,85 @@
     ]
 }
 
+// Perplexing Test
+{
+    "name": "Perplexing Test",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Instant",
+    "oracleText": "Choose one —\n• Return all creature tokens to their owners' hands.\n• Return all nontoken creatures to their owners' hands.",
+    "script": {
+        "spellEffect": {
+            "type": "Modal",
+            "modes": [
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "creature token"
+                                },
+                                "storeAs": "returnAllToHand_gathered"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "returnAllToHand_gathered",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Hand"
+                                }
+                            }
+                        ]
+                    },
+                    "description": "Return all creature tokens to their owners' hands."
+                },
+                {
+                    "effect": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "creature nontoken"
+                                },
+                                "storeAs": "returnAllToHand_gathered"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "returnAllToHand_gathered",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Hand"
+                                }
+                            }
+                        ]
+                    },
+                    "description": "Return all nontoken creatures to their owners' hands."
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "30",
+        "rarity": "RARE",
+        "artist": "Fariba Khamseh",
+        "flavorText": "\"Your proofs were a bit nontraditional, but effective nonetheless. Full marks.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/1/31f2cbcc-d5b8-4659-ae51-e567c555a743.jpg?1783927602",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "A token that is returned to its owner's hand ceases to exist as a state-based action the next time a player would receive priority."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Pest Infestation
 {
     "name": "Pest Infestation",
@@ -226,39 +794,13 @@
                     }
                 },
                 {
-                    "type": "CreateToken",
-                    "count": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Pest",
+                    "dynamicCount": {
                         "type": "Multiply",
                         "amount": "XValue",
                         "multiplier": 2
-                    },
-                    "power": 1,
-                    "toughness": 1,
-                    "colors": [
-                        "BLACK",
-                        "GREEN"
-                    ],
-                    "creatureTypes": [
-                        "Pest"
-                    ],
-                    "imageUri": "https://cards.scryfall.io/normal/front/d/0/d0ddbe3e-4a66-494d-9304-7471232549bf.jpg?1783927190",
-                    "triggeredAbilities": [
-                        {
-                            "id": "Pest Infestation:1",
-                            "trigger": {
-                                "type": "ZoneChangeEvent",
-                                "from": "Battlefield",
-                                "to": "Graveyard"
-                            },
-                            "effect": {
-                                "type": "GainLife",
-                                "amount": {
-                                    "type": "Fixed",
-                                    "amount": 1
-                                }
-                            }
-                        }
-                    ]
+                    }
                 }
             ]
         },
@@ -269,6 +811,7 @@
                 "filter": {
                     "baseFilter": "artifact|enchantment"
                 },
+                "id": "t0",
                 "dynamicMaxCount": "XValue"
             }
         ]
@@ -278,7 +821,7 @@
         "rarity": "RARE",
         "artist": "Brian Valeza",
         "flavorText": "A thousand years of history undone by one juvenile prank.",
-        "imageUri": "https://cards.scryfall.io/normal/front/4/7/4720b4f2-e6af-4223-9250-a0ed21ed5693.jpg?1783927588",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/7/4720b4f2-e6af-4223-9250-a0ed21ed5693.jpg?1792506360",
         "rulings": [
             {
                 "date": "2021-04-16",
@@ -292,6 +835,305 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Promise of Loyalty
+{
+    "name": "Promise of Loyalty",
+    "manaCost": "{4}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Each player puts a vow counter on a creature they control and sacrifices the rest. Each of those creatures can't attack you or planeswalkers you control for as long as it has a vow counter on it.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "ActivePlayerFirst"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "ControlledPermanents",
+                                    "filter": "creature"
+                                },
+                                "storeAs": "gathered1"
+                            },
+                            {
+                                "type": "SelectFromCollection",
+                                "from": "gathered1",
+                                "selection": {
+                                    "type": "ChooseExactly",
+                                    "count": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                },
+                                "storeSelected": "selected2",
+                                "storeRemainder": "remainder2",
+                                "prompt": "Choose a creature to put a vow counter on. The rest are sacrificed.",
+                                "selectedLabel": "Vow",
+                                "remainderLabel": "Sacrifice",
+                                "useTargetingUI": true
+                            }
+                        ]
+                    },
+                    "collectCollections": {
+                        "selected2": "collected3",
+                        "remainder2": "collected4"
+                    }
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Collection",
+                        "collection": "collected3"
+                    },
+                    "body": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "AddCounters",
+                                "counterType": "VOW",
+                                "count": 1,
+                                "target": "IterationEntity"
+                            },
+                            {
+                                "type": "GrantStaticAbility",
+                                "ability": {
+                                    "type": "CantAttackYou",
+                                    "coversPlaneswalkers": true
+                                },
+                                "target": "IterationEntity",
+                                "duration": {
+                                    "type": "WhileAffectedHasCounter",
+                                    "counterType": "VOW"
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "collected4",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Sacrifice"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "21",
+        "rarity": "RARE",
+        "artist": "Sara Winters",
+        "flavorText": "\"It's us against the world. Forever.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/c/fc21e7d5-3641-47fe-add0-8becf5173e28.jpg?1783927608"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Rionya, Fire Dancer
+{
+    "name": "Rionya, Fire Dancer",
+    "manaCost": "{3}{R}{R}",
+    "typeLine": "Legendary Creature — Human Wizard",
+    "oracleText": "At the beginning of combat on your turn, create X tokens that are copies of another target creature you control, where X is one plus the number of instant and sorcery spells you've cast this turn. They gain haste. Exile them at the beginning of the next end step.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Rionya, Fire Dancer:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "BEGIN_COMBAT"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "CreateTokenCopyOfTarget",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "count": {
+                                "type": "Add",
+                                "left": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                },
+                                "right": {
+                                    "type": "SpellsCastThisTurn",
+                                    "filter": "instant|sorcery"
+                                }
+                            },
+                            "exileAtStep": "END"
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Collection",
+                                "collection": "createdTokens"
+                            },
+                            "body": {
+                                "type": "GrantKeyword",
+                                "keyword": "HASTE",
+                                "target": "IterationEntity",
+                                "duration": "Permanent"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you",
+                        "excludeSelf": true
+                    },
+                    "id": "t0"
+                },
+                "descriptionOverride": "At the beginning of combat on your turn, create X tokens that are copies of another target creature you control, where X is one plus the number of instant and sorcery spells you've cast this turn. They gain haste. Exile them at the beginning of the next end step."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "55",
+        "rarity": "RARE",
+        "artist": "Heonhwa",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/1/b1e92b9c-4234-436d-a741-37c5e45859e5.jpg?1783927591",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "The triggered ability counts all instants and sorceries that were cast before it resolves. If you cast instant spells in response to the ability, those spells will count."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "The tokens copy exactly what is printed on the creature and nothing else (unless that creature is a token or is copying something else; see below). They don't copy whether that creature is tapped or untapped, whether it has any counters on it or Auras and/or Equipment attached to it, or any non-copy effects that changed its power, toughness, types, color, and so on."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If the copied creature has {X} in its mana cost, X is 0."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If the copied creature is copying something else, the tokens enter the battlefield as whatever that creature is copying."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If the copied creature is itself a token, the tokens created by Rionya copy the original characteristics of that token as stated by the effect that created it."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "Any enters-the-battlefield abilities of the copied creature will trigger when the tokens enter the battlefield. Any \"As [this creature] enters the battlefield\" or \"[This creature] enters the battlefield with\" abilities of the copied creature will also work."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Stinging Study
+{
+    "name": "Stinging Study",
+    "manaCost": "{4}{B}",
+    "typeLine": "Instant",
+    "oracleText": "You draw X cards and you lose X life, where X is the mana value of a commander you own on the battlefield or in the command zone.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromMultipleZones",
+                        "zones": [
+                            "Battlefield",
+                            "Command"
+                        ],
+                        "player": "Each",
+                        "filter": {
+                            "statePredicates": [
+                                "IsCommander"
+                            ],
+                            "controllerPredicate": "OwnedByYou"
+                        }
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "gathered0",
+                    "selection": {
+                        "type": "ChooseExactly",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    },
+                    "storeSelected": "selected1",
+                    "prompt": "Choose a commander you own — X is its mana value"
+                },
+                {
+                    "type": "StoreNumber",
+                    "name": "number2",
+                    "amount": {
+                        "type": "StoredCardManaValue",
+                        "collectionName": "selected1"
+                    }
+                },
+                {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "VariableReference",
+                        "variableName": "number2"
+                    }
+                },
+                {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "VariableReference",
+                        "variableName": "number2"
+                    },
+                    "target": "Controller"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "44",
+        "rarity": "RARE",
+        "artist": "Kieran Yanner",
+        "flavorText": "Silverquill first-years welcome discomfort in the classroom, knowing it will prepare them for the years ahead.",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/8/b8840226-1693-44bc-a067-e50198c5e17e.jpg?1783927597",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "If your commander is under the control of another player as Stinging Study resolves, it is still on the battlefield and will still be used to determine the value of X."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If you own multiple commanders on the battlefield and/or in the command zone, you choose one of them as Stinging Study resolves to determine the value of X."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -474,6 +1316,237 @@
         "rarity": "RARE",
         "artist": "Andrew Mar",
         "imageUri": "https://cards.scryfall.io/normal/front/5/6/568dd5a6-86f4-4039-87d7-812120c8ab94.jpg?1783927584"
+    },
+    "colorIdentityOverride": []
+}
+
+// Veyran, Voice of Duality
+{
+    "name": "Veyran, Voice of Duality",
+    "manaCost": "{1}{U}{R}",
+    "typeLine": "Legendary Creature — Efreet Wizard",
+    "oracleText": "Magecraft — Whenever you cast or copy an instant or sorcery spell, Veyran gets +1/+1 until end of turn.\nIf you casting or copying an instant or sorcery spell causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Veyran, Voice of Duality:1",
+                "trigger": {
+                    "type": "AnyOfEvents",
+                    "events": [
+                        {
+                            "type": "SpellCastEvent",
+                            "spellFilter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "Or",
+                                        "predicates": [
+                                            "IsInstant",
+                                            "IsSorcery"
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "SpellCopiedEvent",
+                            "spellFilter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "Or",
+                                        "predicates": [
+                                            "IsInstant",
+                                            "IsSorcery"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "Self"
+                },
+                "descriptionOverride": "Magecraft — Whenever you cast or copy an instant or sorcery spell, Veyran gets +1/+1 until end of turn."
+            }
+        ],
+        "staticAbilities": [
+            "AdditionalCastOrCopyTriggers"
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "3",
+        "rarity": "MYTHIC",
+        "artist": "Mathias Kollros",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/6/56d93855-c749-4bdf-9a90-4f69f4226e46.jpg?1783927615",
+        "rulings": [
+            {
+                "date": "2021-04-16",
+                "text": "Veyran, Voice of Duality's last ability causes each of your magecraft abilities, including Veyran's own, to trigger an additional time."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If an effect creates a copy of an instant or sorcery spell, this will also cause the magecraft ability to trigger."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "Veyran's effect doesn't copy the triggered ability; it just causes the ability to trigger again. Any choices you make as you put the ability on the stack, such as modes and targets, are made separately for each instance of the ability. Any choices made on resolution are also made individually."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If an effect creates multiple copies of an instant or sorcery spell, magecraft abilities trigger once for each copy created by the effect."
+            },
+            {
+                "date": "2021-04-16",
+                "text": "If you somehow control two Veyrans (which would be poetic), you casting an instant or sorcery spell causes abilities to trigger three times. A third Veyran (less poetic) causes abilities to trigger four times, and so on."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE",
+        "RED"
+    ]
+}
+
+// Wake the Past
+{
+    "name": "Wake the Past",
+    "manaCost": "{5}{R}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Return all artifact cards from your graveyard to the battlefield. They gain haste until end of turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Graveyard",
+                        "filter": "artifact"
+                    },
+                    "storeAs": "gathered0"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "gathered0",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Battlefield"
+                    },
+                    "storeMovedAs": "moved1"
+                },
+                {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Collection",
+                        "collection": "moved1"
+                    },
+                    "body": {
+                        "type": "GrantKeyword",
+                        "keyword": "HASTE",
+                        "target": "IterationEntity"
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "75",
+        "rarity": "RARE",
+        "artist": "Yeong-Hao Han",
+        "flavorText": "\"Belong in a museum? I think we should let relics belong wherever they please!\"\n—Quintorius, Lorehold mage-student",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/e/aeae7fda-05f5-40af-90cc-b80521ee0521.jpg?1783927584"
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "WHITE"
+    ]
+}
+
+// Witch's Clinic
+{
+    "name": "Witch's Clinic",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "{T}: Add {C}.\n{2}, {T}: Target commander gains lifelink until end of turn.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Witch's Clinic:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddColorlessMana",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            },
+            {
+                "id": "Witch's Clinic:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "GrantKeyword",
+                    "keyword": "LIFELINK",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": {
+                                "cardPredicates": [
+                                    "IsPermanent"
+                                ],
+                                "statePredicates": [
+                                    "IsCommander"
+                                ]
+                            }
+                        },
+                        "id": "t0"
+                    }
+                ],
+                "descriptionOverride": "{2}, {T}: Target commander gains lifelink until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "81",
+        "rarity": "RARE",
+        "artist": "Piotr Dura",
+        "flavorText": "Students from other colleges are invited to visit Witherbloom's medical facilities. Not many do.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/e/fe17b08f-4790-4885-8b2b-b22f00b52d4e.jpg?1783927582"
     },
     "colorIdentityOverride": []
 }

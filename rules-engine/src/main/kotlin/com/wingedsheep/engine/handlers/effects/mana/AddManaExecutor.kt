@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.mana
 
+import com.wingedsheep.engine.mechanics.mana.ChosenTypeManaRestriction
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
@@ -35,7 +36,7 @@ class AddManaExecutor(
             val manaPool = container.get<ManaPoolComponent>() ?: ManaPoolComponent()
             val updatedPool = when {
                 effect.restriction != null ->
-                    manaPool.addRestricted(effect.color, amount, effect.restriction!!, effect.riders, expiry = effect.expiry)
+                    manaPool.addRestricted(effect.color, amount, ChosenTypeManaRestriction.bind(effect.restriction, state, context.sourceId)!!, effect.riders, expiry = effect.expiry)
                 effect.riders.isNotEmpty() ->
                     // Rider-carrying mana (Pyromancer's Goggles): stored as an AnySpend restricted
                     // entry so the rider set survives in the pool while the mana itself stays
@@ -53,9 +54,9 @@ class AddManaExecutor(
         }
 
         newState = if (effect.restriction == null && effect.riders.isEmpty() && effect.expiry == ManaExpiry.END_OF_TURN) {
-            ManaProvenanceTracker.tagAddedMana(newState, context.controllerId, context.sourceId, amount)
+            ManaProvenanceTracker.tagAddedMana(newState, context.controllerId, context.sourceId, amount, effect.color, context)
         } else {
-            ManaProvenanceTracker.tagAddedRestrictedMana(newState, context.controllerId, context.sourceId, amount)
+            ManaProvenanceTracker.tagAddedRestrictedMana(newState, context.controllerId, context.sourceId, amount, context)
         }
 
         return EffectResult.success(newState)

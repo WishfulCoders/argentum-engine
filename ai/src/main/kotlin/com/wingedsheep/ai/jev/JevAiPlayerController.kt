@@ -81,7 +81,7 @@ class JevAiPlayerController(
     }
 
     override fun chooseDraftPick(pack: List<CardSummary>, pickedSoFar: List<CardSummary>, packNumber: Int, pickNumber: Int,
-                                 picksRequired: Int, passDirection: String): List<String> = guarded(
+                                 picksRequired: Int, passDirection: String, podSize: Int?): List<String> = guarded(
         { fallback.chooseDraftPick(pack, pickedSoFar, packNumber, pickNumber, picksRequired, passDirection) }
     ) {
         session("Draft pack $packNumber pick $pickNumber passing $passDirection. Pool: ${pickedSoFar.map(::summary)}")

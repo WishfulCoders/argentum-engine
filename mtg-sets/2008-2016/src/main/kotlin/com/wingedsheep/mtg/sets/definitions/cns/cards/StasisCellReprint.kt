@@ -13,7 +13,7 @@ val StasisCellReprint = Printing(
     collectorNumber = "107",
     scryfallId = "49304692-1e8c-46ed-ba51-e5ba3b70e2f4",
     artist = "Mark A. Nelson",
-    imageUri = "https://cards.scryfall.io/normal/front/4/9/49304692-1e8c-46ed-ba51-e5ba3b70e2f4.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/4/9/49304692-1e8c-46ed-ba51-e5ba3b70e2f4.jpg?1783939358",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

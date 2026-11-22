@@ -6,6 +6,8 @@ import com.wingedsheep.assay.syntax.bind
 import com.wingedsheep.assay.syntax.constant
 import com.wingedsheep.assay.syntax.oneOf
 import com.wingedsheep.assay.syntax.phrase
+import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
@@ -588,12 +590,215 @@ object Prevention {
         return toRecipient + fromRecipient + bothWays + layered
     }
 
+    /**
+     * One-shot damage prevention.
+     *
+     * The damage source and protected recipient are independent:
+     * choosing a source doesn't target it, and matching a source
+     * doesn't require choosing it at resolution.
+     */
+    private val nextDamageSource: Phrase<PreventionSourceFilter> = oneOf(
+        "the source of the next damage instance",
+        listOf(
+            constant<PreventionSourceFilter>(
+                "a source of your choice",
+                PreventionSourceFilter.Chosen(),
+            ),
+            phrase<PreventionSourceFilter>(
+                "a {color} source of your choice",
+                name = "a chosen source of one color",
+            ) {
+                slot("color", Primitives.color)
+
+                fun sourceFor(color: Color) =
+                    PreventionSourceFilter.Chosen(
+                        GameObjectFilter.Any.withColor(color)
+                    )
+
+                build { sourceFor(it.value("color")) }
+
+                match { source ->
+                    val color = Color.entries.singleOrNull {
+                        source == sourceFor(it)
+                    } ?: return@match null
+
+                    bind("color" to color)
+                }
+            },
+            constant<PreventionSourceFilter>(
+                "an artifact source of your choice",
+                PreventionSourceFilter.Chosen(GameObjectFilter.Artifact),
+            ),
+            constant<PreventionSourceFilter>(
+                "a land source of your choice",
+                PreventionSourceFilter.Chosen(GameObjectFilter.Land),
+            ),
+            constant<PreventionSourceFilter>(
+                "a creature of your choice with shadow",
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Creature.withKeyword(Keyword.SHADOW)
+                ),
+            ),
+            constant<PreventionSourceFilter>(
+                "a source of your choice of the chosen color",
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Any.withChosenColor()
+                ),
+            ),
+            constant<PreventionSourceFilter>(
+                "a black or red source of your choice",
+                PreventionSourceFilter.Chosen(
+                    GameObjectFilter.Any.withAnyColor(Color.BLACK, Color.RED)
+                ),
+            ),
+            constant<PreventionSourceFilter>(
+                "a creature of the chosen type",
+                PreventionSourceFilter.Matching(
+                    GameObjectFilter.Creature.withChosenSubtype()
+                ),
+            ),
+        ),
+    )
+
+    /**
+     * Source selection × damage recipient.
+     *
+     * Both dimensions are reconstructed for inverse printing,
+     * so unsupported model fields cannot silently disappear.
+     */
+    private fun nextDamageTo(recipient: Recipient): Phrase<CardScript> =
+        phrase(
+            "the next time {source} would deal damage to ${recipient.surface} this turn, prevent that damage",
+            name = "prevent one damage instance from a source to ${recipient.name}",
+        ) {
+            slot("source", nextDamageSource)
+
+            if (recipient.takesFilter) {
+                slot("filter", Filters.filter)
+            }
+
+            if (recipient.surface.contains("{self}")) {
+                slot("self", Primitives.selfNamed)
+            }
+
+            fun scriptFor(
+                source: PreventionSourceFilter,
+                filter: GameObjectFilter?,
+            ): CardScript? {
+                val requirements = if (recipient.takesFilter) {
+                    listOf(Targets.permanent(filter ?: return null))
+                } else {
+                    recipient.requirements
+                }
+
+                return CardScript(
+                    spellEffect = PreventDamageEffect(
+                        target = recipient.target,
+                        sourceFilter = source,
+                        nextInstanceOnly = true,
+                    ),
+                    targetRequirements = requirements,
+                )
+            }
+
+            build { bindings ->
+                scriptFor(
+                    bindings.value("source"),
+                    if (recipient.takesFilter) bindings.value("filter") else null,
+                )
+            }
+
+            match { script ->
+                val effect = script.spellEffect as? PreventDamageEffect
+                    ?: return@match null
+
+                val filter = if (recipient.takesFilter) {
+                    val requirement = script.targetRequirements.singleOrNull()
+                        ?: return@match null
+
+                    Targets.permanentFilter(requirement)
+                        ?: return@match null
+                } else {
+                    null
+                }
+
+                if (script != scriptFor(effect.sourceFilter, filter)) {
+                    return@match null
+                }
+
+                bind(
+                    "source" to effect.sourceFilter,
+                    "filter" to filter,
+                    "self" to Unit,
+                )
+            }
+        }
+
+    /**
+     * A targeted damage source is different from a chosen source.
+     *
+     * This handles Awe Strike's prevention sentence.
+     */
+    private val nextDamageFromTarget: Phrase<CardScript> =
+        phrase(
+            "the next time target {filter} would deal {kind} this turn, prevent that damage",
+            name = "prevent the next damage dealt by a targeted creature",
+        ) {
+            slot("filter", Filters.filter)
+            slot("kind", kind)
+
+            fun scriptFor(
+                filter: GameObjectFilter,
+                scope: PreventionScope,
+            ) = CardScript(
+                spellEffect = PreventDamageEffect(
+                    target = Targets.bound(),
+                    scope = scope,
+                    direction = PreventionDirection.FromTarget,
+                    nextInstanceOnly = true,
+                ),
+                targetRequirements = listOf(Targets.permanent(filter)),
+            )
+
+            build { bindings ->
+                scriptFor(
+                    bindings.value("filter"),
+                    bindings.value("kind"),
+                )
+            }
+
+            match { script ->
+                val requirement = script.targetRequirements.singleOrNull()
+                    ?: return@match null
+
+                val filter = Targets.permanentFilter(requirement)
+                    ?: return@match null
+
+                val effect = script.spellEffect as? PreventDamageEffect
+                    ?: return@match null
+
+                if (script != scriptFor(filter, effect.scope)) {
+                    return@match null
+                }
+
+                bind(
+                    "filter" to filter,
+                    "kind" to effect.scope,
+                )
+            }
+        }
+
     /** Everything readable from an ordinary clause position — what [Steps] slots. */
     val clauses: List<Phrase<CardScript>> =
         clausesFor(listOf(source, you, anyTarget, targeted)) +
             groupClauses +
             groupSourceLayer(oneOf("a group-recipient shield", groupClauses)) +
-            fog
+            fog +
+            listOf(
+                nextDamageTo(you),
+                nextDamageTo(targeted),
+                nextDamageFromTarget,
+            )
 
     /**
      * The same family over the anaphor — what [Continuations] slots.

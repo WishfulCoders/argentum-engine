@@ -2,6 +2,9 @@ package com.wingedsheep.engine.state.permissions
 
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.PredicateContext
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.model.EntityId
@@ -55,21 +58,64 @@ fun GameState.removeMayPlayPermissionsForCard(cardId: EntityId): GameState =
     )
 
 /**
- * Spend every [MayPlayPermission.singleUse] permission [playerId] holds over [cardId]: the card was
- * just cast or played through it, so the rest of its group loses the grant too ("cast a spell from
- * among those cards" — one spell, not one each). Call only at a play site, never when a card
- * merely leaves exile.
+ * Spend one play from a capped ([MayPlayPermission.playsRemaining]) permission [playerId] holds
+ * over [cardId]: the card was just cast or played through it. A grant left with plays drops the
+ * card that was played; one whose last play this was is revoked for the rest of its group too
+ * ("cast a spell from among those cards" — one spell, not one each). Call only at a play site,
+ * never when a card merely leaves exile.
+ *
+ * A play is made through **one** permission, so only one capped grant pays for it even when
+ * several cover the card — two activations of Idol of Endurance's "you may cast a creature spell
+ * from among cards exiled with this" are two casts, not one. The player would spend the grant
+ * that costs them least: the one covering the fewest cards, then the oldest.
  *
  * When an ordinary, unconditional stored grant also covers the card, the play is attributed to
- * that one and the single-use grant is left for the rest of its group — the player chooses which
- * permission they use, and spending the scarce one would never be their choice. A conditional
- * grant doesn't shield it: its gate isn't re-evaluated here, so it may not have authorized the play.
+ * that one and the capped grant is left untouched — the player chooses which permission they use,
+ * and spending the scarce one would never be their choice. A conditional grant doesn't shield it:
+ * its gate isn't re-evaluated here, so it may not have authorized the play.
  */
-fun GameState.consumeSingleUseMayPlayFor(cardId: EntityId, playerId: EntityId): GameState {
+fun GameState.spendCappedMayPlayFor(cardId: EntityId, playerId: EntityId): GameState {
     fun covers(permission: MayPlayPermission) = permission.controllerId == playerId && cardId in permission.cardIds
-    if (mayPlayPermissions.none { it.singleUse && covers(it) }) return this
-    if (mayPlayPermissions.any { !it.singleUse && it.condition == null && covers(it) }) return this
-    return copy(mayPlayPermissions = mayPlayPermissions.filterNot { it.singleUse && covers(it) })
+    if (mayPlayPermissions.none { it.playsRemaining != null && covers(it) }) return this
+    if (mayPlayPermissions.any { it.playsRemaining == null && it.condition == null && covers(it) }) return this
+    val spent = mayPlayPermissions
+        .filter { it.playsRemaining != null && covers(it) }
+        .minWith(compareBy<MayPlayPermission>({ it.cardIds.size }, { it.timestamp }))
+    val plays = spent.playsRemaining!!
+    return copy(
+        mayPlayPermissions = mayPlayPermissions.mapNotNull { permission ->
+            when {
+                permission !== spent -> permission
+                plays <= 1 -> null
+                else -> permission.copy(playsRemaining = plays - 1, cardIds = permission.cardIds - cardId)
+            }
+        }
+    )
+}
+
+/**
+ * The granter whose once-per-turn allowance ([MayPlayPermission.oncePerTurn]) playing [cardId]
+ * spends, or null when the play spends none. Read against the state *before* the play, while the
+ * card is still in exile and its grants can still be found.
+ *
+ * As with [spendCappedMayPlayFor], an unlimited grant covering the card wins: the player
+ * chooses which permission they use, and burning the scarce one would never be their choice.
+ * Unlike the stored grants there, every candidate here was already gate-checked by
+ * [activeMayPlayFor], so a conditional unlimited grant shields the allowance too. A shield must
+ * offer the same mana relaxation, though: when the once-per-turn grant carries an any-color/any-type
+ * rider the cast may have leaned on, a rider-less unlimited grant couldn't have paid for it alone.
+ */
+fun GameState.oncePerTurnGranterToSpend(
+    cardId: EntityId,
+    playerId: EntityId,
+    conditionEvaluator: ConditionEvaluator,
+    cardRegistry: CardRegistry
+): EntityId? {
+    val active = activeMayPlayFor(cardId, playerId, conditionEvaluator, cardRegistry)
+    val limited = active.firstOrNull { it.oncePerTurn } ?: return null
+    fun relaxesMana(p: MayPlayPermission) = p.withAnyManaType || p.withAnyManaColor || p.spendAsAnyColor != null
+    val shielded = active.any { !it.oncePerTurn && (!relaxesMana(limited) || relaxesMana(it)) }
+    return if (shielded) null else limited.sourceId
 }
 
 /**
@@ -92,6 +138,40 @@ fun GameState.activeMayPlayFor(
         permission.controllerId == playerId && cardId in permission.cardIds
     } + StaticMayPlayGrants.forCard(this, cardId, playerId, cardRegistry, predicateEvaluator = conditionEvaluator.predicates)
     ).filter { permission -> permission.gateOpen(this, cardId, conditionEvaluator) }
+
+/**
+ * The `entersTapped` riders a play of [cardId] through its may-play permissions is bound by, or
+ * null when it is bound by none: some active permission authorizes the play, and every one that
+ * does carries an [MayPlayPermission.entersTapped] filter. The rider belongs to the permission a
+ * play goes through, so a rider-free permission covering the same card is the one the player plays
+ * it with. [authorizes] narrows to the permissions that could authorize this particular play (a
+ * land play skips `nonLandOnly` grants; a cast skips grants for another face or colour). Read while
+ * the card is still in the zone it is played from; the filters are matched against the permanent
+ * as it enters (see [matchesEntersTappedRiders]), so a modal DFC is judged by the face played.
+ */
+fun GameState.mayPlayEntersTappedRiders(
+    cardId: EntityId,
+    playerId: EntityId,
+    conditionEvaluator: ConditionEvaluator,
+    cardRegistry: CardRegistry,
+    authorizes: (MayPlayPermission) -> Boolean,
+): List<GameObjectFilter>? {
+    val authorizing = activeMayPlayFor(cardId, playerId, conditionEvaluator, cardRegistry).filter(authorizes)
+    if (authorizing.isEmpty()) return null
+    return authorizing.map { it.entersTapped ?: return null }
+}
+
+/** True when the entering permanent [entityId] matches every rider filter, so it enters tapped. */
+fun GameState.matchesEntersTappedRiders(
+    entityId: EntityId,
+    controllerId: EntityId,
+    riders: List<GameObjectFilter>,
+    predicates: PredicateEvaluator,
+): Boolean {
+    if (riders.isEmpty()) return false
+    val context = PredicateContext(controllerId = controllerId)
+    return riders.all { predicates.matches(this, projectedState, entityId, it, context) }
+}
 
 /**
  * True when at least one active permission authorizes [playerId] to play [cardId].

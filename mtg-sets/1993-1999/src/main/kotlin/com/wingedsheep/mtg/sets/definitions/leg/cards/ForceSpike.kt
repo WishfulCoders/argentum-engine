@@ -6,8 +6,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * Force Spike — Legends #58 (canonical printing)
- * {U} · Instant
+ * Force Spike
+ * {U}
+ * Instant
  *
  * Counter target spell unless its controller pays {1}.
  */
@@ -27,6 +28,5 @@ val ForceSpike = card("Force Spike") {
         collectorNumber = "58"
         artist = "Bryon Wackwitz"
         imageUri = "https://cards.scryfall.io/normal/front/7/0/70e64028-ae96-4950-aa6c-9d347409fad3.jpg?1783948076"
-        ruling("2004-10-04", "The payment is optional.")
     }
 }

@@ -292,7 +292,7 @@ class ResolutionControlTest : FunSpec({
         val d = driver(); val owner = d.activePlayer!!; val victim = d.getOpponent(owner)
         cast(d); d.bothPass()
         val result = com.wingedsheep.engine.mechanics.sba.player.PlayerLeavesGameProcessor.process(
-            d.services.zones, d.state, owner, GameEndReason.CONCESSION)
+            d.services.zones, d.state, owner, GameEndReason.CONCESSION, d.services.finishAbandonedResolution)
         result.state.actorFor(victim) shouldBe victim
         result.state.resolutionControls shouldBe emptyList()
         result.state.pendingDecision!!.playerId shouldBe victim

@@ -1,10 +1,18 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.core.FinishResolvingAbilityContinuation
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.core.FinishResolvingSpellContinuation
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.innermostResolvingFrame
 import com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent
+import com.wingedsheep.engine.state.components.battlefield.TimestampComponent
+import com.wingedsheep.engine.state.components.identity.TokenComponent
 import com.wingedsheep.engine.state.components.player.EnteredPermanentRecord
+import com.wingedsheep.engine.state.components.player.NontokenPermanentsPutOntoBattlefieldThisTurnComponent
 import com.wingedsheep.engine.state.components.player.PermanentsEnteredUnderControlThisTurnComponent
 import com.wingedsheep.sdk.core.CardType
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -36,14 +44,40 @@ import com.wingedsheep.sdk.model.EntityId
  * changes controller.
  */
 object PermanentEntryTracker {
+    /**
+     * `StatePredicate.EnteredThisTurn(underYourControl = true)`: the permanent now on the battlefield as
+     * [entityId] entered it this turn under [playerId]'s control, as this same object (CR 400.7).
+     * Who controls it now doesn't matter (Shaile, Dean of Radiance ruling).
+     */
+    fun enteredThisTurnUnderControlOf(state: GameState, entityId: EntityId, playerId: EntityId?): Boolean {
+        if (playerId == null || state.logicalZone(entityId)?.zoneType != Zone.BATTLEFIELD) return false
+        val entry = state.getEntity(entityId)?.get<BattlefieldEntryTimestampComponent>() ?: return false
+        return state.getEntity(playerId)?.get<PermanentsEnteredUnderControlThisTurnComponent>()
+            ?.includes(entityId, entry.timestamp) == true
+    }
+
+    /** Entry filters and gates read only components and counts, never a printed script. */
+    private val entryRiderEvaluator = PredicateEvaluator(cardRegistry = null)
 
     /**
      * Record that [entityId] just entered the battlefield under [controllerId]. The
      * recorded card types are read from the projected state, which the caller is
      * responsible for having brought up to date (i.e. [entityId] must already be on the
-     * battlefield with its identity components in place).
+     * battlefield with its identity components in place). [simultaneousEntryGroup] marks an
+     * entry that is part of one simultaneous event with other permanents. [putBy] is the player
+     * who put the permanent there when the caller knows it (a resolving permanent spell's caster);
+     * otherwise it is read off the innermost resolving spell or ability, falling back to
+     * [controllerId] for a move with nothing resolving (a land play). [spellCopy] marks a copy of a
+     * permanent spell resolving into a token (CR 707.10f, 608.3f) — a token that wasn't created.
      */
-    fun record(state: GameState, controllerId: EntityId, entityId: EntityId): GameState {
+    fun record(
+        state: GameState,
+        controllerId: EntityId,
+        entityId: EntityId,
+        simultaneousEntryGroup: String? = null,
+        putBy: EntityId? = null,
+        spellCopy: Boolean = false
+    ): GameState {
         // Object-identity stamp (CR 400.7): every battlefield entry funnels through here, so
         // this is where the entering permanent gets its entry timestamp. Delayed triggers that
         // track a specific permanent (CR 603.7c) snapshot this value and compare it at
@@ -52,9 +86,18 @@ object PermanentEntryTracker {
         // stack, land plays, and similar actions do), so two back-to-back resolutions can share
         // a value — a blink resolving at the same timestamp as the original entry would collide
         // with the snapshot. Ticking here makes every entry stamp unique unconditionally.
+        // The same moment is the permanent's first layer timestamp (CR 613.7d), which its static
+        // abilities' continuous effects sort by (CR 613.7a); see LayerTimestamps for its renewals.
         val stamped = state.updateEntity(entityId) { container ->
-            container.with(BattlefieldEntryTimestampComponent(state.timestamp))
-        }.tick()
+            container.with(BattlefieldEntryTimestampComponent(state.timestamp, simultaneousEntryGroup))
+                .with(TimestampComponent(state.timestamp))
+        }.tick().let { ticked ->
+            val putter = putBy ?: resolvingController(ticked) ?: controllerId
+            // "If a player would put a land onto the battlefield, that player instead puts it onto
+            // the battlefield, then …" (Land Equilibrium) — queued here because every entry funnels
+            // through this method and this is where the putting player is known.
+            EntryRiderReplacements.queue(recordPut(ticked, putter, entityId), entityId, putter, entryRiderEvaluator)
+        }
         val cardTypes = projectedCardTypes(stamped, entityId)
         if (cardTypes.isEmpty()) return stamped
         val subtypes = stamped.projectedState.getSubtypes(entityId)
@@ -63,11 +106,44 @@ object PermanentEntryTracker {
                 ?: PermanentsEnteredUnderControlThisTurnComponent()
             container.with(
                 PermanentsEnteredUnderControlThisTurnComponent(
-                    existing.entries + EnteredPermanentRecord(entityId, cardTypes, subtypes)
+                    existing.entries + EnteredPermanentRecord(
+                        entityId,
+                        cardTypes,
+                        subtypes,
+                        isToken = stamped.getEntity(entityId)?.has<TokenComponent>() == true,
+                        isSpellCopy = spellCopy,
+                        entryTimestamp = state.timestamp,
+                    )
                 )
             )
         }
     }
+
+    /**
+     * Credit [actor] with putting a nontoken permanent onto the battlefield this turn
+     * ([NontokenPermanentsPutOntoBattlefieldThisTurnComponent]). A token's entry is its creation,
+     * not a put of a nontoken permanent, so it is skipped.
+     */
+    private fun recordPut(state: GameState, actor: EntityId, entityId: EntityId): GameState {
+        if (state.getEntity(entityId)?.has<TokenComponent>() != false) return state
+        if (state.getEntity(actor) == null) return state
+        return state.updateEntity(actor) { container ->
+            val count = container.get<NontokenPermanentsPutOntoBattlefieldThisTurnComponent>()?.count ?: 0
+            container.with(NontokenPermanentsPutOntoBattlefieldThisTurnComponent(count + 1))
+        }
+    }
+
+    /**
+     * The controller of the innermost spell or ability now resolving — the player whose effect is
+     * putting things onto the battlefield.
+     */
+    private fun resolvingController(state: GameState): EntityId? =
+        when (val frame = state.innermostResolvingFrame()) {
+            is FinishResolvingSpellContinuation -> frame.spellComponent.casterId
+            is FinishResolvingAbilityContinuation ->
+                TargetResolutionUtils.stackObjectController(state, frame.abilityObject.entityId)
+            else -> null
+        }
 
     private fun projectedCardTypes(state: GameState, entityId: EntityId): Set<CardType> {
         val typeNames = state.projectedState.getTypes(entityId)

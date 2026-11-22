@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.Chooser
  */
 private val destroyALandOfEachBasicType = Effects.Pipeline {
     val lands = gather(CardSource.BattlefieldMatching(GameObjectFilter.Land))
-    destroy(chooseOnePerCategory(lands, Filters.BasicLandTypes, chooser = Chooser.Controller, purpose = "destroy"))
+    destroy(chooseOnePerCategory(lands, Filters.BasicLandTypes, chooser = Chooser.Controller, purpose = com.wingedsheep.sdk.scripting.effects.CategoryPickPurpose.DESTROY))
 }
 
 /**

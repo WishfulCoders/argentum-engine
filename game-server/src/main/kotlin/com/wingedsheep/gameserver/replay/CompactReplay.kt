@@ -177,16 +177,19 @@ object ReplayRecordingPolicy {
     const val MAX_RECORDED_ACTIONS = 25_000
 }
 
-/** Which yield mutation a [ReplayYieldEntry] records. */
+/**
+ * Which per-player preference mutation a [ReplayYieldEntry] records: a yield, or whether the player
+ * orders their own triggers. Both live on the GameState and change what the engine asks.
+ */
 @Serializable
-enum class ReplayYieldOp { SET, CLEAR_ABILITY, CLEAR_ALL }
+enum class ReplayYieldOp { SET, CLEAR_ABILITY, CLEAR_ALL, MANUAL_TRIGGER_ORDERING, AUTOMATIC_TRIGGER_ORDERING }
 
 /**
  * A single persistent-yield mutation captured in turn order against the [actions] stream.
  * [afterActionCount] is the number of recorded actions that had been applied when the yield was set,
  * so [ReplayReconstructor] re-applies it at the same point and the engine's auto-answers reproduce
  * exactly. [identity]/[kind] are populated per [op] (both for SET, [identity] only for CLEAR_ABILITY,
- * neither for CLEAR_ALL).
+ * neither for the others).
  */
 @Serializable
 data class ReplayYieldEntry(
@@ -231,6 +234,8 @@ data class ReplaySetup(
     val seatRoster: List<ServerMessage.PlayerSeatInfo>,
     /** Absent in old replays, which chose deterministic insertion order. */
     val preserveGraveyardOrder: Boolean = false,
+    /** Whether the game was played for ante (CR 407); anteing consumes RNG. Absent in old replays. */
+    val playingForAnte: Boolean = false,
 )
 
 /** Flattened, serializable form of [com.wingedsheep.engine.core.PlayerConfig]. */
@@ -242,4 +247,13 @@ data class ReplayPlayerSetup(
     val deck: Deck,
     val startingLife: Int = 20,
     val commanderCardName: String? = null,
-)
+    /**
+     * The other half of a partner pair (CR 702.124), or null. A separate optional field rather
+     * than turning [commanderCardName] into a list keeps every replay already stored readable.
+     */
+    val secondCommanderCardName: String? = null,
+) {
+    /** The seat's commanders in designation order, as [com.wingedsheep.engine.core.PlayerConfig] wants them. */
+    val commanderCardNames: List<String>
+        get() = if (commanderCardName == null) emptyList() else listOfNotNull(commanderCardName, secondCommanderCardName)
+}

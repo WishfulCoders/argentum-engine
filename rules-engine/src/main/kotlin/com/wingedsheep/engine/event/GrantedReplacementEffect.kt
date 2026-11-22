@@ -23,12 +23,32 @@ import kotlinx.serialization.Serializable
  * @property entityId The permanent the grant is anchored to (its controller scopes "you")
  * @property controllerId The player who controls the grant — used for owner/controller filters
  * @property replacement The replacement effect that was granted
- * @property duration How long the grant lasts
+ * @property duration How long the grant lasts. A [Duration.NextUse] grant is one-shot ("the next
+ *   time one or more enchantment creatures you control enter this turn, …" — Storyweave): the read
+ *   site that applies it marks it [spent], and [com.wingedsheep.engine.replacement.ActiveReplacements.purgeSpent]
+ *   drops it once the event it modified is over; unspent, it expires in the cleanup step.
+ * @property spent True once a [Duration.NextUse] grant has modified an event. It keeps applying to
+ *   the rest of that same event (every object entering simultaneously gets the counters), and is
+ *   removed at the next event boundary.
+ * @property referenceSnapshot The copiable values (and battlefield visit) of the object a granted
+ *   [com.wingedsheep.sdk.scripting.EntersAsCopy.copyOf] names, captured when the grant was made — the
+ *   last-known information an entrant copies if that object has left the battlefield by then and no
+ *   later departure snapshot of the same visit survives (a token that ceased to exist).
  */
 @Serializable
 data class GrantedReplacementEffect(
     val entityId: EntityId,
     val controllerId: EntityId,
     val replacement: ReplacementEffect,
-    val duration: Duration
-)
+    val duration: Duration,
+    val spent: Boolean = false,
+    val referenceSnapshot: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
+) {
+    /**
+     * True when this grant is an ability [holder] itself gained rather than a floating rider: a
+     * `selfOnly` [com.wingedsheep.sdk.scripting.RedirectZoneChange] redirects only its holder, so it
+     * ends when the holder becomes a new object (CR 400.7).
+     */
+    fun isSelfScopedTo(holder: EntityId): Boolean =
+        entityId == holder && (replacement as? com.wingedsheep.sdk.scripting.RedirectZoneChange)?.selfOnly == true
+}

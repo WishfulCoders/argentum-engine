@@ -42,7 +42,7 @@ val CurrencyConverter = card("Currency Converter") {
         trigger = Triggers.you.discards()
         effect = Effects.May(
             Effects.Pipeline {
-                val discarded = gather(CardSource.TriggeringEntity)
+                val discarded = gather(CardSource.Entity(com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity))
                 val inGraveyard = filter(discarded, GameObjectFilter.Any.currentlyIn(Zone.GRAVEYARD))
                 exile(inGraveyard, linkToSource = true)
             },

@@ -12,7 +12,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--bg-overlay-dark);
+  /* Glass over whatever is behind (the card art before the first game, the board after): dark
+   * enough for the hand to own the screen, light enough to keep the table's atmosphere. */
+  background: radial-gradient(ellipse at center, rgba(6, 7, 12, 0.6) 0%, rgba(6, 7, 12, 0.86) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -43,13 +47,13 @@
   bottom: 70px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--color-primary-dark);
-  color: var(--text-primary);
+  background-color: #f2b45c;
+  color: #1d1405;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: 999px;
   cursor: pointer;
-  font-weight: var(--font-weight-semibold);
-  box-shadow: var(--shadow-lg);
+  font-weight: 700;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
   z-index: var(--z-controls);
   display: flex;
   align-items: center;
@@ -66,7 +70,7 @@
 }
 
 .minimizedButton:hover {
-  filter: brightness(1.1);
+  background-color: #f7c67f;
 }
 
 /* =========================================================================
@@ -80,7 +84,7 @@
 }
 
 .tournamentRound {
-  color: var(--text-muted);
+  color: #c9a46a;
   margin: 0;
   font-size: var(--font-sm);
   text-transform: uppercase;
@@ -95,18 +99,56 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* A Magic subgame's own mulligan (Shahrazad, CR 729) — the same gilt as the in-game badge. */
+.subgameBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(233, 207, 148, 0.4);
+  background: linear-gradient(150deg, rgba(58, 40, 18, 0.82) 0%, rgba(26, 17, 8, 0.86) 100%);
+  box-shadow: 0 0 14px rgba(233, 207, 148, 0.16);
+  text-align: center;
+}
+
+.subgameEyebrow {
+  margin: 0;
+  color: #e9cf94;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.subgameText {
+  margin: 0;
+  color: #d9cfbb;
+  font-size: var(--font-sm);
+}
+
+@media (max-width: 640px) {
+  .subgameBanner { border-radius: 12px; }
+}
+
 /* =========================================================================
  * Title
  * ========================================================================= */
 .title {
-  color: var(--text-primary);
+  color: #f4f5f9;
   margin: 0;
-  font-size: var(--font-xl);
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
 }
 
 @media (max-width: 639px) {
   .title {
-    font-size: var(--font-lg);
+    font-size: 23px;
   }
 }
 
@@ -164,10 +206,11 @@
  * Subtitle / Instructions
  * ========================================================================= */
 .subtitle {
-  color: var(--text-muted);
+  color: #b4bccd;
   margin: 0;
   font-size: var(--font-md);
   text-align: center;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
 }
 
 /* =========================================================================
@@ -220,11 +263,22 @@
 .mulliganButton,
 .viewBattlefieldButton,
 .confirmButton {
+  min-height: 48px;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   cursor: pointer;
-  font-size: var(--font-lg);
-  transition: filter var(--transition-fast);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.keepButton:focus-visible,
+.mulliganButton:focus-visible,
+.viewBattlefieldButton:focus-visible,
+.confirmButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 /* Desktop padding */
@@ -236,7 +290,7 @@
 
 .viewBattlefieldButton {
   padding: var(--space-3) var(--space-7);
-  font-size: var(--font-md);
+  font-size: 15px;
 }
 
 @media (max-width: 639px) {
@@ -250,45 +304,40 @@
   }
 }
 
-.keepButton {
-  background-color: var(--color-success);
-  color: var(--text-primary);
-}
-
-.keepButton:hover {
-  filter: brightness(1.1);
-}
-
-.mulliganButton {
-  background-color: var(--color-warning);
-  color: var(--text-primary);
-}
-
-.mulliganButton:hover {
-  filter: brightness(1.1);
-}
-
-.viewBattlefieldButton {
-  background-color: var(--color-primary-dark);
-  color: var(--text-primary);
-}
-
-.viewBattlefieldButton:hover {
-  filter: brightness(1.1);
-}
-
+/* Keeping (and confirming the bottom cards) is the one amber action; the alternatives are glass. */
+.keepButton,
 .confirmButton {
-  background-color: var(--color-success);
-  color: var(--text-primary);
+  min-width: 170px;
+  background-color: #f2b45c;
+  color: #1d1405;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
 }
 
+.keepButton:hover,
 .confirmButton:hover:not(:disabled) {
-  filter: brightness(1.1);
+  background-color: #f7c67f;
+}
+
+.mulliganButton,
+.viewBattlefieldButton {
+  min-width: 150px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #eef0f6;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mulliganButton:hover,
+.viewBattlefieldButton:hover {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .confirmButton:disabled {
-  background-color: var(--bg-surface-6);
-  color: var(--text-muted);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #8f98ac;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -397,4 +446,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* No consequence line on the first hand — don't let the empty paragraph take a gap. */
+.subtitle:empty {
+  display: none;
 }

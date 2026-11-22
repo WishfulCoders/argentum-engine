@@ -116,7 +116,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Plains, Swamp, or Forest card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -264,7 +266,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {B}, Exile this card from your graveyard: Put 1 +1/+1 counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {B}, Exile this card from your graveyard: Put a +1/+1 counter on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -437,7 +439,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {3}{U}, Exile this card from your graveyard: Put 2 +1/+1 counters on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {3}{U}, Exile this card from your graveyard: Put 2 +1/+1 counters on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -693,7 +695,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {1}{B}, Exile this card from your graveyard: Put 1 lifelink counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {1}{B}, Exile this card from your graveyard: Put a lifelink counter on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -950,7 +952,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 2 +1/+1 counter(s) on this creature? If you don't, create a 2/2 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -1826,7 +1838,7 @@
     "colorIdentityOverride": [
         "GREEN"
     ],
-    "layout": "ADVENTURE",
+    "layout": "OMEN",
     "cardFaces": [
         {
             "name": "Claim Territory",
@@ -1895,7 +1907,8 @@
                             },
                             "revealed": true
                         },
-                        "ShuffleLibrary"
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
                     ]
                 }
             }
@@ -2146,7 +2159,9 @@
                                     "baseFilter": "creature Dragon white ctrl:you"
                                 }
                             },
-                            "storeAs": "target0"
+                            "storeAs": "target0",
+                            "nonTargeting": true,
+                            "prompt": "Choose a white Dragon you control to get a +1/+1 counter"
                         },
                         {
                             "type": "AddCounters",
@@ -2165,7 +2180,9 @@
                                     "baseFilter": "creature Dragon blue ctrl:you"
                                 }
                             },
-                            "storeAs": "target2"
+                            "storeAs": "target2",
+                            "nonTargeting": true,
+                            "prompt": "Choose a blue Dragon you control to get a +1/+1 counter"
                         },
                         {
                             "type": "AddCounters",
@@ -2184,7 +2201,9 @@
                                     "baseFilter": "creature Dragon black ctrl:you"
                                 }
                             },
-                            "storeAs": "target4"
+                            "storeAs": "target4",
+                            "nonTargeting": true,
+                            "prompt": "Choose a black Dragon you control to get a +1/+1 counter"
                         },
                         {
                             "type": "AddCounters",
@@ -2203,7 +2222,9 @@
                                     "baseFilter": "creature Dragon red ctrl:you"
                                 }
                             },
-                            "storeAs": "target6"
+                            "storeAs": "target6",
+                            "nonTargeting": true,
+                            "prompt": "Choose a red Dragon you control to get a +1/+1 counter"
                         },
                         {
                             "type": "AddCounters",
@@ -2222,7 +2243,9 @@
                                     "baseFilter": "creature Dragon green ctrl:you"
                                 }
                             },
-                            "storeAs": "target8"
+                            "storeAs": "target8",
+                            "nonTargeting": true,
+                            "prompt": "Choose a green Dragon you control to get a +1/+1 counter"
                         },
                         {
                             "type": "AddCounters",
@@ -2422,7 +2445,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {1}{G}, Exile this card from your graveyard: Put 1 +1/+1 counter on target. Put 1 trample counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {1}{G}, Exile this card from your graveyard: Put a +1/+1 counter on target creature. Put a trample counter on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -2617,7 +2640,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {2}{U}, Exile this card from your graveyard: Tap target. Put 1 stun counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {2}{U}, Exile this card from your graveyard: Tap target creature an opponent controls. Put a stun counter on target creature an opponent controls Activate only as a sorcery."
             }
         ]
     },
@@ -3443,7 +3466,17 @@
                         "type": "Gated",
                         "gate": {
                             "type": "Gate.MayDecide",
-                            "hint": "Put 1 +1/+1 counter(s) on this creature? If you don't, create a 1/1 white Spirit creature token."
+                            "choiceLabels": {
+                                "prompt": "Endure {n}",
+                                "yes": "{n} +1/+1 counter{s}",
+                                "no": "{n}/{n} Spirit token",
+                                "yesDetail": "on this creature",
+                                "noDetail": "a white Spirit creature",
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            }
                         },
                         "then": {
                             "type": "AddDynamicCounters",
@@ -4338,7 +4371,10 @@
                 "powerBonus": 2,
                 "toughnessBonus": 2
             },
-            "GrantHexproofFromMonocoloredToGroup"
+            {
+                "type": "GrantHexproofFromToGroup",
+                "scope": "ProtectionScope.Monocolored"
+            }
         ]
     },
     "equipCost": "{4}",
@@ -4512,7 +4548,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card named Dragonstorm Globe or named Boulderborn Dragon to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -4607,7 +4645,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 3 +1/+1 counter(s) on this creature? If you don't, create a 3/3 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 3
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -4923,7 +4971,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4962,7 +5012,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -5027,7 +5079,9 @@
                                     "amount": 2
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for up to two basic land cards to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -5904,7 +5958,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 1 +1/+1 counter(s) on this creature? If you don't, create a 1/1 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -7429,7 +7493,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 2 +1/+1 counter(s) on this creature? If you don't, create a 2/2 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -7470,7 +7544,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 2 +1/+1 counter(s) on this creature? If you don't, create a 2/2 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -7821,7 +7905,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Island, Mountain, or Plains card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -8168,7 +8254,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {2}{B}{G}{U}, Exile this card from your graveyard: Put 2 +1/+1 counters on target. Put 1 flying counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {2}{B}{G}{U}, Exile this card from your graveyard: Put 2 +1/+1 counters on target creature. Put a flying counter on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -8220,7 +8306,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 1 +1/+1 counter(s) on this creature? If you don't, create a 1/1 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -8380,7 +8476,9 @@
                                         "zone": "Graveyard"
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose a creature card in your graveyard to exile"
                             },
                             {
                                 "type": "MoveToZone",
@@ -8762,27 +8860,50 @@
                 "effect": {
                     "type": "Gated",
                     "gate": {
-                        "type": "Gate.MayDecide",
-                        "hint": "Put X +1/+1 counter(s) on this creature? If you don't, create a X/X white Spirit creature token."
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Compare",
+                            "left": "XValue",
+                            "operator": "GT",
+                            "right": {
+                                "type": "Fixed",
+                                "amount": 0
+                            }
+                        }
                     },
                     "then": {
-                        "type": "AddDynamicCounters",
-                        "counterType": "PLUS_ONE_PLUS_ONE",
-                        "amount": "XValue",
-                        "target": "Self"
-                    },
-                    "otherwise": {
-                        "type": "CreateToken",
-                        "power": 0,
-                        "toughness": 0,
-                        "colors": [
-                            "WHITE"
-                        ],
-                        "creatureTypes": [
-                            "Spirit"
-                        ],
-                        "dynamicPower": "XValue",
-                        "dynamicToughness": "XValue"
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.MayDecide",
+                            "choiceLabels": {
+                                "prompt": "Endure {n}",
+                                "yes": "{n} +1/+1 counter{s}",
+                                "no": "{n}/{n} Spirit token",
+                                "yesDetail": "on this creature",
+                                "noDetail": "a white Spirit creature",
+                                "amount": "XValue"
+                            }
+                        },
+                        "then": {
+                            "type": "AddDynamicCounters",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
+                            "amount": "XValue",
+                            "target": "Self"
+                        },
+                        "otherwise": {
+                            "type": "CreateToken",
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [
+                                "WHITE"
+                            ],
+                            "creatureTypes": [
+                                "Spirit"
+                            ],
+                            "dynamicPower": "XValue",
+                            "dynamicToughness": "XValue"
+                        },
+                        "descriptionOverride": "Put X +1/+1 counter(s) on this creature. If you don't, create a X/X white Spirit creature token."
                     },
                     "descriptionOverride": "Put X +1/+1 counter(s) on this creature. If you don't, create a X/X white Spirit creature token."
                 },
@@ -8900,7 +9021,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {1}{G}, Exile this card from your graveyard: Put the number of lands in your graveyard +1/+1 counters on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {1}{G}, Exile this card from your graveyard: Put the number of lands in your graveyard +1/+1 counters on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -9084,7 +9205,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a black card to put into your graveyard",
+                            "selectedLabel": "Put into your graveyard"
                         },
                         {
                             "type": "MoveCollection",
@@ -9118,7 +9241,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a green card to put into your graveyard",
+                                    "selectedLabel": "Put into your graveyard"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -9154,7 +9279,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a blue card to put into your graveyard",
+                                    "selectedLabel": "Put into your graveyard"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -9314,7 +9441,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Dragon card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -9389,7 +9518,11 @@
                                         "filter": "basicland"
                                     },
                                     "storeAs": "gathered0",
-                                    "search": true
+                                    "search": true,
+                                    "searcher": {
+                                        "type": "ControllerOf",
+                                        "targetDescription": "nonbasic land an opponent controls"
+                                    }
                                 },
                                 {
                                     "type": "SelectFromCollection",
@@ -9421,7 +9554,8 @@
                                 {
                                     "type": "ShuffleLibrary",
                                     "target": "TargetController"
-                                }
+                                },
+                                "EmitLibrarySearchedEvent"
                             ]
                         }
                     ]
@@ -9734,7 +9868,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Mountain, Plains, or Swamp card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -10147,7 +10283,10 @@
                         "CostTap"
                     ]
                 },
-                "effect": "MakeNextSpellUncounterable",
+                "effect": {
+                    "type": "GrantNextSpellRider",
+                    "rider": "MakesSpellUncounterable"
+                },
                 "descriptionOverride": "The next spell you cast this turn can't be countered."
             }
         ],
@@ -10396,7 +10535,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {2}{U}, Exile this card from your graveyard: Put 1 +1/+1 counter on target. Each other you control creature becomes a copy of target until end of turn Activate only as a sorcery."
+                "descriptionOverride": "Renew — {2}{U}, Exile this card from your graveyard: Put a +1/+1 counter on target nonlegendary creature you control. Each other you control creature becomes a copy of target nonlegendary creature you control until end of turn Activate only as a sorcery."
             }
         ],
         "replacementEffects": [
@@ -10577,7 +10716,12 @@
                         "filter": {
                             "cardPredicates": [
                                 "IsCreature",
-                                "ManaValueAtMostX"
+                                {
+                                    "type": "CompareNumericProperty",
+                                    "property": "MANA_VALUE",
+                                    "operator": "LTE",
+                                    "amount": "XValue"
+                                }
                             ]
                         }
                     },
@@ -10594,7 +10738,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a creature card with mana value at most X to put onto the battlefield",
+                    "selectedLabel": "Put onto the battlefield"
                 },
                 {
                     "type": "MoveCollection",
@@ -11200,7 +11346,7 @@
                         }
                     ]
                 },
-                "descriptionOverride": "Flurry — Whenever you cast your second spell each turn, put 1 +1/+1 counter on this creature. Scry 1."
+                "descriptionOverride": "Flurry — Whenever you cast your second spell each turn, put a +1/+1 counter on this creature. Scry 1."
             }
         ]
     },
@@ -11408,7 +11554,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {2}{B}, Exile this card from your graveyard: Put 1 flying counter on target. Put 1 deathtouch counter on target. Put 1 lifelink counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {2}{B}, Exile this card from your graveyard: Put a flying counter on target creature. Put a deathtouch counter on target creature. Put a lifelink counter on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -12754,7 +12900,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -12968,24 +13116,9 @@
         "RENEW"
     ],
     "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Rot-Curse Rakshasa:1",
-                "trigger": "AttackEvent",
-                "effect": {
-                    "type": "CreateDelayedTrigger",
-                    "step": "END_COMBAT",
-                    "effect": {
-                        "type": "SacrificeTarget",
-                        "target": "Self"
-                    }
-                },
-                "descriptionOverride": "Decayed (This creature can't block, and when it attacks, sacrifice it at end of combat.)"
-            }
-        ],
         "activatedAbilities": [
             {
-                "id": "Rot-Curse Rakshasa:2",
+                "id": "Rot-Curse Rakshasa:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -13019,16 +13152,14 @@
                             "baseFilter": "creature"
                         },
                         "id": "t0",
-                        "dynamicMaxCount": "XValue"
+                        "dynamicMaxCount": "XValue",
+                        "dynamicMinCount": "XValue"
                     }
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {X}{B}{B}, Exile this card from your graveyard: For each target, put 1 decayed counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {X}{B}{B}, Exile this card from your graveyard: For each target, put a decayed counter on target Activate only as a sorcery."
             }
-        ],
-        "staticAbilities": [
-            "CantBlock"
         ]
     },
     "metadata": {
@@ -13214,7 +13345,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {3}{G}, Exile this card from your graveyard: Put 1 +1/+1 counter on target. Double the number of +1/+1 counters on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {3}{G}, Exile this card from your graveyard: Put a +1/+1 counter on target creature. Double the number of +1/+1 counters on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -13256,7 +13387,8 @@
                 "trigger": "CastThisSpellEvent",
                 "effect": {
                     "type": "CopyTargetSpell",
-                    "target": "TriggeringEntity"
+                    "target": "TriggeringEntity",
+                    "mayChooseNewTargets": false
                 },
                 "interveningIf": {
                     "type": "PlayerCastSpellsThisTurn",
@@ -13343,7 +13475,7 @@
                 ],
                 "timing": "SorcerySpeed",
                 "activateFromZone": "Graveyard",
-                "descriptionOverride": "Renew — {4}{G}, Exile this card from your graveyard: Put 2 +1/+1 counters on target. Put 1 reach counter on target Activate only as a sorcery."
+                "descriptionOverride": "Renew — {4}{G}, Exile this card from your graveyard: Put 2 +1/+1 counters on target creature. Put a reach counter on target creature Activate only as a sorcery."
             }
         ]
     },
@@ -13398,7 +13530,7 @@
     "colorIdentityOverride": [
         "GREEN"
     ],
-    "layout": "ADVENTURE",
+    "layout": "OMEN",
     "cardFaces": [
         {
             "name": "Roost Seek",
@@ -13429,7 +13561,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -13585,7 +13719,17 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.MayDecide",
-                        "hint": "Put 2 +1/+1 counter(s) on this creature? If you don't, create a 2/2 white Spirit creature token."
+                        "choiceLabels": {
+                            "prompt": "Endure {n}",
+                            "yes": "{n} +1/+1 counter{s}",
+                            "no": "{n}/{n} Spirit token",
+                            "yesDetail": "on this creature",
+                            "noDetail": "a white Spirit creature",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 2
+                            }
+                        }
                     },
                     "then": {
                         "type": "AddDynamicCounters",
@@ -14484,7 +14628,17 @@
                             "type": "Gated",
                             "gate": {
                                 "type": "Gate.MayDecide",
-                                "hint": "Put 1 +1/+1 counter(s) on this creature? If you don't, create a 1/1 white Spirit creature token."
+                                "choiceLabels": {
+                                    "prompt": "Endure {n}",
+                                    "yes": "{n} +1/+1 counter{s}",
+                                    "no": "{n}/{n} Spirit token",
+                                    "yesDetail": "on this creature",
+                                    "noDetail": "a white Spirit creature",
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
+                                }
                             },
                             "then": {
                                 "type": "AddDynamicCounters",
@@ -15860,7 +16014,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Swamp, Forest, or Island card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -16303,7 +16459,8 @@
                     "effects": [
                         {
                             "type": "CopyTargetSpell",
-                            "target": "TriggeringEntity"
+                            "target": "TriggeringEntity",
+                            "mayChooseNewTargets": false
                         },
                         {
                             "type": "Counter",
@@ -16450,7 +16607,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card named Tempest Hawk to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -16630,7 +16789,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Forest, Island, or Mountain card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -17562,6 +17723,7 @@
                             }
                         },
                         "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent",
                         {
                             "type": "GrantMayPlayFromExile",
                             "from": "selected1"
@@ -18541,48 +18703,85 @@
                 "effect": {
                     "type": "Gated",
                     "gate": {
-                        "type": "Gate.MayDecide",
-                        "hint": "Put this creature's the number of counters +1/+1 counter(s) on that creature? If you don't, create a this creature's the number of counters/this creature's the number of counters white Spirit creature token."
-                    },
-                    "then": {
-                        "type": "AddDynamicCounters",
-                        "counterType": "PLUS_ONE_PLUS_ONE",
-                        "amount": {
-                            "type": "EntityProperty",
-                            "entity": "Self",
-                            "numericProperty": {
-                                "type": "CounterCount",
-                                "counterType": null
-                            }
-                        },
-                        "target": "TriggeringEntity"
-                    },
-                    "otherwise": {
-                        "type": "CreateToken",
-                        "power": 0,
-                        "toughness": 0,
-                        "colors": [
-                            "WHITE"
-                        ],
-                        "creatureTypes": [
-                            "Spirit"
-                        ],
-                        "dynamicPower": {
-                            "type": "EntityProperty",
-                            "entity": "Self",
-                            "numericProperty": {
-                                "type": "CounterCount",
-                                "counterType": null
-                            }
-                        },
-                        "dynamicToughness": {
-                            "type": "EntityProperty",
-                            "entity": "Self",
-                            "numericProperty": {
-                                "type": "CounterCount",
-                                "counterType": null
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Compare",
+                            "left": {
+                                "type": "EntityProperty",
+                                "entity": "Self",
+                                "numericProperty": {
+                                    "type": "CounterCount",
+                                    "counterType": null
+                                }
+                            },
+                            "operator": "GT",
+                            "right": {
+                                "type": "Fixed",
+                                "amount": 0
                             }
                         }
+                    },
+                    "then": {
+                        "type": "Gated",
+                        "gate": {
+                            "type": "Gate.MayDecide",
+                            "choiceLabels": {
+                                "prompt": "Endure {n}",
+                                "yes": "{n} +1/+1 counter{s}",
+                                "no": "{n}/{n} Spirit token",
+                                "yesDetail": "on that creature",
+                                "noDetail": "a white Spirit creature",
+                                "amount": {
+                                    "type": "EntityProperty",
+                                    "entity": "Self",
+                                    "numericProperty": {
+                                        "type": "CounterCount",
+                                        "counterType": null
+                                    }
+                                }
+                            }
+                        },
+                        "then": {
+                            "type": "AddDynamicCounters",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
+                            "amount": {
+                                "type": "EntityProperty",
+                                "entity": "Self",
+                                "numericProperty": {
+                                    "type": "CounterCount",
+                                    "counterType": null
+                                }
+                            },
+                            "target": "TriggeringEntity"
+                        },
+                        "otherwise": {
+                            "type": "CreateToken",
+                            "power": 0,
+                            "toughness": 0,
+                            "colors": [
+                                "WHITE"
+                            ],
+                            "creatureTypes": [
+                                "Spirit"
+                            ],
+                            "dynamicPower": {
+                                "type": "EntityProperty",
+                                "entity": "Self",
+                                "numericProperty": {
+                                    "type": "CounterCount",
+                                    "counterType": null
+                                }
+                            },
+                            "dynamicToughness": {
+                                "type": "EntityProperty",
+                                "entity": "Self",
+                                "numericProperty": {
+                                    "type": "CounterCount",
+                                    "counterType": null
+                                }
+                            }
+                        },
+                        "descriptionOverride": "Put this creature's the number of counters +1/+1 counter(s) on that creature. If you don't, create a this creature's the number of counters/this creature's the number of counters white Spirit creature token."
                     },
                     "descriptionOverride": "Put this creature's the number of counters +1/+1 counter(s) on that creature. If you don't, create a this creature's the number of counters/this creature's the number of counters white Spirit creature token."
                 },
@@ -18734,7 +18933,7 @@
                     },
                     "id": "t1"
                 },
-                "descriptionOverride": "Flurry — Whenever you cast your second spell each turn, target creature an opponent controls tap target."
+                "descriptionOverride": "Flurry — Whenever you cast your second spell each turn, target creature an opponent controls tap target creature an opponent controls."
             }
         ]
     },

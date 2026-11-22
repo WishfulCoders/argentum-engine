@@ -70,6 +70,12 @@ class KrumarInitiateScenarioTest : ScenarioTestBase() {
                 val decision = game.getPendingDecision()
                 decision.shouldNotBeNull()
                 decision.shouldBeInstanceOf<YesNoDecision>()
+                withClue("Endure is shown as two peer outcomes carrying the resolved X") {
+                    decision.peerOptions shouldBe true
+                    decision.prompt shouldBe "Endure 3"
+                    decision.yesText shouldBe "3 +1/+1 counters"
+                    decision.noText shouldBe "3/3 Spirit token"
+                }
                 game.submitDecision(YesNoResponse(decision.id, true))
                 game.resolveStack()
 
@@ -122,6 +128,42 @@ class KrumarInitiateScenarioTest : ScenarioTestBase() {
                     tokenCard.colors shouldBe setOf(Color.WHITE)
                     tokenCard.baseStats?.basePower shouldBe 2
                     tokenCard.baseStats?.baseToughness shouldBe 2
+                }
+            }
+
+            test("endure 0 does nothing — no prompt, no counters, no 0/0 Spirit (CR 701.63b)") {
+                val game = scenario()
+                    .withPlayers("Player1", "Player2")
+                    .withCardOnBattlefield(1, "Krumar Initiate", tapped = false, summoningSickness = false)
+                    .withLandsOnBattlefield(1, "Swamp", 1) // pays {B} → X = 0
+                    .withActivePlayer(1)
+                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                    .build()
+
+                val krumar = game.findPermanent("Krumar Initiate")!!
+
+                val result = game.execute(
+                    ActivateAbility(
+                        playerId = game.player1Id,
+                        sourceId = krumar,
+                        abilityId = krumarAbilityId,
+                        xValue = 0
+                    )
+                )
+                withClue("Activating endure-0 should succeed: ${result.error}") {
+                    result.error shouldBe null
+                }
+                game.resolveStack()
+
+                withClue("Endure 0 asks nothing") {
+                    game.getPendingDecision() shouldBe null
+                }
+                withClue("Endure 0 creates no Spirit") {
+                    game.findPermanent("Spirit Token") shouldBe null
+                }
+                val counters = game.state.getEntity(krumar)?.get<CountersComponent>()
+                withClue("Endure 0 puts no counters") {
+                    (counters?.getCount(CounterType.PLUS_ONE_PLUS_ONE) ?: 0) shouldBe 0
                 }
             }
         }

@@ -6,6 +6,7 @@ import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.OwnerComponent
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -34,9 +35,10 @@ const val FACE_DOWN_CARD_DISPLAY_NAME: String = "Face-down card"
  * [com.wingedsheep.engine.view.EventPresentationFactory] while the event-time state still exists.
  *
  * For other text that has an immediate audience, ask
- * [com.wingedsheep.engine.view.Visibility.isCardIdentityVisibleTo] instead and pick the label from
- * its answer. That query knows what this file cannot: explicit reveals, effect-granted access, and
- * the zones CR 708.5 does and does not let a controller look in.
+ * [com.wingedsheep.engine.view.Visibility.cardNameFor] instead, and render a whole decision
+ * through [com.wingedsheep.engine.view.DecisionMasker]. That query knows what this file cannot:
+ * explicit reveals, effect-granted access, and the zones CR 708.5 does and does not let a
+ * controller look in.
  */
 fun nameVisibleToAll(state: GameState, entityId: EntityId, fallback: String): String =
     faceDownDisplayName(state, entityId) ?: fallback
@@ -59,29 +61,49 @@ fun nameVisibleToAll(state: GameState, entityId: EntityId, fallback: String): St
  * Anything else keeps its name, including a face-down object that has already left all three: its
  * owner reveals it to every player as it goes (CR 708.9).
  */
-internal fun faceDownDisplayName(state: GameState, entityId: EntityId): String? {
+internal fun faceDownDisplayName(state: GameState, entityId: EntityId): String? =
+    when (faceDownZone(state, entityId)) {
+        Zone.STACK, Zone.BATTLEFIELD -> FACE_DOWN_DISPLAY_NAME
+        Zone.EXILE -> FACE_DOWN_CARD_DISPLAY_NAME
+        else -> null
+    }
+
+/**
+ * The zone in which [entityId] is a face-down object whose identity is hidden — the stack, the
+ * battlefield or exile — or null if it isn't one. [faceDownDisplayName] documents how each zone is
+ * told apart; [com.wingedsheep.engine.view.Visibility] needs the zone itself, because CR 708.5
+ * lets a controller look in the first two and not the third.
+ */
+internal fun faceDownZone(state: GameState, entityId: EntityId): Zone? {
     val container = state.getEntity(entityId) ?: return null
 
     if (entityId in state.stack) {
         val faceDown = container.has<FaceDownComponent>() ||
             container.get<SpellOnStackComponent>()?.castFaceDown == true
-        return if (faceDown) FACE_DOWN_DISPLAY_NAME else null
+        return if (faceDown) Zone.STACK else null
     }
 
     if (!container.has<FaceDownComponent>()) return null
 
-    if (entityId in state.getBattlefield()) return FACE_DOWN_DISPLAY_NAME
+    if (entityId in state.getBattlefield()) return Zone.BATTLEFIELD
     // Only phased-out permanents are missing from the memoized accessor above, so the unmemoized
     // physical-zone scan is reached only for them.
     if (container.has<PhasedOutComponent>() && entityId in state.allBattlefieldEntities()) {
-        return FACE_DOWN_DISPLAY_NAME
+        return Zone.BATTLEFIELD
     }
 
     val ownerId = container.get<CardComponent>()?.ownerId ?: container.get<OwnerComponent>()?.playerId
-    if (ownerId != null && entityId in state.getExile(ownerId)) return FACE_DOWN_CARD_DISPLAY_NAME
+    if (ownerId != null && entityId in state.getExile(ownerId)) return Zone.EXILE
 
     return null
 }
+
+/**
+ * Whether [entityId] is a card exiled face down — an object with no characteristics (CR 406.3a), so
+ * none of its printed abilities exist while it stays that way. Effects can still grant it one.
+ */
+internal fun isFaceDownInExile(state: GameState, entityId: EntityId): Boolean =
+    faceDownZone(state, entityId) == Zone.EXILE
 
 /**
  * The one player entitled to look at [entityId] merely because they control the face-down object.

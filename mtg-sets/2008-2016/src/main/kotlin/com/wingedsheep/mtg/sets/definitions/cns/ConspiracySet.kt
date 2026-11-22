@@ -6,14 +6,10 @@ import com.wingedsheep.sdk.model.MtgSet
 import com.wingedsheep.sdk.model.Printing
 
 /**
- * Conspiracy (2014)
+ * Conspiracy (2014), a multiplayer draft set.
  *
- * Multiplayer draft set that introduced conspiracies and draft-matters cards. Scaffolded to hold
- * the canonical definitions of cards it printed first (Dack Fayden) and its reprint rows; it is not
- * draftable here, since conspiracies and draft-matters cards have no engine support.
- *
- * Set Code: CNS
- * Release Date: June 6, 2014
+ * Scaffolded for canonical definitions and reprints. Conspiracies and draft-matters
+ * cards are not supported, so this set is not available for Limited play here.
  */
 object ConspiracySet : MtgSet {
 

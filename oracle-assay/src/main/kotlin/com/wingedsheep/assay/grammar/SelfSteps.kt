@@ -127,7 +127,7 @@ object SelfSteps {
                 Effects.GrantKeyword(
                     AbilityFlag.DOESNT_UNTAP,
                     target,
-                    Duration.UntilAfterAffectedControllersNextUntap,
+                    Duration.UntilAfterAffectedControllersNextUntap(),
                 ),
                 subject,
             ),
@@ -586,6 +586,21 @@ object SelfSteps {
         val script = CardScript(spellEffect = SacrificeSelfEffect)
         phrase("sacrifice {self}", name = "sacrifice the source") {
             slot("self", Primitives.self)
+            build { script }
+            match { if (it == script) bind("self" to Unit) else null }
+        }
+    }
+
+    /**
+     * "Sacrifice ~" by name only — [sacrificeSelf] for a *later* clause, where "it" is no longer the
+     * source. "{R}: ~ gets +1/+0 until end of turn. Sacrifice ~ at the beginning of the next end
+     * step." — Pyric Salamander, Varchild's Crusader. Offered to [Steps]' later delayed rider and
+     * nowhere a first clause can reach, so [sacrificeSelf] and this never read one text together.
+     */
+    val sacrificeNamed: Phrase<CardScript> = run {
+        val script = CardScript(spellEffect = SacrificeSelfEffect)
+        phrase("sacrifice {self}", name = "sacrifice the named source") {
+            slot("self", Primitives.selfNamed)
             build { script }
             match { if (it == script) bind("self" to Unit) else null }
         }

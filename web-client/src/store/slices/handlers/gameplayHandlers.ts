@@ -4,13 +4,18 @@
 import type { MessageHandlers } from '@/network/messageHandlers.ts'
 import { ErrorCode, ZoneType } from '@/types'
 import type { EntityId } from '@/types'
-import type { ClientGameState, ClientEvent, LegalActionInfo, PendingDecision, OpponentDecisionStatus, PriorityModeValue, Step, TakebackRequestInfo, LoopOfferInfo } from '@/types'
+import type { ClientGameState, ClientEvent, DecisionResponse, LegalActionInfo, PendingDecision, OpponentDecisionStatus, PriorityModeValue, Step, CardFlippedOntoBattlefieldEvent, TakebackRequestInfo, LoopOfferInfo } from '@/types'
+import type { FlipShow } from '../types'
 import { trackEvent, setInGame } from '@/utils/analytics.ts'
 import { applyStateDelta } from '@/network/deltaApplicator.ts'
 import { getWebSocket, clearLobbyId, requestReauth } from '../shared'
 import { keepAttackerPreview, keepBlockerPreview } from './combatPreview'
 import { CLEARED_PIPELINE_SELECTIONS, isActionStillOffered } from '../ui/pipelineSlice'
 import type { SetState, GetState } from './types'
+import { useTableTalkStore } from '@/store/tableTalkStore'
+import { getPreferences, usePreferences } from '@/store/preferencesStore'
+import { autoAnswerFor, scheduleAutoAnswer } from './autoAnswer'
+import { createSetPriorityModeMessage, createSetStopOverridesMessage, createSetTriggerOrderingMessage } from '@/types'
 import type {
   LogEntry,
   DrawAnimation,
@@ -19,12 +24,13 @@ import type {
   CoinFlipAnimation,
   TargetReselectedAnimation,
   GameStore,
+  SubgameTransition,
 } from '../types'
 
 /**
  * Extract the relevant player ID from an event for log coloring.
  */
-function getEventPlayerId(event: { type: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string; startingPlayerId?: string }): EntityId | null {
+function getEventPlayerId(event: { type: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string; startingPlayerId?: string; newHolderId?: string; newOwnerId?: string }): EntityId | null {
   switch (event.type) {
     case 'lifeChanged': return event.playerId as EntityId
     case 'cardDrawn': return event.playerId as EntityId
@@ -38,15 +44,22 @@ function getEventPlayerId(event: { type: string; playerId?: string; casterId?: s
     case 'handRevealed': return event.revealingPlayerId as EntityId
     case 'cardsRevealed': return event.revealingPlayerId as EntityId
     case 'turnedFaceUp': return event.controllerId as EntityId
+    case 'mutated': return event.controllerId as EntityId
     case 'transformed': return event.controllerId as EntityId
+    case 'dieRolled':
     case 'coinFlipped': return event.playerId as EntityId
     case 'dieRolled': return event.playerId as EntityId
     case 'turnChanged': return event.activePlayerId as EntityId
     case 'gameRestarted': return event.startingPlayerId as EntityId
+    case 'subgameStarted': return event.startingPlayerId as EntityId
     case 'permanentsSacrificed': return event.playerId as EntityId
     case 'cardCycled': return event.playerId as EntityId
     case 'libraryShuffled': return event.playerId as EntityId
+    case 'initiativeTaken': return event.newHolderId as EntityId
+    case 'venturedIntoDungeon': return event.playerId as EntityId
+    case 'dungeonCompleted': return event.playerId as EntityId
     case 'controlChanged': return event.newControllerId as EntityId
+    case 'ownershipChanged': return event.newOwnerId as EntityId
     case 'decisionMade': return event.playerId as EntityId
     default: return null
   }
@@ -83,7 +96,7 @@ function appendGameLogTail(
   const entries: LogEntry[] = reusable > 0 ? existing.slice(0, reusable) : []
   const now = Date.now()
   for (let i = reusable; i < log.length; i++) {
-    const e = log[i] as { type: string; description: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string; startingPlayerId?: string }
+    const e = log[i] as { type: string; description: string; playerId?: string; casterId?: string; controllerId?: string; attackingPlayerId?: string; viewingPlayerId?: string; revealingPlayerId?: string; activePlayerId?: string; newControllerId?: string; startingPlayerId?: string; newHolderId?: string }
     entries.push({
       description: e.description,
       playerId: getEventPlayerId(e),
@@ -97,11 +110,14 @@ function appendGameLogTail(
 function getEventLogType(eventType: string): 'action' | 'turn' | 'combat' | 'system' {
   switch (eventType) {
     case 'turnChanged':
-    case 'gameRestarted': return 'turn'
+    case 'gameRestarted':
+    case 'subgameStarted':
+    case 'subgameEnded': return 'turn'
     case 'creatureAttacked':
     case 'creatureBlocked': return 'combat'
     case 'abilityFizzled':
     case 'abilityAutoAnswered':
+    case 'triggersOrderedAutomatically':
     case 'gameEnded':
     case 'playerLost': return 'system'
     default: return 'action'
@@ -210,6 +226,8 @@ interface StateUpdateEnvelope {
   readonly takebackPending?: boolean
   readonly takebackRequest?: TakebackRequestInfo | null
   readonly loopOffer?: LoopOfferInfo | null
+  readonly autoAnswer?: DecisionResponse | null
+  readonly autoAnswerPublic?: boolean
 }
 
 /** A replaced timeline invalidates every partially built action in the same store update. */
@@ -237,7 +255,6 @@ const CLEARED_ACTION_SELECTIONS = {
   draggingBlockerId: null,
   pendingBlockerIds: [],
   draggingAttackerId: null,
-  draggingAttackerHasBanding: null,
   draggingCardId: null,
   opponentAttackerTargets: null,
   opponentBlockerAssignments: null,
@@ -273,6 +290,7 @@ const CLEARED_ANIMATIONS = {
   damageAnimations: [],
   revealAnimations: [],
   coinFlipAnimations: [],
+  flipShow: null,
   targetReselectedAnimations: [],
 } as const
 
@@ -309,6 +327,45 @@ export function syncSeatTeams(state: ClientGameState, get: GetState): void {
   store.setSeatTeams(next, sharedLife, sharedTurns)
 }
 
+/**
+ * The interstitial for a subgame that began or ended in [events] (CR 729), if any — the last such
+ * event wins, so a subgame that ended in the same update it began announces its end. The spell's
+ * art comes from whichever state still describes the subgame: the new one as it starts, the
+ * previous one as it ends.
+ */
+function subgameTransitionFor(
+  events: readonly ClientEvent[],
+  next: ClientGameState,
+  previous: ClientGameState | null,
+): SubgameTransition | null {
+  const event = [...events].reverse().find((e) => e.type === 'subgameStarted' || e.type === 'subgameEnded')
+  if (!event) return null
+  const nameOf = (id: EntityId) =>
+    id === next.viewingPlayerId ? 'You' : next.players.find((p) => p.playerId === id)?.name ?? 'Opponent'
+  if (event.type === 'subgameStarted') {
+    const creator = next.subgame?.waitingGames[next.subgame.waitingGames.length - 1]
+    return {
+      kind: 'start',
+      depth: event.depth,
+      sourceName: event.sourceName ?? null,
+      sourceImageUri: creator?.sourceImageUri ?? null,
+      firstPlayerName: nameOf(event.startingPlayerId),
+      youGoFirst: event.startingPlayerId === next.viewingPlayerId,
+    }
+  }
+  if (event.type !== 'subgameEnded') return null
+  const creator = previous?.subgame?.waitingGames[previous.subgame.waitingGames.length - 1]
+  return {
+    kind: 'end',
+    depth: event.depth,
+    sourceName: event.sourceName ?? null,
+    sourceImageUri: creator?.sourceImageUri ?? null,
+    winnerNames: event.winnerIds.map(nameOf),
+    youWon: event.youWon === true,
+    nonWinnerNames: event.nonWinnerIds.map(nameOf),
+  }
+}
+
 function processStateUpdate(
   resolvedState: ClientGameState,
   msg: StateUpdateEnvelope,
@@ -327,6 +384,20 @@ function processStateUpdate(
   // never receives it and would render a team game as a free-for-all. Doing it here covers every
   // entry path with one write, and it's a no-op (reference-stable) once the map already matches.
   syncSeatTeams(resolvedState, get)
+
+  // A Magic subgame beginning or ending (CR 729) turns the table into a different game; announce it.
+  const subgameTransition = subgameTransitionFor(msg.events, resolvedState, get().gameState)
+  if (subgameTransition) {
+    // The hovered or selected card belongs to the game being left. Its hand may have unmounted
+    // under the cursor (the subgame opens on its mulligan), so no mouse-leave ever cleared it, and
+    // the card would pop up again as a stray preview the moment that game came back.
+    set({
+      hoveredCardId: null,
+      hoverPosition: null,
+      selectedCardId: null,
+      ...(suppressAnimations ? {} : { subgameTransition }),
+    })
+  }
 
   // Animations spawned by this update are collected here and committed with the state itself,
   // in one store write. Each separate write re-runs every subscriber's selector across the
@@ -594,6 +665,36 @@ function processStateUpdate(
     })
   })
 
+  // A dexterity flip (Chaos Orb): join the thrower's own in-flight show, or start the replay on
+  // every other client. The event carries the table as it lay, since the board it changed is gone.
+  const flipEvent = msg.events.find((e) => e.type === 'cardFlippedOntoBattlefield') as
+    | CardFlippedOntoBattlefieldEvent
+    | undefined
+  let newFlipShow: FlipShow | null = null
+  if (flipEvent && !suppressAnimations) {
+    const result = {
+      landing: flipEvent.landing,
+      turnedOver: flipEvent.turnedOver,
+      touched: flipEvent.touched,
+      affected: flipEvent.affected,
+    }
+    const inFlight = get().flipShow
+    newFlipShow =
+      inFlight && inFlight.isYours && inFlight.result === null && inFlight.flipperId === flipEvent.playerId
+        ? { ...inFlight, table: flipEvent.table, result }
+        : {
+            id: `flip-${flipEvent.playerId}-${Date.now()}`,
+            table: flipEvent.table,
+            sourceName: flipEvent.sourceName,
+            sourceImageUri: flipEvent.sourceImageUri,
+            flipperId: flipEvent.playerId,
+            isYours: flipEvent.playerId === playerId,
+            aim: null,
+            result,
+            startedAt: Date.now(),
+          }
+  }
+
   // Process target reselection events for animations
   const targetReselectedEvents = msg.events.filter((e) => e.type === 'targetReselected') as {
     type: 'targetReselected'
@@ -637,11 +738,21 @@ function processStateUpdate(
     })
   }
 
+  // A question with one legal answer, which the server answered for us: never put it in front of
+  // the player — not even for a frame — and send that answer after a short delay instead.
+  const autoAnswer = autoAnswerFor(
+    msg.pendingDecision,
+    msg.autoAnswer,
+    getPreferences().gameplay.forcedChoices,
+    msg.autoAnswerPublic === true
+  )
+
   set((state) => ({
     gameState: resolvedState,
     interactionEpoch: msg.interactionEpoch ?? null,
     legalActions: msg.legalActions.map((action) => ({ ...action, interactionEpoch: msg.interactionEpoch ?? null })),
-    pendingDecision: msg.pendingDecision ?? null,
+    pendingDecision: autoAnswer ? null : msg.pendingDecision ?? null,
+    autoAnswerPending: autoAnswer != null,
     opponentDecisionStatus: msg.opponentDecisionStatus ?? null,
     nextStopPoint: msg.nextStopPoint ?? null,
     undoAvailable: msg.undoAvailable ?? false,
@@ -660,6 +771,7 @@ function processStateUpdate(
     ...(newDamageAnimations.length > 0 && !suppressAnimations ? { damageAnimations: [...state.damageAnimations, ...newDamageAnimations] } : {}),
     ...(newRevealAnimations.length > 0 && !suppressAnimations ? { revealAnimations: [...state.revealAnimations, ...newRevealAnimations] } : {}),
     ...(newCoinFlipAnimations.length > 0 && !suppressAnimations ? { coinFlipAnimations: [...state.coinFlipAnimations, ...newCoinFlipAnimations] } : {}),
+    ...(newFlipShow ? { flipShow: newFlipShow } : {}),
     ...(newTargetReselectedAnimations.length > 0 && !suppressAnimations
       ? { targetReselectedAnimations: [...state.targetReselectedAnimations, ...newTargetReselectedAnimations] }
       : {}),
@@ -712,17 +824,37 @@ function processStateUpdate(
     opponentBlockerAssignments: keepBlockerPreview(
       resolvedState.currentStep,
       resolvedState.combat != null,
-      (resolvedState.combat?.blockers?.length ?? 0) > 0,
+      // A blocked attacker whose blockers all left combat still counts (CR 509.1h).
+      (resolvedState.combat?.blockers?.length ?? 0) > 0 ||
+        (resolvedState.combat?.attackers?.some((a) => a.isBlocked === true) ?? false),
     )
       ? state.opponentBlockerAssignments
       : null,
+    // Shared-team choices can hand this connection another seat's declaration without an
+    // epoch change. Drop the old seat's draft atomically; App enters the new server offer.
+    ...(state.combatState && !msg.legalActions.some(({ action }) =>
+      action.type === (state.combatState?.mode === 'declareAttackers' ? 'DeclareAttackers' : 'DeclareBlockers') &&
+      (state.combatState?.actingSeat == null || action.playerId === state.combatState.actingSeat)
+    ) ? { combatState: null, draggingBlockerId: null, draggingAttackerId: null } : {}),
     ...(state.interactionEpoch !== (msg.interactionEpoch ?? null)
       ? CLEARED_ACTION_SELECTIONS
       : isPipelineOutpaced(state, msg.legalActions) ? CLEARED_PIPELINE_SELECTIONS : {}),
   }))
 
+  scheduleAutoAnswer(autoAnswer, set, get)
+
+  // The game just ordered several of our triggers where the order could have mattered: say so,
+  // the first time it happens, so a player learns they can choose it — then never again.
+  const autoOrdered = msg.events.find((e) => e.type === 'triggersOrderedAutomatically') as
+    | { type: 'triggersOrderedAutomatically'; count: number }
+    | undefined
+  if (autoOrdered && !suppressAnimations && getPreferences().gameplay.triggerOrderTip) {
+    usePreferences.getState().update('gameplay', { triggerOrderTip: false })
+    set({ triggerOrderNotice: { key: Date.now(), count: autoOrdered.count } })
+  }
+
   // Auto-initialize inline distribute state for DistributeDecision
-  const decision = msg.pendingDecision
+  const decision = autoAnswer ? undefined : msg.pendingDecision
   if (decision?.type === 'DistributeDecision') {
     const initial: Record<string, number> = {}
     for (const targetId of decision.targets) {
@@ -750,9 +882,35 @@ type GameplayHandlerKeys =
   | 'onMulliganDecision' | 'onChooseBottomCards' | 'onMulliganComplete' | 'onWaitingForOpponentMulligan'
   | 'onGameOver' | 'onPlayerEliminated' | 'onError' | 'onTakebackDeclined' | 'onLoopRepeated'
 
+/**
+ * Send the player's standing stops, starting priority mode and trigger ordering to the server for a
+ * new game, and mirror them in the store so the step strip and mode button read right before the
+ * first update. The server keeps them per game, so this runs once per game start.
+ */
+function applyGameplayPreferences(set: SetState) {
+  const { priorityMode, myTurnStops, opponentTurnStops, ownStackStops, autoOrderTriggers } = getPreferences().gameplay
+  set({
+    stopOverrides: { myTurnStops, opponentTurnStops },
+    priorityMode,
+    fullControl: priorityMode === 'fullControl',
+  })
+  const ws = getWebSocket()
+  if (myTurnStops.length || opponentTurnStops.length || ownStackStops.length) {
+    ws?.send(createSetStopOverridesMessage(myTurnStops, opponentTurnStops, ownStackStops))
+  }
+  if (priorityMode !== 'auto') ws?.send(createSetPriorityModeMessage(priorityMode))
+  if (!autoOrderTriggers) ws?.send(createSetTriggerOrderingMessage(true))
+}
+
 export function createGameplayHandlers(set: SetState, get: GetState): Pick<MessageHandlers, GameplayHandlerKeys> {
   return {
     onGameCreated: (msg) => {
+      // A rematch starts straight from the result screen: drop the finished game first, or its
+      // overlay would sit on top of the new one. The server already closed the post-game.
+      if (get().gameOverState) {
+        useTableTalkStore.getState().resetForNewGame()
+        get().returnToMenu()
+      }
       // Clear any quick-game lobby state — the lobby has done its job (server already removed it).
       set({ sessionId: msg.sessionId, quickGameLobbyState: null })
     },
@@ -765,7 +923,8 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
       setInGame(true)
 
       // Clear spectating state — active game takes priority. Fresh game, fresh camera.
-      set({ spectatingState: null })
+      set({ spectatingState: null, triggerOrderNotice: null })
+      useTableTalkStore.getState().resetForNewGame()
       get().resetBoardView()
 
       // Two-Headed Giant (CR 810): the seat → team map only arrives here, in the game-start
@@ -781,33 +940,28 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
       // vs. Team shares neither. `syncSeatTeams` re-derives both from every state update.
       const sharedTurns = msg.players.some((p) => p.teamSharedTurns)
       get().setSeatTeams(seatTeams, sharedLife, sharedTurns)
+      get().setSeatAvatars(msg.players)
 
-      // Load persisted stop overrides and send to server
-      try {
-        const saved = localStorage.getItem('argentum-stop-overrides')
-        if (saved) {
-          const parsed = JSON.parse(saved) as { myTurnStops: string[]; opponentTurnStops: string[] }
-          if (parsed.myTurnStops?.length || parsed.opponentTurnStops?.length) {
-            set({
-              stopOverrides: parsed as { myTurnStops: Step[]; opponentTurnStops: Step[] },
-            })
-            getWebSocket()?.send({
-              type: 'setStopOverrides' as const,
-              myTurnStops: parsed.myTurnStops,
-              opponentTurnStops: parsed.opponentTurnStops,
-            })
-          }
-        }
-      } catch { /* ignore invalid localStorage data */ }
+      // Start the game the way the player set the table up (Preferences → Gameplay): their
+      // standing stops and their starting priority mode.
+      applyGameplayPreferences(set)
 
       // Show match intro animation
       const playerName = localStorage.getItem('argentum-player-name') ?? 'You'
       const { tournamentState, playerId } = get()
       let round: number | undefined
+      let matchGame: string | undefined
       let playerRecord: string | undefined
       let opponentRecord: string | undefined
       if (tournamentState && playerId) {
         round = tournamentState.currentRound
+        const game = tournamentState.currentGame
+        if (game && game.bestOf > 1) {
+          // "Game 2 · 1–0": which game of the best-of-three, and the score going in (ours first).
+          matchGame = game.gameNumber > 1
+            ? `Game ${game.gameNumber} · ${game.yourGameWins}–${game.opponentGameWins}`
+            : `Game 1 of ${game.bestOf}`
+        }
         const playerStanding = tournamentState.standings.find((s) => s.playerId === playerId)
         const opponentStanding = tournamentState.standings.find((s) => s.playerName === opponentName)
         if (playerStanding) {
@@ -822,7 +976,10 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
           playerName,
           opponentName,
           opponentNames: msg.players.filter((p) => !p.isYou).map((p) => p.name),
+          playerAvatar: msg.players.find((p) => p.isYou)?.avatar ?? null,
+          opponentAvatars: msg.players.filter((p) => !p.isYou).map((p) => p.avatar ?? null),
           ...(round != null ? { round } : {}),
+          ...(matchGame != null ? { matchGame } : {}),
           ...(playerRecord != null ? { playerRecord } : {}),
           ...(opponentRecord != null ? { opponentRecord } : {}),
         },
@@ -929,7 +1086,28 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
     },
 
     onGameOver: (msg) => {
-      const { playerId, sessionId } = get()
+      const { playerId, sessionId, spectatingState } = get()
+      // A spectator watching the game that just ended: keep the final board up and show who won.
+      // Leaving stays the spectator's call (or the banner's auto-return) via stopSpectating.
+      if (!sessionId && spectatingState && !spectatingState.isReplay && msg.gameId === spectatingState.gameSessionId) {
+        set({
+          spectatingState: {
+            ...spectatingState,
+            decisionStatus: null,
+            gameOver: {
+              winnerIds: msg.winnerIds && msg.winnerIds.length > 0 ? msg.winnerIds : msg.winnerId ? [msg.winnerId] : [],
+              reason: msg.reason,
+              message: msg.message ?? null,
+              ...(msg.ante ? { ante: msg.ante } : {}),
+            },
+          },
+          // The fight is over; drop the declaration previews. Animations are left to play out:
+          // the lethal hit is what the spectator came to see.
+          opponentAttackerTargets: null,
+          opponentBlockerAssignments: null,
+        })
+        return
+      }
       // Ignore a game-over for a game we already left — e.g. an eliminated FFA player who
       // returned to the lobby still holds a seat server-side and receives the final GameOver.
       if (msg.gameId && sessionId !== msg.gameId) return
@@ -950,6 +1128,7 @@ export function createGameplayHandlers(set: SetState, get: GetState): Pick<Messa
           result,
           message: msg.message,
           gameId: msg.gameId,
+          ...(msg.ante ? { ante: msg.ante } : {}),
         },
         ...CLEARED_ANIMATIONS,
       })

@@ -13,8 +13,7 @@ import kotlin.reflect.KClass
  *
  * Reads the name of the first card in the [StoreCardNameEffect.from] collection and emits
  * it via [EffectResult.updatedChosenValues]. The surrounding
- * [com.wingedsheep.engine.handlers.effects.composite.CompositeEffectExecutor] /
- * [com.wingedsheep.engine.handlers.continuations.EffectContinuationRunner] merges the
+ * [com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter] merges the
  * value into the pipeline context so later sub-effects can match it via
  * [com.wingedsheep.sdk.scripting.predicates.CardPredicate.NameEqualsChosen].
  *

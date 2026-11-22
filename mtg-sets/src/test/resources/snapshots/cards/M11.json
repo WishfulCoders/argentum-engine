@@ -177,6 +177,91 @@
     ]
 }
 
+// Angelic Arbiter
+{
+    "name": "Angelic Arbiter",
+    "manaCost": "{5}{W}{W}",
+    "typeLine": "Creature — Angel",
+    "oracleText": "Flying\nEach opponent who cast a spell this turn can't attack with creatures.\nEach opponent who attacked with a creature this turn can't cast spells.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 6
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "CantAttackUnless",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "SpellsCastThisTurn",
+                        "player": "ControllerOfIterationEntity"
+                    },
+                    "operator": "EQ",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 0
+                    }
+                },
+                "filter": {
+                    "baseFilter": "creature ctrl:opponent"
+                }
+            },
+            {
+                "type": "PlayersCantCastSpells",
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "TurnTracking",
+                        "player": "You",
+                        "tracker": "PLAYER_ATTACKED"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "conditionFromCaster": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "4",
+        "rarity": "RARE",
+        "artist": "Steve Argyle",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/1/71f05793-9e6f-4815-9a13-f791cb4b6aa0.jpg?1783941838",
+        "rulings": [
+            {
+                "date": "2010-08-15",
+                "text": "During your turn, Angelic Arbiter's abilities have no effect on the game."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "During an opponent's turn, that opponent may either cast spells or attack with creatures, but not both (assuming that Angelic Arbiter is on the battlefield for the entirety of that turn). The player may perform other actions, such as activating abilities and playing lands."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "If Angelic Arbiter leaves the battlefield during an opponent's turn, its abilities cease to affect the game. For example, if an opponent casts Doom Blade to destroy Angelic Arbiter, that player may then attack with creatures."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "If Angelic Arbiter enters during an opponent's turn, its abilities take actions that player performed earlier in the turn into account, even though it wasn't on the battlefield at the time. For example, if an opponent casts a spell, then you use Leyline of Anticipation's ability to cast Angelic Arbiter as though it had flash, that player won't be able to attack with creatures that turn."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "Angelic Arbiter's last ability applies if an opponent attacked with at least one creature during the current turn."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Arc Runner
 {
     "name": "Arc Runner",
@@ -742,7 +827,8 @@
                     },
                     "revealed": true
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -907,6 +993,121 @@
     ]
 }
 
+// Elixir of Immortality
+{
+    "name": "Elixir of Immortality",
+    "manaCost": "{1}",
+    "typeLine": "Artifact",
+    "oracleText": "{2}, {T}: You gain 5 life. Shuffle this artifact and your graveyard into their owner's library.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Elixir of Immortality:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{2}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GainLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 5
+                            }
+                        },
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromMultipleZones",
+                                "zones": [
+                                    "Battlefield",
+                                    "Graveyard"
+                                ],
+                                "player": "Each",
+                                "filter": {
+                                    "anyOf": [
+                                        {
+                                            "statePredicates": [
+                                                {
+                                                    "type": "StateAnd",
+                                                    "predicates": [
+                                                        "IsSource",
+                                                        {
+                                                            "type": "InZone",
+                                                            "zone": "Battlefield"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "statePredicates": [
+                                                {
+                                                    "type": "InZone",
+                                                    "zone": "Graveyard"
+                                                }
+                                            ],
+                                            "controllerPredicate": "OwnedByYou"
+                                        }
+                                    ]
+                                }
+                            },
+                            "storeAs": "gathered1"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Library",
+                                "placement": "Shuffled"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "{2}, {T}: You gain 5 life. Shuffle this artifact and your graveyard into their owner's library."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "206",
+        "rarity": "UNCOMMON",
+        "artist": "Zoltan Boros & Gabor Szikszai",
+        "flavorText": "\"Bottled life. Not as tasty as I'm used to, rather stale, but it has the same effect.\"\n—Baron Sengir",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/9/99bd4740-9b1f-40a6-a14d-2c0d642b848b.jpg?1783941791",
+        "rulings": [
+            {
+                "date": "2011-09-22",
+                "text": "As the ability resolves, you’ll shuffle Elixir of Immortality into its owner’s library directly from the battlefield, if it’s still there."
+            },
+            {
+                "date": "2011-09-22",
+                "text": "If Elixir of Immortality is in your graveyard at the time the ability resolves, you’ll still wind up shuffling it into your library because you shuffle your entire graveyard into your library. If it’s anywhere else by that time, including in another player’s graveyard, it remains where it is and you shuffle just your graveyard into your library."
+            },
+            {
+                "date": "2011-09-22",
+                "text": "If you gain control of another player’s Elixir of Immortality and activate it, the Elixir of Immortality will be shuffled into its owner’s library and the cards in your graveyard will be shuffled into your library. You are considered to have shuffled each affected library (even if, as a shortcut, each player physically shuffles their own library)."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "Paying the activation cost of Elixir of Immortality’s ability doesn’t cause it to leave the battlefield. If you have a way to untap it, you can activate the ability multiple times in response to itself."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Ember Hauler
 {
     "name": "Ember Hauler",
@@ -1023,7 +1224,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a creature card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -1052,6 +1255,97 @@
     "colorIdentityOverride": [
         "GREEN"
     ]
+}
+
+// Gaea's Revenge
+{
+    "name": "Gaea's Revenge",
+    "manaCost": "{5}{G}{G}",
+    "typeLine": "Creature — Elemental",
+    "oracleText": "This spell can't be countered.\nHaste\nThis creature can't be the target of nongreen spells or abilities from nongreen sources.",
+    "creatureStats": {
+        "power": 8,
+        "toughness": 5
+    },
+    "keywords": [
+        "HASTE"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "CantBeTargetedBy",
+                "quality": {
+                    "type": "UntargetableBy.SourcesOfColor",
+                    "scope": {
+                        "type": "ProtectionScope.NonColor",
+                        "color": "GREEN"
+                    }
+                }
+            }
+        ],
+        "cantBeCountered": true
+    },
+    "metadata": {
+        "collectorNumber": "174",
+        "rarity": "MYTHIC",
+        "artist": "Kekai Kotaki",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/8/68f610a9-73b0-4ef8-b725-f3eee1b78fad.jpg?1783941799"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Gargoyle Sentinel
+{
+    "name": "Gargoyle Sentinel",
+    "manaCost": "{3}",
+    "typeLine": "Artifact Creature — Gargoyle",
+    "oracleText": "Defender (This creature can't attack.)\n{3}: Until end of turn, this creature loses defender and gains flying.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "DEFENDER"
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Gargoyle Sentinel:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{3}"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RemoveKeyword",
+                            "keyword": "DEFENDER",
+                            "target": "Self"
+                        },
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "FLYING",
+                            "target": "Self"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "207",
+        "rarity": "UNCOMMON",
+        "artist": "Drew Baker",
+        "flavorText": "\"Do not mistake a quiet rampart for one that is unguarded. Some things stir only when they need to.\"\n—Bonovar, siege commander",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/a/6af328bc-bce5-4024-9da5-853ee16eaa8a.jpg?1783941791"
+    },
+    "colorIdentityOverride": []
 }
 
 // Garruk's Companion
@@ -1377,6 +1671,92 @@
     ]
 }
 
+// Inferno Titan
+{
+    "name": "Inferno Titan",
+    "manaCost": "{4}{R}{R}",
+    "typeLine": "Creature — Giant",
+    "oracleText": "{R}: This creature gets +1/+0 until end of turn.\nWhenever this creature enters or attacks, it deals 3 damage divided as you choose among one, two, or three targets.",
+    "creatureStats": {
+        "power": 6,
+        "toughness": 6
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Inferno Titan:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DividedDamage",
+                    "totalDamage": 3
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "count": 3,
+                    "minCount": 1
+                },
+                "descriptionOverride": "Whenever this creature enters or attacks, it deals 3 damage divided as you choose among one, two, or three targets."
+            },
+            {
+                "id": "Inferno Titan:3",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "DividedDamage",
+                    "totalDamage": 3
+                },
+                "targetRequirement": {
+                    "type": "AnyTarget",
+                    "count": 3,
+                    "minCount": 1
+                },
+                "descriptionOverride": "Whenever this creature enters or attacks, it deals 3 damage divided as you choose among one, two, or three targets."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Inferno Titan:1",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomMana",
+                        "cost": "{R}"
+                    }
+                },
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 0
+                    },
+                    "target": "Self"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "146",
+        "rarity": "MYTHIC",
+        "artist": "Kev Walker",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/1/f1e4a028-6462-4373-9864-a8adfc78d52b.jpg?1783941804",
+        "rulings": [
+            {
+                "date": "2010-08-15",
+                "text": "You divide the damage as you put Inferno Titan's triggered ability on the stack, not as it resolves. Each target must be assigned at least 1 damage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Inspired Charge
 {
     "name": "Inspired Charge",
@@ -1447,6 +1827,110 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Leyline of Anticipation
+{
+    "name": "Leyline of Anticipation",
+    "manaCost": "{2}{U}{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "If this card is in your opening hand, you may begin the game with it on the battlefield.\nYou may cast spells as though they had flash.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantFlashToSpellType",
+                "filter": {},
+                "controllerOnly": true
+            }
+        ],
+        "beginOnBattlefield": {}
+    },
+    "metadata": {
+        "collectorNumber": "61",
+        "rarity": "RARE",
+        "artist": "Charles Urbach",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/7/d7dbb092-3bb0-445e-ab26-d939cac92a73.jpg?1783941824",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "A player's \"opening hand\" is the hand of cards the player has after all players have taken mulligans. If players have any cards in hand that allow actions to be taken with them from a player's opening hand, the starting player takes all such actions first in any order, followed by each other player in turn order. Then the first turn begins."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Leyline of Sanctity
+{
+    "name": "Leyline of Sanctity",
+    "manaCost": "{2}{W}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "If this card is in your opening hand, you may begin the game with it on the battlefield.\nYou have hexproof. (You can't be the target of spells or abilities your opponents control.)",
+    "script": {
+        "staticAbilities": [
+            "GrantHexproofToController"
+        ],
+        "beginOnBattlefield": {}
+    },
+    "metadata": {
+        "collectorNumber": "21",
+        "rarity": "RARE",
+        "artist": "Ryan Pancoast",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/6/262de9ae-d641-4f0e-af6a-03ce0e1c91d3.jpg?1783941834",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "A player's \"opening hand\" is the hand of cards the player has after all players have taken mulligans. If players have any cards in hand that allow actions to be taken with them from a player's opening hand, the starting player takes all such actions first in any order, followed by each other player in turn order. Then the first turn begins."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Liliana's Caress
+{
+    "name": "Liliana's Caress",
+    "manaCost": "{1}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "Whenever an opponent discards a card, that player loses 2 life.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Liliana's Caress:1",
+                "trigger": {
+                    "type": "DiscardEvent",
+                    "player": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                },
+                "descriptionOverride": "Whenever an opponent discards a card, that player loses 2 life."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "103",
+        "rarity": "UNCOMMON",
+        "artist": "Steve Argyle",
+        "flavorText": "\"This might hurt less if you don't fight so hard. But I doubt it.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/d/0d995382-57a6-40a4-9050-31f57cb8dae3.jpg?1783941814"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -1595,6 +2079,92 @@
     ]
 }
 
+// Merfolk Spy
+{
+    "name": "Merfolk Spy",
+    "manaCost": "{U}",
+    "typeLine": "Creature — Merfolk Rogue",
+    "oracleText": "Islandwalk (This creature can't be blocked as long as defending player controls an Island.)\nWhenever this creature deals combat damage to a player, that player reveals a card at random from their hand.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "ISLANDWALK"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Merfolk Spy:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "damageType": "DamageCombat",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "player": "TriggeringPlayer"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "Random",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1"
+                        },
+                        {
+                            "type": "RevealCollection",
+                            "from": "selected1"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "66",
+        "artist": "Matt Cavotta & Richard Whitters",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/5/b5ae05cc-116b-4268-ba78-709aeff36ab1.jpg?1783941823",
+        "rulings": [
+            {
+                "date": "2010-08-15",
+                "text": "Islandwalk cares about lands with the land type Island, not necessarily lands named Island."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "The second ability triggers just once each time Merfolk Spy deals combat damage to a player, regardless of how much damage it deals."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "After the second ability resolves, the revealed card stops being revealed in its owner's hand."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "The next time Merfolk Spy deals combat damage to the same player, the card that's revealed at random may be the same card or may be a different card."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Mighty Leap
 {
     "name": "Mighty Leap",
@@ -1721,6 +2291,163 @@
     ]
 }
 
+// Obstinate Baloth
+{
+    "name": "Obstinate Baloth",
+    "manaCost": "{2}{G}{G}",
+    "typeLine": "Creature — Beast",
+    "oracleText": "When this creature enters, you gain 4 life.\nIf a spell or ability an opponent controls causes you to discard this card, put it onto the battlefield instead of putting it into your graveyard.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Obstinate Baloth:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 4
+                    }
+                }
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "RedirectZoneChange",
+                "newDestination": "Battlefield",
+                "appliesTo": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Hand",
+                    "to": "Graveyard"
+                },
+                "selfOnly": true,
+                "requiredCause": "DiscardedByOpponentEffect"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "188",
+        "rarity": "RARE",
+        "artist": "Chris Rahn",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/6/6694496c-45b9-4ddf-bfcd-b632441b8811.jpg?1783941795",
+        "rulings": [
+            {
+                "date": "2017-11-17",
+                "text": "If you discard Obstinate Baloth and put it onto the battlefield, you've still discarded it. Abilities that trigger when you discard a card will still trigger."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Phylactery Lich
+{
+    "name": "Phylactery Lich",
+    "manaCost": "{B}{B}{B}",
+    "typeLine": "Creature — Zombie",
+    "oracleText": "Indestructible\nAs this creature enters, put a phylactery counter on an artifact you control.\nWhen you control no permanents with phylactery counters on them, sacrifice this creature.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 5
+    },
+    "keywords": [
+        "INDESTRUCTIBLE"
+    ],
+    "script": {
+        "stateTriggeredAbilities": [
+            {
+                "id": "Phylactery Lich:1",
+                "condition": {
+                    "type": "Exists",
+                    "player": "You",
+                    "zone": "Battlefield",
+                    "filter": {
+                        "cardPredicates": [
+                            "IsPermanent"
+                        ],
+                        "statePredicates": [
+                            {
+                                "type": "HasCounter",
+                                "counterType": "PHYLACTERY"
+                            }
+                        ]
+                    },
+                    "negate": true
+                },
+                "effect": {
+                    "type": "SacrificeTarget",
+                    "target": "Self"
+                },
+                "descriptionOverride": "When you control no permanents with phylactery counters on them, sacrifice this creature."
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "CREATURE_ON_BATTLEFIELD",
+                "permanentFilter": {
+                    "cardPredicates": [
+                        "IsArtifact"
+                    ],
+                    "controllerPredicate": "ControlledByYou"
+                },
+                "then": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddCounters",
+                            "counterType": "PHYLACTERY",
+                            "count": 1,
+                            "target": "ChosenCreature"
+                        }
+                    ],
+                    "descriptionOverride": "Put a phylactery counter on it"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "110",
+        "rarity": "RARE",
+        "artist": "Michael Komarck",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/d/9d088983-92c1-4f4d-8abf-dd20347495b5.jpg?1783941813",
+        "rulings": [
+            {
+                "date": "2018-07-13",
+                "text": "Phylactery Lich's first ability doesn't target the artifact. No player may take actions between the time you choose an artifact and the time you put a phylactery counter on it."
+            },
+            {
+                "date": "2018-07-13",
+                "text": "If you control no artifacts as Phylactery Lich enters the battlefield, its first ability won't do anything. As soon as it enters the battlefield, its last ability will trigger (unless you control some other permanent with a phylactery counter on it) and you'll have to sacrifice it."
+            },
+            {
+                "date": "2018-07-13",
+                "text": "If Phylactery Lich and an artifact are entering the battlefield under your control at the same time, you can't put a phylactery counter on that artifact. You must choose an artifact you control that's already on the battlefield."
+            },
+            {
+                "date": "2018-07-13",
+                "text": "Phylactery Lich's last ability is a \"state trigger.\" Once a state trigger triggers, it won't trigger again as long as the ability is on the stack. If the ability is countered and the trigger condition is still true, it will immediately trigger again."
+            },
+            {
+                "date": "2018-07-13",
+                "text": "Phylactery Lich's last ability checks your permanents for any phylactery counters, not just the specific one that it caused you to put on an artifact. For example, if you control two Phylactery Liches and two different artifacts with phylactery counters, neither Phylactery Lich will be sacrificed if one of those artifacts leaves the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Preordain
 {
     "name": "Preordain",
@@ -1802,7 +2529,9 @@
                                         "amount": 2
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to two land cards to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -1848,7 +2577,9 @@
                                         "amount": 2
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for up to two land cards to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -1909,6 +2640,72 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Quag Sickness
+{
+    "name": "Quag Sickness",
+    "manaCost": "{2}{B}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nEnchanted creature gets -1/-1 for each Swamp you control.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantDynamicStats",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "AttachedTo"
+                },
+                "powerBonus": {
+                    "type": "Multiply",
+                    "amount": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land Swamp"
+                    },
+                    "multiplier": -1
+                },
+                "toughnessBonus": {
+                    "type": "Multiply",
+                    "amount": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "land Swamp"
+                    },
+                    "multiplier": -1
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "111",
+        "artist": "Martina Pilcerova",
+        "flavorText": "The dread gases didn't kill Farbid. But as he lay in the muck, miserable and helpless, watching ghouls and rats advance on him, he wished they had.",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/1/21d56d13-b9de-44db-b235-4f7eea60f424.jpg?1783941812",
+        "rulings": [
+            {
+                "date": "2010-08-15",
+                "text": "This ability counts the number of Swamps controlled by Quag Sickness's controller, not the enchanted creature's controller (in case they're different players)."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "This bonus is not fixed; it changes as the number of Swamps you control changes."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "The ability cares about lands with the land type Swamp, not necessarily lands named Swamp."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 
@@ -2056,6 +2853,87 @@
     ]
 }
 
+// Serra Ascendant
+{
+    "name": "Serra Ascendant",
+    "manaCost": "{W}",
+    "typeLine": "Creature — Human Monk",
+    "oracleText": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)\nAs long as you have 30 or more life, this creature gets +5/+5 and has flying.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "keywords": [
+        "LIFELINK"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "ModifyStats",
+                    "powerBonus": 5,
+                    "toughnessBonus": 5,
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "LifeTotal",
+                        "player": "You"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 30
+                    }
+                }
+            },
+            {
+                "type": "ConditionalStaticAbility",
+                "ability": {
+                    "type": "GrantKeyword",
+                    "keyword": "FLYING",
+                    "filter": {
+                        "baseFilter": "permanent",
+                        "scope": "Self"
+                    }
+                },
+                "condition": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "LifeTotal",
+                        "player": "You"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 30
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "28",
+        "rarity": "RARE",
+        "artist": "Anthony Palumbo",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/e/1ee65b44-eeb6-418b-b022-a0aef587c738.jpg?1783941831",
+        "rulings": [
+            {
+                "date": "2017-11-17",
+                "text": "If Serra Ascendant is dealt damage at the same time that you gain life (most likely because it dealt combat damage to a creature blocking or blocked by it), and your life total becomes 30 or greater, apply its last effect before considering whether or not the damage dealt to it is lethal."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Stabbing Pain
 {
     "name": "Stabbing Pain",
@@ -2171,6 +3049,79 @@
         "imageUri": "https://cards.scryfall.io/normal/front/3/7/37d0876b-5026-4a0a-bf2f-e831593643a7.jpg?1783941788"
     },
     "colorIdentityOverride": []
+}
+
+// Stormtide Leviathan
+{
+    "name": "Stormtide Leviathan",
+    "manaCost": "{5}{U}{U}{U}",
+    "typeLine": "Creature — Leviathan",
+    "oracleText": "Islandwalk (This creature can't be blocked as long as defending player controls an Island.)\nAll lands are Islands in addition to their other types.\nCreatures without flying or islandwalk can't attack.",
+    "creatureStats": {
+        "power": 8,
+        "toughness": 8
+    },
+    "keywords": [
+        "ISLANDWALK"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantAdditionalTypesToGroup",
+                "filter": {
+                    "baseFilter": "land"
+                },
+                "addSubtypes": [
+                    "Island"
+                ]
+            },
+            {
+                "type": "CantAttack",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature",
+                            {
+                                "type": "NotKeyword",
+                                "keyword": "FLYING"
+                            },
+                            {
+                                "type": "NotKeyword",
+                                "keyword": "ISLANDWALK"
+                            }
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "74",
+        "rarity": "RARE",
+        "artist": "Karl Kopinski",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/e/0e7f3fb6-93ce-4bc9-8efd-11af5a46218f.jpg?1783941820",
+        "rulings": [
+            {
+                "date": "2014-07-18",
+                "text": "Stormtide Leviathan's second ability causes each land on the battlefield to have the land type Island. Each land thus has the ability \"{T}: Add {U}.\" Nothing else changes about those lands, including their names, other subtypes, other abilities, and whether they're legendary or basic."
+            },
+            {
+                "date": "2014-07-18",
+                "text": "If Stormtide Leviathan loses its abilities, all lands on the battlefield (including those that enter the battlefield later on) will still be Islands in addition to their other types and will still be able to tap to produce {U}. The way continuous effects work, Stormtide Leviathan's type-changing ability is applied before the effect that removes that ability is applied."
+            },
+            {
+                "date": "2014-07-18",
+                "text": "Stormtide Leviathan's third ability affects all creatures with neither flying nor islandwalk, regardless of who controls them. They can't attack any player or planeswalker."
+            },
+            {
+                "date": "2014-07-18",
+                "text": "Islandwalk cares about lands with the land type Island, not necessarily lands named Island."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
 }
 
 // Sun Titan
@@ -2375,7 +3326,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",

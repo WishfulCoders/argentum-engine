@@ -3,7 +3,8 @@
  *
  * Tabs:
  *   - My decks: the unified deck library (cloud + browser), as a full-art deck gallery
- *   - Examples: server-supplied starter lists, same gallery tiles
+ *   - Examples: server-supplied starter decks, same gallery tiles — selected in place, like a
+ *               saved deck; "Customize" copies one into Paste
  *   - Paste:    free-form deck list parser ("4 Lightning Bolt" / "Lightning Bolt x4")
  *   - Random:   defer to the server (empty deck list → random sealed pool)
  *
@@ -23,12 +24,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PrintingRef } from '@/types'
 import type { AvailableSet } from '@/types/messages'
 import {
+  type SavedDeck,
+  commandersOf,
   mergeCommanderIntoCards,
   stripCommanderFromCards,
 } from '@/store/deckLibrary'
 import { type UnifiedDeck, useUnifiedDecks } from '@/store/useUnifiedDecks'
 import { useSaveDeck } from '@/store/useSaveDeck'
+import { useCardIndex } from '@/store/useCardIndex'
 import {
+  autoBuiltDeckSize,
   labelForFormat,
   useDeckLegalFormats,
 } from '@/utils/deckLegality'
@@ -40,8 +45,7 @@ import {
 import {
   DeckTile,
   DeckTileActionButton,
-  deckColors,
-  rarestCard,
+  deckTileModel,
 } from '@/components/deck/DeckTile'
 import { formatDeckText, parseDeckText } from './deckPasteText'
 import type { CardSummary } from '../deckbuilder/cardFilter'
@@ -57,12 +61,22 @@ export interface DeckPickerProps {
    * commander, when applicable, merged into the card counts). The optional `commander` is the
    * designated commander card name when the active selection is a saved deck with one. Quick
    * Game / Premade-Decks tournament flows pass it through to the server so commander-shape
-   * formats can wire the engine into Format.Commander.
+   * formats can wire the engine into Format.Commander. `secondCommander` is the partner of
+   * `commander` for a partner pair (CR 702.124); both are stripped from `deckList` alike.
    */
   onDeckChange: (
     deckList: Record<string, number>,
     commander?: string | null,
     sideboard?: Record<string, number>,
+    secondCommander?: string | null,
+    /** The deck's companion (CR 702.139) — a card on `sideboard` — or null. */
+    companion?: string | null,
+    /**
+     * The format the chosen deck was built for — a saved deck's or an example's — or null for a
+     * pasted list or a random pool. A hint the server checks, never trusts: the AI on Auto builds
+     * a deck for it.
+     */
+    deckFormat?: string | null,
   ) => void
   onValidityChange?: (isValid: boolean) => void
   /** Set selection for quick-game Random decks. Empty means the server chooses a set. */
@@ -112,12 +126,18 @@ export interface DeckPickerProps {
    * `onDeckChange` a recipe needs and that one can't give, since a decklist has no identity.
    */
   onSavedDeckNameChange?: (name: string | null) => void
+  /** A starter deck to preselect, by name, once the examples have loaded. Same guards as a saved one. */
+  initialExampleName?: string | undefined
+  /** Fired with the name of the selected starter deck, or null when the selection isn't one. */
+  onExampleNameChange?: (name: string | null) => void
 }
 
 interface ExampleDeck {
   id: string
   name: string
   description: string
+  /** A one-line tip on how to play it. */
+  note?: string | null
   cards: Record<string, number>
   /** Deck format this example is built for. Null = no format hint. */
   format?: string | null
@@ -127,6 +147,8 @@ interface ExampleDeck {
   printings?: Record<string, PrintingRef> | null
   /** Preferred printing for the commander, when one is designated. */
   commanderPrinting?: PrintingRef | null
+  /** The second commander of a partner pair, when the example has one. */
+  secondCommander?: string | null
 }
 
 type ValidationResult = DeckValidationResult
@@ -150,10 +172,12 @@ export function DeckPicker({
   onTabChange,
   initialSavedDeckName,
   onSavedDeckNameChange,
+  initialExampleName,
+  onExampleNameChange,
 }: DeckPickerProps) {
   // Unified library: cloud decks (when signed in) + browser-only decks, each tagged with where it
   // lives. Selecting a cloud deck works the same as a local one because both carry their card list.
-  const { decks, reload: reloadDecks, removeDeck } = useUnifiedDecks()
+  const { decks, settled: decksSettled, reload: reloadDecks, removeDeck } = useUnifiedDecks()
   const { save: saveDeckRouted } = useSaveDeck()
 
   const showSaved = tabs.includes('saved')
@@ -167,22 +191,30 @@ export function DeckPicker({
   // `randomDescription`).
   const randomIsConstructed = format !== null && !COMMANDER_SHAPES.includes(format.toUpperCase())
   const formatLabel = format?.replace('_', ' ').toLowerCase() ?? ''
+  const constructedSize = autoBuiltDeckSize(format)
 
-  // Default tab: saved if available, else paste, else the first allowed tab.
-  const initialTab: Tab = decks.length > 0 && showSaved
-    ? 'saved'
-    : showRandom
-      ? 'random'
-      : showPaste
-        ? 'paste'
-        : (tabs[0] ?? 'paste')
+  // Default tab: wherever a deck the caller named lives; else saved if available, else the starter
+  // decks, else random, else paste. Starters before Random because landing there submits nothing:
+  // Random's empty list *is* a deck, so defaulting to it quietly dealt a random deck to anyone with
+  // no saved decks who merely opened the picker — in a lobby that then retitled itself "Random deck".
+  const initialTab: Tab = initialExampleName && showExamples
+    ? 'examples'
+    : (decks.length > 0 || initialSavedDeckName) && showSaved
+      ? 'saved'
+      : showExamples
+        ? 'examples'
+        : showRandom
+          ? 'random'
+          : showPaste
+            ? 'paste'
+            : (tabs[0] ?? 'paste')
   const [uncontrolledTab, setUncontrolledTab] = useState<Tab>(() => initialTab)
   const tab = controlledTab ?? uncontrolledTab
   /**
-   * Whether landing on Random was a *placeholder* rather than a decision.
+   * Whether the opening tab was a *placeholder* rather than a decision.
    *
    * The deck library hydrates asynchronously, so on the first render `decks` is always empty and
-   * {@link initialTab} falls through to `random` — the picker's way of showing something rather than
+   * {@link initialTab} falls through past `saved` — the picker's way of showing something rather than
    * an empty "My Decks". That placeholder is replaced by `saved` as soon as the list arrives.
    *
    * Random asked for *from outside* is the opposite: the landing wizard's "Random pool" and the
@@ -191,9 +223,9 @@ export function DeckPicker({
    * "A friend → Random pool → Create lobby" opened a lobby sitting on My Decks — the picker
    * overwrote the answer the wizard had just collected.
    */
-  const randomIsPlaceholder = useRef(controlledTab === undefined)
+  const tabIsPlaceholder = useRef(controlledTab === undefined && !initialExampleName)
   const setTab = useCallback((next: Tab) => {
-    randomIsPlaceholder.current = false
+    tabIsPlaceholder.current = false
     setUncontrolledTab(next)
     onTabChange?.(next)
   }, [onTabChange])
@@ -202,10 +234,14 @@ export function DeckPicker({
   // commander UI of its own — loading a commander-shape example is the only way this gets
   // populated. Cleared whenever the user edits the paste text manually so a stale designation
   // can't outlive the original example contents.
-  const [pasteCommander, setPasteCommander] = useState<string | null>(null)
+  const [pasteCommanders, setPasteCommanders] = useState<readonly string[]>([])
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null)
+  const [selectedExampleId, setSelectedExampleId] = useState<string | null>(null)
   const [pendingName, setPendingName] = useState('')
-  const [cards, setCards] = useState<Record<string, CardSummary>>({})
+  // Note and cover riding along with whatever was opened into Paste (a saved deck being edited, or a
+  // starter's tip), so re-saving it there doesn't strip them. A save replaces the deck wholesale.
+  const [pendingDetails, setPendingDetails] = useState<Pick<SavedDeck, 'note' | 'coverCard' | 'coverImageUri'>>({})
+  const cards = useCardIndex()
   const [examples, setExamples] = useState<ExampleDeck[]>([])
   const [validation, setValidation] = useState<ValidationResult | null>(null)
   const [randomSetCodes, setRandomSetCodes] = useState<readonly string[]>(
@@ -240,9 +276,9 @@ export function DeckPicker({
     .join(', ')
   const randomDescription = randomIsConstructed
     ? pinnedSets
-      ? `A 60-card ${formatLabel}-legal deck, auto-built the moment the game starts from the
+      ? `A ${constructedSize}-card ${formatLabel}-legal deck, auto-built the moment the game starts from the
          ${formatLabel}-legal cards in ${setsPhrase}. Nothing to submit — just ready up.`
-      : `A 60-card ${formatLabel}-legal deck, auto-built from the whole legal card pool the moment
+      : `A ${constructedSize}-card ${formatLabel}-legal deck, auto-built from the whole legal card pool the moment
          the game starts. Pick sets below to build it out of those instead.`
     : format !== null
       ? pinnedSets
@@ -268,12 +304,11 @@ export function DeckPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Replace the placeholder Random tab with `saved` once decks are hydrated, so users land on their
-  // own list. Keyed on `decks.length`, so this only fires as the deck list arrives — a user who
-  // picks Random later stays on it, and so does a Random the caller asked for
-  // (see `randomIsPlaceholder`).
+  // Replace the placeholder tab with `saved` once decks are hydrated, so users land on their own
+  // list. Keyed on `decks.length`, so this only fires as the deck list arrives — a user who picks
+  // another tab later stays on it, and so does a tab the caller asked for (see `tabIsPlaceholder`).
   useEffect(() => {
-    if (randomIsPlaceholder.current && decks.length > 0 && tab === 'random' && showSaved) {
+    if (tabIsPlaceholder.current && decks.length > 0 && tab !== 'saved' && showSaved) {
       setTab('saved')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -296,6 +331,40 @@ export function DeckPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantedSavedName, decks, tab])
 
+  /** Same as {@link wantedSavedName}, for a starter deck the launch panel picked. */
+  const wantedExampleName = initialExampleName?.trim().toLowerCase()
+  useEffect(() => {
+    if (!wantedExampleName || selectedExampleId !== null || tab !== 'examples') return
+    const match = examples.find((ex) => ex.name.trim().toLowerCase() === wantedExampleName)
+    if (match) setSelectedExampleId(match.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedExampleName, examples, tab])
+
+  /**
+   * An empty "My Decks" is a dead end — a blank box and a sentence pointing at the other tabs — so
+   * someone with no decks of their own lands on the starter decks instead. Only once the library has
+   * really settled (an empty list on the first render means "not loaded yet"), only from Saved, and
+   * never over a saved deck the caller asked for.
+   */
+  const leftEmptySaved = useRef(false)
+  useEffect(() => {
+    if (leftEmptySaved.current || !decksSettled) return
+    // Once: after the library has settled, the player's own clicks decide — including going back
+    // to an empty My Decks to read its empty state.
+    leftEmptySaved.current = true
+    if (decks.length === 0 && tab === 'saved' && showExamples && !wantedSavedName) {
+      setTab('examples')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decksSettled, decks.length, tab])
+
+  useEffect(() => {
+    onExampleNameChange?.(
+      tab === 'examples' ? (examples.find((ex) => ex.id === selectedExampleId)?.name ?? null) : null,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, selectedExampleId, examples])
+
   // Report the *identity* of the chosen deck, which `onDeckChange`'s card list cannot carry.
   useEffect(() => {
     onSavedDeckNameChange?.(
@@ -312,18 +381,9 @@ export function DeckPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs])
 
-  // Fetch card metadata + examples once.
+  // Fetch the examples once (the card index is shared — see useCardIndex).
   useEffect(() => {
     let cancelled = false
-    fetch('/api/cards')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((list: CardSummary[]) => {
-        if (cancelled) return
-        const byName: Record<string, CardSummary> = {}
-        for (const c of list) byName[c.name] = c
-        setCards(byName)
-      })
-      .catch(() => {})
     fetch('/api/decks/examples')
       .then((r) => (r.ok ? r.json() : []))
       .then((list: ExampleDeck[]) => {
@@ -353,15 +413,13 @@ export function DeckPicker({
         // cards. Quick Game / Premade-Decks tournament submission flows feed
         // the result straight into the lobby payload, so without this the
         // server would receive 99 cards and the commander would be missing.
-        return mergeCommanderIntoCards(saved.cards, saved.commander ?? null)
+        return mergeCommanderIntoCards(saved.cards, ...commandersOf(saved))
       }
       case 'examples':
-        // Examples become a deck via the picker's Paste preview as soon as the user clicks one.
-        // Selecting an example loads its text into the paste tab; while still on the Examples tab
-        // we treat it as "no deck chosen yet".
-        return {}
+        // A starter deck is played as-is, like a saved one; "Customize" is the way into Paste.
+        return examples.find((ex) => ex.id === selectedExampleId)?.cards ?? {}
     }
-  }, [tab, parsedPaste, decks, selectedSavedId])
+  }, [tab, parsedPaste, decks, selectedSavedId, examples, selectedExampleId])
 
   // Auto-populate the Save-deck name from an Arena export's `Name <…>` line.
   // Only fills when the user hasn't typed something themselves, so we don't
@@ -374,15 +432,22 @@ export function DeckPicker({
   }, [parsedPaste.deckName])
 
   // Commander designation. Saved decks store one explicitly; commander-shape examples carry
-  // theirs through Paste via [pasteCommander]. Random has no commander hint.
-  const currentCommander: string | null = useMemo(() => {
+  // theirs through Paste via [pasteCommanders]. Random has no commander hint.
+  // A partner pair (CR 702.124) designates two; the first is `commander`, the second its partner.
+  const currentCommanders: readonly string[] = useMemo(() => {
     if (tab === 'saved') {
       const saved = decks.find((d) => d.id === selectedSavedId)
-      return saved?.commander ?? null
+      return saved ? commandersOf(saved) : []
     }
-    if (tab === 'paste') return pasteCommander
-    return null
-  }, [tab, decks, selectedSavedId, pasteCommander])
+    if (tab === 'paste') return pasteCommanders
+    if (tab === 'examples') {
+      const ex = examples.find((e) => e.id === selectedExampleId)
+      return ex ? commandersOf(ex) : []
+    }
+    return []
+  }, [tab, decks, selectedSavedId, pasteCommanders, examples, selectedExampleId])
+  const currentCommander: string | null = currentCommanders[0] ?? null
+  const currentSecondCommander: string | null = currentCommanders[1] ?? null
 
   // The constructed sideboard ("outside the game", CR 400.11a) the wish effects fetch from.
   // Saved decks carry one (the deckbuilder persists it) and a pasted list carries whatever sat
@@ -397,14 +462,31 @@ export function DeckPicker({
     return {}
   }, [tab, decks, selectedSavedId, parsedPaste])
 
+  // The companion (CR 702.139): a saved deck's marked one, or a pasted list's `Companion` section —
+  // kept only while it is still on the sideboard it rides on.
+  const currentCompanion: string | null = useMemo(() => {
+    const named = tab === 'saved'
+      ? decks.find((d) => d.id === selectedSavedId)?.companion
+      : tab === 'paste' ? parsedPaste.companion : undefined
+    return named && (currentSideboard[named] ?? 0) > 0 ? named : null
+  }, [tab, decks, selectedSavedId, parsedPaste, currentSideboard])
+
+  // The format the chosen deck was built for: a saved deck's, else an example's. A pasted list
+  // carries none — the server infers one from its legality.
+  const currentFormat: string | null = useMemo(() => {
+    if (tab === 'saved') return decks.find((d) => d.id === selectedSavedId)?.format ?? null
+    if (tab === 'examples') return examples.find((ex) => ex.id === selectedExampleId)?.format ?? null
+    return null
+  }, [tab, decks, selectedSavedId, examples, selectedExampleId])
+
   // Strip the commander out of `currentDeck` before crossing the network boundary. `currentDeck`
   // keeps the commander baked in so the totalCards display reads "100 cards" for a Commander
   // deck, but the server's `Deck.cards` is documented as the library only (CR 903.6a) — the
   // validator / lobby registrar adds the commander on top of `cards`. Sending both would count
   // the commander twice. Mirrors the equivalent strip in DeckbuilderPage.
   const deckListForServer = useMemo(
-    () => stripCommanderFromCards(currentDeck, currentCommander),
-    [currentDeck, currentCommander],
+    () => stripCommanderFromCards(currentDeck, ...currentCommanders),
+    [currentDeck, currentCommanders],
   )
 
   // Push the current deck up. We deliberately suppress empty emissions from non-Random tabs
@@ -414,8 +496,13 @@ export function DeckPicker({
   // On the Random tab `{}` *is* the chosen deck (server generates a random pool), so emit it.
   useEffect(() => {
     if (tab !== 'random' && Object.keys(currentDeck).length === 0) return
-    onDeckChange(deckListForServer, currentCommander, currentSideboard)
-  }, [tab, currentDeck, deckListForServer, currentCommander, currentSideboard, onDeckChange])
+    onDeckChange(
+      deckListForServer, currentCommander, currentSideboard, currentSecondCommander, currentCompanion, currentFormat,
+    )
+  }, [
+    tab, currentDeck, deckListForServer, currentCommander, currentSecondCommander, currentSideboard, currentCompanion,
+    currentFormat, onDeckChange,
+  ])
 
   // Server-side validation when the deck is non-empty.
   useEffect(() => {
@@ -434,6 +521,9 @@ export function DeckPicker({
         deckList: deckListForServer,
         ...(format ? { format } : {}),
         ...(currentCommander ? { commander: currentCommander } : {}),
+        ...(currentCommander && currentSecondCommander ? { secondCommander: currentSecondCommander } : {}),
+        // A companion is checked against the deck on the same pass (CR 702.139).
+        ...(currentCompanion ? { companion: currentCompanion, sideboard: currentSideboard } : {}),
       }),
       signal: ctrl.signal,
     })
@@ -453,7 +543,10 @@ export function DeckPicker({
     return () => {
       ctrl.abort()
     }
-  }, [currentDeck, deckListForServer, currentCommander, onValidityChange, format])
+  }, [
+    currentDeck, deckListForServer, currentCommander, currentSecondCommander, currentCompanion, currentSideboard,
+    onValidityChange, format,
+  ])
 
   const stats = useMemo(() => computeDeckStats(currentDeck, cards), [currentDeck, cards])
   const totalCards = Object.values(currentDeck).reduce((a, b) => a + b, 0)
@@ -464,10 +557,11 @@ export function DeckPicker({
     [parsedPaste],
   )
 
-  const handleLoadExample = (ex: ExampleDeck) => {
+  const handleCustomizeExample = (ex: ExampleDeck) => {
     setPasteText(formatDeckText(ex.cards))
-    setPasteCommander(ex.commander ?? null)
+    setPasteCommanders(commandersOf(ex))
     setPendingName(ex.name)
+    setPendingDetails(ex.note ? { note: ex.note } : {})
     setTab('paste')
   }
 
@@ -478,10 +572,13 @@ export function DeckPicker({
       name: pendingName.trim(),
       cards: currentDeck,
       ...(Object.keys(currentSideboard).length > 0 ? { sideboard: currentSideboard } : {}),
+      ...(currentCompanion ? { companion: currentCompanion } : {}),
+      ...pendingDetails,
     })
     reloadDecks()
     setSelectedSavedId(id)
     setPendingName('')
+    setPendingDetails({})
     setTab('saved')
   }
 
@@ -492,7 +589,7 @@ export function DeckPicker({
   const legalityInput = useMemo(() => {
     const out: Record<string, Record<string, number>> = {}
     for (const d of decks) {
-      out[d.id] = mergeCommanderIntoCards(d.cards, d.commander ?? null)
+      out[d.id] = mergeCommanderIntoCards(d.cards, ...commandersOf(d))
     }
     return out
   }, [decks])
@@ -501,7 +598,9 @@ export function DeckPicker({
   // Examples are curated for a concrete format. Once the lobby chooses one, do not show untagged
   // or differently-shaped decks that the server will reject on submission.
   const visibleExamples = useMemo(() => {
-    if (!format) return examples
+    // With no format a lobby plays 60-card decks; a 100-card commander precon is not a starter
+    // for that table, only for a Commander one.
+    if (!format) return examples.filter((ex) => !COMMANDER_SHAPES.includes(ex.format?.toUpperCase() ?? ''))
     const target = format.toUpperCase()
     return examples.filter((ex) => ex.format?.toUpperCase() === target)
   }, [examples, format])
@@ -520,9 +619,9 @@ export function DeckPicker({
 
   return (
     <div className={styles.picker}>
-      <div className={styles.tabs}>
-        {showSaved && <TabButton label={`My Decks${decks.length ? ` (${decks.length})` : ''}`} active={tab === 'saved'} onClick={() => setTab('saved')} disabled={disabled} />}
-        {showExamples && <TabButton label="Examples" active={tab === 'examples'} onClick={() => setTab('examples')} disabled={disabled} />}
+      <div className={styles.tabs} role="tablist" aria-label="Where the deck comes from">
+        {showSaved && <TabButton label="My Decks" count={decks.length || undefined} active={tab === 'saved'} onClick={() => setTab('saved')} disabled={disabled} />}
+        {showExamples && <TabButton label="Starter" title="Starter decks — ready-made lists to play or customise" active={tab === 'examples'} onClick={() => setTab('examples')} disabled={disabled} />}
         {showPaste && <TabButton label="Paste" active={tab === 'paste'} onClick={() => setTab('paste')} disabled={disabled} />}
         {showRandom && <TabButton label="Random" active={tab === 'random'} onClick={() => setTab('random')} disabled={disabled} />}
       </div>
@@ -538,6 +637,8 @@ export function DeckPicker({
             selectedId={selectedSavedId}
             disabled={disabled}
             onSelect={setSelectedSavedId}
+            onBrowse={showExamples ? () => setTab('examples') : undefined}
+            onPaste={showPaste ? () => setTab('paste') : undefined}
             onDelete={(d) => {
               void removeDeck(d)
               if (selectedSavedId === d.id) setSelectedSavedId(null)
@@ -547,9 +648,14 @@ export function DeckPicker({
               // which is stored separately on `SavedDeck` but should appear in the
               // text the user can edit.
               setPasteText(
-                formatDeckText(mergeCommanderIntoCards(d.cards, d.commander ?? null), d.sideboard),
+                formatDeckText(mergeCommanderIntoCards(d.cards, ...commandersOf(d)), d.sideboard, d.companion),
               )
               setPendingName(d.name)
+              setPendingDetails({
+                ...(d.note ? { note: d.note } : {}),
+                ...(d.coverCard ? { coverCard: d.coverCard } : {}),
+                ...(d.coverImageUri ? { coverImageUri: d.coverImageUri } : {}),
+              })
               setTab('paste')
             }}
           />
@@ -561,7 +667,9 @@ export function DeckPicker({
             catalog={cards}
             loading={examples.length === 0}
             disabled={disabled}
-            onLoad={handleLoadExample}
+            selectedId={selectedExampleId}
+            onSelect={setSelectedExampleId}
+            onCustomize={handleCustomizeExample}
           />
         )}
 
@@ -573,7 +681,7 @@ export function DeckPicker({
                 setPasteText(e.target.value)
                 // A manual edit voids any commander designation an example may have carried —
                 // the user might have removed the commander card from the list entirely.
-                if (pasteCommander !== null) setPasteCommander(null)
+                if (pasteCommanders.length > 0) setPasteCommanders([])
               }}
               disabled={disabled}
               className={styles.textarea}
@@ -649,7 +757,7 @@ export function DeckPicker({
 
       {tab !== 'random' && (
         <div className={styles.summaryWrapper}>
-          <DeckSummary validation={validation} totalCards={totalCards} stats={stats} />
+          <DeckSummary validation={validation} totalCards={totalCards} stats={stats} compactOnSmallScreens />
         </div>
       )}
     </div>
@@ -657,11 +765,20 @@ export function DeckPicker({
 }
 
 function TabButton({
-  label, active, onClick, disabled,
-}: { label: string; active: boolean; onClick: () => void; disabled?: boolean }) {
+  label, count, title, active, onClick, disabled,
+}: { label: string; count?: number | undefined; title?: string; active: boolean; onClick: () => void; disabled?: boolean }) {
   return (
-    <button className={`${styles.tab} ${active ? styles.tabActive : ''}`} onClick={onClick} disabled={disabled} type="button">
+    <button
+      className={`${styles.tab} ${active ? styles.tabActive : ''}`}
+      onClick={onClick}
+      disabled={disabled}
+      type="button"
+      role="tab"
+      aria-selected={active}
+      title={title}
+    >
       {label}
+      {count !== undefined && <span className={styles.tabCount}>{count}</span>}
     </button>
   )
 }
@@ -672,7 +789,7 @@ function TabButton({
  * deck to play, and hover exposes Edit (opens it in the Paste tab) / Delete.
  */
 function SavedDecksPanel({
-  decks, catalog, legalityMap, format, hiddenCount, selectedId, disabled, onSelect, onDelete, onEdit,
+  decks, catalog, legalityMap, format, hiddenCount, selectedId, disabled, onSelect, onDelete, onEdit, onBrowse, onPaste,
 }: {
   decks: UnifiedDeck[]
   catalog: Record<string, CardSummary>
@@ -684,21 +801,13 @@ function SavedDecksPanel({
   onSelect: (id: string) => void
   onDelete: (d: UnifiedDeck) => void
   onEdit: (d: UnifiedDeck) => void
+  onBrowse?: (() => void) | undefined
+  onPaste?: (() => void) | undefined
 }) {
-  // Tile metadata per deck. The commander is folded back into the card map (saved decks keep
-  // it out of `cards` per `SavedDeck.commander`) so the count and pips match what actually
-  // gets played, and so a commander can win the hero-art tie-break.
+  // Tile metadata per deck: count and pips with the commander folded back in, and the cover the
+  // owner chose (else the rarest card) — see deckTileModel.
   const tiles = useMemo(
-    () =>
-      decks.map((d) => {
-        const fullCards = mergeCommanderIntoCards(d.cards, d.commander ?? null)
-        return {
-          deck: d,
-          total: Object.values(fullCards).reduce((a, b) => a + b, 0),
-          colors: deckColors(fullCards, catalog),
-          hero: rarestCard(fullCards, catalog, d.commander ?? null),
-        }
-      }),
+    () => decks.map((d) => ({ deck: d, ...deckTileModel(d, catalog) })),
     [decks, catalog],
   )
 
@@ -711,7 +820,16 @@ function SavedDecksPanel({
         </p>
       )
     }
-    return <p className={styles.helperText}>No saved decks yet. Use the Paste tab to enter a list, then Save it.</p>
+    return (
+      <div className={styles.emptyState}>
+        <strong>No decks of your own yet</strong>
+        <span>Build one in the Deckbuilder, or start from a ready-made list.</span>
+        <div className={styles.emptyActions}>
+          {onBrowse && <button type="button" className={styles.emptyAction} onClick={onBrowse}>Browse starter decks</button>}
+          {onPaste && <button type="button" className={styles.emptyAction} onClick={onPaste}>Paste a list</button>}
+        </div>
+      </div>
+    )
   }
   return (
     <>
@@ -730,6 +848,7 @@ function SavedDecksPanel({
               <DeckTile
                 key={deck.id}
                 name={deck.name}
+                note={deck.note}
                 total={total}
                 colors={colors}
                 hero={hero}
@@ -777,32 +896,32 @@ function SavedDecksPanel({
 
 /**
  * Server-supplied starter decks, shown as the same art tiles as "My Decks" so both halves of
- * the picker read as one gallery. Clicking a tile loads the list into the Paste tab (where the
- * user can tweak and save it) — matching the pre-gallery behaviour.
+ * the picker read as one gallery. Clicking a tile selects it to play, exactly as on My Decks;
+ * the hover ✎ copies it into the Paste tab to tweak and save.
+ *
+ * Clicking used to *load into Paste* — so choosing a starter deck threw you onto a textarea of
+ * card names, which read as "now edit this" when all you wanted was to play it.
  */
 function ExampleDecksPanel({
-  examples, catalog, loading, disabled, onLoad,
+  examples, catalog, loading, disabled, selectedId, onSelect, onCustomize,
 }: {
   examples: ExampleDeck[]
   catalog: Record<string, CardSummary>
   loading: boolean
   disabled: boolean
-  onLoad: (ex: ExampleDeck) => void
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onCustomize: (ex: ExampleDeck) => void
 }) {
   const tiles = useMemo(
     () =>
-      examples.map((ex) => ({
-        example: ex,
-        total: Object.values(ex.cards).reduce((a, b) => a + b, 0),
-        colors: deckColors(ex.cards, catalog),
-        hero: rarestCard(ex.cards, catalog, ex.commander ?? null),
-      })),
+      examples.map((ex) => ({ example: ex, ...deckTileModel(ex, catalog) })),
     [examples, catalog],
   )
   if (tiles.length === 0) {
     return (
       <p className={styles.helperText}>
-        {loading ? 'Loading examples…' : 'No examples for this format.'}
+        {loading ? 'Loading starter decks…' : 'No starter decks for this format.'}
       </p>
     )
   }
@@ -814,14 +933,26 @@ function ExampleDecksPanel({
             key={example.id}
             name={example.name}
             description={example.description}
+            note={example.note ?? undefined}
             total={total}
             colors={colors}
             hero={hero}
             format={example.format ?? null}
             formatTitle={example.format ? `Built for ${labelForFormat(example.format)}` : undefined}
-            title={`Load ${example.name} into the Paste tab`}
+            selected={example.id === selectedId}
+            badge={example.id === selectedId ? 'Selected' : undefined}
+            title={`Play with ${example.name}`}
             disabled={disabled}
-            onClick={() => onLoad(example)}
+            onClick={() => onSelect(example.id)}
+            actions={
+              <DeckTileActionButton
+                onClick={() => onCustomize(example)}
+                title="Customize — copy into the Paste tab"
+                ariaLabel={`Customize ${example.name}`}
+              >
+                ✎
+              </DeckTileActionButton>
+            }
           />
         ))}
       </div>

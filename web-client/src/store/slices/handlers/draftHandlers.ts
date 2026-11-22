@@ -33,9 +33,10 @@ export function createDraftHandlers(set: SetState, _get: GetState): Pick<Message
             Forest: 0,
           },
           opponentReady: false,
-          llmHighlightedCards: null,
           commander: null,
+          secondCommander: null,
           poolPlay: false,
+          maxCopiesPerCard: null,
         },
       })
     },
@@ -69,9 +70,10 @@ export function createDraftHandlers(set: SetState, _get: GetState): Pick<Message
               Forest: 0,
             },
             opponentReady: state.deckBuildingState?.opponentReady ?? false,
-            llmHighlightedCards: state.deckBuildingState?.llmHighlightedCards ?? null,
             commander: state.deckBuildingState?.commander ?? null,
+            secondCommander: state.deckBuildingState?.secondCommander ?? null,
             poolPlay: msg.poolPlay ?? false,
+            maxCopiesPerCard: msg.maxCopiesPerCard ?? null,
           },
         }
       })
@@ -180,9 +182,10 @@ export function createDraftHandlers(set: SetState, _get: GetState): Pick<Message
           deck: [],
           landCounts: { Plains: 0, Island: 0, Swamp: 0, Mountain: 0, Forest: 0 },
           opponentReady: false,
-          llmHighlightedCards: null,
           commander: null,
+          secondCommander: null,
           poolPlay: false,
+          maxCopiesPerCard: null,
         },
       }))
     },

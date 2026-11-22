@@ -30,192 +30,9 @@
   }
 }
 
-.contentBackdrop {
-  position: relative;
-  /* Shrinkable, so the glass card gives ground to the side rail before the two can collide. The
-     max is the old fixed width: 660px of tiers plus the horizontal padding either side. Sized by
-     width rather than flex-basis because the same rule has to survive the stacked column below
-     1120px, where a basis would be read as a height. */
-  flex: 0 1 auto;
-  width: 100%;
-  max-width: var(--screen-card-w);
-  min-width: 0;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-5) var(--space-8);
-  background:
-    linear-gradient(180deg, rgba(20, 20, 35, 0.78) 0%, rgba(8, 8, 16, 0.82) 100%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 0 0 1px rgba(0, 0, 0, 0.4),
-    0 24px 60px rgba(0, 0, 0, 0.55),
-    0 4px 16px rgba(79, 195, 247, 0.06);
-  animation: backdropFadeIn 0.45s ease-out;
-}
-
 @keyframes backdropFadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-/*
- * Landing top bar: the viewport controls (fullscreen, help) at the left, the account widget at the
- * right, as one flow row above everything else.
- *
- * The account pills belong in the corner — that is where you look for who you are signed in as — but
- * they are the widest thing on the screen's top edge (five of them on an admin account), and a
- * `position: fixed` corner has no way to know where the glass card's edge is. That is the collision
- * `.landingLayout` below was built to make inexpressible, so the row is in flow too:
- * `space-between` seats both clusters without either being able to reach the card.
- */
-.landingTopBar {
-  flex: none;
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.landingTopBarControls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Under ~720px the two clusters can't share a line without shrinking each other — the pills start
-   breaking their own labels over two rows. Each takes a full line instead, account below controls,
-   still right-aligned. */
-@media (max-width: 720px) {
-  .landingTopBar {
-    flex-wrap: wrap;
-  }
-
-  .landingTopBar > * {
-    flex: 1 0 100%;
-  }
-}
-
-/*
- * Landing layout: the glass card and the side rail (public lobbies, live games).
- *
- * The rail used to be `position: fixed` in the top-right corner while the card was centred in the
- * *viewport*, so the two were laid out in ignorance of each other. They only missed on a wide
- * monitor: at 1512px (a 14" MacBook Pro) the gap was 1px, and at 1440px the rail sat 35px *over*
- * the card. Both are in flow now, so a collision is not expressible.
- *
- * Three bands, widest first:
- *  - >= 1480px  a mirror gutter is rendered opposite the rail, so the card is back to being exactly
- *               viewport-centred with the rail floating in the right margin.
- *  - 1121px+    no gutter: card and rail are centred as a pair, and the card gives up width first.
- *  - <= 1120px  stacked, rail below the card — a 500px-wide card is worse than a scroll.
- */
-.landingLayout {
-  --landing-rail-w: 320px;
-  margin: auto 0;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: var(--space-5);
-}
-
-/* Reserves the same width as the rail on the opposite side. Empty on purpose — its only job is to
-   keep the card centred, and it is `display: none` in the bands where that isn't affordable. */
-.landingGutter {
-  display: none;
-  flex: none;
-  width: var(--landing-rail-w);
-}
-
-@media (min-width: 1480px) {
-  .landingGutter {
-    display: block;
-  }
-}
-
-/* Below this the padding is spending width the wizard needs more than the glass does. */
-@media (max-width: 1280px) {
-  .contentBackdrop {
-    padding-left: var(--space-6);
-    padding-right: var(--space-6);
-  }
-}
-
-@media (max-width: 1120px) {
-  .landingLayout {
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-4);
-  }
-}
-
-@media (max-width: 639px) {
-  .contentBackdrop {
-    gap: var(--space-4);
-    padding: var(--space-6) var(--space-4);
-  }
-
-  .landingLayout {
-    gap: var(--space-3);
-  }
-}
-
-/* =========================================================================
- * Set Button Progress (in lobby set selection)
- * ========================================================================= */
-.settingsButtonWithProgress {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  text-align: left;
-  gap: 6px;
-  padding: 7px var(--space-3) 6px;
-}
-
-.setButtonName {
-  white-space: nowrap;
-}
-
-.setButtonFooter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.setButtonProgressBar {
-  display: block;
-  flex: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.setButtonProgressFill {
-  display: block;
-  height: 100%;
-  background: rgba(130, 160, 255, 0.7);
-  border-radius: 2px;
-}
-
-.settingsButtonActive .setButtonProgressFill {
-  background: rgba(255, 255, 255, 0.55);
-}
-
-.setButtonProgress {
-  font-size: 10px;
-  color: var(--text-disabled);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .setButtonCardCount {
@@ -225,55 +42,8 @@
 }
 
 /* =========================================================================
- * Lobby Overlay
- * ========================================================================= */
-.lobbyOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--gradient-page) center center / cover no-repeat;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: var(--text-primary);
-  padding: var(--space-4);
-  overflow-y: auto;
-}
-
-@media (max-width: 639px) {
-  .lobbyOverlay {
-    padding: var(--space-1);
-  }
-}
-
-/* Same width as the landing card it replaces — see `--screen-card-w`. The two are consecutive
-   screens, so a different cap on each read as the page reflowing rather than as a new screen. */
-.lobbyContent {
-  width: 100%;
-  max-width: var(--screen-card-w);
-  margin: auto 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  padding: var(--space-5) var(--space-6);
-}
-
-@media (max-width: 639px) {
-  .lobbyContent {
-    max-width: 100%;
-  }
-}
-
-/* =========================================================================
- * Tournament Overlay
+ * Tournament Overlay — the standings between rounds, in the play hub's language: card art behind a
+ * tint (set inline, with the art), glass panels, the display serif, amber for Ready.
  * ========================================================================= */
 .tournamentOverlay {
   position: absolute;
@@ -281,32 +51,33 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--bg-overlay-darker);
+  background: #07080d center center / cover no-repeat;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* `safe`: when the column is taller than the window it starts at the top instead of being cut off. */
+  justify-content: safe center;
   color: var(--text-primary);
   gap: var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-6) var(--space-4);
   overflow: auto;
 }
 
 @media (max-width: 639px) {
   .tournamentOverlay {
-    padding: var(--space-1);
+    padding: var(--space-4) var(--space-3);
   }
 }
 
 /* ── Tournament layout: single centered column ── */
 .trnSection {
   width: 100%;
-  max-width: 600px;
+  max-width: 760px;
 }
 
 .trnHeader {
   width: 100%;
-  max-width: 600px;
+  max-width: 760px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -322,54 +93,71 @@
 
 .trnTitle {
   margin: 0;
-  font-size: var(--font-2xl);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f4f5f9;
   white-space: nowrap;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5);
 }
 
 .trnRound {
-  color: var(--text-muted);
+  color: #c3c9d7;
   font-size: var(--font-md);
   white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
 }
 
 .trnToolbar {
   display: flex;
-  gap: var(--space-1);
+  flex-wrap: wrap;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .trnToolbarBtn {
-  padding: var(--space-1) var(--space-3);
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-  color: var(--text-disabled);
-  background: transparent;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  min-height: 32px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #d5dae6;
+  background: rgba(10, 12, 20, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
   white-space: nowrap;
 }
 
 .trnToolbarBtn:hover {
-  color: var(--text-tertiary);
-  background-color: rgba(255, 255, 255, 0.04);
-  border-color: var(--border-medium);
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.trnToolbarBtn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 /* Action zone — groups next-match + ready + bye into a card */
 .trnActionZone {
   width: 100%;
-  max-width: 600px;
+  max-width: 760px;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
+  padding: 18px 20px;
+  background: rgba(10, 12, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
 }
 
 /* Ready row — horizontal with count inline */
@@ -382,10 +170,48 @@
 
 .trnFooter {
   width: 100%;
-  max-width: 600px;
+  max-width: 760px;
   display: flex;
   justify-content: center;
+  gap: var(--space-3);
   padding-top: var(--space-2);
+}
+
+/* Leaving: a quiet glass button that still reads over the card art (the generic leave button is
+   near-invisible there), turning red only on the confirm click. */
+.trnLeave {
+  min-height: 40px;
+  padding: 0 20px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c9cfdc;
+  background: rgba(10, 12, 20, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.trnLeave:hover {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+.trnLeaveConfirm {
+  composes: trnLeave;
+  border-color: rgba(248, 113, 113, 0.7);
+  background: rgba(127, 29, 29, 0.45);
+  color: #fecaca;
+}
+
+.trnLeave:focus-visible,
+.trnLeaveConfirm:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 @media (max-width: 639px) {
@@ -435,86 +261,6 @@
   text-shadow: 0 1px 18px rgba(120, 170, 255, 0.12);
 }
 
-.commitHash {
-  font-size: 10px;
-  color: var(--text-disabled);
-  font-family: ui-monospace, monospace;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.55;
-  margin-top: calc(-1 * var(--space-4));
-  padding: 2px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.lobbyTitle {
-  margin: 0 0 var(--space-1) 0;
-  font-family: var(--font-display);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.005em;
-  background: var(--gradient-title);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-size: var(--font-2xl);
-}
-
-@media (max-width: 639px) {
-  .lobbyTitle {
-    font-size: var(--font-xl);
-  }
-}
-
-/* =========================================================================
- * Error Message
- * ========================================================================= */
-.errorMessage {
-  color: var(--color-error);
-  font-size: var(--font-md);
-}
-
-/* =========================================================================
- * Input Group
- * ========================================================================= */
-.inputGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: center;
-  width: 100%;
-  max-width: 480px;
-}
-
-.inputLabel {
-  color: var(--text-muted);
-  font-size: var(--font-md);
-}
-
-.accountNudge {
-  margin: var(--space-1) 0 0;
-  max-width: 340px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--font-sm);
-  line-height: 1.45;
-}
-
-.accountNudgeButton {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--color-accent);
-  font-size: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.accountNudgeButton:hover {
-  filter: brightness(1.15);
-}
-
 .textInput {
   background-color: var(--bg-surface-5);
   color: var(--text-primary);
@@ -536,24 +282,6 @@
 .textInput:focus {
   outline: none;
   border-color: var(--color-accent);
-}
-
-.sessionInput {
-  composes: textInput;
-  text-align: left;
-  max-width: none;
-  flex: 1;
-  min-width: 320px;
-  font-family: monospace;
-  letter-spacing: 0.02em;
-  font-size: var(--font-md);
-}
-
-@media (max-width: 639px) {
-  .sessionInput {
-    min-width: 0;
-    font-size: var(--font-sm);
-  }
 }
 
 /* =========================================================================
@@ -602,25 +330,6 @@
   box-shadow: none;
   cursor: not-allowed;
   color: var(--text-disabled);
-}
-
-.joinButton {
-  composes: primaryButton;
-  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-  white-space: nowrap;
-  max-width: 100px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
-}
-
-.joinButton:disabled {
-  background-color: var(--bg-surface-6);
-}
-
-@media (max-width: 639px) {
-  .joinButton {
-    max-width: none;
-  }
 }
 
 .cancelButton {
@@ -674,56 +383,17 @@
   font-size: var(--font-lg);
 }
 
-/* =========================================================================
- * Join Row
- * ========================================================================= */
-.joinRow {
-  display: flex;
-  gap: var(--space-2);
-  width: 100%;
-}
-
-@media (max-width: 639px) {
-  .joinRow {
-    flex-direction: column;
-  }
-}
-
-/* =========================================================================
- * Public Tournament List
- * ========================================================================= */
-/* In flow beside the glass card (see `.landingLayout`), not pinned to the viewport corner. Capped in
-   height so a busy server's lobby list scrolls inside the rail instead of stretching the row. */
-.sidePanelStack {
-  flex: none;
-  width: var(--landing-rail-w);
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  max-height: calc(100vh - 2 * var(--space-6));
-  overflow-y: auto;
-}
-
-@media (max-width: 1120px) {
-  .sidePanelStack {
-    width: min(var(--screen-card-w), 100%);
-    max-height: none;
-  }
-}
-
 .publicTournamentPanel {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: rgba(10, 10, 15, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-xl);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+  background: rgba(10, 12, 20, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
 .publicTournamentHeader {
@@ -752,25 +422,7 @@
   gap: var(--space-2);
 }
 
-.onlinePlayersBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary, #c8c8d0);
-  font-size: 11px;
-  padding: 2px 8px;
-  background: rgba(46, 204, 113, 0.12);
-  border: 1px solid rgba(46, 204, 113, 0.3);
-  border-radius: 999px;
-}
 
-.onlinePlayersDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #2ecc71;
-  box-shadow: 0 0 6px rgba(46, 204, 113, 0.7);
-}
 
 /* Sized for the 320px rail: the action button gets exactly the width its label needs and the rest
    goes to the lobby description, which is the part that decides whether you click. */
@@ -809,33 +461,14 @@
   white-space: nowrap;
 }
 
-.publicTournamentMeta,
-.publicTournamentEmpty {
+.publicTournamentMeta {
   color: var(--text-tertiary);
   font-size: 11px;
   line-height: 1.4;
 }
 
-.publicTournamentEmpty {
-  margin: 0;
-}
 
-.publicTournamentJoinButton {
-  flex: 0 0 auto;
-  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-  color: var(--text-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  padding: 6px var(--space-3);
-  font-size: 12px;
-  font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
-}
 
-.publicTournamentJoinButton:hover {
-  filter: brightness(1.1);
-}
 
 .spectateButton {
   flex: 0 0 auto;
@@ -882,17 +515,6 @@
   50% { opacity: 0.45; }
 }
 
-/* =========================================================================
- * Secondary Button Row (Deckbuilder + Replays side-by-side)
- * ========================================================================= */
-.secondaryButtonRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  width: 100%;
-  justify-content: center;
-}
-
 .secondaryButton {
   flex: 1 1 0;
   min-width: 0;
@@ -912,12 +534,6 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.18);
-}
-
-@media (max-width: 639px) {
-  .secondaryButtonRow {
-    flex-direction: column;
-  }
 }
 
 /* =========================================================================
@@ -954,56 +570,8 @@
   color: var(--text-primary);
 }
 
-/* =========================================================================
- * Waiting Section
- * ========================================================================= */
-.waitingSection {
-  text-align: center;
-  width: 100%;
-  max-width: 520px;
-}
-
 .waitingTitle {
   font-size: var(--font-md);
-}
-
-.waitingSubtitle {
-  color: var(--text-muted);
-  font-size: var(--font-md);
-}
-
-/* =========================================================================
- * Invite Code Box
- * ========================================================================= */
-.inviteBox {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  background-color: var(--bg-panel-light);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: var(--space-3);
-  min-width: 0;
-  width: auto;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-@media (max-width: 639px) {
-  .inviteBox {
-    padding: var(--space-2) var(--space-3);
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-.inviteBoxCopied {
-  background-color: rgba(79, 195, 247, 0.08);
-  border-color: rgba(79, 195, 247, 0.3);
 }
 
 .inviteCode {
@@ -1022,16 +590,6 @@
   }
 }
 
-.inviteCopyLabel {
-  color: var(--text-faint);
-  font-size: 12px;
-  transition: color 0.2s;
-}
-
-.inviteCopyLabelCopied {
-  color: var(--color-accent);
-}
-
 /* One role-aware answer to “what do I do now?”, placed between sharing the lobby and the controls
    that fulfil it. The server snapshot remains authoritative; this only explains its current state. */
 .lobbyGuidance {
@@ -1039,14 +597,16 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  background: var(--bg-panel-light);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(10, 12, 20, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .lobbyGuidanceAction {
-  border-color: rgba(79, 195, 247, 0.32);
-  background: rgba(79, 195, 247, 0.07);
+  border-color: rgba(242, 180, 92, 0.4);
+  background: rgba(48, 36, 14, 0.66);
 }
 
 .lobbyGuidanceWaiting {
@@ -1054,8 +614,8 @@
 }
 
 .lobbyGuidanceReady {
-  border-color: rgba(76, 175, 80, 0.35);
-  background: rgba(76, 175, 80, 0.08);
+  border-color: rgba(95, 208, 184, 0.45);
+  background: rgba(14, 40, 36, 0.66);
 }
 
 .lobbyGuidanceIcon {
@@ -1079,27 +639,13 @@
 
 .lobbyGuidanceBody strong {
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: 14px;
 }
 
 .lobbyGuidanceBody span {
-  color: var(--text-tertiary);
-  font-size: var(--font-xs, 0.75rem);
+  color: #b4bccd;
+  font-size: 13px;
   line-height: 1.4;
-}
-
-/* =========================================================================
- * Lobby Header
- * ========================================================================= */
-.lobbyHeader {
-  text-align: center;
-  margin-bottom: var(--space-2);
-}
-
-.lobbySubtitle {
-  color: var(--text-faint);
-  font-size: var(--font-sm);
-  margin: 0;
 }
 
 /* Cards / Table / Event chips — the lobby's point in the three-axis space, shown to every player
@@ -1107,7 +653,7 @@
 .axisSummary {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
@@ -1117,9 +663,9 @@
   align-items: center;
   gap: 6px;
   padding: 3px var(--space-2);
-  background-color: var(--bg-surface-4);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
 }
 
 .axisChipName {
@@ -1143,9 +689,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  background-color: var(--bg-panel-light);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
+  background-color: rgba(10, 12, 20, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
   /* Deliberately *not* a scroll container. It used to cap at `min(62vh, 640px)` and scroll
      internally, to keep the lobby from re-centering as sets/boosters were added — but that put a
      second scrollbar on the screen for the half of the lobby above Players, and a third once a
@@ -1336,10 +884,10 @@
 .settingsButton {
   padding: 5px var(--space-3);
   font-size: var(--font-sm);
-  background-color: var(--bg-surface-4);
-  color: var(--text-muted);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #b4bccd;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
   cursor: pointer;
   font-weight: var(--font-weight-normal);
 }
@@ -1353,8 +901,9 @@
 }
 
 .settingsButtonActive {
-  background-color: var(--color-warning-light);
-  color: var(--text-primary);
+  background-color: rgba(242, 180, 92, 0.2);
+  border-color: rgba(242, 180, 92, 0.75);
+  color: #fbe7c6;
   font-weight: var(--font-weight-semibold);
 }
 
@@ -1454,6 +1003,99 @@
   cursor: pointer;
 }
 
+/* Sticky so the commit button stays in reach under a long deck gallery, on a phone especially. */
+.deckPickerModalFooter {
+  position: sticky;
+  bottom: calc(-1 * var(--space-5));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-surface-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.deckPickerModalSelection {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-right: auto;
+  min-width: 0;
+}
+.deckPickerModalSelectionLabel {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.deckPickerModalSelectionName {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deckPickerModalReason {
+  margin-right: auto;
+  font-size: var(--font-sm);
+  color: #e8c27a;
+}
+
+/* The lobby's own gold, so the dialog's commit reads as the same action as the bar's Ready button. */
+.deckPickerModalPrimary {
+  min-height: 44px;
+  min-width: 160px;
+  padding: 0 var(--space-5);
+  border: none;
+  border-radius: 12px;
+  background: #f2b45c;
+  color: #1d1405;
+  font: inherit;
+  font-size: var(--font-md);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.22);
+  transition: background var(--transition-fast);
+}
+
+.deckPickerModalPrimary:hover:not(:disabled) { background: #f7c67f; }
+
+.deckPickerModalPrimary:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: #8f98ac;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.deckPickerModalSecondary {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-md);
+  cursor: pointer;
+}
+
+.deckPickerModalSecondary:hover { color: var(--text-primary); border-color: var(--border-medium); }
+
+.deckPickerModalPrimary:focus-visible,
+.deckPickerModalSecondary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .deckPickerModalReason { flex: 1 0 100%; margin-right: 0; }
+  .deckPickerModalSelection { flex: 1 1 100%; margin-right: 0; flex-direction: row; align-items: baseline; gap: 6px; }
+  .deckPickerModalFooter { flex-wrap: wrap; }
+  .deckPickerModalPrimary { flex: 1 1 auto; }
+}
+
 .deckPickerModalClose:hover {
   color: var(--text-primary);
   border-color: var(--border-medium);
@@ -1498,55 +1140,6 @@
   text-align: right;
   max-width: 360px;
   line-height: 1.35;
-}
-
-/* Draft type picker with descriptions */
-.draftTypeOptions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.draftTypeButton {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 6px var(--space-3);
-  font-size: var(--font-sm);
-  background-color: var(--bg-surface-4);
-  color: var(--text-muted);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  text-align: left;
-  min-width: 140px;
-  flex: 1 1 140px;
-  transition: border-color 0.15s, background-color 0.15s;
-}
-
-.draftTypeButton:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.draftTypeButton.settingsButtonActive {
-  color: var(--text-primary);
-  border-color: var(--color-accent-dark);
-}
-
-.draftTypeButton.settingsButtonActive .draftTypeDesc {
-  opacity: 0.85;
-}
-
-.draftTypeName {
-  font-weight: var(--font-weight-semibold);
-}
-
-.draftTypeDesc {
-  font-size: var(--font-xs);
-  opacity: 0.7;
-  line-height: 1.3;
 }
 
 .settingsSelect {
@@ -2078,11 +1671,12 @@
  * Player List
  * ========================================================================= */
 .playerListPanel {
-  background-color: var(--bg-panel-light);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  max-height: 60vh;
-  overflow-y: auto;
+  flex: none;
+  background-color: rgba(10, 12, 20, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
 .playerListHeader {
@@ -2096,14 +1690,15 @@
      jammed together respectively. */
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-medium);
-  background-color: var(--bg-panel-light);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px 18px 0 0;
 }
 
 .playerListTitle {
-  font-size: var(--font-md);
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: var(--font-weight-semibold);
-  color: #ccc;
+  color: #eef0f6;
 }
 
 .playerCount {
@@ -2155,8 +1750,8 @@
 .hostBadge {
   font-size: 9px;
   font-weight: var(--font-weight-bold);
-  color: var(--color-warning-light);
-  background-color: rgba(230, 81, 0, 0.12);
+  color: #f2c97a;
+  background-color: rgba(242, 180, 92, 0.14);
   padding: 2px 7px;
   border-radius: var(--radius-sm);
   text-transform: uppercase;
@@ -2204,6 +1799,24 @@
   background: rgba(79, 195, 247, 0.08);
 }
 
+/* Your own seat with a deck chosen: an editable chip, not the faint text of somebody else's state. */
+.playerDeckButtonChosen {
+  color: var(--text-secondary);
+}
+
+/* Your own seat before it has a deck: the one control that unblocks the lobby, so it reads as one. */
+.playerDeckButtonCta {
+  color: #f2c97a;
+  font-weight: var(--font-weight-semibold);
+  border-color: rgba(242, 180, 92, 0.55);
+  background: rgba(242, 180, 92, 0.12);
+}
+
+.playerDeckButtonCta:hover:not(:disabled) {
+  border-color: #f2b45c;
+  background: rgba(242, 180, 92, 0.2);
+}
+
 .playerDeckButton:disabled {
   border-color: transparent;
   background: transparent;
@@ -2237,23 +1850,6 @@
   text-align: center;
   color: var(--border-solid-dark);
   font-size: var(--font-sm);
-}
-
-.addAiButton {
-  width: 100%;
-  padding: var(--space-2) var(--space-4);
-  background: transparent;
-  border: 1px dashed rgba(139, 92, 246, 0.5);
-  border-radius: var(--radius-md);
-  color: #a78bfa;
-  font-size: var(--font-sm);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.addAiButton:hover {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: rgba(139, 92, 246, 0.8);
 }
 
 /* =========================================================================
@@ -2398,15 +1994,6 @@
   background: linear-gradient(to top, rgba(6, 10, 20, 0.98) 0 78%, rgba(6, 10, 20, 0));
 }
 
-/* The reason Start is disabled, beside the button rather than only in its `title`. A tooltip on a
-   disabled control is the one place a hover hint is least likely to be found. */
-.actionsBlockReason {
-  flex-shrink: 1;
-  min-width: 0;
-  font-size: var(--font-xs, 0.75rem);
-  color: var(--warning, #fbbf24);
-}
-
 .startButton {
   flex: 1;
   padding: 13px var(--space-5);
@@ -2429,13 +2016,6 @@
   cursor: not-allowed;
 }
 
-.waitingHint {
-  color: var(--border-solid-medium);
-  font-size: var(--font-sm);
-  text-align: center;
-  margin: 0;
-}
-
 /* =========================================================================
  * Tournament Standings Table
  * ========================================================================= */
@@ -2443,10 +2023,12 @@
   width: 100%;
   max-height: 60vh;
   overflow-y: auto;
-  background: linear-gradient(180deg, rgba(20, 20, 30, 0.95) 0%, rgba(15, 15, 22, 0.98) 100%);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: rgba(10, 12, 20, 0.72);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
 }
 
 /* Record column (merged W-L-D) */
@@ -2466,7 +2048,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: linear-gradient(180deg, rgba(40, 40, 55, 1) 0%, rgba(30, 30, 42, 1) 100%);
+  background: rgba(22, 25, 36, 0.96);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -2509,11 +2091,11 @@
 }
 
 .standingsRowMe {
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.08) 100%);
+  background: linear-gradient(90deg, rgba(242, 180, 92, 0.16) 0%, rgba(242, 180, 92, 0.06) 100%);
 }
 
 .standingsRowMe:hover {
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0.12) 100%);
+  background: linear-gradient(90deg, rgba(242, 180, 92, 0.22) 0%, rgba(242, 180, 92, 0.1) 100%);
 }
 
 .standingsRow:hover {
@@ -2564,12 +2146,12 @@
 
 .standingsGwr {
   color: var(--text-muted);
-  font-size: 12px;
-  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .meIndicator {
-  color: var(--color-accent);
+  color: #f2c97a;
   margin-left: var(--space-2);
   font-size: 12px;
   font-weight: var(--font-weight-normal);
@@ -2598,9 +2180,9 @@
 /* Standing row tooltip - shows instantly on hover */
 .standingsTooltip {
   position: fixed;
-  background: linear-gradient(135deg, rgba(30, 30, 42, 0.98) 0%, rgba(20, 20, 30, 0.98) 100%);
+  background: rgba(16, 18, 28, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   padding: var(--space-3) var(--space-4);
   min-width: 200px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -2663,52 +2245,58 @@
 .statusBoxWaiting {
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   padding: var(--space-4) var(--space-6);
   color: var(--text-muted);
 }
 
 .statusBoxMatch {
-  background-color: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.15);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
+  padding: 0;
 }
 
 .statusBoxMatchLabel {
-  color: var(--text-muted);
-  font-size: var(--font-xs);
-  margin-bottom: var(--space-1);
+  color: #8f98ac;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-bottom: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .statusBoxMatchOpponent {
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-lg);
-  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.2;
+  color: #f4f5f9;
 }
 
 /* =========================================================================
  * Ready Button
  * ========================================================================= */
 .readyButton {
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-semibold);
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-  color: #1a1a1a;
+  min-height: 48px;
+  padding: 0 28px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  background: #f2b45c;
+  color: #1d1405;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition-normal);
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
   white-space: nowrap;
 }
 
 .readyButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: #f7c67f;
+}
+
+.readyButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .readyButton:active:not(:disabled) {
@@ -2716,54 +2304,38 @@
 }
 
 .readyButton:disabled {
-  background: linear-gradient(180deg, rgba(22, 163, 74, 0.3) 0%, rgba(21, 128, 61, 0.25) 100%);
-  border: 2px solid rgba(34, 197, 94, 0.4);
+  background: rgba(95, 208, 140, 0.16);
+  border: 1px solid rgba(95, 208, 140, 0.45);
   color: var(--color-success-light);
   cursor: default;
   box-shadow: none;
 }
 
 .readyCount {
-  color: var(--text-disabled);
+  color: #9aa3b8;
   font-size: var(--font-sm);
   margin: 0;
   margin-left: auto;
 }
 
 .editDeckButton {
-  padding: var(--space-3) var(--space-5);
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-medium);
-  background: linear-gradient(180deg, rgba(60, 60, 80, 0.9) 0%, rgba(45, 45, 60, 0.9) 100%);
-  color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-lg);
+  min-height: 48px;
+  padding: 0 20px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.07);
+  color: #e6e9f1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .editDeckButton:hover {
-  background: linear-gradient(180deg, rgba(75, 75, 100, 0.95) 0%, rgba(55, 55, 75, 0.95) 100%);
+  background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.25);
-  color: var(--text-primary);
-}
-
-.viewDeckButton {
-  padding: var(--space-2) var(--space-5);
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-medium);
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.viewDeckButton:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: var(--text-secondary);
+  color: #fff;
 }
 
 /* =========================================================================
@@ -2933,33 +2505,6 @@
   color: #a1887f;
 }
 
-.deckViewerLandCount {
-  font-size: 12px;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-muted);
-}
-
-/* =========================================================================
- * Share Link Button
- * ========================================================================= */
-.shareLinkButton {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-sm);
-  font-weight: var(--font-weight-medium);
-  background: transparent;
-  color: var(--text-disabled);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.shareLinkButton:hover {
-  background-color: var(--bg-surface-6);
-  color: var(--text-tertiary);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
 /* =========================================================================
  * Disconnected Players
  * ========================================================================= */
@@ -3033,10 +2578,12 @@
 
 .matchesSectionTitle {
   margin: 0 0 var(--space-3) 0;
-  font-size: var(--font-sm);
-  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  color: #9aa3b8;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 
 .matchesList {
@@ -3050,17 +2597,19 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  background: linear-gradient(135deg, rgba(30, 30, 45, 0.9) 0%, rgba(25, 25, 38, 0.9) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
+  background: rgba(10, 12, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .matchButton:hover {
-  background: linear-gradient(135deg, rgba(40, 40, 60, 0.95) 0%, rgba(35, 35, 50, 0.95) 100%);
-  border-color: rgba(79, 195, 247, 0.3);
+  background: rgba(22, 25, 36, 0.85);
+  border-color: rgba(242, 180, 92, 0.45);
   transform: translateX(2px);
 }
 
@@ -3126,23 +2675,44 @@
 }
 
 .resultRow {
-  display: flex;
-  justify-content: space-between;
+  /* Two equal name columns around the outcome, so "vs" sits on the centre line of every row. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  padding: var(--space-2) var(--space-3);
-  background: rgba(20, 20, 28, 0.6);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-1);
+  gap: var(--space-2);
+  padding: 9px 14px;
+  background: rgba(10, 12, 20, 0.66);
+  border-radius: 10px;
+  margin-bottom: 6px;
   font-size: var(--font-sm);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.resultRow > :last-child {
+  text-align: right;
+}
+
+.resultWinner {
+  color: #f4f5f9;
+  font-weight: var(--font-weight-semibold);
+}
+
+.resultWinner::after {
+  content: ' \2713';
+  color: var(--color-success-light);
+}
+
+.resultLoser {
+  color: #8f98ac;
 }
 
 .resultOutcome {
   color: var(--text-tertiary);
   font-size: 12px;
   padding: 2px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-sm);
+  text-align: center;
 }
 
 /* Badge on an AI-vs-AI result the server decided without playing the game. */
@@ -3152,29 +2722,6 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0.7;
-}
-
-/* =========================================================================
- * Fullscreen Button
- * ========================================================================= */
-/* Fixed top-left cluster: the lobby screen's fullscreen toggle. The landing screen's equivalent is
-   the left half of `.landingTopBar`, which is in flow because it shares its row with the account
-   pills. */
-.cornerControls {
-  position: fixed;
-  top: var(--space-3);
-  left: var(--space-3);
-  z-index: var(--z-controls);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-@media (max-width: 639px) {
-  .cornerControls {
-    top: var(--space-2);
-    left: var(--space-2);
-  }
 }
 
 .fullscreenButton {
@@ -3242,7 +2789,8 @@
   }
 
   .standingsPlayerName {
-    max-width: 90px;
+    /* Whatever the four numeric columns leave over, rather than a fixed sliver. */
+    max-width: max(90px, calc(100vw - 250px));
   }
 
   .standingsRank {
@@ -3269,8 +2817,8 @@
   }
 
   .resultRow {
-    font-size: var(--font-xs);
-    padding: var(--space-2);
+    font-size: 12px;
+    padding: var(--space-2) var(--space-3);
     gap: var(--space-1);
   }
 
@@ -3281,15 +2829,14 @@
   }
 
   .statusBoxBye,
-  .statusBoxMatch,
   .statusBoxWaiting {
     padding: var(--space-3) var(--space-4);
     font-size: var(--font-sm);
   }
 
   .readyButton {
-    padding: 10px var(--space-6);
-    font-size: var(--font-md);
+    padding: 0 var(--space-5);
+    font-size: 15px;
   }
 
   .disconnectedPlayer {
@@ -3325,448 +2872,37 @@
   }
 }
 
-/* =========================================================================
- * Attribution
- * ========================================================================= */
-/*
- * In normal flow at the end of the scrolling overlay, not absolutely pinned. `.landingLayout`'s
- * `margin: auto 0` still centres the card in whatever room is left above it, so on a roomy screen
- * this reads as a pinned footer — but when the content is taller than the viewport the two scroll
- * together instead of the footer sitting on top of the panel.
- */
-.attribution {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  max-width: min(720px, calc(100% - 24px));
-  font-size: 12px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.78);
-  background: rgba(8, 8, 16, 0.62);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 8px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: auto;
-  text-align: center;
-}
-
-/*
- * Community row: Discord, GitHub + the contributor guide. Sits in the same glass panel as the credits
- * rather than in a second one, divided off by a hairline — it is an invitation, not attribution,
- * so it reads a step brighter than the lines below it. Chips rather than inline links: at 12px in a
- * translucent panel a bare underline is easy to miss, and the icons need a box to sit in.
- */
-.communityLinks {
-  align-self: stretch;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-bottom: 7px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.communityLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.35;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.communityLink:hover {
-  background: rgba(159, 213, 255, 0.14);
-  border-color: rgba(159, 213, 255, 0.5);
-  color: #eaf4ff;
-}
-
-.communityLink:focus-visible {
-  outline: 2px solid rgba(159, 213, 255, 0.8);
-  outline-offset: 2px;
-}
-
 .communityIcon {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
 }
 
-.attributionDisclaimer {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.attributionLink {
-  color: rgba(159, 213, 255, 0.95);
-  text-decoration: underline;
-  text-decoration-color: rgba(159, 213, 255, 0.4);
-  text-underline-offset: 2px;
-}
-
-.attributionLink:hover {
-  color: #cfe7ff;
-  text-decoration-color: rgba(207, 231, 255, 0.9);
-}
-
 /* Full-bleed footer once the overlay's own padding is all the margin there is to spare. */
 @media (max-width: 639px) {
-  .attribution {
-    margin: var(--space-2) auto 0;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    gap: 2px;
-    font-size: 10px;
-    line-height: 1.35;
-    padding: 7px 12px;
-    border-radius: 10px;
-    background: rgba(8, 8, 16, 0.45);
-    border-color: rgba(255, 255, 255, 0.06);
-  }
-
-  .communityLinks {
-    gap: 6px;
-    padding-bottom: 6px;
-    margin-bottom: 3px;
-  }
-
-  .communityLink {
-    padding: 3px 9px;
-    font-size: 10px;
-  }
 
   .communityIcon {
     width: 12px;
     height: 12px;
   }
-
-  .attributionDisclaimer {
-    font-size: 9px;
-  }
 }
 
-/* =========================================================================
- * Landing tiers (PLAY / BUILD & BROWSE / LAB)
- *
- * The glass card stays a single centred panel; only its contents are tiered.
- * ========================================================================= */
-/* Narrower than the six-preset grid needed (was 760px): the panel is the only thing standing between
-   the player and the artwork, so it gives back what the wizard doesn't use. The glass itself is
-   deliberately unchanged — reducing its footprint shows the painting without washing the panel out. */
-.homeTiers {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  width: 100%;
-  max-width: 660px;
-}
-
-.homeTier {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: stretch;
-}
-
-.tierHeading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.tierHeadingLabel {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  flex-shrink: 0;
-  font-size: var(--font-xs, 0.75rem);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.tierHeadingHint {
-  font-size: 10px;
-  font-weight: var(--font-weight-normal);
-  letter-spacing: 0.06em;
-  text-transform: none;
-  color: var(--text-disabled);
-}
-
-.tierHeadingRule {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
-}
-
-.tierCaption {
-  margin: 0;
-  font-size: var(--font-xs, 0.75rem);
-  color: var(--text-disabled);
-  line-height: 1.4;
-}
-
-/* =========================================================================
- * Play wizard — the three questions in the PLAY tier.
- *
- * The option tiles are the `presetCard*` block below, which the six mode
- * presets used before it; only the chrome around them is new.
- * ========================================================================= */
-.wizardStepper {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-/* All three questions, always visible and numbered, so the order is legible and an answer reads as
-   something you can go back to rather than as decoration. */
-.wizardStepperTrack {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-@media (max-width: 640px) {
-  .wizardStepperTrack {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.wizardStepSlot {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.02);
-  min-width: 0;
-}
-
-.wizardStepSlotCurrent {
-  border-color: rgba(139, 92, 246, 0.5);
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.wizardStepSlotDone {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.wizardStepNum {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-tertiary);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.wizardStepSlotCurrent .wizardStepNum {
-  color: #ede9fe;
-  background: rgba(139, 92, 246, 0.55);
-}
-
-.wizardStepSlotDone .wizardStepNum {
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.wizardStepBody {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.wizardStepWord {
-  font-size: 9px;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-disabled);
-}
-
-/* An answered step is a button with a pencil: the affordance *is* the answer. */
-.wizardStepChange {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-  font-size: var(--font-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.22);
-  align-self: flex-start;
-}
-
-.wizardStepChange:hover {
-  color: var(--text-primary);
-  border-bottom-color: rgba(255, 255, 255, 0.55);
-}
-
-.wizardStepPencil {
-  font-size: 10px;
-  color: var(--text-disabled);
-}
-
-.wizardStepChange:hover .wizardStepPencil {
-  color: #c4b5fd;
-}
-
-/* Decided because it was the only possibility — stated, not offered. */
-.wizardStepAuto {
-  font-size: var(--font-sm);
-  color: var(--text-tertiary);
-  cursor: help;
-}
-
-.wizardStepAutoMark {
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-disabled);
-}
-
-/* The answer on the step you are standing on: stated, no pencil — the tiles below are the control. */
-.wizardStepCurrentValue {
-  font-size: var(--font-sm);
-  font-weight: var(--font-weight-medium);
-  color: #ede9fe;
-}
-
-.wizardStepPending {
-  font-size: var(--font-sm);
-  color: var(--text-disabled);
-  font-style: italic;
-}
-
-.wizardStepTitle {
-  margin: 0;
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-
-/* Why the alternatives to an auto-resolved answer aren't available. Skipping a one-answer step
-   otherwise hides the disabled tiles, and with them the only place the reason was stated. */
-.wizardAutoNote {
-  margin: 0;
-  padding-left: var(--space-3);
-  border-left: 2px solid rgba(245, 158, 11, 0.35);
-  font-size: var(--font-xs, 0.75rem);
-  line-height: 1.45;
-  color: var(--text-tertiary);
-}
-
-/*
- * The launch block: what happens, and the button.
- *
- * These used to share one wrapping flex row with `align-items: flex-end`, which put a six-chip seat
- * picker and its two-line caption beside a large primary button — the caption wrapped under the
- * chips, the button floated at an arbitrary height, and the group read as three unrelated things
- * that happened to be adjacent. One column, and the call to action gets the full width it is worth.
- */
-.wizardFooter {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-/* What will actually happen, stage by stage: "Open boosters → Build a deck → Standings". The one
-   thing none of the names on the tiles can tell you, so it leads the launch block rather than
-   trailing the tiles as loose 10px text. Inline text on its own row, not a flex row: nested flex
-   boxes at this width broke every stage onto its own line. */
-.wizardFlow {
-  margin: 0;
-  font-size: var(--font-sm);
-  line-height: 1.6;
-}
-
-.wizardFlowStage {
-  color: var(--text-secondary);
-}
-
-.wizardFlowArrow {
-  color: var(--text-disabled);
-}
-
-/* Tile badge: is this one game, or an event with steps? */
-.presetCardBadge {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  margin-top: 2px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: 9px;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.presetCardBadge_quick {
-  color: #9fd8c4;
-  border-color: rgba(111, 211, 192, 0.3);
-  background: rgba(111, 211, 192, 0.1);
-}
-
-.presetCardBadge_event {
-  color: #f0c479;
-  border-color: rgba(245, 158, 11, 0.32);
-  background: rgba(245, 158, 11, 0.1);
-}
-
-/* Last completed selection, replayable in one click. */
 /* Save-this-lobby, in the header beside the axis chips. */
 .saveSetupButton {
-  align-self: center;
-  margin-top: var(--space-2);
-  padding: 4px var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(139, 92, 246, 0.35);
-  background: rgba(139, 92, 246, 0.1);
-  color: #c4b5fd;
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: 5px var(--space-3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #d9dde8;
   font-size: var(--font-xs, 0.75rem);
   cursor: pointer;
 }
 
 .saveSetupButton:hover {
-  border-color: rgba(139, 92, 246, 0.6);
-  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(242, 180, 92, 0.6);
+  background: rgba(242, 180, 92, 0.12);
 }
 
 /* What a setup couldn't restore. Stated, because the server discards a whole settings message on a
@@ -3815,10 +2951,12 @@
 }
 
 .setupRailHeading {
-  font-size: var(--font-xs, 0.75rem);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-disabled);
+  letter-spacing: 0.07em;
+  color: #c9cfdc;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 
 .setupRailChips {
@@ -3831,22 +2969,25 @@
   position: relative;
   display: flex;
   align-items: stretch;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(139, 92, 246, 0.35);
-  background: rgba(139, 92, 246, 0.1);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 12, 20, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   max-width: 100%;
 }
 
 .setupChipWrap:hover {
-  border-color: rgba(139, 92, 246, 0.6);
-  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(242, 180, 92, 0.55);
+  background: rgba(20, 18, 16, 0.7);
 }
 
 .setupChip {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--space-2) var(--space-3);
+  min-height: 44px;
+  padding: 10px 14px;
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -3857,17 +2998,17 @@
 }
 
 .setupChipName {
+  font-size: 14px;
   font-weight: var(--font-weight-semibold);
-  color: #c4b5fd;
+  color: #eef0f6;
 }
 
 /* Wraps rather than truncating. A chip's whole job is to say what it will launch — "A group ·
    Booster Draft · Round-robin brac…" answers the wrong half of the question, hiding exactly the
    sets and pack counts that make a setup worth one click. */
 .setupChipBody {
-  font-family: ui-monospace, monospace;
-  font-size: var(--font-xs, 0.75rem);
-  color: var(--text-tertiary);
+  font-size: 12.5px;
+  color: #b4bccd;
   max-width: 62ch;
 }
 
@@ -3880,7 +3021,7 @@
   padding: 0 var(--space-2);
   background: none;
   border: none;
-  border-left: 1px solid rgba(139, 92, 246, 0.25);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-disabled);
   cursor: pointer;
   font-size: var(--font-sm);
@@ -3924,175 +3065,10 @@
 }
 
 /* =========================================================================
- * Option tiles (the wizard's steps; previously the mode preset cards)
- * ========================================================================= */
-.presetGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-/* Four options — the Table question. Three columns leave a single tile stranded on a second row,
-   reading as an afterthought rather than as a peer of the other three; 2×2 is the same two rows with
-   no orphan, and the extra width lets the taglines fit in fewer lines. */
-.presetGridPairs {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (max-width: 900px) {
-  .presetGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 520px) {
-  .presetGrid,
-  .presetGridPairs {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.presetCard {
-  position: relative;
-  display: flex;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.015) 100%);
-  color: var(--text-primary);
-  overflow: hidden;
-  transition: transform var(--transition-fast), border-color var(--transition-fast),
-    background var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.presetCardButton {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  text-align: left;
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-/* Top-right `?`, outside the card's own click target. */
-.presetCardHelp {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 1;
-}
-
-/* The accent lives in a left edge stripe, so six cards stay distinguishable
-   without six competing button colours. */
-.presetCard::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--preset-accent, rgba(148, 163, 184, 0.6));
-}
-
-.presetCard:hover:not(:has(.presetCardButton:disabled)) {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.22);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-}
-
-.presetCard:active:has(.presetCardButton:active) {
-  transform: translateY(0);
-}
-
-.presetCard:has(.presetCardButton:disabled) {
-  opacity: 0.45;
-}
-
-.presetCardButton:disabled {
-  cursor: not-allowed;
-}
-
-/* The tile whose sub-shape row is open (Sealed / Draft), or the shape picked
-   while the footer is showing. */
-.presetCardSelected {
-  --preset-accent: #8b5cf6;
-  border-color: rgba(139, 92, 246, 0.45);
-  background:
-    linear-gradient(180deg, rgba(139, 92, 246, 0.14) 0%, rgba(139, 92, 246, 0.04) 100%);
-}
-
-.presetCardTitle {
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.01em;
-}
-
-.presetCardTagline {
-  font-size: var(--font-xs, 0.75rem);
-  line-height: 1.35;
-  color: var(--text-tertiary);
-}
-
-/* =========================================================================
- * Continue chip (a lobby survived the page reload)
- * ========================================================================= */
-.continueChip {
-  display: flex;
-  align-items: stretch;
-  gap: 1px;
-  align-self: flex-start;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.continueChipButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: var(--space-2) var(--space-3);
-  color: var(--color-success-light, #86efac);
-  font-size: var(--font-sm);
-  font-weight: var(--font-weight-medium);
-}
-
-.continueChipButton:hover {
-  background: rgba(34, 197, 94, 0.16);
-}
-
-.continueChipCode {
-  font-family: ui-monospace, monospace;
-  letter-spacing: 0.06em;
-}
-
-.continueChipDismiss {
-  background: none;
-  border: none;
-  border-left: 1px solid rgba(34, 197, 94, 0.25);
-  cursor: pointer;
-  padding: 0 var(--space-2);
-  color: var(--text-disabled);
-  font-size: var(--font-md);
-  line-height: 1;
-}
-
-.continueChipDismiss:hover {
-  color: var(--text-primary);
-}
-
-/* =========================================================================
  * Compact landing — short viewports
  *
  * A laptop is a wide, *short* screen: a 14" MacBook gives about 800px of viewport once the browser
- * has taken its share. The tallest landing state — all three questions answered, four Table tiles,
- * the seat picker and the launch block — overran that on vertical rhythm alone, so the rhythm
+ * has taken its share. The name-entry card overran that on vertical rhythm alone, so the rhythm
  * tightens and nothing is taken away.
  *
  * Last in the file on purpose: every rule below overrides a single-class rule declared earlier, and
@@ -4103,17 +3079,26 @@
     gap: var(--space-4);
   }
 
-  .contentBackdrop {
-    gap: var(--space-4);
-    padding-top: var(--space-4);
-    padding-bottom: var(--space-4);
-  }
-
   .title {
     font-size: var(--font-2xl);
   }
-
-  .homeTiers {
-    gap: var(--space-4);
-  }
 }
+
+/* Icon-only fullscreen toggle for the landing and lobby top bars — glass, like the bar's other
+   controls. */
+.fullscreenButtonCompact {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 12, 20, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #d9dde8;
+  cursor: pointer;
+}
+.fullscreenButtonCompact:hover { background: rgba(30, 33, 46, 0.75); color: #fff; }
+.fullscreenButtonCompact:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }

@@ -18,6 +18,15 @@
   --z-priority: 1500;
   --z-combat: 2000;
   --z-targeting: 2500;
+  /* In-game animations (card draws, floating life changes, reveals, coin flips; +1/+2 within the
+   * layer). Above every board widget and decision overlay, below the game's result. */
+  --z-animation: 2600;
+  /* The game's result (the player's Victory/Defeat card, the spectator's game-over banner). Above
+   * the animations, so the last hit's numbers never paint over who won. */
+  --z-game-result: 2700;
+  /* Connection / server-restart notices: they must read on the game-over screen too (a restart
+   * while the player clicks Rematch). */
+  --z-system-notice: 2800;
   --z-tooltip: 10000;
 
   /* =========================================================================
@@ -49,11 +58,16 @@
 
   /* Board chrome: the small floating controls pinned to the game board's corners (Fullscreen,
    * Concede, Log, AI Insight). One quiet glass treatment so none of them outshouts the cards. */
-  --chrome-bg: rgba(20, 22, 34, 0.72);
-  --chrome-border: rgba(255, 255, 255, 0.1);
-  --chrome-text: #aeb4c2;
-  --chrome-danger-text: #f08a8a;
-  --chrome-danger-border: rgba(240, 138, 138, 0.35);
+  --chrome-bg: rgba(14, 16, 26, 0.72);
+  --chrome-border: rgba(255, 255, 255, 0.12);
+  --chrome-text: #c9cfdc;
+  --chrome-danger-text: #f3a0a0;
+  --chrome-danger-border: rgba(240, 138, 138, 0.38);
+  --chrome-radius: 9px;
+  --chrome-blur: blur(14px) saturate(140%);
+  /* The panels those controls open (log, AI insight): the landing screen's glass, darker for text. */
+  --chrome-panel-bg: rgba(10, 12, 20, 0.9);
+  --chrome-panel-border: rgba(255, 255, 255, 0.1);
 
   /* =========================================================================
    * Colors - Text

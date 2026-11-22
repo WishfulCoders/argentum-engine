@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.AdditionalCost
 import com.wingedsheep.sdk.scripting.CardNamePool
+import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Condition
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
@@ -12,6 +13,7 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
 import com.wingedsheep.sdk.scripting.text.TextReplacer
+import com.wingedsheep.sdk.scripting.util.numberToWord
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -20,9 +22,28 @@ import kotlinx.serialization.Serializable
 // Pipeline Vocabulary Types
 // =============================================================================
 
+/** "basic land cards", but a bare filter reads "cards" — never "card cards". */
+private fun cardsPhrase(filter: GameObjectFilter): String =
+    filter.description.let { if (it == "card") "cards" else "$it cards" }
+
 /**
  * Where to gather cards from.
  */
+/**
+ * "the top 3 cards of your library" / "the top X cards of …" — or, when the count is a phrase
+ * rather than a number ("the number of attacking creatures you control"), Oracle's
+ * "a number of cards from the top of … library equal to …", since the phrase can't stand
+ * between "top" and "cards".
+ */
+internal fun libraryEndDescription(end: String, count: DynamicAmount, player: Player): String {
+    val amount = count.description
+    return if (count is DynamicAmount.Fixed || amount.none { it.isWhitespace() }) {
+        "the $end $amount cards of ${player.possessive} library"
+    } else {
+        "a number of cards from the $end of ${player.possessive} library equal to $amount"
+    }
+}
+
 @Serializable
 sealed interface CardSource {
     val description: String
@@ -57,14 +78,19 @@ sealed interface CardSource {
      * Top N cards of a player's library.
      *
      * [isMill] marks this gather as the library half of a *mill* (top N → graveyard), so the
-     * count site applies `ModifyMillAmount` replacement effects (CR 701.17 "mill that many plus
+     * count site applies mill `ModifyKeywordActionAmount` replacement effects (CR 701.17 "mill that many plus
      * four instead"). Only the `Patterns.Library.mill(...)` pipeline sets this; other top-N
      * gathers (scry, surveil, exile-top, look-at-top) leave it `false` so they are never affected
      * by mill-amount replacements.
      *
      * [isScry] is the scry twin (CR 701.22): set only by the scry pipeline
-     * (`Patterns.Library.scryPipeline`), it makes the count site apply `ModifyScryAmount`
-     * replacement effects ("scry that many cards plus one instead"). At most one of the two is set.
+     * (`Patterns.Library.scryPipeline`), it makes the count site apply scry `ModifyKeywordActionAmount`
+     * replacement effects ("scry that many cards plus one instead").
+     *
+     * [isSurveil] is the surveil twin (CR 701.25): set only by the surveil pipeline
+     * (`Patterns.Library.surveilPipeline`), it makes the count site apply surveil `ModifyKeywordActionAmount`
+     * replacement effects ("look at an additional two cards each time you surveil"). At most one of
+     * the three is set.
      */
     @SerialName("TopOfLibrary")
     @Serializable
@@ -72,17 +98,20 @@ sealed interface CardSource {
         val count: DynamicAmount,
         val player: Player = Player.You,
         val isMill: Boolean = false,
-        val isScry: Boolean = false
+        val isScry: Boolean = false,
+        val isSurveil: Boolean = false
     ) : CardSource {
         init {
-            require(!(isMill && isScry)) { "TopOfLibrary can't be both a mill and a scry" }
+            require(listOf(isMill, isScry, isSurveil).count { it } <= 1) {
+                "TopOfLibrary can be at most one of a mill, a scry and a surveil"
+            }
         }
 
         /** The top [count] cards — a constant count ("look at the top three cards"). */
         constructor(count: Int, player: Player = Player.You, isMill: Boolean = false) :
             this(DynamicAmount.Fixed(count), player, isMill)
 
-        override val description: String = "the top ${count.description} cards of ${player.possessive} library"
+        override val description: String = libraryEndDescription("top", count, player)
     }
 
     /**
@@ -101,7 +130,7 @@ sealed interface CardSource {
         /** The bottom [count] cards — a constant count ("the bottom card of their library"). */
         constructor(count: Int, player: Player = Player.You) : this(DynamicAmount.Fixed(count), player)
 
-        override val description: String = "the bottom ${count.description} cards of ${player.possessive} library"
+        override val description: String = libraryEndDescription("bottom", count, player)
     }
 
     /**
@@ -127,7 +156,10 @@ sealed interface CardSource {
         val excludeSacrificedThisWay: Boolean = false
     ) : CardSource {
         override val description: String = buildString {
-            append("${filter.description} cards in ${player.possessive} ${zone.displayName}")
+            // The battlefield is not anyone's zone: its cards are permanents a player controls.
+            val scope = if (zone == Zone.BATTLEFIELD) controlScope(player) else null
+            if (scope != null) append(filter.permanentNounPhrase(plural = true, scope))
+            else append("${cardsPhrase(filter)} in ${player.possessive} ${zone.noun}")
             if (excludeSacrificedThisWay) append(" other than one sacrificed this way")
         }
     }
@@ -147,7 +179,9 @@ sealed interface CardSource {
         val player: Player = Player.You,
         val filter: GameObjectFilter = GameObjectFilter.Companion.Any
     ) : CardSource {
-        override val description: String = "${filter.description} cards in ${player.possessive} ${zones.joinToString(", ") { it.displayName }}"
+        override val description: String = "${cardsPhrase(filter)} in ${player.possessive} ${zones.map { it.noun }.let { nouns ->
+            if (nouns.size <= 2) nouns.joinToString(" or ") else nouns.dropLast(1).joinToString(", ") + ", or " + nouns.last()
+        }}"
     }
 
     /**
@@ -222,14 +256,25 @@ sealed interface CardSource {
      * ([EffectTarget.ContextTarget]); any [EffectTarget] that resolves to a permanent works
      * (Self, TriggeringEntity, …). Yields nothing when the host has left play or has no
      * matching attachments.
+     *
+     * [zone] names where the gathered objects are *now*. The default, [Zone.BATTLEFIELD], is the
+     * attached permanents above. Any other zone reads the last-known attachments of a host that
+     * has left the battlefield ([EffectTarget.TriggeringEntity] on a dies / leaves trigger) and
+     * keeps the cards that followed it out of play into **your** [zone] — "return any number of
+     * Aura cards that were attached to it from your graveyard" (Cass, Hand of Vengeance). A card
+     * qualifies only while it is still the object that left the battlefield attached to that host:
+     * once it changes zones again it is a new object (CR 400.7) and is no longer gathered.
      */
     @SerialName("AttachedToTarget")
     @Serializable
     data class AttachedTo(
         val host: EffectTarget,
-        val filter: GameObjectFilter = GameObjectFilter.Companion.Any
+        val filter: GameObjectFilter = GameObjectFilter.Companion.Any,
+        val zone: Zone = Zone.BATTLEFIELD
     ) : CardSource {
-        override val description: String = "${filter.description} attached to ${host.description}"
+        override val description: String =
+            if (zone == Zone.BATTLEFIELD) "${filter.description} attached to ${host.description}"
+            else "${cardsPhrase(filter)} that were attached to ${host.description} in your ${zone.noun}"
     }
 
     /**
@@ -264,6 +309,30 @@ sealed interface CardSource {
     @Serializable
     data object ExiledAsCost : CardSource {
         override val description: String = "those exiled cards"
+    }
+
+    /**
+     * The cards the permanents sacrificed "this way" became, in whatever public zone each went to — read from the
+     * same `EffectContext.sacrificedPermanents` snapshots that
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.TotalPowerSacrificedThisWay] sums, so it
+     * covers both a sacrifice *cost* (recorded at activation, CR 602.2b) and a sacrifice effect
+     * earlier in the same resolution. The source of a self-sacrifice cost isn't one of them; name
+     * it with [Self].
+     *
+     * "Those creature cards" in Sword of the Ages's "{T}, Sacrifice this artifact and any number of
+     * creatures you control: … then exile this artifact and those creature cards." The sacrifice
+     * counterpart of [ExiledAsCost] and [TappedAsCost].
+     *
+     * A card qualifies only while it is still the very object the sacrifice made, in the zone it
+     * went to — its owner's graveyard, or exile when a replacement sent it there instead (Rescue
+     * from the Underworld: "the sacrificed card" returns from the zone it went to).
+     * A token has ceased to exist (CR 704.5d), a card that has since moved on again is a new object
+     * (CR 400.7), and a card put into a hidden zone can't be followed, so none of those is gathered.
+     */
+    @SerialName("SacrificedThisWay")
+    @Serializable
+    data object SacrificedThisWay : CardSource {
+        override val description: String = "the cards sacrificed this way"
     }
 
     /**
@@ -323,34 +392,29 @@ sealed interface CardSource {
     }
 
     /**
-     * The ability's own source card ([com.wingedsheep.sdk.scripting.references] sourceId).
+     * A single entity named by an [EffectTarget.SingleEntity] reference, resolved at resolution
+     * time — the gatherable counterpart of that reference. Yields a one-element collection while
+     * the named entity still exists (in any zone), otherwise nothing.
      *
-     * Yields a single-element collection referencing the source, regardless of which zone
-     * it currently occupies. Lets a self-referential ability feed its own card into a
-     * pipeline that expects a collection — e.g. the suspend countdown gathering the exiled
-     * card so [CastFromCollectionWithoutPayingCostEffect] can play it.
-     */
-    @SerialName("Self")
-    @Serializable
-    data object Self : CardSource {
-        override val description: String = "this card"
-    }
-
-    /**
-     * The entity that caused the trigger to fire (`EffectContext.triggeringEntityId`) — the
-     * gatherable counterpart of [com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity].
-     * Yields a single-element collection when that entity is still in play, so a non-targeted "it"
-     * reference (the blocked creature, the dying permanent, …) can feed a gather → move → grant
-     * pipeline. Restricted to entities that still exist; an entity that already left yields nothing.
+     *  - `Entity(EffectTarget.Self)` — the ability's own source card, wherever it is: the suspend
+     *    countdown feeding the exiled card to [CastFromCollectionWithoutPayingCostEffect].
+     *  - `Entity(EffectTarget.TriggeringEntity)` — "it", the creature or permanent the trigger
+     *    names (Norin, Swift Survivalist: exile the just-blocked creature).
+     *  - `Entity(EffectTarget.EnchantedCreature)` — the Aura's host, falling back to the host it
+     *    last had if the Aura has left (Infinite Authority's "the first creature").
      *
-     * Backs "whenever a creature you control becomes blocked, you may exile it. You may play that
-     * card from exile this turn" (Norin, Swift Survivalist): `GatherCards(TriggeringEntity)` →
-     * `MoveCollection(EXILE)` → `GrantMayPlayFromExile(EndOfTurn)`.
+     * Gathering the reference freezes *which object* it named: a later step, or a delayed trigger
+     * that carries the collection (`carryCollections`), still means that object even after
+     * "enchanted creature" or "it" would read differently.
      */
-    @SerialName("TriggeringEntity")
+    @SerialName("Entity")
     @Serializable
-    data object TriggeringEntity : CardSource {
-        override val description: String = "it"
+    data class Entity(val entity: EffectTarget.SingleEntity) : CardSource {
+        override val description: String = when (entity) {
+            EffectTarget.Self -> "this card"
+            EffectTarget.TriggeringEntity -> "it"
+            else -> entity.description
+        }
     }
 
     /**
@@ -362,6 +426,13 @@ sealed interface CardSource {
      * dies trigger (Abu Ja'far): by resolution the engine has already torn the combat
      * cross-references down, so the pairing must come from the last-known snapshot carried on
      * the leaves-battlefield event rather than from live combat components.
+     *
+     * Outside a trigger the same read serves an activated ability (CR 608.2h): while the source
+     * is still on the battlefield the pairing is read live, and once it has left — before or
+     * during resolution — from the last-known snapshot the source carries in its new zone. Gather
+     * this *before* moving the source itself: "Put this creature and each creature blocking or
+     * blocked by it on top of their owners' libraries" (Vortex Elemental, whose ruling keeps the
+     * pairing even if the Elemental left before the ability resolved).
      */
     @SerialName("LastKnownCombatPairedWithSource")
     @Serializable
@@ -370,19 +441,41 @@ sealed interface CardSource {
     }
 
     /**
-     * The creatures that saddled the effect's source this turn (CR 702.171c) — the union of every
-     * creature tapped to pay a Saddle ability's cost on this Mount, read off the source's
-     * `CrewSaddleContributorsComponent`. Restricted to creatures still on the battlefield, since a
-     * saddler that has since left can't be affected (the component records last-known crew/saddle
-     * contributors and is cleared at cleanup).
+     * The creatures that crewed (CR 702.122) or saddled (CR 702.171c) the effect's source this
+     * turn — the union of every creature tapped to pay a Crew or Saddle cost on it, read off the
+     * source's `CrewSaddleContributorsComponent`. A permanent is a Vehicle or a Mount, so one record
+     * serves both. Restricted to creatures still on the battlefield, since a contributor that has
+     * since left can't be affected. The record is last-known information about the source: it
+     * survives the source leaving the battlefield (cleared at cleanup, or when the card re-enters
+     * as a new object).
      *
-     * Backs "exile … up to one creature that saddled it this turn" (Fortune, Loyal Steed): gather
-     * the saddlers, then [SelectFromCollectionEffect] picks up to one of them.
+     * Backs "exile … up to one creature that saddled it this turn" (Fortune, Loyal Steed) and
+     * "exile each creature that crewed it this turn" (Golden Argosy).
      */
-    @SerialName("CreaturesThatSaddledSource")
+    @SerialName("CreaturesThatCrewedOrSaddledSource")
     @Serializable
-    data object CreaturesThatSaddledSource : CardSource {
-        override val description: String = "creatures that saddled it this turn"
+    data object CreaturesThatCrewedOrSaddledSource : CardSource {
+        override val description: String = "creatures that crewed or saddled it this turn"
+    }
+
+    /**
+     * Each creature that convoked the resolving spell (CR 702.51c), in the order they were tapped
+     * — **including any that has since left the battlefield**. Unlike the
+     * `GameObjectFilter.thatConvokedSource()` group, which can only see convokers still on the
+     * battlefield, this names every creature the spell's convoke record holds, because some
+     * instructions apply to a convoker that is gone: "each creature that convoked this spell
+     * connives" (Lethal Scheme) — a convoker the spell itself destroyed still connives, by its last
+     * known information (CR 701.50b).
+     *
+     * A departed convoker is gathered by its id — the card it became, or nothing at all for a
+     * token — so only pair this with an instruction that reads last-known information for a
+     * convoker that is gone, as `Effects.Connive` does; anything else wants the battlefield-only
+     * group. Empty when the spell wasn't convoked.
+     */
+    @SerialName("CreaturesThatConvokedSource")
+    @Serializable
+    data object CreaturesThatConvokedSource : CardSource {
+        override val description: String = "creatures that convoked it"
     }
 
     /**
@@ -663,6 +756,23 @@ sealed interface SelectionRestriction {
     }
 
     /**
+     * At most one card of each mana value may be selected — "any number of cards with
+     * different mana values" (Seasons Past). The non-targeting sibling of
+     * `TargetObject.differentNumericProperty = MANA_VALUE` (Long Rest), and it reads a
+     * card's mana value the same way (a face-down card is 0; {X} counts 0 off the stack,
+     * CR 202.3e), so every card has one and can be kept unless its value is claimed.
+     *
+     * The executor enforces this server-side: if the player's response names multiple
+     * cards sharing a mana value, only the first such card (in response order) is kept;
+     * the rest fall through into the remainder collection.
+     */
+    @SerialName("OnePerManaValue")
+    @Serializable
+    data object OnePerManaValue : SelectionRestriction {
+        override val description: String = "at most one card of each mana value"
+    }
+
+    /**
      * The sum of selected cards' mana values must not exceed the cap. {X} contributes 0
      * (per CR 202.3e for cards not on the stack). Used for "with total mana value N or
      * less" wording like Scout for Survivors.
@@ -755,6 +865,12 @@ sealed interface SelectionRestriction {
      * payment and silently forfeit the payoff ("pay {4} for each creature chosen
      * this way" — Magnetic Mountain).
      *
+     * [lifePerSelected] is the life axis of the same cap: `floor(payer's life / lifePerSelected)`
+     * (CR 119.4 — life can be paid down to exactly 0), or 0 when the payer can't pay life at all
+     * (CR 119.8). Pair it with one `PayLife(lifePerSelected)` per selected card ("for each of those
+     * cards, pay 4 life or put the card on top of your library" — Sylvan Library). When both rates
+     * are set, the smaller cap wins.
+     *
      * A cap of zero suppresses the selection prompt entirely (nothing is selected).
      * Unlike the per-card restrictions above, this one needs no response-order
      * trimming: the cap is folded into the decision's `maxSelections` at
@@ -764,10 +880,16 @@ sealed interface SelectionRestriction {
     @SerialName("MaxAffordablePayment")
     @Serializable
     data class MaxAffordablePayment(
-        val manaPerSelected: Int,
-        val payer: Player = Player.You
+        val manaPerSelected: Int = 0,
+        val payer: Player = Player.You,
+        val lifePerSelected: Int = 0
     ) : SelectionRestriction {
-        override val description: String = "at most as many as can be paid {$manaPerSelected} for"
+        override val description: String = when {
+            lifePerSelected > 0 && manaPerSelected > 0 ->
+                "at most as many as can be paid {$manaPerSelected} and $lifePerSelected life for"
+            lifePerSelected > 0 -> "at most as many as can be paid $lifePerSelected life for"
+            else -> "at most as many as can be paid {$manaPerSelected} for"
+        }
     }
 }
 
@@ -833,6 +955,15 @@ enum class Chooser {
      * controller performs a follow-up search/choice.
      */
     ControllerOfTarget,
+
+    /**
+     * The controller of the triggering object decides — read as last-known information once it
+     * has left the battlefield (CR 608.2h), the decision-side twin of
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.ControllerOfTriggeringEntity]. For a
+     * "when enchanted creature dies, that creature's controller chooses …" trigger (Takklemaggot)
+     * this is whoever controlled the creature as it died, not the Aura's controller.
+     */
+    ControllerOfTriggeringEntity,
 
     /**
      * The defending player (CR 802.2a) decides — the player, or the controller/protector of the
@@ -908,8 +1039,16 @@ enum class CardOrder {
  * @property search This gather *is* a search of a library (CR 701.23) — the "search your library
  *   for …" step, not a bulk move of a whole library (Jace, the Mind Sculptor's −12) or a look at
  *   its top. A gather is the only place a search can be told apart from those, so the flag rides
- *   here: when the searching player (the effect's controller) can't search libraries
- *   ([CantSearchLibrariesEffect]), library cards are left out of the gathered collection.
+ *   here: library cards the [searcher] is forbidden to search ([CantSearchLibrariesEffect], or a
+ *   [com.wingedsheep.sdk.scripting.PlayersCantSearchLibraries] static) are left out of the
+ *   gathered collection.
+ * @property searcher Who performs the search when [search] is set. Defaults to [Player.You], the
+ *   effect's controller ("search your library", and "search target player's library" — Cranial
+ *   Extraction, where *you* search). A different player searches their own library in
+ *   "its controller may search their library" (Sandworm) or "target player … searches their
+ *   library" (Restorative Technique): name that player here, matching the source's player. The
+ *   can't-search check reads it, and the pipeline's [EmitLibrarySearchedEventEffect] tail reports
+ *   the search as this player's. Ignored when [search] is `false`.
  */
 @SerialName("GatherCards")
 @Serializable
@@ -919,10 +1058,24 @@ data class GatherCardsEffect(
     val revealed: Boolean = false,
     val lookAudience: LookAudience = LookAudience.Controller,
     val search: Boolean = false,
+    val searcher: Player = Player.You,
 ) : Effect {
     override val description: String = buildString {
-        if (revealed) append("Reveal ") else append("Look at ")
-        append(source.description)
+        val zones = when (source) {
+            is CardSource.FromZone -> listOf(source.zone)
+            is CardSource.FromMultipleZones -> source.zones
+            else -> emptyList()
+        }
+        val filter = (source as? CardSource.FromZone)?.filter ?: (source as? CardSource.FromMultipleZones)?.filter
+        val player = (source as? CardSource.FromZone)?.player ?: (source as? CardSource.FromMultipleZones)?.player
+        when {
+            search && filter != null && player != null ->
+                append("Search ${SearchText.zones(player, zones)} for ${SearchText.noun(filter, plural = true)}")
+            revealed -> append("Reveal ${source.description}")
+            // Permanents on the battlefield are public: there is nothing to "look at".
+            zones == listOf(Zone.BATTLEFIELD) -> append("Find ${source.description}")
+            else -> append("Look at ${source.description}")
+        }
     }
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
@@ -948,16 +1101,25 @@ data class GatherCardsEffect(
  * fall back to the card's owner; permanents always have an owner, so the captured
  * list is the same length as [from] and indices line up 1:1.
  *
+ * [asLastBlockedBy] swaps "its controller now" for "the player who controlled it the last time it
+ * became blocked by [asLastBlockedBy] this turn" (Glyph of Reincarnation) — read off the creature's
+ * turn-scoped block record, so a later control change doesn't move it. An entry that creature
+ * never blocked this turn falls back to the current-controller ladder.
+ *
  * @property from Stored collection whose entities' controllers to capture.
  * @property storeAs Stored collection key under which the parallel controller list lives.
+ * @property asLastBlockedBy When set, capture each entity's controller as of its last block by this creature.
  */
 @SerialName("CaptureControllers")
 @Serializable
 data class CaptureControllersEffect(
     val from: String,
-    val storeAs: String
+    val storeAs: String,
+    val asLastBlockedBy: EffectTarget? = null
 ) : Effect {
-    override val description: String = "Capture the controllers of those cards"
+    override val description: String =
+        if (asLastBlockedBy == null) "Capture the controllers of those cards"
+        else "Capture who controlled each of those cards the last time ${asLastBlockedBy.description} blocked it"
 }
 
 /**
@@ -1078,7 +1240,7 @@ data class GatherUntilMatchEffect(
 
 /**
  * Emit a [com.wingedsheep.engine.core.CardsRevealedEvent] for all cards in the
- * named stored collection. Does not move or change any cards.
+ * named stored collection. Does not move any cards, and changes none unless [turnFaceUp].
  *
  * @property from Name of the stored collection to reveal
  * @property revealToSelf When false, the revealing player does not see the reveal
@@ -1092,6 +1254,11 @@ data class GatherUntilMatchEffect(
  *   Without this, public-info cards would be hidden from the overlay and shown only
  *   as a behold-pulse on the permanent.
  * @property toZone Optional destination zone for the reveal context. See [fromZone].
+ * @property turnFaceUp "Turn face up all cards exiled with …" (Pyxis of Pandemonium, Grimoire
+ *   Thief): every card of the collection that sits face down in exile is turned face up *where it
+ *   is* and stays face up — the same object, no zone change, so it is still "exiled with" its
+ *   source and later steps (a type filter, a move) read its real characteristics. Cards that are
+ *   already face up, or not in exile, are only revealed. The only step that changes cards.
  */
 @SerialName("RevealCollection")
 @Serializable
@@ -1099,9 +1266,11 @@ data class RevealCollectionEffect(
     val from: String,
     val revealToSelf: Boolean = true,
     val fromZone: com.wingedsheep.sdk.core.Zone? = null,
-    val toZone: com.wingedsheep.sdk.core.Zone? = null
+    val toZone: com.wingedsheep.sdk.core.Zone? = null,
+    val turnFaceUp: Boolean = false
 ) : Effect {
-    override val description: String = "Reveal those cards"
+    override val description: String =
+        if (turnFaceUp) "Turn those cards face up" else "Reveal those cards"
 }
 
 /**
@@ -1159,7 +1328,11 @@ data class SelectFromCollectionEffect(
      * Used for "creature card of the chosen type" patterns.
      */
     val matchChosenCreatureType: Boolean = false,
-    /** Custom prompt for the selection decision. If null, a generic prompt is generated. */
+    /**
+     * Custom prompt for the selection decision. If null, a generic prompt is generated. Inside an
+     * `IterationSpace.CounterKindsAmong` loop, `{counter}` is replaced by the visited kind's
+     * printed name ("Choose a token to get a {counter} counter" — Exotic Pets).
+     */
     val prompt: String? = null,
     /** Label describing where selected cards go (e.g., "Put on bottom"). Shown in the UI. */
     val selectedLabel: String? = null,
@@ -1185,13 +1358,41 @@ data class SelectFromCollectionEffect(
      * forced). Used by reveal-then-discard flows where the caster is picking from
      * another player's zone — auto-selecting the one eligible card feels abrupt
      * and players want to see and confirm the pick.
+     *
+     * The engine already behaves as if this were set whenever which cards are eligible
+     * depends on cards some player can't see (a search, a filtered look at a hand or
+     * library): every player sees whether a question is pending, so it is never skipped
+     * on hidden cards (#3340). Cards need this only for public pools.
      */
     val alwaysPrompt: Boolean = false
 ) : Effect {
+    /**
+     * "Choose two of those cards" / "An opponent chooses one of those cards" — Oracle's wording,
+     * naming the chooser when it isn't you (never "Choose exactly 2", and never an imperative that
+     * reads as though the controller picks when another player does).
+     */
     override val description: String = buildString {
-        if (chooser == Chooser.Opponent) append("An opponent ")
-        append(selection.description.replaceFirstChar { it.uppercase() })
-        append(" of those cards")
+        val subject = when (chooser) {
+            Chooser.Controller, Chooser.SourceController -> null
+            Chooser.Opponent -> "An opponent"
+            Chooser.ChosenOpponent -> "The chosen player"
+            Chooser.TargetPlayer, Chooser.TriggeringPlayer -> "That player"
+            Chooser.ControllerOfSelection -> "Their controller"
+            Chooser.ControllerOfTarget, Chooser.ControllerOfTriggeringEntity -> "Its controller"
+            Chooser.DefendingPlayer -> "Defending player"
+        }
+        fun amount(count: DynamicAmount): String =
+            (count as? DynamicAmount.Fixed)?.amount?.let { if (it in 1..10) numberToWord(it) else "$it" }
+                ?: count.description
+        val what = when (val s = selection) {
+            is SelectionMode.ChooseExactly -> "${amount(s.count)} of those cards"
+            is SelectionMode.ChooseUpTo -> "up to ${amount(s.count)} of those cards"
+            is SelectionMode.Random -> "${amount(s.count)} of those cards at random"
+            SelectionMode.ChooseAnyNumber -> "any number of those cards"
+            SelectionMode.All -> "all of those cards"
+            SelectionMode.ChooseSpell -> "up to one spell"
+        }
+        append(if (subject == null) "Choose $what" else "$subject chooses $what")
     }
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
@@ -1216,14 +1417,27 @@ data class SelectFromCollectionEffect(
  * Empty piles are legal — the chooser still gets to assign the empty pile to
  * either side.
  *
+ * **More than two piles.** [additionalPiles] (labelled by [additionalPileLabels]) extends the
+ * choice past two — "separates all permanents they control into three piles" (Whims of the
+ * Fates) is `pileA`, `pileB` plus one additional pile. The chosen pile goes to [storeChosenAs];
+ * every other pile, merged, goes to [storeOtherAs].
+ *
+ * **At random.** [atRandom] is "chooses one of their piles at random": the engine, not a player,
+ * draws one pile uniformly with the game's seeded RNG (each pile, empty or not, has an equal
+ * chance — Whims of the Fates' ruling), presents no decision and announces nothing; the pick is
+ * revealed by whatever the pipeline then does with it. [chooser] is ignored.
+ *
  * @property pileA Name of the first pre-existing collection (e.g. "pileA")
  * @property pileB Name of the second pre-existing collection (e.g. "pileB")
  * @property pileALabel Display label for pile A (defaults to "Pile 1")
  * @property pileBLabel Display label for pile B (defaults to "Pile 2")
  * @property chooser Who picks (defaults to the controller of the source spell/ability)
  * @property storeChosenAs Collection name to store the picked pile under
- * @property storeOtherAs Collection name to store the non-picked pile under
+ * @property storeOtherAs Collection name to store the non-picked pile(s) under
  * @property prompt Custom prompt for the decision; defaults to a generic one
+ * @property additionalPiles Names of further piles after [pileA] and [pileB], in display order
+ * @property additionalPileLabels Display labels for [additionalPiles] (defaults to "Pile 3", …)
+ * @property atRandom The engine picks a pile uniformly at random instead of a player choosing
  */
 @SerialName("ChoosePile")
 @Serializable
@@ -1235,10 +1449,26 @@ data class ChoosePileEffect(
     val chooser: Chooser = Chooser.Controller,
     val storeChosenAs: String,
     val storeOtherAs: String,
-    val prompt: String? = null
+    val prompt: String? = null,
+    val additionalPiles: List<String> = emptyList(),
+    val additionalPileLabels: List<String> = additionalPiles.indices.map { "Pile ${it + 3}" },
+    val atRandom: Boolean = false
 ) : Effect {
+    init {
+        require(additionalPileLabels.size == additionalPiles.size) {
+            "ChoosePile: one label per additional pile (${additionalPiles.size} piles, ${additionalPileLabels.size} labels)"
+        }
+    }
+
+    /** Every pile in display order: [pileA], [pileB], then [additionalPiles]. */
+    val piles: List<String> get() = listOf(pileA, pileB) + additionalPiles
+
+    /** The display label of each of [piles], in the same order. */
+    val pileLabels: List<String> get() = listOf(pileALabel, pileBLabel) + additionalPileLabels
+
     override val description: String =
-        "Choose one pile: $pileALabel or $pileBLabel"
+        if (atRandom) "Choose one of ${piles.size} piles at random"
+        else "Choose one pile: ${pileLabels.joinToString(" or ")}"
 }
 
 /**
@@ -1316,6 +1546,8 @@ data class MoveCollectionEffect(
     val noRegenerate: Boolean = false,
     val storeMovedAs: String? = null,
     val underOwnersControl: Boolean = false,
+    /** Each card enters the battlefield with one counter, honoring placement replacements/prevention;
+     * other destinations annotate the arriving card. Redirected/failed moves get no counter. */
     val addCounterType: CounterType? = null,
     /**
      * When true, each card moved to the battlefield is stamped with an
@@ -1332,26 +1564,75 @@ data class MoveCollectionEffect(
      */
     val filter: GameObjectFilter? = null,
     /**
-     * For a move onto the battlefield: the permanent every **Aura** in the collection enters
-     * attached to — "put that Aura card onto the battlefield attached to it" (Auratouched Mage),
-     * "return the other cards exiled this way … attached to that creature" (Flickerform). The effect
-     * names the host, so no enchant choice is offered (CR 303.4f). An Aura whose printed enchant
-     * restriction that host doesn't satisfy — or every Aura, when the host is no longer on the
-     * battlefield — can't enter and stays in its current zone (CR 303.4g). Non-Aura cards move
-     * normally. Null (the default) leaves each Aura's host to the player's choice.
+     * For a move onto the battlefield: the permanent every **Aura, Equipment and Fortification**
+     * card in the collection enters attached to — "put that Aura card onto the battlefield attached
+     * to it" (Auratouched Mage), "return the other cards exiled this way … attached to that
+     * creature" (Flickerform), "an Aura or Equipment card … attached to Danitha". The effect names
+     * the host, so no enchant choice is offered (CR 303.4f). An Aura that host can't legally carry —
+     * or every Aura, when the host is no longer on the battlefield — can't enter and stays in its
+     * current zone (CR 303.4i); an Equipment or Fortification that can't be attached enters
+     * unattached (CR 301.5e). Pair with a `CardPredicate.CouldAttachTo` [filter] when the unattachable ones stay
+     * behind instead (Mantle of the Ancients). Other cards move normally. Null (the default) leaves
+     * each Aura's host to the player's choice.
      */
-    val attachTo: EffectTarget? = null
+    val attachTo: EffectTarget? = null,
+    /**
+     * For a move onto the battlefield without [attachTo]: narrows the host each Aura card's
+     * controller chooses as it enters (CR 303.4f) to permanents that also match this filter, "you"
+     * being the effect's controller — "return any number of Aura cards … attached to creatures you
+     * control" (Storm Herald), "only creatures can be enchanted this way" (Retether). Each Aura still
+     * needs a host its own enchant ability allows; one with no host in the intersection stays where
+     * it is (CR 303.4g). Null (the default) offers every host the Aura's enchant ability allows.
+     */
+    val auraHostFilter: GameObjectFilter? = null,
+    /**
+     * What each card put onto the battlefield [ZonePlacement.TappedAndAttacking] attacks. The
+     * default, [EnteringAttackDefender.JOIN_SOURCE], joins a defending player already in this
+     * combat; [EnteringAttackDefender.CONTROLLER_CHOOSES] is a bare "tapped and attacking" as
+     * printed (CR 508.4) — the controller picks a defending player, a planeswalker one controls or
+     * a battle one protects for each card, before any of them moves (Minion of the Mighty).
+     */
+    val attackDefender: EnteringAttackDefender = EnteringAttackDefender.JOIN_SOURCE,
+    /**
+     * Characteristics each card moved to the battlefield has as it enters — "they enter as 5/5
+     * creatures in addition to their other types" (Dance of the Manse). See [EntersWithCharacteristics].
+     */
+    val entersWith: EntersWithCharacteristics? = null,
 ) : Effect {
+    init {
+        require(attackDefender != EnteringAttackDefender.RETURNED_ATTACKER) {
+            "MoveCollectionEffect has no returned attacker; use JOIN_SOURCE or CONTROLLER_CHOOSES"
+        }
+        require(
+            attackDefender == EnteringAttackDefender.JOIN_SOURCE ||
+                (destination as? CardDestination.ToZone)?.placement == ZonePlacement.TappedAndAttacking
+        ) { "attackDefender needs a ToZone destination with placement = TappedAndAttacking" }
+        require(auraHostFilter == null || attachTo == null) {
+            "auraHostFilter narrows a chosen host; attachTo names the host outright — set one, not both"
+        }
+    }
+
     override val description: String = buildString {
+        val discardingPlayer = (destination as? CardDestination.ToZone)
+            ?.takeIf { moveType == MoveType.Discard && it.zone == Zone.GRAVEYARD && !revealed }?.player
+        if (discardingPlayer != null) {
+            // A discard is the hand's owner discarding, never "Put those cards into a graveyard".
+            if (discardingPlayer == Player.You) append("Discard those cards")
+            else append("${discardingPlayer.description.replaceFirstChar { it.uppercase() }} discards those cards")
+            return@buildString
+        }
         if (revealed) append("Reveal and put ") else append("Put ")
         append("those cards ")
         // `from` is an internal pipeline-collection key — never surface it to players.
         append(if ((destination as? CardDestination.ToZone)?.zone == Zone.BATTLEFIELD) "onto " else "into ")
         append(destination.description)
+        // Manifest / cloak: the card arrives as a face-down 2/2, which is the whole point of the move.
+        if (faceDown != null) append(" face down")
         // "under its owner's control" is a printed clause on every card that sets this flag
         // (Safe Haven, Oblivion Ring's cousins). Dropping it from the generated text loses the
         // one detail that distinguishes it from a plain return to the battlefield.
         if (underOwnersControl) append(" under its owner's control")
+        auraHostFilter?.let { append(" attached to ${it.description}") }
         if (lookableInExile) append(". You may look at those cards for as long as they remain exiled")
     }
 }
@@ -1388,12 +1669,33 @@ enum class OptionType {
     /** Choose from the five basic land types (Plains, Island, Swamp, Mountain, Forest) */
     BASIC_LAND_TYPE,
     /**
+     * Choose a card type (CR 205.2a) — the types listed in
+     * [com.wingedsheep.sdk.core.CardType.CHOOSABLE_TYPE_NAMES]. Pair the stored type with
+     * [com.wingedsheep.sdk.scripting.predicates.CardPredicate.CardTypeEqualsChosen] to match cards
+     * by it ("choose a card type, then reveal … put all cards of the chosen type" — Alrund, God of
+     * the Cosmos).
+     */
+    CARD_TYPE,
+    /**
      * Name a card. Options are every card name the engine knows about (the registry),
      * sorted alphabetically, so the player searches/filters a list rather than typing
      * free text. Pair the stored name with [com.wingedsheep.sdk.scripting.predicates.CardPredicate.NameEqualsChosen]
      * to match cards by it. Used by "name a card" effects (Desperate Research, etc.).
      */
-    CARD_NAME
+    CARD_NAME;
+
+    /**
+     * The durable cast-choices slot a choice of this type is recorded under when
+     * [ChooseOptionEffect.recordOnSource] is set — the slot the matching `EntersWithChoice` writes.
+     */
+    val recordSlot: ChoiceSlot
+        get() = when (this) {
+            CREATURE_TYPE -> ChoiceSlot.CREATURE_TYPE
+            COLOR -> ChoiceSlot.COLOR
+            BASIC_LAND_TYPE -> ChoiceSlot.LAND_TYPE
+            CARD_TYPE -> ChoiceSlot.CARD_TYPE
+            CARD_NAME -> ChoiceSlot.CARD_NAME
+        }
 }
 
 /**
@@ -1410,6 +1712,15 @@ enum class OptionType {
  * @property cardNamePool For [OptionType.CARD_NAME], which registered names are offered —
  *   every name ([CardNamePool.ANY], "choose a card name"), or only nonland / land names
  *   ("choose a nonland card name" — Cranial Extraction). Ignored for every other option type.
+ * @property chooser Who makes the choice — the controller by default, or another player the text
+ *   names: "target player chooses a card name" (Petra Sphinx) is [Chooser.TargetPlayer].
+ * @property recordOnSource Also record the choice **durably on the source permanent**, under the
+ *   option type's [ChoiceSlot] ([OptionType.recordSlot]) in its cast-choices bag — the same slot the
+ *   as-enters `EntersWithChoice` writes, replacing any prior value. For a choice made by a resolving
+ *   ability that a *later* resolution reads back ("II — Choose a card name. III — When you cast a
+ *   spell with the chosen name …", Medomai's Prophecy): read it with
+ *   `GameObjectFilter.namedFromChosenComponent()` / `.ofChosenCardTypeComponent()`. With no source
+ *   permanent on the battlefield nothing is recorded; the pipeline variable is stored either way.
  */
 @SerialName("ChooseOption")
 @Serializable
@@ -1418,7 +1729,9 @@ data class ChooseOptionEffect(
     val storeAs: String = "chosenOption",
     val prompt: String? = null,
     val excludedOptions: List<String> = emptyList(),
-    val cardNamePool: CardNamePool = CardNamePool.ANY
+    val cardNamePool: CardNamePool = CardNamePool.ANY,
+    val chooser: Chooser = Chooser.Controller,
+    val recordOnSource: Boolean = false
 ) : Effect {
     override val description: String = buildString {
         append("Choose ")
@@ -1426,11 +1739,8 @@ data class ChooseOptionEffect(
             OptionType.CREATURE_TYPE -> "a creature type"
             OptionType.COLOR -> "a color"
             OptionType.BASIC_LAND_TYPE -> "a basic land type"
-            OptionType.CARD_NAME -> when (cardNamePool) {
-                CardNamePool.ANY -> "a card name"
-                CardNamePool.NONLAND -> "a nonland card name"
-                CardNamePool.LAND -> "a land card name"
-            }
+            OptionType.CARD_TYPE -> "a card type"
+            OptionType.CARD_NAME -> cardNamePool.nounPhrase
         })
     }
 }
@@ -1528,6 +1838,7 @@ data class EachPlayerChoosesCreatureTypeEffect(
  * @property requirement The target requirement (reuses all existing TargetRequirement types)
  * @property storeAs Name of the collection to store the selected target IDs in
  * @property prompt Optional player-facing prompt overriding the derived "Choose <requirement>"
+ * @property atRandom The engine picks one legal candidate uniformly at random instead of a player
  */
 @SerialName("SelectTarget")
 @Serializable
@@ -1547,9 +1858,33 @@ data class SelectTargetEffect(
      * declared at cast, so the prompt has to say what the Giant is for rather than read like a
      * second target. `null` keeps the derived prompt.
      */
-    val prompt: String? = null
+    val prompt: String? = null,
+    /**
+     * Pipeline collections whose members are not offered — "choose a second player", "then
+     * choose a third player" where every pick must differ from the earlier ones (Gluntch, the
+     * Bestower). Each key names a collection an earlier step of the same resolution stored
+     * (typically another [SelectTargetEffect]); anything in them is removed from the legal set
+     * before the choice is offered or auto-picked. A missing collection excludes nothing. Empty
+     * leaves the choice unrestricted, as before.
+     */
+    val excluding: List<String> = emptyList(),
+    /**
+     * `true` for "choose … at random" (Vial Smasher the Fierce's "choose an opponent at random"):
+     * the engine, not a player, picks uniformly among the legal candidates with the game's seeded
+     * RNG, presents no decision, and stores the pick in [storeAs] exactly like a chosen one — an
+     * empty collection when there is no candidate. Only a single, mandatory pick can be random, so
+     * the requirement must ask for exactly one target. Usually paired with [nonTargeting].
+     */
+    val atRandom: Boolean = false
 ) : Effect {
-    override val description: String = prompt ?: "Choose ${requirement.description}"
+    init {
+        require(!atRandom || requirement.requiresExactlyOneTarget) {
+            "atRandom picks exactly one candidate: ${requirement.description} must ask for exactly one, not optional"
+        }
+    }
+
+    override val description: String =
+        prompt ?: if (atRandom) "Choose ${requirement.description} at random" else "Choose ${requirement.description}"
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
         val newRequirement = requirement.applyTextReplacement(replacer)
@@ -1580,13 +1915,21 @@ data class GrantMayPlayFromExileEffect(
      */
     val withAnyManaType: Boolean = false,
     /**
-     * When true, colorless mana may be spent **as though it were mana of any color** to cast the
-     * granted cards (CR 609.4b) — "and you may spend colorless mana as though it were mana of any
-     * color to cast that spell" (Abstruse Appropriation). Narrower than [withAnyManaType]: the cost
-     * is not rewritten, every colored pip simply also accepts colorless mana, and `{C}` still needs
-     * colorless.
+     * When true, mana may be spent **as though it were mana of any color** to cast the granted
+     * cards (CR 609.4b) — "and you may spend mana as though it were mana of any color to cast
+     * those spells" (Stolen Strategy, Curse of Hospitality). Every colored pip is relaxed to
+     * generic, but unlike [withAnyManaType] a `{C}` pip still needs colorless mana: colorless is a
+     * type of mana, not a color (CR 106.1, 118.14).
      */
-    val colorlessAsAnyColor: Boolean = false,
+    val withAnyManaColor: Boolean = false,
+    /**
+     * Which mana may be spent **as though it were mana of any color** to cast the granted cards
+     * (CR 609.4b), when only some may — [ManaSpentAsAnyColor.COLORLESS] for "and you may spend
+     * colorless mana as though it were mana of any color to cast that spell" (Abstruse
+     * Appropriation). Narrower than [withAnyManaColor]: the cost is not rewritten, every colored
+     * pip simply also accepts that mana, and `{C}` still needs colorless.
+     */
+    val spendAsAnyColor: ManaSpentAsAnyColor? = null,
     /**
      * Optional gate evaluated each time the play permission is checked. Used for cards
      * that grant a conditional may-play, e.g. Possibility Technician's "you may play it
@@ -1595,12 +1938,14 @@ data class GrantMayPlayFromExileEffect(
      */
     val condition: Condition? = null,
     /**
-     * When true, a land card played via this permission enters the battlefield tapped.
-     * Used by Lightstall Inquisitor-style "each land played this way enters tapped"
-     * clauses, where the tapped-on-entry rule is imposed by the granting effect rather
-     * than the played card's own script.
+     * Which cards played through this permission enter the battlefield tapped — a land played
+     * or a permanent spell cast this way, when the card matches. [GameObjectFilter.Land] for
+     * "each land played this way enters tapped" (Lightstall Inquisitor), [GameObjectFilter.Any]
+     * for "you may play target snow permanent card … If you do, it enters tapped" (Kaldring, the
+     * Rimestaff). The rule is imposed by the grant, not the played card's own script, so it only
+     * binds a play that has to go through a rider-bearing permission. `null` for no such rider.
      */
-    val landEntersTapped: Boolean = false,
+    val entersTapped: GameObjectFilter? = null,
     /**
      * Optional "When you play a card this way, …" rider. When set, playing (casting or
      * playing as a land) any card granted by this permission puts this effect on the stack
@@ -1710,7 +2055,9 @@ data class GrantMayPlayFromExileEffect(
      * any card-specific wiring.
      *
      * Read by the from-exile/graveyard cast enumerator and enforced by the authoritative cast
-     * handler, which rejects a hand-constructed `faceIndex` no permission authorizes.
+     * handler, which rejects a hand-constructed `faceIndex` no permission authorizes. Left null,
+     * the grant covers every face the card can be cast as — an Adventure (CR 715.3), either face of
+     * a modal DFC (CR 712.11b).
      */
     val castFaceIndex: Int? = null,
     /**
@@ -1724,17 +2071,45 @@ data class GrantMayPlayFromExileEffect(
      */
     val castColorRestriction: com.wingedsheep.sdk.core.Color? = null,
     /**
-     * When true, the permission over the whole collection is **used up by one play**: casting (or
-     * playing, for a land) any one granted card revokes it for every other card in the group.
-     * Models "you may cast **an** instant or sorcery spell from among those cards" (Chandra, Hope's
-     * Beacon's +1) — a single spell, not any number of them — as distinct from the default, where a
-     * multi-card grant keeps authorising the remaining cards after each cast (Light Up the Stage's
-     * "you may play those cards"). The permission is consumed as the spell is cast, so a spell that
-     * is later countered back into exile cannot be recast through it; a card that leaves exile any
-     * other way does not spend it. Honoured by the cast path and the land-play path alike.
+     * When set, the permission authorizes casting only spells with exactly this many **colors**,
+     * checked — like [castColorRestriction] — against the face actually being cast. Models "You
+     * may cast spells with exactly three colors from among them this turn" (Meeting of the Five).
+     * Pair with `nonLandOnly = true`: the count is a cast-time check, it does not stop a land play.
      */
-    val singleUse: Boolean = false
+    val castColorCount: Int? = null,
+    /**
+     * When set, the permission authorizes casting only spells that have at least one of these
+     * **card types**, checked — like [castColorRestriction] — against the face actually being cast
+     * rather than the card in exile. Models "you may cast it if it's a creature spell" (Vivien,
+     * Champion of the Wilds −2: an exiled Adventurer card's instant or sorcery Adventure is not a
+     * creature spell, so only its creature half is castable) and "an instant or sorcery spell"
+     * wording. A cast-time check only: it never stops a land play, so pair it with
+     * `nonLandOnly = true` for "cast" wording. Distinct from a `FilterCollection` over the exiled
+     * cards, which decides which cards get a permission at all.
+     */
+    val castSpellTypes: Set<com.wingedsheep.sdk.core.CardType>? = null,
+    /**
+     * Caps how many plays the permission over the whole collection authorises; null (the default)
+     * is unlimited. Each cast (or land play) of a granted card spends one, and the last one revokes
+     * the grant for every card still in the group. `1` models "you may cast **an** instant or sorcery
+     * spell from among those cards" (Chandra, Hope's Beacon's +1); `2` models "you may play **up to
+     * two** of those cards" (March of Reckless Joy) — as distinct from the default, where a
+     * multi-card grant keeps authorising the remaining cards after each cast (Light Up the Stage's
+     * "you may play those cards"). A play is spent as the spell is cast, so a spell that is later
+     * countered back into exile cannot be recast through it; a card that leaves exile any other way
+     * spends nothing. Honoured by the cast path and the land-play path alike. With [ownerControls]
+     * the cap applies to each owner's grant separately.
+     */
+    val maxPlays: Int? = null
 ) : Effect {
+    init {
+        require(!(withAnyManaColor && spendAsAnyColor != null)) {
+            "withAnyManaColor already lets all mana stand in for a color; spendAsAnyColor narrows it — set one"
+        }
+        require(maxPlays == null || maxPlays >= 1) { "maxPlays must be at least 1, or null for unlimited" }
+        require(castSpellTypes == null || castSpellTypes.isNotEmpty()) { "castSpellTypes must name a type, or be null for any spell" }
+    }
+
     override val description: String = buildString {
         val who = when {
             ownerControls -> "its owner"
@@ -1743,14 +2118,21 @@ data class GrantMayPlayFromExileEffect(
         }
         val verb = if (nonLandOnly) "cast" else "play"
         val what = when {
-            castColorRestriction != null && singleUse -> "a ${castColorRestriction.name.lowercase()} spell from among them"
+            castColorRestriction != null && maxPlays == 1 -> "a ${castColorRestriction.name.lowercase()} spell from among them"
             castColorRestriction != null -> "${castColorRestriction.name.lowercase()} spells among them"
-            singleUse && nonLandOnly -> "a spell from among those cards"
-            singleUse -> "one of those cards"
+            castColorCount != null -> "spells with exactly $castColorCount colors from among them"
+            maxPlays == 1 && nonLandOnly -> "a spell from among those cards"
+            maxPlays == 1 -> "one of those cards"
+            maxPlays != null && nonLandOnly -> "up to ${numberToWord(maxPlays)} spells from among those cards"
+            maxPlays != null -> "up to ${numberToWord(maxPlays)} of those cards"
             nonLandOnly -> "that card"
             else -> "those cards"
         }
         append("${expiry.description.replaceFirstChar { it.uppercase() }}, $who may $verb $what from exile")
+        if (castSpellTypes != null) {
+            val types = castSpellTypes.joinToString(" or ") { it.displayName.lowercase() }
+            append(" if it's ${if (types.first() in "aeiou") "an" else "a"} $types spell")
+        }
         if (castFaceIndex != null) append(" as its alternative face")
         if (fixedAlternativeCostIsManaValue) {
             append(if (waterbend) " by waterbending {X} rather than paying their mana cost, where X is their mana value"
@@ -1763,8 +2145,11 @@ data class GrantMayPlayFromExileEffect(
         }
         if (asThoughFlash) append(", as though they had flash")
         if (withAnyManaType) append(", and mana of any type can be spent to cast them")
-        if (colorlessAsAnyColor) append(", and you may spend colorless mana as though it were mana of any color to cast them")
-        if (landEntersTapped) append(". Each land played this way enters tapped")
+        if (withAnyManaColor) append(", and you may spend mana as though it were mana of any color to cast them")
+        spendAsAnyColor?.let { append(", and you may spend ${it.description} as though it were mana of any color to cast them") }
+        entersTapped?.let {
+            append(if (it == GameObjectFilter.Any) ". If you do, it enters tapped" else ". Each ${it.description} played this way enters tapped")
+        }
         insteadOfGraveyard?.let { append(it.riderText) }
     }
 }
@@ -1838,7 +2223,7 @@ data class ConditionalOnCollectionEffect(
             append("If those cards include at least $minSize$restrict cards, ")
         }
         append(ifNotEmpty.description.replaceFirstChar { it.lowercase() })
-        if (ifEmpty != null) {
+        if (ifEmpty != null && ifEmpty.description.isNotBlank()) {
             append(". Otherwise, ")
             append(ifEmpty.description.replaceFirstChar { it.lowercase() })
         }
@@ -1866,16 +2251,25 @@ data class ConditionalOnCollectionEffect(
  *   your next turn, you may play those cards … without paying their mana costs" (Ignite the
  *   Future). A non-turn-keyed expiry ([MayPlayExpiry.Permanent], the source-keyed ones) never
  *   expires at cleanup: the paired permission's own revocation is what ends the play.
+ * @property ownerControls When true, each card's waiver belongs to its *owner* rather than the
+ *   effect's controller (a turn-keyed [expiry] then follows that owner's turns) — "its owner may
+ *   cast it without paying its mana cost" (Release to the Wind). Pair with a
+ *   [GrantMayPlayFromExileEffect] that also sets `ownerControls`.
  */
 @SerialName("GrantPlayWithoutPayingCost")
 @Serializable
 data class GrantPlayWithoutPayingCostEffect(
     val from: String,
-    val expiry: MayPlayExpiry = MayPlayExpiry.EndOfTurn
+    val expiry: MayPlayExpiry = MayPlayExpiry.EndOfTurn,
+    val ownerControls: Boolean = false
 ) : Effect {
-    override val description: String =
-        if (expiry == MayPlayExpiry.EndOfTurn) "Until end of turn, you may play those cards without paying their mana costs"
-        else "You may play those cards without paying their mana costs ${expiry.description}"
+    override val description: String = when {
+        ownerControls && expiry == MayPlayExpiry.EndOfTurn ->
+            "Until end of turn, its owner may play that card without paying its mana cost"
+        ownerControls -> "Its owner may play that card without paying its mana cost ${expiry.description}"
+        expiry == MayPlayExpiry.EndOfTurn -> "Until end of turn, you may play those cards without paying their mana costs"
+        else -> "You may play those cards without paying their mana costs ${expiry.description}"
+    }
 }
 
 /**
@@ -1911,17 +2305,34 @@ data class GrantPlayWithAdditionalCostEffect(
  * more to cast"), where each opponent exiles a card from their own hand and
  * may play it with this tax.
  *
+ * When the controller already holds a may-play permission over a card from this same source (the
+ * grant this effect is paired with), the tax is tied to that permission — "it costs {8} more to
+ * cast **this way**": it lapses with the permission and isn't owed by a flashback/escape/… cast of
+ * the same card, which is a different way of casting it.
+ *
  * @property from Name of the collection containing the card(s)
  * @property amount Generic mana added to each card's cost when the controller casts it
+ * @property unlessTargets Waives the tax when any of the spell's chosen targets matches this
+ *   filter — "if that spell doesn't target a creature you control, it costs {8} more to cast this
+ *   way" (Mavinda, Students' Advocate). The negated counterpart of the spell-side
+ *   [com.wingedsheep.sdk.scripting.CostModification.IncreaseGenericIfAnyTargetMatches]; a spell
+ *   with no targets always pays it. Null (the default) taxes every cast.
  */
 @SerialName("GrantPlayWithCostIncrease")
 @Serializable
 data class GrantPlayWithCostIncreaseEffect(
     val from: String,
-    val amount: Int
+    val amount: Int,
+    val unlessTargets: GameObjectFilter? = null,
 ) : Effect {
     override val description: String =
-        "Each of those spells costs {$amount} more to cast"
+        if (unlessTargets == null) "Each of those spells costs {$amount} more to cast"
+        else "If that spell doesn't target ${unlessTargets.description}, it costs {$amount} more to cast this way"
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newFilter = unlessTargets?.applyTextReplacement(replacer)
+        return if (newFilter !== unlessTargets) copy(unlessTargets = newFilter) else this
+    }
 }
 
 /**
@@ -2088,6 +2499,23 @@ data class FilterCollectionEffect(
  * Swapping the last step gives Consuming Tide ("returns the rest to their hands"); swapping the
  * category list gives Cataclysm and Divine Reckoning.
  *
+ * The picks can also be the ones that suffer: a per-category edict ("each opponent sacrifices an
+ * artifact creature and a nonartifact creature" — Perilous Predicament) sets [purpose] to
+ * [CategoryPickPurpose.SACRIFICE] and feeds the picks themselves to the move step, so every pick is
+ * sacrificed at once rather than one edict after another. Give a SACRIFICE step **disjoint**
+ * categories: the picks are deduplicated (so a keep can spare one permanent as several types), so
+ * overlapping categories would let a single permanent answer two of them — unless [distinctPicks]
+ * is set.
+ *
+ * [distinctPicks] is the overlapping-category edict: "each player sacrifices an artifact, a creature,
+ * an enchantment, a land, and a planeswalker of their choice" (Release). There one permanent answers
+ * **one** category only (an artifact creature is the artifact *or* the creature), and the chooser must
+ * end up with as many picks as their board allows (Release's ruling: with an artifact creature and a
+ * nonartifact creature, the artifact creature must be the artifact). The executor enforces both: a
+ * permanent already picked is no longer a candidate, and each prompt offers only the candidates that
+ * still leave a maximum set of distinct picks reachable for the remaining categories (a bipartite
+ * matching over the chooser's own permanents), so no sequence of choices strands a category.
+ *
  * ### One chooser across the whole pool ([chooser])
  *
  * Some cards have a *single* player make every pick over everyone's permanents instead — Sundering
@@ -2096,14 +2524,15 @@ data class FilterCollectionEffect(
  * (2020-08-07 ruling), and a land with two basic land types may be the pick for both. Setting
  * [chooser] switches to that shape: the named player is asked once per category over every member
  * of [from] (no per-controller split), with the same skip-if-empty, single-candidate-is-forced and
- * one-permanent-many-categories behaviour. [purpose] words the prompt ("Choose a Plains to
- * destroy").
+ * one-permanent-many-categories behaviour. [purpose] words the prompt
+ * ([CategoryPickPurpose.DESTROY]: "Choose a Plains to destroy").
  *
  * ```kotlin
  * // Sundering Titan: "choose a land of each basic land type, then destroy those lands"
  * Effects.Pipeline {
  *     val lands = gather(CardSource.BattlefieldMatching(GameObjectFilter.Land))
- *     val chosen = chooseOnePerCategory(lands, basicLandTypeFilters, chooser = Chooser.Controller, purpose = "destroy")
+ *     val chosen = chooseOnePerCategory(lands, basicLandTypeFilters, chooser = Chooser.Controller,
+ *         purpose = CategoryPickPurpose.DESTROY)
  *     destroy(chosen)
  * }
  * ```
@@ -2111,9 +2540,13 @@ data class FilterCollectionEffect(
  * @property from Collection to choose from — every candidate, across all affected players.
  * @property categories One filter per choice each controller makes, in the order they are offered.
  * @property storeAs Collection receiving every player's picks (deduplicated).
+ * @property purpose What the picks are for — what the chooser is asked ("… to keep" / "… to
+ *   sacrifice" / "… to destroy"), and so which end of their board an AI chooser reaches for. The
+ *   step itself still moves nothing.
+ * @property distinctPicks Each permanent may answer only one category, and the chooser must pick as
+ *   many distinct permanents as possible (Release). Default false: one permanent may cover several.
  * @property chooser `null` (the default): each controller of a member of [from] picks among their
  *   own, in APNAP order. Non-null: that one player makes every pick over the whole of [from].
- * @property purpose The verb the prompt ends on — "Choose a creature to **keep**".
  */
 @SerialName("ChooseOnePerCategory")
 @Serializable
@@ -2121,8 +2554,9 @@ data class ChooseOnePerCategoryEffect(
     val from: String,
     val categories: List<GameObjectFilter>,
     val storeAs: String,
-    val chooser: Chooser? = null,
-    val purpose: String = "keep"
+    val purpose: CategoryPickPurpose = CategoryPickPurpose.KEEP,
+    val distinctPicks: Boolean = false,
+    val chooser: Chooser? = null
 ) : Effect {
     init {
         require(categories.isNotEmpty()) {
@@ -2130,15 +2564,33 @@ data class ChooseOnePerCategoryEffect(
         }
     }
 
-    override val description: String =
-        if (chooser == null) "each player chooses ${categories.joinToString(", ") { it.description }} they control"
-        else "choose ${categories.joinToString(", ") { it.description }}"
+    override val description: String = when {
+        chooser != null -> "choose ${categories.joinToString(", ") { it.description }}"
+        purpose == CategoryPickPurpose.SACRIFICE ->
+            "each player chooses ${categories.joinToString(" and ") { "${it.indefiniteArticle} ${it.description}" }} " +
+                "they control to sacrifice"
+        else -> "each player chooses ${categories.joinToString(", ") { it.description }} they control"
+    }
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
         val newCategories = categories.map { it.applyTextReplacement(replacer) }
         val changed = newCategories.indices.any { newCategories[it] !== categories[it] }
         return if (changed) copy(categories = newCategories) else this
     }
+}
+
+/**
+ * What the picks of a [ChooseOnePerCategoryEffect] are for: the ones the chooser **keeps** while
+ * "the rest" suffer (Liliana, Dreadhorde General's −9), the ones they **sacrifice** (Perilous
+ * Predicament's per-category edict), or — with a single [ChooseOnePerCategoryEffect.chooser] over
+ * everyone's permanents — the ones that will be **destroyed** (Sundering Titan). Sets the question
+ * the chooser is asked.
+ */
+@Serializable
+enum class CategoryPickPurpose(val verb: String) {
+    KEEP("keep"),
+    SACRIFICE("sacrifice"),
+    DESTROY("destroy")
 }
 
 /**
@@ -2186,6 +2638,36 @@ data class StorePlayerEffect(
 }
 
 /**
+ * "one of those [spellFilter] spells [caster] cast this turn" — the controller chooses one of the
+ * spells the player [caster] resolves to has cast this turn that match [spellFilter], and the
+ * damage that spell dealt this turn is stored under [storeDamageDealtAs] in pipeline
+ * `storedNumbers`, for a later step to read through
+ * [com.wingedsheep.sdk.scripting.values.DynamicAmount.VariableReference]. Backdraft: "deals damage
+ * to that player equal to half the damage dealt by one of those sorcery spells this turn, rounded
+ * down".
+ *
+ * The cast history is the per-turn cast record, so a spell still counts after it resolved, was
+ * countered or left the stack; the damage is the total the spell dealt as its own source while it
+ * was a spell (a copy is never cast, so it is not one of "those spells"). When the matching spells
+ * all dealt the same damage the choice is immaterial and made without a prompt; with no matching
+ * spell the stored number is 0.
+ *
+ * Closest neighbours: [StoreNumberEffect] stores a [DynamicAmount] but can't let a player pick
+ * among the spells, and [ChooseOptionEffect] picks from a fixed option family into `chosenValues`
+ * strings, not from a player's cast history into a number.
+ */
+@SerialName("ChooseSpellCastThisTurn")
+@Serializable
+data class ChooseSpellCastThisTurnEffect(
+    val caster: EffectTarget,
+    val spellFilter: GameObjectFilter,
+    val storeDamageDealtAs: String,
+) : Effect {
+    override val description: String =
+        "Choose one of the ${spellFilter.description} spells ${caster.description} cast this turn"
+}
+
+/**
  * Read the name of the first card in a stored collection and store it under [storeAs] in
  * pipeline `chosenValues`. Subsequent effects can match cards against it via
  * [com.wingedsheep.sdk.scripting.predicates.CardPredicate.NameEqualsChosen] (e.g.
@@ -2206,6 +2688,33 @@ data class StoreCardNameEffect(
     val storeAs: String = "chosenCardName"
 ) : Effect {
     override val description: String = "Note the name of that card"
+}
+
+/**
+ * "Exile it and the top card of your library **in a face-down pile, shuffle that pile**, then
+ * manifest those cards" (Jeskai Infiltrator): put the cards of every collection in [from] together
+ * into one pile, in a random order, stored under [storeAs].
+ *
+ * The shuffle is what hides which card is which, so every card of the pile that is face down
+ * outside the library (CR 406.3 — a card exiled face down) is given a fresh object identity as the
+ * pile is shuffled: an opponent who watched one of them go into the pile can't follow it out. Face-up
+ * cards keep theirs, since anyone can tell them apart anyway. Duplicates across [from] count once.
+ *
+ * Closest types: [MoveCollectionEffect] with `order = CardOrder.Random` orders cards as it moves
+ * them, but reads one collection and keeps each card's identity, so a face-down pile it builds is
+ * still traceable; [FilterCollectionEffect] / `CollectionFilter.ExcludeOtherCollection` narrow or
+ * subtract collections but never join them.
+ *
+ * @property from The collections making up the pile, in any order.
+ * @property storeAs Key under which the shuffled pile is stored.
+ */
+@SerialName("ShufflePile")
+@Serializable
+data class ShufflePileEffect(
+    val from: List<String>,
+    val storeAs: String
+) : Effect {
+    override val description: String = "Shuffle those cards together into a pile"
 }
 
 /** Append the current battlefield objects in a pipeline collection to a source-local history slot. */

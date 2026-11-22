@@ -50,7 +50,7 @@ class StateTriggerPoller(
         val projected = state.projectedState
         // Build once per poll, rather than scanning the stack for each permanent/ability.
         val occupied = mutableSetOf<Pair<ObjectRef?, AbilityId>>()
-        for (trigger in state.pendingTriggers) {
+        for (trigger in state.waitingTriggers) {
             if (trigger.ability.trigger == EventPattern.StateConditionMetEvent) {
                 occupied += trigger.objectReferences.origin to trigger.ability.id
             }

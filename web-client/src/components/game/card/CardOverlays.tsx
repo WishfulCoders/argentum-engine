@@ -64,7 +64,6 @@ export function KeywordIcons({
   isSolved,
   isRenowned,
   isMonstrous,
-  topOffset,
   size,
 }: {
   keywords: readonly Keyword[]
@@ -83,8 +82,6 @@ export function KeywordIcons({
   isRenowned?: boolean
   /** Whether the permanent has the monstrous designation (CR 701.37b). */
   isMonstrous?: boolean
-  /** Override the column's top offset (px) so it can clear the ring-bearer badge in the same corner. */
-  topOffset?: number
   size: number
 }) {
   // Filter out PROTECTION (rendered via protections array) and FIRST_STRIKE when DOUBLE_STRIKE is present.
@@ -117,7 +114,7 @@ export function KeywordIcons({
   if (!hasKeywords && !hasProtections && !hasHexproofFrom && !hasSuspected && !hasSolved && !hasRenowned && !hasMonstrous) return null
 
   return (
-    <div style={topOffset === undefined ? styles.keywordIconsContainer : { ...styles.keywordIconsContainer, top: topOffset }}>
+    <div style={styles.keywordIconsContainer}>
       {hasSuspected && (
         <div key="suspected" style={styles.keywordIconWrapper} title="Suspected (has menace and can't block)">
           <KeywordGlyph name="SUSPECTED" size={size} />

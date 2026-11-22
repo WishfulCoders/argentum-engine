@@ -13,7 +13,7 @@ val IntangibleVirtueReprint = Printing(
     collectorNumber = "72",
     scryfallId = "267f9f64-c67c-499d-8c39-bb4849980942",
     artist = "Clint Cearley",
-    imageUri = "https://cards.scryfall.io/normal/front/2/6/267f9f64-c67c-499d-8c39-bb4849980942.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/2/6/267f9f64-c67c-499d-8c39-bb4849980942.jpg?1783939366",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

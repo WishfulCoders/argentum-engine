@@ -1915,7 +1915,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land card to put into your graveyard",
+                            "selectedLabel": "Put into your graveyard"
                         },
                         {
                             "type": "MoveCollection",
@@ -2051,22 +2053,18 @@
                                         "count": {
                                             "type": "Fixed",
                                             "amount": 1
-                                        }
+                                        },
+                                        "isSurveil": true
                                     },
                                     "storeAs": "surveiled"
                                 },
                                 {
                                     "type": "SelectFromCollection",
                                     "from": "surveiled",
-                                    "selection": {
-                                        "type": "ChooseUpTo",
-                                        "count": {
-                                            "type": "Fixed",
-                                            "amount": 1
-                                        }
-                                    },
+                                    "selection": "ChooseAnyNumber",
                                     "storeSelected": "toGraveyard",
                                     "storeRemainder": "toTop",
+                                    "prompt": "Surveil 1: choose cards to put into your graveyard",
                                     "selectedLabel": "Put in graveyard",
                                     "remainderLabel": "Put on top"
                                 },
@@ -3099,7 +3097,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -3855,21 +3855,23 @@
         "replacementEffects": [
             {
                 "type": "ReplaceTokenCreationWithToken",
-                "token": {
-                    "type": "CreateToken",
-                    "power": 5,
-                    "toughness": 5,
-                    "colors": [
-                        "RED"
-                    ],
-                    "creatureTypes": [
-                        "Dragon"
-                    ],
-                    "keywords": [
-                        "FLYING"
-                    ],
-                    "imageUri": "https://cards.scryfall.io/normal/front/9/9/991a5840-adc7-45b5-8d5f-b24dae384bab.jpg?1789734473"
-                },
+                "tokens": [
+                    {
+                        "type": "CreateToken",
+                        "power": 5,
+                        "toughness": 5,
+                        "colors": [
+                            "RED"
+                        ],
+                        "creatureTypes": [
+                            "Dragon"
+                        ],
+                        "keywords": [
+                            "FLYING"
+                        ],
+                        "imageUri": "https://cards.scryfall.io/normal/front/9/9/991a5840-adc7-45b5-8d5f-b24dae384bab.jpg?1789734473"
+                    }
+                ],
                 "appliesTo": {
                     "type": "TokenCreationEvent",
                     "tokenFilter": "artifact"
@@ -4362,22 +4364,18 @@
                                         "count": {
                                             "type": "Fixed",
                                             "amount": 1
-                                        }
+                                        },
+                                        "isSurveil": true
                                     },
                                     "storeAs": "surveiled"
                                 },
                                 {
                                     "type": "SelectFromCollection",
                                     "from": "surveiled",
-                                    "selection": {
-                                        "type": "ChooseUpTo",
-                                        "count": {
-                                            "type": "Fixed",
-                                            "amount": 1
-                                        }
-                                    },
+                                    "selection": "ChooseAnyNumber",
                                     "storeSelected": "toGraveyard",
                                     "storeRemainder": "toTop",
+                                    "prompt": "Surveil 1: choose cards to put into your graveyard",
                                     "selectedLabel": "Put in graveyard",
                                     "remainderLabel": "Put on top"
                                 },
@@ -4536,7 +4534,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a planeswalker card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -5066,7 +5066,8 @@
                                 "descriptionOverride": "Empower Jace 2"
                             }
                         ]
-                    }
+                    },
+                    "description": "Draw a card. Empower Jace 2"
                 },
                 {
                     "effect": {
@@ -5864,7 +5865,11 @@
                     "destination": "Battlefield",
                     "placement": "Tapped",
                     "fromZone": "Graveyard",
-                    "addCounterType": "PLUS_ONE_PLUS_ONE"
+                    "entryCounters": [
+                        {
+                            "counterType": "PLUS_ONE_PLUS_ONE"
+                        }
+                    ]
                 },
                 "activateFromZone": "Graveyard"
             }
@@ -6446,7 +6451,11 @@
             },
             "destination": "Battlefield",
             "fromZone": "Graveyard",
-            "addCounterType": "PLUS_ONE_PLUS_ONE"
+            "entryCounters": [
+                {
+                    "counterType": "PLUS_ONE_PLUS_ONE"
+                }
+            ]
         },
         "targetRequirements": [
             {
@@ -7779,7 +7788,9 @@
                                         "key": "TRIGGER_DAMAGE_AMOUNT"
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for land cards (up to the damage dealt) to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -8506,7 +8517,7 @@
             "type": "Composite",
             "effects": [
                 {
-                    "type": "GrantInstantSpeedLoyaltyAbilities",
+                    "type": "GrantLoyaltyActivationPermission",
                     "planeswalkerFilter": {
                         "cardPredicates": [
                             "IsPlaneswalker",
@@ -8516,7 +8527,8 @@
                             }
                         ],
                         "controllerPredicate": "ControlledByYou"
-                    }
+                    },
+                    "instantSpeed": true
                 },
                 {
                     "type": "Composite",
@@ -8808,17 +8820,9 @@
                 "id": "Jiang Yanggu, Alone:1",
                 "trigger": {
                     "type": "AttackEvent",
-                    "filter": {
-                        "cardPredicates": [
-                            "IsCreature"
-                        ],
-                        "statePredicates": [
-                            "IsAttackingAnOpponent"
-                        ],
-                        "controllerPredicate": "ControlledByYou"
-                    },
+                    "filter": "creature ctrl:you",
                     "requires": [
-                        "AttacksAlone"
+                        "AttacksPlayerAlone"
                     ]
                 },
                 "binding": "ANY",
@@ -8976,7 +8980,7 @@
     "script": {
         "staticAbilities": [
             {
-                "type": "SuppressEntersTriggers",
+                "type": "SuppressZoneChangeTriggers",
                 "filter": "creature|artifact"
             }
         ]
@@ -9505,7 +9509,8 @@
                             "type": "Fixed",
                             "amount": 3
                         }
-                    }
+                    },
+                    "description": "Add {C}{C}{C}"
                 }
             ]
         }
@@ -10256,7 +10261,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a planeswalker card to put on top of your library",
+                    "selectedLabel": "Put on top of your library"
                 },
                 "ShuffleLibrary",
                 {
@@ -11480,7 +11487,9 @@
                         }
                     ]
                 },
-                "fromHandOnly": true
+                "fromZones": [
+                    "Hand"
+                ]
             }
         ]
     },
@@ -11880,7 +11889,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for an enchantment card to put into your hand",
+                                    "selectedLabel": "Put into your hand"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -12442,7 +12453,11 @@
                     "target": "Self",
                     "destination": "Battlefield",
                     "fromZone": "Graveyard",
-                    "addCounterType": "FINALITY"
+                    "entryCounters": [
+                        {
+                            "counterType": "FINALITY"
+                        }
+                    ]
                 },
                 "restrictions": [
                     {
@@ -14828,7 +14843,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -15464,7 +15481,10 @@
                                     },
                                     {
                                         "type": "GatherCards",
-                                        "source": "Self",
+                                        "source": {
+                                            "type": "Entity",
+                                            "entity": "Self"
+                                        },
                                         "storeAs": "gathered3"
                                     },
                                     {
@@ -15506,7 +15526,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a Sphinx creature card to put onto the battlefield",
+                                    "selectedLabel": "Put onto the battlefield"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -17327,7 +17349,10 @@
                         "CostSacrificeSelf"
                     ]
                 },
-                "effect": "MakeNextSpellUncounterable",
+                "effect": {
+                    "type": "GrantNextSpellRider",
+                    "rider": "MakesSpellUncounterable"
+                },
                 "descriptionOverride": "The next spell you cast this turn can't be countered."
             }
         ]
@@ -17431,10 +17456,7 @@
                 "effect": {
                     "type": "Behold",
                     "filter": "Jace",
-                    "otherwise": {
-                        "type": "TapUntap",
-                        "target": "Self"
-                    }
+                    "otherwise": "EnterTapped"
                 }
             }
         ]
@@ -19397,7 +19419,8 @@
                                 "descriptionOverride": "Empower Jace 6"
                             }
                         ]
-                    }
+                    },
+                    "description": "You lose 2 life. Empower Jace 6"
                 }
             ]
         }
@@ -20478,7 +20501,10 @@
                         },
                         {
                             "type": "PlayAdditionalLands",
-                            "count": 1
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
                         }
                     ]
                 }
@@ -21536,17 +21562,9 @@
                 "id": "Yuriko, Blade of the Mighty:1",
                 "trigger": {
                     "type": "AttackEvent",
-                    "filter": {
-                        "cardPredicates": [
-                            "IsCreature"
-                        ],
-                        "statePredicates": [
-                            "IsAttackingAnOpponent"
-                        ],
-                        "controllerPredicate": "ControlledByYou"
-                    },
+                    "filter": "creature ctrl:you",
                     "requires": [
-                        "AttacksAlone"
+                        "AttacksPlayerAlone"
                     ]
                 },
                 "binding": "ANY",
@@ -21580,7 +21598,7 @@
                     ],
                     "yoursOnly": false
                 },
-                "nonManaAbilitiesOnly": true,
+                "abilities": "NON_MANA",
                 "anyZone": true
             }
         ]

@@ -71,6 +71,22 @@ class LibraryPlacementKnowledgeTest : ScenarioTestBase() {
         }
     }
 
+    /**
+     * Brainstorm's put-back half: two cards from the caster's hand on top, in an order the caster
+     * chooses — the path that pauses for an order decision and resumes outside ZoneTransitionService.
+     */
+    private val tuckTwoFromHand = card("Tuck Two From Hand Test") {
+        manaCost = "{0}"
+        typeLine = "Sorcery"
+        spell {
+            effect = Effects.Pipeline {
+                val hand = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any))
+                val putBack = chooseExactly(2, hand)
+                toLibraryTop(putBack)
+            }
+        }
+    }
+
     /** A sorcery that shuffles the caster's library. */
     private val shuffleUp = card("Shuffle Up Test") {
         manaCost = "{0}"
@@ -90,6 +106,7 @@ class LibraryPlacementKnowledgeTest : ScenarioTestBase() {
 
     init {
         cardRegistry.register(tuckFromHand)
+        cardRegistry.register(tuckTwoFromHand)
         cardRegistry.register(shuffleUp)
 
         context("library placement knowledge") {
@@ -170,6 +187,83 @@ class LibraryPlacementKnowledgeTest : ScenarioTestBase() {
                 }
                 withClue("and the opponent's view cannot see it either") {
                     game.getClientState(2).cards.containsKey(bears).shouldBeFalse()
+                }
+            }
+
+            /**
+             * Two worlds from #3443. Player 2's Grizzly Bears is bounced, so the table knows it in
+             * Player 2's hand; Player 2 then puts two cards back with an order choice — world A the
+             * Bears and the Hill Giant, world B a Forest and the Hill Giant.
+             */
+            fun putBackWorld(putBackBears: Boolean): Triple<ScenarioTestBase.TestGame, EntityId, EntityId> {
+                val game = scenario()
+                    .withPlayers("Player1", "Player2")
+                    .withCardOnBattlefield(2, "Grizzly Bears")
+                    .withCardInHand(2, "Unsummon")
+                    .withLandsOnBattlefield(2, "Island", 1)
+                    .withCardInHand(2, "Tuck Two From Hand Test")
+                    .withCardInHand(2, "Hill Giant")
+                    .withCardInHand(2, "Forest")
+                    .withCardInLibrary(2, "Mountain")
+                    .withActivePlayer(2)
+                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                    .build()
+
+                // Returning to hand from the battlefield makes the Bears public knowledge.
+                val bears = game.findPermanent("Grizzly Bears")!!
+                val unsummon = game.state.handCard(game.player2Id, "Unsummon")
+                game.execute(CastSpell(game.player2Id, unsummon, listOf(ChosenTarget.Permanent(bears))))
+                game.resolveStack()
+                withClue("the bounced Bears is known to Player 1 in Player 2's hand") {
+                    game.state.revealedTo(bears) shouldContain game.player1Id
+                }
+
+                val giant = game.state.handCard(game.player2Id, "Hill Giant")
+                val forest = game.state.handCard(game.player2Id, "Forest")
+                game.castSpell(2, "Tuck Two From Hand Test")
+                game.resolveStack()
+                game.selectCards(listOf(if (putBackBears) bears else forest, giant))
+                game.keepLibraryOrder()
+                game.resolveStack()
+                return Triple(game, bears, giant)
+            }
+
+            test("putting back a known hand card in a chosen order hides it from the opponent") {
+                val (game, bears, giant) = putBackWorld(putBackBears = true)
+
+                val library = game.state.getZone(ZoneKey(game.player2Id, Zone.LIBRARY))
+                withClue("both cards went on top") {
+                    library.take(2).toSet() shouldBe setOf(bears, giant)
+                }
+                withClue("the Bears is known only to the player who put it back") {
+                    game.state.revealedTo(bears) shouldBe setOf(game.player2Id)
+                }
+                withClue("the Hill Giant is known to the player who put it back") {
+                    game.state.revealedTo(giant) shouldBe setOf(game.player2Id)
+                }
+                withClue("Player 1's view of that library shows neither card") {
+                    val view = game.getClientState(1)
+                    view.cards.containsKey(bears).shouldBeFalse()
+                    view.cards.containsKey(giant).shouldBeFalse()
+                }
+                withClue("Player 2's view still names both cards it put back") {
+                    val view = game.getClientState(2)
+                    view.cards[bears]!!.name shouldBe "Grizzly Bears"
+                    view.cards[giant]!!.name shouldBe "Hill Giant"
+                }
+            }
+
+            test("a hidden put-back forgets the known cards left in that hand") {
+                // World B: the Bears stays in hand. Player 1 saw two cards go back but not which,
+                // so the Bears could have been one of them — showing it would tell Player 1 it wasn't.
+                val (game, bears, _) = putBackWorld(putBackBears = false)
+
+                withClue("the Bears is still in Player 2's hand") {
+                    (bears in game.state.getHand(game.player2Id)) shouldBe true
+                }
+                withClue("but Player 1 no longer knows it") {
+                    (game.player1Id in game.state.revealedTo(bears)).shouldBeFalse()
+                    game.getClientState(1).cards.containsKey(bears).shouldBeFalse()
                 }
             }
 

@@ -13,7 +13,7 @@ val PlatedSeastriderReprint = Printing(
     collectorNumber = "103",
     scryfallId = "e83a74c4-026e-4419-9dde-3b044ef507a0",
     artist = "Izzy",
-    imageUri = "https://cards.scryfall.io/normal/front/e/8/e83a74c4-026e-4419-9dde-3b044ef507a0.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/e/8/e83a74c4-026e-4419-9dde-3b044ef507a0.jpg?1783939358",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

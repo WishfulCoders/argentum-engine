@@ -13,7 +13,7 @@ val ScreamingSeahawkReprint = Printing(
     collectorNumber = "105",
     scryfallId = "fc32c801-cc84-4d3a-a14f-67e28ccb95f2",
     artist = "Heather Hudson",
-    imageUri = "https://cards.scryfall.io/normal/front/f/c/fc32c801-cc84-4d3a-a14f-67e28ccb95f2.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/f/c/fc32c801-cc84-4d3a-a14f-67e28ccb95f2.jpg?1783939358",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

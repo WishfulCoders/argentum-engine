@@ -13,7 +13,7 @@ val TeferiTimeRavelerReprint = Printing(
     collectorNumber = "92",
     scryfallId = "5a47d968-bba0-4277-b5d7-eb9e1acd7953",
     artist = "Dmitry Burmak",
-    imageUri = "https://cards.scryfall.io/normal/front/5/a/5a47d968-bba0-4277-b5d7-eb9e1acd7953.jpg?1783910709",
+    imageUri = "https://cards.scryfall.io/normal/front/5/a/5a47d968-bba0-4277-b5d7-eb9e1acd7953.jpg",
     releaseDate = "2024-08-02",
     rarity = Rarity.RARE,
 )

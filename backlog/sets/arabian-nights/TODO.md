@@ -114,7 +114,7 @@ Remaining:
 - **Cumulative counters dealing damage**: Cyclone.
 - **Card-from-outside-the-game**: Ring of Ma'rûf (wish-style).
 - **Ante**: Jeweled Bird — needs the ante mechanic (often unsupported / house-ruled).
-- **Subgame**: Shahrazad — a full Magic subgame; the largest single feature here.
+- **Subgame**: Shahrazad — a full Magic subgame (CR 729). Done: `Effects.PlaySubgame`.
 - **Jihad** — multi-condition enchantment that references a chosen color/player. Implement
   it like any other card, faithfully to its oracle text.
 

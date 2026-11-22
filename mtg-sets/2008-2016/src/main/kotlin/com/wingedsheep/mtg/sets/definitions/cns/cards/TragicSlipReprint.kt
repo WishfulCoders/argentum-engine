@@ -13,7 +13,7 @@ val TragicSlipReprint = Printing(
     collectorNumber = "128",
     scryfallId = "966cfbfb-775c-474e-b26c-df26e909dea8",
     artist = "Christopher Moeller",
-    imageUri = "https://cards.scryfall.io/normal/front/9/6/966cfbfb-775c-474e-b26c-df26e909dea8.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/9/6/966cfbfb-775c-474e-b26c-df26e909dea8.jpg?1783939352",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

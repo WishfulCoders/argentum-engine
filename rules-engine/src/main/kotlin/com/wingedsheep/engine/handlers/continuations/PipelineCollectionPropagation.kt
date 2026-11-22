@@ -1,11 +1,14 @@
 package com.wingedsheep.engine.handlers.continuations
 
-import com.wingedsheep.engine.core.EffectContinuation
+import com.wingedsheep.engine.core.EffectProgram
 import com.wingedsheep.engine.core.GatedActionContinuation
 import com.wingedsheep.engine.core.ForEachContinuation
 import com.wingedsheep.engine.core.ReflexiveTriggerTargetContinuation
 import com.wingedsheep.engine.core.RepeatWhileContinuation
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.PipelineOutputs
+import com.wingedsheep.engine.handlers.mergeOutputs
+import com.wingedsheep.engine.handlers.pipelineOutputs
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.model.EntityId
 
@@ -19,7 +22,7 @@ import com.wingedsheep.sdk.model.EntityId
  * collection-producing step routes its `updatedCollections` here, and the recognized
  * consumer frames get a merged context:
  *
- * - [EffectContinuation] — remaining composite siblings read the collections
+ * - [EffectProgram] — remaining composite siblings read the collections
  *   (the original LibraryAndZone inject pattern).
  * - [ReflexiveTriggerTargetContinuation] — "When you do, …" reflexive effects
  *   (the Amass multi-Army path).
@@ -46,13 +49,13 @@ import com.wingedsheep.sdk.model.EntityId
  * sacrifice's LKI), and the sacrifice pauses for target selection as soon as you control two
  * creatures that could be sacrificed.
  *
- * [RepeatWhileContinuation] takes only [collections], into its `bodyCollections` slot — the repeat
- * condition reads collection outputs, and there is no numeric equivalent for it to read.
+ * [RepeatWhileContinuation] takes [collections] and [numbers], into its `bodyCollections` /
+ * `bodyNumbers` slots — a repeat condition reads a pass's collections (Cultivator Colossus) or its
+ * numbers (Delina, Wild Mage's d20 result gating "you may roll again").
  *
- * The consumer is always the top of the continuation stack here: a deferred
- * [PendingTriggersContinuation] queued by a mid-resolution trigger is inserted *beneath* the
- * frames of the in-flight resolution (see `SubmitDecisionHandler`), so it never sits between a
- * producer and its consumer.
+ * The consumer is always the top of the continuation stack here: triggers waiting to go on the
+ * stack live in the state ([GameState.triggersBeingPlaced], [GameState.pendingTriggers]), never
+ * on the continuation stack, so nothing sits between a producer and its consumer.
  */
 fun exposeCollectionsToNextFrame(
     state: GameState,
@@ -61,32 +64,38 @@ fun exposeCollectionsToNextFrame(
     chosenValues: Map<String, String> = emptyMap(),
     subtypeGroups: Map<String, List<Set<String>>> = emptyMap(),
     sacrificed: List<com.wingedsheep.engine.state.components.stack.EntitySnapshot> = emptyList(),
-): GameState {
-    if (collections.isEmpty() && numbers.isEmpty() && chosenValues.isEmpty() && subtypeGroups.isEmpty() && sacrificed.isEmpty()) return state
+    departed: List<com.wingedsheep.engine.state.components.stack.EntitySnapshot> = emptyList(),
+): GameState = exposeOutputsToNextFrame(state, PipelineOutputs(
+    collections = collections, subtypeGroups = subtypeGroups, numbers = numbers,
+    chosenValues = chosenValues, sacrificed = sacrificed, departed = departed,
+))
 
-    fun EffectContext.withMergedCollections(): EffectContext =
-        copy(
-            sacrificedPermanents = sacrificedPermanents + sacrificed,
-            pipeline = pipeline.copy(
-                storedCollections = pipeline.storedCollections + collections,
-                storedNumbers = pipeline.storedNumbers + numbers,
-                chosenValues = pipeline.chosenValues + chosenValues,
-                storedSubtypeGroups = pipeline.storedSubtypeGroups + subtypeGroups,
-            )
-        )
+/**
+ * A step a resumer ran to completion hands the frame beneath every output it stored: what the
+ * program running it would have published had something inside it paused, so the steps after it
+ * see the same values on both paths.
+ */
+fun com.wingedsheep.engine.core.EffectResult.stateWithOutputsHandedOn(): GameState =
+    exposeOutputsToNextFrame(state, pipelineOutputs)
+
+/** [exposeCollectionsToNextFrame] for a whole [PipelineOutputs]; merges with [mergeOutputs]. */
+fun exposeOutputsToNextFrame(state: GameState, outputs: PipelineOutputs): GameState {
+    if (outputs.isEmpty()) return state
+
+    // The same merge a synchronous step's result gets, with snapshots merged as a set.
+    fun EffectContext.withMergedCollections(): EffectContext = mergeOutputs(outputs, dedupSnapshots = true)
 
     return when (val next = state.peekContinuation()) {
         is com.wingedsheep.engine.core.ManaAbilitySourcesContinuation,
         is com.wingedsheep.engine.core.ManaSpendingObligationsContinuation -> {
             val (_, popped) = state.popContinuation()
-            exposeCollectionsToNextFrame(popped, collections, numbers, chosenValues, subtypeGroups, sacrificed)
-                .pushContinuation(next)
+            exposeOutputsToNextFrame(popped, outputs).pushContinuation(next)
         }
         is ForEachContinuation -> {
             val merged = next.effectContext.withMergedCollections()
             var accumulated = next.effectContext.pipeline.storedCollections
             for ((localName, aggregateName) in next.effect.collectCollections) {
-                val iterationOutput = collections[localName].orEmpty()
+                val iterationOutput = outputs.collections[localName].orEmpty()
                 if (iterationOutput.isNotEmpty()) {
                     accumulated = accumulated + (
                         aggregateName to accumulated[aggregateName].orEmpty() + iterationOutput
@@ -102,7 +111,7 @@ fun exposeCollectionsToNextFrame(
                 )
             )
         }
-        is EffectContinuation -> {
+        is EffectProgram -> {
             val (_, popped) = state.popContinuation()
             popped.pushContinuation(next.copy(effectContext = next.effectContext.withMergedCollections()))
         }
@@ -118,7 +127,12 @@ fun exposeCollectionsToNextFrame(
             // Stash into bodyCollections, not effectContext — the condition reads these outputs
             // this pass, but the next iteration must start from the pristine pre-loop context.
             val (_, popped) = state.popContinuation()
-            popped.pushContinuation(next.copy(bodyCollections = next.bodyCollections + collections))
+            popped.pushContinuation(
+                next.copy(
+                    bodyCollections = next.bodyCollections + outputs.collections,
+                    bodyNumbers = next.bodyNumbers + outputs.numbers,
+                )
+            )
         }
         else -> state
     }

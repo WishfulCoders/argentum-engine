@@ -1783,7 +1783,12 @@
                                     "filter": {
                                         "cardPredicates": [
                                             "IsCreature",
-                                            "ManaValueAtMostX"
+                                            {
+                                                "type": "CompareNumericProperty",
+                                                "property": "MANA_VALUE",
+                                                "operator": "LTE",
+                                                "amount": "XValue"
+                                            }
                                         ]
                                     }
                                 },
@@ -2072,7 +2077,10 @@
                     "type": "Fixed",
                     "amount": 1
                 },
-                "onlyIfTargetIsSource": true
+                "targeting": {
+                    "baseFilter": "permanent",
+                    "scope": "Self"
+                }
             }
         ]
     },
@@ -2396,7 +2404,12 @@
                     "baseFilter": {
                         "cardPredicates": [
                             "IsCreature",
-                            "ManaValueAtMostX"
+                            {
+                                "type": "CompareNumericProperty",
+                                "property": "MANA_VALUE",
+                                "operator": "LTE",
+                                "amount": "XValue"
+                            }
                         ]
                     }
                 },
@@ -4503,7 +4516,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -4551,7 +4566,7 @@
                 "mustBeYouControl": false
             },
             {
-                "type": "SuppressEntersTriggers",
+                "type": "SuppressZoneChangeTriggers",
                 "filter": "permanent",
                 "abilitiesOf": {
                     "cardPredicates": [
@@ -9059,7 +9074,10 @@
                                 "effects": [
                                     {
                                         "type": "GatherCards",
-                                        "source": "TriggeringEntity",
+                                        "source": {
+                                            "type": "Entity",
+                                            "entity": "TriggeringEntity"
+                                        },
                                         "storeAs": "gathered0"
                                     },
                                     {
@@ -9166,7 +9184,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Mountain card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -9249,7 +9269,8 @@
                         },
                         "descriptionOverride": "Whenever a Mountain you control enters, this emblem deals 4 damage to any target."
                     },
-                    "descriptionOverride": "Whenever a Mountain you control enters, this emblem deals 4 damage to any target."
+                    "descriptionOverride": "Whenever a Mountain you control enters, this emblem deals 4 damage to any target.",
+                    "emblem": true
                 },
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true,
@@ -9548,7 +9569,6 @@
                 "targetRequirements": [
                     {
                         "type": "TargetObject",
-                        "minCount": 0,
                         "unlimited": true,
                         "filter": {
                             "baseFilter": "creature|planeswalker"
@@ -11148,7 +11168,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land or land Sphere or land Locus card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -11314,7 +11336,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         }
                     ]
@@ -11435,7 +11460,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Myr card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -11476,7 +11503,6 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "minCount": 0,
                 "unlimited": true,
                 "filter": {
                     "baseFilter": "creature"
@@ -11499,7 +11525,12 @@
                                     "IsCreature"
                                 ]
                             },
-                            "ManaValueEqualsX"
+                            {
+                                "type": "CompareNumericProperty",
+                                "property": "MANA_VALUE",
+                                "operator": "EQ",
+                                "amount": "XValue"
+                            }
                         ]
                     }
                 }
@@ -11552,7 +11583,7 @@
                     "type": "GrantStaticAbility",
                     "ability": {
                         "type": "MustAttack",
-                        "playersOnly": true
+                        "defender": "APlayer"
                     },
                     "target": {
                         "type": "BoundVariable",
@@ -12866,31 +12897,49 @@
                     }
                 },
                 "onPrevented": {
-                    "type": "ReflexiveTrigger",
-                    "action": {
-                        "type": "Composite",
-                        "effects": []
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Compare",
+                            "left": {
+                                "type": "ContextProperty",
+                                "key": "PREVENTED_DAMAGE_AMOUNT"
+                            },
+                            "operator": "GT",
+                            "right": {
+                                "type": "Fixed",
+                                "amount": 0
+                            }
+                        }
                     },
-                    "optional": false,
-                    "reflexiveEffect": {
-                        "type": "DealDamage",
-                        "amount": {
-                            "type": "ContextProperty",
-                            "key": "PREVENTED_DAMAGE_AMOUNT"
+                    "then": {
+                        "type": "ReflexiveTrigger",
+                        "action": {
+                            "type": "Composite",
+                            "effects": []
                         },
-                        "target": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        }
-                    },
-                    "reflexiveTargetRequirements": [
-                        {
-                            "type": "TargetOther",
-                            "baseRequirement": "AnyTarget",
-                            "id": "t0"
-                        }
-                    ],
-                    "descriptionOverride": "this creature deals that much damage to any other target"
+                        "optional": false,
+                        "reflexiveEffect": {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "ContextProperty",
+                                "key": "PREVENTED_DAMAGE_AMOUNT"
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        "reflexiveTargetRequirements": [
+                            {
+                                "type": "TargetOther",
+                                "baseRequirement": "AnyTarget",
+                                "id": "t0"
+                            }
+                        ],
+                        "descriptionOverride": "this creature deals that much damage to any other target"
+                    }
                 }
             }
         ]
@@ -14788,7 +14837,8 @@
                                     }
                                 },
                                 "storeAs": "target0",
-                                "nonTargeting": true
+                                "nonTargeting": true,
+                                "prompt": "Choose a creature to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -15106,7 +15156,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         },
                         "CostTap"
@@ -15477,7 +15530,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -15512,7 +15568,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 2
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         }
                     ]
@@ -15531,7 +15590,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 3
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                }
                             }
                         }
                     ]
@@ -15549,7 +15611,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 4
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 4
+                                }
                             }
                         }
                     ]
@@ -15798,7 +15863,10 @@
                         },
                         {
                             "type": "PlayAdditionalLands",
-                            "count": 1
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
                         }
                     ]
                 }
@@ -17142,7 +17210,12 @@
                                 "cardPredicates": [
                                     "IsArtifact",
                                     "IsNontoken",
-                                    "ManaValueEqualsX"
+                                    {
+                                        "type": "CompareNumericProperty",
+                                        "property": "MANA_VALUE",
+                                        "operator": "EQ",
+                                        "amount": "XValue"
+                                    }
                                 ],
                                 "controllerPredicate": "ControlledByYou"
                             }
@@ -17364,7 +17437,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -19731,7 +19806,7 @@
                             "condition": {
                                 "type": "Not",
                                 "condition": {
-                                    "type": "TriggeringPlayerIs",
+                                    "type": "PlayerIs",
                                     "player": "You"
                                 }
                             }

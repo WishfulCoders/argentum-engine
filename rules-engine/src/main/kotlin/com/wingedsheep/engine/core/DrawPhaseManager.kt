@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.core
 
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.drawing.DrawCardsExecutor
@@ -13,11 +14,11 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.player.CardsDrawnThisTurnComponent
 import com.wingedsheep.engine.state.components.player.PlayerLostComponent
 import com.wingedsheep.engine.state.components.player.SkipDrawStepComponent
-import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.identity.RoomFaceStatics
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.SkipDrawStep
+import com.wingedsheep.sdk.core.TurnPart
+import com.wingedsheep.sdk.scripting.DrawDuringOtherDrawSteps
+import com.wingedsheep.sdk.scripting.SkipStepOrPhase
 import com.wingedsheep.sdk.scripting.effects.Effect
 
 /**
@@ -35,7 +36,8 @@ class DrawPhaseManager(
     @Suppress("unused") private val decisionHandler: DecisionHandler,
     effectExecutor: ((GameState, Effect, EffectContext) -> EffectResult)?,
     replacementProcessor: ReplacementEffectProcessor,
-    private val amountEvaluator: DynamicAmountEvaluator
+    private val predicateEvaluator: PredicateEvaluator,
+    private val amountEvaluator: DynamicAmountEvaluator = predicateEvaluator.amounts
 ) {
     private val drawExecutor = DrawCardsExecutor(
         cardRegistry = cardRegistry,
@@ -66,7 +68,8 @@ class DrawPhaseManager(
 
         // Snapshot the active player's cards-drawn-this-turn count as the draw step begins,
         // before the turn-based draw (CR 504.1). The first card drawn from here on is "the first
-        // card they draw in this draw step" — the one exempted by Orcish Bowmasters. Captured for
+        // card they draw in this draw step" — the one `DrawEvent.firstInDrawStep` singles out (skipped
+        // by Orcish Bowmasters, the only one Wiretapping sees). Captured for
         // every draw-step entry (including the skip/first-turn paths below) so a later in-step draw
         // is still identified correctly. See GameState.drawStepStartDrawCountByPlayer.
         val drawnSoFar = stateIn.getEntity(activePlayer)
@@ -96,21 +99,32 @@ class DrawPhaseManager(
         // CR 805.4b — each player on the active team draws during the team's draw step. Draw the
         // teammates first (a team draws in any order it likes, 805.6a), then the active player last.
         // In a non-team game — and in Team vs. Team, where each player draws only on their own turn
-        // (CR 808.4) — there are no shared-turn teammates and this loop is a no-op.
+        // (CR 808.4) — there are no shared-turn teammates and this list is empty.
+        return drawForTeam(state, activePlayer, state.sharedTurnTeam(activePlayer).filter { it != activePlayer })
+    }
+
+    /**
+     * The draw step's draws from [teammates] onwards, then [activePlayer]'s. A teammate's draw can
+     * pause (a miracle reveal, an optional draw replacement); the team's remaining draws wait
+     * beneath that question in a [DrawStepTeamDrawsContinuation], which resumes here.
+     */
+    fun drawForTeam(state: GameState, activePlayer: EntityId, teammates: List<EntityId>): ExecutionResult {
         var s = state
         val teammateEvents = mutableListOf<GameEvent>()
-        for (teammate in state.sharedTurnTeam(activePlayer)) {
-            if (teammate == activePlayer) continue
+        for ((index, teammate) in teammates.withIndex()) {
             if (s.getEntity(teammate)?.has<SkipDrawStepComponent>() == true) {
                 s = s.updateEntity(teammate) { it.without<SkipDrawStepComponent>() }
                 continue
             }
             if (skipsDrawStep(s, teammate)) continue
-            val r = drawCards(s, teammate, 1)
+            val rest = DrawStepTeamDrawsContinuation(activePlayer, teammates.drop(index + 1))
+            val r = drawCards(s.pushContinuation(rest), teammate, 1)
             if (r.outcome is Outcome.Paused) {
                 return ExecutionResult.propagatePause(r.newState, teammateEvents + r.events)
             }
-            s = r.newState
+            val (popped, afterPop) = r.newState.popContinuation()
+            check(popped == rest) { "A completed teammate draw must leave the team's frame on top" }
+            s = afterPop
             teammateEvents.addAll(r.events)
         }
 
@@ -133,35 +147,75 @@ class DrawPhaseManager(
             )
         }
 
-        val drawResult = drawCards(s, activePlayer, 1)
+        // "You draw a card during each opponent's draw step" (Teferi, Who Slows the Sunset's emblem):
+        // those draws follow the active player's, with no priority in between. Their frame sits
+        // beneath the active player's draw too, so a pause there still leads to them.
+        val otherDraws = otherPlayersDrawStepDraws(s, activePlayer)
+        val otherFrame = DrawStepOtherDrawsContinuation(activePlayer, otherDraws)
+        val drawResult = drawCards(if (otherDraws.isEmpty()) s else s.pushContinuation(otherFrame), activePlayer, 1)
         if (drawResult.outcome !is Outcome.Done) {
             return drawResult
         }
-
-        val newState = drawResult.newState.withPriority(activePlayer)
-        return ExecutionResult.success(newState, teammateEvents + drawResult.events + StepChangedEvent(Step.DRAW))
+        if (otherDraws.isEmpty()) {
+            val newState = drawResult.newState.withPriority(activePlayer)
+            return ExecutionResult.success(newState, teammateEvents + drawResult.events + StepChangedEvent(Step.DRAW))
+        }
+        val (popped, afterPop) = drawResult.newState.popContinuation()
+        check(popped == otherFrame) { "A completed draw-step draw must leave the other players' frame on top" }
+        val rest = drawForOthers(afterPop, activePlayer, otherDraws)
+        return rest.copy(events = teammateEvents + drawResult.events + rest.events)
     }
 
     /**
-     * Whether [playerId] controls a permanent with the [SkipDrawStep] static ability.
-     *
-     * Read the same way maximum hand size is ([com.wingedsheep.engine.core.MaximumHandSize]): a
-     * turn-based scan of the projected battlefield rather than a continuous-projection value,
-     * because a skipped draw step is a turn-based action, not a characteristic. Routed through
-     * [RoomFaceStatics] so a Room face's static counts only while its door is unlocked (CR 709.5).
+     * The draw step's draws by players other than the active one, one card per entry of [drawers]
+     * in order, then priority to [activePlayer]. Each draw sits above a [DrawStepOtherDrawsContinuation]
+     * holding the ones after it — including an empty one beneath the last, so a draw that pauses
+     * (a miracle reveal: an opponent's draw step is their first draw that turn) still hands priority
+     * back to the active player rather than to the drawer.
      */
-    private fun skipsDrawStep(state: GameState, playerId: EntityId): Boolean {
-        val projected = state.projectedState
-        for (permanentId in projected.getBattlefieldControlledBy(playerId)) {
-            val container = state.getEntity(permanentId) ?: continue
-            val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card) ?: continue
-            if (RoomFaceStatics.activeStaticAbilities(container, cardDef).any { it is SkipDrawStep }) {
-                return true
+    fun drawForOthers(state: GameState, activePlayer: EntityId, drawers: List<EntityId>): ExecutionResult {
+        var s = state
+        val events = mutableListOf<GameEvent>()
+        for ((index, drawer) in drawers.withIndex()) {
+            val rest = DrawStepOtherDrawsContinuation(activePlayer, drawers.drop(index + 1))
+            val r = drawCards(s.pushContinuation(rest), drawer, 1)
+            if (r.outcome is Outcome.Paused) {
+                return ExecutionResult.propagatePause(r.newState, events + r.events)
             }
+            if (r.outcome !is Outcome.Done) return r
+            val (popped, afterPop) = r.newState.popContinuation()
+            check(popped == rest) { "A completed draw-step draw must leave the other players' frame on top" }
+            s = afterPop
+            events.addAll(r.events)
         }
-        return false
+        return ExecutionResult.success(s.withPriority(activePlayer), events + StepChangedEvent(Step.DRAW))
     }
+
+    /**
+     * One entry per card a non-active player draws during [activePlayer]'s draw step through a
+     * [DrawDuringOtherDrawSteps] they control, in APNAP order (CR 101.4) — the active team itself
+     * excluded, since it is that team's own draw step. Empty, after one scan, in the usual game.
+     */
+    private fun otherPlayersDrawStepDraws(state: GameState, activePlayer: EntityId): List<EntityId> {
+        val activeTeam = state.sharedTurnTeam(activePlayer)
+        fun countFor(drawer: (EntityId) -> Boolean) =
+            standingStatics(state, cardRegistry, predicateEvaluator, DrawDuringOtherDrawSteps::class) { ability, _, controller ->
+                drawer(controller) && controller !in activeTeam &&
+                    actsInStepOf(state, ability.duringStepsOf, controller, activePlayer)
+            }.size
+        if (countFor { true } == 0) return emptyList()
+        return state.apnapOrder.flatMap { player -> List(countFor { it == player }) { player } }
+    }
+
+    /**
+     * Whether a standing [SkipStepOrPhase] for the draw step applies to [playerId] ("Skip your
+     * draw step" — Colfenor's Plans). A turn-based scan rather than a continuous-projection value,
+     * because a skipped draw step is a turn-based action, not a characteristic; the same reader as
+     * the untap step's ([hasStandingSkip]), so a Room face's static counts only while its door is
+     * unlocked (CR 709.5) and a permanent that lost its abilities no longer skips anything.
+     */
+    private fun skipsDrawStep(state: GameState, playerId: EntityId): Boolean =
+        hasStandingSkip(state, cardRegistry, predicateEvaluator, playerId, TurnPart.DRAW_STEP)
 
     /**
      * Draw [count] cards for [playerId] as part of the draw step.

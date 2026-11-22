@@ -11,7 +11,11 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then(({ QRCodeSVG }) => ({ d
  * fast path for pulling a phone into your game. The button is self-contained (owns its own open
  * state) so any lobby overlay can drop it in next to its invite box.
  */
-export function JoinQrModal({ url }: { url: string }) {
+export function JoinQrModal({ url, buttonClassName }: {
+  url: string
+  /** Styles the trigger to match its surroundings; the built-in look is used without one. */
+  buttonClassName?: string | undefined
+}) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -37,7 +41,8 @@ export function JoinQrModal({ url }: { url: string }) {
         aria-label="Show QR code to join"
         title="Show QR code to join"
         data-testid="lobby-qr-button"
-        style={styles.iconButton}
+        className={buttonClassName}
+        style={buttonClassName ? undefined : styles.iconButton}
       >
         <QrGlyph />
       </button>
@@ -181,9 +186,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '8px 14px',
     fontSize: 13,
     fontWeight: 600,
-    color: 'white',
-    backgroundColor: '#9b59b6',
-    border: 'none',
+    color: '#eef0f6',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.14)',
     borderRadius: 8,
     cursor: 'pointer',
   },

@@ -36,7 +36,9 @@ val RuthlessLawbringer = card("Ruthless Lawbringer") {
                 val creatureToSacrifice = selectTarget(
                     TargetObject(
                         filter = TargetFilter.CreatureYouControl.other()
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose another creature to sacrifice"
                 )
                 run(Effects.SacrificeTarget(creatureToSacrifice.asTarget))
             },

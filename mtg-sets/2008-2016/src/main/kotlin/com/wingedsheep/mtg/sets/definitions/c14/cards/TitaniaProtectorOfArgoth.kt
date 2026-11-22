@@ -11,17 +11,15 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Titania, Protector of Argoth — Commander 2014 #50
- * {3}{G}{G} · Legendary Creature — Elemental · 5 / 3
+ * {3}{G}{G} · Legendary Creature — Elemental · 5/3
  *
  * When Titania enters, return target land card from your graveyard to the battlefield.
  * Whenever a land you control is put into a graveyard from the battlefield, create a 5/3 green
  * Elemental creature token.
  *
- * The enters trigger is Molderhulk's targeted graveyard-to-battlefield return. "Put into a graveyard
- * from the battlefield" is the same zone-change event as "dies" (CR 700.4), so the second trigger is
- * `Triggers.a(land you control).dies()` — it sees sacrificed fetch lands and destroyed lands alike,
- * and Titania sees lands that leave simultaneously with her (leaves-the-battlefield triggers look
- * back in time, CR 603.10a).
+ * The return is the guarded [Effects.PutOntoBattlefieldFromGraveyard] (Molderhulk's shape). The
+ * second ability is any land you control moving battlefield → graveyard (`Triggers.a(...).dies()`,
+ * Dingus Egg's event narrowed by `youControl()`, read off last-known control).
  */
 val TitaniaProtectorOfArgoth = card("Titania, Protector of Argoth") {
     manaCost = "{3}{G}{G}"
@@ -37,6 +35,7 @@ val TitaniaProtectorOfArgoth = card("Titania, Protector of Argoth") {
         trigger = Triggers.self.enters()
         val land = target(TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.PutOntoBattlefieldFromGraveyard(land)
+        description = "When Titania enters, return target land card from your graveyard to the battlefield."
     }
 
     triggeredAbility {
@@ -46,7 +45,7 @@ val TitaniaProtectorOfArgoth = card("Titania, Protector of Argoth") {
             toughness = 3,
             colors = setOf(Color.GREEN),
             creatureTypes = setOf("Elemental"),
-            imageUri = "https://cards.scryfall.io/normal/front/1/4/1449862b-309e-4c58-ac94-13d1acdd363f.jpg?1783938795"
+            imageUri = "https://cards.scryfall.io/normal/front/1/4/1449862b-309e-4c58-ac94-13d1acdd363f.jpg?1783938795",
         )
         description = "Whenever a land you control is put into a graveyard from the battlefield, create a 5/3 " +
             "green Elemental creature token."

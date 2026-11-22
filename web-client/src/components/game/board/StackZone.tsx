@@ -6,12 +6,15 @@ import type { EntityId } from '@/types'
 import type { ClientAbilityIdentity, ClientCard } from '@/types/gameState'
 import { getCardImageUrl, faceDownImageUrl } from '@/utils/cardImages.ts'
 import { ActiveEffectBadges } from '../card/CardOverlays'
+import { AbilityArtTile, isArtlessAbility } from '../card/AbilityArtTile'
 import { AbilityText, ManaCost } from '../../ui/ManaSymbols'
 import { useOpenCardMenuOnTap } from '@/hooks/useOpenCardMenuOnTap.ts'
 import { useResponsiveContext, handleImageError } from './shared'
 import { styles } from './styles'
 import { chosenModeGroupsForStack, groupStackCards, type StackGroup } from './stackGrouping'
+import { zoneCardTargetLabels } from './graveyardTargets'
 import { YieldContextMenu } from './YieldContextMenu'
+import { findYield, yieldTags, YIELD_TONE } from '../yields'
 
 /**
  * Stack display - shows spells/abilities waiting to resolve.
@@ -36,12 +39,25 @@ export function StackDisplay() {
   const gameState = useGameStore((state) => state.gameState)
   // Which collapsible piles the player has manually expanded (by groupId = first member's id).
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<EntityId>>(() => new Set())
-  // Right-click yield menu (MTGO-style persistent yields — backlog §C), anchored to a stack ability.
-  const [yieldMenu, setYieldMenu] = useState<{ identity: ClientAbilityIdentity; sourceName: string; x: number; y: number } | null>(null)
+  // Yield menu (MTGO-style persistent yields — backlog §C), anchored to a stack ability. Opened by
+  // right-click on any ability, its yield marker, or the "Yield" button under the top of the stack.
+  const [yieldMenu, setYieldMenu] = useState<{ identity: ClientAbilityIdentity; sourceName: string; ownAbility: boolean; x: number; y: number } | null>(null)
+  const activeYields = gameState?.activeYields
+  const openYieldMenuAt = (card: ClientCard, x: number, y: number) => {
+    if (!card.abilityIdentity) return
+    const ownAbility = card.controllerId === gameState?.viewingPlayerId
+    setYieldMenu({ identity: card.abilityIdentity, sourceName: card.name, ownAbility, x, y })
+  }
   const openYieldMenu = (card: ClientCard, e: React.MouseEvent) => {
     if (!card.abilityIdentity) return
     e.preventDefault()
-    setYieldMenu({ identity: card.abilityIdentity, sourceName: card.name, x: e.clientX, y: e.clientY })
+    openYieldMenuAt(card, e.clientX, e.clientY)
+  }
+  // From a button: the stack hugs the left edge, so the menu opens to the button's right.
+  const openYieldMenuBeside = (card: ClientCard, e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    openYieldMenuAt(card, rect.right + 8, rect.top - 8)
   }
   const toggleGroup = (groupId: EntityId) =>
     setExpandedGroups((prev) => {
@@ -228,7 +244,16 @@ export function StackDisplay() {
           // Creature" for disguise. Its controller still sees the real card on hover, exactly as
           // for their own face-down permanents.
           const faceDown = card.isFaceDown === true
-          const image = (
+          const image = !faceDown && isArtlessAbility(card) ? (
+            <AbilityArtTile
+              name={card.name}
+              typeLine={card.typeLine}
+              width={stackImageWidth}
+              height={stackImageHeight}
+              fontSize={responsive.isMobile ? 8 : 12}
+              style={{ cursor: isValidTarget || opts.onClick ? 'pointer' : 'default' }}
+            />
+          ) : (
             <img
               src={faceDown
                 ? faceDownImageUrl(card.faceDownMode)
@@ -258,6 +283,46 @@ export function StackDisplay() {
             <div style={{ position: 'relative', width: stackImageHeight, height: stackImageWidth, borderRadius: 6 }}>
               {image}
             </div>
+          )
+        })()}
+        {/* Yield marker — the viewer told the game to stop asking about this ability. Sits in the
+            top strip, the part of a buried card that stays visible. Click to change or revoke. */}
+        {(() => {
+          const active = findYield(activeYields, card.abilityIdentity)
+          const tag = active ? yieldTags(active)[0] : undefined
+          if (!tag) return null
+          const tone = YIELD_TONE[tag.tone]
+          const crowded = opts.countBadge != null || opts.collapseControl != null
+          return (
+            <button
+              type="button"
+              title={`${yieldTags(active!).map((t) => t.detail).join(' · ')} — click to change`}
+              onClick={(e) => openYieldMenuBeside(card, e)}
+              style={{
+                position: 'absolute',
+                top: 4,
+                right: crowded ? 42 : 4,
+                zIndex: 12,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                maxWidth: stackImageWidth - 12,
+                padding: '1px 6px',
+                borderRadius: 999,
+                background: 'rgba(14, 10, 22, 0.88)',
+                border: `1px solid ${tone.border}`,
+                color: tone.fg,
+                fontSize: responsive.isMobile ? 7 : 9,
+                fontWeight: 800,
+                letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                boxShadow: '0 2px 5px rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              <span aria-hidden>{tag.tone === 'pass' ? '»' : tag.tone === 'yes' ? '✓' : '✕'}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{tag.label}</span>
+            </button>
           )
         })()}
         {/* Collapsed-pile count pip */}
@@ -316,36 +381,39 @@ export function StackDisplay() {
             X={card.chosenX}
           </div>
         )}
-        {/* Show how the spell was cast — "Disturb · Graveyard" — for anything but a plain hand cast.
-            The tooltip carries the whole story, since a spell with something on top of it is clipped
-            to its first badge row. */}
-        {card.castProvenanceLabel && (
-          <div
-            style={{ ...styles.stackCastProvenanceBadge, top: topOf('provenance') }}
-            title={[
-              `Cast: ${card.castProvenanceLabel}`,
-              card.costSacrificeLabel,
-              card.manaPaidCost && `Paid ${card.manaPaidCost}`,
-            ].filter(Boolean).join(' · ')}
-          >
-            {card.castProvenanceLabel}
-          </div>
-        )}
-        {/* The mana that actually paid, for any alternative-cost cast — the printed pips on the card
-            were never what was spent. Top-*right*, so it shares the one badge row that stays visible
-            when a cast trigger (or any later spell) covers the rest of this card. Shifted left when
-            an X badge already owns that corner. */}
-        {card.manaPaidCost && (
+        {/* The top badge row: how the spell was cast ("Disturb · Graveyard") on the left, and the
+            mana that actually paid on the right — the printed pips on an alternative-cost cast were
+            never what was spent. One flex row, so the two share the width instead of overlapping:
+            the provenance label gives way (ellipsis) and the pips never do. It's the one row that
+            stays visible when a cast trigger or a later spell covers the rest of this card, so the
+            tooltip carries the whole story. Ends short of the corner when an X badge owns it. */}
+        {(card.castProvenanceLabel || card.manaPaidCost) && (
           <div
             style={{
-              ...styles.stackManaPaidBadge,
+              ...styles.stackTopBadgeRow,
               top: topOf('provenance'),
               right: card.chosenX != null ? 44 : 4,
             }}
-            title={`Paid ${card.manaPaidCost}`}
           >
-            <span style={{ opacity: 0.75 }}>Paid</span>
-            <ManaCost cost={card.manaPaidCost} size={9} gap={1} />
+            {card.castProvenanceLabel && (
+              <div
+                style={styles.stackCastProvenanceBadge}
+                title={[
+                  `Cast: ${card.castProvenanceLabel}`,
+                  card.costSacrificeLabel,
+                  card.manaPaidCost && `Paid ${card.manaPaidCost}`,
+                ].filter(Boolean).join(' · ')}
+              >
+                {card.castProvenanceLabel}
+              </div>
+            )}
+            {card.manaPaidCost && (
+              <div style={styles.stackManaPaidBadge} title={`Paid ${card.manaPaidCost}`}>
+                {/* The word only fits when it has the row to itself. */}
+                {!card.castProvenanceLabel && <span style={{ opacity: 0.75 }}>Paid</span>}
+                <ManaCost cost={card.manaPaidCost} size={9} gap={1} />
+              </div>
+            )}
           </div>
         )}
         {/* What the alternative cost ate — "Sacrificed Niblis of the Urn". Emerge (CR 702.119a)
@@ -470,7 +538,9 @@ export function StackDisplay() {
     <>
     <div data-learn="stack" style={{
       position: 'fixed',
-      left: responsive.isMobile ? 12 : 120,
+      // A tablet's HUD reaches further left than a desktop's; at 120px the stack sat on the
+      // left life orb's name.
+      left: responsive.isMobile ? 12 : responsive.viewportWidth < 1200 ? 16 : 120,
       top: '50%',
       transform: 'translateY(-50%)',
       display: 'flex',
@@ -541,6 +611,39 @@ export function StackDisplay() {
                 {topCard.name}
               </div>
             )}
+            {/* The visible way into yields (right-click still works on every ability). Offered for
+                the top ability only — the one you're being asked about right now — and only while you
+                hold priority over it, not behind a decision that covers the board. */}
+            {topCard?.abilityIdentity && !targetingState && !decisionSelectionState && !pendingDecision && (() => {
+              const active = findYield(activeYields, topCard.abilityIdentity)
+              return (
+                <button
+                  type="button"
+                  onClick={(e) => openYieldMenuBeside(topCard, e)}
+                  title="Stop being asked about this ability — auto-pass it, or always answer its “you may”"
+                  aria-haspopup="menu"
+                  style={{
+                    marginTop: 6,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: responsive.isMobile ? '2px 7px' : '3px 10px',
+                    borderRadius: 999,
+                    background: active ? 'rgba(110, 80, 190, 0.35)' : 'rgba(30, 18, 50, 0.85)',
+                    border: `1px solid ${active ? 'rgba(170, 140, 250, 0.7)' : 'rgba(150, 100, 200, 0.45)'}`,
+                    color: active ? '#d9cbff' : '#c8b8e0',
+                    fontSize: responsive.isMobile ? 9 : 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.35)',
+                  }}
+                >
+                  <span aria-hidden style={{ fontSize: responsive.isMobile ? 10 : 12, lineHeight: 1 }}>»</span>
+                  <span>{active ? 'Yielding' : 'Yield…'}</span>
+                </button>
+              )
+            })()}
           </div>
         </>
       )}
@@ -677,7 +780,16 @@ export function StackDisplay() {
       }
 
       const displayText = isAbility ? topCard.oracleText : topCard.stackText
-      if (!displayText) return null
+      // A card targeted in a graveyard or exile is a thumbnail in a pile at best, so name it here.
+      const zoneTargets = gameState
+        ? zoneCardTargetLabels(
+            topCard,
+            gameState.cards,
+            gameState.viewingPlayerId,
+            (id) => gameState.players.find((p) => p.playerId === id)?.name ?? 'Unknown',
+          )
+        : []
+      if (!displayText && zoneTargets.length === 0) return null
       return (
         <div style={{
           padding: responsive.isMobile ? '4px 6px' : '6px 10px',
@@ -687,19 +799,37 @@ export function StackDisplay() {
           maxWidth: responsive.isMobile ? 120 : 160,
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
         }}>
-          <div style={{
-            color: '#b8a8cc',
-            fontSize: responsive.isMobile ? 8 : 9,
-            lineHeight: 1.35,
-            textAlign: 'center',
-            whiteSpace: 'pre-line',
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 5,
-            WebkitBoxOrient: 'vertical',
-          }}>
-            <AbilityText text={displayText} size={responsive.isMobile ? 9 : 10} />
+          {/* Never clamped: a cut-off rules sentence ("triggers only once..") reads as a different
+              rule. Ordinary abilities show whole; a rare wall of text scrolls inside the box rather
+              than pushing the board around, and the full text is on hover either way. */}
+          <div
+            title={displayText ?? undefined}
+            style={{
+              color: '#b8a8cc',
+              fontSize: responsive.isMobile ? 8 : 9,
+              lineHeight: 1.35,
+              textAlign: 'center',
+              whiteSpace: 'pre-line',
+              maxHeight: '14em',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              scrollbarWidth: 'thin',
+            }}
+          >
+            {displayText && <AbilityText text={displayText} size={responsive.isMobile ? 9 : 10} />}
           </div>
+          {zoneTargets.length > 0 && (
+            <div style={{
+              marginTop: displayText ? 4 : 0,
+              color: '#ffcc66',
+              fontSize: responsive.isMobile ? 8 : 9,
+              lineHeight: 1.3,
+              textAlign: 'center',
+              fontStyle: 'italic',
+            }}>
+              → {zoneTargets.join(', ')}
+            </div>
+          )}
         </div>
       )
     })()}
@@ -709,9 +839,8 @@ export function StackDisplay() {
         identity={yieldMenu.identity}
         sourceName={yieldMenu.sourceName}
         position={{ x: yieldMenu.x, y: yieldMenu.y }}
-        existing={gameState?.activeYields?.find(
-          (y) => y.cardDefinitionId === yieldMenu.identity.cardDefinitionId && y.abilityId === yieldMenu.identity.abilityId,
-        )}
+        existing={findYield(activeYields, yieldMenu.identity)}
+        ownAbility={yieldMenu.ownAbility}
         onClose={() => setYieldMenu(null)}
       />
     )}

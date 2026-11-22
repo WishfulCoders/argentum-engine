@@ -13,7 +13,7 @@ val NobleTemplarReprint = Printing(
     collectorNumber = "75",
     scryfallId = "dc770c5e-8d58-4ae4-828e-02bd978dbe57",
     artist = "Alex Horley-Orlandelli",
-    imageUri = "https://cards.scryfall.io/normal/front/d/c/dc770c5e-8d58-4ae4-828e-02bd978dbe57.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/d/c/dc770c5e-8d58-4ae4-828e-02bd978dbe57.jpg?1783939365",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

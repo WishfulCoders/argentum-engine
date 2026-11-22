@@ -53,3 +53,29 @@ Edited on 2026-09-28 when mana provenance gained a producing-source card-type ax
 `RestrictedManaEntry.source`). The new keys were inserted with their defaults in the
 `encodeDefaults = true` captures; the one tagged pool — Birds of Paradise's floating mana in
 `suspended-mana-window/after-1.json` — carries `{"CREATURE": 1}`, as the engine now records.
+
+Edited on 2026-10-08 when the battlefield-exit `EntitySnapshot` gained `copiableCard` (the
+departed permanent's copiable values, read by a token copy of a triggering creature that has
+left — CR 608.2h). The one snapshot in these traces — Naturalize's Sol Ring in
+`free-cast-target/after-3.json` — now carries Sol Ring's `CardComponent` there, exactly the
+component the card keeps in the graveyard (it was no copy). No action or event payload changed,
+and no gameplay was rerun.
+
+Edited on 2026-10-16 when the battlefield-exit `EntitySnapshot` gained `colors` (the departed
+permanent's projected colors, read by a color count of a permanent that has left — CR 608.2h).
+The one snapshot in these traces — Naturalize's Sol Ring in `free-cast-target/after-3.json` —
+now carries `"colors": []`, Sol Ring being colorless. No action or event payload changed, and no
+gameplay was rerun.
+
+Edited on 2026-10-17 when the effect interpreter's `EffectProgram` replaced `EffectContinuation`
+and the executor registry began labelling every leaf it runs with its step
+(`EffectContext.programOrigin`). The old `EffectContinuation` frames in these captures are
+unchanged and are converted on load. The only edit is in `nested-may/after-1.json`: the inner
+"may" frame's context, created while replaying the first answer, now carries
+`"programOrigin": {"type": "…ProgramOrigin.BuiltBy", "step": "Gated", "parent": null}`. Its parent
+is null because the outer frame predates labels. No action or event payload changed.
+
+Prompt-text refresh on 2026-10-20: the `nested-may` inner yes/no prompt in `after-1.json` and
+`events-1.json` (the engine's own output for the recorded question) now reads "You may gain 1 life"
+instead of "You may you gain 1 life". The captured `state.json` and `creation-events.json` are
+untouched.

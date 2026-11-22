@@ -229,6 +229,10 @@ private fun playRandomGame(
 internal fun randomDecisionResponse(decision: PendingDecision, rng: Random): DecisionResponse {
     return when (decision) {
         is PlayCardDecision -> error("Forced play requires the benchmark action enumerator")
+        is com.wingedsheep.engine.core.OrderTriggersDecision ->
+            com.wingedsheep.engine.core.TriggerOrderResponse(decision.id, decision.triggers.indices.shuffled(rng))
+        is com.wingedsheep.engine.core.FlipOntoBattlefieldDecision -> com.wingedsheep.engine.core.FlipThrowResponse.toward(
+            decision.id, decision.table, decision.table.width / 2, -2 * decision.table.height)
         is ChooseTargetsDecision -> {
             val targets = decision.targetRequirements.associate { req ->
                 val valid = decision.legalTargets[req.index] ?: emptyList()

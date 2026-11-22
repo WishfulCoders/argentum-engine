@@ -10,19 +10,16 @@ import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Ivora, Insatiable Heir
- * {1}{R}
- * Legendary Creature — Vampire Warrior
- * 1/1
+ * Ivora, Insatiable Heir — Foundations Jumpstart #50 (canonical printing; its only printing)
+ * {1}{R} · Legendary Creature — Vampire Warrior · 1/1
  *
  * Trample
  * When Ivora enters and whenever it deals combat damage to a player, create a Blood token.
  * Whenever you discard a card, put a +1/+1 counter on Ivora.
  *
- * The combined "When … and whenever …" sentence is two triggered abilities sharing one effect
- * (CR 603.1), so it follows the repo idiom of one `triggeredAbility` block per condition. The
- * discard trigger is the per-card reading ("a card"): discarding two cards at once puts two
- * counters on Ivora.
+ * The one printed ability with two trigger conditions is two triggered abilities sharing an effect.
+ * The discard trigger fires once per card you discard, from any source — a Blood token's cost,
+ * a loot, cleanup.
  */
 val IvoraInsatiableHeir = card("Ivora, Insatiable Heir") {
     manaCost = "{1}{R}"
@@ -39,12 +36,12 @@ val IvoraInsatiableHeir = card("Ivora, Insatiable Heir") {
 
     triggeredAbility {
         trigger = Triggers.self.enters()
-        effect = Effects.CreateBlood(1)
+        effect = Effects.CreateBlood()
     }
 
     triggeredAbility {
         trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
-        effect = Effects.CreateBlood(1)
+        effect = Effects.CreateBlood()
     }
 
     triggeredAbility {

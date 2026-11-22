@@ -12,6 +12,9 @@ import {
   getRemainingCostAfterConvoke,
   materializeX,
   parseManaCost,
+  manaCostAfterPhyrexianLife,
+  defaultPhyrexianLifePips,
+  trimAutoTapPreview,
 } from './manaCost'
 
 const set = (...cs: string[]) => new Set(cs)
@@ -202,5 +205,37 @@ describe('convoke toward X', () => {
   it('drops X=0 and leaves an unchosen X alone', () => {
     expect(materializeX(['X', 'G'], 0)).toEqual(['G'])
     expect(materializeX(['X', 'G'], undefined)).toEqual(['X', 'G'])
+  })
+})
+
+describe('Phyrexian mana pre-selection', () => {
+  const plains = (id: string): TrimmableManaSource<string> => ({ entityId: id, producesColors: ['W'] })
+  const forest = (id: string): TrimmableManaSource<string> => ({ entityId: id, producesColors: ['G'] })
+
+  it('drops life-paid pips and owes the rest as their mana half', () => {
+    expect(manaCostAfterPhyrexianLife('{4}{G/P}', [1])).toBe('{4}')
+    expect(manaCostAfterPhyrexianLife('{4}{G/P}', [])).toBe('{4}{G}')
+    expect(manaCostAfterPhyrexianLife('{R/G/P}{B/P}', [1])).toBe('{R/G}')
+  })
+
+  it('defaults a pip to life only when no source can make its colour', () => {
+    expect(defaultPhyrexianLifePips('{4}{G/P}', set('W'), 20)).toEqual([1])
+    expect(defaultPhyrexianLifePips('{4}{G/P}', set('W', 'G'), 20)).toEqual([])
+    expect(defaultPhyrexianLifePips('{R/G/P}', set('G'), 20)).toEqual([])
+  })
+
+  it('never defaults more life than the player can pay', () => {
+    expect(defaultPhyrexianLifePips('{B/P}{B/P}', set(), 3)).toEqual([0])
+    expect(defaultPhyrexianLifePips('{B/P}', set(), 1)).toEqual([])
+  })
+
+  it('pre-selects four Plains for Tarkir Duneshaper with the {G/P} paid in life', () => {
+    const sources = [plains('p1'), plains('p2'), plains('p3'), plains('p4'), plains('p5')]
+    const owed = parseManaCost(manaCostAfterPhyrexianLife('{4}{G/P}', [1]))
+    expect(computeAutoTapPreview(sources, owed)).toEqual(['p1', 'p2', 'p3', 'p4'])
+  })
+
+  it('lets a source pay a hybrid pip with either half', () => {
+    expect(trimAutoTapPreview(['f1'], [forest('f1')], ['R/G'])).toEqual(['f1'])
   })
 })

@@ -1,10 +1,12 @@
 /**
  * Magic-link sign-in modal: enter an email, receive a one-time sign-in link. No passwords.
- * Styled inline to match the app's other overlays (e.g. JoinQrModal).
+ * Uses the account area's glass dialog (`account.module.css`).
  */
 import { useEffect, useState } from 'react'
 import type React from 'react'
 import { requestLogin } from '@/api/account'
+import a from '@/components/profile/account.module.css'
+import p from '@/components/ui/PageShell.module.css'
 
 interface LoginModalProps {
   open: boolean
@@ -15,6 +17,8 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
   const [error, setError] = useState<string | null>(null)
+  // Only ever set by a local dev server that has no mail to send — see `requestLogin`.
+  const [devLoginPath, setDevLoginPath] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -30,6 +34,7 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
     if (open) {
       setStatus('idle')
       setError(null)
+      setDevLoginPath(null)
     }
   }, [open])
 
@@ -41,7 +46,8 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
     setStatus('sending')
     setError(null)
     try {
-      await requestLogin(email.trim())
+      const result = await requestLogin(email.trim())
+      setDevLoginPath(result.devLoginPath ?? null)
       setStatus('sent')
     } catch (err) {
       setStatus('idle')
@@ -50,40 +56,59 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
   }
 
   return (
-    <div style={styles.backdrop} onClick={onClose} role="dialog" aria-modal="true">
-      <div style={styles.panel} onClick={(e) => e.stopPropagation()}>
-        <button type="button" onClick={onClose} style={styles.close} aria-label="Close">
-          ×
-        </button>
-        {status === 'sent' ? (
-          <>
-            <h2 style={styles.title}>Check your email</h2>
-            <p style={styles.subtitle}>
-              We sent a sign-in link to <strong>{email}</strong>. Open it on this device to finish
+    <div className={a.backdrop} onClick={onClose} role="presentation">
+      <div className={a.dialog} data-size="small" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <div className={a.dialogHead}>
+          <h2 id="login-title" className={a.dialogTitle}>
+            {status === 'sent' && devLoginPath ? 'Sign in (dev server)' : status === 'sent' ? 'Check your email' : 'Sign in'}
+          </h2>
+          <button type="button" onClick={onClose} className={a.close} aria-label="Close">
+            ×
+          </button>
+        </div>
+        {status === 'sent' && devLoginPath ? (
+          <div className={a.form}>
+            <p className={a.muted}>
+              This server has no mail configured, so no email was sent. The sign-in link for{' '}
+              <strong className={a.strong}>{email}</strong> is ready — use it here.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.assign(devLoginPath)}
+              className={p.buttonPrimary}
+              data-testid="dev-sign-in"
+            >
+              Sign in now
+            </button>
+          </div>
+        ) : status === 'sent' ? (
+          <div className={a.form}>
+            <p className={a.muted}>
+              We sent a sign-in link to <strong className={a.strong}>{email}</strong>. Open it on this device to finish
               signing in. The link expires shortly and can be used once.
             </p>
-            <button type="button" onClick={onClose} style={styles.primary}>
+            <button type="button" onClick={onClose} className={p.buttonPrimary}>
               Done
             </button>
-          </>
+          </div>
         ) : (
           <>
-            <h2 style={styles.title}>Sign in</h2>
-            <p style={styles.subtitle}>
-              Enter your email and we'll send you a one-time sign-in link — no password needed.
+            <p className={a.muted} style={{ marginTop: 6 }}>
+              Enter your email and we’ll send you a one-time sign-in link — no password needed.
             </p>
-            <form onSubmit={submit} style={styles.form}>
+            <form onSubmit={submit} className={a.form}>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                aria-label="Email"
                 autoFocus
                 required
-                style={styles.input}
+                className={p.input}
               />
-              {error && <div style={styles.error}>{error}</div>}
-              <button type="submit" disabled={status === 'sending'} style={styles.primary}>
+              {error && <p className={a.error}>{error}</p>}
+              <button type="submit" disabled={status === 'sending'} className={p.buttonPrimary}>
                 {status === 'sending' ? 'Sending…' : 'Send sign-in link'}
               </button>
             </form>
@@ -92,62 +117,4 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
       </div>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.78)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3000,
-    padding: 16,
-  },
-  panel: {
-    position: 'relative',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #2a2a3e',
-    borderRadius: 16,
-    padding: '28px 28px 24px',
-    width: '100%',
-    maxWidth: 360,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-  },
-  close: {
-    position: 'absolute',
-    top: 10,
-    right: 14,
-    background: 'none',
-    border: 'none',
-    color: '#888',
-    fontSize: 24,
-    cursor: 'pointer',
-    lineHeight: 1,
-  },
-  title: { margin: 0, color: '#fff', fontSize: 22 },
-  subtitle: { margin: 0, color: '#aaa', fontSize: 14, lineHeight: 1.5 },
-  form: { display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 },
-  input: {
-    padding: '10px 12px',
-    borderRadius: 8,
-    border: '1px solid #2a2a3e',
-    backgroundColor: '#0f0f1a',
-    color: '#fff',
-    fontSize: 15,
-  },
-  primary: {
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: { color: '#ff6b6b', fontSize: 13 },
 }

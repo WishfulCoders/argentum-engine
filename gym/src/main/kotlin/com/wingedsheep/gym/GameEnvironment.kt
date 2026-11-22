@@ -13,6 +13,7 @@ import com.wingedsheep.ai.engine.evaluation.LifeDifferential
 import com.wingedsheep.ai.engine.evaluation.Tempo
 import com.wingedsheep.ai.engine.evaluation.ThreatAssessment
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.handlers.MulliganHandler
 import com.wingedsheep.engine.legalactions.EnumerationMode
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
@@ -142,9 +143,14 @@ class GameEnvironment private constructor(
     /** The winner's entity ID, or null if the game is ongoing or a draw. */
     val winnerId: EntityId? get() = state.winnerId
 
-    /** The player who currently needs to act (has priority or a pending decision). */
+    /**
+     * The player who currently needs to act: the one with a pending decision, the next to decide
+     * on an opening hand (nobody has priority before the first turn), or the priority holder.
+     */
     val agentToAct: EntityId?
-        get() = state.pendingDecision?.playerId ?: state.priorityPlayerId
+        get() = state.pendingDecision?.playerId
+            ?: MulliganHandler.nextOpeningHandDecider(state)
+            ?: state.priorityPlayerId
 
     /** Non-null when the engine is paused waiting for a player decision. */
     val pendingDecision: PendingDecision? get() = state.pendingDecision
@@ -159,19 +165,23 @@ class GameEnvironment private constructor(
     /**
      * Initialize a new game and return the opening state.
      *
-     * Replaces any existing game state. Set [GameConfig.skipMulligans] to `true`
-     * for training runs where you don't want the mulligan phase.
+     * Replaces any existing game state. With a mulligan phase the first actions are each player's
+     * keep or mulligan, then the cards they put on the bottom ([legalActions] offers them). Set
+     * [GameConfig.skipMulligans] to `true` for training runs where you don't want the mulligan
+     * phase: every hand is kept and the game opens at the opening-hand actions (CR 103.6) or the
+     * first upkeep, as it would after the last keep.
      */
     fun reset(config: GameConfig): StepResult {
         val initializer = GameInitializer(cardRegistry)
         val initResult = initializer.initializeGame(config)
-        state = initResult.state
+        val begun = processor.beginGame(initResult.state, initResult.events)
+        state = begun.state
         playerIds = initResult.playerIds
-        events = initResult.events
-        lastStepEvents = initResult.events
+        events = begun.events
+        lastStepEvents = begun.events
         lastRejection = null
         stepCount = 0
-        return buildStepResult(initResult.events)
+        return buildStepResult(begun.events)
     }
 
     /**

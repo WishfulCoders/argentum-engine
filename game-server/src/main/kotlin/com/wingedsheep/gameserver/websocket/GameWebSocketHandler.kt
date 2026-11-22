@@ -22,8 +22,14 @@ class GameWebSocketHandler(
     private val gamePlayHandler: GamePlayHandler,
     private val lobbyHandler: LobbyHandler,
     private val quickGameLobbyHandler: QuickGameLobbyHandler,
+    private val matchmakingService: com.wingedsheep.gameserver.matchmaking.MatchmakingService,
+    private val postGameService: com.wingedsheep.gameserver.social.PostGameService,
+    private val emoteService: com.wingedsheep.gameserver.social.EmoteService,
     private val sender: MessageSender,
-    private val llmTournamentService: com.wingedsheep.gameserver.tournament.llm.LlmTournamentService
+    private val llmTournamentService: com.wingedsheep.gameserver.tournament.llm.LlmTournamentService,
+    private val sessionRegistry: com.wingedsheep.gameserver.session.SessionRegistry,
+    private val activityTracker: com.wingedsheep.gameserver.activity.PlayerActivityTracker,
+    private val restartNotice: com.wingedsheep.gameserver.session.ServerRestartNotice,
 ) : TextWebSocketHandler() {
 
     private val logger = LoggerFactory.getLogger(GameWebSocketHandler::class.java)
@@ -38,6 +44,7 @@ class GameWebSocketHandler(
         gamePlayHandler.llmTournamentGameOverCallback = { gameSessionId, winnerId, winnerLife ->
             llmTournamentService.onGameComplete(gameSessionId, winnerId, winnerLife)
         }
+        gamePlayHandler.postGameCallback = { gameSession -> postGameService.onGameOver(gameSession) }
         gamePlayHandler.joinSealedGameCallback = { session, msg -> lobbyHandler.handleJoinSealedGame(session, msg) }
         gamePlayHandler.joinLobbyCallback = { session, msg -> lobbyHandler.handleJoinLobby(session, msg) }
         connectionHandler.handleGameOverCallback = { gameSession, reason -> gamePlayHandler.handleGameOver(gameSession, reason) }
@@ -63,6 +70,11 @@ class GameWebSocketHandler(
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
         logger.info("WebSocket connection established: ${session.id}")
+        // A client that reconnects into the shutdown window would be restored on a server about
+        // to die. Turn it away with the same restart signal so it waits for the new one.
+        if (restartNotice.isShuttingDown) {
+            session.close(CloseStatus.SERVICE_RESTARTED)
+        }
     }
 
     override fun handleTextMessage(session: WebSocketSession, message: TextMessage) {
@@ -93,6 +105,7 @@ class GameWebSocketHandler(
                 is ClientMessage.SetAbilityYield,
                 is ClientMessage.ClearAbilityYield,
                 is ClientMessage.ClearAllYields,
+                is ClientMessage.SetTriggerOrdering,
                 is ClientMessage.RequestUndo,
                 is ClientMessage.RequestTakeback,
                 is ClientMessage.RespondTakeback,
@@ -101,7 +114,7 @@ class GameWebSocketHandler(
 
                 is ClientMessage.CreateSealedGame,
                 is ClientMessage.JoinSealedGame,
-                is ClientMessage.PickJumpstartPack,
+                is ClientMessage.PickJumpstartPacks,
                 is ClientMessage.SubmitSealedDeck,
                 is ClientMessage.UnsubmitDeck,
                 is ClientMessage.CreateTournamentLobby,
@@ -120,6 +133,14 @@ class GameWebSocketHandler(
 
                 is ClientMessage.ReadyForNextRound -> {
                     lobbyHandler.handleReadyForNextRound(session)
+                }
+
+                is ClientMessage.SubmitMatchDeck -> {
+                    lobbyHandler.handleSubmitMatchDeck(session, clientMessage)
+                }
+
+                is ClientMessage.EditMatchDeck -> {
+                    lobbyHandler.handleEditMatchDeck(session)
                 }
 
                 is ClientMessage.AddExtraRound -> {
@@ -144,10 +165,30 @@ class GameWebSocketHandler(
                 is ClientMessage.SetQuickGameLobbySetCode,
                 is ClientMessage.SetQuickGameLobbyPublic,
                 is ClientMessage.SetQuickGameLobbyRanked,
+                is ClientMessage.SetQuickGameLobbyAnte,
                 is ClientMessage.SetQuickGameAiDeck,
                 is ClientMessage.AddQuickGameAi,
                 is ClientMessage.RemoveQuickGameAi,
                 is ClientMessage.SetQuickGameLobbyFormat -> quickGameLobbyHandler.handle(session, clientMessage)
+
+                is ClientMessage.JoinMatchmaking,
+                is ClientMessage.LeaveMatchmaking,
+                is ClientMessage.RespondToMatch -> matchmakingService.handle(session, clientMessage)
+
+                is ClientMessage.SendEmote -> emoteService.handle(session, clientMessage)
+
+                is ClientMessage.PostGameRematch,
+                is ClientMessage.PostGameAddFriend,
+                is ClientMessage.PostGameBlock,
+                is ClientMessage.PostGameLeave -> postGameService.handle(session, clientMessage)
+
+                // Admin telemetry only — recorded below with every other message.
+                is ClientMessage.ReportActivity -> {}
+            }
+            // After dispatch, so a Connect has registered the identity it names. A liveness ping
+            // is the client's own heartbeat, not something the player did.
+            if (clientMessage !is ClientMessage.Ping) {
+                sessionRegistry.getIdentityByWsId(session.id)?.let { activityTracker.onMessage(it, clientMessage) }
             }
         } catch (e: Exception) {
             logger.error("Error handling message from ${session.id}", e)

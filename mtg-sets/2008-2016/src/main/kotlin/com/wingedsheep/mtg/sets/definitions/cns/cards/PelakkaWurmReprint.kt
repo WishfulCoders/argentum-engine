@@ -13,7 +13,7 @@ val PelakkaWurmReprint = Printing(
     collectorNumber = "172",
     scryfallId = "9a2cb305-3f38-4192-b125-8ccc455d4b29",
     artist = "Daniel Ljunggren",
-    imageUri = "https://cards.scryfall.io/normal/front/9/a/9a2cb305-3f38-4192-b125-8ccc455d4b29.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/9/a/9a2cb305-3f38-4192-b125-8ccc455d4b29.jpg?1783939343",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

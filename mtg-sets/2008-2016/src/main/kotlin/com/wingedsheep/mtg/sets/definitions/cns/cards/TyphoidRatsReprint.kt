@@ -13,7 +13,7 @@ val TyphoidRatsReprint = Printing(
     collectorNumber = "130",
     scryfallId = "035533c6-ed13-488c-a9bc-5c7087472e84",
     artist = "Kev Walker",
-    imageUri = "https://cards.scryfall.io/normal/front/0/3/035533c6-ed13-488c-a9bc-5c7087472e84.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/0/3/035533c6-ed13-488c-a9bc-5c7087472e84.jpg?1783939352",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

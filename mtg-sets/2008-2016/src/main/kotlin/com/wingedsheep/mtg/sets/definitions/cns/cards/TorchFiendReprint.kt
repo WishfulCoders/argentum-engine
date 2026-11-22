@@ -13,7 +13,7 @@ val TorchFiendReprint = Printing(
     collectorNumber = "153",
     scryfallId = "e3e258a9-d978-4bcd-ad51-e05744847cbe",
     artist = "Winona Nelson",
-    imageUri = "https://cards.scryfall.io/normal/front/e/3/e3e258a9-d978-4bcd-ad51-e05744847cbe.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/e/3/e3e258a9-d978-4bcd-ad51-e05744847cbe.jpg?1783939347",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

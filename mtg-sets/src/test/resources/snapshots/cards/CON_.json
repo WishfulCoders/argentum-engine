@@ -189,7 +189,9 @@
                                     "amount": 2
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for up to two basic land cards to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -1191,6 +1193,52 @@
     ]
 }
 
+// Font of Mythos
+{
+    "name": "Font of Mythos",
+    "manaCost": "{4}",
+    "typeLine": "Artifact",
+    "oracleText": "At the beginning of each player's draw step, that player draws two additional cards.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Font of Mythos:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "DRAW",
+                    "player": "Each"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "136",
+        "rarity": "RARE",
+        "artist": "Dave Allsop",
+        "flavorText": "Those who drink from Malfegor's cup are tainted with hunger and stained with lies.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/1/c198caf8-27ab-4300-841b-507e1b0ce9b3.jpg?1783942462",
+        "rulings": [
+            {
+                "date": "2013-04-15",
+                "text": "The triggered ability is put onto the stack after you have already drawn your card for the turn."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Fusion Elemental
 {
     "name": "Fusion Elemental",
@@ -1458,6 +1506,67 @@
     ]
 }
 
+// Kederekt Parasite
+{
+    "name": "Kederekt Parasite",
+    "manaCost": "{B}",
+    "typeLine": "Creature — Horror",
+    "oracleText": "Whenever an opponent draws a card, if you control a red permanent, you may have this creature deal 1 damage to that player.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 1
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Kederekt Parasite:1",
+                "trigger": {
+                    "type": "DrawEvent",
+                    "player": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "DealDamage",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "target": {
+                            "type": "PlayerRef",
+                            "player": "TriggeringPlayer"
+                        }
+                    }
+                },
+                "interveningIf": {
+                    "type": "Exists",
+                    "player": "You",
+                    "zone": "Battlefield",
+                    "filter": "permanent red"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "48",
+        "rarity": "RARE",
+        "artist": "Dan Murayama Scott",
+        "flavorText": "When the smell of passing thoughts piques its hunger, its maw becomes primed with acid and a taste for brains.",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/7/878c7d8c-4df0-43ac-8197-d89c8be5e70d.jpg?1783942482",
+        "rulings": [
+            {
+                "date": "2009-02-01",
+                "text": "The \"intervening 'if' clause\" means that (1) the ability won't trigger at all unless you control a permanent of the specified color, and (2) the ability will do nothing unless you control a permanent of the specified color at the time it resolves."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Knight of the Reliquary
 {
     "name": "Knight of the Reliquary",
@@ -1480,7 +1589,7 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomSacrifice",
-                                "filter": "land Forest|Plains"
+                                "filter": "permanent Forest|Plains"
                             }
                         }
                     ]
@@ -1508,7 +1617,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -1521,8 +1632,7 @@
                         "ShuffleLibrary",
                         "EmitLibrarySearchedEvent"
                     ]
-                },
-                "descriptionOverride": "{T}, Sacrifice a Forest or Plains: Search your library for a land card, put it onto the battlefield, then shuffle."
+                }
             }
         ],
         "staticAbilities": [
@@ -1533,13 +1643,13 @@
                     "scope": "Self"
                 },
                 "powerBonus": {
-                    "type": "AggregateZone",
+                    "type": "Count",
                     "player": "You",
                     "zone": "Graveyard",
                     "filter": "land"
                 },
                 "toughnessBonus": {
-                    "type": "AggregateZone",
+                    "type": "Count",
                     "player": "You",
                     "zone": "Graveyard",
                     "filter": "land"
@@ -1611,6 +1721,184 @@
     "colorIdentityOverride": [
         "RED",
         "WHITE"
+    ]
+}
+
+// Martial Coup
+{
+    "name": "Martial Coup",
+    "manaCost": "{X}{W}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Create X 1/1 white Soldier creature tokens. If X is 5 or more, destroy all other creatures.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "CreateToken",
+                    "count": "XValue",
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Soldier"
+                    ]
+                },
+                {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.WhenCondition",
+                        "condition": {
+                            "type": "Compare",
+                            "left": "XValue",
+                            "operator": "GTE",
+                            "right": {
+                                "type": "Fixed",
+                                "amount": 5
+                            }
+                        }
+                    },
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": "creature"
+                                },
+                                "storeAs": "gathered0"
+                            },
+                            {
+                                "type": "FilterCollection",
+                                "from": "gathered0",
+                                "collectionFilter": {
+                                    "type": "ExcludeOtherCollection",
+                                    "otherCollectionName": "createdTokens"
+                                },
+                                "storeMatching": "matching1"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "matching1",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Graveyard"
+                                },
+                                "moveType": "Destroy"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "11",
+        "rarity": "RARE",
+        "artist": "Greg Staples",
+        "flavorText": "Their war forgotten, the nations of Bant stood united in the face of a common threat.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/2/4201385f-6f74-4e3d-aafb-0eff82cb24c1.jpg?1783942492"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Master Transmuter
+{
+    "name": "Master Transmuter",
+    "manaCost": "{3}{U}",
+    "typeLine": "Artifact Creature — Human Artificer",
+    "oracleText": "{U}, {T}, Return an artifact you control to its owner's hand: You may put an artifact card from your hand onto the battlefield.",
+    "creatureStats": {
+        "power": 1,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Master Transmuter:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{U}"
+                            }
+                        },
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomReturnToHand",
+                                "filter": "artifact"
+                            }
+                        }
+                    ]
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Hand",
+                                "filter": "artifact"
+                            },
+                            "storeAs": "put_candidates"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "put_candidates",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "putting",
+                            "prompt": "You may put an artifact card from your hand onto the battlefield"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "putting",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "{U}, {T}, Return an artifact you control to its owner's hand: You may put an artifact card from your hand onto the battlefield."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "31",
+        "rarity": "RARE",
+        "artist": "Chippy",
+        "flavorText": "\"Wasted potential surrounds us. Lend me that bauble, and let me see what it can be made to be.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/5/252482b2-aaa7-49f3-af8c-30923ca98994.jpg?1783942487",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "Master Transmuter can be returned to its owner's hand to pay the cost of its activated ability."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "The artifact card you put onto the battlefield when the ability resolves may be the same card that you returned to your hand when you paid the cost. If so, it returns to the battlefield as a new object with no relation to its previous existence."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -1807,21 +2095,7 @@
         "rarity": "RARE",
         "artist": "Mark Zug",
         "flavorText": "She protects the sacred groves from blight, drought, and the Unbeholden.",
-        "imageUri": "https://cards.scryfall.io/normal/front/6/a/6adfe928-1305-444d-b709-1e714544daaf.jpg?1783942473",
-        "rulings": [
-            {
-                "date": "2020-08-07",
-                "text": "If you declare exactly one creature as an attacker, each exalted ability on each permanent you control (including, perhaps, the attacking creature itself) will trigger."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "You must attack with exactly one creature for exalted abilities to trigger. Exalted abilities won't trigger if you attack a player with one creature and a planeswalker with another, for example, or if you attack with two creatures but one is removed from combat."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "Some effects put creatures onto the battlefield attacking. Since those creatures were never declared as attackers, they're ignored by exalted abilities. They won't cause exalted abilities to trigger. If any exalted abilities have already triggered (because exactly one creature was declared as an attacker), those abilities will resolve as normal even though there may now be multiple attackers."
-            }
-        ]
+        "imageUri": "https://cards.scryfall.io/normal/front/6/a/6adfe928-1305-444d-b709-1e714544daaf.jpg?1783942473"
     },
     "colorIdentityOverride": [
         "GREEN",
@@ -2196,58 +2470,58 @@
                     "destination": "Exile"
                 },
                 {
-                    "type": "Gated",
-                    "gate": "Gate.MayDecide",
-                    "then": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "GatherCards",
-                                "source": {
-                                    "type": "FromZone",
-                                    "zone": "Library",
-                                    "player": {
-                                        "type": "ControllerOf",
-                                        "targetDescription": "target"
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": {
+                            "type": "ControllerOf",
+                            "targetDescription": "target creature"
+                        }
+                    },
+                    "body": {
+                        "type": "Gated",
+                        "gate": "Gate.MayDecide",
+                        "then": {
+                            "type": "Composite",
+                            "effects": [
+                                {
+                                    "type": "GatherCards",
+                                    "source": {
+                                        "type": "FromZone",
+                                        "zone": "Library",
+                                        "filter": "basicland"
                                     },
-                                    "filter": "basicland"
+                                    "storeAs": "searchable",
+                                    "search": true
                                 },
-                                "storeAs": "gathered0",
-                                "search": true
-                            },
-                            {
-                                "type": "SelectFromCollection",
-                                "from": "gathered0",
-                                "selection": {
-                                    "type": "ChooseUpTo",
-                                    "count": {
-                                        "type": "Fixed",
-                                        "amount": 1
+                                {
+                                    "type": "SelectFromCollection",
+                                    "from": "searchable",
+                                    "selection": {
+                                        "type": "ChooseUpTo",
+                                        "count": {
+                                            "type": "Fixed",
+                                            "amount": 1
+                                        }
+                                    },
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                    "selectedLabel": "Put onto the battlefield tapped"
+                                },
+                                {
+                                    "type": "MoveCollection",
+                                    "from": "found",
+                                    "destination": {
+                                        "type": "ToZone",
+                                        "zone": "Battlefield",
+                                        "placement": "Tapped"
                                     }
                                 },
-                                "chooser": "ControllerOfTarget",
-                                "storeSelected": "selected1"
-                            },
-                            {
-                                "type": "MoveCollection",
-                                "from": "selected1",
-                                "destination": {
-                                    "type": "ToZone",
-                                    "zone": "Battlefield",
-                                    "player": {
-                                        "type": "ControllerOf",
-                                        "targetDescription": "target"
-                                    },
-                                    "placement": "Tapped"
-                                }
-                            },
-                            {
-                                "type": "ShuffleLibrary",
-                                "target": "TargetController"
-                            }
-                        ]
-                    },
-                    "decisionMaker": "TargetController"
+                                "ShuffleLibrary",
+                                "EmitLibrarySearchedEvent"
+                            ]
+                        }
+                    }
                 }
             ]
         },
@@ -2270,10 +2544,6 @@
             {
                 "date": "2026-01-27",
                 "text": "The controller of the exiled creature isn't required to search their library for a basic land. If that player doesn't, the player won't shuffle their library."
-            },
-            {
-                "date": "2026-01-27",
-                "text": "If the target creature is an illegal target by the time Path to Exile tries to resolve, it won't resolve and none of its effects will happen. The creature's controller won't search for a basic land card."
             }
         ]
     },
@@ -3140,7 +3410,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an artifact creature card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",

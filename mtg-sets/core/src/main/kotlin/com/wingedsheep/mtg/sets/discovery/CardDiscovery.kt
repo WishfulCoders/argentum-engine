@@ -50,6 +50,54 @@ object CardDiscovery {
 
     private val cache = ConcurrentHashMap<String, ScannedPackage>()
 
+    /** Every set and every card lives under here; see [corpusIndex]. */
+    private const val CORPUS_PACKAGE = "com.wingedsheep.mtg.sets.definitions"
+
+    /** Class names found by a classpath scan: by package, plus the [MtgSet] implementations. */
+    private class ClassIndex(
+        val classNamesByPackage: Map<String, List<String>>,
+        val setClassNames: List<String>,
+    ) {
+        /** Class names in [packageName] and its subpackages, matching ClassGraph's `acceptPackages`. */
+        fun classNamesUnder(packageName: String): List<String> =
+            classNamesByPackage.flatMap { (pkg, names) ->
+                if (pkg == packageName || pkg.startsWith("$packageName.")) names else emptyList()
+            }
+    }
+
+    /**
+     * One scan of the whole card corpus, shared by every set.
+     *
+     * Each set's `cards`, `basicLands` and `printings` used to run its own ClassGraph scan, and a
+     * scan reopens every jar on the classpath however narrow its package filter — several hundred
+     * sets made that a large slice of server startup, most of it on a fat jar's nested jars.
+     */
+    private val corpusIndex: ClassIndex by lazy { indexClasses(CORPUS_PACKAGE) }
+
+    private fun indexClasses(packageName: String): ClassIndex =
+        ClassGraph()
+            // ClassGraph 5+ scans nothing until a source is enabled. The corpus is plain
+            // classpath (including a Spring Boot fat jar's nested jars), never JPMS modules.
+            .enableClasspath()
+            .acceptPackages(packageName)
+            .enableClassInfo()
+            .scan()
+            .use { scanResult ->
+                ClassIndex(
+                    classNamesByPackage = scanResult.allClasses.groupBy({ it.packageName }, { it.name }),
+                    setClassNames = scanResult.getAllClassesImplementing(MtgSet::class.java.name)
+                        .filter { !it.isInterface && !it.isAbstract }
+                        .map { it.name },
+                )
+            }
+
+    private fun indexFor(packageName: String): ClassIndex =
+        if (packageName == CORPUS_PACKAGE || packageName.startsWith("$CORPUS_PACKAGE.")) corpusIndex
+        else indexClasses(packageName)
+
+    private fun loadClassOrNull(name: String): Class<*>? =
+        runCatching { Class.forName(name, false, CardDiscovery::class.java.classLoader) }.getOrNull()
+
     fun findIn(packageName: String): List<CardDefinition> =
         cache.getOrPut(packageName) { scan(packageName) }.cards
 
@@ -78,64 +126,51 @@ object CardDiscovery {
      * place in the catalog. Ordering is non-deterministic here; callers sort.
      */
     fun findSets(packageName: String): List<MtgSet> =
-        ClassGraph()
-            .acceptPackages(packageName)
-            .enableClassInfo()
-            .scan()
-            .use { scanResult ->
-                scanResult.getClassesImplementing(MtgSet::class.java.name)
-                    .filter { !it.isInterface && !it.isAbstract }
-                    .mapNotNull { classInfo ->
-                        val cls = runCatching { classInfo.loadClass() }.getOrNull()
-                            ?: return@mapNotNull null
-                        runCatching { cls.getField("INSTANCE").get(null) as? MtgSet }.getOrNull()
-                    }
+        indexFor(packageName).setClassNames
+            .filter { it.startsWith("$packageName.") }
+            .mapNotNull { name ->
+                val cls = loadClassOrNull(name) ?: return@mapNotNull null
+                runCatching { cls.getField("INSTANCE").get(null) as? MtgSet }.getOrNull()
             }
 
     private fun scan(packageName: String): ScannedPackage {
         val cards = mutableListOf<CardDefinition>()
         val basicLands = mutableListOf<CardDefinition>()
         val printings = mutableListOf<Printing>()
-        ClassGraph()
-            .acceptPackages(packageName)
-            .enableClassInfo()
-            .scan()
-            .use { scanResult ->
-                for (classInfo in scanResult.allClasses) {
-                    if (!classInfo.name.endsWith("Kt")) continue
-                    val cls = runCatching { classInfo.loadClass() }.getOrNull() ?: continue
-                    // A top-level `val` produces a private static field plus a public static
-                    // getter. The getter's return type is what we trust as the val's declared
-                    // type; the field's name pairs them up. This filters out synthetic helpers
-                    // (private-by-default) and aggregate `List<...>` vals.
-                    val exposedFields = cls.declaredMethods
-                        .asSequence()
-                        .filter { Modifier.isStatic(it.modifiers) && Modifier.isPublic(it.modifiers) }
-                        .filter { it.parameterCount == 0 }
-                        .filter { it.returnType == CardDefinition::class.java || it.returnType == Printing::class.java }
-                        .filter { it.name.startsWith("get") && it.name.length > 3 }
-                        .associateBy(
-                            { it.name.substring(3).replaceFirstChar { c -> c.lowercase() } },
-                            { it.returnType },
-                        )
-                    for (field in cls.declaredFields) {
-                        if (!Modifier.isStatic(field.modifiers)) continue
-                        val key = field.name.replaceFirstChar { it.lowercase() }
-                        val declaredType = exposedFields[key] ?: continue
-                        field.isAccessible = true
-                        when (declaredType) {
-                            CardDefinition::class.java -> {
-                                val v = field.get(null) as? CardDefinition ?: continue
-                                if (v.typeLine.isBasicLand) basicLands += v else cards += v
-                            }
-                            Printing::class.java -> {
-                                val v = field.get(null) as? Printing ?: continue
-                                printings += v
-                            }
-                        }
+        for (className in indexFor(packageName).classNamesUnder(packageName)) {
+            if (!className.endsWith("Kt")) continue
+            val cls = loadClassOrNull(className) ?: continue
+            // A top-level `val` produces a private static field plus a public static
+            // getter. The getter's return type is what we trust as the val's declared
+            // type; the field's name pairs them up. This filters out synthetic helpers
+            // (private-by-default) and aggregate `List<...>` vals.
+            val exposedFields = cls.declaredMethods
+                .asSequence()
+                .filter { Modifier.isStatic(it.modifiers) && Modifier.isPublic(it.modifiers) }
+                .filter { it.parameterCount == 0 }
+                .filter { it.returnType == CardDefinition::class.java || it.returnType == Printing::class.java }
+                .filter { it.name.startsWith("get") && it.name.length > 3 }
+                .associateBy(
+                    { it.name.substring(3).replaceFirstChar { c -> c.lowercase() } },
+                    { it.returnType },
+                )
+            for (field in cls.declaredFields) {
+                if (!Modifier.isStatic(field.modifiers)) continue
+                val key = field.name.replaceFirstChar { it.lowercase() }
+                val declaredType = exposedFields[key] ?: continue
+                field.isAccessible = true
+                when (declaredType) {
+                    CardDefinition::class.java -> {
+                        val v = field.get(null) as? CardDefinition ?: continue
+                        if (v.typeLine.isBasicLand) basicLands += v else cards += v
+                    }
+                    Printing::class.java -> {
+                        val v = field.get(null) as? Printing ?: continue
+                        printings += v
                     }
                 }
             }
+        }
         return ScannedPackage(
             cards = cards.sortedBy { it.name },
             // Name alone is not a total order for basics — every art variant of a type shares one

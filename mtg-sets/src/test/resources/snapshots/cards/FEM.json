@@ -139,7 +139,8 @@
                                     "type": "Fixed",
                                     "amount": 2
                                 }
-                            }
+                            },
+                            "description": "You gain 2 life"
                         },
                         {
                             "effect": {
@@ -925,9 +926,10 @@
                     ]
                 },
                 "effect": {
-                    "type": "Modal",
-                    "modes": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
+                            "label": "Put a +0/+1 counter on it",
                             "effect": {
                                 "type": "AddCounters",
                                 "counterType": "PLUS_ZERO_PLUS_ONE",
@@ -936,10 +938,10 @@
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
-                            },
-                            "description": "Put a +0/+1 counter on it"
+                            }
                         },
                         {
+                            "label": "Put a +1/+0 counter on it",
                             "effect": {
                                 "type": "AddCounters",
                                 "counterType": "PLUS_ONE_PLUS_ZERO",
@@ -948,11 +950,9 @@
                                     "type": "BoundVariable",
                                     "name": "t0"
                                 }
-                            },
-                            "description": "Put a +1/+0 counter on it"
+                            }
                         }
-                    ],
-                    "countsAsModalSpell": false
+                    ]
                 },
                 "targetRequirements": [
                     {
@@ -3794,7 +3794,7 @@
                         ]
                     }
                 ],
-                "descriptionOverride": "Pay enchanted creature's mana cost: Remove a net counter from this Aura. Only the controller of the enchanted creature may activate this ability."
+                "descriptionOverride": "Pay enchanted creature's mana cost: Remove a net counter from this Aura."
             }
         ],
         "staticAbilities": [
@@ -4954,8 +4954,13 @@
                                 ],
                                 "statePredicates": [
                                     {
-                                        "type": "ControllerControls",
-                                        "filter": "land Island ctrl:you"
+                                        "type": "ControllerMeets",
+                                        "condition": {
+                                            "type": "Exists",
+                                            "player": "You",
+                                            "zone": "Battlefield",
+                                            "filter": "land Island"
+                                        }
                                     }
                                 ]
                             }

@@ -140,9 +140,7 @@ class AiUndoDecisionFreshnessTest : ScenarioTestBase() {
                     .shouldBeInstanceOf<GameSession.ActionResult.Success>()
                 session.isUndoAvailable(human) shouldBe true
                 val oldTargets = advanceToTargets(session)
-                session.getStateForTesting()!!.continuationStack
-                    .filterIsInstance<com.wingedsheep.engine.core.PendingTriggersContinuation>()
-                    .single().remainingTriggers.size shouldBe 2
+                session.getStateForTesting()!!.triggersBeingPlaced.size shouldBe 2
                 session.isUndoAvailable(human) shouldBe true
                 val oldUpdate = session.createStateUpdate(ai, emptyList(), useEngineDecisionIds = true)
                     .shouldBeInstanceOf<ServerMessage.StateUpdate>()
@@ -157,9 +155,7 @@ class AiUndoDecisionFreshnessTest : ScenarioTestBase() {
                 session.executeAction(human, CastSpell(human, naturalize, listOf(ChosenTarget.Permanent(closet))))
                     .shouldBeInstanceOf<GameSession.ActionResult.Success>()
                 val replacementTargets = advanceToTargets(session)
-                session.getStateForTesting()!!.continuationStack
-                    .filterIsInstance<com.wingedsheep.engine.core.PendingTriggersContinuation>()
-                    .single().remainingTriggers.size shouldBe 1
+                session.getStateForTesting()!!.triggersBeingPlaced.size shouldBe 1
                 replacementTargets.id shouldBe oldTargets.id
                 val newUpdate = session.createStateUpdate(ai, emptyList(), useEngineDecisionIds = true)
                     .shouldBeInstanceOf<ServerMessage.StateDeltaUpdate>()
@@ -313,6 +309,7 @@ class AiUndoDecisionFreshnessTest : ScenarioTestBase() {
         aiGameManager = mockk(relaxed = true),
         matchResultSink = mockk(relaxed = true),
         rankedResultSink = mockk(relaxed = true),
-        deckProfiler = mockk(relaxed = true)
+        deckProfiler = mockk(relaxed = true),
+        anteSpoilsSink = mockk(relaxed = true),
     )
 }

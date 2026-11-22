@@ -13,7 +13,7 @@ val MortifyReprint = Printing(
     collectorNumber = "190",
     scryfallId = "42024ec4-08c6-4a0d-9ea7-2ddc7626c2d0",
     artist = "Nils Hamm",
-    imageUri = "https://cards.scryfall.io/normal/front/4/2/42024ec4-08c6-4a0d-9ea7-2ddc7626c2d0.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/4/2/42024ec4-08c6-4a0d-9ea7-2ddc7626c2d0.jpg?1783939339",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

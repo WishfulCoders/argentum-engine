@@ -8,14 +8,14 @@
  * set-page sections (see `ExtraGroup`). See `game-server` SetCoverageService /
  * `GET /api/sets/coverage` and `GET /api/sets/{code}/coverage`.
  *
- * Cards we've decided never to implement (ante, subgames, physical dexterity) come back
+ * Cards we've decided never to implement (ante, physical dexterity) come back
  * flagged `notPlanned` and are already excluded from every total, so `implemented / total`
  * measures what we intend to build.
  */
 
 /** Why a card will never be implemented. Present only on not-planned cards, and never without a reason. */
 export interface NotPlanned {
-  /** Short reason key — `ante`, `subgame`, `dexterity`. */
+  /** Short reason key — `ante`, `dexterity`. */
   readonly kind: string
   /** Player-facing sentence explaining the decision. */
   readonly why: string
@@ -145,6 +145,84 @@ export interface SetDetail {
   readonly draft: readonly CardCoverage[]
   /** Completionist extras in Scryfall's section order. Empty if the set has none. */
   readonly extraGroups: readonly ExtraGroup[]
+}
+
+/**
+ * A set's AI-reading score: of its authored cards, how many the engine AI's static card readers
+ * read fully (the headline), and of their checked abilities, how many are read (the secondary,
+ * ability-weighted measure).
+ */
+export interface SetAiReading {
+  readonly readFully: number
+  readonly total: number
+  readonly abilitiesRead: number
+  readonly abilities: number
+}
+
+/** One effect-type group the AI misses in a set: the audit key (`intent: AddCountersEffect`) and its cards. */
+export interface AiGapGroup {
+  readonly key: string
+  /** `polarity`, `intent`, `combat`, `timing` or `modal`. */
+  readonly check: string
+  readonly effectType: string
+  readonly cards: readonly string[]
+}
+
+/**
+ * One implemented card the AI doesn't fully read: its audit flag keys (`intent: AddCountersEffect`)
+ * and how many of its checked abilities the readers do understand.
+ */
+export interface AiUnreadCard {
+  readonly name: string
+  readonly flags: readonly string[]
+  readonly abilitiesRead: number
+  readonly abilities: number
+}
+
+/** A set's unread cards, grouped by what the AI misses — biggest group first. */
+export interface SetAiReadingDetail {
+  readonly ready: boolean
+  readonly score: SetAiReading | null
+  readonly groups: readonly AiGapGroup[]
+  readonly unread: readonly AiUnreadCard[]
+  /** Where the draft AI's pick ratings for the set come from; absent while the index builds. */
+  readonly draft?: SetDraftRatings | null
+}
+
+/**
+ * How the draft AI rates a set's cards: `rated` of `nonland` implemented nonland cards are in the
+ * set's own pick table (none when `hasTable` is false); the limited rater fills in the rest.
+ * `archetypes` — the table carries archetype tags, so the pick scorer reads archetype fit.
+ */
+export interface SetDraftRatings {
+  readonly hasTable: boolean
+  readonly rated: number
+  readonly nonland: number
+  readonly archetypes: boolean
+  /** Of the cards the table leaves unrated, how many nothing rates anywhere — the effect heuristic's guesses. */
+  readonly heuristic: number
+}
+
+export async function fetchSetAiReading(code: string): Promise<SetAiReadingDetail> {
+  const res = await fetch(`/api/sets/${encodeURIComponent(code)}/ai-reading`)
+  if (!res.ok) throw new Error(`Failed to load AI reading (${res.status})`)
+  return res.json() as Promise<SetAiReadingDetail>
+}
+
+/**
+ * Per-set AI-read counts from the AI card-reading audit (`docs/ai/reading-audit.md`). The server
+ * indexes the corpus lazily in the background, so the first answers are `ready: false` with no
+ * sets; poll until it is ready. A set with no authored cards has no entry.
+ */
+export interface AiReadingSummary {
+  readonly ready: boolean
+  readonly sets: Readonly<Record<string, SetAiReading>>
+}
+
+export async function fetchAiReadingSummary(): Promise<AiReadingSummary> {
+  const res = await fetch('/api/sets/coverage/ai-reading')
+  if (!res.ok) throw new Error(`Failed to load AI reading (${res.status})`)
+  return res.json() as Promise<AiReadingSummary>
 }
 
 /** Per-set card-implementation coverage, newest release first. */

@@ -189,14 +189,14 @@ class ManaAbilitySourcesTest : FunSpec({
     test("pipeline metadata passes through nested scopes without changing their captured context") {
         val d = driver(); val p = d.activePlayer!!
         val context = EffectContext(sourceId = null, controllerId = p)
-        val outer = EffectContinuation(listOf(Effects.GainLife(1)), context)
+        val outer = EffectProgram.queued(listOf(Effects.GainLife(1)), context, origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null))
         val frame = ManaAbilitySourcesContinuation(p, lands, context)
         val before = d.state.pushContinuation(outer).pushContinuation(frame).pushContinuation(frame)
         val after = com.wingedsheep.engine.handlers.continuations.exposeCollectionsToNextFrame(before,
             collections = mapOf("cards" to d.state.getHand(p)), numbers = mapOf("count" to 3),
             chosenValues = mapOf("choice" to "green"), subtypeGroups = mapOf("types" to listOf(setOf("Elf"))))
         after.continuationStack.takeLast(2) shouldBe listOf(frame, frame)
-        val pipeline = (after.continuationStack.first() as EffectContinuation).effectContext.pipeline
+        val pipeline = (after.continuationStack.first() as EffectProgram).effectContext.pipeline
         pipeline.storedCollections["cards"] shouldBe d.state.getHand(p)
         pipeline.storedNumbers["count"] shouldBe 3
         pipeline.chosenValues["choice"] shouldBe "green"

@@ -190,9 +190,9 @@
  * View Battlefield Button
  * ========================================================================= */
 .viewBattlefieldButton {
-  background-color: var(--color-primary-dark);
-  color: var(--text-primary);
-  border: none;
+  background-color: var(--chrome-bg);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);

@@ -4,10 +4,13 @@ import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.ActivationRestriction
+import com.wingedsheep.sdk.scripting.ExtraOnceOnlyActivations
+import com.wingedsheep.sdk.scripting.OnceOnlyAbilityKind
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 
@@ -28,6 +31,10 @@ import io.kotest.matchers.shouldBe
  *
  * Note boast is once *each turn*, not exhaust's once ever — a boaster that attacks on two
  * consecutive turns boasts on both.
+ *
+ * The once-each-turn limit can be raised: "Creatures you control can boast twice during each of
+ * your turns rather than once" (Birgi, God of Storytelling) is an [ExtraOnceOnlyActivations] over
+ * [OnceOnlyAbilityKind.BOAST], read against the per-turn activation count.
  */
 class BoastKeywordScenarioTest : ScenarioTestBase() {
 
@@ -53,6 +60,34 @@ class BoastKeywordScenarioTest : ScenarioTestBase() {
             isBoast = true
             cost = Costs.Free
             effect = Effects.GainLife(3)
+        }
+    }
+
+    /** Birgi's boast clause in isolation. */
+    private val storyteller = card("Test Storyteller") {
+        manaCost = "{2}{R}"
+        typeLine = "Creature — God"
+        power = 3
+        toughness = 3
+        staticAbility {
+            ability = ExtraOnceOnlyActivations(
+                kind = OnceOnlyAbilityKind.BOAST,
+                extraActivations = 1,
+                condition = Conditions.IsYourTurn
+            )
+        }
+    }
+
+    /** A plain "only once each turn" ability — not a boast, so no boast permission may reach it. */
+    private val drummer = card("Test Drummer") {
+        manaCost = "{1}{R}"
+        typeLine = "Creature — Human Bard"
+        power = 1
+        toughness = 1
+        activatedAbility {
+            cost = Costs.Free
+            restrictions = listOf(ActivationRestriction.OncePerTurn)
+            effect = Effects.GainLife(1)
         }
     }
 
@@ -107,6 +142,8 @@ class BoastKeywordScenarioTest : ScenarioTestBase() {
     init {
         cardRegistry.register(boaster)
         cardRegistry.register(bystander)
+        cardRegistry.register(storyteller)
+        cardRegistry.register(drummer)
 
         // -----------------------------------------------------------------------------------
         // CR 702.142a — the lowering itself
@@ -222,6 +259,54 @@ class BoastKeywordScenarioTest : ScenarioTestBase() {
             game.boast("Test Boaster").error shouldBe null
             game.resolveStack()
             game.getLifeTotal(1) shouldBe life + 3
+        }
+
+        // -----------------------------------------------------------------------------------
+        // "Creatures you control can boast twice" — ExtraOnceOnlyActivations(BOAST)
+        // -----------------------------------------------------------------------------------
+
+        test("a boast permission raises the per-turn limit to two, and no further") {
+            val game = combatScenario().withCardOnBattlefield(1, "Test Storyteller").build()
+            game.declareAttackers(mapOf("Test Boaster" to 2))
+            val life = game.getLifeTotal(1)
+
+            game.boast("Test Boaster").error shouldBe null
+            game.resolveStack()
+            withClue("the second boast is offered…") {
+                game.boastActions("Test Boaster").size shouldBe 1
+            }
+            withClue("…and accepted") { game.boast("Test Boaster").error shouldBe null }
+            game.resolveStack()
+            game.getLifeTotal(1) shouldBe life + 6
+
+            withClue("twice is the whole allowance") {
+                game.boastActions("Test Boaster").isEmpty() shouldBe true
+                game.boast("Test Boaster").error shouldBe
+                    "This ability can only be activated once each turn"
+            }
+            game.getLifeTotal(1) shouldBe life + 6
+        }
+
+        test("the permission still needs the creature to have attacked") {
+            val game = combatScenario().withCardOnBattlefield(1, "Test Storyteller").build()
+            game.declareAttackers(mapOf("Test Boaster" to 2))
+
+            game.boastActions("Test Bystander").isEmpty() shouldBe true
+            game.boast("Test Bystander").error shouldBe "Activation condition not met"
+        }
+
+        test("the permission doesn't reach a plain once-each-turn ability") {
+            val game = combatScenario()
+                .withCardOnBattlefield(1, "Test Storyteller")
+                .withCardOnBattlefield(1, "Test Drummer")
+                .build()
+            val drummerId = game.findPermanent("Test Drummer")!!
+            val drummerAbility = abilityIdOf("Test Drummer")
+
+            game.execute(ActivateAbility(game.player1Id, drummerId, drummerAbility)).error shouldBe null
+            game.resolveStack()
+            game.execute(ActivateAbility(game.player1Id, drummerId, drummerAbility)).error shouldBe
+                "This ability can only be activated once each turn"
         }
     }
 }

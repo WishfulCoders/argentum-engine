@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.mana.withReservedSnowBonus
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor
 import com.wingedsheep.engine.mechanics.mana.ManaPool
@@ -121,6 +122,9 @@ internal class ActivationAutoTapper(
             )?.let(events::add)
         }
 
+        val sourceTags = solution.sources.associate { it.entityId to
+            com.wingedsheep.engine.handlers.effects.mana.ManaProvenanceTracker.sourceTag(state, it.entityId) }
+
         // Add produced mana to floating pool so costHandler.payAbilityCost can consume it.
         // When the source's ability is restricted (e.g. Steelswarm Operator's
         // {T}: Add {U}{U} restricted to artifact-source ability activations), tag the
@@ -141,8 +145,19 @@ internal class ActivationAutoTapper(
             } else source.restriction
             currentPool = when {
                 color != null && restriction != null ->
-                    currentPool.addRestricted(color, production.amount, restriction)
-                else -> currentPool.addProduction(production)
+                    production.coloredAmounts.entries.fold(currentPool) { pool, (unitColor, amount) ->
+                        pool.addRestricted(unitColor, amount, restriction).let { tagged ->
+                            tagged.copy(restrictedMana = tagged.restrictedMana.dropLast(amount) +
+                                tagged.restrictedMana.takeLast(amount).map { it.copy(source = sourceTags.getValue(source.entityId)) })
+                        }
+                    }
+                else -> currentPool.addProduction(production).let { produced ->
+                    val tag = sourceTags.getValue(source.entityId)
+                    produced.copy(manaUnits = produced.manaUnits +
+                        List(if (color == null) 0 else production.amount) { com.wingedsheep.engine.mechanics.mana.ManaUnit(color, tag) } +
+                        production.extraColors.flatMap { (extra, n) -> List(n) { com.wingedsheep.engine.mechanics.mana.ManaUnit(extra, tag) } } +
+                        List(production.colorless) { com.wingedsheep.engine.mechanics.mana.ManaUnit(null, tag) })
+                }
             }
         }
 
@@ -156,10 +171,9 @@ internal class ActivationAutoTapper(
         // Aura bonus mana is unrestricted — the source's restriction belongs to the
         // printed ability, not to the aura-granted extras.
         for (source in solution.sources) {
-            if (source.bonusManaPerTap > 0 && source.bonusManaColor != null) {
-                currentPool = currentPool.add(source.bonusManaColor, source.bonusManaPerTap)
-            }
+            for ((color, amount) in source.fixedBonusMana) currentPool = currentPool.add(color, amount)
         }
+        currentPool = currentPool.withReservedSnowBonus(solution)
 
         // Update state with enriched pool — carry restrictedMana and mana-source provenance through
         // so the ability-payment context can spend (and the leftover can stay) restricted, and so the
@@ -179,6 +193,7 @@ internal class ActivationAutoTapper(
                 manaBySource = currentPool.manaBySource,
                 manaByCardType = currentPool.manaByCardType,
                 snowMana = currentPool.snowMana,
+                manaUnits = currentPool.manaUnits,
                 snowColorless = currentPool.snowColorless
             ))
         }

@@ -13,7 +13,7 @@ class CardSpecificContinuationResumer(
 ) : ContinuationResumerModule {
 
     override fun resumers(): List<ContinuationResumer<*>> = listOf(
-        resumer(SecretBidContinuation::class, ::resumeSecretBid),
+        resumer(SecretChoiceContinuation::class, ::resumeSecretChoice),
         resumer(OpenLifeBidContinuation::class, ::resumeOpenLifeBid),
         resumer(ContestedRetargetContinuation::class, ::resumeContestedRetarget)
     )
@@ -114,128 +114,16 @@ class CardSpecificContinuationResumer(
         }
     }
 
-    fun resumeSecretBid(
+    fun resumeSecretChoice(
         state: GameState,
-        continuation: SecretBidContinuation,
+        continuation: SecretChoiceContinuation,
         response: DecisionResponse,
         checkForMore: CheckForMore
     ): ExecutionResult {
-        if (response !is NumberChosenResponse) {
-            return ExecutionResult.error(state, "Expected number chosen response")
-        }
-
-        val chosenNumber = response.number
-        val currentPlayerId = continuation.currentPlayerId
-
-        val newChosenNumbers = continuation.chosenNumbers + (currentPlayerId to chosenNumber)
-
-        // Check if there are more players
-        if (continuation.remainingPlayers.isNotEmpty()) {
-            val nextPlayer = continuation.remainingPlayers.first()
-            val nextRemainingPlayers = continuation.remainingPlayers.drop(1)
-
-            val prompt = "Secretly choose a number (you will lose that much life if you have the highest bid)"
-
-            val decisionHandler = DecisionHandler()
-            val newContinuation = continuation.copy(
-                currentPlayerId = nextPlayer,
-                remainingPlayers = nextRemainingPlayers,
-                chosenNumbers = newChosenNumbers
-            )
-
-            val decisionResult = decisionHandler.createNumberDecision(
-                state = state,
-                playerId = nextPlayer,
-                sourceId = continuation.sourceId,
-                sourceName = continuation.sourceName,
-                prompt = prompt,
-                minValue = 0,
-                maxValue = 99,
-                phase = DecisionPhase.RESOLUTION,
-                answer = newContinuation,
-            )
-
-            return ExecutionResult.propagatePause(
-                decisionResult.state,
-                decisionResult.events
-            )
-        }
-
-        // All players have chosen - resolve the bid
-        return resolveSecretBid(state, continuation, newChosenNumbers, checkForMore)
-    }
-
-    /**
-     * Resolve the secret bid: determine outcome groups and execute effects per matching bidder.
-     * Each bidder's context sets controllerId = that bidder and xValue = bid amount,
-     * so effects can use EffectTarget.Controller and DynamicAmount.XValue respectively.
-     */
-    private fun resolveSecretBid(
-        state: GameState,
-        continuation: SecretBidContinuation,
-        chosenNumbers: Map<EntityId, Int>,
-        checkForMore: CheckForMore
-    ): ExecutionResult {
-        var currentState = state
-        val allEvents = mutableListOf<GameEvent>()
-
-        val nonZeroBids = chosenNumbers.filter { it.value > 0 }
-
-        if (nonZeroBids.isNotEmpty()) {
-            val highestBid = nonZeroBids.values.max()
-            val lowestBid = nonZeroBids.values.min()
-
-            // Execute highestBidderEffect per player with the highest bid
-            if (continuation.highestBidderEffect != null) {
-                val highest = nonZeroBids.filter { it.value == highestBid }
-                for ((playerId, amount) in highest) {
-                    val result = executeForBidder(currentState, continuation, continuation.highestBidderEffect, playerId, amount)
-                    if (result.error != null) return result
-                    currentState = result.state
-                    allEvents.addAll(result.events)
-                }
-            }
-
-            // Execute lowestBidderEffect per player with the lowest non-zero bid
-            if (continuation.lowestBidderEffect != null) {
-                val lowest = nonZeroBids.filter { it.value == lowestBid }
-                for ((playerId, amount) in lowest) {
-                    val result = executeForBidder(currentState, continuation, continuation.lowestBidderEffect, playerId, amount)
-                    if (result.error != null) return result
-                    currentState = result.state
-                    allEvents.addAll(result.events)
-                }
-            }
-
-            // Execute tiedBidderEffect per player when all non-zero bids are equal
-            if (continuation.tiedBidderEffect != null && highestBid == lowestBid) {
-                for ((playerId, amount) in nonZeroBids) {
-                    val result = executeForBidder(currentState, continuation, continuation.tiedBidderEffect, playerId, amount)
-                    if (result.error != null) return result
-                    currentState = result.state
-                    allEvents.addAll(result.events)
-                }
-            }
-        }
-
-        return checkForMore(currentState, allEvents)
-    }
-
-    private fun executeForBidder(
-        state: GameState,
-        continuation: SecretBidContinuation,
-        effect: Effect,
-        playerId: EntityId,
-        bidAmount: Int
-    ): ExecutionResult {
-        val context = com.wingedsheep.engine.handlers.EffectContext(
-            resolvingTriggeredAbility = continuation.resolvingTriggeredAbility,
-            sourceId = continuation.sourceId,
-            objectReferences = continuation.objectReferences,
-            controllerId = playerId,
-            xValue = bidAmount
+        val result = com.wingedsheep.engine.handlers.effects.player.SecretChoiceLogic.resume(
+            state, continuation, response, services.predicateEvaluator.amounts
         )
-        return services.effectExecutorRegistry.execute(state, effect, context).toExecutionResult()
+        return if (result.error != null || result.pendingDecision != null) result
+        else checkForMore(result.state, result.events)
     }
-
 }

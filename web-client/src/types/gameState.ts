@@ -30,8 +30,14 @@ export interface ClientGameState {
   /** Who currently has priority */
   readonly priorityPlayerId: EntityId
 
-  /** Turn number */
+  /** Turn number — counts every player turn, so it advances on each seat's turn */
   readonly turnNumber: number
+
+  /**
+   * Round number — advances once the turn passes back around the table, so every seat's turn in
+   * one pass shares a number. Absent on states recorded before it existed; fall back to turnNumber.
+   */
+  readonly roundNumber?: number | undefined
 
   /** Whether the game is over */
   readonly isGameOver: boolean
@@ -66,6 +72,20 @@ export interface ClientGameState {
    * only: `validAttackTargets` is still what a declaration may name.
    */
   readonly attackMode?: AttackMode | null
+
+  /**
+   * True when this game is played for ante (CR 407): each player's ante zone is shown on the board
+   * and the "Playing for ante" indicator is up. Absent means false. Fixed for the whole game, so a
+   * delta never carries it — the applicator keeps the full state's value.
+   */
+  readonly playingForAnte?: boolean
+
+  /**
+   * Set while this state is a Magic subgame (Shahrazad, CR 729): the board, zones and life totals
+   * are the subgame's. Describes the games waiting on it, outermost first. Absent in an ordinary
+   * game.
+   */
+  readonly subgame?: ClientSubgame | null
 
   /**
    * If non-null, the affected player whose choices the viewing player is currently driving
@@ -216,6 +236,18 @@ export interface ClientCard {
   /** Hexproof from multicolored (CR 105.2b) — shows an uncolored hexproof shield chip */
   readonly hexproofFromMulticolored?: boolean
 
+  /**
+   * This permanent's "bands with other [quality]" abilities (CR 702.22b) as projected keyword
+   * strings (`BANDS_WITH_OTHER_SUPERTYPE_LEGENDARY`, …). Absent for nearly every card.
+   */
+  readonly bandsWithOther?: readonly string[]
+
+  /**
+   * The "bands with other" abilities on the battlefield whose quality this creature has — so the
+   * client can mirror the server's band check without reading types or names (see combatBands.ts).
+   */
+  readonly bandQualities?: readonly string[]
+
   /** Counters on the card */
   readonly counters: Partial<Record<CounterType, number>>
 
@@ -358,6 +390,10 @@ export interface ClientCard {
    * Battlefield only. */
   readonly isDashed?: boolean
 
+  /** Whether this permanent's blitz cost was paid (CR 702.152, Streets of New Capenna): it has haste
+   * and "when this dies, draw a card", and is sacrificed at the next end step. Battlefield only. */
+  readonly isBlitzed?: boolean
+
   /** Saddle N printed on this permanent (CR 702.171a), or absent if it has no saddle ability.
    * Public — the number is how much power its controller must spend to switch its Mount payoffs
    * on, which is exactly what the other players need to play around. Battlefield only. */
@@ -453,6 +489,9 @@ export interface ClientCard {
   /** Chosen card type for "choose a card type" permanents (e.g., Arachne, Psionic Weaver) */
   readonly chosenCardType?: string | null
 
+  /** Number chosen as the permanent entered (Shapeshifter; Haktos the Unscarred's random 2, 3, or 4) */
+  readonly chosenNumber?: number | null
+
   /** Triggering entity ID for triggered abilities on the stack (for source arrows) */
   readonly triggeringEntityId?: EntityId | null
 
@@ -490,6 +529,9 @@ export interface ClientCard {
   /** Original card name when this permanent is a copy (e.g., "Clever Impersonator") */
   readonly copyOf?: string | null
 
+  /** Art of the original card's own printing when this permanent is a copy */
+  readonly copyOfImageUri?: string | null
+
   /**
    * True when the printed card is legendary but this permanent's projected type line is not —
    * a copy effect explicitly stripped legendariness ("except it isn't legendary" /
@@ -523,8 +565,11 @@ export interface ClientCard {
    */
   readonly grantedCardTypes?: readonly string[]
 
-  /** Damage distribution for DividedDamageEffect spells on the stack (target entity ID -> damage amount) */
+  /** The division a spell or ability on the stack announced (target entity ID -> share of damage or counters) */
   readonly damageDistribution?: Record<EntityId, number> | null
+
+  /** What {@link damageDistribution} divides when it isn't damage — "+1/+1 counter". Absent means damage. */
+  readonly damageDistributionUnit?: string | null
 
   /** For Sagas: the total number of chapters (e.g., 3). Null for non-Sagas. */
   readonly sagaTotalChapters?: number | null
@@ -615,8 +660,13 @@ export interface ClientCard {
    * for Mulldrifter. Same job as `impending`: the action menu offers the evoke cast next to the
    * normal cast in both directions, graying out whichever the player can't pay for, so a card you
    * can only afford to evoke never casts itself the moment you drag it out.
+   * `additionalCostDescription` is the non-mana half ("Exile a green card from your hand",
+   * Endurance), with `cost` "" when that half is the whole evoke cost.
    */
-  readonly evoke?: string | null
+  readonly evoke?: {
+    readonly cost: string
+    readonly additionalCostDescription?: string | null
+  } | null
 
   /**
    * The non-mana part of the evoke cost (CR 702.74a), e.g. "Exile a white card from your hand" for
@@ -629,6 +679,9 @@ export interface ClientCard {
     readonly cost: string
     readonly additionalCostDescription?: string | null
   } | null
+
+  /** Mutate cost (CR 702.140), e.g. "{1}{G}{G}" — offered beside the normal cast like `evoke`. */
+  readonly mutate?: string | null
 }
 
 /** One face of a split-layout card (CR 709). */
@@ -714,6 +767,12 @@ export interface ClientPlayer {
    * badge is rendered.
    */
   readonly energyCounters?: number
+  readonly radCounters?: number
+  /**
+   * This player's experience counter total (CR 122.1 — a counter on a player). `0` means no badge
+   * is rendered.
+   */
+  readonly experienceCounters?: number
   /**
    * Team membership in a team variant (Two-Headed Giant — CR 810; Team vs. Team — CR 808):
    * players sharing a `teamIndex` are teammates. Absent in every non-team game. Carried on the
@@ -731,6 +790,37 @@ export interface ClientPlayer {
    * there, which is why it can't be folded into `teamSharedLife` or into "has a `teamIndex`".
    */
   readonly teamSharedTurns?: boolean
+  /**
+   * This player's revealed companion while it waits outside the game (CR 103.2b, 702.139a); absent
+   * once it is put into hand, or when there is none. Public: the card itself is in `cards` for
+   * every viewer. Shown beside the command zone.
+   */
+  readonly companionId?: EntityId | null
+  /**
+   * The dungeon this player owns in the command zone and where their venture marker is (CR 309),
+   * or absent when they aren't in a dungeon. Public — everyone sees every player's dungeon.
+   */
+  readonly dungeon?: ClientDungeon | null
+  /** Names of the dungeons this player has completed, in order (CR 309.7). */
+  readonly completedDungeons?: readonly string[]
+}
+
+/**
+ * A player's dungeon (CR 309): the whole room graph plus the room the venture marker is on.
+ * Matches backend ClientDungeon.kt.
+ */
+export interface ClientDungeon {
+  readonly name: string
+  readonly imageUri?: string | null
+  readonly currentRoom: number
+  readonly rooms: readonly ClientDungeonRoom[]
+}
+
+/** One room: its name, printed effect, and the room indices its arrows lead to (empty = bottom). */
+export interface ClientDungeonRoom {
+  readonly name: string
+  readonly text: string
+  readonly leadsTo: readonly number[]
 }
 
 /**
@@ -770,6 +860,11 @@ export interface ClientPlayerEffect {
    * (e.g. The Ring's four temptations). Rendered as filled/empty pips.
    */
   readonly progress?: ClientEffectProgress
+  /**
+   * The emblem entity behind this badge, when the emblem has activated abilities of its own
+   * (Karn, Living Legacy's). Legal actions whose `sourceId` matches are activated from the badge.
+   */
+  readonly sourceId?: EntityId
   /** When the effect ends, e.g. "until end of turn"; absent when no end is stated. */
   readonly duration?: string | null
 }
@@ -880,6 +975,11 @@ export interface ClientAttacker {
   readonly creatureName: string
   readonly attackingTarget: ClientCombatTarget
   readonly blockedBy: readonly EntityId[]
+  /**
+   * Whether this attacker is blocked. A blocked creature stays blocked after every creature
+   * blocking it leaves combat (CR 509.1h), so this can be true with an empty `blockedBy`.
+   */
+  readonly isBlocked?: boolean
   /** True if all creatures that can block this creature must do so (Alluring Scent) */
   readonly mustBeBlockedByAll?: boolean
   /** Banding band id (CR 702.22) shared by every attacker in the same band; null/absent if not banded. */
@@ -1038,4 +1138,29 @@ export function sharesPriorityTeam(
   if (!seatA?.teamSharedTurns || seatA.teamIndex == null) return false
   const seatB = state.players.find((p) => p.playerId === b)
   return seatB?.teamIndex === seatA.teamIndex
+}
+
+/** A Magic subgame in progress (CR 729). */
+export interface ClientSubgame {
+  /** 1 for a subgame of the main game, 2 for a subgame within that one (CR 729.6). */
+  readonly depth: number
+  /** The games discontinued while it's played, outermost first. The last one created it. */
+  readonly waitingGames: readonly ClientWaitingGame[]
+}
+
+/** A game discontinued while the subgame it created is played. All public. */
+export interface ClientWaitingGame {
+  /** The spell that created the subgame this game waits on (Shahrazad). */
+  readonly sourceName?: string | null
+  readonly sourceImageUri?: string | null
+  /** That spell's rules text — what happens when the subgame is over. */
+  readonly sourceOracleText?: string | null
+  readonly players: readonly ClientWaitingPlayer[]
+}
+
+/** A player's life total in a waiting game, and whether they've already left it. */
+export interface ClientWaitingPlayer {
+  readonly playerId: EntityId
+  readonly life: number
+  readonly hasLost?: boolean
 }

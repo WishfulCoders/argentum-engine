@@ -13,7 +13,7 @@ val TrinketMageReprint = Printing(
     collectorNumber = "49",
     scryfallId = "fe522d2e-5f0a-40e3-98d2-b244226c2b03",
     artist = "Mark A. Nelson",
-    imageUri = "https://cards.scryfall.io/normal/front/f/e/fe522d2e-5f0a-40e3-98d2-b244226c2b03.jpg?1783941760",
+    imageUri = "https://cards.scryfall.io/normal/front/f/e/fe522d2e-5f0a-40e3-98d2-b244226c2b03.jpg",
     releaseDate = "2010-09-03",
     rarity = Rarity.COMMON,
 )

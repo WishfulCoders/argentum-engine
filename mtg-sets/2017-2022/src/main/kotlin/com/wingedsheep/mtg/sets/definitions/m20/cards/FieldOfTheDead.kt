@@ -12,28 +12,29 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.references.Player
 
 /**
- * Field of the Dead — Core Set 2020 #247
- * Land
+ * Field of the Dead — Core Set 2020 #247 (canonical printing)
+ * (no mana cost) · Land
  *
  * This land enters tapped.
  * {T}: Add {C}.
  * Whenever this land or another land you control enters, if you control seven or more lands with
  * different names, create a 2/2 black Zombie creature token.
  *
- * "This land or another land you control" is every land you control entering, itself included:
- * `Triggers.a(Land you control).enters()`. The intervening "if" counts distinct names among your
- * lands — Maze's End's `distinctNames()` — on the trigger event and again on resolution, and the
- * lands that entered alongside it count (rulings).
+ * "This land or another land you control" is exactly "a land you control" (Field is itself a land
+ * you control), so the trigger is [Triggers.a] over lands you control. The seven-names clause is an
+ * intervening "if" (CR 603.4): checked when the trigger fires and again on resolution, counting
+ * Field itself and every land that entered simultaneously (the Scapeshift ruling).
  */
 val FieldOfTheDead = card("Field of the Dead") {
+    manaCost = ""
     typeLine = "Land"
-    oracleText = "This land enters tapped.\n" +
+    oracleText =
+        "This land enters tapped.\n" +
         "{T}: Add {C}.\n" +
-        "Whenever this land or another land you control enters, if you control seven or more lands with " +
-        "different names, create a 2/2 black Zombie creature token."
+        "Whenever this land or another land you control enters, if you control seven or more lands " +
+        "with different names, create a 2/2 black Zombie creature token."
 
     replacementEffect(EntersTapped())
 
@@ -47,7 +48,7 @@ val FieldOfTheDead = card("Field of the Dead") {
     triggeredAbility {
         trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         interveningIf = Conditions.CompareAmounts(
-            DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).distinctNames(),
+            DynamicAmounts.differentlyNamedLandsYouControl(),
             ComparisonOperator.GTE,
             7
         )
@@ -58,8 +59,8 @@ val FieldOfTheDead = card("Field of the Dead") {
             creatureTypes = setOf("Zombie"),
             imageUri = "https://cards.scryfall.io/normal/front/1/8/18f0436e-9328-4266-9cf8-80b557a0c17c.jpg?1783932856"
         )
-        description = "Whenever this land or another land you control enters, if you control seven or more " +
-            "lands with different names, create a 2/2 black Zombie creature token."
+        description = "Whenever this land or another land you control enters, if you control seven " +
+            "or more lands with different names, create a 2/2 black Zombie creature token."
     }
 
     metadata {
@@ -67,22 +68,25 @@ val FieldOfTheDead = card("Field of the Dead") {
         collectorNumber = "247"
         artist = "Kev Walker"
         imageUri = "https://cards.scryfall.io/normal/front/4/7/470ca3f4-29aa-4c4c-8ff2-8cdd70c69943.jpg?1783932937"
-
         ruling(
             "2019-07-12",
-            "Field of the Dead's last ability counts itself and the land entering the battlefield in addition to " +
-                "whichever other lands you control."
+            "Field of the Dead's last ability counts itself and the land entering the battlefield in " +
+                "addition to whichever other lands you control."
         )
         ruling(
             "2019-07-12",
-            "If you control multiple lands with the same name, only one of those lands will count toward the seven " +
-                "or more required to create a Zombie. For example, if you control four lands named Plains, two named " +
-                "Island, and one named Field of the Dead, you control three lands with different names."
+            "If you control multiple lands with the same name, only one of those lands will count toward " +
+                "the seven or more required to create a Zombie. For example, if you control four lands " +
+                "named Plains, two named Island, and one named Field of the Dead, you control three lands " +
+                "with different names."
         )
         ruling(
             "2019-07-12",
-            "If multiple lands enter the battlefield simultaneously, possibly including Field of the Dead itself, " +
-                "all of those lands are counted."
+            "If multiple lands enter the battlefield simultaneously, possibly including Field of the Dead " +
+                "itself, all of those lands are counted. For example, if you sacrifice eight lands while " +
+                "resolving Scapeshift and search your library for five different basic land cards, two " +
+                "Field of the Dead cards, and one other land card with a different name, you'll create " +
+                "sixteen Zombie tokens."
         )
     }
 }

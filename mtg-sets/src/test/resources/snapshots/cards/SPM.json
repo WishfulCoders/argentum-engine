@@ -1165,32 +1165,37 @@
                     },
                     "body": {
                         "type": "Gated",
-                        "gate": "Gate.MayDecide",
+                        "gate": {
+                            "type": "Gate.MayDecide",
+                            "prompt": "Put a +1/+1 counter on Cheering Crowd? If you do, add {C} for each counter on it."
+                        },
                         "then": {
-                            "type": "Composite",
-                            "effects": [
-                                {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.DoAction",
+                                "action": {
                                     "type": "AddCounters",
                                     "counterType": "PLUS_ONE_PLUS_ONE",
                                     "count": 1,
                                     "target": "Self"
                                 },
-                                {
-                                    "type": "AddColorlessMana",
-                                    "amount": {
-                                        "type": "EntityProperty",
-                                        "entity": "Self",
-                                        "numericProperty": {
-                                            "type": "CounterCount",
-                                            "counterType": null
-                                        }
+                                "successCriterion": "SuccessCriterion.CountersAdded"
+                            },
+                            "then": {
+                                "type": "AddColorlessMana",
+                                "amount": {
+                                    "type": "EntityProperty",
+                                    "entity": "Self",
+                                    "numericProperty": {
+                                        "type": "CounterCount",
+                                        "counterType": null
                                     }
                                 }
-                            ]
-                        },
-                        "descriptionOverride": "That player may put a +1/+1 counter on this creature. If they do, they add {C} for each counter on it."
+                            }
+                        }
                     }
-                }
+                },
+                "descriptionOverride": "At the beginning of each player's first main phase, that player may put a +1/+1 counter on this creature. If they do, they add {C} for each counter on it."
             }
         ]
     },
@@ -2094,17 +2099,17 @@
                     "trigger": "AttackEvent",
                     "effect": {
                         "type": "Gated",
-                        "gate": "Gate.MayDecide",
+                        "gate": {
+                            "type": "Gate.MayPay",
+                            "cost": {
+                                "type": "Sacrifice",
+                                "filter": "creature",
+                                "excludeSource": true
+                            }
+                        },
                         "then": {
                             "type": "Composite",
                             "effects": [
-                                {
-                                    "type": "SacrificeTarget",
-                                    "target": {
-                                        "type": "BoundVariable",
-                                        "name": "t0"
-                                    }
-                                },
                                 {
                                     "type": "DrawCards",
                                     "count": {
@@ -2160,14 +2165,6 @@
                                 }
                             ]
                         }
-                    },
-                    "targetRequirement": {
-                        "type": "TargetObject",
-                        "filter": {
-                            "baseFilter": "creature ctrl:you",
-                            "excludeSelf": true
-                        },
-                        "id": "t0"
                     },
                     "descriptionOverride": "Whenever Venom attacks, you may sacrifice another creature. If you do, draw X cards, then you may put a permanent card with mana value X or less from your hand onto the battlefield, where X is the sacrificed creature's mana value."
                 }
@@ -3378,11 +3375,12 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "count": 20,
-                "optional": true,
                 "filter": {
                     "baseFilter": "creature|artifact"
-                }
+                },
+                "id": "t0",
+                "dynamicMaxCount": "XValue",
+                "dynamicMinCount": "XValue"
             }
         ]
     },
@@ -3954,7 +3952,8 @@
                         {
                             "type": "CopyTargetSpell",
                             "target": "TriggeringEntity",
-                            "removeLegendary": true
+                            "removeLegendary": true,
+                            "mayChooseNewTargets": false
                         },
                         {
                             "type": "AddCounters",
@@ -5426,7 +5425,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Mountain card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -5678,10 +5679,7 @@
                                 "type": "Composite",
                                 "effects": []
                             },
-                            "otherwise": {
-                                "type": "TapUntap",
-                                "target": "Self"
-                            }
+                            "otherwise": "EnterTapped"
                         }
                     ]
                 }
@@ -6017,7 +6015,8 @@
                     }
                 },
                 {
-                    "type": "GraveyardCardsHaveMayhem",
+                    "type": "GraveyardCardsHaveCastKeyword",
+                    "keyword": "Mayhem",
                     "filter": "nonland"
                 }
             ]
@@ -6250,7 +6249,10 @@
                     "type": "Gated",
                     "gate": {
                         "type": "Gate.WhenCondition",
-                        "condition": "TriggeringEntityEnteredOrWasCastFromGraveyard"
+                        "condition": {
+                            "type": "TriggeringEntityEnteredOrWasCastFrom",
+                            "zone": "Graveyard"
+                        }
                     },
                     "then": {
                         "type": "LoseLife",
@@ -7141,7 +7143,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Spider Hero card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -9603,7 +9607,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -10073,10 +10079,7 @@
         "staticAbilities": [
             {
                 "type": "TransformPermanent",
-                "setCardTypes": [
-                    "CREATURE"
-                ],
-                "setSubtypes": [
+                "setCreatureSubtypes": [
                     "Citizen"
                 ]
             },
@@ -10157,26 +10160,18 @@
                                                 "type": "CounterCount",
                                                 "counterType": null
                                             }
-                                        }
+                                        },
+                                        "isSurveil": true
                                     },
                                     "storeAs": "surveiled"
                                 },
                                 {
                                     "type": "SelectFromCollection",
                                     "from": "surveiled",
-                                    "selection": {
-                                        "type": "ChooseUpTo",
-                                        "count": {
-                                            "type": "EntityProperty",
-                                            "entity": "TriggeringEntity",
-                                            "numericProperty": {
-                                                "type": "CounterCount",
-                                                "counterType": null
-                                            }
-                                        }
-                                    },
+                                    "selection": "ChooseAnyNumber",
                                     "storeSelected": "toGraveyard",
                                     "storeRemainder": "toTop",
+                                    "prompt": "Surveil: choose cards to put into your graveyard",
                                     "selectedLabel": "Put in graveyard",
                                     "remainderLabel": "Put on top"
                                 },
@@ -10290,7 +10285,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -11486,7 +11483,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -11607,7 +11606,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for an Aura or Equipment card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -12230,7 +12231,8 @@
                     "effect": {
                         "type": "CopyTargetSpell",
                         "target": "TriggeringEntity",
-                        "removeLegendary": true
+                        "removeLegendary": true,
+                        "mayChooseNewTargets": false
                     },
                     "trigger": {
                         "event": {
@@ -13453,7 +13455,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",

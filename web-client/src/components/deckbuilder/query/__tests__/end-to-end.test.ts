@@ -108,31 +108,30 @@ describe('end-to-end search', () => {
     expect(runAll('name:/^ademi/')).toEqual(['Spectacular Spider-Man'])
   })
 
-  it('printedNameMatcher picks the printing only when the printed name is what matched', async () => {
-    const { printedNameMatcher, parseQuery } = await import('../index')
+  it('printedNameMatch picks the printing only when the printed name is what matched', () => {
     const spidey = SPECTACULAR_SPIDER_MAN
-    expect(printedNameMatcher(parseQuery('ademi').ast)?.(spidey)?.setCode).toBe('OM1')
-    expect(printedNameMatcher(parseQuery('ademi t:creature').ast)?.(spidey)?.setCode).toBe('OM1')
-    expect(printedNameMatcher(parseQuery('spectacular').ast)?.(spidey)).toBeNull()
-    expect(printedNameMatcher(parseQuery('t:creature').ast)).toBeNull()
-    expect(printedNameMatcher(parseQuery('ademi or t:instant').ast)).toBeNull()
+    const pick = (q: string) => parseQuery(q).printedNameMatch
+    expect(pick('ademi')?.(spidey)?.setCode).toBe('OM1')
+    expect(pick('ademi t:creature')?.(spidey)?.setCode).toBe('OM1')
+    expect(pick('spectacular')?.(spidey)).toBeNull()
+    expect(pick('t:creature')).toBeNull()
+    expect(pick('ademi or t:instant')).toBeNull()
     // A pasted decklist is an `or` of exact names — each card still picks its printing.
-    expect(printedNameMatcher(parseQuery('!"Cut Down" or !"Ademi of the Silkchutes"').ast)?.(spidey)?.setCode).toBe('OM1')
-    expect(printedNameMatcher(parseQuery('!"Cut Down" or !"Spectacular Spider-Man"').ast)?.(spidey)).toBeNull()
+    expect(pick('!"Cut Down" or !"Ademi of the Silkchutes"')?.(spidey)?.setCode).toBe('OM1')
+    expect(pick('!"Cut Down" or !"Spectacular Spider-Man"')?.(spidey)).toBeNull()
   })
 
   it('s:EOE Banishing Light combines reprint set with name match', () => {
     expect(run('s:eoe banishing')).toEqual(['Banishing Light'])
   })
 
-  it('extractSetFilter returns the dominant set code from a top-level AND query', async () => {
-    const { extractSetFilter, parseQuery } = await import('../index')
-    expect(extractSetFilter(parseQuery('s:eoe banishing').ast)).toBe('EOE')
-    expect(extractSetFilter(parseQuery('set:GRN t:creature').ast)).toBe('GRN')
-    expect(extractSetFilter(parseQuery('').ast)).toBeNull()
-    expect(extractSetFilter(parseQuery('lightning').ast)).toBeNull()
+  it('setFilter is the dominant set code of a top-level AND query', () => {
+    expect(parseQuery('s:eoe banishing').setFilter).toBe('EOE')
+    expect(parseQuery('set:GRN t:creature').setFilter).toBe('GRN')
+    expect(parseQuery('').setFilter).toBeNull()
+    expect(parseQuery('lightning').setFilter).toBeNull()
     // OR/NOT branches break the "every result is from this set" invariant — bail out.
-    expect(extractSetFilter(parseQuery('s:eoe or t:creature').ast)).toBeNull()
+    expect(parseQuery('s:eoe or t:creature').setFilter).toBeNull()
   })
 
   it('format legality', () => {

@@ -9,9 +9,6 @@ import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
  * {3}
  * Artifact
  * You may play lands from your graveyard.
- *
- * [MayPlayLandsFromGraveyard] (Conduit of Worlds' static): it widens where a land may be played
- * from, not when — the land drop is still the one-per-turn, main-phase, empty-stack special action.
  */
 val CrucibleOfWorlds = card("Crucible of Worlds") {
     manaCost = "{3}"
@@ -29,9 +26,11 @@ val CrucibleOfWorlds = card("Crucible of Worlds") {
         artist = "Ron Spencer"
         flavorText = "Amidst the darkest ashes grow the strongest seeds."
         imageUri = "https://cards.scryfall.io/normal/front/3/1/312a6058-de08-487d-95bd-b3c56807fdd6.jpg?1783944383"
+
         ruling(
             "2018-07-13",
-            "Crucible of Worlds doesn't change the times when you can play those land cards. You can still play only one land per turn, and only during your main phase when you have priority and the stack is empty."
+            "Crucible of Worlds doesn't change the times when you can play those land cards. You can still " +
+                "play only one land per turn, and only during your main phase when you have priority and the stack is empty."
         )
         ruling(
             "2018-07-13",

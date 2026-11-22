@@ -52,6 +52,25 @@ class TarkirDuneshaperScenarioTest : ScenarioTestBase() {
                 }
             }
 
+            test("with no green source the client is still offered the Plains to tap for {4}") {
+                val game = scenario()
+                    .withPlayers("Player1", "Player2")
+                    .withCardOnBattlefield(1, "Tarkir Duneshaper")
+                    .withLandsOnBattlefield(1, "Plains", 4)
+                    .withActivePlayer(1)
+                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                    .build()
+
+                val beast = game.findPermanent("Tarkir Duneshaper")!!
+                val transform = game.getLegalActions(1)
+                    .single { (it.action as? ActivateAbility)?.sourceId == beast }
+
+                // Mana alone can't pay {G/P}, so the server has no auto-tap preview — but paying the
+                // pip with life leaves {4} for the player to tap, so the picker needs the lands.
+                transform.isAffordable shouldBe true
+                transform.availableManaSources.orEmpty().map { it.name } shouldBe List(4) { "Plains" }
+            }
+
             test("with a Forest the pip is paid with green mana, not life") {
                 val game = scenario()
                     .withPlayers("Player1", "Player2")

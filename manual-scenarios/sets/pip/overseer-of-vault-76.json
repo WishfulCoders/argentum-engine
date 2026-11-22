@@ -1,0 +1,48 @@
+{
+  "player1Name": "Vault Dweller",
+  "player2Name": "Opponent",
+  "player1": {
+    "battlefield": [
+      {
+        "name": "Overseer of Vault 76",
+        "counters": {
+          "quest": 3
+        }
+      },
+      {
+        "name": "Grizzly Bears"
+      },
+      {
+        "name": "Plains"
+      }
+    ],
+    "library": [
+      "Plains",
+      "Plains",
+      "Plains",
+      "Plains",
+      "Plains"
+    ]
+  },
+  "player2": {
+    "battlefield": [
+      {
+        "name": "Glory Seeker"
+      }
+    ],
+    "library": [
+      "Mountain",
+      "Mountain",
+      "Mountain",
+      "Mountain",
+      "Mountain"
+    ]
+  },
+  "phase": "PRECOMBAT_MAIN",
+  "activePlayer": 1,
+  "priorityPlayer": 1,
+  "player1StopAtSteps": [
+    "PRECOMBAT_MAIN",
+    "BEGIN_COMBAT"
+  ]
+}

@@ -13,7 +13,7 @@ val HungerOfTheHowlpackReprint = Printing(
     collectorNumber = "168",
     scryfallId = "23676697-2b84-4e9f-9e38-4fd58085a698",
     artist = "Nils Hamm",
-    imageUri = "https://cards.scryfall.io/normal/front/2/3/23676697-2b84-4e9f-9e38-4fd58085a698.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/2/3/23676697-2b84-4e9f-9e38-4fd58085a698.jpg?1783939343",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

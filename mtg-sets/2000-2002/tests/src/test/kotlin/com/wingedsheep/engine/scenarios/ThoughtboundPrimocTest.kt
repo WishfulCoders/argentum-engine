@@ -130,10 +130,7 @@ class ThoughtboundPrimocTest : FunSpec({
         projected.getController(primoc) shouldBe opponent
 
         // Advance to opponent's DECLARE_ATTACKERS
-        // From primocOwner's UPKEEP, go to opponent's DRAW (past opponent's upkeep),
-        // then to DECLARE_ATTACKERS
-        driver.passPriorityUntil(Step.DRAW, maxPasses = 200)
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, maxPasses = 200)
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, opponent)
         driver.activePlayer shouldBe opponent
 
         // Opponent should be able to declare Primoc as an attacker

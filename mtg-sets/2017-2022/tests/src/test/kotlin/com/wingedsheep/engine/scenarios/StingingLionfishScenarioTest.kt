@@ -82,12 +82,13 @@ class StingingLionfishScenarioTest : ScenarioTestBase() {
 
                 game.resolveStack()
                 game.getPendingDecision().shouldBeInstanceOf<YesNoDecision>()
-                game.answerYesNo(true)
+                game.answerYesNo(true).error shouldBe null
                 game.chooseMode("Tap")
                 game.resolveStack()
 
                 withClue("the trigger tapped the Bears") { game.isTapped(bears) shouldBe true }
 
+                game.passPriority() // Player2 is active and receives priority after the resolution (CR 117.3b)
                 game.castSpell(1, "Flash Probe").error shouldBe null
                 withClue("the second spell this turn does not trigger") {
                     (game.getPendingDecision() is ChooseTargetsDecision) shouldBe false
@@ -113,7 +114,7 @@ class StingingLionfishScenarioTest : ScenarioTestBase() {
                 game.castSpell(1, "Flash Probe").error shouldBe null
                 game.selectTargets(listOf(bears)).error shouldBe null
                 game.resolveStack()
-                game.answerYesNo(true)
+                game.answerYesNo(true).error shouldBe null
                 game.chooseMode("Untap")
                 game.resolveStack()
 

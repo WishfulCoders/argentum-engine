@@ -1,0 +1,256 @@
+/*
+ * A cube in the deckbuilder's Deck-view layout — the shared-cube page, and the builder's Cube view
+ * ({@link CubeColumns}). The frame is the deckbuilder's own (`deckbuilder.module.css`: the deck-mode
+ * workspace, the preview rail, the flowing group columns); this file styles what's particular to a
+ * cube — the header, the list toolbar, the rows (read-only, or with copy steppers when editing) and
+ * the stats footer.
+ */
+
+/* ── Left rail ────────────────────────────────────────────────────────── */
+
+.packCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.packLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.packBlurb {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa3b8;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+
+.header {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.titleBlock {
+  flex: 1 1 360px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f4f5f9;
+}
+
+.byline {
+  font-size: 13px;
+  color: #9aa3b8;
+}
+
+.description {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #c3c9d7;
+  max-width: 72ch;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.notice {
+  flex: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: 13px;
+  color: #c8ebc9;
+  background: rgba(80, 160, 90, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── List toolbar ─────────────────────────────────────────────────────── */
+
+.listToolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.filter {
+  flex: 0 1 320px;
+  min-width: 0;
+  padding: 6px var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  background: var(--bg-surface-4);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.filter:focus { border-color: var(--color-accent-dark); }
+
+.listMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-sm);
+  color: #c3c9d7;
+  white-space: nowrap;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-left: auto;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.segment {
+  padding: 4px 12px;
+  font-size: var(--font-sm);
+  color: #b4bccd;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segment:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.segment[aria-checked='true'] { color: #fff; background: rgba(255, 255, 255, 0.14); }
+.segment:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* ── Groups ───────────────────────────────────────────────────────────── */
+
+/* A deck's groups are a dozen rows and stay whole; a cube's Creature group can run to a hundred and
+   eighty, which would leave columns empty. Let groups flow across columns, keeping each heading on
+   the same column as its first card. (`[aria-label]` outranks the deck view's own rule.) */
+.group[aria-label] { break-inside: auto; }
+.group > h3 { break-after: avoid; }
+
+/* ── Rows ─────────────────────────────────────────────────────────────── */
+
+.row {
+  display: grid;
+  /* Columns: count, rarity chip, name (flex), mana cost. */
+  grid-template-columns: 18px 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  cursor: default;
+  break-inside: avoid;
+}
+
+.row:hover,
+.row[data-active='true'] { background: rgba(255, 255, 255, 0.05); }
+
+/* Editing adds the copy steppers as a last column; they surface on hover so the list reads clean. */
+.row[data-editable] { grid-template-columns: 18px 20px minmax(0, 1fr) auto auto; }
+
+.steps {
+  display: inline-flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.row:hover .steps,
+.row:focus-within .steps { opacity: 1; }
+
+@media (hover: none) {
+  .steps { opacity: 1; }
+}
+
+.step {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--bg-surface-4);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.step:hover { color: var(--text-primary); border-color: var(--color-accent-dark); }
+.step:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+
+.count {
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.row[data-missing='true'] .name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.cost {
+  display: inline-flex;
+  align-items: center;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--text-muted);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+
+.footer {
+  flex: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footer > div { border-top: none; }
+
+@media (max-width: 640px) {
+  .header { padding: var(--space-3); }
+  .title { font-size: 22px; }
+  .listToolbar { flex-wrap: wrap; padding: var(--space-2) var(--space-3); }
+  .filter { flex: 1 1 100%; }
+  .segmented { margin-left: 0; }
+}

@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * {B}
  * Instant
  * Search your library for a card, put that card into your graveyard, then shuffle.
- *
- * Demonic Tutor's search with a graveyard destination (Buried Alive's shape for one card of any kind).
  */
 val Entomb = card("Entomb") {
     manaCost = "{B}"
@@ -23,7 +21,8 @@ val Entomb = card("Entomb") {
     spell {
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any,
-            destination = SearchDestination.GRAVEYARD,
+            count = 1,
+            destination = SearchDestination.GRAVEYARD
         )
     }
 

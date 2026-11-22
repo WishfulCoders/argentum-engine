@@ -57,7 +57,9 @@ submission happens. The rules that keep it honest:
 - **Server lists are trusted as-is.** `validCreatures` for attackers and blockers already
   excludes tapped creatures (the engine's `MustBeUntappedAttackRule`, `getValidBlockers`), so
   `GameCard` no longer re-checks `isTapped` on top of it; the default attack defender is the first
-  living seat in `validAttackTargets`, not the first living opponent in seat order.
+  living seat in `validAttackTargets`, not the first living opponent in seat order. A sticky or
+  default defender only applies to an attacker whose `attackTargetsByAttacker` entry (when it has one)
+  lists it — `utils/attackTargets.ts` is the lookup.
 - **A client-side pre-check reads the same data the server reads.** Banding (CR 702.22c, at most
   one member without banding) is checked in the `linkBand` reducer against `ClientCard.keywords`
   — the projected keyword set `validateBands` reads — so the client only refuses a band the
@@ -83,8 +85,7 @@ Still client-derived, and the shape of the fix for each:
   checked on Confirm. The client submits and the server rejects — the right direction of
   failure, but a per-attacker `validBlockersFor` on the `DeclareBlockers` legal action would let
   the drop highlight say so first.
-- The **per-extra-target mana tax** is summed client-side from `manaCostPerExtraTarget`; the
-  **delve / tap caps** (`maxDelve`, improvise `maxTaps` with an X in the cost) are derived from
+- The **delve / tap caps** (`maxDelve`, improvise `maxTaps` with an X in the cost) are derived from
   the cost string; the harmonize reduction is applied in a different order than the engine's.
   All display-only today, all trivially server-sendable.
 
@@ -132,8 +133,11 @@ For responsiveness, we may later add:
 | `mulliganDecision` | Player must keep/mulligan |
 | `chooseBottomCards` | Player must choose cards for bottom |
 | `mulliganComplete` | Mulligan phase finished |
-| `gameOver` | Game ended with winner/reason |
+| `gameOver` | Game ended with winner/reason. Spectators get it too (it carries nothing hidden): the client keeps the final board up under a result banner (`spectatingState.gameOver`) until the spectator sends `stopSpectating` — the banner's Back to Overview or its auto-return — which answers `spectatingStopped` + the active matches |
 | `error` | Error with code and message |
+| `matchmakingStatus` | This player's matchmaking state (searching / idle, with a notice when it changed under them; `matched` once seated) |
+| `matchFound` | The queue paired this player; accept before the window closes |
+| `matchmakingQueues` | Searching players per queue, pushed on change |
 
 ### Client Messages (ClientMessage)
 
@@ -147,6 +151,9 @@ For responsiveness, we may later add:
 | `mulligan` | Take a mulligan |
 | `chooseBottomCards` | Select cards for library bottom |
 | `concede` | Concede the game |
+| `joinMatchmaking` | Search for an opponent: a mode (Random deck, Jump In, Momir Basic, Constructed + format), casual or ranked |
+| `leaveMatchmaking` | Stop searching (declines an open match prompt) |
+| `respondToMatch` | Accept or decline a `matchFound` prompt |
 
 ## State Management (Zustand)
 

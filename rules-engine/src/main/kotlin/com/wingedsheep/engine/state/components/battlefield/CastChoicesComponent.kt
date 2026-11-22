@@ -2,6 +2,8 @@ package com.wingedsheep.engine.state.components.battlefield
 
 import com.wingedsheep.engine.state.Component
 import com.wingedsheep.engine.state.ComponentContainer
+import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.ObjectRef
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ChoiceSlot
@@ -25,10 +27,18 @@ sealed interface ChoiceValue {
     @Serializable
     data class TextChoice(val text: String) : ChoiceValue
 
-    /** A chosen entity (e.g. Dauntless Bodyguard's chosen creature). */
+    /**
+     * A chosen entity (e.g. Dauntless Bodyguard's chosen creature). [generation] is the chosen
+     * object's [com.wingedsheep.engine.state.ObjectRef.generation] when it was chosen, so a reader
+     * can tell that object from a later one the same card becomes (CR 400.7); null for a player or
+     * a choice recorded before the stamp existed.
+     */
     @SerialName("ChoiceValue.Entity")
     @Serializable
-    data class EntityChoice(val entityId: EntityId) : ChoiceValue
+    data class EntityChoice(val entityId: EntityId, val generation: Long? = null) : ChoiceValue {
+        /** The chosen object, or null when it was recorded without a generation. */
+        val objectRef: ObjectRef? get() = generation?.let { ObjectRef(entityId, it) }
+    }
 
     /** A chosen number (e.g. the X declared for a `blight X` additional cost). */
     @SerialName("ChoiceValue.Number")
@@ -85,7 +95,15 @@ data class CastChoicesComponent(
     /** The value chosen for `{X}` as this object was cast. Only present for spells cast with `{X}`. */
     val x: Int? = null,
     /** The per-[ChoiceSlot] values locked in for this object. */
-    val chosen: Map<ChoiceSlot, ChoiceValue> = emptyMap()
+    val chosen: Map<ChoiceSlot, ChoiceValue> = emptyMap(),
+    /**
+     * The spell's "as you cast this spell" captures (CR 601.2i), by name, carried over from
+     * `SpellOnStackComponent.castTimeValues` as the spell resolved into this permanent, so its
+     * enters trigger or enters-with replacement can read "if you controlled a Dragon as you cast
+     * this spell" (Orator of Ojutai, Scaleguard Sentinels) via
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.CapturedAtCast].
+     */
+    val castTimeValues: Map<String, Int> = emptyMap()
 ) : Component {
     /** Return a copy with [slot] set to [value], replacing any prior value for that slot. */
     fun withChoice(slot: ChoiceSlot, value: ChoiceValue): CastChoicesComponent =
@@ -105,6 +123,16 @@ fun ComponentContainer.chosenColor(): Color? =
 fun ComponentContainer.chosenCreatureType(): String? =
     (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.CREATURE_TYPE) as? ChoiceValue.TextChoice)?.text
 
+/** The planeswalker type chosen as this object entered (Deification), or null. */
+fun ComponentContainer.chosenPlaneswalkerType(): String? =
+    (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.PLANESWALKER_TYPE) as? ChoiceValue.TextChoice)?.text
+
+/**
+ * The subtype [com.wingedsheep.sdk.scripting.predicates.CardPredicate.HasChosenSubtype] matches:
+ * the creature type chosen as this object entered, else its chosen planeswalker type.
+ */
+fun ComponentContainer.chosenSubtype(): String? = chosenCreatureType() ?: chosenPlaneswalkerType()
+
 /** The basic land type chosen as this object entered, or null. */
 fun ComponentContainer.chosenLandType(): String? =
     (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.LAND_TYPE) as? ChoiceValue.TextChoice)?.text
@@ -122,12 +150,36 @@ fun ComponentContainer.chosenCardType(): String? =
     (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.CARD_TYPE) as? ChoiceValue.TextChoice)?.text
 
 /** The creature chosen as this object entered, or null. */
-fun ComponentContainer.chosenCreatureRef(): EntityId? =
-    (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.CREATURE) as? ChoiceValue.EntityChoice)?.entityId
+fun ComponentContainer.chosenCreatureRef(): EntityId? = chosenCreatureChoice()?.entityId
+
+/** The recorded choice behind [chosenCreatureRef], carrying the chosen object's generation. */
+fun ComponentContainer.chosenCreatureChoice(): ChoiceValue.EntityChoice? =
+    get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.CREATURE) as? ChoiceValue.EntityChoice
+
+/**
+ * The creature [sourceId] chose as it entered, while that is still the same object (CR 400.7): a
+ * chosen creature that left the battlefield — even one whose card has since come back — is gone for
+ * good ("if the chosen creature leaves the battlefield, you can't choose a new creature"). A choice
+ * recorded without a generation falls back to the bare entity id.
+ */
+fun GameState.chosenCreatureOf(sourceId: EntityId): EntityId? {
+    val choice = getEntity(sourceId)?.chosenCreatureChoice() ?: return null
+    return choice.currentIn(this)
+}
+
+/** [choice]'s entity while it is still the chosen object, else null. */
+fun ChoiceValue.EntityChoice.currentIn(state: GameState): EntityId? {
+    val ref = objectRef ?: return entityId
+    return entityId.takeIf { state.isCurrentObject(ref) }
+}
 
 /** The opponent chosen as this object entered (a player entity id), or null. */
 fun ComponentContainer.chosenOpponent(): EntityId? =
     (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.OPPONENT) as? ChoiceValue.EntityChoice)?.entityId
+
+/** The player (any player) recorded as this object entered ([ChoiceSlot.PLAYER]), or null. */
+fun ComponentContainer.chosenPlayer(): EntityId? =
+    (get<CastChoicesComponent>()?.chosen?.get(ChoiceSlot.PLAYER) as? ChoiceValue.EntityChoice)?.entityId
 
 /** Whether this object was cast kicked. */
 fun ComponentContainer.wasKickedChoice(): Boolean =

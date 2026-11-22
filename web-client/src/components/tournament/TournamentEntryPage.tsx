@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGameStore } from '@/store/gameStore.ts'
 import { useConnectName } from '@/store/useConnectName'
+import { EntryCard } from '@/components/lobby/EntryCard'
 
 /**
  * Entry point for the /tournament/:lobbyId route.
@@ -56,14 +57,22 @@ export function TournamentEntryPage() {
     }
   }, [connectionStatus, connect, connectName, sessionReplaced])
 
+  // Already seated in this tournament: this route was reached by going Back from another page (a
+  // replay), because App stamps `/tournament/<id>` into the history entry it sits on. The store
+  // already holds the live tournament, so there is nothing to join. Re-sending JoinLobby makes the
+  // server replay the whole rejoin snapshot, which resets the standings screen mid-round.
+  const alreadyHere =
+    lobbyId != null && (tournamentState?.lobbyId === lobbyId || lobbyState?.lobbyId === lobbyId)
+
   // Auto-join lobby once connected
   useEffect(() => {
+    if (alreadyHere) return
     if (connectionStatus === 'connected' && lobbyId && !hasJoinedRef.current) {
       hasJoinedRef.current = true
       setJoining(true)
       joinLobby(lobbyId)
     }
-  }, [connectionStatus, lobbyId, joinLobby])
+  }, [alreadyHere, connectionStatus, lobbyId, joinLobby])
 
   // Navigate to "/" once lobby or tournament state is received
   useEffect(() => {
@@ -87,180 +96,18 @@ export function TournamentEntryPage() {
   const showNameEntry = !errorMessage && connectionStatus === 'disconnected' && !connectName && !nameResolving
 
   return (
-    <div style={pageStyles.container}>
-      <div style={pageStyles.card}>
-        <h1 style={pageStyles.title}>Argentum Engine</h1>
-
-        {tournamentInfo && (
-          <div style={pageStyles.info}>
-            <div style={pageStyles.infoRow}>
-              <span style={pageStyles.infoLabel}>Format</span>
-              <span style={pageStyles.infoValue}>{tournamentInfo.format}</span>
-            </div>
-            <div style={pageStyles.infoRow}>
-              <span style={pageStyles.infoLabel}>Status</span>
-              <span style={pageStyles.infoValue}>{tournamentInfo.state.replace(/_/g, ' ')}</span>
-            </div>
-            <div style={pageStyles.infoRow}>
-              <span style={pageStyles.infoLabel}>Players</span>
-              <span style={pageStyles.infoValue}>{tournamentInfo.playerCount}</span>
-            </div>
-          </div>
-        )}
-
-        {errorMessage && (
-          <p style={pageStyles.error}>{errorMessage}</p>
-        )}
-
-        {showNameEntry && (
-          <div style={pageStyles.form}>
-            <label style={pageStyles.label}>Enter your name to join</label>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleConnect() }}
-              placeholder="Your name"
-              autoFocus
-              maxLength={20}
-              style={pageStyles.input}
-            />
-            <button
-              onClick={handleConnect}
-              disabled={!playerName.trim()}
-              style={{
-                ...pageStyles.button,
-                opacity: playerName.trim() ? 1 : 0.5,
-              }}
-            >
-              Join Tournament
-            </button>
-          </div>
-        )}
-
-        {!showNameEntry && !errorMessage && (
-          <div style={pageStyles.loading}>
-            <div style={pageStyles.spinner} />
-            <p style={pageStyles.loadingText}>
-              {joining ? 'Joining tournament...' : 'Connecting...'}
-            </p>
-            <style>{`@keyframes tournament-spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-        )}
-      </div>
-    </div>
+    <EntryCard
+      kicker="Tournament invite"
+      title="Join the tournament"
+      code={lobbyId}
+      facts={tournamentInfo ? [
+        { label: 'Format', value: tournamentInfo.format },
+        { label: 'Status', value: tournamentInfo.state.replace(/_/g, ' ').toLowerCase() },
+        { label: 'Players', value: tournamentInfo.playerCount },
+      ] : undefined}
+      error={errorMessage}
+      nameEntry={showNameEntry ? { value: playerName, onChange: setPlayerName, onSubmit: handleConnect, submitLabel: 'Join tournament' } : undefined}
+      progressText={joining ? 'Joining tournament…' : 'Connecting…'}
+    />
   )
-}
-
-const pageStyles: Record<string, React.CSSProperties> = {
-  container: {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0a0a0f',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  },
-  card: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: '40px 48px',
-    maxWidth: 420,
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 24,
-    border: '1px solid #2a2a3e',
-  },
-  title: {
-    margin: 0,
-    fontSize: 28,
-    color: '#e0e0e0',
-    fontWeight: 600,
-  },
-  info: {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    padding: '12px 16px',
-    backgroundColor: '#12121e',
-    borderRadius: 8,
-    border: '1px solid #2a2a3e',
-  },
-  infoRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  infoLabel: {
-    color: '#888',
-    fontSize: 13,
-  },
-  infoValue: {
-    color: '#ccc',
-    fontSize: 13,
-    fontWeight: 500,
-    textTransform: 'capitalize' as const,
-  },
-  error: {
-    color: '#ff6b6b',
-    fontSize: 14,
-    margin: 0,
-    textAlign: 'center' as const,
-  },
-  form: {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    alignItems: 'center',
-  },
-  label: {
-    color: '#888',
-    fontSize: 14,
-  },
-  input: {
-    width: '100%',
-    padding: '10px 14px',
-    fontSize: 16,
-    backgroundColor: '#12121e',
-    color: '#e0e0e0',
-    border: '1px solid #3a3a4e',
-    borderRadius: 6,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-  },
-  button: {
-    width: '100%',
-    padding: '12px 24px',
-    fontSize: 16,
-    fontWeight: 600,
-    backgroundColor: '#9b59b6',
-    color: 'white',
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-  },
-  loading: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 12,
-  },
-  spinner: {
-    width: 32,
-    height: 32,
-    border: '3px solid #333',
-    borderTopColor: '#888',
-    borderRadius: '50%',
-    animation: 'tournament-spin 1s linear infinite',
-  },
-  loadingText: {
-    color: '#888',
-    fontSize: 14,
-    margin: 0,
-  },
 }

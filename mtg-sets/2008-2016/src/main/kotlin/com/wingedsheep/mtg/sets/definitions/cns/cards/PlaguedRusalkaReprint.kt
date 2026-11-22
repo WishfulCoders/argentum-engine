@@ -13,7 +13,7 @@ val PlaguedRusalkaReprint = Printing(
     collectorNumber = "121",
     scryfallId = "2933f08c-9e4a-4f0a-92c5-a3a2bfb1e1e2",
     artist = "Alex Horley-Orlandelli",
-    imageUri = "https://cards.scryfall.io/normal/front/2/9/2933f08c-9e4a-4f0a-92c5-a3a2bfb1e1e2.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/2/9/2933f08c-9e4a-4f0a-92c5-a3a2bfb1e1e2.jpg?1783939354",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

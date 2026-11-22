@@ -13,7 +13,7 @@ val BrainstormReprint = Printing(
     collectorNumber = "91",
     scryfallId = "7d14cecb-c425-4812-8d36-aecc406763c4",
     artist = "Willian Murai",
-    imageUri = "https://cards.scryfall.io/normal/front/7/d/7d14cecb-c425-4812-8d36-aecc406763c4.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/7/d/7d14cecb-c425-4812-8d36-aecc406763c4.jpg?1783939361",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

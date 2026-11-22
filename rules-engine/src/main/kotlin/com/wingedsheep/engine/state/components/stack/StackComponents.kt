@@ -38,19 +38,25 @@ data class SpellOnStackComponent(
     val wasBlightPaid: Boolean = false,  // For BlightOrPay additional cost — true if blight path was taken
     val wasWaterbendPaid: Boolean = false,  // For optional spell waterbend additional cost (Avatar) — true if "you may waterbend {N}" was paid; readable via WaterbendWasPaid
     /**
-     * Extra counters owed to the permanent this spell becomes, bought with the optional "pay any
-     * amount of mana" additional cost of an `AdditionalManaForEntryCounters` static (Chorus of the
-     * Conclave). Fixed when the cost is paid, so the counters arrive even if the granting permanent
-     * has left the battlefield before the spell resolves. Null when nothing was paid.
+     * Extra counters owed to the permanent this spell becomes, placed as it enters (CR 122.6) so
+     * counter-placement replacements see them then. Bought with the optional "pay any amount of
+     * mana" additional cost of an `AdditionalManaForEntryCounters` static (Chorus of the Conclave),
+     * or put on the spell while it's on the stack by a counter effect — "that creature enters with
+     * an additional +1/+1 counter on it" (Runadi, Jade Orb of Dragonkind), or at payment time by a
+     * `ManaSpellRider.EntersWithCountersWhenSpent` (Guildmages' Forum). Fixed when owed, so the
+     * counters arrive even if whatever granted them has left the battlefield before the spell
+     * resolves. Not copied (CR 707.2): a copy of the spell owes nothing.
      */
-    val additionalEntryCounters: AdditionalEntryCounters? = null,
+    val additionalEntryCounters: List<AdditionalEntryCounters> = emptyList(),
     /**
-     * Keywords the permanent this spell becomes gains with no end date, frozen at payment time by a
-     * `ManaSpellRider.GrantsKeywordWhenSpent` with `Duration.Permanent` (Hall of the Bandit Lord's
-     * "it gains haste"). Granted as the permanent enters; kept here on the stack object rather than
-     * as a floating effect so a spell that never resolves carries nothing into its next zone.
+     * Keywords the permanent this spell becomes gains, each for its own duration: frozen at payment
+     * time by a `ManaSpellRider.GrantsKeywordWhenSpent` (Hall of the Bandit Lord's "it gains haste",
+     * Carnelian Orb of Dragonkind's "until end of turn"), or while on the stack by a
+     * `GrantKeywordToSpellEffect` (Tyvar Kell's emblem; CR 400.7a). Granted as the
+     * permanent enters; kept here on the stack object rather than as a floating effect so a spell
+     * that never resolves carries nothing into its next zone (CR 400.7).
      */
-    val entryKeywordGrants: List<String> = emptyList(),
+    val entryKeywordGrants: List<EntryKeywordGrant> = emptyList(),
     /**
      * The opponent promised this spell's gift additional cost (CR 702.174a), or null when the gift
      * wasn't promised. A resolving permanent carries the fact onward in its cast-choices bag
@@ -61,8 +67,8 @@ data class SpellOnStackComponent(
     /**
      * Card-definition names of the cards revealed from hand and **spliced** onto this spell
      * (CR 702.47a), in the order their text was added. Each one's `spellEffect` is executed after the
-     * main spell's own effects when the spell resolves (CR 702.47b), with its own target slice from
-     * [splicedTargetsOrdered].
+     * main spell's own effects when the spell resolves (CR 702.47b), with its own slice of the spell's
+     * resolution-validated target slots — the tail of the flat list, in this order (CR 608.2b).
      *
      * Names rather than entity ids: the spliced card never leaves hand, so what the spell gained is
      * its *text*, not a reference to the object — and the spell must keep resolving that text even if
@@ -103,6 +109,8 @@ data class SpellOnStackComponent(
      * view can say how the spell was cast without a flag per mechanic — see
      * [com.wingedsheep.engine.view.CastProvenance]. Disturb, flashback, harmonize, emerge and
      * miracle have no `was*` flag at all, which is exactly why the stack could not describe them.
+     * Rules read it too: flashback's exile, escape's "escaped" mark, and the card's own
+     * alternative cost (`Conditions.SelfAlternativeCostWasPaid`). A free cast records none.
      */
     val alternativeCost: com.wingedsheep.engine.core.AlternativeCostType? = null,
     val wasWarped: Boolean = false,  // For warp - permanent is exiled at end step
@@ -115,6 +123,7 @@ data class SpellOnStackComponent(
      * so it never carries this.
      */
     val sacrificeAtNextCleanup: Boolean = false,
+    val wasBlitzed: Boolean = false,  // For blitz (CR 702.152) - permanent has haste + "dies: draw a card", sacrificed at next end step
     val wasEvoked: Boolean = false,  // For evoke - permanent is sacrificed on ETB
     val wasImpending: Boolean = false,  // For impending - permanent enters with time counters and isn't a creature until they're gone
     val wasOverloaded: Boolean = false,  // For overload (CR 702.96) - spell has no targets and resolves with its "each" variant
@@ -147,6 +156,21 @@ data class SpellOnStackComponent(
      */
     val convokedCreatures: Map<EntityId, Long> = emptyMap(),
     /**
+     * The cards exiled from the graveyard to pay this spell's delve (CR 702.66a), each with the
+     * object generation it had in exile, in exile order. Carried onto the resolving permanent's
+     * cast-choices bag under [ChoiceSlot.DELVED_CARDS] — "a creature card with flying was exiled
+     * with this creature's delve ability" (Soulflayer). Empty when delve paid nothing.
+     */
+    val delvedCards: Map<EntityId, Long> = emptyMap(),
+    /**
+     * Last-known information (CR 113.7a) for each convoker in [convokedCreatures] that has left the
+     * battlefield since it convoked this spell, stamped by `ZoneTransitionService` at the moment it
+     * left. "Each creature that convoked this spell connives" (Lethal Scheme) still has a departed
+     * convoker connive, and which object that was and who controlled it are read from here
+     * (CR 701.50b). Empty while every convoker is still the object that convoked it.
+     */
+    val convokedLastKnown: Map<EntityId, EntitySnapshot> = emptyMap(),
+    /**
      * Entity ids of cards discarded to pay this spell's additional discard cost
      * (`Costs.additional.DiscardCards(...)`). Read at resolution via
      * [com.wingedsheep.sdk.scripting.targets.EffectTarget.DiscardedAsCost] so a condition can
@@ -178,6 +202,14 @@ data class SpellOnStackComponent(
      * whose printed characteristics answer the question.
      */
     val exiledAsCostSnapshots: List<EntitySnapshot> = emptyList(),
+    /**
+     * Permanents tapped to pay this spell's additional cost (`CostAtom.TapPermanents`, or a
+     * variable tap cost), recorded at payment time (CR 601.2h). The spell counterpart of
+     * [ActivatedAbilityOnStackComponent.tappedPermanents] — read at resolution by
+     * `EffectTarget.TappedAsCost` (Swallow Whole's "the creature tapped to pay this spell's
+     * additional cost"). Convoke taps are not costs of this kind; they live in [convokedCreatures].
+     */
+    val tappedPermanents: List<EntityId> = emptyList(),
     /**
      * Last-known-info snapshots (Rule 113.7a) for entities chosen at cost-pay time
      * that may later leave the battlefield before the spell resolves. Populated
@@ -213,6 +245,11 @@ data class SpellOnStackComponent(
      */
     val manaSpentSnow: Int = 0,
     /**
+     * The colors of the snow mana in [manaSpentSnow] (colorless snow mana adds none). Read via
+     * [ManaSpentReader] by `SpellCastPredicate.PaidWithSnowManaOfItsColors` (Boreal Outrider).
+     */
+    val manaSpentSnowColors: Set<Color> = emptySet(),
+    /**
      * Per-color mana spent on the `{X}` portion of this spell, for a color-restricted X
      * (e.g. Soul Burn's "spend only black and/or red mana on X"). Read at resolution via
      * `DynamicAmount.ManaSpentOnX`. Empty when X was unrestricted or the spell has no X.
@@ -232,19 +269,25 @@ data class SpellOnStackComponent(
      * the correct face unlocked. `null` for normal single-face cards.
      */
     val faceIndex: Int? = null,
+    /** The spell has both split halves; copied with the spell and cleared when it leaves the stack. */
+    val castFused: Boolean = false,
     /**
-     * Names of the "as you cast this spell" condition captures (CR 601.2i) whose condition was true
-     * the moment this spell finished being cast. Frozen here so the resolving effect can branch on
-     * the cast-time board via [com.wingedsheep.sdk.scripting.conditions.CastTimeFlagSet] even after
-     * the board has changed (e.g. Steer Clear's "if you controlled a Mount as you cast this spell").
-     * Declared on the card via the `captureAtCast` DSL.
+     * The "as you cast this spell" captures (CR 601.2i), by name, evaluated the moment this spell
+     * finished being cast. Frozen here so the resolving effect reads the cast-time board via
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.CapturedAtCast] (Lethal Exploit's "for
+     * each modified creature you controlled as you cast this spell") or, for a 1/0 condition
+     * capture, the `Conditions.CapturedAtCast(flag)` facade (Steer Clear's "if you
+     * controlled a Mount as you cast this spell") even after the board has changed. Declared on the
+     * card via the `captureAtCast` DSL. A copy (CR 707.10) wasn't cast, so it keeps only the
+     * captures an announced division's pool reads (`AnnouncedDivision.poolCaptures`).
      */
-    val castTimeFlags: Set<String> = emptySet()
+    val castTimeValues: Map<String, Int> = emptyMap()
 ) : Component
 
 /**
- * [count] counters of [counterType] a resolving permanent spell enters with, bought as an additional
- * cost while casting (see [SpellOnStackComponent.additionalEntryCounters]).
+ * [count] counters of [counterType] a resolving permanent spell enters with — bought as an additional
+ * cost while casting, or put on the spell while it was on the stack (see
+ * [SpellOnStackComponent.additionalEntryCounters]).
  */
 @Serializable
 data class AdditionalEntryCounters(
@@ -307,6 +350,10 @@ data class TriggeredAbilityOnStackComponent(
     val chosenModes: List<Int> = emptyList(),
     val modeTargetsOrdered: List<List<ChosenTarget>> = emptyList(),
     val modeTargetRequirements: Map<Int, List<TargetRequirement>> = emptyMap(),
+    /** Bound requirements for each occurrence, when the same owner-distributed mode repeats. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val modeTargetRequirementsOrdered: List<List<TargetRequirement>> = emptyList(),
     val modeDamageDistribution: Map<Int, Map<EntityId, Int>> = emptyMap(),
     /** Set when this triggered ability is a Saga chapter ability; on resolution the engine emits a
      *  SagaChapterResolvedEvent so "final chapter of a Saga resolves" triggers (Tom Bombadil) can fire. */
@@ -398,6 +445,22 @@ data class ActivatedAbilityOnStackComponent(
      */
     val exiledAsCostCards: List<EntityId> = emptyList(),
     /**
+     * Last-known snapshots (Rule 113.7a) of the entries of [exiledAsCostCards] exiled **from the
+     * battlefield**, taken by the cost's zone transition — what
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.ExiledAsCost] reads "the exiled creature"
+     * from, copiable values included (Curie, Emergent Intelligence). Empty for other exile costs.
+     */
+    val exiledAsCostSnapshots: List<EntitySnapshot> = emptyList(),
+    /**
+     * The players, planeswalkers or battles the attacking creatures returned to hand to pay this
+     * activation's cost were attacking, in payment order — ninjutsu's "enters attacking the same
+     * player, planeswalker, or battle as the creature that was returned" (CR 702.49c), read by a
+     * `MoveToZoneEffect` with `EnteringAttackDefender.RETURNED_ATTACKER`. Captured before the
+     * return, since the creature in hand is a new object with no combat state. Empty when the cost
+     * returned no attacker.
+     */
+    val returnedAttackerDefenders: List<EntityId> = emptyList(),
+    /**
      * Cards discarded to pay this activation's cost, carried to resolution for
      * [com.wingedsheep.sdk.scripting.targets.EffectTarget.DiscardedAsCost] ("the discarded card").
      * The activated-ability counterpart of [SpellOnStackComponent.discardedAsCostCards].
@@ -478,16 +541,28 @@ data class ActivatedAbilityOnStackComponent(
      * reflexive triggers) that carry no restriction.
      */
     val sourceFaceChanges: Int? = null,
+    /**
+     * The source permanent's [com.wingedsheep.engine.state.components.battlefield.UntapCountComponent]
+     * clock the moment this ability was put onto the stack. Effects it creates "for as long as
+     * <source> remains tapped" hold only while the clock still reads this, so a source that
+     * untapped before resolution leaves them inert (CR 611.2b). Null for synthesized abilities.
+     */
+    val sourceUntapCount: Int? = null,
     val sourceBattlefieldTimestamp: Long? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment =
         com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     /**
-     * Division chosen at activation for a `DividedDamageEffect` ability (target -> damage), locked
-     * onto the stack object so responding removal can't make the controller re-divide (CR 601.2d).
-     * Mirrors [SpellOnStackComponent.damageDistribution]. Null for every other ability, and for a
-     * divided-damage ability whose controller left the division to resolution time.
+     * Division chosen at activation (CR 601.2d) — damage for a `DividedDamageEffect` ability, counters
+     * for a `DistributeCountersAmongTargetsEffect` one (target -> amount) — locked onto the stack
+     * object so responding removal can't make the controller re-divide. Mirrors
+     * [SpellOnStackComponent.damageDistribution]. Null for every other ability, and for a divided
+     * ability whose controller left the division to resolution time.
      */
-    val damageDistribution: Map<EntityId, Int>? = null
+    val damageDistribution: Map<EntityId, Int>? = null,
+    val chosenModes: List<Int> = emptyList(),
+    val modeTargetsOrdered: List<List<ChosenTarget>> = emptyList(),
+    val modeTargetRequirementsOrdered: List<List<TargetRequirement>> = emptyList(),
+    val modeTargetRequirements: Map<Int, List<TargetRequirement>> = emptyMap()
 ) : Component {
     val activatedAbilityId: AbilityId?
         get() = activatedAbility?.id
@@ -514,6 +589,14 @@ data class AbilityOnStackComponent(
  *           on resolution (Rule 608.2b — targets must still be legal when the spell/ability resolves)
  * @property targetEntryStamps Object-identity stamps for the permanent targets (CR 400.7),
  *           captured when the targets were chosen — see [capture].
+ * @property targetingAttachmentHost The permanent the source Aura/Equipment was attached to when
+ *           the ability was put on the stack with its targets (after its costs were paid, so a
+ *           cost that sacrifices or unattaches the source leaves it null). A target requirement phrased relative to the source's host
+ *           ("target creature that's blocking equipped creature", Plasma Caster) was satisfied
+ *           against *that* creature, so the resolution re-check reads it too: the ability still
+ *           resolves if the Equipment has since left or moved to another creature, and fizzles only
+ *           when the target stops blocking the creature it was chosen against. Null for a source
+ *           that wasn't attached to anything.
  */
 @Serializable
 data class TargetsComponent(
@@ -522,8 +605,20 @@ data class TargetsComponent(
     val targetEntryStamps: Map<EntityId, Long> = emptyMap(),
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
-    val targetObjectRefs: Map<EntityId, com.wingedsheep.engine.state.ObjectRef> = emptyMap()
+    val targetObjectRefs: Map<EntityId, com.wingedsheep.engine.state.ObjectRef> = emptyMap(),
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val targetingAttachmentHost: EntityId? = null,
 ) : Component {
+
+    /**
+     * The same requirements with [newTargets] chosen in place of the current ones (a retarget), each
+     * stamped as it becomes a target. The attachment host the requirements were first satisfied
+     * against is kept, though a retarget's own legality check reads the source's current host —
+     * the two differ only when the source was moved after the ability was put on the stack.
+     */
+    fun retargeted(state: GameState, newTargets: List<ChosenTarget>): TargetsComponent =
+        capture(state, newTargets, targetRequirements).copy(targetingAttachmentHost = targetingAttachmentHost)
 
     companion object {
         /**
@@ -546,10 +641,16 @@ data class TargetsComponent(
         fun capture(
             state: GameState,
             targets: List<ChosenTarget>,
-            targetRequirements: List<TargetRequirement> = emptyList()
+            targetRequirements: List<TargetRequirement> = emptyList(),
+            /** The stack object's source; its current attachment host becomes [targetingAttachmentHost]. */
+            sourceId: EntityId? = null,
         ): TargetsComponent = TargetsComponent(
             targets = targets,
             targetRequirements = targetRequirements,
+            targetingAttachmentHost = sourceId?.let {
+                state.getEntity(it)
+                    ?.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()?.targetId
+            },
             targetEntryStamps = targets.filterIsInstance<ChosenTarget.Permanent>()
                 .filter { it.entityId in state.getBattlefield() }
                 .associate { it.entityId to entryStamp(state, it.entityId) },
@@ -628,6 +729,19 @@ data class SpellContextComponent(
 ) : Component
 
 /**
+ * One keyword a permanent spell hands to the permanent it becomes ([SpellOnStackComponent.entryKeywordGrants]),
+ * lasting [duration] from the moment it enters. [sourceId] is what granted it (Tyvar Kell's emblem
+ * trigger's source), shown as the grant's origin; null credits the spell itself (a mana rider,
+ * whose producer may be long gone).
+ */
+@Serializable
+data class EntryKeywordGrant(
+    val keyword: String,
+    val duration: com.wingedsheep.sdk.scripting.Duration,
+    val sourceId: EntityId? = null,
+)
+
+/**
  * Marks a spell or ability on the stack as having been granted extra keywords (by enum name)
  * while it remains on the stack. Used by effects like Spinerock Tyrant that grant wither to
  * a copied or original spell. The component disappears with the spell entity when it leaves
@@ -647,27 +761,47 @@ data class SpellGrantedKeywordsComponent(
  * controller's turn). The spell-copy sibling of the same fields on
  * `CreateTokenCopyOfTargetEffect`; used for "Copy target creature spell you control. The copy gains
  * haste and 'At the beginning of the end step, sacrifice this token.'" (Choreographed Sparks).
+ * [startingLoyalty], when set, is the loyalty a planeswalker token enters with in place of the
+ * printed one ("The copy … has starting loyalty X", casualty X on Ob Nixilis, the Adversary).
  */
 @Serializable
 data class SpellCopyTokenRidersComponent(
     val addedKeywords: Set<Keyword> = emptySet(),
     val sacrificeAtStep: Step? = null,
-    val sacrificeOnlyOnControllersTurn: Boolean = false
+    val sacrificeOnlyOnControllersTurn: Boolean = false,
+    val startingLoyalty: Int? = null
 ) : Component
 
 /**
- * Cast-this-way entry rider for a spell cast from the graveyard under a
- * [com.wingedsheep.sdk.scripting.MayCastFromGraveyard] grant that carries rider fields
- * (The Tomb of Aclazotz). The rider is frozen onto the stack spell at cast time — from the
+ * Cast-this-way entry rider for a spell cast under a permission that carries rider fields: a
+ * [com.wingedsheep.sdk.scripting.MayCastFromGraveyard] grant (The Tomb of Aclazotz), a forage or
+ * linked-exile permission's finality counter, or a may-play permission's
+ * [com.wingedsheep.engine.state.permissions.MayPlayPermission.entersTapped] (Kaldring, the
+ * Rimestaff — [entersTapped]). The rider is frozen onto the stack spell at cast time — from the
  * *specific* grant that authorized the cast, so it survives grant expiry and is unambiguous when
  * several graveyard-cast grants are active. Read by
  * [com.wingedsheep.engine.mechanics.stack.StackResolver] when the spell resolves onto the
  * battlefield: the permanent enters with one [entersWithCounter] counter and gains
- * [addedSubtype] "in addition to its other types". The component disappears with the spell entity
- * when it leaves the stack (countered / fizzled spells simply never apply it).
+ * [addedSubtype] "in addition to its other types", and gains [grantedAbility] (Serra Paragon) for as
+ * long as it stays on the battlefield. The component disappears with the spell entity when it leaves
+ * the stack (countered / fizzled spells simply never apply it).
  */
 @Serializable
-data class GraveyardCastRiderComponent(
+@SerialName("com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent")
+data class CastThisWayEntryRiderComponent(
     val entersWithCounter: com.wingedsheep.sdk.core.CounterType? = null,
-    val addedSubtype: String? = null
+    val addedSubtype: String? = null,
+    val grantedAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
+    /** The grant's filters; the permanent enters tapped when it matches every one as it enters. */
+    val entersTapped: List<com.wingedsheep.sdk.scripting.GameObjectFilter> = emptyList(),
 ) : Component
+
+/**
+ * Cipher (CR 702.99a): the resolving spell's controller chose to exile it encoded on [creatureId].
+ * Stamped by [com.wingedsheep.engine.handlers.effects.stack.EncodeOnCreatureExecutor] as the last
+ * step of the spell's resolution; `NonPermanentSpellResolver` reads it as the spell leaves the stack
+ * — the card goes straight to exile, never the graveyard — and writes the encoding
+ * ([com.wingedsheep.engine.state.components.battlefield.EncodedOnComponent]) once it lands there.
+ */
+@Serializable
+data class CipherEncodeChoiceComponent(val creatureId: EntityId) : Component

@@ -58,7 +58,7 @@ class WebSlingingCastEnumerator : ActionEnumerator {
             // speed. Spider-Sense (an instant) is castable whenever the player has priority.
             val isInstant = cardComponent.typeLine.isInstant
             val grantedFlash = cardDef.keywords.contains(Keyword.FLASH) ||
-                context.castPermissionUtils.hasGrantedFlash(state, cardId)
+                context.castPermissionUtils.hasGrantedFlash(state, cardId, context.playerId)
             if (!isInstant && !grantedFlash && !context.canPlaySorcerySpeed) continue
 
             // Honor cast restrictions exactly like the normal cast path (CR 601.3).
@@ -69,9 +69,11 @@ class WebSlingingCastEnumerator : ActionEnumerator {
 
             // Mana portion of the web-slinging cost (the bounce is paid alongside). Cost increases
             // and reductions still apply on top of the alternative cost (CR 118.9d).
-            val webSlingMana = context.costCalculator.calculateEffectiveCostWithAlternativeBase(
-                state, cardDef, webSlinging.cost, playerId
+            val webSlingPricing = context.costCalculator.priceByTargets(
+                state, cardDef, playerId, cardId, baseCost = webSlinging.cost, withTable = !context.skipAutoTapPreview,
             )
+            val webSlingMana = webSlingPricing.min
+            val webSlingManaByTargetCount = webSlingPricing.byCountStrings()
             if (!context.manaSolver.canPay(state, playerId, webSlingMana, precomputedSources = cachedSources)) {
                 continue
             }
@@ -123,6 +125,7 @@ class WebSlingingCastEnumerator : ActionEnumerator {
                     targetDescription = firstReq?.description,
                     targetRequirements = targetReqInfos.surfacedRequirements(),
                     manaCostString = webSlingMana.toString(),
+                    manaCostByTargetCount = webSlingManaByTargetCount,
                     additionalCostInfo = bounceCostInfo,
                     autoTapPreview = autoTapPreview
                 )

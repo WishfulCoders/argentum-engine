@@ -1073,7 +1073,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card named Avarax to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -1876,7 +1878,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         },
                         "CostSacrificeSelf"
@@ -1905,7 +1910,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Swamp or Mountain card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -3996,7 +4003,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card named Daru Cavalier to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4206,7 +4215,10 @@
         "replacementEffects": [
             {
                 "type": "PreventDamage",
-                "amount": 1,
+                "amount": {
+                    "type": "Fixed",
+                    "amount": 1
+                },
                 "appliesTo": {
                     "type": "DamageEvent",
                     "recipient": {
@@ -5286,44 +5298,6 @@
     ]
 }
 
-// Elven Riders
-{
-    "name": "Elven Riders",
-    "manaCost": "{3}{G}{G}",
-    "typeLine": "Creature — Elf",
-    "oracleText": "Elven Riders can't be blocked except by creatures with flying.",
-    "creatureStats": {
-        "power": 3,
-        "toughness": 3
-    },
-    "script": {
-        "staticAbilities": [
-            {
-                "type": "CantBeBlockedExceptBy",
-                "blockerFilter": {
-                    "cardPredicates": [
-                        "IsCreature",
-                        {
-                            "type": "HasKeyword",
-                            "keyword": "FLYING"
-                        }
-                    ]
-                }
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "254",
-        "rarity": "UNCOMMON",
-        "artist": "Darrell Riche",
-        "flavorText": "They are seldom combated, and never caught.",
-        "imageUri": "https://cards.scryfall.io/normal/front/f/7/f7c1aa30-0271-48d9-b9d0-3b1da26d98bf.jpg?1562953705"
-    },
-    "colorIdentityOverride": [
-        "GREEN"
-    ]
-}
-
 // Elvish Guidance
 {
     "name": "Elvish Guidance",
@@ -5645,7 +5619,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card named Embermage Goblin to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -6147,7 +6123,9 @@
                             "amount": 2
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for up to two basic land cards to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -6650,7 +6628,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         },
                         "CostSacrificeSelf"
@@ -6679,7 +6660,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Plains or Island card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -9749,7 +9732,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -10101,7 +10086,7 @@
     "name": "Menacing Ogre",
     "manaCost": "{3}{R}{R}",
     "typeLine": "Creature — Ogre",
-    "oracleText": "Trample, haste\nWhen Menacing Ogre enters, each player secretly chooses a number. Then those numbers are revealed. Each player with the highest number loses that much life. If you are one of those players, put two +1/+1 counters on Menacing Ogre.",
+    "oracleText": "Trample, haste\nWhen this creature enters, each player secretly chooses a number. Then those numbers are revealed. Each player with the highest number loses that much life. If you are one of those players, put two +1/+1 counters on this creature.",
     "creatureStats": {
         "power": 3,
         "toughness": 3
@@ -10119,30 +10104,54 @@
                     "to": "Battlefield"
                 },
                 "effect": {
-                    "type": "SecretBid",
-                    "highestBidderEffect": {
-                        "type": "Composite",
-                        "effects": [
-                            {
-                                "type": "LoseLife",
-                                "amount": "XValue",
-                                "target": "Controller"
-                            },
-                            {
-                                "type": "Gated",
-                                "gate": {
-                                    "type": "Gate.WhenCondition",
-                                    "condition": "YouControlSource"
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "StorePlayer",
+                            "storeAs": "players0"
+                        },
+                        {
+                            "type": "SecretChoice",
+                            "choice": {
+                                "type": "SecretNumberChoice",
+                                "maxValue": {
+                                    "type": "Fixed",
+                                    "amount": 2147483647
                                 },
-                                "then": {
-                                    "type": "AddCounters",
-                                    "counterType": "PLUS_ONE_PLUS_ONE",
-                                    "count": 2,
-                                    "target": "Self"
+                                "outcomeMinValue": 0,
+                                "highestEffect": {
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "LoseLife",
+                                            "amount": "XValue",
+                                            "target": "Controller"
+                                        },
+                                        {
+                                            "type": "Gated",
+                                            "gate": {
+                                                "type": "Gate.WhenCondition",
+                                                "condition": {
+                                                    "type": "PlayerIs",
+                                                    "subject": "You",
+                                                    "player": {
+                                                        "type": "InCollection",
+                                                        "collection": "players0"
+                                                    }
+                                                }
+                                            },
+                                            "then": {
+                                                "type": "AddCounters",
+                                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                                "count": 2,
+                                                "target": "Self"
+                                            }
+                                        }
+                                    ]
                                 }
                             }
-                        ]
-                    }
+                        }
+                    ]
                 }
             }
         ]
@@ -10150,9 +10159,8 @@
     "metadata": {
         "collectorNumber": "219",
         "rarity": "RARE",
-        "artist": "Pete Venters",
-        "flavorText": "The Skirk Ridge goblins had never seen an ogre before. They would never see one again.",
-        "imageUri": "https://cards.scryfall.io/normal/front/5/3/5360a871-6932-45b2-bc94-1bd414e38906.jpg?1562914555"
+        "artist": "Ron Spencer",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/3/5360a871-6932-45b2-bc94-1bd414e38906.jpg?1783945051"
     },
     "colorIdentityOverride": [
         "RED"
@@ -11110,47 +11118,6 @@
     ]
 }
 
-// Pacifism
-{
-    "name": "Pacifism",
-    "manaCost": "{1}{W}",
-    "typeLine": "Enchantment — Aura",
-    "oracleText": "Enchant creature\nEnchanted creature can't attack or block.",
-    "script": {
-        "staticAbilities": [
-            {
-                "type": "CantAttack",
-                "filter": {
-                    "baseFilter": "permanent",
-                    "scope": "AttachedTo"
-                }
-            },
-            {
-                "type": "CantBlock",
-                "filter": {
-                    "baseFilter": "permanent",
-                    "scope": "AttachedTo"
-                }
-            }
-        ],
-        "auraTarget": {
-            "type": "TargetObject",
-            "filter": {
-                "baseFilter": "creature"
-            }
-        }
-    },
-    "metadata": {
-        "collectorNumber": "47",
-        "artist": "Matthew D. Wilson",
-        "flavorText": "Even those born to battle could only lay their blades at Akroma’s feet.",
-        "imageUri": "https://cards.scryfall.io/normal/front/e/e/ee262fde-8df1-431f-9e5c-0cafe9212b49.jpg?1562951573"
-    },
-    "colorIdentityOverride": [
-        "WHITE"
-    ]
-}
-
 // Patriarch's Bidding
 {
     "name": "Patriarch's Bidding",
@@ -11497,7 +11464,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         },
                         "CostSacrificeSelf"
@@ -11526,7 +11496,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Island or Swamp card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -12992,7 +12964,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card named Screaming Seahawk to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -15589,49 +15563,6 @@
     ]
 }
 
-// Syphon Soul
-{
-    "name": "Syphon Soul",
-    "manaCost": "{2}{B}",
-    "typeLine": "Sorcery",
-    "oracleText": "Syphon Soul deals 2 damage to each other player. You gain life equal to the damage dealt this way.",
-    "script": {
-        "spellEffect": {
-            "type": "Composite",
-            "effects": [
-                {
-                    "type": "DealDamage",
-                    "amount": {
-                        "type": "Fixed",
-                        "amount": 2
-                    },
-                    "target": {
-                        "type": "PlayerRef",
-                        "player": "EachOpponent"
-                    },
-                    "damageDealtVariable": "storedNumber0"
-                },
-                {
-                    "type": "GainLife",
-                    "amount": {
-                        "type": "VariableReference",
-                        "variableName": "storedNumber0"
-                    }
-                }
-            ]
-        }
-    },
-    "metadata": {
-        "collectorNumber": "176",
-        "artist": "Ron Spears",
-        "flavorText": "As Phage drank their energy, a vague memory of Jeska stirred. Then she lost herself again in the joy of her victims' suffering.",
-        "imageUri": "https://cards.scryfall.io/normal/front/3/b/3bdaef0f-9965-463b-902d-72ec24b2db7b.jpg?1562909040"
-    },
-    "colorIdentityOverride": [
-        "BLACK"
-    ]
-}
-
 // Taunting Elf
 {
     "name": "Taunting Elf",
@@ -16854,7 +16785,8 @@
                             "Insect"
                         ],
                         "imageUri": "https://cards.scryfall.io/normal/front/a/a/aa47df37-f246-4f80-a944-008cdf347dad.jpg?1561757793"
-                    }
+                    },
+                    "description": "Create a 1/1 green Insect creature token"
                 },
                 {
                     "effect": {
@@ -17096,7 +17028,7 @@
                                 }
                             },
                             "body": {
-                                "type": "MarkMustAttackThisTurn",
+                                "type": "MarkMustAttack",
                                 "target": "IterationEntity"
                             }
                         }
@@ -17203,11 +17135,12 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "count": 20,
-                "optional": true,
                 "filter": {
                     "baseFilter": "creature"
-                }
+                },
+                "id": "t0",
+                "dynamicMaxCount": "XValue",
+                "dynamicMinCount": "XValue"
             }
         ]
     },
@@ -17272,7 +17205,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -17293,9 +17228,13 @@
                         "condition": {
                             "type": "Compare",
                             "left": {
-                                "type": "AggregateBattlefield",
-                                "player": "EachOpponent",
-                                "filter": "land"
+                                "type": "GreatestAmongPlayers",
+                                "players": "EachOpponent",
+                                "inner": {
+                                    "type": "AggregateBattlefield",
+                                    "player": "You",
+                                    "filter": "land"
+                                }
                             },
                             "operator": "GT",
                             "right": {
@@ -17353,7 +17292,9 @@
                             "type": "ChooseUpTo",
                             "count": "XValue"
                         },
-                        "storeSelected": "found"
+                        "storeSelected": "found",
+                        "prompt": "Search your library for creature cards (up to X) to put into your hand",
+                        "selectedLabel": "Put into your hand"
                     },
                     {
                         "type": "MoveCollection",
@@ -17581,7 +17522,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         },
                         "CostSacrificeSelf"
@@ -17610,7 +17554,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Forest or Plains card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -17716,7 +17662,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for an Elf card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -17995,7 +17943,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         },
                         "CostSacrificeSelf"
@@ -18024,7 +17975,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land Mountain or Forest card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",

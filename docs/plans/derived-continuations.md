@@ -107,6 +107,45 @@ code, not the effect tree, so they are Option B's territory.
 4. **Keep `SuspensionTraceTest` as the contract** throughout. Now that its fixtures are encoded without
    defaults, a new field no longer breaks them; a changed *shape* still does, which is the point.
 
+## Pilot status
+
+**Step 1 landed (2026-10-17): sequences.** `EffectContinuation` and its runner are gone. Every
+`CompositeEffect` now runs as one `EffectProgram` (root copy, origin label, cursor, `EffectContext`)
+walked by `EffectProgramInterpreter`; nested composites are positions in the root. The cursor is a
+zipper (`Start`, or `Child(index, delta)` per open composite, the delta rebuilding the composite's
+entry context exactly from its parent's), so a paused run leaves every scope exactly as a run that
+never paused does. That fixed divergences `main` had: a shadowed pipeline key, `stopOnError` after a
+pause, a caller's view of collections stored before a final paused leaf, subtype groups crossing a
+paused composite or a gate's answered branch, a queued program, a converted saved frame, and the
+resolution depth after a pause. String lists, which only a creature-type choice writes (into the
+frame beneath it), now also survive leaving the composite they were chosen in. The unpaused behaviour is the reference and didn't change, with two exceptions, both in
+`ForEachCapturedController` and both inert in today's cards (Builder's Bane's body is one damage
+effect): it now returns its sub-effects' outputs, and its sub-effects now thread every pipeline
+kind, snapshot and permit to the next one, where it used to pass only collections and subtype
+groups. Gates, `ForEach`, `RepeatWhile`
+and every other control node are still leaves that start nested programs of their own (labelled
+`BuiltBy`, cursors local to their subtree). Saved games holding the old frame load through
+`LegacyEffectContinuationLift`. **Next:** move `GatedEffect` with `Gate.MayDecide` into the
+interpreter as a `Gate(phase)` cursor step, so a "may" is answered by the program itself and
+`nested-may` replays as one frame. Then the other gates follow one at a time (`MayPay` with
+non-mana costs, `DoAction`, the mana and X variants), deleting `GatedEffectContinuation` once none
+is left. Loops will need `Each(item, remaining, …)` steps.
+
+**Order of the remaining migrations**, each its own PR with twin tests: (1) `Gate.MayDecide`;
+(2) `Gate.MayPay` and the mana/X gate variants; (3) `Gate.DoAction`, fixing its two return
+conventions; (4) `ForEach` / `ForEachCapturedController` as `Each` steps; (5) `RepeatWhile`. Each
+step deletes the continuation class it replaces; the pilot is done when `GatedEffectContinuation`,
+`ForEachContinuation` and `RepeatWhileContinuation` are gone and the `nested-may` and
+`repeat-while` fixtures replay as one frame.
+
+**`ProgramOrigin` has no reader yet.** It is the observation contract: a paused frame says what
+its cursor is relative to (the resolving object's effect, or a subtree some step built), so a
+debugger, a replay diff or a future Option B checkpoint can locate it without re-running anything.
+Nothing in the engine decides on it, apart from `null` marking a converted frame. If the
+migrations above finish without anything consuming it, remove it then rather than let it drift. `DoAction` still returns its branch's outputs
+synchronously but not after a pause, and imports the action's numbers after a pause but not
+synchronously; its migration fixes both.
+
 ## What this does not change
 
 The settle boundary (`Settler`), the waiting-trigger queue, and the sealed `Outcome` are independent of

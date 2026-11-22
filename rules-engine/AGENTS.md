@@ -28,8 +28,9 @@ just test-class CreatureStatsTest                  # Specific test class
   - `detectLeavesBattlefieldTriggers()` — permanents that left the battlefield aren't in
     `getBattlefield()` anymore, so dies/leaves triggers need this separate pass.
 - **Mid-resolution pauses must preserve queued triggers.** `TriggerProcessor.processTriggers()`
-  handles one trigger at a time; if it pauses, remaining triggers go on
-  `PendingTriggersContinuation` and `ContinuationHandler.checkForMoreContinuations()` resumes them.
+  handles one trigger at a time; if it pauses, the rest of the wave waits in
+  `GameState.triggersBeingPlaced` and the `Settler` places it after the answer, before SBAs and
+  before `pendingTriggers` (the next wave — keep the two apart, CR 603.3b).
 - **Continuations that execute effects must propagate `targets`.** Any new `ContinuationFrame`
   wrapping an effect with `EffectTarget.ContextTarget(n)` has to include the targets list, or the
   effect resolves with an empty context and silently fizzles.

@@ -16,8 +16,8 @@ test('Winter Orb and Damping Field keep a rejected selection editable', async ({
   })
   player1.page.setDefaultTimeout(15_000)
   player2.page.setDefaultTimeout(15_000)
-  await player1.page.getByRole('button', { name: "To opponent's turn", exact: true }).click()
-  await player2.page.getByRole('button', { name: 'To my turn', exact: true }).click()
+  await player1.page.getByRole('button', { name: "To Opponent's Turn", exact: true }).click()
+  await player2.page.getByRole('button', { name: 'To My Turn', exact: true }).click()
   const p = player2.page
   await expect(p.getByText('Select permanents to keep tapped', { exact: true })).toBeVisible()
   await player2.gamePage.clickCard('Plains')

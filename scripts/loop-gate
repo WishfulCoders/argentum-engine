@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""The narrow local gate: run only the tests a branch's diff can plausibly break, and leave the
+full suite to CI.
+
+`just build` / `just test` run every module's tests (~all card scenarios, the server's Spring
+suite, gym) — and then CI runs the same thing again on the PR. A loop unit pays for both. This
+gate reads the diff against origin/main and runs, in one locked Gradle invocation:
+
+  - every test class the branch adds or changes, in its own module;
+  - the content suite (`:mtg-sets:test` — card snapshots, card lint, printing checks) and the AI
+    card-reading ratchet (`AiReadingRatchetTest`) whenever cards, the SDK or the engine moved;
+  - the whole test suite of any non-card module whose main sources changed (engine, SDK, AI,
+    server, Assay, search, gym), plus the touched eras' scenario suites when the engine or SDK
+    moved;
+  - a compile of every module's tests when the SDK or engine changed, so a sealed `when` in a
+    consumer can't break unseen;
+  - the web client's typecheck when web-client/ changed.
+
+Usage:
+    scripts/loop-gate            # run it
+    scripts/loop-gate --plan     # print what would run, run nothing
+    scripts/loop-gate --base origin/main   # diff base (default: merge-base with origin/main)
+    scripts/loop-gate --rebless  # also re-bless the card snapshot goldens in the same run; then
+                                 # check that only your cards moved (`git diff --stat` is printed)
+
+Exit status is the first failing command's. CI remains the full gate; this one is what a PR must
+pass before it is opened.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Main-source changes in these modules run that module's whole suite.
+SUITE_MODULES = {
+    "rules-engine": ":rules-engine",
+    "mtg-sdk": ":mtg-sdk",
+    "mtg-sdk-tooling": ":mtg-sdk-tooling",
+    "mtg-search": ":mtg-search",
+    "ai": ":ai",
+    "game-server": ":game-server",
+    "oracle-assay": ":oracle-assay",
+    "gym": ":gym",
+    "gym-server": ":gym-server",
+    "gym-trainer": ":gym-trainer",
+}
+# A change here can break any consumer: compile every module's tests and run the touched eras'
+# scenarios.
+CORE_MODULES = {"rules-engine", "mtg-sdk"}
+
+
+def git(*args: str) -> list[str]:
+    out = subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, check=True)
+    return [line for line in out.stdout.splitlines() if line]
+
+
+def changed_files(base: str | None) -> list[str]:
+    if base is None:
+        base = git("merge-base", "HEAD", "origin/main")[0]
+    files = set(git("diff", "--name-only", base))  # committed + staged + unstaged
+    files |= set(git("ls-files", "--others", "--exclude-standard"))
+    return sorted(f for f in files if (REPO_ROOT / f).exists())
+
+
+def gradle_project_for(rel: str) -> str | None:
+    parts = Path(rel).parts
+    if "src" not in parts:
+        return None
+    return ":" + ":".join(parts[: parts.index("src")])
+
+
+def plan(files: list[str]) -> tuple[list[str], bool]:
+    """Returns the Gradle arguments and whether the web client needs a typecheck."""
+    suites: set[str] = set()
+    classes: dict[str, set[str]] = {}
+    eras: set[str] = set()
+    core_changed = False
+    content = False
+
+    for rel in files:
+        parts = Path(rel).parts
+        top = parts[0]
+        if top == "mtg-sets":
+            content = True
+            if len(parts) > 1 and parts[1][:1].isdigit():
+                eras.add(parts[1])
+        if top in SUITE_MODULES and "src" in parts and parts[parts.index("src") + 1:][:1] == ("main",):
+            suites.add(SUITE_MODULES[top])
+            if top in CORE_MODULES:
+                core_changed = True
+                content = True
+        if rel.endswith("Test.kt") and "/src/test/" in rel:
+            project = gradle_project_for(rel)
+            if project:
+                classes.setdefault(project, set()).add(Path(rel).stem)
+
+    if content:
+        suites.add(":mtg-sets")
+        # A card can bring an effect type the AI can't read; the ratchet (~10 s once :ai compiles)
+        # catches that here rather than in CI's ai group. See docs/ai/reading-audit.md.
+        classes.setdefault(":ai", set()).add("AiReadingRatchetTest")
+    if core_changed:
+        suites |= {f":mtg-sets:{era}:tests" for era in eras}
+
+    args: list[str] = []
+    if core_changed:
+        args.append("testClasses")
+    for project in sorted(suites):
+        args.append(f"{project}:test")
+    for project in sorted(classes):
+        if project in suites:
+            continue
+        args.append(f"{project}:test")
+        for cls in sorted(classes[project]):
+            args += ["--tests", cls]
+    if args:
+        args += ["-x", ":mtgish-tooling:test", "-x", ":mtgish-tooling:testClasses",
+                 "-x", ":mtgish-tooling:compileTestKotlin"]
+    web = any(f.startswith("web-client/") for f in files)
+    return args, web
+
+
+def with_rebless(args: list[str]) -> list[str]:
+    """Re-bless the card snapshot goldens in the same run — only when the content suite runs anyway."""
+    return [*args, "-DupdateSnapshots=true"] if ":mtg-sets:test" in args else args
+
+
+def main(argv: list[str]) -> int:
+    base = None
+    if "--base" in argv:
+        base = argv[argv.index("--base") + 1]
+    files = changed_files(base)
+    gradle_args, web = plan(files)
+    rebless = "--rebless" in argv and with_rebless(gradle_args) != gradle_args
+    if rebless:
+        gradle_args = with_rebless(gradle_args)
+
+    print(f"loop-gate: {len(files)} changed file(s)", file=sys.stderr)
+    if gradle_args:
+        print("loop-gate: scripts/gradle-locked " + " ".join(gradle_args), file=sys.stderr)
+    if web:
+        print("loop-gate: (cd web-client && npm run typecheck)", file=sys.stderr)
+    if not gradle_args and not web:
+        print("loop-gate: nothing to test — CI is the gate", file=sys.stderr)
+    if "--plan" in argv:
+        return 0
+
+    if gradle_args:
+        status = subprocess.call([str(REPO_ROOT / "scripts" / "gradle-locked"), *gradle_args], cwd=REPO_ROOT)
+        if status:
+            return status
+    if rebless:
+        subprocess.call(["git", "diff", "--stat", "--", "mtg-sets/src/test/resources/snapshots"], cwd=REPO_ROOT)
+    if web:
+        status = subprocess.call(["npm", "run", "typecheck"], cwd=REPO_ROOT / "web-client")
+        if status:
+            return status
+    print("loop-gate: passed (CI runs the full suite)", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

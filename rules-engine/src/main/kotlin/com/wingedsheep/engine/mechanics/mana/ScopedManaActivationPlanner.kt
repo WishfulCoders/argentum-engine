@@ -63,7 +63,7 @@ class ScopedManaActivationPlanner(private val services: EngineServices, private 
             val component = current.getEntity(player)?.get<ManaPoolComponent>() ?: return false
             val pool = ManaPool(component.white, component.blue, component.black, component.red,
                 component.green, component.colorless, restrictedMana = component.restrictedMana,
-                snowMana = component.snowMana, snowColorless = component.snowColorless)
+                snowMana = component.snowMana, manaUnits = component.manaUnits, snowColorless = component.snowColorless)
                 .withSpendingColors(current, player)
             val allocation = pool.allocateFloating(cost, context, xAmount, xColors) ?: return false
             val required = current.continuationStack.filterIsInstance<ManaSpendingObligationsContinuation>()
@@ -71,6 +71,70 @@ class ScopedManaActivationPlanner(private val services: EngineServices, private 
             return allocation.pool.dischargedObligations.containsAll(required)
         }
         data class Prefix(val state: GameState, val events: List<GameEvent>)
+        fun settled(current: GameState, floor: Int) =
+            current.pendingDecision == null && current.continuationStack.size == floor
+        // Finish one activation's production questions, preferring the color the guide wanted.
+        fun finish(prefix: Prefix, floor: Int, wanted: Color?): Prefix? {
+            var (current, events) = prefix
+            repeat(GUIDED_ANSWER_LIMIT) {
+                if (current.pendingDecision == null) return Prefix(current, events).takeIf { settled(current, floor) }
+                val decision = current.pendingDecision!!
+                val responses = activationResponses(current, player)?.toList() ?: return null
+                val ordered = responses.sortedByDescending { (it as? ColorChosenResponse)?.color == wanted }
+                val response = ordered.firstOrNull { DecisionValidators.validate(decision, it, current) == null }
+                    ?: return null
+                val result = services.continuationHandler.resumeWithin(current, response, floor)
+                if (result.error != null || result.state.gameOver) return null
+                events = events + DecisionSubmittedEvent(decision.id, player) + result.events
+                current = result.state
+            }
+            return null
+        }
+        // The ordinary solver picks a minimal source set; each tap then runs through the real
+        // activation handler. Only the complete exact allocation below certifies the result, so a
+        // misleading guide merely falls through to the exhaustive search.
+        fun guided(initial: GameState, floor: Int): Prefix? {
+            val component = initial.getEntity(player)?.get<ManaPoolComponent>() ?: ManaPoolComponent()
+            val partial = ManaPool(component.white, component.blue, component.black, component.red,
+                component.green, component.colorless, restrictedMana = component.restrictedMana,
+                snowMana = component.snowMana, manaUnits = component.manaUnits, snowColorless = component.snowColorless)
+                .withSpendingColors(initial, player).payPartial(cost, context)
+            val xRemaining = (xAmount - partial.newPool.xCoverage(xAmount, xColors, context)).coerceAtLeast(0)
+            val solution = services.manaSolver.solve(initial, player, partial.remainingCost, xRemaining,
+                excludeSources, context, xManaRestriction = xColors) ?: return null
+            // The guide is one path through the search tree: the root plus one node per activation.
+            if (solution.manaProduced.size >= nodeLimit) return null
+            var prefix = Prefix(initial, emptyList())
+            for ((sourceId, wanted) in solution.manaProduced) {
+                val candidates = services.legalActionEnumerator.enumerateManaAbilities(prefix.state, player)
+                    .filter { (it.action as? ActivateAbility)?.sourceId == sourceId }
+                var fallback: Prefix? = null
+                var matched: Prefix? = null
+                for (candidate in candidates) {
+                    val base = candidate.action as ActivateAbility
+                    val ability = resolver.lookup(prefix.state, sourceId, base.abilityId)?.ability ?: continue
+                    // Same proof boundary as the search: an activation it can't model never certifies.
+                    if (!safeCost(ability.cost) || exileCostCount(ability.cost) > 1 ||
+                        hasNestedExileCost(ability.cost) || !manaOnly(ability.effect)) continue
+                    val color = wanted.color?.takeIf {
+                        candidate.requiresManaColorChoice && ability.effect !is CompositeEffect &&
+                            (candidate.availableManaColors?.contains(it) ?: true)
+                    }
+                    if (candidate.requiresManaColorChoice && ability.effect !is CompositeEffect && color == null &&
+                        wanted.color != null) continue
+                    val action = base.copy(manaColorChoice = color, paymentStrategy = PaymentStrategy.FromPool)
+                    if (handler.validate(prefix.state, action) != null) continue
+                    val executed = handler.execute(prefix.state, action)
+                    if (executed.error != null || executed.state.gameOver) continue
+                    val done = finish(Prefix(executed.state, prefix.events + executed.events), floor, wanted.color)
+                        ?: continue
+                    if (producedWanted(prefix.state, done.state, player, wanted)) { matched = done; break }
+                    if (fallback == null) fallback = done
+                }
+                prefix = matched ?: fallback ?: return null
+            }
+            return prefix.takeIf { settled(it.state, floor) && complete(it.state) }
+        }
         fun search(initial: GameState): ScopedManaPlanResult {
             // Floating payment needs no source enumeration, even on hidden boards or at zero budget.
             val continuationFloor = prefixFloor ?: initial.continuationStack.size
@@ -80,6 +144,12 @@ class ScopedManaActivationPlanner(private val services: EngineServices, private 
             if (initial.getBattlefield().any { initial.getEntity(it)?.has<FaceDownComponent>() == true })
                 return ScopedManaPlanResult.Unknown(setOf(ScopedManaSearchLimit.HIDDEN_BATTLEFIELD))
             if (nodeLimit <= 0) return ScopedManaPlanResult.Unknown(setOf(ScopedManaSearchLimit.NODE_BUDGET))
+            // Try the ordinary solver's minimal plan first, executed for real; the exact allocation
+            // still certifies it, and a guide that fails falls through to the exhaustive search.
+            if (initial.pendingDecision == null && initial.continuationStack.size == continuationFloor)
+                guided(initial, continuationFloor)?.let {
+                    return ScopedManaPlanResult.Found(ExecutionResult.success(it.state, it.events))
+                }
             val pending = ArrayDeque<Prefix>()
             pending.add(Prefix(initial, emptyList()))
             var attempted = 1
@@ -204,6 +274,28 @@ class ScopedManaActivationPlanner(private val services: EngineServices, private 
             priorityPlayerId = state.priorityPlayerId, priorityPassedBy = state.priorityPassedBy)))
     }
 
+    /** Whether the activation added at least one unit of the kind the ordinary solver planned for it. */
+    private fun producedWanted(before: GameState, after: GameState, player: EntityId, wanted: ManaProduction): Boolean {
+        fun count(state: GameState): Int {
+            val pool = state.getEntity(player)?.get<ManaPoolComponent>() ?: return 0
+            val color = wanted.color
+            val plain = when (color) {
+                Color.WHITE -> pool.white
+                Color.BLUE -> pool.blue
+                Color.BLACK -> pool.black
+                Color.RED -> pool.red
+                Color.GREEN -> pool.green
+                null -> pool.colorless
+            }
+            return plain + pool.restrictedMana.count { it.color == color }
+        }
+        return count(after) > count(before)
+    }
+
+    private companion object {
+        const val GUIDED_ANSWER_LIMIT = 16
+    }
+
     private fun activationResponses(state: GameState, player: EntityId): Sequence<DecisionResponse>? {
         val suspension = state.continuationStack.lastOrNull() as? Suspension ?: return null
         val question = suspension.question
@@ -267,13 +359,15 @@ class ScopedManaActivationPlanner(private val services: EngineServices, private 
         is AbilityCost.Composite -> cost.costs.isNotEmpty() && cost.costs.all(::supportedCost) && cost.costs.any(::safeCost)
         is AbilityCost.Atom -> when (val atom = cost.atom) {
             is CostAtom.Mana -> atom.cost.hasX || atom.cost.cmc > 0
-            is CostAtom.PayLife -> atom.amount > 0
+            // A state-priced life cost (War Room) isn't a fixed resource to plan repeats over.
+            is CostAtom.PayLife -> (atom.fixedAmount ?: 0) > 0
             is CostAtom.RemoveCounters -> atom.self && atom.counterType != null &&
                 ((atom.count as? DynamicAmount.Fixed)?.amount?.let { it > 0 } == true ||
                     atom.count is DynamicAmount.XValue)
             is CostAtom.Sacrifice -> atom.count > 0
             is CostAtom.ExileFrom -> atom.zone == Zone.GRAVEYARD && atom.count > 0
-            is CostAtom.TapPermanents -> atom.count > 0
+            // Untapping is no consumed resource — repeated activations could loop on it.
+            is CostAtom.TapPermanents -> atom.count > 0 && !atom.untaps
             is CostAtom.VariablePermanents -> atom.minCount > 0 || atom.minMeasure > 0
             else -> false
         }
@@ -286,7 +380,7 @@ class ScopedManaActivationPlanner(private val services: EngineServices, private 
         is AbilityCost.Composite -> cost.costs.all(::supportedCost)
         is AbilityCost.Atom -> when (val atom = cost.atom) {
             is CostAtom.Mana -> true
-            is CostAtom.PayLife -> atom.amount >= 0
+            is CostAtom.PayLife -> atom.fixedAmount != null
             else -> safeCost(cost)
         }
         else -> safeCost(cost)

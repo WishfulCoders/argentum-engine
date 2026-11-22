@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
 /**
- * `MayCastFromGraveyard(playLands = true, gainsAbility = …)` — the "play a land or cast a spell
+ * `MayCastFromGraveyard(playsLands = true, grantedAbilityOnEntry = …)` — the "play a land or cast a spell
  * from your graveyard" grant and its "if you do, it gains '…'" rider, proven on an inline granter
  * shaped like Serra Paragon:
  *
@@ -53,8 +53,8 @@ class GraveyardPlayGrantScenarioTest : FunSpec({
                 filter = GameObjectFilter.Permanent.manaValueAtMost(3),
                 duringYourTurnOnly = true,
                 oncePerTurn = true,
-                playLands = true,
-                gainsAbility = TriggeredAbility.create(
+                playsLands = true,
+                grantedAbilityOnEntry = TriggeredAbility.create(
                     trigger = Triggers.self.dies(),
                     effect = Effects.Exile(EffectTarget.Self) then Effects.GainLife(2),
                 ),

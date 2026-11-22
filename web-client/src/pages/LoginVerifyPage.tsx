@@ -3,10 +3,11 @@
  * stores it, and bounces home. Shown only briefly; renders an error with a retry path on failure.
  */
 import { useEffect, useRef, useState } from 'react'
-import type React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { verifyLogin } from '@/api/account'
 import { useAuthStore } from '@/store/authStore'
+import { AccountPage, MessageCard, accountStyles as a } from '@/components/profile/accountUi'
+import { pageStyles as p } from '@/components/ui/PageShell'
 
 export function LoginVerifyPage() {
   const [searchParams] = useSearchParams()
@@ -32,56 +33,25 @@ export function LoginVerifyPage() {
   }, [searchParams, navigate, setSession])
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.card}>
+    <AccountPage title="Sign in" width="narrow">
+      <MessageCard center>
         {error ? (
           <>
-            <h2 style={styles.title}>Sign-in failed</h2>
-            <p style={styles.text}>{error}</p>
-            <button type="button" style={styles.button} onClick={() => navigate('/', { replace: true })}>
+            <h1 className={p.h1}>Sign-in failed</h1>
+            <p className={a.muted}>{error}</p>
+            <p className={a.muted}>Request a fresh link and use it soon — each one works only once.</p>
+            <button type="button" className={p.buttonPrimary} onClick={() => navigate('/', { replace: true })}>
               Back home
             </button>
           </>
         ) : (
           <>
-            <h2 style={styles.title}>Signing you in…</h2>
-            <p style={styles.text}>One moment.</p>
+            <span className={a.spinner} aria-hidden />
+            <h1 className={p.h1}>Signing you in…</h1>
+            <p className={a.muted}>One moment.</p>
           </>
         )}
-      </div>
-    </div>
+      </MessageCard>
+    </AccountPage>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  wrap: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0a0a15',
-    padding: 16,
-  },
-  card: {
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #2a2a3e',
-    borderRadius: 16,
-    padding: 32,
-    maxWidth: 380,
-    textAlign: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-  },
-  title: { margin: 0, color: '#fff', fontSize: 22 },
-  text: { margin: 0, color: '#aaa', fontSize: 14 },
-  button: {
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
 }

@@ -45,7 +45,7 @@ class RollDieExecutor(
         val event = DieRolledEvent(
             playerId = context.controllerId,
             sides = effect.sides,
-            naturalResult = natural,
+            natural = natural,
             result = result,
             sourceId = context.sourceId ?: context.controllerId,
             sourceName = sourceName

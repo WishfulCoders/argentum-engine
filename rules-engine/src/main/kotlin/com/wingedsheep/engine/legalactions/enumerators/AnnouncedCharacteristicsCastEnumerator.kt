@@ -12,6 +12,7 @@ import com.wingedsheep.engine.legalactions.EnumerationContext
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.mechanics.BestowCasts
 import com.wingedsheep.engine.mechanics.CastCharacteristics
+import com.wingedsheep.engine.mechanics.MutateCasts
 import com.wingedsheep.engine.mechanics.PrototypeCasts
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.EntityId
@@ -29,7 +30,8 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 
 /**
  * A way to cast a card announced with characteristics other than its printed ones — bestow's Aura
- * (CR 702.103) or prototype's cost and size (CR 718.3). The announced characteristics decide
+ * (CR 702.103), a mutating creature spell's target (CR 702.140a) or prototype's cost and size
+ * (CR 718.3). The announced characteristics decide
  * every cost, payment and timing check, through [CastCharacteristics].
  */
 enum class CharacteristicsAnnouncement(val actionType: String) {
@@ -39,6 +41,13 @@ enum class CharacteristicsAnnouncement(val actionType: String) {
             CastSpell(player, card, useAlternativeCost = true, alternativeCostType = AlternativeCostType.BESTOW)
         override val targets = listOf(BestowCasts.enchantCreature)
         override fun description(printed: CardDefinition, card: CardComponent) = "Bestow ${card.name}"
+    },
+    MUTATE("CastWithAlternativeCost") {
+        override fun offers(printed: CardDefinition) = MutateCasts.mutateOf(printed) != null
+        override fun action(player: EntityId, card: EntityId) =
+            CastSpell(player, card, useAlternativeCost = true, alternativeCostType = AlternativeCostType.MUTATE)
+        override val targets = listOf<TargetRequirement>(MutateCasts.target)
+        override fun description(printed: CardDefinition, card: CardComponent) = "Mutate ${card.name}"
     },
     PROTOTYPE("CastSpell") {
         override fun offers(printed: CardDefinition) = PrototypeCasts.prototypeOf(printed) != null
@@ -90,7 +99,7 @@ class AnnouncedCharacteristicsCastEnumerator(private val kind: CharacteristicsAn
                 if (context.castPermissionUtils.reasonCannotCast(state, player, id) != null) continue
                 if (zones.hasPlayWithoutPayingCost(state, player, id) ||
                     state.getEntity(id)?.has<com.wingedsheep.engine.state.components.identity.PlayWithFixedAlternativeManaCostComponent>() == true) continue
-                if (Keyword.FLASH !in def.keywords && !zones.hasGrantedFlash(state, id) && !context.canPlaySorcerySpeed) continue
+                if (Keyword.FLASH !in def.keywords && !zones.hasGrantedFlash(state, id, player) && !context.canPlaySorcerySpeed) continue
                 if (!context.legality.castRestrictionsMet(state, player, def.script.castRestrictions)) continue
 
                 val totals = CastCostTotaller(context.cardRegistry, context.costCalculator,
@@ -100,10 +109,15 @@ class AnnouncedCharacteristicsCastEnumerator(private val kind: CharacteristicsAn
                 val paymentContext = com.wingedsheep.engine.mechanics.mana.SpellPaymentContext(
                     isCreature = card.typeLine.isCreature, isLegendary = card.typeLine.isLegendary,
                     manaValue = card.manaCost.cmc, hasXInCost = card.manaCost.hasX,
-                    isColorless = card.colors.isEmpty(),
+                    costSymbols = card.manaCost.symbols.toSet(),
+                    isColorless = state.projectedState.colorSetOf(id).isEmpty(),
+                    colorCount = state.projectedState.colorSetOf(id).size,
+                    colors = state.projectedState.colorSetOf(id),
                     subtypes = card.typeLine.subtypes.mapTo(mutableSetOf()) { it.value }, cardTypes = card.typeLine.cardTypes,
                     isFromHand = inHand,
-                    isFromExile = state.turnOrder.any { id in state.getZone(ZoneKey(it, Zone.EXILE)) }
+                    isFromExile = state.turnOrder.any { id in state.getZone(ZoneKey(it, Zone.EXILE)) },
+                    isFromGraveyard = id in state.getZone(ZoneKey(player, Zone.GRAVEYARD)),
+                    keywords = card.baseKeywords,
                 )
                 fun hasKeyword(keyword: Keyword) =
                     context.grantedKeywordResolver.hasKeyword(state, player, def, keyword, id)

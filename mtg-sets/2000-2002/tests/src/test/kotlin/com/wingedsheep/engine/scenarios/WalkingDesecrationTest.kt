@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.state.components.combat.AttackingComponent
+import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.DeclareAttackers
@@ -184,16 +186,12 @@ class WalkingDesecrationTest : FunSpec({
             driver.state.updateEntity(bear) { it.with(MustAttackThisTurnComponent) }
         )
 
-        // Advance to declare attackers
+        // Advance to declare attackers. With no creature able to attack, the engine makes the
+        // empty declaration itself — the must-attack requirement doesn't reject it.
+        val turn = driver.state.turnNumber
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-
-        // Declaring no attackers should succeed (creature can't attack due to sickness)
-        val result = driver.submit(
-            DeclareAttackers(
-                playerId = activePlayer,
-                attackers = emptyMap()
-            )
-        )
-        result.outcome shouldBe Outcome.Done
+        driver.state.turnNumber shouldBe turn
+        driver.state.getEntity(activePlayer)?.has<AttackersDeclaredThisCombatComponent>() shouldBe true
+        driver.state.getEntity(bear)?.has<AttackingComponent>() shouldBe false
     }
 })

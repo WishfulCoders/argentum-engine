@@ -478,6 +478,10 @@ explore/    the browser UI — a loopback HTTP server over the live grammar and 
 cli/        assay parse | explain | compile | gate | report | differential | explore | corpus
 ```
 
+`syntax/`, `grammar/`, `normalize/` and `compile/` (plus `mtg-sdk` and the card validator) are also
+compiled to Kotlin/Wasm by the standalone browser checker in [`browser/`](browser/README.md). Keep
+them free of JVM-only APIs; the `assay-wasm` CI job fails when one slips in.
+
 ## The three things that make this different
 
 **The grammar runs backwards.** A rule registers `build` (text→model) and `match` (model→text)
@@ -1109,7 +1113,7 @@ control** this turn" (Denethor, Faramir, Sméagol, Barrensteppe Siege). Each pri
 whole condition with a facade of its own, so the band is two `constant` rows beside the life-state
 conditions, and every position that slots `Conditions` read them at once: intervening-ifs, "Activate
 only if", "… instead if", and "This spell costs {3} less to cast if". The subtype-filtered spellings
-("if a Zombie died this turn") build `CreatureWithSubtypeDiedThisTurn` and stay out of this band.
+("if a Zombie died this turn") build `CreatureDiedThisTurnMatching` and stay out of this band.
 
 ### What the differential found
 
@@ -1805,7 +1809,7 @@ families behind four cards are worth a hundred and forty.
 
 **Mill was not in the grammar at all.** `Patterns.Library.mill` had a reader in `Amounts` for
 Dreamborn Muse's "that player mills X cards, where X is …" and `Costs` knew it as a cost atom, but
-the plain effect clause — "Mill two cards." — had no rule, so 93 cards were blocked on CR 701.13's
+the plain effect clause — "Mill two cards." — had no rule, so 93 cards were blocked on CR 701.17's
 one-word verb. It is this file's pipeline with the middle taken out (a gather and one move, no
 selection and no second pile), which is why it reads as a family beside the look/keep/rest layers
 rather than a row inside them; the miller is a template per row for `Hand`'s reason, and
@@ -1852,7 +1856,7 @@ Sandbender Scavengers, plus Unlucky Cabbage Merchant and Lightless Evangel that 
 outside the compared set. CR 603.2c makes the singular wording per-permanent: sacrificing two Blood
 tokens to one cost is two triggers and two life, and the batch spec paid once. The other three:
 Falkenrath Forebear's "return this card **from your graveyard**" had lost its `fromZone` guard,
-Mysterio's Phantasm hand-built the mill pipeline and lost `isMill` with it (so CR 701.13's "mills
+Mysterio's Phantasm hand-built the mill pipeline and lost `isMill` with it (so CR 701.17's "mills
 that many plus four instead" could not see it), and Angel's Tomb wrote `addTypes = CREATURE` — a
 type `BecomeCreature` adds anyway — where the printed word is "artifact".
 
@@ -3193,7 +3197,8 @@ token with decayed" is a keyword on the token per CR 702.147, so the grammar rea
 attack-sacrifice trigger only off `CounterType.DECAYED`, so the keyword alone is inert and the card
 writes `initialCounters = {decayed: 1}`. The card's spelling is the one that *works* and the
 grammar's is the one the text states; neither is right to change on its own, so the gap is reported.
-Same shape as the display-only keywords the report's bottom table already ranks.
+Same shape as the display-only keywords the report's bottom table already ranks. *(Closed since: the engine now
+realizes Decayed off the projected keyword, and the card writes `keywords = [DECAYED]`.)*
 
 ## The fronted duration
 
@@ -3536,7 +3541,7 @@ So the quantifier is a **row**, a rule that uses it is a *family* of rules, and
 The rows are exhaustive over the *printed* forms rather than over the SDK's fields. "One or two target
 creatures" is a `minCount` below its `count` and is a seventh row nobody has needed yet
 (`Combat.returnOneOrTwoTargets` still spells it whole); "target creature an opponent controls" is a
-filter, not a quantifier; a `sameController` or a `totalManaValueAtMost` is a rider on the noun phrase
+filter, not a quantifier; a `sameController` or a `totalAtMost` is a rider on the noun phrase
 and belongs to a layer above the list, exactly as `Filters`' controller clause does.
 
 ### `plural` is one column with two consequences
@@ -4053,7 +4058,7 @@ The riders are rows with a genuinely **empty** surface, which is the whole point
 as required template text is precisely the shape that put 19 bare "…to the battlefield." lines in
 [the final period](#the-final-period). The counter rider is the corpus's spelling and not the SDK's
 shorter one — eight cards write `Composite(move, AddCounters(…, Self))` and none writes
-`MoveToZoneEffect.addCounterType`, which holds one counter where the sentence can print several.
+`MoveToZoneEffect.entryCounters` for this sentence.
 
 And a row **declares which riders it takes**. "To your hand" is never printed tapped and never lands
 with counters, so it is offered neither; the library row fixes its own `ZonePlacement.Top` instead.
@@ -5070,9 +5075,9 @@ the corpus's 205 restriction sentences**. What blocks the rest is mostly not thi
 - **contexts with no SDK atom** — "on costs that contain {X}" (4 lines, and Rosheen Meanderer is a
   card people play), "a multicolored spell" (4 cards), "a colorless spell", "spells from your
   graveyard", "your commander";
-- **the chosen type** (5 lines) — a different *effect*, `AddAnyColorManaSpendOnChosenTypeEffect`, which
-  mints its restriction at resolution from the source's `CastChoicesComponent`, so the whole two-sentence
-  span is one rule rather than a restriction slot;
+- **the chosen type** (5 lines) — now a restriction atom, `ManaRestriction.OfChosenType(creatureOnly)`,
+  that the engine binds to the source's chosen type when the mana is made, so it can fill the ordinary
+  restriction slot (and an `AnyOf`) — no grammar rule reads it yet;
 - **`creatureOnly` on a printed subtype** — "cast Dragon creature spells", "an Elf creature spell". The
   field exists on `SubtypeSpellsOrAbilitiesOnly`, but every hand-written user of it is a chosen-type
   card whose printed wording is "a creature spell of the chosen type", so reading a *named* subtype onto
@@ -5633,7 +5638,7 @@ Tail keys "you draw a …" and "opponent draws a …". The grammar read the ordi
 the every-draw one it is the sibling of: `Triggers.<player>.draws()` is `DrawEvent`, the drawer is a
 row for the reason it is one in the ordinal rule, and the payoff is the same source cascade because a
 draw names no object (CR 121.2). Orcish Bowmasters' "except the first one they draw in each of their
-draw steps" is the event's `exceptFirstInDrawStep` flag and its own row, since only the opponent's
+draw steps" is the event's `firstInDrawStep = EXCLUDED` scope and its own row, since only the opponent's
 surface prints it. One row joins the life vocabulary — "that player loses {n} life", the drawer as
 `Player.TriggeringPlayer`, as the hand-written cards spell it.
 
@@ -6049,7 +6054,7 @@ of them was added after the gate was caught claiming a check nobody had performe
 | The text is the **same text** | A golden carries the wording it was authored from; if that is not what Scryfall serves, Assay is reading one card and diffing another. Compared normalized, so inconsistently-included reminder text is not a difference. |
 | The definition uses only **modelled slots** | A keyword the SDK lowers to a triggered ability at authoring time leaves content the grammar cannot produce. Confirming it would claim a check nobody performed. |
 | The lines **fold into one card** | A `CardScript` has one `spellEffect`; a card printing two effect paragraphs means a sequence the grammar has no rule for. Neither keeping the first nor concatenating them is honest, so it is counted. |
-| The card has no **unread abilities** | A keyword the SDK lowers at authoring time puts an ability in the script that no text line prints — prowess, provoke, rampage, training and mobilize become triggers; cycling, equip, morph and level up become activated abilities. A card carrying more of either than Assay read is carrying content nobody printed. One-directional: *Assay* having more would mean the grammar invented an ability, and that must diverge loudly. |
+| The card has no **unread abilities** | A keyword the SDK lowers at authoring time puts an ability in the script that no text line prints — prowess, provoke, training and mobilize become triggers; cycling, equip, morph and level up become activated abilities. A card carrying more of either than Assay read is carrying content nobody printed. One-directional: *Assay* having more would mean the grammar invented an ability, and that must diverge loudly. |
 
 A divergence never fails the build — it is a finding to classify as **parser bug**, **card bug**, or
 **fold**. Only an undecodable golden exits non-zero. The fold list lives in `gate/Differential.kt`
@@ -6409,6 +6414,41 @@ on the *first request*, so a server nobody opens it on fetches nothing. Where `~
 does not exist, that first sweep downloads the bulk; where it cannot, the page stays up with its
 live parser and rule tree and reports the failure. The differential needs `mtg-sets` test resources
 and so answers "no goldens found" off a bootJar — one page degraded, the rest intact.
+
+### What the engine AI reads
+
+Inside the app, each card page also has an **AI reading** panel: what the engine AI's static card
+readers (target polarity, card intent, combat reach, end-of-turn timing, the escalate picker)
+understand of each of the card's abilities — the corpus audit of
+[`docs/ai/reading-audit.md`](../docs/ai/reading-audit.md), placed. Each spell, triggered and
+activated ability is a row marked read (✓) or with gaps (✕); each finding names its reader, the
+target slot or the step of the effect it is about, a plain-English reason ("target 1: can't tell if
+this helps or hurts"), and the SDK effect type for a developer. A chip beside the card's title sums
+it up ("AI reads 3/4 abilities") and jumps to the panel. The card list gains an AI column and an
+**AI gaps** filter.
+
+Which definition is read: the engine's own (the live registry), else the hand-written golden, else —
+for a card nobody has implemented — Assay's whole-card [`CardCompiler`] output, labelled a
+**preview** of what the AI would understand if the card were written the way Assay reads it.
+
+This module cannot compute any of that: the readers live in `:ai`, which depends on the engine, and
+`:oracle-assay` depends on the SDK alone. So `explore/AiReading.kt` declares an
+`AiReadingProvider` interface and the views the page renders, `ExploreApi` takes one optionally, and
+`game-server` passes its implementation (`AiReadingService`) when it mounts the explorer. Standalone
+`just assay-explore` passes none, and the panel says the AI reading needs the game server.
+
+Beside it, **How the AI rates it** draws the numbers the AI puts on the card, from the same provider
+(`AiReadingProvider.rate`, answered by `AiCardRating` in `:ai`):
+
+- **Draft & deckbuilding** — the 0–5 limited pick rating on a gauge banded by the scorer's cutoffs,
+  where it came from (17Lands, a pick table, or the effect heuristic — called out as "No draft rating"
+  when nothing rates the card), the draft scorer's starting number per set the card is in, and the
+  heuristic as a waterfall: base, each keyword, each ability, rarity and curve.
+- **In play** — the evaluator's board value on an empty battlefield, on a scale ticked with familiar
+  cards, broken into stats and keywords (a creature) or the prior rung that priced it (any other
+  permanent), and the intent tags the AI's timing and targeting policies read.
+
+`just ai-card "<name>|<name>"` prints both panels' answers in the terminal.
 
 ## The verdict ledger
 

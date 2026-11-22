@@ -26,7 +26,7 @@ class RemoveCountersExecutor(
         effect: RemoveCountersEffect,
         context: EffectContext
     ): EffectResult {
-        val targetId = context.resolveTarget(effect.target)
+        val targetId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid target for counter removal")
 
         val counterType = effect.counterType
@@ -46,11 +46,12 @@ class RemoveCountersExecutor(
             container.with(current.withRemoved(counterType, removed))
         }
 
-        val entityName = state.getEntity(targetId)?.get<CardComponent>()?.name ?: ""
+        val entityName = state.getEntity(targetId)?.get<CardComponent>()?.name
+            ?: state.getEntity(targetId)?.get<com.wingedsheep.engine.state.components.identity.PlayerComponent>()?.name.orEmpty()
 
         return EffectResult.success(
             newState,
-            listOf(CountersRemovedEvent(targetId, effect.counterType, removed, entityName))
+            listOf(CountersRemovedEvent(targetId, effect.counterType, removed, entityName, removedBy = context.controllerId))
         )
     }
 }

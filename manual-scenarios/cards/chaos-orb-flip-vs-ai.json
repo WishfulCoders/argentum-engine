@@ -1,0 +1,44 @@
+{
+  "player1Name": "You",
+  "player2Name": "AI",
+  "mode": "AI",
+  "aiPlayer": 2,
+  "player1": {
+    "lifeTotal": 20,
+    "hand": [],
+    "battlefield": [
+      {"name": "Chaos Orb"},
+      {"name": "Shivan Dragon"},
+      {"name": "Serra Angel"},
+      {"name": "Grizzly Bears"},
+      {"name": "Island"},
+      {"name": "Mountain"},
+      {"name": "Plains"}
+    ],
+    "graveyard": [],
+    "library": ["Island", "Island", "Island", "Island", "Island"]
+  },
+  "player2": {
+    "lifeTotal": 20,
+    "hand": [],
+    "battlefield": [
+      {"name": "Chaos Orb"},
+      {"name": "Hill Giant"},
+      {"name": "Holy Strength", "attachedTo": "Hill Giant"},
+      {"name": "Craw Wurm"},
+      {"name": "Sol Ring"},
+      {"name": "Island"},
+      {"name": "Forest"},
+      {"name": "Forest"}
+    ],
+    "graveyard": [],
+    "library": ["Forest", "Forest", "Forest", "Forest", "Forest"]
+  },
+  "phase": "PRECOMBAT_MAIN",
+  "activePlayer": 2,
+  "priorityPlayer": 2,
+  "player1StopAtSteps": [],
+  "player2StopAtSteps": [],
+  "player1OpponentStopAtSteps": [],
+  "player2OpponentStopAtSteps": []
+}

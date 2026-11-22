@@ -13,7 +13,7 @@ val VictimizeReprint = Printing(
     collectorNumber = "133",
     scryfallId = "bfc8a06c-2efb-468e-b39c-1a897acd8504",
     artist = "Craig J Spearing",
-    imageUri = "https://cards.scryfall.io/normal/front/b/f/bfc8a06c-2efb-468e-b39c-1a897acd8504.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/f/bfc8a06c-2efb-468e-b39c-1a897acd8504.jpg?1783939351",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

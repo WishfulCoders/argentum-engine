@@ -31,7 +31,7 @@ data class ChooseColorThenContinuation(
  * The resumer stamps the chosen number onto [baseContext] as the X value and dispatches
  * [then] through the standard effect runner, so any composition of atomic effects and
  * filters can read it via `EffectContext.xValue` /
- * [com.wingedsheep.sdk.scripting.predicates.CardPredicate.ManaValueEqualsX] (Void).
+ * `manaValueEqualsX()` (Void).
  */
 @Serializable
 data class ChooseNumberThenContinuation(
@@ -58,15 +58,18 @@ data class ChooseManaColorContinuation(
 
 /**
  * One pending "additional one mana of any color" bonus from a [com.wingedsheep.sdk.scripting.AdditionalManaOnTap]
- * aura with `anyColor = true` (Fertile Ground). [amount] is the resolved bonus size (already
- * evaluated from the aura's dynamic amount at tap time), [controllerId] is the land controller who
+ * aura with `anyColor = true` (Fertile Ground, Market Festival). [amount] is the units of the bonus
+ * still to be colored (evaluated from the aura's dynamic amount at tap time; each unit is chosen
+ * independently, so a two-mana bonus resumes with `amount = 1` after its first pick), [controllerId] is the land controller who
  * gets the mana and chooses the color, and [auraId] is the aura source (for events/messages).
  */
 @Serializable
 data class AnyColorTapBonus(
     val auraId: EntityId,
     val controllerId: EntityId,
-    val amount: Int
+    val amount: Int,
+    /** The bonus's full size at tap time, so a multi-unit prompt can say which unit it is asking for. */
+    val total: Int = amount
 )
 
 /**
@@ -74,7 +77,8 @@ data class AnyColorTapBonus(
  * fires when a land they control is tapped for mana (Fertile Ground). These bonuses resolve as
  * triggered mana abilities (off-stack) but still require a per-tap color choice; this continuation
  * adds the chosen-color mana for [current], then drives the [remaining] bonuses (which may pause
- * again for their own color choice).
+ * again for their own color choice). A multi-unit [current] adds one unit per answer and asks again
+ * for the rest ("two mana in any combination of colors").
  */
 @Serializable
 data class ChooseAnyColorTapBonusContinuation(
@@ -194,7 +198,7 @@ data class ChooseColorOrColorlessForProtectionContinuation(
  * Resume after a player chose a creature type for "each player chooses a creature type" effects.
  *
  * Each player (in APNAP order) chooses a creature type. After all players have chosen,
- * the accumulated chosen types are stored in the EffectContinuation below via storedStringLists[storeAs].
+ * the accumulated chosen types are stored in the EffectProgram below via storedStringLists[storeAs].
  *
  * @property sourceId The spell that created this effect
  * @property sourceName Name of the source for display
@@ -243,4 +247,24 @@ data class CastWithCreatureTypeContinuation(
     val targetRequirements: List<TargetRequirement> = emptyList(),
     val count: Int,
     val creatureTypes: List<String>
+) : AnswerContinuation
+
+/**
+ * Resume a [com.wingedsheep.sdk.scripting.effects.VoteEffect] after [currentPlayerId] voted.
+ *
+ * @property choices The vote's choices, in printed order — the decision's options
+ * @property remainingVoters Players still to vote, in turn order
+ * @property tallies Votes cast so far, per choice
+ * @property voteCounts Pipeline number name → the choice it tallies
+ */
+@Serializable
+data class VoteContinuation(
+    val sourceId: EntityId?,
+    val sourceName: String?,
+    val currentPlayerId: EntityId,
+    val remainingVoters: List<EntityId>,
+    val choices: List<String>,
+    val tallies: Map<String, Int>,
+    val voteCounts: Map<String, String>,
+    val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation

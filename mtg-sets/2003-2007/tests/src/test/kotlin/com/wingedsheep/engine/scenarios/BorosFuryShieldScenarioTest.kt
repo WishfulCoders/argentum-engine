@@ -35,10 +35,7 @@ class BorosFuryShieldScenarioTest : FunSpec({
         val bears = driver.putCreatureOnBattlefield(attacker, "Grizzly Bears")
         driver.removeSummoningSickness(bears)
 
-        driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        if (driver.activePlayer != attacker) {
-            driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        }
+        driver.passPriorityUntil(Step.DECLARE_ATTACKERS, attacker)
         driver.declareAttackers(attacker, listOf(bears), defender)
         // The attacking player holds priority after attackers are declared; hand it to the
         // defender so the shield can be cast in the declare-attackers step.

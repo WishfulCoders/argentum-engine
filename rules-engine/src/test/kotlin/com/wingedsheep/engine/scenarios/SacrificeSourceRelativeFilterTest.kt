@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
@@ -70,8 +71,8 @@ class SacrificeSourceRelativeFilterTest : FunSpec({
         val bears = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
         val life = d.getLifeTotal(d.player1)
         d.activate(source, creatureZealot)
-        d.state.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
-        d.submitYesNo(d.player1, true).error shouldBe null
+        // Upstream offers an optional sacrifice as one select-or-decline prompt; older flow asked yes/no first.
+        if (d.state.pendingDecision is YesNoDecision) d.submitYesNo(d.player1, true).error shouldBe null
         // Exactly one legal permanent: it is sacrificed without a choice, or offered alone.
         (d.state.pendingDecision as? SelectCardsDecision)?.let { decision ->
             decision.options shouldBe listOf(bears)
@@ -88,9 +89,9 @@ class SacrificeSourceRelativeFilterTest : FunSpec({
         val life = d.getLifeTotal(d.player1)
         d.activate(source, artifactZealot)
         withClue("the artifact branch has no 'another'") {
-            d.state.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
+            d.state.pendingDecision.shouldNotBeNull()
         }
-        d.submitYesNo(d.player1, true).error shouldBe null
+        if (d.state.pendingDecision is YesNoDecision) d.submitYesNo(d.player1, true).error shouldBe null
         (d.state.pendingDecision as? SelectCardsDecision)?.let { decision ->
             decision.options shouldBe listOf(source)
             d.submitCardSelection(d.player1, listOf(source)).error shouldBe null

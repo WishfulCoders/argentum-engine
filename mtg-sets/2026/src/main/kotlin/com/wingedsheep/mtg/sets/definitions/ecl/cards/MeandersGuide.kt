@@ -32,7 +32,9 @@ val MeandersGuide = card("Meanders Guide") {
                             .withSubtype("Merfolk")
                             .untapped()
                             .other()
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose another untapped Merfolk you control to tap"
                 )
                 run(Effects.Tap(merfolkToTap.asTarget))
             },

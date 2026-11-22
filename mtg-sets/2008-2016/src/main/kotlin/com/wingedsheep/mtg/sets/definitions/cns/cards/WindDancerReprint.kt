@@ -13,7 +13,7 @@ val WindDancerReprint = Printing(
     collectorNumber = "111",
     scryfallId = "3d7143e2-fa87-4196-b22c-6893571bf40d",
     artist = "Cynthia Sheppard",
-    imageUri = "https://cards.scryfall.io/normal/front/3/d/3d7143e2-fa87-4196-b22c-6893571bf40d.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/3/d/3d7143e2-fa87-4196-b22c-6893571bf40d.jpg?1783939356",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

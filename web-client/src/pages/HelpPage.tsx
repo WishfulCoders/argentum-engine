@@ -1,6 +1,7 @@
 /**
- * `/help` — the full guide. Deep-linkable as `/help/<section>#<topic-id>`, which is what every
- * inline {@link HelpTip}'s "Read more" points at.
+ * `/help` — the Argentum wiki. Deep-linkable as `/help/<section>#<topic-id>`, which is what every
+ * inline {@link HelpTip}'s "Read more" points at. Bare `/help` is the wiki's front page: every
+ * section with its full topic list, a "start here" row, and an A–Z index of every topic.
  *
  * Content comes entirely from `src/help/topics.ts`; this file is layout only. What it adds on top
  * of rendering a section is the three things a 40-topic guide needs to be usable: a search box that
@@ -8,9 +9,11 @@
  * links existed but there was no way to get one out of the page.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   HELP_SECTIONS,
+  HELP_TOPICS,
+  START_HERE_TOPIC_IDS,
   topicsInSection,
   topicById,
   searchTopics,
@@ -20,9 +23,8 @@ import {
   type HelpTopic,
 } from '@/help/topics'
 import { HelpTopicView } from '@/components/help/HelpTopicView'
+import { PageShell, pageStyles } from '@/components/ui/PageShell'
 import styles from './HelpPage.module.css'
-
-const DEFAULT_SECTION: HelpSection = 'getting-started'
 
 /** How long a topic stays ringed after being jumped to, so you can see where you landed. */
 const HIGHLIGHT_MS = 2200
@@ -34,8 +36,8 @@ function isSection(value: string | undefined): value is HelpSection {
 export function HelpPage() {
   const { section: sectionParam } = useParams<{ section?: string }>()
   const navigate = useNavigate()
-  const section: HelpSection = isSection(sectionParam) ? sectionParam : DEFAULT_SECTION
-  const meta = sectionMeta(section)
+  // No (valid) section in the URL is the wiki's front page.
+  const section: HelpSection | null = isSection(sectionParam) ? sectionParam : null
 
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -45,12 +47,15 @@ export function HelpPage() {
 
   const trimmed = query.trim()
   const results = useMemo(() => (trimmed ? searchTopics(trimmed) : null), [trimmed])
-  const sectionTopics = useMemo(() => topicsInSection(section), [section])
+  const sectionTopics = useMemo(() => (section ? topicsInSection(section) : []), [section])
   const topics = results ?? sectionTopics
+  const isHome = !results && section === null
 
-  const index = HELP_SECTIONS.findIndex((s) => s.id === section)
+  const index = section ? HELP_SECTIONS.findIndex((s) => s.id === section) : -1
   const previous = index > 0 ? HELP_SECTIONS[index - 1] : undefined
-  const next = index < HELP_SECTIONS.length - 1 ? HELP_SECTIONS[index + 1] : undefined
+  const next = section === null
+    ? HELP_SECTIONS[0]
+    : index < HELP_SECTIONS.length - 1 ? HELP_SECTIONS[index + 1] : undefined
 
   /** Ring a topic for a moment after scrolling to it, then let it fade back. */
   const flag = useCallback((id: string) => {
@@ -104,67 +109,77 @@ export function HelpPage() {
     scrollToTopic(id)
   }, [navigate, scrollToTopic])
 
-  const goToSection = (id: HelpSection) => {
+  const goToSection = (id: HelpSection | null) => {
     setQuery('')
-    navigate(`/help/${id}`)
+    navigate(id ? `/help/${id}` : '/help')
     pageRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const searchBox = (
+    <div className={styles.searchBox}>
+      <svg className={styles.searchIcon} viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M10.5 10.5 L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <input
+        ref={searchRef}
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search the guide"
+        aria-label="Search help topics"
+        className={styles.searchInput}
+      />
+      {trimmed
+        ? (
+          <button
+            type="button"
+            className={styles.searchClear}
+            onClick={() => { setQuery(''); searchRef.current?.focus() }}
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+          )
+        : <kbd className={styles.searchHint}>/</kbd>}
+    </div>
+  )
+
   return (
     <div className={styles.page} ref={pageRef}>
-      <div className={styles.topBar}>
-        <div className={styles.topBarInner}>
-          <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
-            ← Menu
-          </button>
-          <span className={styles.topBarTitle}>Argentum Help</span>
-          <div className={styles.searchBox}>
-            <svg className={styles.searchIcon} viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10.5 10.5 L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search the guide"
-              aria-label="Search help topics"
-              className={styles.searchInput}
-            />
-            {trimmed
-              ? (
-                <button
-                  type="button"
-                  className={styles.searchClear}
-                  onClick={() => { setQuery(''); searchRef.current?.focus() }}
-                  aria-label="Clear search"
-                >
-                  ✕
-                </button>
-                )
-              : <kbd className={styles.searchHint}>/</kbd>}
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.body}>
+      <PageShell title="Help" width="normal">
         <header className={styles.header}>
-          <h1 className={styles.title}>Help</h1>
-          <p className={styles.subtitle}>
-            For players who know Magic and are new to Argentum. This does not teach the rules — it
-            explains what this app does with them.
+          <h1 className={pageStyles.h1}>Argentum Wiki</h1>
+          <p className={pageStyles.lede}>
+            Everything Argentum does, in one place: every way to play, every screen, every setting.
+            It assumes you know Magic — it explains what this app does with the rules, not the rules
+            themselves.{' '}
+            <Link to="/learn" className={styles.headerLink}>New to Magic? Learn to play →</Link>
           </p>
         </header>
 
         <div className={styles.layout}>
           <nav className={styles.nav} aria-label="Help sections">
+            {searchBox}
             <div className={styles.navSections}>
+              <button
+                type="button"
+                className={`${styles.navItem} ${isHome ? styles.navItemActive : ''}`}
+                aria-current={isHome ? 'page' : undefined}
+                onClick={() => goToSection(null)}
+              >
+                <span className={styles.navItemHead}>
+                  <span className={styles.navItemTitle}>Wiki home</span>
+                  <span className={styles.navItemCount}>{HELP_TOPICS.length}</span>
+                </span>
+                <span className={styles.navItemBlurb}>Every section, every topic, and an A–Z index.</span>
+              </button>
               {HELP_SECTIONS.map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   className={`${styles.navItem} ${s.id === section && !results ? styles.navItemActive : ''}`}
+                  aria-current={s.id === section && !results ? 'page' : undefined}
                   onClick={() => goToSection(s.id)}
                 >
                   <span className={styles.navItemHead}>
@@ -195,8 +210,10 @@ export function HelpPage() {
             )}
           </nav>
 
-          <main className={styles.content}>
-            {results
+          <div className={styles.content}>
+            {isHome ? <WikiHome onTopic={goToTopic} onSection={goToSection} /> : null}
+
+            {isHome ? null : results
               ? (
                 <div className={styles.sectionIntro}>
                   <h2 className={styles.sectionTitle}>
@@ -209,10 +226,10 @@ export function HelpPage() {
                   </p>
                 </div>
                 )
-              : (
+              : section && (
                 <div className={styles.sectionIntro}>
-                  <h2 className={styles.sectionTitle}>{meta.title}</h2>
-                  <p className={styles.sectionBlurb}>{meta.blurb}</p>
+                  <h2 className={styles.sectionTitle}>{sectionMeta(section).title}</h2>
+                  <p className={styles.sectionBlurb}>{sectionMeta(section).blurb}</p>
                 </div>
                 )}
 
@@ -235,7 +252,7 @@ export function HelpPage() {
               ))}
             </div>
 
-            {!results && (previous || next) && (
+            {!results && (previous || next || section) && (
               <div className={styles.pager}>
                 {previous
                   ? (
@@ -244,7 +261,14 @@ export function HelpPage() {
                       <span className={styles.pagerTitle}>{previous.title}</span>
                     </button>
                     )
-                  : <span />}
+                  : section
+                    ? (
+                      <button type="button" className={styles.pagerLink} onClick={() => goToSection(null)}>
+                        <span className={styles.pagerDirection}>← Wiki home</span>
+                        <span className={styles.pagerTitle}>Contents</span>
+                      </button>
+                      )
+                    : <span />}
                 {next && (
                   <button
                     type="button"
@@ -257,11 +281,100 @@ export function HelpPage() {
                 )}
               </div>
             )}
-          </main>
+          </div>
         </div>
-      </div>
+      </PageShell>
     </div>
   )
+}
+
+/**
+ * The front page: a "start here" row, every section with its whole topic list, and an A–Z index.
+ * A wiki's contents page is the thing that tells you what exists before you know what to search for.
+ */
+function WikiHome({
+  onTopic,
+  onSection,
+}: {
+  onTopic: (id: string) => void
+  onSection: (id: HelpSection) => void
+}) {
+  const startHere = START_HERE_TOPIC_IDS.map(topicById).filter((t): t is HelpTopic => !!t)
+  const alphabetical = useMemo(
+    () => [...HELP_TOPICS].sort((a, b) => indexKey(a.title).localeCompare(indexKey(b.title))),
+    [],
+  )
+  const byLetter = useMemo(() => {
+    const groups = new Map<string, HelpTopic[]>()
+    for (const t of alphabetical) {
+      const first = indexKey(t.title).charAt(0).toUpperCase()
+      const letter = /[A-Z]/.test(first) ? first : '#'
+      groups.set(letter, [...(groups.get(letter) ?? []), t])
+    }
+    return [...groups.entries()]
+  }, [alphabetical])
+
+  return (
+    <div className={styles.home}>
+      <section className={styles.homeBlock}>
+        <h2 className={styles.sectionTitle}>Start here</h2>
+        <div className={styles.startGrid}>
+          {startHere.map((t) => (
+            <button key={t.id} type="button" className={styles.startCard} onClick={() => onTopic(t.id)}>
+              <span className={styles.startCardSection}>{sectionMeta(t.section).title}</span>
+              <span className={styles.startCardTitle}>{t.title}</span>
+              <span className={styles.startCardSummary}>{t.summary}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.homeBlock}>
+        <h2 className={styles.sectionTitle}>Contents</h2>
+        <div className={styles.contentsGrid}>
+          {HELP_SECTIONS.map((s) => (
+            <div key={s.id} className={styles.contentsCard}>
+              <button type="button" className={styles.contentsTitle} onClick={() => onSection(s.id)}>
+                {s.title}
+                <span className={styles.navItemCount}>{topicsInSection(s.id).length}</span>
+              </button>
+              <p className={styles.contentsBlurb}>{s.blurb}</p>
+              <ul className={styles.contentsList}>
+                {topicsInSection(s.id).map((t) => (
+                  <li key={t.id}>
+                    <button type="button" className={styles.onThisPageLink} onClick={() => onTopic(t.id)}>
+                      {t.title}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.homeBlock}>
+        <h2 className={styles.sectionTitle}>A–Z index</h2>
+        <div className={styles.indexGrid}>
+          {byLetter.map(([letter, group]) => (
+            <div key={letter} className={styles.indexGroup}>
+              <span className={styles.indexLetter}>{letter}</span>
+              {group.map((t) => (
+                <button key={t.id} type="button" className={styles.onThisPageLink} onClick={() => onTopic(t.id)}>
+                  {t.title}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/** Index titles by their first real word: "The deckbuilder" files under D, "⚡ Assay-ready" under A. */
+function indexKey(title: string): string {
+  return title.replace(/^[^A-Za-z0-9]+/, '').replace(/^(the|a|an)\s+/i, '')
 }
 
 /** Copies the topic's deep link. The links already worked; there was no way to obtain one. */

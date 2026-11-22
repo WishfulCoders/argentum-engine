@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.effects
 
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.scripting.AdditionalCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -43,6 +44,9 @@ data class ShuffleLibraryEffect(
  * Suppression of a literal "scry 0" (CR 701.22b) is handled by `scry()` omitting this
  * tail entirely, not here.
  *
+ * The size of [bottomCollection] captures the number chosen for the bottom, independently
+ * of any later library changes, for "that many" scry payoffs.
+ *
  * Card authors should not use this directly; it is wired into the scry primitive.
  */
 @SerialName("EmitScriedEvent")
@@ -50,7 +54,9 @@ data class ShuffleLibraryEffect(
 data class EmitScriedEventEffect(
     val gatherCollection: String = "scried",
     /** Who scried — the player whose library was looked at ("Target player scries X"). */
-    val player: Player = Player.You
+    val player: Player = Player.You,
+    /** Collection chosen for the bottom; count the choice, not the later library contents. */
+    val bottomCollection: String = "toBottom"
 ) : Effect {
     // Intentionally blank: this is an internal pipeline tail with no player-facing text.
     override val description: String = ""
@@ -138,9 +144,11 @@ data class EmitManifestedDreadEventEffect(
  * `Triggers.anOpponent.searchesLibrary()`) fire exactly once per
  * search (CR 701.23), after the found cards have moved and the library has shuffled.
  *
- * The searching player is the effect's controller at resolution time — for a per-player
- * `ForEachPlayer` search (each player searches their own library) that controller is rebound to
- * each iterated player, so the event carries the correct searcher. Searching is the act of looking
+ * The searching player is the [GatherCardsEffect.searcher] of the pipeline's search gather — the
+ * effect's controller by default, or the player an "its controller may search their library"
+ * (Sandworm) gather names. For a per-player `ForEachPlayer` search (each player searches their own
+ * library) the controller is rebound to each iterated player, so the event carries the correct
+ * searcher. With no search gather before it, it falls back to the controller. Searching is the act of looking
  * through the zone (CR 701.23a) and finding a card is not required (CR 701.23b), so the event still
  * fires when no card was found.
  *
@@ -384,11 +392,28 @@ data class ExileLibraryUntilManaValueEffect(
  * can't be skipped. The cost is stamped on the card for this one cast only and removed if the cast
  * never initiates. Mutually exclusive with [payManaCost].
  *
+ * **Paying other mana instead.** Set [alternativeManaCost] for "you may cast it by paying {1}
+ * rather than paying its mana cost" — Jadzi, Oracle of Arcavios. The fixed mana cost replaces the
+ * mana cost as an alternative cost (CR 118.9), from whatever zone the card is in (library, exile,
+ * graveyard, hand): {X} in the printed cost is 0 (CR 107.3b), cost increases and reductions still
+ * apply on top of it (CR 601.2f), and additional costs such as kicker may still be paid. It rides
+ * the same fixed-alternative-cost stamp madness and airbend use, for this one cast only, removed
+ * if the cast never initiates. A caster who can't pay simply doesn't cast it (CR 601.2h).
+ * Exclusive with [payManaCost], [alternativeCost], [castUsing] and [castFaceDown], each of which
+ * names a different price.
+ *
  * **Paying more on top.** Set [additionalManaCost] (with [payManaCost]) for "you may cast that card
  * by paying {R}{R} in addition to its other costs" — Ogre Battlecaster. It is an additional cost
  * (CR 601.2f): added to the mana cost and to every other cost increase, stamped on the card for this
  * one cast only, and removed if the cast never initiates. A caster who can't pay the total simply
  * doesn't cast it (CR 601.2h).
+ *
+ * **Paying less.** Set [costReduction] (with [payManaCost] or [alternativeManaCost]) for "you may
+ * cast it. It costs {4} less to cast this way" — Uvilda, Dean of Perfection's exiled instant or
+ * sorcery. It is a cost reduction (CR 601.2f): taken off the total after the base and every
+ * increase, generic mana only, so a colored requirement is never reduced and {X} is still chosen
+ * and paid (the card's mana value doesn't change). Stamped on the card for this one cast only and
+ * removed if the cast never initiates. A free cast has nothing to reduce, so it needs a price.
  *
  * **Casting it face down.** Set [castFaceDown] for "you may cast that card face down as a 2/2
  * creature spell without paying its mana cost" (Illusionary Mask). The spell is a face-down spell
@@ -401,6 +426,22 @@ data class ExileLibraryUntilManaValueEffect(
  * tapped, it is turned face up instead and then does so. Face-down casts take no targets, so the
  * free-cast-only shape is enforced: no [payManaCost], [castTransformed], [alternativeCost] or
  * [additionalManaCost].
+ *
+ * **Casting it using one of its own keyword costs.** Set [castUsing] (with [payManaCost]) for "you
+ * may cast it by paying [its keyword] cost rather than its mana cost" — the miracle trigger's cast
+ * (CR 702.94a, [com.wingedsheep.sdk.scripting.Miracle]). The cast announces that alternative cost
+ * (CR 118.9), so the spell is priced exactly as a cast with it from that zone would be — the keyword
+ * cost as the base, cost increases and reductions applied (CR 601.2f), {X} chosen normally — and
+ * the stack remembers how it was cast. A keyword the engine can't cast with this way casts
+ * nothing. Exclusive with [alternativeCost], [additionalManaCost], [castTransformed] and
+ * [castFaceDown], each of which names a different price or face.
+ *
+ * **Spending mana of any type.** Set [withAnyManaType] for "you may cast [it], and mana of any type
+ * can be spent to cast that spell" — Summon: Esper Valigarmanda's chapters II–IV. Every colored and
+ * colorless pip of the cost the cast owes accepts mana of any type (CR 118.14, 609.4b — the same relaxation
+ * [GrantMayPlayFromExileEffect.withAnyManaType] grants a lingering permission), for this one cast
+ * only: the rider rides the one-shot cast grant and is gone with it. It only means something when
+ * mana is paid, so it needs [payManaCost] or [alternativeManaCost].
  */
 @SerialName("CastFromCollectionWithoutPayingCost")
 @Serializable
@@ -435,8 +476,31 @@ data class CastFromCollectionWithoutPayingCostEffect(
     val castFaceDown: Boolean = false,
     /** The face-down permanent turns face up instead of dealing/being dealt damage or tapping. */
     val turnsFaceUpInstead: Boolean = false,
+    /** The keyword alternative cost the cast announces, or null — see the class KDoc. */
+    val castUsing: Keyword? = null,
+    /** The fixed mana cost paid rather than the mana cost, or null — see the class KDoc. */
+    val alternativeManaCost: ManaCost? = null,
+    /** Generic mana the cast costs less ("It costs {4} less to cast this way") — see the class KDoc. */
+    val costReduction: Int = 0,
+    /** Mana of any type can be spent to cast the spell — see the class KDoc. */
+    val withAnyManaType: Boolean = false,
 ) : Effect {
     init {
+        require(!withAnyManaType || payManaCost || alternativeManaCost != null) {
+            "withAnyManaType relaxes the mana paid; a free cast needs payManaCost or alternativeManaCost"
+        }
+        require(costReduction >= 0) { "costReduction is an amount of generic mana; it can't be negative" }
+        require(costReduction == 0 || payManaCost || alternativeManaCost != null) {
+            "costReduction reduces a price; a free cast needs payManaCost or alternativeManaCost"
+        }
+        require(alternativeManaCost == null || (!payManaCost && alternativeCost == null && castUsing == null &&
+            !castFaceDown)) {
+            "alternativeManaCost replaces the mana cost; it takes no other price"
+        }
+        require(castUsing == null || (payManaCost && alternativeCost == null && additionalManaCost == null &&
+            !castTransformed && !castFaceDown)) {
+            "castUsing names the spell's whole price and face; it needs payManaCost and no other cost or face"
+        }
         require(!castFaceDown || (!payManaCost && !castTransformed && alternativeCost == null && additionalManaCost == null)) {
             "A face-down cast is a free cast of the card's face-down 2/2; it takes no other cost or face"
         }
@@ -456,13 +520,17 @@ data class CastFromCollectionWithoutPayingCostEffect(
         if (castTransformed) append(" transformed")
         if (castFaceDown) append(" face down as a 2/2 creature spell")
         when {
+            castUsing != null -> append(" for its ${castUsing.displayName.lowercase()} cost")
             alternativeCost != null -> append(
                 " by ${alternativeCost.description.replaceFirstChar { it.lowercaseChar() }.replaceFirst("pay ", "paying ")}" +
                     " rather than paying its mana cost"
             )
+            alternativeManaCost != null -> append(" by paying $alternativeManaCost rather than paying its mana cost")
             !payManaCost -> append(" without paying its mana cost")
             additionalManaCost != null -> append(" by paying $additionalManaCost in addition to its other costs")
         }
+        if (costReduction > 0) append(". It costs {$costReduction} less to cast this way")
+        if (withAnyManaType) append(", and mana of any type can be spent to cast that spell")
         insteadOfGraveyard?.let { append(it.riderText) }
         if (turnsFaceUpInstead) {
             append(". If the creature that spell becomes as it resolves has not been turned face up and would " +
@@ -545,7 +613,7 @@ data class PlayFromCollectionWithoutPayingCostEffect(
  * once nothing fits. A free cast has X = 0 (CR 107.3b), so a card's mana value off the stack is the
  * mana value it is cast with. Like [maxCasts], it is only wired for the free form.
  *
- * @property from Name of the collection of already-exiled candidate cards.
+ * @property from Name of the collection of candidate cards (in exile, a hand or a graveyard).
  * @property payManaCost When true, each chosen card is cast paying its normal mana cost.
  * @property maxCasts Maximum number of cards that may still be cast by this loop, or `null`
  *   for no cap. A value of `0` or less makes the effect a no-op. Only meaningful alongside the
@@ -558,9 +626,32 @@ data class PlayFromCollectionWithoutPayingCostEffect(
  * normal land-play path (a special action, CR 116.2a), so it uses up that land play; it is not a
  * spell, so it spends none of a [maxCasts] / [maxTotalManaValue] budget.
  *
+ * **Where the cards may be.** The candidates are cast from wherever they sit in their owner's
+ * exile, hand or graveyard — usually exile (the cards were gathered and exiled upstream), but
+ * Invoke Calamity gathers straight from "your graveyard and/or hand" and casts from there. A card
+ * that has left those zones since it was gathered (cast, put onto the battlefield, back into a
+ * library) is dropped from the pool.
+ *
+ * **Where the spells go.** [insteadOfGraveyard] is the cast-this-way rider "If those spells would
+ * be put into your graveyard, exile them instead" (Invoke Calamity): each spell cast by this loop
+ * goes there instead of its owner's graveyard — on resolution, when countered, or when it fizzles.
+ * The same rider, under the same name, as [CastFromCollectionWithoutPayingCostEffect.insteadOfGraveyard].
+ *
+ * **Remembering what was cast.** [storeCastTo] names a pipeline collection that ends up holding
+ * every card the loop actually cast, in cast order — "then each player who owns a spell you cast
+ * this way loses life equal to its mana value" (Kefka, Dancing Mad). A pick whose cast never
+ * initiates (no legal target, CR 601.2c; a cost the caster can't pay) is not recorded, and a land
+ * played under [playLands] is not a spell, so it is not recorded either. The collection is written
+ * even when nothing is cast (empty), so a later step reads "none" rather than a missing slot.
+ * The same name and meaning as [CastFromCollectionWithoutPayingCostEffect.storeCastTo], widened to
+ * every cast of the loop.
+ *
  * @property maxTotalManaValue Remaining total-mana-value budget for the casts, or `null` for no
  *   cap. Only meaningful alongside the default `payManaCost = false`.
  * @property playLands When true, land cards in the collection may be played as lands.
+ * @property insteadOfGraveyard Where each spell cast by this loop goes instead of its owner's
+ *   graveyard, or `null` for the normal destination.
+ * @property storeCastTo Pipeline collection the loop publishes every cast card to, or `null`.
  */
 @SerialName("CastAnyNumberFromCollectionWithoutPayingCost")
 @Serializable
@@ -570,6 +661,8 @@ data class CastAnyNumberFromCollectionWithoutPayingCostEffect(
     val maxCasts: Int? = null,
     val maxTotalManaValue: Int? = null,
     val playLands: Boolean = false,
+    val insteadOfGraveyard: AfterResolveDestination? = null,
+    val storeCastTo: String? = null,
 ) : Effect {
     override val description: String = buildString {
         append(if (playLands) "Play lands and cast spells from among " else "Cast ")
@@ -582,6 +675,14 @@ data class CastAnyNumberFromCollectionWithoutPayingCostEffect(
         )
         if (maxTotalManaValue != null) append(" with total mana value $maxTotalManaValue or less")
         if (!payManaCost) append(" without paying their mana costs")
+        when (insteadOfGraveyard) {
+            AfterResolveDestination.EXILE -> append(". If those spells would be put into a graveyard, exile them instead")
+            AfterResolveDestination.BOTTOM_OF_LIBRARY ->
+                append(". If those spells would be put into a graveyard, put them on the bottom of their owners' libraries instead")
+            AfterResolveDestination.HAND ->
+                append(". If those spells would be put into a graveyard, put them into their owners' hands instead")
+            null -> {}
+        }
     }
 }
 

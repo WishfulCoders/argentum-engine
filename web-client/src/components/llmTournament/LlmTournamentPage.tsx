@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { DevPage } from '@/components/admin/DevPage'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AvailableSet } from '@/types/messages'
 import { SetSelector } from '@/components/ui/SetSelector'
@@ -169,11 +170,7 @@ export function LlmTournamentPage() {
   }
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.h1}>🏆 LLM Tournament <span style={styles.devTag}>dev</span></h1>
-        <a href="/" style={styles.homeLink}>← Home</a>
-      </header>
+    <DevPage section="Dev tools" title="LLM tournament" dev width="wide">
 
       {error && (
         <div style={styles.errorBar} onClick={() => setError(null)}>
@@ -214,7 +211,7 @@ export function LlmTournamentPage() {
           <ParticipantList tournament={tournament} />
         </>
       )}
-    </div>
+    </DevPage>
   )
 }
 
@@ -232,7 +229,7 @@ function SetupForm({
   const [sets, setSets] = useState<AvailableSet[]>([])
   const [setCode, setSetCode] = useState('')
   const [modelsText, setModelsText] = useState(PRESET_MODELS.slice(0, 4).join('\n'))
-  const [mode, setMode] = useState<'heuristic' | 'llm'>('heuristic')
+  const [mode, setMode] = useState<'draftsim' | 'llm'>('draftsim')
   const [bestOf, setBestOf] = useState(3)
   const [busy, setBusy] = useState(false)
 
@@ -286,7 +283,7 @@ function SetupForm({
 
   return (
     <div style={styles.card}>
-      <h2 style={styles.h2}>New Tournament</h2>
+      <h2 style={styles.h2}>New tournament</h2>
 
       <label style={styles.label}>Models (one per line — they are seeded top to bottom)</label>
       <textarea
@@ -323,7 +320,7 @@ function SetupForm({
           <label style={styles.label}>Deck building</label>
           <div style={styles.radioRow}>
             <label style={styles.radioLabel}>
-              <input type="radio" checked={mode === 'heuristic'} onChange={() => setMode('heuristic')} /> Heuristic
+              <input type="radio" checked={mode === 'draftsim'} onChange={() => setMode('draftsim')} /> Draftsim
             </label>
             <label style={styles.radioLabel}>
               <input type="radio" checked={mode === 'llm'} onChange={() => setMode('llm')} /> Each LLM builds
@@ -749,35 +746,16 @@ function buildStatusColor(status: string): React.CSSProperties {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    padding: '20px 28px',
-    fontFamily: 'system-ui, sans-serif',
-  },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  h1: { fontSize: 26, margin: 0, display: 'flex', alignItems: 'center', gap: 10 },
-  devTag: {
-    fontSize: 11,
-    background: '#7f1d1d',
-    color: '#fecaca',
-    padding: '2px 8px',
-    borderRadius: 999,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  homeLink: { color: '#7dd3fc', textDecoration: 'none' },
-  h2: { fontSize: 16, margin: '0 0 12px', color: '#cbd5e1' },
-  errorBar: { background: '#7f1d1d', color: '#fecaca', padding: '10px 14px', borderRadius: 8, marginBottom: 14, cursor: 'pointer' },
-  warnBar: { background: '#422006', color: '#fed7aa', border: '1px solid #854d0e', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, lineHeight: 1.5 },
-  card: { background: '#11131d', border: '1px solid #1f2433', borderRadius: 12, padding: 18, marginBottom: 16, maxWidth: 760 },
-  label: { display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 },
+  h2: { fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 600, margin: '0 0 14px', color: '#f1f3f9' },
+  errorBar: { background: 'rgba(127, 29, 29, 0.75)', border: '1px solid rgba(248, 113, 113, 0.5)', color: '#fecaca', padding: '10px 14px', borderRadius: 10, marginBottom: 0, cursor: 'pointer' },
+  warnBar: { background: 'rgba(66, 32, 6, 0.8)', color: '#fed7aa', border: '1px solid #854d0e', padding: '10px 14px', borderRadius: 10, marginBottom: 0, fontSize: 13, lineHeight: 1.5 },
+  card: { background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)', border: '1px solid rgba(255, 255, 255, 0.09)', borderRadius: 16, padding: 18, marginBottom: 0, maxWidth: 760 },
+  label: { display: 'block', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#a3abbd', marginBottom: 7 },
   textarea: {
     width: '100%',
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    border: '1px solid #2a3142',
+    background: 'rgba(0, 0, 0, 0.32)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: 10,
     fontFamily: 'monospace',
@@ -787,28 +765,28 @@ const styles: Record<string, React.CSSProperties> = {
   },
   presetRow: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   presetBtn: {
-    background: '#1e293b',
-    color: '#cbd5e1',
-    border: '1px solid #334155',
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: '#d5dae6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 6,
     padding: '4px 8px',
     fontSize: 11,
     cursor: 'pointer',
   },
-  hint: { fontSize: 12, color: '#64748b', marginTop: 6 },
-  formRow: { display: 'flex', gap: 18, alignItems: 'flex-start', margin: '16px 0' },
+  hint: { fontSize: 12, color: '#8f98ac', marginTop: 6 },
+  formRow: { display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-start', margin: '16px 0' },
   select: {
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    border: '1px solid #2a3142',
+    background: 'rgba(0, 0, 0, 0.32)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 10px',
     fontSize: 13,
   },
   setButton: {
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    border: '1px solid #2a3142',
+    background: 'rgba(0, 0, 0, 0.32)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 12px',
     fontSize: 13,
@@ -821,43 +799,44 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '4px 12px',
     fontSize: 11,
     color: '#fbbf24',
-    background: '#0c0e16',
-    borderTop: '1px solid #161a26',
+    background: 'rgba(0, 0, 0, 0.22)',
+    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
   },
   radioRow: { display: 'flex', gap: 14, paddingTop: 6 },
   radioLabel: { fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' },
   primaryBtn: {
-    background: '#2563eb',
-    color: 'white',
+    background: '#f2b45c',
+    color: '#1d1405',
     border: 'none',
-    borderRadius: 8,
-    padding: '10px 18px',
+    borderRadius: 10,
+    padding: '11px 20px',
+    boxShadow: '0 4px 16px rgba(242, 180, 92, 0.22)',
     fontSize: 14,
     cursor: 'pointer',
     fontWeight: 600,
   },
-  smallNote: { fontSize: 11, color: '#64748b', marginTop: 12, lineHeight: 1.5 },
+  smallNote: { fontSize: 11, color: '#8f98ac', marginTop: 12, lineHeight: 1.5 },
   pacingBar: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: 12,
-    background: '#11131d',
-    border: '1px solid #1f2433',
+    background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+    border: '1px solid rgba(255, 255, 255, 0.09)',
     borderRadius: 12,
     padding: '12px 16px',
-    marginBottom: 16,
+    marginBottom: 0,
   },
   statusGroup: { display: 'flex', alignItems: 'center', gap: 12 },
   statusPill: { fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 999, letterSpacing: 0.5 },
-  metaText: { fontSize: 12, color: '#94a3b8' },
+  metaText: { fontSize: 12, color: '#a3abbd' },
   champion: { fontSize: 14, fontWeight: 700, color: '#fde047' },
   controlsGroup: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   ctrlBtn: {
-    background: '#1e293b',
-    color: '#e2e8f0',
-    border: '1px solid #334155',
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 14px',
     fontSize: 13,
@@ -875,8 +854,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   secondaryBtn: {
     background: 'transparent',
-    color: '#7dd3fc',
-    border: '1px solid #334155',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 14px',
     fontSize: 13,
@@ -884,16 +863,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   speedGroup: { display: 'flex', alignItems: 'center', gap: 8 },
   buildCard: {
-    background: '#11131d',
-    border: '1px solid #1f2433',
+    background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+    border: '1px solid rgba(255, 255, 255, 0.09)',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 0,
   },
   buildHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  buildTitle: { fontSize: 14, fontWeight: 600, color: '#cbd5e1' },
-  progressTrack: { height: 6, background: '#1f2433', borderRadius: 999, overflow: 'hidden', marginBottom: 12 },
-  progressFill: { height: '100%', background: '#2563eb', transition: 'width 0.4s ease' },
+  buildTitle: { fontSize: 14, fontWeight: 600, color: '#d5dae6' },
+  progressTrack: { height: 6, background: 'rgba(255, 255, 255, 0.09)', borderRadius: 999, overflow: 'hidden', marginBottom: 12 },
+  progressFill: { height: '100%', background: '#f2b45c', transition: 'width 0.4s ease' },
   buildList: { display: 'flex', flexDirection: 'column', gap: 6 },
   buildRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 },
   buildRowName: { display: 'flex', alignItems: 'center', gap: 8 },
@@ -901,7 +880,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 12,
     height: 12,
     border: '2px solid #334155',
-    borderTopColor: '#7dd3fc',
+    borderTopColor: '#f2b45c',
     borderRadius: '50%',
     display: 'inline-block',
     animation: 'llmtspin 0.8s linear infinite',
@@ -909,59 +888,59 @@ const styles: Record<string, React.CSSProperties> = {
   linkButton: {
     background: 'none',
     border: 'none',
-    color: '#7dd3fc',
+    color: '#f2c97a',
     cursor: 'pointer',
     fontSize: 13,
     padding: 0,
     textDecoration: 'underline',
   },
   modalBackdrop: {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: 16,
     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
   },
   modalPanel: {
-    background: '#11131d', border: '1px solid #2a3142', borderRadius: 12,
+    background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)', border: '1px solid rgba(255, 255, 255, 0.16)', borderRadius: 12,
     width: 'min(520px, 92vw)', maxHeight: '82vh', display: 'flex', flexDirection: 'column',
   },
   modalHeader: {
     display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-    padding: '14px 18px', borderBottom: '1px solid #1f2433',
+    padding: '14px 18px', borderBottom: '1px solid rgba(255, 255, 255, 0.09)',
   },
   modalTitle: { fontSize: 16, fontWeight: 700 },
-  modalClose: { background: 'none', border: 'none', color: '#94a3b8', fontSize: 24, cursor: 'pointer', lineHeight: 1 },
+  modalClose: { background: 'none', border: 'none', color: '#a3abbd', fontSize: 24, cursor: 'pointer', lineHeight: 1 },
   deckBody: { padding: 18, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18 },
   deckGroup: {},
-  deckGroupTitle: { fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 8 },
+  deckGroupTitle: { fontSize: 13, fontWeight: 700, color: '#a3abbd', marginBottom: 8 },
   deckLine: { display: 'flex', gap: 10, fontSize: 13, padding: '2px 0' },
-  deckCount: { color: '#64748b', minWidth: 20, textAlign: 'right' },
-  bracketScroll: { overflowX: 'auto', paddingBottom: 12, marginBottom: 16 },
+  deckCount: { color: '#8f98ac', minWidth: 20, textAlign: 'right' },
+  bracketScroll: { overflowX: 'auto', paddingBottom: 12 },
   bracket: { display: 'flex', gap: 28, alignItems: 'stretch', minHeight: 100 },
   roundCol: { display: 'flex', flexDirection: 'column', minWidth: 220 },
-  roundTitle: { fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 12, textAlign: 'center' },
+  roundTitle: { fontSize: 13, fontWeight: 700, color: '#a3abbd', marginBottom: 12, textAlign: 'center' },
   matchStack: { display: 'flex', flexDirection: 'column', justifyContent: 'space-around', flex: 1, gap: 14 },
-  matchCard: { background: '#11131d', border: '1px solid #1f2433', borderRadius: 10, overflow: 'hidden' },
+  matchCard: { background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)', border: '1px solid rgba(255, 255, 255, 0.09)', borderRadius: 10, overflow: 'hidden' },
   matchLive: { border: '1px solid #16a34a', boxShadow: '0 0 0 1px #16a34a55' },
   seatRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' },
   seatWinner: { background: '#0f291a' },
   seatInfo: { minWidth: 0 },
   seatName: { fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150 },
-  seatModel: { fontSize: 10, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150 },
-  seatWins: { fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginLeft: 8 },
-  seatDivider: { height: 1, background: '#1f2433' },
+  seatModel: { fontSize: 10, color: '#8f98ac', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150 },
+  seatWins: { fontSize: 16, fontWeight: 700, color: '#eef0f6', marginLeft: 8 },
+  seatDivider: { height: 1, background: 'rgba(255, 255, 255, 0.09)' },
   bye: { color: '#475569', fontStyle: 'italic', fontWeight: 400 },
   matchFooter: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 12px',
-    background: '#0c0e16',
-    borderTop: '1px solid #1f2433',
+    background: 'rgba(0, 0, 0, 0.22)',
+    borderTop: '1px solid rgba(255, 255, 255, 0.09)',
   },
   miniPill: { fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, textTransform: 'uppercase' },
   matchLinks: { display: 'flex', gap: 8, alignItems: 'center' },
   watchLink: { color: '#4ade80', fontSize: 12, textDecoration: 'none', fontWeight: 600 },
-  replayLink: { color: '#7dd3fc', fontSize: 12, textDecoration: 'none' },
+  replayLink: { color: '#f2c97a', fontSize: 12, textDecoration: 'none' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { textAlign: 'left', padding: '6px 10px', color: '#64748b', borderBottom: '1px solid #1f2433', fontWeight: 600 },
-  td: { padding: '6px 10px', borderBottom: '1px solid #161a26' },
+  th: { textAlign: 'left', padding: '6px 10px', color: '#8f98ac', borderBottom: '1px solid rgba(255, 255, 255, 0.09)', fontWeight: 600 },
+  td: { padding: '6px 10px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' },
 }

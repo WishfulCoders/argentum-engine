@@ -15,8 +15,10 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CastFromHandComponent
+import com.wingedsheep.engine.state.permissions.matchesEntersTappedRiders
 import com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.CrewSaddleContributorsComponent
 import com.wingedsheep.engine.state.components.battlefield.EnteredThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.SagaComponent
 import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
@@ -71,11 +73,19 @@ internal class PermanentEntry(
         cardComponent: CardComponent?,
         cardDef: com.wingedsheep.sdk.model.CardDefinition?
     ): Pair<GameState, List<GameEvent>> {
-        val controllerId = spellComponent.casterId
-        // The Tomb of Aclazotz: a graveyard-cast entry rider frozen on this spell at cast time.
+        // A resolving permanent spell enters under its controller's control (CR 608.3a) unless it
+        // says otherwise:
+        // "enters under the control of an opponent of your choice" was answered as it resolved,
+        // and the answer rides the stack object's as-enters choices.
+        val controllerId = com.wingedsheep.engine.handlers.effects.ChosenEntryController.of(
+            cardDef,
+            state.getEntity(spellId)?.get<com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent>()?.chosen,
+        ) ?: spellComponent.casterId
+        // A cast-this-way entry rider frozen on this spell at cast time (The Tomb of Aclazotz,
+        // Kaldring, the Rimestaff).
         // Captured before the `updateEntity` block below strips it; applied on entry further down.
-        val graveyardCastRider =
-            state.getEntity(spellId)?.get<com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent>()
+        val castRider =
+            state.getEntity(spellId)?.get<com.wingedsheep.engine.state.components.stack.CastThisWayEntryRiderComponent>()
 
         // For Auras: get the target before removing TargetsComponent. The target is usually a
         // permanent, but "enchant player" Auras (Grievous Wound) attach to a player — both are
@@ -127,8 +137,13 @@ internal class PermanentEntry(
         }
 
         newState = applyEntryCounterReplacements(
-            newState, spellId, spellComponent, cardComponent, cardDef, controllerId, graveyardCastRider, counterEvents
+            newState, spellId, spellComponent, cardComponent, cardDef, controllerId, castRider, counterEvents
         )
+        // The spell-copy riders have done their job (keywords, sacrifice, starting loyalty); strip
+        // them so they don't linger on the permanent.
+        newState = newState.updateEntity(spellId) { c ->
+            c.without<com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent>()
+        }
         newState = applyEntryDesignations(newState, spellId, spellComponent, cardDef)
 
         // Add to battlefield — clean up any may-play permission first (mirrors the same
@@ -138,8 +153,10 @@ internal class PermanentEntry(
                 .updateEntity(spellId) { it.with(bestowed.copy(entered = true)) }
         }
         newState = newState.removeMayPlayPermissionsForCard(spellId)
+        // The spell's controller is the player putting it onto the battlefield, even when it enters
+        // under another player's control.
         newState = com.wingedsheep.engine.handlers.effects.BattlefieldEntry
-            .place(newState, controllerId, spellId)
+            .place(newState, controllerId, spellId, putBy = spellComponent.casterId, spellCopy = resolvingAsSpellCopy)
 
         val spellRef = state.objectRef(spellId)
         val permanentRef = newState.objectRef(spellId)
@@ -167,21 +184,35 @@ internal class PermanentEntry(
         // emit the CountersAddedEvent chapter detection reads, from every entry path (including the
         // as-enters-choice resumers, which is where a read-ahead Saga enters).
         if (cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga) {
+            // A placement replacement can cut the entry lore counters to none — then nothing was
+            // put on it and there's no event.
             val loreCount = newState.getEntity(spellId)?.get<CountersComponent>()
-                ?.getCount(CounterType.LORE)?.takeIf { it > 0 } ?: 1
-            newState = com.wingedsheep.engine.handlers.effects.DamageUtils
-                .markCounterOnControlledPermanent(newState, spellId, CounterType.LORE, entering = true)
-            counterEvents.add(CountersAddedEvent(spellId, CounterType.LORE, loreCount, cardDef.name))
+                ?.getCount(CounterType.LORE) ?: 0
+            if (loreCount > 0) {
+                newState = com.wingedsheep.engine.handlers.effects.DamageUtils
+                    .markCounterOnControlledPermanent(newState, spellId, CounterType.LORE, entering = true)
+                // CR 122.6a — the entering Saga's controller puts its entry counters on it.
+                counterEvents.add(CountersAddedEvent(spellId, CounterType.LORE, loreCount, cardDef.name, placedBy = controllerId))
+            }
         }
 
-        newState = applyGlobalEntersTapped(newState, spellId, spellComponent, cardDef, controllerId)
+        newState = applyGlobalEntersTapped(newState, spellId, spellComponent, cardDef, controllerId, castRider)
         newState = enterSneakAttacking(newState, spellId, spellComponent, controllerId)
         addCastFaceDoorUnlockedEvents(newState, spellId, cardComponent, controllerId, counterEvents)
         newState = scheduleWarpExile(newState, spellId, spellComponent, cardComponent, controllerId)
         newState = scheduleDashReturn(newState, spellId, spellComponent, cardComponent, controllerId)
         newState = scheduleCleanupSacrifice(newState, spellId, spellComponent, cardComponent, controllerId)
+        newState = scheduleBlitzSacrifice(newState, spellId, spellComponent, cardComponent, controllerId)
         newState = enterPreparedIfKeyworded(newState, spellId, spellComponent, cardDef, controllerId)
         newState = grantEntryKeywords(newState, spellId, spellComponent, controllerId)
+        // The rest of an as-enters creature choice ("…, you may exchange his text box and another
+        // creature's"), read off the card it entered as: a replacement rider, run before trigger
+        // detection. A face-down entry has no abilities (CR 708.2).
+        if (!spellComponent.castFaceDown) {
+            newState = com.wingedsheep.engine.handlers.effects.EntryRiderReplacements.queueOwnChoiceRiders(
+                newState, spellId, controllerId,
+                newState.getEntity(spellId)?.get<CardComponent>()?.let { cardRegistry.getCard(it.cardDefinitionId) })
+        }
 
         // Entry precedes the counters placed on that battlefield object.
         counterEvents.add(0, ZoneChangeEvent(
@@ -198,22 +229,22 @@ internal class PermanentEntry(
     }
 
     /**
-     * Hall of the Bandit Lord's "if that mana is spent on a creature spell, it gains haste": the
-     * keywords a permanent-duration mana rider froze onto the spell become grants on the permanent,
-     * lasting until it leaves the battlefield (CR 400.7 ends them there).
+     * The keywords frozen onto the spell (Hall of the Bandit Lord's mana rider "it gains haste",
+     * Tyvar Kell's emblem "it gains haste until end of turn") become grants on the permanent, each
+     * for its own duration; leaving the battlefield ends them (CR 400.7).
      */
     private fun grantEntryKeywords(
         state: GameState,
         spellId: EntityId,
         spellComponent: SpellOnStackComponent,
         controllerId: EntityId,
-    ): GameState = spellComponent.entryKeywordGrants.fold(state) { acc, keyword ->
+    ): GameState = spellComponent.entryKeywordGrants.fold(state) { acc, grant ->
         acc.addFloatingEffect(
             layer = Layer.ABILITY,
-            modification = SerializableModification.GrantKeyword(keyword),
+            modification = SerializableModification.GrantKeyword(grant.keyword),
             affectedEntities = setOf(spellId),
-            duration = Duration.Permanent,
-            context = EffectContext(sourceId = spellId, controllerId = controllerId)
+            duration = grant.duration,
+            context = EffectContext(sourceId = grant.sourceId ?: spellId, controllerId = controllerId)
         )
     }
 
@@ -241,7 +272,13 @@ internal class PermanentEntry(
         var updated = com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristics.enterBattlefield(c)
             .without<SpellOnStackComponent>()
             .without<TargetsComponent>()
-            .without<com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent>()
+            // A keyword stamped on the spell lasts only while it's a spell; one meant to outlast the
+            // stack was frozen into entryKeywordGrants and is granted to the permanent instead.
+            .without<com.wingedsheep.engine.state.components.stack.SpellGrantedKeywordsComponent>()
+            .without<com.wingedsheep.engine.state.components.stack.CastThisWayEntryRiderComponent>()
+            // The crew/saddle record outlives the permanent as last-known information; a recast
+            // card is a new object nothing has crewed (CR 400.7).
+            .without<CrewSaddleContributorsComponent>()
             .with(ControllerComponent(controllerId))
 
         if (resolvingAsSpellCopy) {
@@ -275,7 +312,7 @@ internal class PermanentEntry(
         updated = updated.with(EnteredThisTurnComponent)
 
         updated = withCastOriginMarkers(updated, spellComponent)
-        updated = withCastChoices(updated, spellComponent)
+        updated = withCastChoices(updated, spellComponent, resolvingAsSpellCopy)
         updated = withAlternativeCostMarkers(updated, spellComponent, cardDef)
         updated = withRoomDoors(updated, spellComponent, cardDef)
         updated = withCastRecord(updated, spellComponent)
@@ -343,7 +380,8 @@ internal class PermanentEntry(
 
     private fun withCastChoices(
         container: ComponentContainer,
-        spellComponent: SpellOnStackComponent
+        spellComponent: SpellOnStackComponent,
+        resolvingAsSpellCopy: Boolean,
     ): ComponentContainer {
         var updated = container
         // Carry the cast-time choices durably onto the permanent (CR 601.2b choices ride the
@@ -369,7 +407,9 @@ internal class PermanentEntry(
         spellComponent.declaredCostSlot?.let { slot ->
             bag = bag.withChoice(
                 slot,
-                com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
+                spellComponent.additionalCostChoices[slot]?.let {
+                    com.wingedsheep.engine.state.components.battlefield.ChoiceValue.NumberChoice(it)
+                } ?: com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
             )
         }
         // Sneak (CR 702.190): durably mark the permanent so Conditions.SneakCostWasPaid
@@ -414,6 +454,23 @@ internal class PermanentEntry(
                 com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
             )
         }
+        // Surge (CR 702.117a): durably mark a permanent cast for its surge cost so
+        // Conditions.SurgeCostWasPaid reads it for the permanent's whole life (Reckless
+        // Bushwhacker's "when this creature enters, if its surge cost was paid").
+        if (spellComponent.alternativeCost == com.wingedsheep.engine.core.AlternativeCostType.SURGE) {
+            bag = bag.withChoice(
+                com.wingedsheep.sdk.scripting.ChoiceSlot.SURGE_CAST,
+                com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
+            )
+        }
+        // A card's own alternative cost (CR 118.9): durably mark the permanent so
+        // Conditions.SelfAlternativeCostWasPaid reads it for the permanent's whole life.
+        if (spellComponent.alternativeCost == com.wingedsheep.engine.core.AlternativeCostType.SELF_ALTERNATIVE) {
+            bag = bag.withChoice(
+                com.wingedsheep.sdk.scripting.ChoiceSlot.SELF_ALTERNATIVE_COST_PAID,
+                com.wingedsheep.engine.state.components.battlefield.ChoiceValue.Flag
+            )
+        }
         // Waterbend (Avatar): durably mark a permanent cast with its (optional) waterbend
         // cost paid so Conditions.WaterbendWasPaid reads it for the permanent's whole life.
         if (spellComponent.wasWaterbendPaid) {
@@ -446,6 +503,16 @@ internal class PermanentEntry(
                 )
             )
         }
+        // Delve (CR 702.66a): the cards exiled to pay it, for "if a creature card with flying was
+        // exiled with this creature's delve ability" (Soulflayer) for the permanent's whole life.
+        if (spellComponent.delvedCards.isNotEmpty()) {
+            bag = bag.withChoice(
+                com.wingedsheep.sdk.scripting.ChoiceSlot.DELVED_CARDS,
+                com.wingedsheep.engine.state.components.battlefield.ChoiceValue.EntitiesChoice(
+                    spellComponent.delvedCards
+                )
+            )
+        }
         if (spellComponent.additionalCostBlightAmount > 0) {
             bag = bag.withChoice(
                 com.wingedsheep.sdk.scripting.ChoiceSlot.BLIGHT_AMOUNT,
@@ -454,7 +521,15 @@ internal class PermanentEntry(
                 )
             )
         }
-        if (bag.x != null || bag.chosen.isNotEmpty()) {
+        // "As you cast this spell" captures (CR 601.2i) — "if you controlled a Dragon as you cast
+        // this spell" — frozen on the spell as it was cast, carried onto the permanent it becomes so
+        // its enters trigger / enters-with replacement reads them via DynamicAmount.CapturedAtCast.
+        // A copy of a permanent spell wasn't cast (CR 707.10f makes it a token), so its token gets
+        // none: per the DTK rulings only a revealed Dragon, never a controlled one, earns its bonus.
+        if (!resolvingAsSpellCopy && spellComponent.castTimeValues.isNotEmpty()) {
+            bag = bag.copy(castTimeValues = spellComponent.castTimeValues)
+        }
+        if (bag.x != null || bag.chosen.isNotEmpty() || bag.castTimeValues.isNotEmpty()) {
             updated = updated.with(bag)
         }
         return updated
@@ -478,6 +553,12 @@ internal class PermanentEntry(
             updated = updated.with(com.wingedsheep.engine.state.components.battlefield.DashedComponent)
         }
 
+        // Track if this permanent's blitz cost was paid (CR 702.152a — haste and the dies-draw
+        // trigger live off this marker; see BlitzedComponent's doc).
+        if (spellComponent.wasBlitzed) {
+            updated = updated.with(com.wingedsheep.engine.state.components.battlefield.BlitzedComponent)
+        }
+
         // Track if this permanent was cast for its evoke cost
         if (spellComponent.wasEvoked) {
             updated = updated.with(com.wingedsheep.engine.state.components.battlefield.EvokedComponent)
@@ -494,9 +575,9 @@ internal class PermanentEntry(
                 ?.filterIsInstance<KeywordAbility.Impending>()
                 ?.firstOrNull()?.time ?: 0
             if (impendingTime > 0) {
-                val existingCounters = updated.get<CountersComponent>() ?: CountersComponent()
+                // The N time counters themselves are placed with the other entry counters
+                // (applyEntryCounterReplacements), so the placement replacements see them.
                 updated = updated
-                    .with(existingCounters.withAdded(CounterType.TIME, impendingTime))
                     .with(com.wingedsheep.engine.state.components.battlefield.CastForImpendingComponent)
             }
         }
@@ -538,7 +619,8 @@ internal class PermanentEntry(
         container: ComponentContainer,
         spellComponent: SpellOnStackComponent
     ): ComponentContainer {
-        var updated = container
+        // A record from an earlier cast of this card must not outlive it (a free recast stamps none).
+        var updated = container.without<com.wingedsheep.engine.state.components.battlefield.CastRecordComponent>()
         // Record mana colors and provenance spent to cast (for mana-spent-gated triggers and
         // enters-the-battlefield "for each mana from a [subtype] spent to cast it" payoffs).
         if (spellComponent.manaSpentWhite > 0 || spellComponent.manaSpentBlue > 0 ||
@@ -621,10 +703,6 @@ internal class PermanentEntry(
                     fireOnPlayerId = if (copyRiders.sacrificeOnlyOnControllersTurn) controllerId else null
                 )
             )
-            // The rider component has done its job; strip it so it doesn't linger on the permanent.
-            newState = newState.updateEntity(spellId) { c ->
-                c.without<com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent>()
-            }
         }
         return newState
     }
@@ -686,7 +764,7 @@ internal class PermanentEntry(
         cardComponent: CardComponent?,
         cardDef: com.wingedsheep.sdk.model.CardDefinition?,
         controllerId: EntityId,
-        graveyardCastRider: com.wingedsheep.engine.state.components.stack.GraveyardCastRiderComponent?,
+        castRider: com.wingedsheep.engine.state.components.stack.CastThisWayEntryRiderComponent?,
         counterEvents: MutableList<GameEvent>
     ): GameState {
         var newState = state
@@ -704,30 +782,50 @@ internal class PermanentEntry(
         // The Tomb of Aclazotz cast-this-way entry rider: a creature cast from the graveyard under
         // its grant enters with a finality counter and gains "Vampire" in addition to its other
         // types. Applied after the printed enters-with replacements so both stack cleanly (CR 614).
-        if (graveyardCastRider != null && !spellComponent.castFaceDown) {
+        if (castRider != null && !spellComponent.castFaceDown) {
             val (riderState, riderEvents) =
                 com.wingedsheep.engine.handlers.effects.EntersWithReplacements.applyCastFromGraveyardRider(
                     newState, spellId, controllerId,
-                    graveyardCastRider.entersWithCounter, graveyardCastRider.addedSubtype
+                    castRider.entersWithCounter, castRider.addedSubtype,
+                    castRider.grantedAbility,
+                    predicateEvaluator = conditionEvaluator.predicates
                 )
             newState = riderState
             counterEvents.addAll(riderEvents)
         }
 
-        // Counters bought while casting (Chorus of the Conclave: "that creature enters with that
-        // many additional +1/+1 counters on it"). Recorded on the spell when the cost was paid, so
-        // they arrive even if the granting permanent has since left the battlefield. Placed through
-        // the shared entry-counter path so counter-modifying replacements see them.
-        val boughtCounters = spellComponent.additionalEntryCounters
-        if (boughtCounters != null && boughtCounters.count > 0) {
-            val (boughtState, boughtEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements.placeEntryCounters(
+        // Counters owed to the permanent: bought while casting (Chorus of the Conclave: "that
+        // creature enters with that many additional +1/+1 counters on it"), or put on the spell
+        // while it was on the stack (Runadi, Jade Orb of Dragonkind). Recorded on the spell, so they
+        // arrive even if whatever granted them has since left the battlefield. Placed through the
+        // shared entry-counter path so counter-modifying replacements see them (CR 122.6).
+        for (owed in spellComponent.additionalEntryCounters) {
+            if (owed.count <= 0) continue
+            val (owedState, owedEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements.placeEntryCounters(
                 newState, spellId,
-                boughtCounters.counterType, boughtCounters.count,
+                owed.counterType, owed.count,
                 controllerId, cardComponent?.name ?: "",
                 predicateEvaluator = conditionEvaluator.predicates
             )
-            newState = boughtState
-            counterEvents.addAll(boughtEvents)
+            newState = owedState
+            counterEvents.addAll(owedEvents)
+        }
+
+        // Impending (CR 702.176a): "If you chose to pay this permanent's impending cost, it enters
+        // with N time counters on it" — entry counters like any other (CR 122.6).
+        if (spellComponent.wasImpending && cardDef != null) {
+            val impendingTime = cardDef.keywordAbilities
+                .filterIsInstance<KeywordAbility.Impending>()
+                .firstOrNull()?.time ?: 0
+            if (impendingTime > 0) {
+                val (impendingState, impendingEvents) = EntersWithReplacements.placeEntryCounters(
+                    newState, spellId, CounterType.TIME, impendingTime,
+                    controllerId, cardComponent?.name ?: "",
+                    predicateEvaluator = conditionEvaluator.predicates
+                )
+                newState = impendingState
+                counterEvents.addAll(impendingEvents)
+            }
         }
 
         // Handle the intrinsic entry counters of a planeswalker (starting loyalty, CR 306.5b) or a
@@ -736,13 +834,25 @@ internal class PermanentEntry(
         // because resolution places permanents via addToZone rather than
         // ZoneTransitionService.moveToZone. Every other entry reaches the same shared
         // placeEntryCounters call through ZoneMovementUtils.applyIntrinsicEntryCountersIfNeeded.
+        // A spell copy may enter with a starting loyalty other than the printed one (casualty X's
+        // "the copy has starting loyalty X", CR 707.10f). Failing that, a copy exception's
+        // "its starting loyalty is N" carried as a copiable value — a Clone entering as a copy of
+        // Jace, Mirror Mage's token starts at 1 — wins over the printed loyalty.
+        val spellEntity = newState.getEntity(spellId)
+        val copyStartingLoyalty = spellEntity
+            ?.get<com.wingedsheep.engine.state.components.stack.SpellCopyTokenRidersComponent>()?.startingLoyalty
+            ?: spellEntity?.get<CardComponent>()?.startingLoyaltyOverride
         val intrinsicEntryCounters = if (cardDef != null && !spellComponent.castFaceDown) {
             when {
                 // Compleated (CR 702.150a): two fewer loyalty counters for each Phyrexian mana
                 // symbol the caster paid with life.
                 cardDef.startingLoyalty != null -> {
                     val lifePips = if (Keyword.COMPLEATED in cardDef.keywords) spellComponent.phyrexianLifePips else 0
-                    CounterType.LOYALTY to (cardDef.startingLoyalty!! - 2 * lifePips).coerceAtLeast(0)
+                    // Printed loyalty X (Nissa, Steward of Elements) is the X chosen for the
+                    // spell it resolved from (CR 107.3m); a spell copy carries the same X.
+                    val printed = copyStartingLoyalty
+                        ?: if (cardDef.loyaltyIsX) spellComponent.xValue ?: 0 else cardDef.startingLoyalty!!
+                    CounterType.LOYALTY to (printed - 2 * lifePips).coerceAtLeast(0)
                 }
                 cardDef.startingDefense != null ->
                     com.wingedsheep.engine.mechanics.battle.Battles.DEFENSE_COUNTER to cardDef.startingDefense!!
@@ -799,10 +909,16 @@ internal class PermanentEntry(
         if (cardDef != null && !spellComponent.castFaceDown && cardDef.isSaga) {
             val entering = newState.getEntity(spellId)
             val current = entering?.get<CountersComponent>() ?: CountersComponent()
-            // One lore counter (CR 714.3a), or the read-ahead chosen number (CR 714.3b)
-            val loreCount = entering?.let {
-                com.wingedsheep.engine.handlers.effects.ZoneMovementUtils.sagaEntryLoreCount(it)
-            } ?: 1
+            // One lore counter (CR 714.3a), or the read-ahead chosen number (CR 714.3b) — counters
+            // it's given as it enters, so the placement replacements apply (CR 122.6).
+            val loreCount = com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils.applyCounterPlacementModifiers(
+                newState, spellId, CounterType.LORE,
+                entering?.let { com.wingedsheep.engine.handlers.effects.ZoneMovementUtils.sagaEntryLoreCount(it) } ?: 1,
+                // CR 122.6a — the entering permanent's controller puts the counters on it.
+                placerId = entering?.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
+                    ?: spellComponent.casterId,
+                predicateEvaluator = conditionEvaluator.predicates, byEffect = true
+            )
             val sagaComponent = SagaComponent(triggeredChapters = (1..loreCount).toSet())
             newState = newState.updateEntity(spellId) { c ->
                 c.with(sagaComponent)
@@ -821,9 +937,21 @@ internal class PermanentEntry(
         spellId: EntityId,
         spellComponent: SpellOnStackComponent,
         cardDef: com.wingedsheep.sdk.model.CardDefinition?,
-        controllerId: EntityId
+        controllerId: EntityId,
+        castRider: com.wingedsheep.engine.state.components.stack.CastThisWayEntryRiderComponent?
     ): GameState {
         var newState = state
+        // A permission's "if you do, it enters tapped" rider (Kaldring, the Rimestaff), frozen on
+        // the spell at cast and matched against the permanent as it enters, face up. An applicable
+        // "enters untapped" replacement still wins (CR 614).
+        if (castRider != null && !spellComponent.wasSneaked &&
+            newState.matchesEntersTappedRiders(spellId, controllerId, castRider.entersTapped, conditionEvaluator.predicates) &&
+            newState.getEntity(spellId)?.has<TappedComponent>() != true &&
+            !com.wingedsheep.engine.handlers.effects.EnterUntappedReplacements
+                .entersUntapped(newState, spellId, controllerId, predicateEvaluator = conditionEvaluator.predicates)
+        ) {
+            newState = newState.updateEntity(spellId) { c -> c.with(TappedComponent) }
+        }
         // Global "[filter] enter tapped" replacements sourced from OTHER battlefield permanents
         // (Authority of the Consuls — "Creatures your opponents control enter tapped"). The
         // self-only EntersTapped handled earlier covers a permanent's own printed clause; a
@@ -833,6 +961,16 @@ internal class PermanentEntry(
         // entity is on the battlefield so its controller/type resolve for the filter. CR 614: an
         // applicable "enters untapped" replacement still wins, and a self-EntersTapped that already
         // tapped it stands. Sneak sets its own tapped-and-attacking state below, so skip it here.
+        // "Instead it enters tapped and attacking" (PermanentsEnterTapped.attackDefender — Kira
+        // Nerys, Firebrand): a tapped-and-attacking entry, so an "enters untapped" replacement
+        // doesn't undo the tap. A sneaked permanent is already attacking its own defender.
+        if (!spellComponent.wasSneaked &&
+            com.wingedsheep.engine.handlers.effects.EnterTappedReplacements
+                .entersAttacking(newState, spellId, predicateEvaluator = conditionEvaluator.predicates)
+        ) {
+            return com.wingedsheep.engine.handlers.effects.EnterTappedReplacements
+                .enterTappedAndAttacking(newState, spellId, controllerId)
+        }
         if (cardDef != null && !spellComponent.castFaceDown && !spellComponent.wasSneaked) {
             val alreadyTapped = newState.getEntity(spellId)?.has<TappedComponent>() == true
             val entersUntapped = com.wingedsheep.engine.handlers.effects.EnterUntappedReplacements
@@ -862,19 +1000,12 @@ internal class PermanentEntry(
             newState = newState.updateEntity(spellId) { c -> c.with(TappedComponent) }
             val projected = newState.projectedState
             // CR 506.3c / 508.4a: the creature only enters attacking if the carried defender is
-            // still a legal attack target — an opponent still in the game, an opponent's
+            // still a legal attack target — a defending player still in the game, their
             // planeswalker still on the battlefield, or a battle still on the battlefield and
-            // protected by an opponent (mirrors the defender check in AttackPhaseManager). If it's
-            // no longer valid, the creature enters but is never attacking — no redirect.
-            val opponents = newState.getOpponents(controllerId).toSet()
+            // protected by one of them. If it's no longer valid, the creature enters but is never
+            // attacking — no redirect.
             val legalDefender = spellComponent.sneakAttackDefenderId?.takeIf { d ->
-                (d in newState.turnOrder && d != controllerId) ||
-                    (projected.isPlaneswalker(d) &&
-                        d in newState.getBattlefield() &&
-                        projected.getController(d) != controllerId) ||
-                    (projected.isBattle(d) &&
-                        d in newState.getBattlefield() &&
-                        com.wingedsheep.engine.mechanics.battle.Battles.canBeAttackedBy(newState, d, controllerId, opponents))
+                com.wingedsheep.engine.mechanics.combat.CombatDefenders.isLegalEnteringAttackTarget(newState, controllerId, d)
             }
             if (legalDefender != null && projected.isCreature(spellId)) {
                 newState = newState.updateEntity(spellId) { c ->
@@ -1027,6 +1158,33 @@ internal class PermanentEntry(
         return allocatedState.addDelayedTrigger(delayedTrigger)
     }
 
+    private fun scheduleBlitzSacrifice(
+        state: GameState,
+        spellId: EntityId,
+        spellComponent: SpellOnStackComponent,
+        cardComponent: CardComponent?,
+        controllerId: EntityId
+    ): GameState {
+        // Blitz (CR 702.152a): "sacrifice the permanent this spell becomes at the beginning of the
+        // next end step". `Self` is checked against the captured source reference, so the
+        // sacrifice only hits this battlefield object: one that was flickered or died and came back
+        // before the end step is a new object the trigger no longer tracks (CR 400.7 / 603.7c).
+        if (!spellComponent.wasBlitzed) return state
+        val (triggerId, allocatedState) = state.newRoutingId()
+        return allocatedState.addDelayedTrigger(
+            DelayedTriggeredAbility(
+                id = triggerId,
+                effect = com.wingedsheep.sdk.scripting.effects.SacrificeTargetEffect(EffectTarget.Self),
+                fireAtStep = Step.END,
+                sourceId = spellId,
+                objectReferences = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(captured = true,
+                    origin = state.objectRef(spellId), source = state.objectRef(spellId)),
+                sourceName = cardComponent?.name ?: "Unknown",
+                controllerId = controllerId
+            )
+        )
+    }
+
     private fun enterPreparedIfKeyworded(
         state: GameState,
         spellId: EntityId,
@@ -1034,20 +1192,10 @@ internal class PermanentEntry(
         cardDef: com.wingedsheep.sdk.model.CardDefinition?,
         controllerId: EntityId
     ): GameState {
-        var newState = state
-        // Prepared (Secrets of Strixhaven): a preparation creature whose face carries the PREPARED
-        // keyword ("This creature enters prepared") enters prepared. Becoming prepared creates a
-        // copy of the card's prepare spell in exile that its controller may cast (paying that
-        // spell's cost); casting it unprepares the creature. PREPARE-layout creatures that lack the
-        // keyword (e.g. Leech Collector, which only becomes prepared via a trigger) do not enter
-        // prepared.
-        if (cardDef != null && cardDef.layout == com.wingedsheep.sdk.model.CardLayout.PREPARE &&
-            cardDef.keywords.contains(com.wingedsheep.sdk.core.Keyword.PREPARED) &&
-            !spellComponent.castFaceDown
-        ) {
-            newState = PreparationLogic.makePrepared(newState, spellId, cardDef, controllerId)
-        }
-        return newState
+        // Prepared (Secrets of Strixhaven): becoming prepared creates a copy of the card's prepare
+        // spell in exile that its controller may cast; casting it unprepares the creature.
+        if (cardDef == null || spellComponent.castFaceDown) return state
+        return PreparationLogic.enterPreparedIfKeyworded(state, spellId, cardDef, controllerId)
     }
 
     // =========================================================================
@@ -1079,6 +1227,10 @@ internal class PermanentEntry(
         newState = ownState
         events.addAll(ownEvents)
 
+        val (sunburstState, sunburstEvents) = applySunburst(newState, entityId, cardDef, controllerId)
+        newState = sunburstState
+        events.addAll(sunburstEvents)
+
         val (globalState, globalEvents) = EntersWithReplacements.applyGlobal(
             newState, entityId, controllerId, cardRegistry,
             predicateEvaluator = conditionEvaluator.predicates
@@ -1087,5 +1239,43 @@ internal class PermanentEntry(
         events.addAll(globalEvents)
 
         return newState to events
+    }
+
+    /**
+     * Sunburst (CR 702.44a) — "If this object is entering the battlefield from the stack as a
+     * creature, it enters with a +1/+1 counter on it for each color of mana spent to cast it.
+     * Otherwise, it enters with a charge counter on it for each color of mana spent to cast it."
+     *
+     * Synthesized here, on the stack-resolution path only, because the keyword functions only as
+     * the object enters *from the stack*: a sunburst permanent put onto the battlefield any other way
+     * gets no counters. Whether it enters as a creature — and whether it still has sunburst at all —
+     * is read off the object as it would exist on the battlefield (CR 614.12,
+     * [com.wingedsheep.engine.handlers.effects.EntryCharacteristics]), so an artifact March of the
+     * Machines animates gets +1/+1 counters. The printed keyword gates the scratch projection so
+     * ordinary permanents never pay for it. Colorless mana is not a color (CR 105.1), so a spell paid
+     * only with colorless mana enters with no counters.
+     */
+    private fun applySunburst(
+        state: GameState,
+        entityId: EntityId,
+        cardDef: com.wingedsheep.sdk.model.CardDefinition,
+        controllerId: EntityId,
+    ): Pair<GameState, List<GameEvent>> {
+        if (com.wingedsheep.sdk.core.Keyword.SUNBURST !in cardDef.keywords) return state to emptyList()
+        val predicates = conditionEvaluator.predicates
+        val entering = com.wingedsheep.engine.handlers.effects.EntryCharacteristics.projectedAsEntering(
+            state, entityId, controllerId, entryCopy = null, cardRegistry, predicates
+        ) ?: return state to emptyList()
+        if (!entering.hasKeyword(entityId, com.wingedsheep.sdk.core.Keyword.SUNBURST)) return state to emptyList()
+        val colors = predicates.amounts.evaluate(
+            state,
+            com.wingedsheep.sdk.scripting.values.DynamicAmount.DistinctColorsManaSpent(),
+            EffectContext(sourceId = entityId, controllerId = controllerId),
+        )
+        val kind = if (entering.isCreature(entityId)) CounterType.PLUS_ONE_PLUS_ONE else CounterType.CHARGE
+        val name = state.getEntity(entityId)?.get<CardComponent>()?.name ?: ""
+        return EntersWithReplacements.placeEntryCounters(
+            state, entityId, kind, colors, controllerId, name, predicateEvaluator = predicates
+        )
     }
 }

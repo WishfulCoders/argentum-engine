@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Bedevil
@@ -20,11 +19,10 @@ val Bedevil = card("Bedevil") {
     oracleText = "Destroy target artifact, creature, or planeswalker."
 
     spell {
-        val t = target(TargetObject(
-                filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Planeswalker)
-            ),
+        val permanent = target(
+            TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Planeswalker)
         )
-        effect = Effects.Destroy(t)
+        effect = Effects.Destroy(permanent)
     }
 
     metadata {

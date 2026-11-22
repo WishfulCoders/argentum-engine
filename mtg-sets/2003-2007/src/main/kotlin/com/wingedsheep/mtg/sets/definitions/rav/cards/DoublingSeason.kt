@@ -2,7 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.DoubleCounterPlacement
+import com.wingedsheep.sdk.scripting.ScaleCounterPlacement
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.MultiplyTokenCreation
 import com.wingedsheep.sdk.scripting.events.Recipient
@@ -19,7 +19,9 @@ import com.wingedsheep.sdk.scripting.events.Recipient
  * Both clauses are static replacement effects. Token doubling uses the default
  * `TokenCreationEvent(controller = You)`. Counter doubling gates purely on the recipient
  * ("a permanent you control"), independent of who places the counters — hence
- * `placedByYou = false` with `Recipient.PermanentYouControl` and any counter type.
+ * the default `placer = Player.Any` with `Recipient.PermanentYouControl` and any counter type. "If an
+ * *effect* would put" excludes counters put on as a cost (a [+1] loyalty cost) and by the Saga
+ * turn-based action — `effectsOnly = true`.
  */
 val DoublingSeason = card("Doubling Season") {
     manaCost = "{4}{G}"
@@ -32,12 +34,12 @@ val DoublingSeason = card("Doubling Season") {
     replacementEffect(MultiplyTokenCreation())
 
     replacementEffect(
-        DoubleCounterPlacement(
-            placedByYou = false,
+        ScaleCounterPlacement(
             appliesTo = EventPattern.CounterPlacementEvent(
                 counterType = null,
                 recipient = Recipient.PermanentYouControl,
             ),
+            effectsOnly = true,
         )
     )
 

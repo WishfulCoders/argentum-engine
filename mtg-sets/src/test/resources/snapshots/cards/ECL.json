@@ -3243,7 +3243,8 @@
                         ]
                     }
                 },
-                "ShuffleLibrary"
+                "ShuffleLibrary",
+                "EmitLibrarySearchedEvent"
             ]
         }
     },
@@ -3488,7 +3489,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         },
                         {
@@ -3836,7 +3840,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -6138,7 +6144,10 @@
             {
                 "id": "Eclipsed Realms:2",
                 "cost": "CostTap",
-                "effect": "AddAnyColorManaSpendOnChosenType",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "restriction": "OfChosenType"
+                },
                 "timing": "ManaAbility",
                 "isManaAbility": true
             }
@@ -7644,7 +7653,9 @@
                                             "amount": 1
                                         }
                                     },
-                                    "storeSelected": "found"
+                                    "storeSelected": "found",
+                                    "prompt": "Search your library for a creature card to put into your hand",
+                                    "selectedLabel": "Put into your hand"
                                 },
                                 {
                                     "type": "MoveCollection",
@@ -9067,7 +9078,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another untapped creature you control to tap"
                             },
                             {
                                 "type": "TapUntap",
@@ -11720,7 +11733,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another untapped Merfolk you control to tap"
                             },
                             {
                                 "type": "TapUntap",
@@ -12396,7 +12411,7 @@
             {
                 "id": "Moonshadow:1",
                 "trigger": {
-                    "type": "CardsPutIntoYourGraveyardEvent",
+                    "type": "CardsPutIntoGraveyardEvent",
                     "filter": "permanent"
                 },
                 "binding": "ANY",
@@ -12703,7 +12718,8 @@
                                         "player": "TriggeringPlayer"
                                     },
                                     "storeAs": "gathered0",
-                                    "search": true
+                                    "search": true,
+                                    "searcher": "TriggeringPlayer"
                                 },
                                 {
                                     "type": "SelectFromCollection",
@@ -12735,7 +12751,8 @@
                                         "type": "PlayerRef",
                                         "player": "TriggeringPlayer"
                                     }
-                                }
+                                },
+                                "EmitLibrarySearchedEvent"
                             ]
                         }
                     ]
@@ -13005,13 +13022,10 @@
         "staticAbilities": [
             {
                 "type": "TransformPermanent",
-                "setCardTypes": [
-                    "CREATURE"
-                ],
-                "setSubtypes": [
+                "setColors": [],
+                "setCreatureSubtypes": [
                     "Noggle"
-                ],
-                "setColors": []
+                ]
             },
             "LoseAllAbilities",
             {
@@ -13770,7 +13784,9 @@
                                     "aggregation": "DISTINCT_COLORS"
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for basic land cards (up to the number of colors among cards you control) to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -16213,8 +16229,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -16351,37 +16376,6 @@
     },
     "colorIdentityOverride": [
         "RED"
-    ]
-}
-
-// Spell Snare
-{
-    "name": "Spell Snare",
-    "manaCost": "{U}",
-    "typeLine": "Instant",
-    "oracleText": "Counter target spell with mana value 2.",
-    "script": {
-        "spellEffect": "Counter",
-        "targetRequirements": [
-            {
-                "type": "TargetObject",
-                "filter": {
-                    "baseFilter": "mv=2",
-                    "zone": "Stack"
-                },
-                "id": "t0"
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "71",
-        "rarity": "UNCOMMON",
-        "artist": "Iris Compiet",
-        "flavorText": "Shadowmoor merrow swindle and steal not only for profit but for spite.",
-        "imageUri": "https://cards.scryfall.io/normal/front/b/7/b7551b61-656e-4f37-b9da-73174db983b7.jpg?1767659595"
-    },
-    "colorIdentityOverride": [
-        "BLUE"
     ]
 }
 
@@ -17986,7 +17980,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -19036,7 +19032,10 @@
                     "type": "CreateTokenCopyOfTarget",
                     "target": "TriggeringEntity"
                 },
-                "interveningIf": "TriggeringEntityEnteredOrWasCastFromGraveyard",
+                "interveningIf": {
+                    "type": "TriggeringEntityEnteredOrWasCastFrom",
+                    "zone": "Graveyard"
+                },
                 "oncePerTurn": true
             }
         ]
@@ -19321,7 +19320,8 @@
                             "Elf"
                         ],
                         "imageUri": "https://cards.scryfall.io/normal/front/3/9/39b36f22-21f9-44fe-8a49-bdc859503342.jpg?1767955588"
-                    }
+                    },
+                    "description": "Create a 2/2 black and green Elf creature token"
                 }
             ]
         }
@@ -19451,7 +19451,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",

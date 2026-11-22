@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn
+import com.wingedsheep.sdk.scripting.RestrictCardsDrawnPerTurn
 import com.wingedsheep.sdk.scripting.references.Player
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
@@ -21,7 +21,7 @@ private val DrawWarden = card("Test Draw Warden") {
     manaCost = "{2}"
     typeLine = "Artifact"
     oracleText = "Each opponent can't draw more than one card each turn."
-    staticAbility { ability = RestrictDrawsPerTurn(maxPerTurn = 1, affected = Player.EachOpponent) }
+    staticAbility { ability = RestrictCardsDrawnPerTurn(maxPerTurn = 1, affected = Player.EachOpponent) }
     metadata { rarity = Rarity.RARE; collectorNumber = "T1" }
 }
 
@@ -30,7 +30,7 @@ private val DrawLock = card("Test Draw Lock") {
     manaCost = "{2}"
     typeLine = "Artifact"
     oracleText = "Each player can't draw cards."
-    staticAbility { ability = RestrictDrawsPerTurn(maxPerTurn = 0, affected = Player.Each) }
+    staticAbility { ability = RestrictCardsDrawnPerTurn(maxPerTurn = 0, affected = Player.Each) }
     metadata { rarity = Rarity.RARE; collectorNumber = "T2" }
 }
 
@@ -59,11 +59,11 @@ private val DrawUpToThree = card("Test Draw Up To Three") {
 }
 
 /**
- * [RestrictDrawsPerTurn] — a per-turn draw cap, which is a "can't" effect (CR 101.2, CR 614.17)
+ * [RestrictCardsDrawnPerTurn] — a per-turn draw cap, which is a "can't" effect (CR 101.2, CR 614.17)
  * rather than a replacement effect. Each test pins one rule or ruling of Narset, Parter of Veils /
  * Leovold, Emissary of Trest.
  */
-class RestrictDrawsPerTurnTest : ScenarioTestBase() {
+class RestrictCardsDrawnPerTurnTest : ScenarioTestBase() {
 
     init {
         cardRegistry.register(listOf(DrawWarden, DrawLock, MayDrawTwo, MayDrawOne, DrawUpToThree))

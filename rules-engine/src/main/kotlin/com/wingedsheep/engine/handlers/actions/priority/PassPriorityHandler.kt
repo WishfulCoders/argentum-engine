@@ -10,9 +10,6 @@ import com.wingedsheep.engine.mechanics.stack.StackResolver
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombatComponent
-import com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent
-import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
-import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.sdk.core.Step
 import kotlin.reflect.KClass
 
@@ -101,19 +98,12 @@ class PassPriorityHandler(
     }
 
     private fun resolveTopOfStack(state: GameState): ExecutionResult {
-        // Determine who controlled the top stack item (caster/activator) so priority
-        // returns to them after resolution, per MTG rule 117.3c
-        val topId = state.getTopOfStack()
-        val topContainer = topId?.let { state.getEntity(it) }
-        val stackItemController = topContainer?.let { container ->
-            container.get<SpellOnStackComponent>()?.casterId
-                ?: container.get<TriggeredAbilityOnStackComponent>()?.controllerId
-                ?: container.get<ActivatedAbilityOnStackComponent>()?.controllerId
-        } ?: state.activePlayerId
-
+        // CR 117.3b: after a spell or ability resolves, the active player receives priority — not
+        // the resolved object's controller (CR 117.3c is about casting and activating, not
+        // resolving). A resolution that pauses hands this on to [SubmitDecisionHandler].
         val result = stackResolver.resolveTop(state)
         if (result.error != null || result.pendingDecision != null) return result
-        return ExecutionResult.success(result.newState.withPriority(stackItemController), result.events)
+        return ExecutionResult.success(result.newState.withPriority(state.activePlayerId), result.events)
     }
 
     companion object {

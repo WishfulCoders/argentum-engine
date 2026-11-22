@@ -1,0 +1,256 @@
+/*
+ * Standalone pages (profile, stats, help, deckbuilder, …) in the landing screen's language: card art
+ * behind a tint, glass surfaces, the display serif for headings, amber for the one primary action.
+ * The tint is darker than home's because these pages are mostly text.
+ *
+ * Shared surfaces pages compose from: `.panel` (glass section), `.panelHeader`/`.panelTitle`,
+ * `.h1`/`.lede`, `.muted`, `.button`/`.buttonPrimary`/`.buttonGhost`, `.input`, `.tabs`/`.tab`,
+ * `.statGrid`/`.stat`, `.empty`.
+ */
+
+.page {
+  position: relative;
+  /* The page is its own scroll container: index.html pins html/body/#root at 100% with overflow
+     hidden, so a document-level scroll never happens. */
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary, #eef0f6);
+  background: #07080d center center / cover no-repeat fixed;
+}
+
+.page[data-plain='true'] {
+  background: radial-gradient(120% 80% at 50% 0%, #161a26 0%, #0b0d14 55%, #08090e 100%);
+}
+
+.page[data-fit='true'] {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.artTint {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 7, 12, 0.62) 0%, rgba(6, 7, 12, 0.5) 40%, rgba(6, 7, 12, 0.78) 100%);
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+
+.topBar {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 10px 24px;
+  box-sizing: border-box;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #f1f3f9;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+}
+.brand:hover { color: #fff; }
+.brand:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+.brandMark { flex: none; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6)); }
+
+.crumbSep { color: rgba(255, 255, 255, 0.3); font-size: 18px; }
+.crumb {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 500;
+  color: #d5dae6;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.topBarEnd { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* ── Content column ────────────────────────────────────────────────────── */
+
+.main {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 24px 40px;
+  box-sizing: border-box;
+}
+
+.topBar[data-width='narrow'], .main[data-width='narrow'] { max-width: 760px; }
+.topBar[data-width='normal'], .main[data-width='normal'] { max-width: 1080px; }
+.topBar[data-width='wide'], .main[data-width='wide'] { max-width: 1320px; }
+.topBar[data-width='full'], .main[data-width='full'] { max-width: none; }
+
+.page[data-fit='true'] .main {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-bottom: 14px;
+}
+
+/* ── Shared surfaces ───────────────────────────────────────────────────── */
+
+.panel {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(10, 12, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9aa3b8;
+}
+
+.h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f4f5f9;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5);
+}
+
+.lede { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: #c3c9d7; }
+.muted { color: #8f98ac; }
+
+.button,
+.buttonPrimary,
+.buttonGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.button { border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.08); color: #eef0f6; }
+.button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+.buttonPrimary { border: none; background: #f2b45c; color: #1d1405; box-shadow: 0 4px 16px rgba(242, 180, 92, 0.22); }
+.buttonPrimary:hover:not(:disabled) { background: #f7c67f; }
+.buttonGhost { border: 1px solid transparent; background: transparent; color: #c9cfdc; }
+.buttonGhost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.button:disabled, .buttonPrimary:disabled, .buttonGhost:disabled { opacity: 0.45; cursor: not-allowed; }
+.button:focus-visible, .buttonPrimary:focus-visible, .buttonGhost:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.input {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.32);
+  color: #eef0f6;
+  font: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.input::placeholder { color: #8f98ac; }
+.input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(10, 12, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: none;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #b4bccd;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.tab[aria-selected='true'], .tab[data-active='true'] { background: rgba(255, 255, 255, 0.13); color: #fff; }
+.tab:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.statValue { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: #f4f5f9; line-height: 1.1; }
+.statLabel { font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: #8f98ac; }
+
+.empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: #9aa3b8;
+  font-size: 14px;
+}
+
+/* ── Narrow screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .page { background-attachment: scroll; }
+  .topBar { padding: 10px 12px 6px; }
+  .main { padding: 4px 12px 28px; gap: 12px; }
+  .brandText { display: none; }
+  .panel { padding: 14px 14px; border-radius: 14px; }
+  .h1 { font-size: 24px; }
+}

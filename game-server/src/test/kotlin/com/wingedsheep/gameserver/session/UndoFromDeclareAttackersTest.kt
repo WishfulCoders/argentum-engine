@@ -39,7 +39,7 @@ class UndoFromDeclareAttackersTest : ScenarioTestBase() {
 
             val session = newSession(game)
 
-            // AP presses "Pass to Attackers" — server records SET_PRECOMBAT_CHECKPOINT.
+            // AP presses "To Attackers" — server records SET_PRECOMBAT_CHECKPOINT.
             session.executeAction(game.player1Id, PassPriority(game.player1Id)).also {
                 check(it is com.wingedsheep.gameserver.session.GameSession.ActionResult.Success) {
                     "Pass priority should succeed: $it"
@@ -99,7 +99,7 @@ class UndoFromDeclareAttackersTest : ScenarioTestBase() {
 
             val session = newSession(game)
 
-            // AP presses "Pass to Attackers" — server records SET_PRECOMBAT_CHECKPOINT.
+            // AP presses "To Attackers" — server records SET_PRECOMBAT_CHECKPOINT.
             session.executeAction(game.player1Id, PassPriority(game.player1Id))
 
             // Drive the auto-pass loop until AP lands at DECLARE_ATTACKERS.

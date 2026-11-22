@@ -1,0 +1,39 @@
+{
+  "player1Name": "Owner",
+  "player2Name": "New Controller",
+  "player1": {
+    "hand": [
+      "Lightning Bolt"
+    ],
+    "battlefield": [
+      {
+        "name": "Yes Man, Personal Securitron"
+      },
+      {
+        "name": "Mountain"
+      }
+    ],
+    "library": [
+      "Plains",
+      "Plains",
+      "Plains",
+      "Plains",
+      "Plains"
+    ]
+  },
+  "player2": {
+    "library": [
+      "Mountain",
+      "Mountain",
+      "Mountain",
+      "Mountain",
+      "Mountain"
+    ]
+  },
+  "phase": "PRECOMBAT_MAIN",
+  "activePlayer": 1,
+  "priorityPlayer": 1,
+  "player1StopAtSteps": [
+    "PRECOMBAT_MAIN"
+  ]
+}

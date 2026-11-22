@@ -92,6 +92,9 @@ class MultiversalPassageScenarioTest : FunSpec({
         // Second decision: you may pay 2 life. Pay it -> land enters untapped.
         val payDecision = driver.pendingDecision
         payDecision.shouldBeInstanceOf<YesNoDecision>()
+        // Paying is its own reward (no "If you do, ." clause), and the decline branch names the
+        // land rather than calling it "this creature".
+        payDecision.prompt shouldBe "You may pay 2 life. If you don't, Multiversal Passage enters tapped"
         driver.submitYesNo(p1, true)
 
         driver.pendingDecision shouldBe null

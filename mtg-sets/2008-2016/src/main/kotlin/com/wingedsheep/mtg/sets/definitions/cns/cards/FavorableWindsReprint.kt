@@ -13,7 +13,7 @@ val FavorableWindsReprint = Printing(
     collectorNumber = "98",
     scryfallId = "2cba6652-a367-492a-add6-3f9f9197c463",
     artist = "Winona Nelson",
-    imageUri = "https://cards.scryfall.io/normal/front/2/c/2cba6652-a367-492a-add6-3f9f9197c463.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/2/c/2cba6652-a367-492a-add6-3f9f9197c463.jpg?1783939359",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

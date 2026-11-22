@@ -137,8 +137,15 @@ internal class SpellOnStackProjector(
                 ?.filterIsInstance<KeywordAbility.OptionalAdditionalCost>()
                 ?.firstOrNull { it.declaredSlot == slot }
             when {
+                declared?.multi == true -> {
+                    val count = spellOnStack.additionalCostChoices[slot] ?: 1
+                    "${declared.displayPrefix} ×$count"
+                }
                 declared?.keyword == Keyword.OFFSPRING -> "Offspring"
                 slot == ChoiceSlot.BARGAINED -> "Bargained"
+                slot == ChoiceSlot.ENTWINED -> "Entwined"
+                slot == ChoiceSlot.BOUGHT_BACK -> "Buyback paid"
+                slot == ChoiceSlot.ADDITIONAL_COST_PAID -> "Additional cost paid"
                 slot == ChoiceSlot.KICKED -> {
                     // A two-kicker card names the kicker(s) paid ("Kicked {G}"), CR 702.33f.
                     val kickers = cardDef?.keywordAbilities

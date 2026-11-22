@@ -59,6 +59,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
 
     fun registry() = CardRegistry().also { it.register(bear) }
     val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+    val finish = com.wingedsheep.engine.core.EngineServices(registry()).finishAbandonedResolution
 
     fun init2hg(): Pair<GameState, List<EntityId>> {
         val deck = Deck(cards = List(40) { bear.name })
@@ -192,7 +193,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
         val (s2, atkTeammate) = s1.withBear(p[1], attacking = p[3]) // the NON-active teammate's
         val state = s2.copy(step = Step.DECLARE_ATTACKERS, phase = Phase.COMBAT)
 
-        val after = StateBasedActionChecker(zones, cardRegistry = registry()).checkAndApply(state).newState
+        val after = StateBasedActionChecker(zones, cardRegistry = registry(), finishAbandonedResolution = finish).checkAndApply(state).newState
 
         after.getEntity(atkActive)!!.has<AttackingComponent>().shouldBeTrue()
         after.getEntity(atkTeammate)!!.has<AttackingComponent>().shouldBeTrue()
@@ -208,7 +209,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
             .updateEntity(blkP3) { it.with(BlockingComponent(listOf(atk))) }
             .copy(step = Step.DECLARE_BLOCKERS, phase = Phase.COMBAT)
 
-        val after = StateBasedActionChecker(zones, cardRegistry = registry()).checkAndApply(state).newState
+        val after = StateBasedActionChecker(zones, cardRegistry = registry(), finishAbandonedResolution = finish).checkAndApply(state).newState
 
         after.getEntity(blkP2)!!.has<BlockingComponent>().shouldBeTrue()
         after.getEntity(blkP3)!!.has<BlockingComponent>().shouldBeTrue()
@@ -222,7 +223,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
             .updateEntity(atk) { it.with(ControllerComponent(p[2])) }
             .copy(step = Step.DECLARE_ATTACKERS, phase = Phase.COMBAT)
 
-        val after = StateBasedActionChecker(zones, cardRegistry = registry()).checkAndApply(state).newState
+        val after = StateBasedActionChecker(zones, cardRegistry = registry(), finishAbandonedResolution = finish).checkAndApply(state).newState
 
         after.getEntity(atk)!!.has<AttackingComponent>().shouldBeFalse()
     }

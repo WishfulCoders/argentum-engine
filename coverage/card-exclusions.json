@@ -4,7 +4,7 @@
     "'everything we intend to build is built' rather than 'literally every card exists'.",
     "",
     "This is a policy list, not a backlog. A card belongs here only when the reason is",
-    "permanent — the card needs a mechanic the engine will never carry (ante, subgames,",
+    "permanent — the card needs a mechanic the engine will never carry (e.g.",
     "physical dexterity). A card that is merely hard, or blocked on a feature we do plan",
     "to build, stays a normal missing card and keeps counting against the set.",
     "",
@@ -24,22 +24,10 @@
     "exclusion only ever removes a card from the denominator while it is still missing."
   ],
   "reasons": {
-    "ante": "Ante is not supported — the engine has no ante zone, and ante play is banned in every sanctioned format.",
-    "subgame": "Playing a Magic subgame inside a game is out of scope for the engine.",
-    "dexterity": "Requires physical dexterity with a real card, which has no digital equivalent."
+    "ante": "Playing for ante is supported, but this card's ante effect isn't implemented yet."
   },
   "cards": [
     { "name": "Amulet of Quoz", "reason": "ante" },
-    { "name": "Bronze Tablet", "reason": "ante" },
-    { "name": "Contract from Below", "reason": "ante" },
-    { "name": "Darkpact", "reason": "ante" },
-    { "name": "Demonic Attorney", "reason": "ante" },
-    { "name": "Jeweled Bird", "reason": "ante" },
-    { "name": "Rebirth", "reason": "ante" },
-    { "name": "Tempest Efreet", "reason": "ante" },
-    { "name": "Timmerian Fiends", "reason": "ante" },
-    { "name": "Shahrazad", "reason": "subgame" },
-    { "name": "Chaos Orb", "reason": "dexterity" },
-    { "name": "Falling Star", "reason": "dexterity" }
+    { "name": "Timmerian Fiends", "reason": "ante" }
   ]
 }

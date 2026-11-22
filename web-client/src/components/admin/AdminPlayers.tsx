@@ -18,29 +18,46 @@ import {
 } from '@/api/adminUsers'
 import type { AdminAuth } from '@/api/adminAuth'
 import { TournamentDetailModal } from '@/components/profile/TournamentDetailModal'
+import { Avatar, PlayedRecord } from '@/components/profile/accountUi'
+import { describeFilter, isAllGames } from '@/api/statsFilter'
+import { NotCountedNote, OpponentSplit, StatsFilterBar, useStatsFilterParam } from '@/components/stats/StatsFilterBar'
 import { colorForIdentity, colorLabel, mergeModeBuckets } from './statFormat'
 import { AdminScreen, Panel, StatCard, Table, adminTheme, cellStyle } from './adminUi'
 import { AdminDeckModal, AdminSavedDecks } from './AdminPlayerDecks'
+import { useAdminTournamentParam } from './adminNav'
 
 const GAMES_PAGE_SIZE = 10
 
-export function AdminPlayers({ auth, onBack }: { auth: AdminAuth; onBack: () => void }) {
+export function AdminPlayers({
+  auth,
+  selectedId,
+  onSelect,
+  onCloseDetail,
+  onBack,
+}: {
+  auth: AdminAuth
+  /** The player whose detail is open (`/admin/players/<id>`), or null for the roster. */
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onCloseDetail: () => void
+  onBack: () => void
+}) {
   const [users, setUsers] = useState<AdminUserSummary[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useStatsFilterParam()
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetchUsers(auth)
+    fetchUsers(auth, filter)
       .then((u) => !cancelled && setUsers(u))
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : 'Failed to load players'))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
     }
-  }, [auth])
+  }, [auth, filter])
 
   /** Reflect an admin-flag change from the detail view back into the roster row. */
   const applyAdminChange = (id: string, isAdmin: boolean) =>
@@ -49,9 +66,10 @@ export function AdminPlayers({ auth, onBack }: { auth: AdminAuth; onBack: () => 
   if (selectedId != null) {
     return (
       <PlayerDetail
+        key={selectedId}
         auth={auth}
         id={selectedId}
-        onBack={() => setSelectedId(null)}
+        onBack={onCloseDetail}
         onAdminChange={applyAdminChange}
       />
     )
@@ -65,8 +83,12 @@ export function AdminPlayers({ auth, onBack }: { auth: AdminAuth; onBack: () => 
       backLabel="← Dashboard"
     >
       {error && <p style={styles.error}>{error}</p>}
-      <Panel>
-        {loading ? (
+      <Panel
+        title={isAllGames(filter) ? 'Every game' : `Games ${describeFilter(filter)}`}
+        subtitle="Games, wins and win rate leave out games a player never took an action in"
+        action={<StatsFilterBar filter={filter} onChange={setFilter} />}
+      >
+        {loading && users.length === 0 ? (
           <p style={cellStyle.muted}>Loading players…</p>
         ) : users.length === 0 ? (
           <p style={cellStyle.muted}>No registered accounts yet.</p>
@@ -75,13 +97,18 @@ export function AdminPlayers({ auth, onBack }: { auth: AdminAuth; onBack: () => 
             {users.map((u) => {
               const winRate = u.games > 0 ? Math.round((u.wins / u.games) * 100) : 0
               return (
-                <tr key={u.id} style={styles.row} onClick={() => setSelectedId(u.id)}>
+                <tr key={u.id} style={styles.row} onClick={() => onSelect(u.id)}>
                   <td style={cellStyle.td}>
                     <div style={styles.playerCell}>
-                      <span style={styles.playerName}>{u.displayName}</span>
-                      {u.isAdmin && <span style={styles.adminBadge}>ADMIN</span>}
+                      <Avatar name={u.displayName} avatar={u.avatar} small />
+                      <div>
+                        <div style={styles.playerNameRow}>
+                          <span style={styles.playerName}>{u.displayName}</span>
+                          {u.isAdmin && <span style={styles.adminBadge}>ADMIN</span>}
+                        </div>
+                        <div style={styles.playerEmail}>{u.email}</div>
+                      </div>
                     </div>
-                    <div style={styles.playerEmail}>{u.email}</div>
                   </td>
                   <td style={cellStyle.tdNum}>{u.games}</td>
                   <td style={cellStyle.tdNum}>{u.wins}</td>
@@ -117,27 +144,32 @@ function PlayerDetail({
   const [games, setGames] = useState<AdminGamesPage>({ entries: [], total: 0 })
   const [gamesPage, setGamesPage] = useState(0)
   const [deckModal, setDeckModal] = useState<{ gameId: string; opponent: string } | null>(null)
-  const [openTournament, setOpenTournament] = useState<number | null>(null)
+  const [openTournament, setOpenTournament, closeTournament] = useAdminTournamentParam()
+  const [filter, setFilterParam] = useStatsFilterParam()
+  const setFilter = (next: typeof filter) => {
+    setFilterParam(next)
+    setGamesPage(0)
+  }
 
   useEffect(() => {
     let cancelled = false
-    fetchUserDetail(auth, id)
+    fetchUserDetail(auth, id, filter)
       .then((d) => !cancelled && setDetail(d))
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : 'Failed to load player'))
     return () => {
       cancelled = true
     }
-  }, [auth, id])
+  }, [auth, id, filter])
 
   useEffect(() => {
     let cancelled = false
-    fetchUserGames(auth, id, GAMES_PAGE_SIZE, gamesPage * GAMES_PAGE_SIZE)
+    fetchUserGames(auth, id, GAMES_PAGE_SIZE, gamesPage * GAMES_PAGE_SIZE, filter)
       .then((p) => !cancelled && setGames(p))
       .catch(() => !cancelled && setGames({ entries: [], total: 0 }))
     return () => {
       cancelled = true
     }
-  }, [auth, id, gamesPage])
+  }, [auth, id, gamesPage, filter])
 
   /** Open a finished game's replay in a new tab so the admin keeps their place on this screen. */
   const watchReplay = (gameId: string) => window.open(`/replay/${gameId}`, '_blank', 'noopener')
@@ -182,12 +214,21 @@ function PlayerDetail({
         <p style={cellStyle.muted}>Loading…</p>
       ) : (
         <>
+          <div style={styles.identity}>
+            <Avatar name={detail.displayName} avatar={detail.avatar} />
+            <div style={styles.meta}>Joined {detail.createdAt.slice(0, 10)}</div>
+          </div>
+
           {detail.isAdmin && (
             <div style={styles.adminNotice}>
               <span style={styles.adminBadge}>ADMIN</span>
               <span style={cellStyle.muted}>This account can reach the admin dashboard with its own sign-in.</span>
             </div>
           )}
+
+          <div style={styles.filterRow}>
+            <StatsFilterBar filter={filter} onChange={setFilter} />
+          </div>
 
           <div style={styles.cardRow}>
             <StatCard label="Games" value={detail.stats.games} />
@@ -199,8 +240,10 @@ function PlayerDetail({
               accent
             />
           </div>
-
-          <div style={styles.meta}>Joined {detail.createdAt.slice(0, 10)}</div>
+          <div style={styles.splitRow}>
+            <OpponentSplit vsHumans={detail.stats.vsHumans} vsAi={detail.stats.vsAi} filter={filter} onChange={setFilter} />
+            <NotCountedNote count={detail.stats.notCounted} />
+          </div>
 
           {detail.colors.length > 0 && (
             <Panel title="Colors played">
@@ -239,11 +282,20 @@ function PlayerDetail({
 
           {detail.tournaments.length > 0 && (
             <Panel title="Tournaments">
-              <Table head={['Date', 'Tournament', 'Place']}>
+              <Table head={['Date', 'Tournament', 'Record', 'Place']}>
                 {detail.tournaments.map((t) => (
                   <tr key={t.id} style={styles.row} onClick={() => setOpenTournament(t.id)}>
                     <td style={cellStyle.td}>{t.endedAt.slice(0, 10)}</td>
                     <td style={cellStyle.td}>{t.name ?? '—'}</td>
+                    <td style={cellStyle.tdNum}>
+                      <PlayedRecord
+                        wins={t.wins}
+                        losses={t.losses}
+                        draws={t.draws}
+                        forfeitWins={t.forfeitWins}
+                        forfeitLosses={t.forfeitLosses}
+                      />
+                    </td>
                     <td style={cellStyle.tdNum}>
                       {t.placement}/{t.playerCount}
                     </td>
@@ -253,8 +305,9 @@ function PlayerDetail({
             </Panel>
           )}
 
-          {games.total > 0 && (
+          {(games.total > 0 || !isAllGames(filter)) && (
             <Panel title={`Games · ${games.total}`}>
+              {games.total === 0 && <p style={cellStyle.muted}>No games {describeFilter(filter)}.</p>}
               <Table head={['Date', 'Mode', 'Colors', 'Opponent', 'Result', 'Deck', 'Replay']}>
                 {games.entries.map((g, i) => (
                   <tr key={`${g.gameId}-${i}`}>
@@ -271,8 +324,18 @@ function PlayerDetail({
                       )}
                     </td>
                     <td style={cellStyle.td}>{g.opponents ?? '—'}</td>
-                    <td style={{ ...cellStyle.tdNum, color: g.won ? adminTheme.good : adminTheme.bad }}>
+                    <td
+                      style={{ ...cellStyle.tdNum, color: g.notCounted ? adminTheme.textMuted : g.won ? adminTheme.good : adminTheme.bad }}
+                      title={
+                        g.notCounted === 'NO_ACTION'
+                          ? 'Not counted: this player never took an action'
+                          : g.notCounted
+                            ? 'Not counted: no opponent ever took an action'
+                            : undefined
+                      }
+                    >
                       {g.won ? 'Win' : 'Loss'}
+                      {g.notCounted && <span style={styles.notCounted}>not counted</span>}
                     </td>
                     <td style={cellStyle.tdNum}>
                       <button
@@ -339,7 +402,7 @@ function PlayerDetail({
       )}
 
       {openTournament != null && (
-        <TournamentDetailModal tournamentId={openTournament} onClose={() => setOpenTournament(null)} />
+        <TournamentDetailModal tournamentId={openTournament} onClose={closeTournament} />
       )}
     </AdminScreen>
   )
@@ -369,8 +432,12 @@ function prettyMode(mode: string | null): string {
 
 const styles: Record<string, React.CSSProperties> = {
   error: { color: adminTheme.bad, fontSize: 13, margin: 0 },
+  filterRow: { marginBottom: 14 },
+  splitRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 16px', margin: '-4px 0 18px' },
+  notCounted: { display: 'block', fontSize: 11, color: adminTheme.textMuted, fontWeight: 400 },
   row: { cursor: 'pointer' },
-  playerCell: { display: 'flex', alignItems: 'center', gap: 8 },
+  playerCell: { display: 'flex', alignItems: 'center', gap: 12 },
+  playerNameRow: { display: 'flex', alignItems: 'center', gap: 8 },
   playerName: { color: adminTheme.text, fontWeight: 600 },
   playerEmail: { color: adminTheme.textMuted, fontSize: 12, marginTop: 2 },
   adminBadge: {
@@ -386,6 +453,7 @@ const styles: Record<string, React.CSSProperties> = {
   viewLink: { color: adminTheme.accent, fontSize: 13, whiteSpace: 'nowrap' },
   cardRow: { display: 'flex', gap: 12, flexWrap: 'wrap' },
   meta: { color: adminTheme.textMuted, fontSize: 13 },
+  identity: { display: 'flex', alignItems: 'center', gap: 16 },
   adminNotice: {
     display: 'flex',
     alignItems: 'center',
@@ -410,7 +478,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 9,
     border: 'none',
     backgroundColor: adminTheme.accentSolid,
-    color: '#fff',
+    color: adminTheme.onAccent,
     fontWeight: 600,
     fontSize: 13,
     cursor: 'pointer',

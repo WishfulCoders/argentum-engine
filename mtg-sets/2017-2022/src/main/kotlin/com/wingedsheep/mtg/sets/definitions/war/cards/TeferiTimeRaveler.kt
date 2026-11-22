@@ -20,15 +20,8 @@ import com.wingedsheep.sdk.scripting.references.Player
  * +1: Until your next turn, you may cast sorcery spells as though they had flash.
  * −3: Return up to one target artifact, creature, or enchantment to its owner's hand. Draw a card.
  *
- * The static is a [PlayersCantCastSpells] lock gated on `Not(CouldCastSorcery())` and read from the
- * caster's seat: an opponent can cast a spell only in a main phase of their own turn with the stack
- * empty (CR 307.1) — which also stops a spell cast during a resolution (cascade, discover), since the
- * resolving object is still on the stack (CR 608.2). It's a "can't", so it beats any flash
- * permission the opponent has (CR 101.2, the first ruling).
- *
- * The +1 is a duration-bounded flash grant to sorcery spells; the −3's target is optional, and an
- * illegal chosen target means the whole ability doesn't resolve and no card is drawn (CR 608.2b,
- * the second ruling).
+ * The static is a caster-relative [PlayersCantCastSpells]: an opponent is barred whenever *they*
+ * couldn't cast a sorcery (CR 307.5), which also outranks any flash permission they hold.
  */
 val TeferiTimeRaveler = card("Teferi, Time Raveler") {
     manaCost = "{1}{W}{U}"
@@ -42,16 +35,13 @@ val TeferiTimeRaveler = card("Teferi, Time Raveler") {
     staticAbility {
         ability = PlayersCantCastSpells(
             affected = Player.EachOpponent,
-            condition = Conditions.Not(Conditions.CouldCastSorcery()),
+            condition = Conditions.Not(Conditions.CouldCastSorcery),
             conditionFromCaster = true,
         )
     }
 
     loyaltyAbility(+1) {
-        effect = Effects.GrantFlashToSpells(
-            spellFilter = GameObjectFilter.Sorcery,
-            duration = Duration.UntilYourNextTurn,
-        )
+        effect = Effects.GrantFlashToSpells(spellFilter = GameObjectFilter.Sorcery, duration = Duration.UntilYourNextTurn)
     }
 
     loyaltyAbility(-3) {

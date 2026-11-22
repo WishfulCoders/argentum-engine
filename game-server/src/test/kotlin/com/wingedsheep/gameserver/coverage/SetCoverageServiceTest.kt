@@ -141,39 +141,69 @@ class SetCoverageServiceTest : FunSpec({
     }
 
     context("cards we've decided never to implement") {
-        test("drop out of the denominator, so Antiquities is complete with Bronze Tablet unbuilt") {
-            // Bronze Tablet needs the ante zone the engine will never carry. Left in the total it
-            // would peg ATQ at 84/85 forever; excluded, the set reads done because everything we
-            // intend to build is built.
-            val atq = coverage.find { it.code == "ATQ" }.shouldNotBeNull()
-            atq.notPlanned shouldBe 1
-            atq.implemented shouldBe atq.total
-            atq.percent shouldBe 100.0
+        test("drop out of the denominator, so a set's total counts only what we intend to build") {
+            // Homelands excuses Timmerian Fiends (its ante effect isn't built). Left in the total it
+            // would peg HML one short forever; excluded, its total is every draft card we do
+            // intend to build.
+            val hml = coverage.find { it.code == "HML" }.shouldNotBeNull()
+            hml.notPlanned shouldBe 1
+            val detail = service.detail("HML").shouldNotBeNull()
+            hml.total shouldBe detail.draft.size - 1
         }
 
         test("are still listed in the detail view, each carrying its reason") {
-            val detail = service.detail("ATQ").shouldNotBeNull()
-            val tablet = detail.draft.find { it.name == "Bronze Tablet" }.shouldNotBeNull()
-            tablet.implemented shouldBe false
-            tablet.notPlanned.shouldNotBeNull().kind shouldBe "ante"
+            val detail = service.detail("HML").shouldNotBeNull()
+            val fiends = detail.draft.find { it.name == "Timmerian Fiends" }.shouldNotBeNull()
+            fiends.implemented shouldBe false
+            fiends.notPlanned.shouldNotBeNull().kind shouldBe "ante"
             // Exclusion is carried as its reason, so a flagged card can never lack an explanation.
-            tablet.notPlanned.shouldNotBeNull().why.shouldNotBeEmpty()
+            fiends.notPlanned.shouldNotBeNull().why.shouldNotBeEmpty()
             detail.notPlanned shouldBe 1
             detail.total shouldBe detail.draft.count { it.notPlanned == null }
+            // A set always names what it isn't counting, so a set that reads 100% can say which
+            // cards it excused to get there.
+            detail.draft.filter { it.notPlanned != null }.map { it.name }.toSet() shouldBe
+                setOf("Timmerian Fiends")
         }
 
-        test("an excused set still names what it isn't counting — Arabian Nights and its two exclusions") {
-            // ARN's only remaining holes are two policy exclusions (Jeweled Bird = ante, Shahrazad
-            // = subgame); every card we intend to build is built, City in a Bottle included. The
-            // exclusions drop out of the denominator but stay named in the detail view, so a set
-            // that reads 100% can always say which cards it excused to get there.
-            val arn = coverage.find { it.code == "ARN" }.shouldNotBeNull()
-            arn.notPlanned shouldBe 2
-            arn.implemented shouldBe arn.total
-            arn.percent shouldBe 100.0
-            val detail = service.detail("ARN").shouldNotBeNull()
-            detail.draft.filter { it.notPlanned != null }.map { it.name } shouldBe
-                listOf("Jeweled Bird", "Shahrazad")
+        test("Legends excuses nothing once Falling Star's flip and its ante cards are built") {
+            val leg = coverage.find { it.code == "LEG" }.shouldNotBeNull()
+            leg.notPlanned shouldBe 0
+            val draft = service.detail("LEG").shouldNotBeNull().draft
+            for (name in listOf("Falling Star", "Rebirth", "Tempest Efreet")) {
+                val card = draft.find { it.name == name }.shouldNotBeNull()
+                card.implemented shouldBe true
+                card.notPlanned shouldBe null
+            }
+        }
+
+        test("Chaos Orb stops being excused once its table-flip is built — Alpha is complete") {
+            val lea = coverage.find { it.code == "LEA" }.shouldNotBeNull()
+            lea.notPlanned shouldBe 0
+            lea.implemented shouldBe lea.total
+            lea.percent shouldBe 100.0
+            val orb = service.detail("LEA").shouldNotBeNull().draft
+                .find { it.name == "Chaos Orb" }.shouldNotBeNull()
+            orb.implemented shouldBe true
+            orb.notPlanned shouldBe null
+        }
+
+        test("an ante card stops being excused once it is built — Antiquities and Arabian Nights") {
+            // Bronze Tablet and Jeweled Bird were excluded while the engine had no ante zone. With
+            // playing for ante supported they are built, so they count as ordinary implemented
+            // cards: Antiquities is complete with nothing excused at all.
+            val atq = coverage.find { it.code == "ATQ" }.shouldNotBeNull()
+            atq.notPlanned shouldBe 0
+            atq.implemented shouldBe atq.total
+            atq.percent shouldBe 100.0
+            val tablet = service.detail("ATQ").shouldNotBeNull().draft
+                .find { it.name == "Bronze Tablet" }.shouldNotBeNull()
+            tablet.implemented shouldBe true
+            tablet.notPlanned shouldBe null
+            val bird = service.detail("ARN").shouldNotBeNull().draft
+                .find { it.name == "Jeweled Bird" }.shouldNotBeNull()
+            bird.implemented shouldBe true
+            bird.notPlanned shouldBe null
         }
 
         test("a set that reaches 100% is no longer flagged incomplete") {
@@ -192,8 +222,7 @@ class SetCoverageServiceTest : FunSpec({
 
         test("summary counts them once across every set that prints them") {
             val summary = service.summary()
-            // Exclusions key on card name, so Contract from Below is one not-planned card whether
-            // it shows up in Alpha, Beta or Unlimited.
+            // Exclusions key on card name, so an excused card counts once however many sets print it.
             summary.distinctNotPlanned shouldBeGreaterThanOrEqualTo 1
             summary.setsComplete shouldBe coverage.count { it.percent >= 100.0 }
         }

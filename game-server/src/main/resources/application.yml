@@ -14,6 +14,9 @@ app:
   # Build identity, stamped onto every recorded replay so one that later fails to re-simulate can be
   # traced to the build that recorded it. The Dockerfile sets this from the deploy's git sha.
   version: ${APP_VERSION:dev}
+  # Downtime quoted to connected players when the server shuts down for a restart (ServerRestartNotice).
+  # A deploy takes about this long from SIGTERM to the new container accepting connections.
+  restart-expected-downtime-seconds: ${RESTART_EXPECTED_DOWNTIME_SECONDS:60}
 
 spring:
   application:
@@ -140,8 +143,8 @@ game:
     model: ${GAME_AI_MODEL:qwen/qwen3.6-plus:free}
     deckbuilding-model: ${GAME_AI_DECKBUILDING_MODEL:}
     open-router-api-key: ${OPENROUTER_API_KEY:}
-    # When true, AI sealed decks always use the deterministic heuristic builder (skips the LLM).
-    heuristic-deckbuilding: ${GAME_AI_HEURISTIC_DECKBUILDING:false}
+    # When true, AI limited decks never ask the LLM; the Draftsim autobuilder always builds them.
+    skip-llm-deckbuilding: ${GAME_AI_SKIP_LLM_DECKBUILDING:false}
     # Local testing mode: record the engine AI's candidate actions + scores and serve them from
     # /api/dev/ai-insight. Off in production — recording retains a GameState per decision.
     insight-enabled: ${GAME_AI_INSIGHT_ENABLED:false}

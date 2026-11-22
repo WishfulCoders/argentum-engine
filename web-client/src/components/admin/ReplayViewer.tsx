@@ -13,6 +13,8 @@ import {
 } from '@/replay/reconstructSnapshots.ts'
 import { uploadReplayFile } from '@/replay/replayFile.ts'
 import { ReplayPlayer, type ReplayMetadata } from '../replay/ReplayPlayer'
+import { PageShell, pageStyles } from '../ui/PageShell'
+import styles from '../replay/Replay.module.css'
 
 // ============================================================================
 // Types
@@ -126,6 +128,7 @@ export function ReplayViewer({ fetchGames, fetchReplay, onBack }: ReplayViewerPr
       metadata={fileMetadata}
       fromFile={fileMetadata != null}
       onExit={handleBackToList}
+      onHome={onBack}
     />
   )
 }
@@ -139,8 +142,31 @@ interface GameGroup {
   games: GameSummary[]
 }
 
+/** How the list is laid out. A flat date order is the default — grouping is opt-in. */
+type ListOrder = 'newest' | 'oldest' | 'tournament'
+
+const ORDER_LABELS: Record<ListOrder, string> = {
+  newest: 'Newest first',
+  oldest: 'Oldest first',
+  tournament: 'By tournament',
+}
+
+function endedAtMillis(game: GameSummary): number {
+  const t = Date.parse(game.endedAt)
+  return Number.isNaN(t) ? 0 : t
+}
+
+/** Sorts by when the game ended; the endpoints don't agree on an order, so the list sets its own. */
+function sortByEnded(games: GameSummary[], direction: 'asc' | 'desc'): GameSummary[] {
+  const sign = direction === 'asc' ? 1 : -1
+  return [...games].sort((a, b) => sign * (endedAtMillis(a) - endedAtMillis(b)))
+}
+
+/**
+ * Tournaments first, most recently played first, each in the order its games were played (round
+ * order); casual games last, newest first.
+ */
 function groupByTournament(games: GameSummary[]): GameGroup[] {
-  const groups: GameGroup[] = []
   const tournamentMap = new Map<string, GameSummary[]>()
   const casual: GameSummary[] = []
 
@@ -157,11 +183,12 @@ function groupByTournament(games: GameSummary[]): GameGroup[] {
     }
   }
 
-  for (const [name, tournamentGames] of tournamentMap) {
-    groups.push({ label: name, games: tournamentGames })
-  }
+  const latest = (gs: GameSummary[]) => Math.max(...gs.map(endedAtMillis))
+  const groups: GameGroup[] = [...tournamentMap]
+    .sort(([, a], [, b]) => latest(b) - latest(a))
+    .map(([name, tournamentGames]) => ({ label: name, games: sortByEnded(tournamentGames, 'asc') }))
   if (casual.length > 0) {
-    groups.push({ label: 'Casual Games', games: casual })
+    groups.push({ label: 'Casual Games', games: sortByEnded(casual, 'desc') })
   }
   return groups
 }
@@ -183,16 +210,31 @@ function GameListView({
   loading: boolean
   error: string | null
 }) {
-  const groups = groupByTournament(games)
   const hasTournaments = games.some((g) => g.tournamentName)
+  const [order, setOrder] = useState<ListOrder>('newest')
+  // "By tournament" is only offered when there is a tournament to group by.
+  const effectiveOrder: ListOrder = order === 'tournament' && !hasTournaments ? 'newest' : order
+  const orders: ListOrder[] = hasTournaments ? ['newest', 'oldest', 'tournament'] : ['newest', 'oldest']
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div style={styles.pageContainer}>
-      <div style={styles.listContainer}>
-        <div style={styles.listHeader}>
-          <h1 style={styles.listTitle}>Game Replays</h1>
-          <div style={styles.headerButtons}>
+    // This list is an in-app screen, not a route: on the landing screen it is a flag in
+    // HomeScreen's state at "/", so the shell's home link (a Link to "/") would go nowhere. Clicks on
+    // it are taken here and closed the way Back closes them.
+    <div
+      className={styles.listScroll}
+      onClickCapture={(e) => {
+        const home = (e.target as HTMLElement).closest('a[href="/"]')
+        if (home) { e.preventDefault(); e.stopPropagation(); onBack() }
+      }}
+    >
+      <PageShell title="Replays" width="normal">
+        <div className={styles.listHeader}>
+          <div className={styles.listHeading}>
+            <h1 className={pageStyles.h1}>Your replays</h1>
+            <p className={pageStyles.lede}>Watch any finished game again, step by step.</p>
+          </div>
+          <div className={styles.listActions}>
             <input
               ref={fileInputRef}
               type="file"
@@ -205,36 +247,65 @@ function GameListView({
                 if (file) onOpenFile(file)
               }}
             />
+            <button type="button" onClick={onBack} className={pageStyles.buttonGhost}>
+              ← Back
+            </button>
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
-              style={styles.secondaryButton}
-              title="Watch a replay file exported from any game ('Export replay' in the replay viewer)."
+              className={pageStyles.button}
+              title="Watch a replay file exported from any game ('Export' in the replay viewer)."
             >
-              Open replay file
+              Open file
             </button>
-            <button onClick={onReload} disabled={loading} style={styles.secondaryButton}>
-              {loading ? 'Loading...' : 'Reload'}
-            </button>
-            <button onClick={onBack} style={styles.secondaryButton}>
-              Back
+            <button type="button" onClick={onReload} disabled={loading} className={pageStyles.button}>
+              {loading ? 'Loading…' : 'Reload'}
             </button>
           </div>
         </div>
-        {error && <p style={styles.errorText}>{error}</p>}
-        {games.length === 0 ? (
-          <p style={styles.emptyText}>No completed games yet.</p>
-        ) : hasTournaments ? (
-          groups.map((group) => (
-            <div key={group.label} style={styles.groupContainer}>
-              <h2 style={styles.groupTitle}>{group.label}</h2>
-              <GameTable games={group.games} onReplay={onReplay} showRound />
-            </div>
-          ))
-        ) : (
-          <GameTable games={games} onReplay={onReplay} showRound={false} />
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        {games.length > 1 && (
+          <div className={pageStyles.tabs} role="tablist" aria-label="Order" style={{ alignSelf: 'flex-start' }}>
+            {orders.map((o) => (
+              <button
+                key={o}
+                type="button"
+                role="tab"
+                aria-selected={effectiveOrder === o}
+                onClick={() => setOrder(o)}
+                className={pageStyles.tab}
+              >
+                {ORDER_LABELS[o]}
+              </button>
+            ))}
+          </div>
         )}
-      </div>
+        <section className={pageStyles.panel}>
+          {games.length === 0 ? (
+            <div className={pageStyles.empty}>
+              <p className={styles.emptyTitle}>{loading ? 'Loading games…' : 'No finished games yet'}</p>
+              {!loading && <p className={pageStyles.muted}>Play a game and it shows up here when it ends.</p>}
+            </div>
+          ) : effectiveOrder === 'tournament' ? (
+            <div className={styles.group} style={{ gap: 18 }}>
+              {groupByTournament(games).map((group) => (
+                <div key={group.label} className={styles.group}>
+                  <h2 className={styles.groupTitle}>{group.label}</h2>
+                  <GameTable games={group.games} onReplay={onReplay} showRound showTournament={false} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <GameTable
+              games={sortByEnded(games, effectiveOrder === 'oldest' ? 'asc' : 'desc')}
+              onReplay={onReplay}
+              showRound
+              showTournament
+            />
+          )}
+        </section>
+      </PageShell>
     </div>
   )
 }
@@ -243,49 +314,40 @@ function GameTable({
   games,
   onReplay,
   showRound,
+  showTournament,
 }: {
   games: GameSummary[]
   onReplay: (gameId: string) => void
   showRound: boolean
+  /** In a flat list the tournament name is the only hint of which event a game belonged to. */
+  showTournament: boolean
 }) {
   return (
-    <table style={styles.table}>
-      <thead>
-        <tr>
-          {showRound && <th style={styles.th}>Round</th>}
-          <th style={styles.th}>Players</th>
-          <th style={styles.th}>Date</th>
-          <th style={styles.th}>Winner</th>
-          <th style={styles.th}>Steps</th>
-          <th style={styles.th}></th>
-        </tr>
-      </thead>
-      <tbody>
-        {games.map((game) => (
-          <tr key={game.gameId} style={styles.tr}>
-            {showRound && (
-              <td style={styles.td}>
-                {game.tournamentRound != null ? game.tournamentRound + 1 : '-'}
-              </td>
-            )}
-            <td style={styles.td}>
-              {game.player1Name} vs {game.player2Name}
-            </td>
-            <td style={styles.td}>{formatDate(game.endedAt)}</td>
-            <td style={styles.td}>{game.winnerName ?? 'Draw'}</td>
-            <td style={styles.td}>{game.snapshotCount}</td>
-            <td style={styles.td}>
-              <button onClick={() => onReplay(game.gameId)} style={styles.replayButton}>
-                Replay
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ul className={styles.rows} role="list">
+      {games.map((game) => (
+        <li key={game.gameId} className={styles.row}>
+          <div className={styles.rowMain}>
+            <span className={styles.players}>
+              {game.player1Name}<span className={styles.vs}>vs</span>{game.player2Name}
+            </span>
+            <span className={styles.meta}>
+              {showTournament && game.tournamentName && <span>{game.tournamentName}</span>}
+              {showRound && game.tournamentRound != null && (
+                <span className={styles.round}>Round {game.tournamentRound + 1}</span>
+              )}
+              <span>{formatDate(game.endedAt)}</span>
+              <span className={styles.metaWinner}>{game.winnerName ? `${game.winnerName} won` : 'Draw'}</span>
+              <span>{game.snapshotCount} steps</span>
+            </span>
+          </div>
+          <button type="button" onClick={() => onReplay(game.gameId)} className={`${pageStyles.buttonPrimary} ${styles.watch}`}>
+            Replay
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
-
 // ============================================================================
 // Replay View
 // ============================================================================
@@ -302,104 +364,4 @@ function formatDate(iso: string): string {
   } catch {
     return iso
   }
-}
-
-// ============================================================================
-// Styles
-// ============================================================================
-
-const styles: Record<string, React.CSSProperties> = {
-  pageContainer: {
-    height: '100vh',
-    backgroundColor: '#0a0a12',
-    color: '#ccc',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingTop: 80,
-    paddingBottom: 80,
-    overflowY: 'auto',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  listContainer: {
-    width: '100%',
-    maxWidth: 900,
-    padding: '0 24px',
-  },
-  listHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  listTitle: {
-    margin: 0,
-    fontSize: 24,
-    color: '#e0e0e0',
-  },
-  headerButtons: {
-    display: 'flex',
-    gap: 8,
-  },
-  secondaryButton: {
-    padding: '8px 16px',
-    fontSize: 13,
-    backgroundColor: 'transparent',
-    color: '#888',
-    border: '1px solid #333',
-    borderRadius: 6,
-    cursor: 'pointer',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 12,
-    marginBottom: 0,
-  },
-  emptyText: {
-    color: '#555',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 48,
-  },
-  groupContainer: {
-    marginBottom: 32,
-  },
-  groupTitle: {
-    margin: '0 0 12px 0',
-    fontSize: 16,
-    fontWeight: 500,
-    color: '#8ab4f8',
-    borderBottom: '1px solid #1a1a2e',
-    paddingBottom: 8,
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  th: {
-    textAlign: 'left',
-    padding: '10px 12px',
-    fontSize: 12,
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    borderBottom: '1px solid #1a1a2e',
-  },
-  tr: {
-    borderBottom: '1px solid #111',
-  },
-  td: {
-    padding: '12px 12px',
-    fontSize: 14,
-  },
-  replayButton: {
-    padding: '6px 14px',
-    fontSize: 12,
-    backgroundColor: '#1e40af',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 4,
-    cursor: 'pointer',
-  },
 }

@@ -11,7 +11,6 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.EntersOnlyIfCostPaid
 import com.wingedsheep.sdk.scripting.effects.Effect
 
 /**
@@ -31,20 +30,14 @@ import com.wingedsheep.sdk.scripting.effects.Effect
  */
 object EffectEntryCosts {
 
-    /** The entry cost [entityId] would pay as it enters, read off the card that would enter. */
-    fun costFor(state: GameState, entityId: EntityId, context: EffectContext, registry: CardRegistry) =
-        enteringCard(state, entityId, context)
-            ?.let { registry.getCard(it) }
-            ?.script?.replacementEffects
-            ?.filterIsInstance<EntersOnlyIfCostPaid>()
-            ?.firstOrNull()
-            ?.cost
-
-    /** The card as it would enter — the copied card when it enters as a copy (CR 614.12). */
-    private fun enteringCard(state: GameState, entityId: EntityId, context: EffectContext): CardComponent? =
-        context.entryCopies[entityId]
-            ?.let { EffectCopyEntry.apply(state, entityId, it).getEntity(entityId)?.get<CardComponent>() }
-            ?: state.getEntity(entityId)?.get<CardComponent>()
+    /**
+     * The entry cost [entityId] would pay as it enters. Always null since the 2026-11-22 upstream merge:
+     * the fork's `EntersOnlyIfCostPaid` was replaced by upstream's `EntersOnlyIfPaid` (Mox Diamond now
+     * goes through `EffectEntryPayments`), so this path is dormant and can be deleted.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun costFor(state: GameState, entityId: EntityId, context: EffectContext, registry: CardRegistry):
+        com.wingedsheep.sdk.scripting.costs.PayCost? = null
 
     /** The prepared context, or the pause asking an entrant's controller to pay. */
     data class Preparation(val pause: EffectResult?, val context: EffectContext)

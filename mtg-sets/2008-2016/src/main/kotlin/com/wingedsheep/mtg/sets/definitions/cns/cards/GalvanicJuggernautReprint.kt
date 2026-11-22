@@ -13,7 +13,7 @@ val GalvanicJuggernautReprint = Printing(
     collectorNumber = "200",
     scryfallId = "7a006dd2-8a7f-4eef-a6aa-b6bcc0b56ed6",
     artist = "Lucas Graciano",
-    imageUri = "https://cards.scryfall.io/normal/front/7/a/7a006dd2-8a7f-4eef-a6aa-b6bcc0b56ed6.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/7/a/7a006dd2-8a7f-4eef-a6aa-b6bcc0b56ed6.jpg?1783939336",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

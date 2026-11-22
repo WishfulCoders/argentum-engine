@@ -13,7 +13,7 @@ val MirrodinSCoreReprint = Printing(
     collectorNumber = "208",
     scryfallId = "f660d25d-a1d1-444c-8f04-da31a8165499",
     artist = "Greg Staples",
-    imageUri = "https://cards.scryfall.io/normal/front/f/6/f660d25d-a1d1-444c-8f04-da31a8165499.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/f/6/f660d25d-a1d1-444c-8f04-da31a8165499.jpg?1783939335",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

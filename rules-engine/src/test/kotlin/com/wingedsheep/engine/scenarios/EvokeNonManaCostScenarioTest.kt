@@ -237,9 +237,9 @@ class EvokeNonManaCostScenarioTest : ScenarioTestBase() {
             val client = stateTransformer.transform(game.state, game.player1Id)
             val evoker = client.cards[game.cardInHand("Pitch Evoker")]!!
             evoker.evokeAdditionalCost.shouldNotBeNull() shouldContain "white"
-            evoker.evoke shouldBe "{0}"
+            evoker.evoke?.cost shouldBe "{0}"
             val mulldrifter = client.cards[game.cardInHand("Mulldrifter")]!!
-            mulldrifter.evoke shouldBe "{2}{U}"
+            mulldrifter.evoke?.cost shouldBe "{2}{U}"
             mulldrifter.evokeAdditionalCost.shouldBeNull()
         }
     }

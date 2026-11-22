@@ -57,7 +57,12 @@ function saveReadState(state: ReadState) {
   }
 }
 
-export function WhatsNew() {
+/**
+ * `compact`: the bell and its unread count only — no label, and no headline peek beside it. For a
+ * top bar that also carries navigation, where the peek's one-line headline cost more width than
+ * everything else in the bar; the headline is the first entry the panel shows.
+ */
+export function WhatsNew({ compact = false }: { compact?: boolean } = {}) {
   const [readState, setReadState] = useState<ReadState>(loadReadState)
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
@@ -103,7 +108,7 @@ export function WhatsNew() {
   const today = new Date()
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={`${styles.root} ${compact ? styles.compact : ''}`} ref={rootRef}>
       <button
         ref={bellRef}
         type="button"
@@ -124,7 +129,7 @@ export function WhatsNew() {
       </button>
 
       {/* The newest unread headline, readable without opening anything. Gone once it's read. */}
-      {!open && latestUnread && (
+      {!open && !compact && latestUnread && (
         <button type="button" className={styles.peek} onClick={() => setOpen(true)}>
           <span className={styles.peekTag}>New</span>
           <span className={styles.peekTitle}>{latestUnread.title}</span>

@@ -5,9 +5,9 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #0f172a;
+  /* The card art is set inline (it's picked at runtime); this tint sits over it. */
+  background: #07080d center center / cover no-repeat;
   color: #e2e8f0;
-  font-family: system-ui, sans-serif;
 }
 
 /* --- top bar ----------------------------------------------------------------------------- */
@@ -15,18 +15,36 @@
 .topbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-bottom: 1px solid #1e293b;
-  background: #111827;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 12, 20, 0.62);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
   flex: 0 0 auto;
 }
 
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .title {
-  font-size: 16px;
-  font-weight: 700;
   margin: 0;
-  letter-spacing: 0.01em;
+  font-size: 15px;
+  font-weight: 500;
+  color: #d5dae6;
+  white-space: nowrap;
 }
 
 .spacer {
@@ -35,7 +53,7 @@
 
 .linkBtn {
   background: transparent;
-  color: #93c5fd;
+  color: #f2c97a;
   border: none;
   cursor: pointer;
   font-size: 14px;
@@ -43,7 +61,7 @@
 }
 
 .linkBtn:hover {
-  color: #bfdbfe;
+  color: #f7d79c;
 }
 
 .actionBtn {
@@ -51,9 +69,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 5px 12px;
   cursor: pointer;
@@ -61,18 +79,19 @@
 }
 
 .actionBtn:hover {
-  background: #263449;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .actionBtnPrimary {
   composes: actionBtn;
-  background: #7c3aed;
+  background: #f2b45c;
   border-color: transparent;
-  color: #fff;
+  color: #1d1405;
+  box-shadow: 0 4px 16px rgba(242, 180, 92, 0.22);
 }
 
 .actionBtnPrimary:hover {
-  background: #8b5cf6;
+  background: #f7c67f;
 }
 
 .actionBtn:disabled {
@@ -87,18 +106,18 @@
 
 .actionHint {
   font-size: 10px;
-  color: #94a3b8;
+  color: #a3abbd;
   font-weight: 400;
 }
 
 .actionBtnPrimary .actionHint {
-  color: #e9d5ff;
+  color: rgba(29, 20, 5, 0.72);
 }
 
 .iconBtn {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
   color: #cbd5e1;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   width: 30px;
   height: 30px;
@@ -108,7 +127,7 @@
 }
 
 .iconBtn:hover:not(:disabled) {
-  background: #263449;
+  background: rgba(255, 255, 255, 0.14);
   color: #f8fafc;
 }
 
@@ -119,7 +138,7 @@
 
 .statusBar {
   padding: 6px 14px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 13px;
   flex: 0 0 auto;
 }
@@ -147,20 +166,20 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .splitter {
   flex: 0 0 6px;
   cursor: col-resize;
-  background: #111827;
-  border-right: 1px solid #1e293b;
+  background: rgba(10, 12, 20, 0.66);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
 }
 
 .splitter:hover,
 .splitterActive {
-  background: #4c1d95;
+  background: rgba(242, 180, 92, 0.4);
 }
 
 .splitterActive {
@@ -183,13 +202,13 @@
   gap: 6px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #94a3b8;
+  color: #a3abbd;
 }
 
 .select {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 4px 6px;
   font-size: 12px;
@@ -197,7 +216,7 @@
 
 .smallLabel {
   font-size: 11px;
-  color: #94a3b8;
+  color: #a3abbd;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -210,8 +229,8 @@
   gap: 8px;
   flex-wrap: wrap;
   padding: 8px 12px;
-  border-bottom: 1px solid #1e293b;
-  background: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 12, 20, 0.66);
   flex: 0 0 auto;
 }
 
@@ -221,16 +240,26 @@
   gap: 5px;
 }
 
+.rowBreak { flex-basis: 100%; height: 0; }
+
 .modeHint {
+  flex: 1 1 220px;
+  min-width: 0;
   font-size: 11px;
-  color: #64748b;
-  flex-basis: 100%;
+  color: #8f98ac;
+}
+
+.boardTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .ghostBtn {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 5px 10px;
   cursor: pointer;
@@ -238,7 +267,7 @@
 }
 
 .ghostBtn:hover:not(:disabled) {
-  background: #263449;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .ghostBtn:disabled {
@@ -258,9 +287,11 @@
 }
 
 .seat {
-  background: #111827;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
+  background: rgba(10, 12, 20, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 14px;
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -269,8 +300,8 @@
 
 .seatActive {
   composes: seat;
-  border-color: #6d28d9;
-  box-shadow: 0 0 0 1px rgba(109, 40, 217, 0.35);
+  border-color: rgba(242, 180, 92, 0.75);
+  box-shadow: 0 0 0 1px rgba(242, 180, 92, 0.3);
 }
 
 .seatHead {
@@ -284,9 +315,9 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #a78bfa;
-  background: rgba(124, 58, 237, 0.15);
-  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #f2c97a;
+  background: rgba(242, 180, 92, 0.14);
+  border: 1px solid rgba(242, 180, 92, 0.45);
   border-radius: 999px;
   padding: 2px 7px;
   white-space: nowrap;
@@ -295,9 +326,9 @@
 .nameInput {
   flex: 1;
   min-width: 90px;
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 5px 8px;
   font-size: 13px;
@@ -308,8 +339,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 2px 4px;
 }
@@ -336,9 +367,9 @@
 }
 
 .stepBtn {
-  background: #0b1220;
+  background: rgba(0, 0, 0, 0.28);
   color: #cbd5e1;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 4px;
   width: 20px;
   height: 20px;
@@ -348,7 +379,7 @@
 }
 
 .stepBtn:hover {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 /* --- zones ------------------------------------------------------------------------------- */
@@ -360,8 +391,8 @@
 }
 
 .zone {
-  background: #0b1220;
-  border: 1px dashed #1e293b;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 6px 8px 8px;
   display: flex;
@@ -382,13 +413,13 @@
 }
 
 .zoneDropActive {
-  border-color: #a78bfa;
+  border-color: #f2c97a;
   border-style: solid;
-  background: rgba(124, 58, 237, 0.12);
+  background: rgba(242, 180, 92, 0.1);
 }
 
 .zoneTarget {
-  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(242, 180, 92, 0.5);
 }
 
 .zoneHead {
@@ -399,25 +430,25 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: #a3abbd;
   cursor: pointer;
 }
 
 .zoneHeadActive {
   composes: zoneHead;
-  color: #c4b5fd;
+  color: #f2c97a;
 }
 
 .zoneCount {
   font-weight: 400;
-  color: #64748b;
+  color: #8f98ac;
 }
 
 .zoneClear {
   margin-left: auto;
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #8f98ac;
   font-size: 11px;
   cursor: pointer;
 }
@@ -435,7 +466,7 @@
 }
 
 .zoneEmpty {
-  color: #475569;
+  color: rgba(255, 255, 255, 0.26);
   font-size: 11px;
   font-style: italic;
   align-self: center;
@@ -454,8 +485,8 @@
   height: var(--card-h);
   border-radius: 5px;
   overflow: hidden;
-  background: #1e293b;
-  border: 1px solid #263449;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   cursor: grab;
   flex: 0 0 auto;
   padding: 0;
@@ -475,8 +506,8 @@
 }
 
 .cardSelected {
-  border-color: #a78bfa;
-  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.55);
+  border-color: #f2c97a;
+  box-shadow: 0 0 0 2px rgba(242, 180, 92, 0.6);
 }
 
 .cardImg {
@@ -584,7 +615,7 @@
 .toolBtn {
   flex: 1;
   background: rgba(30, 41, 59, 0.95);
-  border: 1px solid #475569;
+  border: 1px solid rgba(255, 255, 255, 0.26);
   color: #e2e8f0;
   border-radius: 3px;
   font-size: 9px;
@@ -595,8 +626,8 @@
 }
 
 .toolBtn:hover {
-  background: #4c1d95;
-  border-color: #7c3aed;
+  background: rgba(242, 180, 92, 0.2);
+  border-color: rgba(242, 180, 92, 0.65);
 }
 
 .toolBtnDanger:hover {
@@ -618,8 +649,9 @@
 }
 
 .modal {
-  background: #111827;
-  border: 1px solid #334155;
+  background: rgba(16, 18, 28, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
   padding: 16px;
   width: min(720px, 100%);
@@ -662,7 +694,7 @@
 
 .modalType {
   font-size: 12px;
-  color: #94a3b8;
+  color: #a3abbd;
 }
 
 .fieldGroup {
@@ -675,7 +707,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: #a3abbd;
 }
 
 .toggleRow {
@@ -688,8 +720,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
@@ -698,9 +730,9 @@
 
 .toggleActive {
   composes: toggle;
-  background: #4c1d95;
-  border-color: #7c3aed;
-  color: #ede9fe;
+  background: rgba(242, 180, 92, 0.2);
+  border-color: rgba(242, 180, 92, 0.65);
+  color: #f6e3bf;
 }
 
 .counterRow {
@@ -719,9 +751,9 @@
 }
 
 .textInput {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.07);
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 5px 8px;
   font-size: 12px;
@@ -755,8 +787,8 @@
 /* --- JSON drawer ------------------------------------------------------------------------- */
 
 .jsonDrawer {
-  border-top: 1px solid #1e293b;
-  background: #0b1220;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -767,9 +799,9 @@
 .jsonArea {
   width: 100%;
   height: 180px;
-  background: #020617;
+  background: rgba(0, 0, 0, 0.4);
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   padding: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -785,7 +817,7 @@
 
 .hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: #a3abbd;
   line-height: 1.35;
 }
 
@@ -804,10 +836,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border: 1px solid #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 8px;
-  background: #020617;
+  background: rgba(0, 0, 0, 0.4);
   max-height: 260px;
   overflow-y: auto;
 }
@@ -859,7 +891,7 @@
 }
 
 .assayPrinted {
-  color: #94a3b8;
+  color: #a3abbd;
   font-style: italic;
 }
 
@@ -881,7 +913,7 @@
 
 .verdictVariant {
   background: #1e3a5f;
-  color: #93c5fd;
+  color: #f2c97a;
 }
 
 .verdictBad {
@@ -894,7 +926,7 @@
   flex: 1 0 100%;
   margin: 0;
   padding: 6px 8px;
-  background: #0b1220;
+  background: rgba(0, 0, 0, 0.28);
   border-radius: 4px;
   color: #cbd5e1;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -932,4 +964,47 @@
   flex: 1;
   font-size: 12px;
   color: #e2e8f0;
+}
+
+/* --- narrow screens ---------------------------------------------------------------------- */
+
+/* A laptop keeps the side-by-side split (the board needs ~360px beside the browser); below that the
+   browser stacks above the board and the body scrolls. */
+@media (max-width: 1023px) {
+  .body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  /* The pane's width comes from the drag splitter as an inline style. */
+  .browserPane {
+    width: 100% !important;
+    flex: 0 0 55vh !important;
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .splitter { display: none; }
+  .boardPane { min-width: 0; flex: none; }
+}
+
+/* Phones: the top bar's actions become a sideways-scrolling row and a seat's zones wrap. */
+@media (max-width: 760px) {
+  .topbar { padding: 8px 12px; }
+  .spacer { display: none; }
+  .actions {
+    flex: 1 0 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .actions::-webkit-scrollbar { display: none; }
+  .actionBtn { flex: none; }
+  .actionHint { display: none; }
+  .browserPane { flex-basis: 60vh !important; }
+  /* Badge on its own line; name, life and the seat buttons share the next one instead of Clear
+     dangling on a line of its own. */
+  .seatHead { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; }
+  .seatBadge { grid-column: 1 / -1; justify-self: start; }
+  .seatHead .nameInput { min-width: 0; }
+  .zoneRow { flex-wrap: wrap; }
+  .zoneRow > * { flex: 1 1 calc(50% - 4px); min-width: 0; }
 }

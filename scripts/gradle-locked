@@ -24,6 +24,12 @@
 #   GRADLE_LOCK_TIMEOUT  seconds to wait before giving up (default 1800 = 30m)
 #   GRADLE_LOCK_FILE     override the lock path (default ~/.cache/argentum/gradle.lock)
 #   GRADLE_LOCK_SLOTS    maximum concurrent Gradle runs (default 2)
+#   GRADLE_REAP=0        skip the automatic daemon reaping described below
+#
+# Daemon reaping: a heap-starved shared Kotlin compile daemon is the usual reason both slots sit
+# "stuck" for hours. So while queued, every REAP_EVERY seconds this checks for sick daemons and
+# kills them (scripts/kill-stale-daemons.sh --sick-only); once a slot is acquired it also reaps
+# orphaned and idle daemons, which only happens when no other build holds a slot.
 
 set -euo pipefail
 
@@ -31,6 +37,12 @@ LOCK_FILE="${GRADLE_LOCK_FILE:-$HOME/.cache/argentum/gradle.lock}"
 TIMEOUT="${GRADLE_LOCK_TIMEOUT:-1800}"
 SLOTS="${GRADLE_LOCK_SLOTS:-2}"
 POLL=5
+REAP_EVERY=120
+REAPER="$(dirname "$0")/kill-stale-daemons.sh"
+reap() {
+    [ "${GRADLE_REAP:-1}" != "0" ] && [ -x "$REAPER" ] || return 0
+    "$REAPER" --apply --quiet "$@" >&2 || true
+}
 
 if ! [[ "$SLOTS" =~ ^[1-9][0-9]*$ ]]; then
     echo "gradle-locked: GRADLE_LOCK_SLOTS must be a positive integer (got '$SLOTS')." >&2
@@ -73,9 +85,14 @@ while [ -z "$acquired_lock" ]; do
     fi
     sleep "$POLL"
     elapsed=$((elapsed + POLL))
+    if [ $((elapsed % REAP_EVERY)) -eq 0 ]; then
+        reap --sick-only
+    fi
 done
 
 # We hold the lock; ensure it is released on any exit (success, failure, signal).
 trap 'rm -f "$acquired_lock"' EXIT INT TERM
+
+reap --ignore-lock "$acquired_lock"
 
 ./gradlew "$@"

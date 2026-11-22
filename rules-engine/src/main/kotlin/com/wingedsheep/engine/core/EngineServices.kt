@@ -30,6 +30,7 @@ import com.wingedsheep.engine.mechanics.targeting.TargetValidator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.registry.PrintingRegistry
 import com.wingedsheep.engine.registry.TokenArtRegistry
+import com.wingedsheep.engine.state.GameState
 
 /**
  * Composition root for the rules engine.
@@ -71,7 +72,7 @@ class EngineServices(
      * it is threaded through the graph rather than parked in a global — two engines in one JVM
      * (server plus gym, parallel tests) each keep their own.
      */
-    val zones = ZoneTransitionService(cardRegistry, predicateEvaluator, tokenArtRegistry)
+    val zones = ZoneTransitionService(cardRegistry, predicateEvaluator)
 
     /**
      * The one replacement-effect processor for this game. Declared before anything that
@@ -86,7 +87,7 @@ class EngineServices(
      * Counters and exiles stack objects. Shared by [stackResolver] and the counter / exile-a-spell
      * executors, which need nothing else of the stack machinery.
      */
-    val spellCounterer = SpellCounterer(cardRegistry, predicateEvaluator, zones)
+    val spellCounterer = SpellCounterer(zones)
 
     /**
      * The one effect-executor registry. The cast and land-play pipelines and the cost-payment
@@ -123,7 +124,6 @@ class EngineServices(
         spellCounterer = spellCounterer,
         predicateEvaluator = predicateEvaluator,
         spliceTargetValidator = targetValidator,
-        costPaymentService = { costPaymentService },
     )
     val triggerProcessor = TriggerProcessor(cardRegistry = cardRegistry, stackResolver = stackResolver, amountEvaluator = dynamicAmountEvaluator, targetFinder = targetFinder)
     val manaSolver = ManaSolver(cardRegistry, predicateEvaluator, scopedPlanner = { scopedManaActivationPlanner })
@@ -134,10 +134,21 @@ class EngineServices(
     val grantedKeywordResolver = GrantedKeywordResolver(cardRegistry)
     val alternativePaymentHandler = AlternativePaymentHandler(grantedKeywordResolver)
     val costHandler = CostHandler(zones)
-    val mulliganHandler = MulliganHandler(cardRegistry, effectExecutorRegistry::execute)
+    val mulliganHandler = MulliganHandler(cardRegistry, effectExecutorRegistry::execute, conditionEvaluator)
     val castPermissionUtils = CastPermissionUtils(cardRegistry, predicateEvaluator, conditionEvaluator)
     val legalityKernel = LegalityKernel(cardRegistry, conditionEvaluator)
-    val sbaChecker = StateBasedActionChecker(zones, cardRegistry = cardRegistry)
+    /**
+     * Runs the final part of a resolution abandoned because the player it waited on left the game
+     * (see [com.wingedsheep.engine.mechanics.sba.player.PlayerLeavesGameProcessor.process]): the
+     * finish and resolution-control frames left on the stack, drained by their auto-resumers.
+     * [continuationHandler] is built below; this only reads it when a player leaves.
+     */
+    val finishAbandonedResolution: (GameState) -> ExecutionResult =
+        { state -> continuationHandler.drainAutomatic(state, emptyList()) }
+    val sbaChecker = StateBasedActionChecker(
+        zones, cardRegistry = cardRegistry, finishAbandonedResolution = finishAbandonedResolution,
+        effectExecutor = effectExecutorRegistry::execute,
+    )
     val turnManager = TurnManager(
         zones,
         cardRegistry = cardRegistry,
@@ -156,7 +167,13 @@ class EngineServices(
         effectExecutor = effectExecutorRegistry::execute,
         gameRestarter = GameRestarter(cardRegistry) { state, events ->
             mulliganHandler.beginFirstTurn(state, events, turnManager)
-        }
+        },
+        subgames = Subgames(
+            cardRegistry,
+            beginFirstTurn = { state, events -> mulliganHandler.beginFirstTurn(state, events, turnManager) },
+            effectExecutor = effectExecutorRegistry::execute,
+            drainAutomatic = continuationHandler::drainAutomatic,
+        )
     )
 
     /** The cast pipeline (CR 601.2). Built last: it draws on nearly every service above. */

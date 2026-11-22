@@ -13,12 +13,12 @@ import com.wingedsheep.engine.state.components.player.CardsDrawnThisTurnComponen
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.CompositeStaticAbility
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
-import com.wingedsheep.sdk.scripting.RestrictDrawsPerTurn
+import com.wingedsheep.sdk.scripting.RestrictCardsDrawnPerTurn
 import com.wingedsheep.sdk.scripting.StaticAbility
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
- * The per-turn draw caps of [RestrictDrawsPerTurn] ("Each opponent can't draw more than one card
+ * The per-turn draw caps of [RestrictCardsDrawnPerTurn] ("Each opponent can't draw more than one card
  * each turn" — Narset, Parter of Veils; Leovold, Emissary of Trest).
  *
  * A cap is a "can't" effect (CR 101.2, CR 614.17), so it is consulted **before** any replacement
@@ -54,7 +54,7 @@ object DrawLimits {
         return (cap - drawn).coerceAtLeast(0)
     }
 
-    /** The smallest [RestrictDrawsPerTurn.maxPerTurn] binding [playerId], or `null` if none does. */
+    /** The smallest [RestrictCardsDrawnPerTurn.maxPerTurn] binding [playerId], or `null` if none does. */
     fun capFor(
         state: GameState,
         cardRegistry: CardRegistry,
@@ -74,7 +74,7 @@ object DrawLimits {
                     }
                 }
                 is CompositeStaticAbility -> ability.abilities.forEach { collect(it, source, controller) }
-                is RestrictDrawsPerTurn -> {
+                is RestrictCardsDrawnPerTurn -> {
                     if (binds(state, ability.affected, controller, playerId)) {
                         cap = cap?.let { minOf(it, ability.maxPerTurn) } ?: ability.maxPerTurn
                     }
@@ -108,9 +108,9 @@ object DrawLimits {
         return cap
     }
 
-    /** Whether [ability] is, or wraps, a [RestrictDrawsPerTurn] — the pre-filter for [capFor]. */
+    /** Whether [ability] is, or wraps, a [RestrictCardsDrawnPerTurn] — the pre-filter for [capFor]. */
     private fun mayCap(ability: StaticAbility): Boolean = when (ability) {
-        is RestrictDrawsPerTurn -> true
+        is RestrictCardsDrawnPerTurn -> true
         is ConditionalStaticAbility -> mayCap(ability.ability)
         is CompositeStaticAbility -> ability.abilities.any(::mayCap)
         else -> false

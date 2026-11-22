@@ -39,8 +39,9 @@ class ExtraTurnReplacementTest : ScenarioTestBase() {
             val game = board(); val id = game.findPermanent(source.name)!!
             extra(game)
             val badges = com.wingedsheep.engine.view.projection.PlayerActiveEffectsProjector(
-                services.zones.predicateEvaluator).project(game.state, game.player2Id,
-                game.state.getEntity(game.player2Id))
+                services.zones.predicateEvaluator,
+                com.wingedsheep.engine.view.Visibility(cardRegistry, conditionEvaluator = services.zones.predicateEvaluator.conditions),
+            ).project(game.state, game.player2Id, game.state.getEntity(game.player2Id), game.player2Id)
             badges.any { it.effectId == "skip_next_turn" } shouldBe false
             val codec = Json { serializersModule = engineSerializersModule; encodeDefaults = true; allowStructuredMapKeys = true }
             game.state = codec.decodeFromString<GameState>(codec.encodeToString(GameState.serializer(), game.state))

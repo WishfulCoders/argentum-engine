@@ -21,7 +21,7 @@ EOF
 
 usage() {
   cat <<'EOF'
-Usage: just set-loop <set code or quoted name> [model]
+Usage: just set-loop <set code or quoted name> [model] [priority-file]
 
 Examples:
   just set-loop ecl sonnet
@@ -29,6 +29,7 @@ Examples:
   just set-loop ecl astra
   just set-loop ecl codex:gpt-6-sol
   just set-loop lea codex:gpt-6.1-sol
+  just set-loop pip codex:gpt-6.1-sol backlog/sets/fallout/hail-caesar.txt
   just set-loop "March of the Machine" sonnet
   just set-loop ecl pick           # Choose from a menu
   just set-loop --models          # Show model shortcuts
@@ -41,7 +42,16 @@ case "${1:-}" in
   ""|-h|--help) usage; exit 0 ;;
   --models) models; exit 0 ;;
 esac
-if [ "$#" -gt 2 ]; then usage >&2; exit 2; fi
+if [ "$#" -gt 3 ]; then usage >&2; exit 2; fi
+PRIORITY=${3:-}
+PRIORITY_CARDS=""
+if [ -n "$PRIORITY" ]; then
+  if [ ! -f "$PRIORITY" ] || [ ! -r "$PRIORITY" ] || [ ! -s "$PRIORITY" ]; then
+    echo "set-loop: priority file must be a readable, nonempty file: $PRIORITY" >&2
+    exit 2
+  fi
+  PRIORITY_CARDS=$(cat "$PRIORITY")
+fi
 
 # Accept a code or a set name ("march" -> mom); fail here rather than spend a session on a bad code.
 CODE=$("$(dirname "$0")/resolve-set" "${1:-}") || exit 1
@@ -95,24 +105,31 @@ command -v "$HARNESS" >/dev/null || { echo "set-loop: $HARNESS is not installed"
 REPO=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
 RUNS="$REPO/.claude/loop-runs"
 mkdir -p "$RUNS"
+# shellcheck source=loop-lib.sh
+source "$(dirname "$0")/loop-lib.sh"
+loop_maybe_tui "$CODE" "$0" "$CODE" "$(loop_model_arg)" ${PRIORITY:+"$PRIORITY"}
 
 PROMPT="You are one iteration of an unattended loop implementing MTG set '$CODE' (Scryfall code).
 You are a fresh session: your memory is the ledger at $RUNS/$CODE-cards.md (create it if missing),
-the gap analysis at $RUNS/$CODE-gaps.md, and GitHub. Do exactly ONE of the steps below, then stop.
+the gap analysis at $RUNS/$CODE-gaps.md, and GitHub. Do exactly ONE of the steps below, then stop — except that merging a PR is followed by the next build step in the same session.
 
 The set is built in four phases: gap analysis once, then the Assay-ready sweep (the cards Argentum Assay
 already reads whole, authored to its compiled model), then every engine gap one PR at a time, then the
 remaining cards in big batches — by then every remaining card composes from existing primitives.
 
 Other loops may be running for other sets at the same time, so everything this set owns is named by its prefix
-'loop-$CODE-': every branch you create is 'loop-$CODE-<short-slug>', and its worktree is
-$REPO/.claude/worktrees/loop-$CODE-<short-slug>. Find our open PR for this set by branch name only:
+'loop-$CODE-': every branch you create is 'loop-$CODE-<short-slug>'. All of them live in ONE long-lived worktree,
+$REPO/.claude/worktrees/loop-$CODE: never remove it, because its build/ outputs, Gradle configuration cache and
+node_modules are what keep each unit's builds incremental (a fresh worktree costs a cold compile and an npm ci).
+Start a unit there with \`git -C <wt> fetch origin && git -C <wt> switch -C loop-$CODE-<short-slug> origin/main\`,
+or \`git worktree add --detach <wt> origin/main\` first if it is missing. If a dead session left it dirty, commit or
+discard only what is yours; never \`git clean -x\`. Find our open PR for this set by branch name only:
 \`gh pr list --author @me --state open --json number,headRefName --jq '.[] | select(.headRefName | startswith("loop-$CODE-"))'\`
 — never by the files it touches or its title (a reprint's canonical can land in another set's definitions/, and
 that PR belongs to the other loop). Never touch a PR, branch or worktree without our prefix. Work on our PR in its
-worktree (recreate it with \`git worktree add\` if missing). Never work in the main checkout.
+worktree: the set worktree, or an older per-branch 'loop-$CODE-*' worktree that still holds it. Never work in the main checkout.
 
-0. No $RUNS/$CODE-gaps.md yet -> gap analysis, no PR. From a fresh worktree 'loop-$CODE-gaps' off origin/main, list the
+0. No $RUNS/$CODE-gaps.md yet -> gap analysis, no PR. From the set worktree, detached at a fresh origin/main, list the
    unimplemented cards (\`just card-status --set $CODE --list\`). Cards \`just assay-ready $CODE --names\` lists
    in its original / elsewhere / row-only / basic buckets are the step-5 sweep's: don't classify them. If
    backlog/$CODE-engine-gaps.md or the set's backlog/sets/*/mechanics.md exists, start from
@@ -127,17 +144,12 @@ worktree (recreate it with \`git worktree add\` if missing). Never work in the m
    '## Assay-ready' — the split's counts per bucket, and a \`- [ ] sweep\` line. If the split is all zero (or only
      unscaffolded/absent), write \`- [x] sweep — nothing to sweep\`.
    Stop after writing it.
-1. PR open, CI failed -> read only the failing log tail (\`gh run view <id> --log-failed | tail -200\`),
-   fix it, re-run the affected gate per the verify skill, push. A known-flaky test: \`gh run rerun --failed\` instead.
-2. PR open, has merge conflicts -> rebase on origin/main (re-bless snapshot goldens instead of hand-merging), gate, push.
-3. PR open, CI green, not yet reviewed (no 'loop-reviewed' comment) -> review it with the review-changes skill,
-   fix what holds up, gate, push, and post a PR comment starting 'loop-reviewed' listing fixes and declines.
-4. PR open, CI green, reviewed, nothing pushed since -> \`gh pr merge --squash --delete-branch\` (from $REPO, after
-   \`git worktree remove\` of its worktree), mark the unit done in the ledger. If it closed a gap, tick it \`[x]\`
+1-4. Our PR is open -> follow the PR LIFECYCLE below (CI failed, conflicts, unreviewed, or ready to merge).
+   Merge bookkeeping: mark the unit done in the ledger. If it closed a gap, tick it \`[x]\`
    in the gaps file and move the cards it unlocked (minus any it shipped) into '## Ready'. If it was an Assay sweep
    whose after-count left nothing but dropped, unscaffolded and absent cards, tick the sweep \`[x]\`.
 5. No PR open, the '## Assay-ready' sweep line is not \`[x]\` or \`[!]\` (add it as \`[ ]\` if a gaps file predates it)
-   -> Assay-ready sweep. \`git fetch\`, new worktree + 'loop-$CODE-assay-<n>' branch from origin/main, and follow the
+   -> Assay-ready sweep. \`git fetch\`, new 'loop-$CODE-assay-<n>' branch in the set worktree, from origin/main, and follow the
    assay-ready-sweep skill on the worktree: Stage 0's split (\`just assay-ready $CODE --names --tail\`, run there; never
    \`just assay-bake\` — the verdict ledger is someone else's deliberate commit), the capability pre-flight, the
    differential baseline, every card authored to \`oracle-assay compile\`'s JSON rather than to the oracle text, and
@@ -148,28 +160,38 @@ worktree (recreate it with \`git worktree add\` if missing). Never work in the m
    or the differential shows needs new vocabulary, or that the batch can't make faithful, is dropped: name it in
    the gaps file under '## Assay-ready' as \`dropped: <card> — <reason>\`, add it to '## Gaps' or '## Ready', and
    never sweep it again. One definition file and one scenario test file per authored card. Gate per Stage 5
-   (\`just build\`, \`just rebless-cards\` moving only your cards, \`just assay-differential\` with only the delta
-   classified, \`just check-card-printing\`), then re-run \`just assay-ready $CODE\` on the branch. Commit, push, open
+   (\`just loop-gate --rebless\` in place of \`just build\` and a separate rebless, moving only your cards, \`just assay-differential\` with only the delta
+   classified, \`just check-card-printing\`), then re-run \`just assay-ready $CODE\` on the branch. Commit, review, push and open
    a PR titled '[agent-loop: $MODEL] Add <N> Assay-ready <set name> cards' whose body carries the split, the
    before/after differential triple, the before/after assay-ready count, dropped cards with reasons, and that
    nothing was play-tested. Record the unit and its after-count in the ledger; a sweep with cards left over gets
    another sweep PR once this one merges.
-6. No PR open, sweep \`[x]\` or \`[!]\`, an unticked gap whose deps are all \`[x]\` -> engine gap. \`git fetch\`, new worktree + 'loop-$CODE-' branch
+6. No PR open, sweep \`[x]\` or \`[!]\`, an unticked gap whose deps are all \`[x]\` -> engine gap. \`git fetch\`, new 'loop-$CODE-' branch in the set worktree,
    from origin/main. Take the first such gap, mark it \`[~]\`, and build it with the add-feature skill: the capability,
    its SDK reference entry, engine tests, plus one or two of the cards it unlocks as proof (one scenario test file
-   per card). Gate, commit, push, open a PR titled '[agent-loop: $MODEL] <capability> for <set name>' whose body
+   per card). Gate, commit, review, push, open a PR titled '[agent-loop: $MODEL] <capability> for <set name>' whose body
    names the gap, the cards it unlocks, the gate run, and that nothing was play-tested. Record the unit in the ledger.
-7. No PR open, sweep \`[x]\` or \`[!]\`, no buildable gap left -> card batch. \`git fetch\`, new worktree + 'loop-$CODE-' branch from origin/main. Take up
-   to 15 unimplemented cards from '## Ready', grouped by colour or theme. Fan them out to subagents, one card each,
-   with the add-card skill (one definition file and one scenario test file per card). A card that turns out to need
-   new vocabulary is dropped from the batch and added to '## Gaps' as a new \`[ ]\` gap — the next iteration builds
-   it before more cards. Gate once per the verify skill, commit, push, open a PR titled
+7. No PR open, sweep \`[x]\` or \`[!]\`, no buildable gap left -> card batch. \`git fetch\`, new 'loop-$CODE-' branch in the set worktree, from origin/main. Take up
+   to 15 unimplemented cards from '## Ready', grouped by colour or theme. Give each card its own implementer
+   subagent (pair two cards only when one is a near-copy of the other), one after another, waiting for each to
+   return: a subagent that implements card after card re-reads every earlier card's context on each call, so a
+   fresh agent per card is cheaper than a shared one. Each follows the add-card skill through Step 6 and Step 9,
+   writing files only (one definition file and one scenario test file per card): no git, no Gradle builds, no
+   tests — skip Step 7 (manual UI check, done once per unit) and Step 10 (the AI check, run once per unit by the
+   PR LIFECYCLE's AI CHECK below — never skipped); the single gate below is the only build
+   and runs every new test class. \`just assay\`, \`just where\` and \`just check-card-printing\` are fine. A card that turns out to need
+   new vocabulary — or could only ship as a \"known approximation\" (an engine path, mana type or event that
+   doesn't match the printed text exactly) — is dropped from the batch and added to '## Gaps' as a new \`[ ]\` gap — the next iteration builds
+   it before more cards. Gate once with \`just loop-gate --rebless\`, commit, review, push, open a PR titled
    '[agent-loop: $MODEL] Add <N> <set name> cards' whose body lists the cards, the gate run, and that nothing was
    play-tested. Record the unit in the ledger.
 8. No PR open, \`card-status\` shows every card implemented, finishing PR not yet merged -> finishing PR. \`git fetch\`, new
-   worktree + 'loop-$CODE-finish' branch from origin/main. Make the set draftable and give it Limited archetypes:
+   'loop-$CODE-finish' branch in the set worktree, from origin/main. Make the set draftable and give it Limited archetypes:
    - Drop \`override val incomplete = true\` from the set's \`MtgSet\` object (finishing a set also trips the
      FrozenBaselineTest hash — re-bless it per the verify skill).
+   - Run \`just sdk-tail\` and put its per-family table in the PR body, with the number of \`[added]\` lines this
+     loop wrote to \`mtg-sdk/src/test/resources/sdk-surface-baseline.txt\`. More than about one net new SDK type
+     per loop PR is a review flag; name any fossil candidate the loop's own types created.
    - Unless the set has \`sealedSupported = false\`, add its archetypes if they're missing, in BOTH files, kept in
      lockstep: \`ai/src/main/kotlin/com/wingedsheep/ai/engine/deck/SetArchetypes.kt\` (the \`allSets\` map) and
      \`web-client/src/components/draft/SetSynergiesOverlay.tsx\` (\`SET_SYNERGIES\`). Copy the shape of an existing
@@ -178,17 +200,21 @@ worktree (recreate it with \`git worktree add\` if missing). Never work in the m
      signpost as \`keyCard\`, a 1–2 sentence description of the deck's plan, and \`creatureTypes\` only when the
      archetype is tribal. No signposts (e.g. a supplemental set) -> model the colour pairs the set's mechanics
      actually support. Add a \`SetArchetypesTest\` case pinning the names and colour pairs.
+   - Unless the set has \`sealedSupported = false\`, verify its booster strategy against the official collecting/product
+     article: slot counts, eligible cards per slot, rarity weights, land/bonus slots and guaranteed pairings.
+     Fix mismatches using existing or composable strategies, and test slot exclusions, pack size, guarantees,
+     bans and sparse pools; add seeded distribution checks where odds matter and a real-pool integration test.
+     Record the source and any unsupported foil/treatment differences in the finishing PR. Run the affected
+     booster tests through \`just\`; do not mark the set finished with a known collation mismatch.
    - Announce the set in the landing page's What's new feed, unless it is already there: add a \`kind: 'set'\` entry
      to \`web-client/src/components/whatsNew/announcements.ts\` (newest first; \`id: 'set-<code>'\`, \`setCode\`, today's
      date, title '<set name> is complete'). \`body\` is the pitch, 1-2 sentences on what the set is like to play: its
      world, its headline mechanics, how its decks feel, so a player can tell from the feed alone whether to try it.
      The archetypes above (or the set's mechanics.md) are the source; don't describe mechanics the set lacks.
      \`tryIf\` completes 'Try it if you like ...' (e.g. 'tribal synergies and creature-type deckbuilding').
-   Gate (\`just test-ai\`, \`npm run typecheck\` and \`npx vitest run src/components/whatsNew\` in web-client, and the set-module tests the baseline re-bless touches), commit, push, open a PR titled
+   Gate (\`just test-ai\`, \`npm run typecheck\` and \`npx vitest run src/components/whatsNew\` in web-client, and \`just loop-gate\`), commit, review, push, open a PR titled
    '[agent-loop: $MODEL] Finish <set name>: archetypes + draftable' and record the unit in the ledger.
 
-PR open, CI still pending or running -> do nothing; don't poll or wait on it — the loop waits for CI
-between sessions. Answer WAITING_CI.
 
 A card whose earliest real printing is in a set that isn't scaffolded yet (\`just check-card-printing\` says NOT
 SCAFFOLDED) is an ordinary '## Ready' card, never needs-human and never a reason to answer STUCK: scaffold that set
@@ -203,12 +229,21 @@ as their own PR first ('[agent-loop: $MODEL] Scaffold <set name> for <card>'), a
 If a step fails twice for the same PR, comment on it, mark it needs-human in the ledger (and the gap \`[!]\` if it
 was one), and move on. A sweep that fails twice marks the sweep line \`[!]\`, and its cards go through steps 6-7. Cards blocked on a \`[!]\` gap are skipped. When the only cards left are blocked on \`[!]\`
 gaps, answer STUCK naming those gaps; when \`card-status\` shows the set complete AND the step-8
-finishing PR (archetypes + no \`incomplete\` + What's new entry) is merged, answer SET_COMPLETE.
+finishing PR (archetypes + verified booster strategy + no \`incomplete\` + What's new entry) is merged, answer SET_COMPLETE.
 Follow AGENTS.md. Never revert or stash work that isn't yours.
 An unrelated failure on origin/main (a test in a module your change doesn't touch) is NOT a reason to answer
 STUCK: run the gates for the modules you changed, note the unrelated failure in the ledger and the PR body,
 and carry on. Only answer STUCK when the failure is inside code your unit changed or depends on. If the
 failure is a trivial stale test, you may fix it in a separate one-commit PR.
+
+$LOOP_PR_PROTOCOL
+
+SUBAGENTS — every token a subagent spends is re-read on each of its later calls, so keep them short-lived:
+- Wait for every subagent you launch to return before you end your reply. Never end on a 'waiting for' line;
+  a session that ends early is replaced by a fresh one that redoes the work.
+- Brief each one with exactly what it needs (files, cards, the skill to follow) and tell it to batch lookups:
+  several greps or file reads in one command, \`docs/sdk-index.md\` before grepping the full SDK reference,
+  and never print whole large files when a range will do.
 
 A human watches your text live, one line at a time, so keep them posted in short lines (under 150 chars each):
 - once you know which step you're taking: 'Working on: <step and unit, e.g. step 6, G3 splice onto Arcane>'
@@ -217,6 +252,28 @@ A human watches your text live, one line at a time, so keep them posted in short
 - just before your final line, one to three lines: 'Summary: <what you did / what's next>'
 No other long prose.
 End your reply with exactly one line: STEP <n> DONE | WAITING_CI | SET_COMPLETE | STUCK <reason>"
+
+if [ -n "$PRIORITY" ]; then
+  PROMPT="$PROMPT
+
+PRIORITY DECK — this overrides the global phase ordering in steps 5-7 while this deck is incomplete.
+The following is a card-name list, one name per line, captured from $PRIORITY at launch:
+<priority-cards>
+$PRIORITY_CARDS
+</priority-cards>
+At gap analysis and every pick, check these names against origin/main's actual corpus and this set's
+printing rows. Track the deck's missing cards and gaps separately in the ledger. Complete this deck
+before selecting cards or gaps only used by the rest of the set. Within the deck, sweep its Assay-ready
+cards first, then build gaps that unlock its remaining cards (dependencies first), then its ready cards.
+Filter the sweep's authored cards AND row-only/basic rows to the priority list; do not mark the whole-set
+sweep done merely because the deck's sweep is empty. Existing global gaps files must be re-ranked for
+this deck. Never bypass a deck engine gap to work on unrelated set cards. Include missing reprints and
+basic printing coverage, and place canonicals in their earliest real printing as usual. A blocked deck
+must report STUCK with its blockers, rather than silently proceeding to the other decks.
+Once all listed cards and their set printings are on origin/main, record PRIORITY_DECK_COMPLETE in the
+ledger and continue the ordinary whole-set phases. Deck completion is not SET_COMPLETE and does not
+drop the set's incomplete flag. Include deck progress in each Summary line."
+fi
 
 if [ "$HARNESS" = codex ]; then
   PROMPT="$PROMPT
@@ -232,48 +289,63 @@ model ID from your session's system information and use it instead of '$MODEL' i
 answer STUCK cannot determine driving model ID."
 fi
 
+GOAL="/goal Your latest message's last line is exactly one of: STEP <n> DONE, WAITING_CI, SET_COMPLETE, or STUCK <reason>."
+
+# One loop per set: a second one shares the worktree and the run log, and clobbers both.
+if [ -f "$RUNS/$CODE.pid" ] && kill -0 "$(cat "$RUNS/$CODE.pid")" 2>/dev/null; then
+  echo "set-loop $CODE is already running (pid $(cat "$RUNS/$CODE.pid")); stop it first." >&2
+  exit 1
+fi
+
 # Everything the loop prints also goes to the run log.
 LOGDIR="$RUNS/$CODE-logs"
 mkdir -p "$LOGDIR"
 exec > >(tee -a "$RUNS/$CODE.log") 2>&1
+loop_clear_stale_stop "$RUNS/$CODE.stop" "$RUNS/$CODE.pid"
+# `just loops` reads this to tell a running loop from a finished one.
+echo $$ > "$RUNS/$CODE.pid"
+# Only remove the pid file if it is still ours.
+trap '[ "$(cat "$RUNS/$CODE.pid" 2>/dev/null)" = "$$" ] && rm -f "$RUNS/$CODE.pid"' EXIT
 log() { echo "[$(date '+%F %T')] $*"; }
 
-# One line per action the session takes, streamed live: its messages and each tool call.
-PRETTY='select(.type == "assistant") | .message.content[]? |
+# Streamed live: the milestones the session reports (Working on / Finding / Summary), nothing else.
+# LOOP_VERBOSE=1 adds its other messages and every tool call. `just loops` is the at-a-glance view.
+[ -n "${LOOP_VERBOSE:-}" ] && VERBOSE=true || VERBOSE=false
+MILESTONE='def milestone: (if startswith("Working on") then "   🔨 " elif startswith("Finding") then "   🔎 " else "   📋 " end) + .[0:200];'
+PRETTY="$MILESTONE"'select(.type == "assistant") | .message.content[]? |
   (if .type == "text" then
      ([.text | split("\n")[] | select(test("^(Working on|Finding|Summary):"))]) as $m
-     | if ($m | length) > 0 then $m[]
-         | (if startswith("Working on") then "   🔨 " elif startswith("Finding") then "   🔎 " else "   📋 " end) + .[0:200]
-       else "   💬 " + (.text | split("\n")[0] | .[0:160]) end
-   elif .type == "tool_use" then "   → " + .name + ": " +
+     | if ($m | length) > 0 then $m[] | milestone
+       elif $verbose then "   💬 " + (.text | split("\n")[0] | .[0:160]) else empty end
+   elif .type == "tool_use" and $verbose then "   → " + .name + ": " +
      ((.input.description // .input.command // .input.skill // .input.file_path // .input.pattern
        // .input.prompt // "") | tostring | split("\n")[0] | .[0:140])
    else empty end)'
 
 if [ "$HARNESS" = codex ]; then
-  PRETTY='if .type == "item.completed" and .item.type == "agent_message" then
-      .item.text | split("\n")[] | select(length > 0) | "   💬 " + .[0:200]
-    elif .type == "item.started" and .item.type == "command_execution" then
+  PRETTY="$MILESTONE"'if .type == "item.completed" and .item.type == "agent_message" then
+      .item.text | split("\n")[] | select(length > 0)
+      | if test("^(Working on|Finding|Summary):") then milestone elif $verbose then "   💬 " + .[0:200] else empty end
+    elif .type == "item.started" and .item.type == "command_execution" and $verbose then
       "   → " + (.item.command | split("\n")[0] | .[0:140])
     elif .type == "error" or .type == "turn.failed" then
       "   ! " + (.message // .error.message // "Codex turn failed")
     else empty end'
 fi
 
+# Stamp each rendered line when received, using the same local clock as launcher events.
+PRETTY="($PRETTY)"' | "[" + (now | strflocaltime("%Y-%m-%d %H:%M:%S")) + "] " + .'
+
 log "set-loop $CODE started (harness $HARNESS, model $MODEL, log $RUNS/$CODE.log)"
 N=0
 while [ ! -e "$RUNS/$CODE.stop" ]; do
   N=$((N + 1))
-  # Wait on CI for free instead of spending a session on it.
-  PR=$(gh pr list --author @me --state open --json number,headRefName \
-        --jq "[.[] | select(.headRefName | startswith(\"loop-$CODE-\"))][0].number // empty")
-  if [ -n "$PR" ]; then
-    log "waiting for CI on PR #$PR"
-    sleep 60
-    gh pr checks "$PR" --watch >/dev/null 2>&1
-    log "CI on PR #$PR: $(gh pr checks "$PR" --json bucket --jq '[.[].bucket] | group_by(.) | map("\(.[0])=\(length)") | join(" ")' 2>/dev/null)"
-  fi
+  loop_await_turn "loop-$CODE-"
+  PR=$LOOP_PRS
+  [ -e "$RUNS/$CODE.stop" ] && break
 
+  loop_session_acquire "$RUNS/$CODE.stop" || break
+  SESSION_START=$SECONDS
   TRANSCRIPT="$LOGDIR/$(date '+%Y%m%d-%H%M%S')-iter$N.jsonl"
   log "iteration $N (PR: ${PR:-none}) — transcript $TRANSCRIPT"
   if [ "$HARNESS" = codex ]; then
@@ -282,25 +354,43 @@ while [ ! -e "$RUNS/$CODE.stop" ]; do
     rm -f "$FINAL_FILE"
     (cd "$REPO" && codex exec --model "$MODEL" --approve-for-me --json \
         --output-last-message "$FINAL_FILE" "$PROMPT" 2>&1) \
-      | tee "$TRANSCRIPT" | jq -Rr --unbuffered "fromjson? | $PRETTY"
+      | tee "$TRANSCRIPT" | jq -Rr --unbuffered --argjson verbose "$VERBOSE" "fromjson? | $PRETTY"
     SESSION_STATUS=$?
     RESULT=$(cat "$FINAL_FILE" 2>/dev/null || true)
     FINAL=$RESULT
     STATS="exit $SESSION_STATUS"
   else
-    (cd "$REPO" && claude -p "$PROMPT" --model "$MODEL" --permission-mode "${PERMISSION_MODE:-auto}" \
-        --output-format stream-json --verbose 2>&1) \
-      | tee "$TRANSCRIPT" | jq -Rr --unbuffered "fromjson? | $PRETTY"
+    # /goal keeps the session alive until its protocol line, so it can't end while its own subagents
+    # still run. The evaluator sees only the transcript (not the system prompt), so the condition must be
+    # checkable from the output alone. --strict-mcp-config drops MCP servers the loop never uses; they
+    # weigh on every subagent's context.
+    (cd "$REPO" && loop_run_reaped "$TRANSCRIPT" SET_COMPLETE \
+        claude -p "$GOAL" --append-system-prompt "$PROMPT" --model "$MODEL" \
+        --permission-mode "${PERMISSION_MODE:-auto}" --strict-mcp-config \
+        --output-format stream-json --verbose < /dev/null 2>&1) \
+      | tee "$TRANSCRIPT" | jq -Rr --unbuffered --argjson verbose "$VERBOSE" "fromjson? | $PRETTY"
+    loop_note_reaped "$TRANSCRIPT"
 
-    FINAL=$(jq -Rc 'fromjson? | select(.type == "result")' "$TRANSCRIPT" 2>/dev/null | tail -1)
+    # The goal's closing result event is empty; the step's answer is the last non-empty one.
+    FINAL=$(jq -Rc 'fromjson? | select(.type == "result" and (.result // "") != "")' "$TRANSCRIPT" 2>/dev/null | tail -1)
+    [ -n "$FINAL" ] || FINAL=$(jq -Rc 'fromjson? | select(.type == "result")' "$TRANSCRIPT" 2>/dev/null | tail -1)
     RESULT=$(echo "$FINAL" | jq -r '.result // empty' 2>/dev/null)
 
-    STATS=$(echo "$FINAL" | jq -r '"\(.num_turns // "?") turns, \((.duration_ms // 0) / 60000 | floor) min"' 2>/dev/null)
+    # A session reports a result each time it wakes for a background task, so the last one's
+    # duration is only its tail: time the session by the wall clock instead.
+    # Cost is cumulative, so read it off the last result event even when that one is the goal's empty close.
+    STATS=$(jq -Rc 'fromjson? | select(.type == "result")' "$TRANSCRIPT" 2>/dev/null | tail -1 |
+      jq -r '"$\(.total_cost_usd // 0 | . * 100 | round / 100) at API prices"' 2>/dev/null)
   fi
   LAST=$(echo "$RESULT" | tail -1)
+  STATS="$(( (SECONDS - SESSION_START) / 60 )) min, $STATS"
   log "iteration $N finished: ${LAST:-<no result>} ($STATS)"
+  loop_session_release
 
-  if grep -qiE 'usage limit|session limit|hit your limit|rate limit|overloaded|quota exceeded' <<<"$RESULT$(tail -5 "$TRANSCRIPT")"; then
+  # A session that ended on its protocol line finished its step; any "rate limit" in its text is
+  # its own prose (e.g. a Scryfall 429 it reported), not the harness stopping it.
+  if ! grep -qE '^(STEP [0-9]+ DONE|WAITING_CI|[A-Z]+_COMPLETE|STUCK)' <<<"$LAST" &&
+     grep -qiE 'usage limit|session limit|hit your limit|rate limit|overloaded|quota exceeded' <<<"$RESULT$(tail -5 "$TRANSCRIPT")"; then
     log "limit reached — waiting 15 min"; sleep 900; continue
   fi
   if [ "$HARNESS" = codex ] && { [ "$SESSION_STATUS" -ne 0 ] || [ -z "$FINAL" ]; }; then

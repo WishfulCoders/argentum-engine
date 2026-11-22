@@ -11,6 +11,8 @@ import { RarityBadge } from './RarityBadge'
 import { MobileCardPreview, MobileDraftTabBar, MobilePoolView, type MobileDraftTab } from './MobileDraftPool'
 import { getCardColors, getCmc, type PoolGrouping } from './draftPool'
 import { fetchAdvisors, type AdvisorInfo } from '@/api/aiAssist'
+import ls from './limitedScreen.module.css'
+import { ChatButton } from '@/components/messages/ChatButton'
 
 /**
  * Draft Pick overlay for draft mode.
@@ -215,22 +217,16 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
   const totalPacks = settings.boosterCount
   // Booster sizes vary by set era/strategy; picksPerPack is derived from the received packs.
   const totalPicks = draftState.picksPerPack != null ? totalPacks * draftState.picksPerPack : null
+  const packCardWidth = fitPackCardWidth(
+    draftState.currentPack.length,
+    responsive.viewportWidth,
+    responsive.viewportHeight,
+    responsive.isMobile,
+    draftState.queuedPacks > 0,
+  )
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: '#1a1a1a',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 1000,
-        overflow: 'hidden',
-      }}
-    >
+    <div className={ls.screen}>
       {/* Header */}
       {responsive.isMobile ? (
         <MobileDraftHeader
@@ -243,20 +239,9 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
           timerWarning={timerWarning}
         />
       ) : (
-        <div
-          style={{
-            padding: responsive.isMobile ? '8px 12px' : '12px 24px',
-            backgroundColor: '#222',
-            borderBottom: '1px solid #444',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <h2 style={{ color: 'white', margin: 0, fontSize: responsive.isMobile ? 16 : 22 }}>
+        <div className={ls.header}>
+          <div className={ls.headerGroup}>
+            <h2 className={ls.title}>
               Draft - {settings.setNames.join(' + ')}
             </h2>
             <PackPickIndicator
@@ -271,74 +256,35 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {/* Pack flow indicator */}
-            <PassDirectionIndicator playerOrder={playerOrder} passDirection={draftState.passDirection} />
+          <div className={ls.headerGroup}>
+            {/* Pack flow indicator — dropped on narrower laptops, where it would wrap the bar */}
+            {responsive.viewportWidth >= 1360 && (
+              <PassDirectionIndicator playerOrder={playerOrder} passDirection={draftState.passDirection} />
+            )}
 
             {/* Timer - only show when player has a pack to pick from */}
             {draftState.currentPack.length > 0 ? (
               <Timer seconds={draftState.timeRemaining} warning={timerWarning} />
             ) : (
-              <div
-                style={{
-                  padding: '6px 14px',
-                  backgroundColor: 'rgba(255, 152, 0, 0.15)',
-                  borderRadius: 6,
-                  color: '#ff9800',
-                  fontWeight: 600,
-                  fontSize: 14,
-                }}
-              >
-                Waiting...
-              </div>
+              <span className={ls.pill} data-tone="warn">Waiting...</span>
             )}
 
             {/* Picked count */}
-            <div
-              style={{
-                padding: '6px 14px',
-                backgroundColor: '#333',
-                borderRadius: 6,
-                color: '#4fc3f7',
-                fontWeight: 600,
-                fontSize: responsive.fontSize.normal,
-              }}
-            >
+            <span className={ls.pill} title="Cards picked">
               {totalPicks != null ? `${totalPicked} / ${totalPicks}` : totalPicked}
-            </div>
+            </span>
 
             {/* Leave/Stop button */}
             {isHost ? (
-              <button
-                onClick={stopLobby}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: responsive.fontSize.normal,
-                  backgroundColor: '#c0392b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                }}
-              >
+              <button type="button" onClick={stopLobby} className={ls.leave}>
                 Stop Draft
               </button>
             ) : (
-              <button
-                onClick={leaveLobby}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: responsive.fontSize.normal,
-                  backgroundColor: '#c0392b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                }}
-              >
+              <button type="button" onClick={leaveLobby} className={ls.leave}>
                 Leave
               </button>
             )}
+            <ChatButton className={`${ls.button} ${ls.iconButton}`} />
           </div>
         </div>
       )}
@@ -370,19 +316,8 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
           >
             {/* Queued packs indicator — on phones the Pack tab's badge carries this instead */}
             {!responsive.isMobile && draftState.queuedPacks > 0 && draftState.currentPack.length > 0 && (
-              <div
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                  borderBottom: '1px solid rgba(255, 152, 0, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <span style={{ color: '#ff9800', fontSize: 13 }}>
-                  {draftState.queuedPacks} more {draftState.queuedPacks === 1 ? 'pack' : 'packs'} queued
-                </span>
+              <div className={ls.banner}>
+                {draftState.queuedPacks} more {draftState.queuedPacks === 1 ? 'pack' : 'packs'} queued
               </div>
             )}
 
@@ -405,7 +340,7 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
                     gap: responsive.isMobile ? 8 : 12,
                     justifyContent: 'center',
                     alignItems: 'flex-start',
-                    maxWidth: 1200,
+                    maxWidth: Math.max(1200, packCardWidth * 8 + 12 * 7),
                   }}
                 >
                   {(['MYTHIC', 'RARE', 'UNCOMMON', 'COMMON'] as const).flatMap((rarity) => {
@@ -423,66 +358,29 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
                         score={pickScores?.[card.name]?.score ?? null}
                         reason={pickScores?.[card.name]?.reason}
                         isRecommended={recommendedPick.includes(card.name)}
+                        cardWidth={packCardWidth}
                       />
                     ))
                   })}
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 16,
-                    color: '#888',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 48,
-                      height: 48,
-                      border: '3px solid #444',
-                      borderTopColor: '#ff9800',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                    }}
-                  />
-                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                  <div style={{ fontSize: 18, fontWeight: 500 }}>
-                    Waiting for next pack...
-                  </div>
-                  <div style={{ fontSize: 14, color: '#555' }}>
-                    Other players are still making their picks
-                  </div>
+                <div className={`${ls.panel} ${ls.waiting}`}>
+                  <div className={ls.spinner} aria-hidden />
+                  <p className={ls.waitingTitle}>Waiting for next pack...</p>
+                  <p className={ls.waitingText}>Other players are still making their picks</p>
                 </div>
               )}
             </div>
 
             {/* Confirm pick button - only show when there's a pack */}
             {draftState.currentPack.length > 0 && (
-              <div
-                style={{
-                  padding: responsive.isMobile ? '12px' : '16px 24px',
-                  backgroundColor: '#222',
-                  borderTop: '1px solid #444',
-                  display: 'flex',
-                  justifyContent: 'center',
-                }}
-              >
+              <div className={ls.footer}>
                 <button
+                  type="button"
                   onClick={handleConfirmPick}
                   disabled={selectedCards.length !== picksRequired}
-                  style={{
-                    padding: responsive.isMobile ? '12px 32px' : '14px 48px',
-                    fontSize: responsive.isMobile ? 16 : 18,
-                    backgroundColor: selectedCards.length === picksRequired ? '#4caf50' : '#555',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: selectedCards.length === picksRequired ? 'pointer' : 'not-allowed',
-                    fontWeight: 600,
-                    transition: 'background-color 0.15s',
-                  }}
+                  className={`${ls.primary} ${ls.large}`}
+                  style={{ minWidth: responsive.isMobile ? undefined : 280 }}
                 >
                   {selectedCards.length === picksRequired
                     ? `Pick ${selectedCards.join(' & ')}`
@@ -536,6 +434,29 @@ function DraftPicker({ draftState, settings }: { draftState: DraftState; setting
 }
 
 /**
+ * The largest pack-card width at which the whole pack fits the space between the bars without
+ * scrolling — so a 14-card pack fills a large monitor and still shows in full on a 720px laptop.
+ * Bounded so cards stay readable on a short screen (it scrolls instead) and don't balloon on a
+ * huge one. Phones keep their fixed two-column size.
+ */
+function fitPackCardWidth(count: number, vw: number, vh: number, isMobile: boolean, hasBanner: boolean): number {
+  if (isMobile) return 120
+  const gap = 12
+  const areaW = vw - 280 - 48 // the picked-cards rail and the grid's padding
+  const areaH = vh - 60 - 80 - 48 - (hasBanner ? 34 : 0) // header, confirm bar, padding
+  const n = Math.max(1, count)
+  const MIN = 110
+  const MAX = 230
+  for (let w = MAX; w > MIN; w -= 2) {
+    const cols = Math.max(1, Math.floor((areaW + gap) / (w + gap)))
+    const rows = Math.ceil(n / cols)
+    // The selected card scales up 5%; leave it room.
+    if (rows * (Math.round(w * 1.4) + gap) <= areaH) return w
+  }
+  return MIN
+}
+
+/**
  * Phone header: two rows that fit a 320–640px screen, so every control is on screen. The
  * pass-order strip is left out (it alone is wider than a phone), and the queued-pack banner and
  * picked count move to the bottom tab bar.
@@ -558,30 +479,9 @@ function MobileDraftHeader({
   timerWarning: boolean
 }) {
   return (
-    <div
-      style={{
-        padding: '8px 12px',
-        backgroundColor: '#222',
-        borderBottom: '1px solid #444',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        flexShrink: 0,
-      }}
-    >
+    <div className={ls.header} style={{ flexDirection: 'column', alignItems: 'stretch', flexWrap: 'nowrap', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <h2
-          style={{
-            color: 'white',
-            margin: 0,
-            fontSize: 16,
-            flex: 1,
-            minWidth: 0,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
+        <h2 className={ls.title} style={{ flex: 1 }}>
           Draft - {settings.setNames.join(' + ')}
         </h2>
         <PackPickIndicator
@@ -594,38 +494,14 @@ function MobileDraftHeader({
         {draftState.currentPack.length > 0 ? (
           <Timer seconds={draftState.timeRemaining} warning={timerWarning} />
         ) : (
-          <div
-            style={{
-              padding: '6px 10px',
-              backgroundColor: 'rgba(255, 152, 0, 0.15)',
-              borderRadius: 6,
-              color: '#ff9800',
-              fontWeight: 600,
-              fontSize: 13,
-              flexShrink: 0,
-            }}
-          >
-            Waiting...
-          </div>
+          <span className={ls.pill} data-tone="warn">Waiting...</span>
         )}
+        <ChatButton className={`${ls.button} ${ls.iconButton}`} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <SetSynergiesButton setCodes={settings.setCodes} cardPool={draftState.pickedCards} />
         {settings.aiAssistEnabled && draftState.currentPack.length > 0 && <SuggestPickControl />}
-        <button
-          onClick={isHost ? onStop : onLeave}
-          style={{
-            marginLeft: 'auto',
-            padding: '6px 14px',
-            fontSize: 13,
-            backgroundColor: '#c0392b',
-            color: 'white',
-            border: 'none',
-            borderRadius: 6,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <button type="button" onClick={isHost ? onStop : onLeave} className={ls.leave} style={{ marginLeft: 'auto' }}>
           {isHost ? 'Stop Draft' : 'Leave'}
         </button>
       </div>
@@ -640,20 +516,21 @@ function PackPickIndicator({ packNumber, pickNumber, totalPacks, picksPerPack, c
         display: 'flex',
         alignItems: 'center',
         gap: compact ? 4 : 8,
-        padding: compact ? '4px 8px' : '4px 12px',
-        backgroundColor: '#333',
-        borderRadius: 6,
+        padding: compact ? '4px 10px' : '5px 12px',
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: 999,
         flexShrink: compact ? 0 : undefined,
         whiteSpace: compact ? 'nowrap' : undefined,
       }}
     >
-      <span style={{ color: '#888', fontSize: 13 }}>Pack</span>
-      <span style={{ color: '#4fc3f7', fontWeight: 700, fontSize: 16 }}>{packNumber}</span>
-      <span style={{ color: '#666', fontSize: 12 }}>/ {totalPacks}</span>
-      <span style={{ color: '#555' }}>|</span>
-      <span style={{ color: '#888', fontSize: 13 }}>Pick</span>
-      <span style={{ color: '#4fc3f7', fontWeight: 700, fontSize: 16 }}>{pickNumber}</span>
-      {picksPerPack != null && <span style={{ color: '#666', fontSize: 12 }}>/ {picksPerPack}</span>}
+      <span style={{ color: '#9aa3b8', fontSize: 13 }}>Pack</span>
+      <span style={{ color: '#f2c97a', fontWeight: 700, fontSize: 15 }}>{packNumber}</span>
+      <span style={{ color: '#8f98ac', fontSize: 12 }}>/ {totalPacks}</span>
+      <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+      <span style={{ color: '#9aa3b8', fontSize: 13 }}>Pick</span>
+      <span style={{ color: '#f2c97a', fontWeight: 700, fontSize: 15 }}>{pickNumber}</span>
+      {picksPerPack != null && <span style={{ color: '#8f98ac', fontSize: 12 }}>/ {picksPerPack}</span>}
     </div>
   )
 }
@@ -673,25 +550,25 @@ function PassDirectionIndicator({
         display: 'flex',
         alignItems: 'center',
         gap: 0,
-        padding: '4px 8px',
-        backgroundColor: '#2a2a2a',
-        borderRadius: 6,
-        border: '1px solid #444',
+        padding: '4px 10px',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 999,
+        border: '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
-      {/* Direction label */}
+      {/* Direction — an arrow, not a word: the strip has to fit a 1366px bar beside everything else. */}
       <span
+        title={`Packs pass ${passDirection === 'LEFT' ? 'left' : 'right'}`}
+        aria-label={`Packs pass ${passDirection === 'LEFT' ? 'left' : 'right'}`}
         style={{
-          color: '#666',
-          fontSize: 10,
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          marginRight: 8,
+          color: '#8f98ac',
+          fontSize: 13,
+          fontWeight: 700,
+          marginRight: 6,
           whiteSpace: 'nowrap',
         }}
       >
-        Pass {passDirection === 'LEFT' ? 'L' : 'R'}
+        {passDirection === 'LEFT' ? '\u2190' : '\u2192'}
       </span>
 
       {/* Player nodes in passing order */}
@@ -736,7 +613,7 @@ function PassDirectionIndicator({
                   color: player.isYou
                     ? '#4fc3f7'
                     : isIdle
-                      ? '#666'
+                      ? '#8f98ac'
                       : hasQueue
                         ? '#ff9800'
                         : '#8bc34a',
@@ -747,8 +624,10 @@ function PassDirectionIndicator({
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
+                title={player.name}
               >
-                {player.isYou ? 'You' : player.name}
+                {/* The seat's "[AI] " tag costs a third of the strip's room; the full name is the tooltip. */}
+                {player.isYou ? 'You' : player.name.replace(/^\[AI\]\s*/, '')}
               </span>
             </div>
           </div>
@@ -840,14 +719,15 @@ function Timer({ seconds, warning }: { seconds: number | null; warning: boolean 
   return (
     <div
       style={{
-        padding: '6px 14px',
-        backgroundColor: warning ? (pulse ? '#c0392b' : '#8e2a21') : '#333',
-        borderRadius: 6,
-        color: warning ? 'white' : '#ccc',
+        padding: '5px 12px',
+        backgroundColor: warning ? (pulse ? '#c0392b' : '#8e2a21') : 'rgba(255, 255, 255, 0.08)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: 999,
+        color: warning ? 'white' : '#dfe3ec',
         fontWeight: 600,
-        fontSize: 16,
-        fontFamily: 'monospace',
-        minWidth: 60,
+        fontSize: 14,
+        fontVariantNumeric: 'tabular-nums',
+        minWidth: 56,
         textAlign: 'center',
         transition: 'background-color 0.2s',
       }}
@@ -869,6 +749,7 @@ function PackCard({
   score = null,
   reason,
   isRecommended = false,
+  cardWidth: cardWidthProp,
 }: {
   card: SealedCardInfo
   rarity: 'MYTHIC' | 'RARE' | 'UNCOMMON' | 'COMMON'
@@ -882,8 +763,10 @@ function PackCard({
   reason?: string | undefined
   /** True when the AI recommends taking this card this pick. */
   isRecommended?: boolean
+  /** Width fitted to the pack area; falls back to the fixed phone / desktop size. */
+  cardWidth?: number
 }) {
-  const cardWidth = responsive.isMobile ? 120 : 160
+  const cardWidth = cardWidthProp ?? (responsive.isMobile ? 120 : 160)
   const cardHeight = Math.round(cardWidth * 1.4)
   const imageUrl = getCardImageUrl(card.name, card.imageUri, 'normal')
 
@@ -899,12 +782,12 @@ function PackCard({
     score == null ? '#555' : score >= 70 ? '#4caf50' : score >= 45 ? '#ff9800' : '#777'
 
   const border = isSelected
-    ? '3px solid #4caf50'
+    ? '3px solid #f2b45c'
     : isRecommended
       ? '3px solid #ffd700'
       : '3px solid transparent'
   const boxShadow = isSelected
-    ? '0 0 20px rgba(76, 175, 80, 0.5)'
+    ? '0 0 22px rgba(242, 180, 92, 0.55)'
     : isRecommended
       ? '0 0 18px rgba(255, 215, 0, 0.55)'
       : '0 4px 12px rgba(0, 0, 0, 0.4)'
@@ -1004,14 +887,14 @@ function PackCard({
             position: 'absolute',
             top: 8,
             right: 8,
-            backgroundColor: '#4caf50',
+            backgroundColor: '#f2b45c',
             borderRadius: '50%',
             width: 24,
             height: 24,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
+            color: '#1d1405',
             fontWeight: 700,
             fontSize: 14,
           }}
@@ -1082,10 +965,10 @@ function SuggestPickControl() {
           style={{
             padding: '6px 8px',
             fontSize: 13,
-            backgroundColor: '#333',
+            backgroundColor: 'rgba(0, 0, 0, 0.35)',
             color: '#ddd',
-            border: '1px solid #555',
-            borderRadius: 6,
+            border: '1px solid rgba(255, 255, 255, 0.16)',
+            borderRadius: 8,
           }}
         >
           {advisors.map((a) => (
@@ -1110,10 +993,10 @@ function SuggestPickControl() {
           style={{
             padding: '6px 10px',
             fontSize: 13,
-            backgroundColor: '#444',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
             color: '#ccc',
-            border: 'none',
-            borderRadius: 6,
+            border: '1px solid rgba(255, 255, 255, 0.14)',
+            borderRadius: 8,
             cursor: 'pointer',
           }}
         >
@@ -1150,10 +1033,9 @@ function PickedCardsSidebar({
 
   return (
     <div
+      className={ls.rail}
       style={{
         width: responsive.isMobile ? '100%' : 280,
-        backgroundColor: '#1e1e1e',
-        borderLeft: '1px solid #444',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -1162,9 +1044,8 @@ function PickedCardsSidebar({
       {/* Header with stats */}
       <div
         style={{
-          padding: '10px 14px',
-          backgroundColor: '#252525',
-          borderBottom: '1px solid #333',
+          padding: '12px 14px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -1172,7 +1053,7 @@ function PickedCardsSidebar({
             Card Pool
           </span>
           <span style={{ color: '#4fc3f7', fontSize: 13, fontWeight: 600 }}>
-            {totalPicked} cards
+            {totalPicked} {totalPicked === 1 ? 'card' : 'cards'}
           </span>
         </div>
 
@@ -1229,11 +1110,11 @@ function PickedCardsSidebar({
                   key={type}
                   style={{
                     padding: '1px 6px',
-                    backgroundColor: '#333',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
                     borderRadius: 3,
                     fontSize: 9,
                     color: '#bbb',
-                    border: '1px solid #444',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -1315,7 +1196,7 @@ function PickedCardRow({
         alignItems: 'center',
         height: 26,
         padding: '0 14px',
-        borderBottom: '1px solid #2a2a2a',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.backgroundColor = 'rgba(79, 195, 247, 0.1)'

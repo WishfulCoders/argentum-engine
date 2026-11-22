@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
@@ -114,14 +115,18 @@ class GoblinResearcherScenarioTest : ScenarioTestBase() {
      * first. The opponent's attack declaration is submitted empty, since passUntilPhase stops at it.
      */
     private fun advanceTo(game: TestGame, activePlayer: EntityId, phase: Phase, step: Step) {
+        // A declare attackers step whose declaration is already made — the engine makes the empty
+        // one itself when nothing can attack — is not one the test can attack in.
+        fun alreadyDeclared() = step == Step.DECLARE_ATTACKERS &&
+            game.state.getEntity(game.state.activePlayerId!!)?.has<AttackersDeclaredThisCombatComponent>() == true
         var guard = 0
         do {
             check(guard++ < 30) { "Could not reach $phase/$step for $activePlayer" }
             if (game.state.phase == phase && game.state.step == step) {
-                if (step == Step.DECLARE_ATTACKERS) game.declareAttackers(emptyMap())
+                if (step == Step.DECLARE_ATTACKERS && !alreadyDeclared()) game.declareAttackers(emptyMap())
                 game.passPriority()
             }
             game.passUntilPhase(phase, step)
-        } while (game.state.activePlayerId != activePlayer)
+        } while (game.state.activePlayerId != activePlayer || alreadyDeclared())
     }
 }

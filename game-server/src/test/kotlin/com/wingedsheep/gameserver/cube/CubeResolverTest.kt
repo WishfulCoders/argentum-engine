@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.PrintingRef
+import com.wingedsheep.sdk.model.Rarity
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -123,5 +124,45 @@ class CubeResolverTest : FunSpec({
                 "Printing M10-211 belongs to Runeclaw Bear",
             ),
         )
+    }
+
+    test("stamps each entry's cube rarity and keeps the card's own rarity otherwise") {
+        val result = resolver().resolve(
+            CubeList(
+                name = "Bear Cube",
+                cards = listOf(
+                    CubeCardEntry("Grizzly Bears", rarity = Rarity.MYTHIC),
+                    CubeCardEntry("Runeclaw Bear"),
+                ),
+                basicLandSetCode = "BLB",
+                boosterStyle = CubeBoosterStyle.PLAY_BOOSTER,
+            )
+        ) as CubeResolution.Success
+
+        result.cube.rarityByName() shouldBe mapOf(
+            "Grizzly Bears" to Rarity.MYTHIC,
+            "Runeclaw Bear" to runeclaw.metadata.rarity,
+        )
+        result.cube.boosterStyle shouldBe CubeBoosterStyle.PLAY_BOOSTER
+    }
+
+    test("a booster-style cube prints special rarities as rares and opens cards kept out of boosters") {
+        val result = CubeResolver(
+            cardRegistry = CardRegistry().apply {
+                register(listOf(grizzly.copy(metadata = grizzly.metadata.copy(inBooster = false))))
+            },
+            printingRegistry = PrintingRegistry(),
+        ).resolve(
+            CubeList(
+                name = "Bear Cube",
+                cards = listOf(CubeCardEntry("Grizzly Bears", rarity = Rarity.SPECIAL)),
+                basicLandSetCode = "BLB",
+                boosterStyle = CubeBoosterStyle.DRAFT_BOOSTER,
+            )
+        ) as CubeResolution.Success
+
+        val card = result.cube.cards.single()
+        card.metadata.rarity shouldBe Rarity.RARE
+        card.metadata.inBooster shouldBe true
     }
 })

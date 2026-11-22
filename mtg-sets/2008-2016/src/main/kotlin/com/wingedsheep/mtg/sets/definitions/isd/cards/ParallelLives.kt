@@ -11,13 +11,16 @@ import com.wingedsheep.sdk.scripting.MultiplyTokenCreation
  * If an effect would create one or more tokens under your control, it creates twice that many of
  * those tokens instead.
  *
- * Doubling Season's token half; two copies quadruple (the replacements stack, ruling).
+ * Doubling Season's token clause: [MultiplyTokenCreation] with its default
+ * "under your control" pattern. Multiple copies stack multiplicatively (each is its own
+ * replacement effect).
  */
 val ParallelLives = card("Parallel Lives") {
     manaCost = "{3}{G}"
     colorIdentity = "G"
     typeLine = "Enchantment"
-    oracleText = "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead."
+    oracleText =
+        "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead."
 
     replacementEffect(MultiplyTokenCreation())
 

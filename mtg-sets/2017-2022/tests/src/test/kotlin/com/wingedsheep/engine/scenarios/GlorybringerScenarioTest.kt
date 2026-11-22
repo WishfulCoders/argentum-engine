@@ -3,77 +3,75 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.state.components.battlefield.ExertedComponent
-import com.wingedsheep.engine.support.GameTestDriver
-import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.mtg.sets.definitions.akh.cards.Glorybringer
+import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.model.Deck
-import io.kotest.core.spec.style.FunSpec
+import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Glorybringer (AKH #134) — {3}{R}{R} Creature — Dragon 4/4.
+ * Scenario tests for Glorybringer (AKH #134).
  *
- *   Flying, haste
- *   You may exert this creature as it attacks. When you do, it deals 4 damage to target non-Dragon
- *   creature an opponent controls.
+ *   Flying, haste. You may exert this creature as it attacks. When you do, it deals 4 damage to
+ *   target non-Dragon creature an opponent controls.
  */
-class GlorybringerScenarioTest : FunSpec({
+class GlorybringerScenarioTest : ScenarioTestBase() {
 
-    val wyrm = card("Test Glory Wyrm") {
-        manaCost = "{1}{R}"
-        typeLine = "Creature — Dragon"
-        power = 1
-        toughness = 1
+    init {
+        context("Glorybringer") {
+
+            fun game() = scenario()
+                .withPlayers("Alice", "Bob")
+                .withCardOnBattlefield(1, "Glorybringer")
+                .withCardOnBattlefield(1, "Craw Wurm")
+                .withCardOnBattlefield(2, "Grizzly Bears")
+                .withCardOnBattlefield(2, "Hill Giant")
+                .withCardOnBattlefield(2, "Shivan Dragon")
+                .withCardInLibrary(1, "Mountain")
+                .withCardInLibrary(2, "Mountain")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+
+            test("exerting deals 4 to a non-Dragon creature an opponent controls; Dragons and own creatures aren't legal") {
+                val game = game()
+                val glorybringer = game.findPermanent("Glorybringer")!!
+                val bears = game.findPermanent("Grizzly Bears")!!
+                val giant = game.findPermanent("Hill Giant")!!
+
+                game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
+                game.declareAttackers(mapOf("Glorybringer" to 2)).error shouldBe null
+                game.getPendingDecision().shouldBeInstanceOf<SelectCardsDecision>()
+                game.selectCards(listOf(glorybringer))
+                game.state.getEntity(glorybringer)!!.has<ExertedComponent>() shouldBe true
+
+                val targeting = game.getPendingDecision().shouldBeInstanceOf<ChooseTargetsDecision>()
+                withClue("only the opponent's non-Dragon creatures are legal targets") {
+                    targeting.legalTargets[0]!!.shouldContainExactlyInAnyOrder(bears, giant)
+                }
+
+                game.selectTargets(listOf(giant)).error shouldBe null
+                game.resolveStack()
+
+                game.isInGraveyard(2, "Hill Giant") shouldBe true
+                game.isOnBattlefield("Grizzly Bears") shouldBe true
+                game.isOnBattlefield("Shivan Dragon") shouldBe true
+                game.isOnBattlefield("Craw Wurm") shouldBe true
+            }
+
+            test("declining the exert puts no trigger on the stack") {
+                val game = game()
+                val glorybringer = game.findPermanent("Glorybringer")!!
+
+                game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
+                game.declareAttackers(mapOf("Glorybringer" to 2)).error shouldBe null
+                game.selectCards(emptyList())
+
+                game.state.stack.isEmpty() shouldBe true
+                game.state.getEntity(glorybringer)!!.has<ExertedComponent>() shouldBe false
+            }
+        }
     }
-
-    fun driver(): GameTestDriver {
-        val d = GameTestDriver()
-        d.registerCards(TestCards.all + listOf(Glorybringer, wyrm))
-        d.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true)
-        d.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        return d
-    }
-
-    test("exerting deals 4 damage to a non-Dragon creature an opponent controls") {
-        val d = driver()
-        val me = d.activePlayer!!
-        val opp = d.getOpponent(me)
-        val glory = d.putCreatureOnBattlefield(me, "Glorybringer") // haste: no sickness removal needed
-        val mine = d.putCreatureOnBattlefield(me, "Centaur Courser")
-        val courser = d.putCreatureOnBattlefield(opp, "Centaur Courser")
-        val dragon = d.putCreatureOnBattlefield(opp, "Test Glory Wyrm")
-
-        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        d.declareAttackers(me, listOf(glory), opp)
-        d.pendingDecision.shouldBeInstanceOf<SelectCardsDecision>()
-        d.submitCardSelection(me, listOf(glory))
-        d.state.getEntity(glory)?.has<ExertedComponent>() shouldBe true
-
-        val choose = d.pendingDecision.shouldBeInstanceOf<ChooseTargetsDecision>()
-        choose.legalTargets.values.flatten() shouldContainExactlyInAnyOrder listOf(courser)
-        d.submitTargetSelection(me, listOf(courser))
-        d.bothPass()
-
-        d.state.getBattlefield(opp).contains(courser) shouldBe false
-        d.state.getBattlefield(opp).contains(dragon) shouldBe true
-        d.state.getBattlefield(me).contains(mine) shouldBe true
-    }
-
-    test("not exerting: no trigger, Glorybringer is not exerted") {
-        val d = driver()
-        val me = d.activePlayer!!
-        val opp = d.getOpponent(me)
-        val glory = d.putCreatureOnBattlefield(me, "Glorybringer")
-        d.putCreatureOnBattlefield(opp, "Centaur Courser")
-
-        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        d.declareAttackers(me, listOf(glory), opp)
-        d.submitCardSelection(me, emptyList())
-        d.state.stack.isEmpty() shouldBe true
-        d.state.getEntity(glory)?.has<ExertedComponent>() shouldBe false
-    }
-})
+}

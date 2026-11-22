@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Crucible of Worlds reprint in M19. Canonical CardDefinition lives in its earliest set (5DN).
+ * Crucible of Worlds reprint in M19. Canonical CardDefinition lives in its earliest set.
  */
 val CrucibleOfWorldsReprint = Printing(
     oracleId = "33c722cf-b4bf-431f-aefd-ee96241a7fbf",

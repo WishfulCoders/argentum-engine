@@ -15,6 +15,7 @@
  * `useLobbyCommands.ts`.
  */
 import type { LobbyState } from '@/store/slices/types'
+import { labelForFormat } from '@/utils/deckLegality'
 import type { AiDeckSpecView, QuickGameLobbyStateMessage } from '@/types'
 import type { DeckPickerTab } from '../ui/DeckPicker'
 import {
@@ -29,6 +30,7 @@ import {
 } from './axes'
 import type { GroupId } from './settingsGroups'
 import { pickTimePhrase } from './pickTime'
+import { boosterStyleInfo, isBoosterStyle } from '@/components/cube/cubeModel'
 
 /** Which server implementation is backing this lobby. */
 export type LobbyKind = 'QUICK' | 'TOURNAMENT'
@@ -43,6 +45,8 @@ export interface LobbyViewPlayer {
   /** Right-hand status text — "Deck Ready", "Choosing deck…", "✓ Ready · Custom (60)". */
   status: string
   tone: 'ready' | 'joined' | 'disconnected'
+  /** Your own seat still has a deck to choose before you can ready up (quick lobbies only). */
+  needsDeck?: boolean
   /**
    * For an AI seat: what the host chose for it to play, or null where the choice doesn't exist —
    * on a human seat, and in a lobby whose format deals the AI a pool to build from.
@@ -116,6 +120,12 @@ export interface UnifiedLobbyView {
   /** Whether the host may currently add an AI seat. */
   canAddAi: boolean
   ranked: { available: boolean; on: boolean }
+  /**
+   * Play for ante (CR 407). `available` is whether the host may offer it at all; `lockedReason` is
+   * set while it can't be switched on — ranked forces ante off server-side, so the row stays
+   * visible but disabled and says why.
+   */
+  ante: { available: boolean; on: boolean; lockedReason: string | null }
   teams: LobbyTeams
   /**
    * The settings group holding the reason Start is disabled, when one does.
@@ -141,8 +151,13 @@ export function fromQuickGameLobby(
   opts: { deckValid: boolean; deckTab: DeckPickerTab | undefined; aiEnabled: boolean },
 ): UnifiedLobbyView {
   const you = lobby.players.find((p) => p.playerId === lobby.youPlayerId)
+  // The queue fixed a matchmade lobby's settings, so nobody hosts it: no settings panel, no invite
+  // code, no AI seat. Each player just picks a deck and readies up.
+  const matchmade = lobby.matchmade ?? false
+  const hostId = matchmade ? undefined : lobby.players.find((p) => !p.isAi)?.playerId
   // Host is the first non-AI seat — the same convention the server's leave handler uses.
-  const isHost = lobby.players.find((p) => !p.isAi)?.playerId === lobby.youPlayerId
+  const isHost = hostId !== undefined && hostId === lobby.youPlayerId
+  const invitable = !lobby.vsAi && !matchmade
   const isMomir = lobby.momirBasic ?? false
   const youReady = you?.ready ?? false
   const needsDeck = !isMomir && (!opts.deckValid || !you?.deckSelected)
@@ -157,7 +172,7 @@ export function fromQuickGameLobby(
     playerId: p.playerId,
     name: p.playerName,
     isYou: p.playerId === lobby.youPlayerId,
-    isHost: p.playerId === lobby.players.find((q) => !q.isAi)?.playerId,
+    isHost: p.playerId === hostId,
     isAi: p.isAi,
     // Quick lobbies drop disconnected players outright, so anyone listed is connected.
     isConnected: true,
@@ -167,26 +182,31 @@ export function fromQuickGameLobby(
         ? `✓ Ready · ${p.deckLabel}`
         : `Deck: ${p.deckLabel}`,
     tone: p.ready ? 'ready' : 'joined',
+    ...(p.playerId === lobby.youPlayerId && !isMomir && !p.deckSelected ? { needsDeck: true } : {}),
   }))
+  const opponent = lobby.players.find((p) => p.playerId !== lobby.youPlayerId)
   const guidance = quickGuidance({
     players,
     isHost,
     youReady,
     needsDeck,
     needsAiCommander,
-    invitable: !lobby.vsAi,
+    invitable,
+    bringsDeck: axes.cards.kind === 'BRING_A_DECK',
+    opponentChoosing: opponent !== undefined && !opponent.isAi && !opponent.deckSelected,
+    youRollRandom: you?.randomDeck === true,
   })
 
   return {
     kind: 'QUICK',
     lobbyId: lobby.lobbyId,
-    title: '1v1 Lobby',
-    subtitle: quickSubtitle(axes.cards.kind, lobby.vsAi),
+    title: matchmade ? matchmadeTitle(lobby) : quickTitle(axes.cards.kind),
+    subtitle: matchmade ? matchmadeSubtitle(axes.cards.kind) : quickSubtitle(axes.cards.kind, lobby.vsAi),
     isHost,
     // A quick lobby has no state machine: it is staging right up until the game starts.
     isWaiting: true,
     // An AI fills the only opponent seat. Removing it reopens the same lobby and invite flow.
-    invitable: !lobby.vsAi,
+    invitable,
     axes,
     players,
     you: players.find((p) => p.isYou),
@@ -199,7 +219,7 @@ export function fromQuickGameLobby(
           label: "I'm ready",
           disabled: needsDeck || needsAiCommander,
           reason: needsDeck
-            ? 'Pick a deck first'
+            ? you?.deckSelected ? 'Your deck isn’t legal in this lobby' : 'Pick a deck first'
             : needsAiCommander
               ? 'Pick a Commander deck for the AI'
               : undefined,
@@ -208,6 +228,12 @@ export function fromQuickGameLobby(
     isPublic: lobby.isPublic,
     canAddAi: isHost && opts.aiEnabled && !lobby.vsAi && lobby.players.length < 2,
     ranked: { available: lobby.rankedEligible ?? false, on: lobby.ranked ?? false },
+    ante: anteView(
+      // A matchmade lobby's settings are fixed by the queue, which never plays for ante.
+      !lobby.matchmade,
+      lobby.playingForAnte ?? false,
+      (lobby.rankedEligible ?? false) && (lobby.ranked ?? false),
+    ),
     // The server's `QuickGameLobby.twoHeadedGiant` exists but no client has ever reached it (gap
     // #6): it isn't in `QuickGameLobbyStateMessage` at all, so there is nothing here to read.
     teams: { mode: 'NONE' },
@@ -223,6 +249,9 @@ function quickGuidance({
   needsDeck,
   needsAiCommander,
   invitable,
+  bringsDeck,
+  opponentChoosing = false,
+  youRollRandom = false,
 }: {
   players: readonly LobbyViewPlayer[]
   isHost: boolean
@@ -230,13 +259,21 @@ function quickGuidance({
   needsDeck: boolean
   needsAiCommander: boolean
   invitable: boolean
+  /** Only a brought deck is a choice; Random and Momir have nothing to pick while you wait. */
+  bringsDeck: boolean
+  /** The other human hasn't chosen a deck yet — the honest reason the game can't start. */
+  opponentChoosing?: boolean
+  /** Your seat is on the server-rolled deck, so there is nothing for you to prepare. */
+  youRollRandom?: boolean
 }): LobbyGuidance {
   const other = players.find((p) => !p.isYou)
 
   if (needsDeck) {
     return {
       title: 'Choose your deck',
-      detail: 'Open your player row to choose one. When it is valid, mark yourself ready below.',
+      detail: invitable
+        ? 'Use “Choose deck” on your row, then ready up.'
+        : 'Use “Choose deck” on your row — the game starts as soon as you’re ready.',
       tone: 'action',
     }
   }
@@ -252,7 +289,9 @@ function quickGuidance({
       title: 'You’re ready',
       detail: other?.tone === 'ready'
         ? 'Everyone is ready. The game is starting.'
-        : `Waiting for ${other?.name ?? 'the other player'} to get ready. You can cancel ready below.`,
+        : opponentChoosing
+          ? `${other?.name ?? 'Your opponent'} is still choosing a deck. The game starts once they ready up.`
+          : `Waiting for ${other?.name ?? 'the other player'} to get ready. You can cancel ready below.`,
       tone: 'ready',
     }
   }
@@ -260,7 +299,7 @@ function quickGuidance({
     return {
       title: isHost ? 'Invite your opponent' : 'Waiting for the host',
       detail: isHost
-        ? 'Copy the invite code or share the QR code. You can choose your deck while you wait.'
+        ? `Copy the invite code or share the QR code.${bringsDeck ? ' You can choose your deck while you wait.' : ''}`
         : 'The host will invite the other player.',
       tone: 'waiting',
     }
@@ -272,11 +311,40 @@ function quickGuidance({
       tone: 'action',
     }
   }
+  const yourDeck = youRollRandom ? 'You’re on a random deck — nothing to prepare. ' : ''
   return {
     title: 'Ready when you are',
-    detail: 'Mark yourself ready below. The game starts automatically when both players are ready.',
+    detail: opponentChoosing
+      ? `${yourDeck}${other?.name ?? 'Your opponent'} is still choosing a deck; ready up now and the game starts when they do.`
+      : `${yourDeck}Mark yourself ready below. The game starts automatically when both players are ready.`,
     tone: 'action',
   }
+}
+
+/** A quick lobby is named for its Cards value — the same words as the home screen's mode tiles. */
+function quickTitle(cards: CardsKind): string {
+  switch (cards) {
+    case 'RANDOM': return 'Random deck'
+    case 'MOMIR': return 'Momir Basic'
+    case 'BRING_A_DECK': return 'Constructed'
+    default: return '1v1 Lobby'
+  }
+}
+
+/**
+ * "Ranked Pauper match" — what the queue agreed on. Only a Constructed match stays in the lobby long
+ * enough to be seen; Random deck and Momir Basic start at once, so the fallback is rarely shown.
+ */
+function matchmadeTitle(lobby: QuickGameLobbyStateMessage): string {
+  const format = lobby.format ? labelForFormat(lobby.format) : lobby.momirBasic ? 'Momir Basic' : 'Random deck'
+  return `${lobby.ranked ? 'Ranked' : 'Casual'} ${format} match`
+}
+
+function matchmadeSubtitle(cards: CardsKind): string {
+  const prepare = cards === 'RANDOM'
+    ? 'Your sealed deck is built when the game starts.'
+    : 'Pick a deck.'
+  return `Matched by the queue. ${prepare} The game starts when you both ready up.`
 }
 
 /**
@@ -378,7 +446,17 @@ export function fromTournamentLobby(
     canAddAi: isWaiting && lobbyState.isHost && opts.aiEnabled && playerCount < maxPlayers,
     // Ranked is a 1v1-bracket-only concept server-side (`TournamentLobby.rankedEligible`).
     ranked: { available: axes.table === 'ONE_V_ONE', on: s.ranked ?? false },
+    ante: anteView(true, s.playingForAnte ?? false, axes.table === 'ONE_V_ONE' && (s.ranked ?? false)),
     teams: tournamentTeams(lobbyState),
+  }
+}
+
+/** Shared by both lobby kinds: ranked games never play for ante, so ranked locks the row off. */
+function anteView(available: boolean, on: boolean, rankedOn: boolean): UnifiedLobbyView['ante'] {
+  return {
+    available,
+    on: on && !rankedOn,
+    lockedReason: rankedOn ? 'Ranked games never play for ante — switch to Casual first' : null,
   }
 }
 
@@ -463,19 +541,23 @@ function tournamentTeams(lobbyState: LobbyState): LobbyTeams {
 
 function tournamentTitle(lobbyState: LobbyState): string {
   const s = lobbyState.settings
+  if (s.jumpstartActive) return 'Jump In / Jumpstart'
   if (s.cubeName) return s.cubeName
   if (s.format !== 'PREMADE_DECKS') return s.setNames.join(' + ') || 'Lobby'
+  // Named for the table, as the home screen's tiles are; "Premade Decks" is the server's word for
+  // "bring a deck", and the Cards chip under the title already says that.
+  const commander = rulesFromLobbySettings(s) === 'COMMANDER'
   switch (s.gameMode) {
-    case 'TWO_HEADED_GIANT': return 'Premade Decks Two-Headed Giant'
-    case 'TEAM_VS_TEAM': return 'Premade Decks Team vs. Team'
-    case 'FREE_FOR_ALL': return 'Premade Decks Free-for-All'
-    case 'TOURNAMENT': return 'Premade Decks Tournament'
+    case 'TWO_HEADED_GIANT': return commander ? 'Commander Two-Headed Giant' : 'Two-Headed Giant'
+    case 'TEAM_VS_TEAM': return commander ? 'Commander Team vs. Team' : 'Team vs. Team'
+    case 'FREE_FOR_ALL': return commander ? 'Commander' : 'Free-for-All'
+    case 'TOURNAMENT': return commander ? 'Commander bracket' : 'Constructed bracket'
   }
 }
 
 function tournamentSubtitle(lobbyState: LobbyState): string {
   const s = lobbyState.settings
-  if (s.jumpstartActive) return 'Jumpstart · choose two themed packs · 40-card deck'
+  if (s.jumpstartActive) return `${s.setNames.join(' + ')} · two themed packs · no deckbuilding`
   // With more than one set selected the header names the split rather than a bare total.
   const distText = s.setCodes.length > 1 && Object.keys(s.boosterDistribution).length > 0
     ? Object.entries(s.boosterDistribution)
@@ -494,7 +576,7 @@ function tournamentSubtitle(lobbyState: LobbyState): string {
     : preset === 'COMMANDER' ? 'Commander 30 life'
     : 'Brawl 25 life'
   const commanderNote = rulesFromLobbySettings(s) !== 'COMMANDER' ? null
-    : s.format === 'PREMADE_DECKS' ? 'Commander 40 life'
+    : s.format === 'PREMADE_DECKS' ? '40 life'
     : presetLabel
   const pick2 = s.picksPerRound === 2 ? ' · Pick 2' : ''
 
@@ -511,7 +593,9 @@ function tournamentSubtitle(lobbyState: LobbyState): string {
         case 'COMMANDER_SEALED':
           return `${distText ?? `${s.boosterCount} packs`}`
         case 'PREMADE_DECKS':
-          return 'Premade Decks · bring your own ≥40-card deck'
+          return rulesFromLobbySettings(s) === 'COMMANDER'
+            ? 'Bring your own commander deck'
+            : 'Bring your own deck (40+ cards)'
         case 'SEALED':
           return distText ?? `${s.boosterCount} boosters per player`
       }
@@ -523,12 +607,17 @@ function tournamentSubtitle(lobbyState: LobbyState): string {
     ? poolPlay
       // Pool Play deals nothing, so pack size and booster count are meaningless here.
       ? `Cube Pool Play · ${s.cubeCardCount ?? 0} cards · everyone builds from the whole cube`
-      : `Cube · ${s.cubeCardCount ?? 0} cards · ${s.packSize ?? 15}-card packs · ${base}`
+      : isBoosterStyle(s.cubeBoosterStyle)
+        ? `Cube · ${s.cubeCardCount ?? 0} cards · ${boosterStyleInfo(s.cubeBoosterStyle).label} · ${base}`
+        : `Cube · ${s.cubeCardCount ?? 0} cards · ${s.packSize ?? 15}-card packs · ${base}`
     : base
 
-  const isMultiplayer = s.gameMode !== 'TOURNAMENT'
-  const games = s.gamesPerMatch ?? 1
-  return !isMultiplayer && games > 1 ? `${source} · ${games} games per matchup` : source
+  if (s.gameMode !== 'TOURNAMENT') return source
+  const meetings = s.gamesPerMatch ?? 1
+  const parts = [source]
+  if ((s.bestOf ?? 1) >= 3) parts.push('best of 3')
+  if (meetings > 1) parts.push(`each pair meets ${meetings}×`)
+  return parts.join(' · ')
 }
 
 function startLabel(lobbyState: LobbyState): string {
@@ -595,6 +684,8 @@ function startBlockReason(lobbyState: LobbyState): { reason: string; group: Grou
     // Pool Play hands every player the whole cube instead of dealing from it, so it has no capacity
     // constraint at all — mirrors TournamentLobby.cubeCapacityError.
     if (s.cubePoolPlay && s.format === 'SEALED') return null
+    // Booster-style cubes print packs with replacement, like a real set, so they never run out.
+    if (isBoosterStyle(s.cubeBoosterStyle)) return null
     const packSize = s.packSize ?? 15
     const sharedPool = s.format === 'WINSTON_DRAFT' || s.format === 'GRID_DRAFT'
     const packsNeeded = sharedPool ? s.boosterCount : n * s.boosterCount

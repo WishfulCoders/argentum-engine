@@ -8,7 +8,9 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.ChoosePileEffect
 import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
+import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
+import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
 import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
@@ -37,6 +39,7 @@ import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.SearchText
 
 /**
  * Effect patterns for library manipulation: search, scry, surveil, mill,
@@ -385,13 +388,13 @@ object LibraryPatterns {
      * "Target player scries [count]" (CR 701.22) — a *player-scoped* scry. When [target] is the
      * effect's own controller this is identical to [scry] (returns the compact [ScryEffect] macro);
      * otherwise it expands to a [scryPipeline] whose gather/library-moves read the *target* player's
-     * library and whose top/bottom decision is made by that player ([Chooser.TargetPlayer]) — the
+     * library and whose top/bottom decision is made by that player ([effectTargetToChooser]) — the
      * scry twin of [mill]`(count, target)`. Used by modal "• Target player scries N" modes (Bumi,
      * King of Three Trials), where the player is the chosen mode's local [EffectTarget.ContextTarget].
      */
     fun scry(count: Int, target: EffectTarget): Effect = when (target) {
         EffectTarget.Controller -> ScryEffect(count)
-        else -> scryPipeline(count, scryPlayer(target), Chooser.TargetPlayer)
+        else -> scryPipeline(count, scryPlayer(target), effectTargetToChooser(target))
     }
 
     /**
@@ -407,7 +410,7 @@ object LibraryPatterns {
         is DynamicAmount.Fixed -> scry(count.amount, target)
         else -> when (target) {
             EffectTarget.Controller -> scryPipeline(count)
-            else -> scryPipeline(count, scryPlayer(target), Chooser.TargetPlayer)
+            else -> scryPipeline(count, scryPlayer(target), effectTargetToChooser(target))
         }
     }
 
@@ -415,7 +418,7 @@ object LibraryPatterns {
     private fun scryPlayer(target: EffectTarget): Player = when (target) {
         EffectTarget.Controller -> Player.You
         is EffectTarget.ContextTarget -> Player.ContextPlayer(target.index)
-        is EffectTarget.BoundVariable -> Player.BoundVariable(target.name)
+        is EffectTarget.BoundVariable -> Player.BoundVariable(target.name, target.description)
         is EffectTarget.PlayerRef -> target.player
         else -> Player.You
     }
@@ -506,7 +509,7 @@ object LibraryPatterns {
     ): CompositeEffect = CompositeEffect(
         listOfNotNull(
             GatherCardsEffect(
-                // isScry: the gather is the scry announcement, where ModifyScryAmount
+                // isScry: the gather is the scry announcement, where scry ModifyKeywordActionAmount
                 // ("scry that many plus one") replacements resize the look.
                 source = CardSource.TopOfLibrary(count, player, isScry = true),
                 storeAs = "scried"
@@ -519,6 +522,7 @@ object LibraryPatterns {
                 chooser = chooser,
                 storeSelected = "toBottom",
                 storeRemainder = "toTop",
+                prompt = scryPrompt(count, player, chooser),
                 selectedLabel = "Put on bottom",
                 remainderLabel = "Put on top"
             ),
@@ -537,6 +541,34 @@ object LibraryPatterns {
     )
 
     /**
+     * The scry pick's prompt — "Scry 2: choose cards to put on the bottom of your library" — so the
+     * decision says which keyword action it is and what a selected card means. The library is named
+     * from the chooser's side: a target or triggering player who scries is choosing for their own.
+     */
+    private fun scryPrompt(count: DynamicAmount, player: Player, chooser: Chooser): String {
+        val library = when (chooser) {
+            Chooser.Controller -> "${player.possessive} library"
+            Chooser.TargetPlayer, Chooser.TriggeringPlayer -> "your library"
+            else -> "the library"
+        }
+        return "${keywordAction("Scry", count)}: choose cards to put on the bottom of $library"
+    }
+
+    /** The surveil pick's prompt — "Surveil 1: choose cards to put into your graveyard". */
+    private fun surveilPrompt(count: DynamicAmount): String =
+        "${keywordAction("Surveil", count)}: choose cards to put into your graveyard"
+
+    /**
+     * A keyword action with its number as printed — "Scry 2", "Scry X" — or bare when the count is
+     * some other resolution-time amount whose wording doesn't fit after the keyword.
+     */
+    private fun keywordAction(keyword: String, count: DynamicAmount): String = when (count) {
+        is DynamicAmount.Fixed -> "$keyword ${count.amount}"
+        DynamicAmount.XValue -> "$keyword X"
+        else -> keyword
+    }
+
+    /**
      * Run a keyword action's event [tail] only when its dynamic [count] resolves above zero — "scry 0"
      * / "surveil 0" is no event at all (CR 701.22b / 701.25c).
      */
@@ -553,14 +585,19 @@ object LibraryPatterns {
     fun surveilPipeline(count: Int, storeGraveyardAs: String? = null): CompositeEffect = CompositeEffect(
         listOfNotNull(
             GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(count)),
+                // isSurveil: the gather is the surveil announcement, where surveil ModifyKeywordActionAmount
+                // ("look at an additional two cards") replacements resize the look.
+                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(count), isSurveil = true),
                 storeAs = "surveiled"
             ),
             SelectFromCollectionEffect(
                 from = "surveiled",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(count)),
+                // Any number of the cards actually looked at — the gather bounds the collection,
+                // and a surveil replacement can make it larger than [count].
+                selection = SelectionMode.ChooseAnyNumber,
                 storeSelected = "toGraveyard",
                 storeRemainder = "toTop",
+                prompt = surveilPrompt(DynamicAmount.Fixed(count)),
                 selectedLabel = "Put in graveyard",
                 remainderLabel = "Put on top"
             ),
@@ -594,14 +631,15 @@ object LibraryPatterns {
     fun surveilPipeline(count: DynamicAmount): CompositeEffect = CompositeEffect(
         listOf(
             GatherCardsEffect(
-                source = CardSource.TopOfLibrary(count),
+                source = CardSource.TopOfLibrary(count, isSurveil = true),
                 storeAs = "surveiled"
             ),
             SelectFromCollectionEffect(
                 from = "surveiled",
-                selection = SelectionMode.ChooseUpTo(count),
+                selection = SelectionMode.ChooseAnyNumber,
                 storeSelected = "toGraveyard",
                 storeRemainder = "toTop",
+                prompt = surveilPrompt(count),
                 selectedLabel = "Put in graveyard",
                 remainderLabel = "Put on top"
             ),
@@ -649,7 +687,9 @@ object LibraryPatterns {
             SelectFromCollectionEffect(
                 from = "searchable",
                 selection = SelectionMode.ChooseUpTo(count),
-                storeSelected = "found"
+                storeSelected = "found",
+                prompt = searchPrompt("your library", filter, count, destination, entersTapped),
+                selectedLabel = searchSelectedLabel(destination, entersTapped)
             )
         )
 
@@ -688,6 +728,36 @@ object LibraryPatterns {
         return CompositeEffect(effects)
     }
 
+    /**
+     * The player-facing prompt for a search's pick, derived from what it looks for and where the
+     * found cards go: "Search your library for a basic land card to put onto the battlefield
+     * tapped". The filter wording is [GameObjectFilter.description]'s, so it improves with it.
+     */
+    private fun searchPrompt(
+        zonePhrase: String,
+        filter: GameObjectFilter,
+        count: DynamicAmount,
+        destination: SearchDestination,
+        entersTapped: Boolean
+    ): String {
+        val (zone, placement) = when (destination) {
+            SearchDestination.HAND -> Zone.HAND to ZonePlacement.Default
+            SearchDestination.BATTLEFIELD -> Zone.BATTLEFIELD to if (entersTapped) ZonePlacement.Tapped else ZonePlacement.Default
+            SearchDestination.GRAVEYARD -> Zone.GRAVEYARD to ZonePlacement.Default
+            SearchDestination.TOP_OF_LIBRARY -> Zone.LIBRARY to ZonePlacement.Top
+        }
+        return "Search $zonePhrase for ${SearchText.counted(filter, count)} to put ${SearchText.destination(zone, placement)}"
+    }
+
+    /** Where a search's found cards go, for the selection UI's "Selected →" label. */
+    private fun searchSelectedLabel(destination: SearchDestination, entersTapped: Boolean): String =
+        when (destination) {
+            SearchDestination.HAND -> "Put into your hand"
+            SearchDestination.BATTLEFIELD -> if (entersTapped) "Put onto the battlefield tapped" else "Put onto the battlefield"
+            SearchDestination.GRAVEYARD -> "Put into your graveyard"
+            SearchDestination.TOP_OF_LIBRARY -> "Put on top of your library"
+        }
+
     fun searchMultipleZones(
         zones: List<Zone>,
         filter: GameObjectFilter = GameObjectFilter.Any,
@@ -706,11 +776,23 @@ object LibraryPatterns {
             )
         )
 
+        // A searcher may fail to find a matching card only in a hidden zone (CR 701.23b); a search
+        // of public zones alone (a graveyard) must find what is there, up to [count].
+        val selection = if (zones.any { it.isHidden }) {
+            SelectionMode.ChooseUpTo(DynamicAmount.Fixed(count))
+        } else {
+            SelectionMode.ChooseExactly(DynamicAmount.Fixed(count))
+        }
         effects.add(
             SelectFromCollectionEffect(
                 from = "searchable",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(count)),
-                storeSelected = "found"
+                selection = selection,
+                storeSelected = "found",
+                prompt = searchPrompt(
+                    "your " + zones.joinToString(" and/or ") { it.name.lowercase() },
+                    filter, DynamicAmount.Fixed(count), destination, entersTapped
+                ),
+                selectedLabel = searchSelectedLabel(destination, entersTapped)
             )
         )
 
@@ -738,6 +820,39 @@ object LibraryPatterns {
         }
 
         return CompositeEffect(effects)
+    }
+
+    /**
+     * "[You may] search your library and/or graveyard for [filter] and put it [destination]. If you
+     * search your library this way, shuffle." — the M21 planeswalker-deck tutors (Basri's Aegis,
+     * Garruk's Warsteed) and The Hunger Tide Rises.
+     *
+     * "And/or" is a choice of which zones to search, made as the effect resolves — a
+     * [ChooseActionEffect], not a modal (a top-level modal would be chosen at cast or trigger
+     * time) — picking library, graveyard or both, and each option is [searchMultipleZones] over those
+     * zones — which shuffles and fires "searches their library" triggers (CR 701.23) only when the
+     * library is among them. A graveyard-only search therefore neither shuffles nor counts as
+     * searching a library. [optional] adds a "Don't search" option for the "you may" wording, so
+     * declining is one choice in the same prompt rather than a separate yes/no.
+     */
+    fun searchLibraryAndOrGraveyard(
+        filter: GameObjectFilter = GameObjectFilter.Any,
+        count: Int = 1,
+        destination: SearchDestination = SearchDestination.HAND,
+        entersTapped: Boolean = false,
+        reveal: Boolean = false,
+        optional: Boolean = false
+    ): Effect {
+        fun search(zones: List<Zone>) =
+            searchMultipleZones(zones, filter, count, destination, entersTapped, reveal)
+        return Effects.ChooseAction(
+            listOfNotNull(
+                EffectChoice("Search your library", search(listOf(Zone.LIBRARY))),
+                EffectChoice("Search your graveyard", search(listOf(Zone.GRAVEYARD))),
+                EffectChoice("Search your library and graveyard", search(listOf(Zone.LIBRARY, Zone.GRAVEYARD))),
+                if (optional) EffectChoice("Don't search", Effects.Nothing) else null
+            )
+        )
     }
 
     fun revealUntilNonlandDealDamage(target: EffectTarget): CompositeEffect = CompositeEffect(
@@ -936,6 +1051,30 @@ object LibraryPatterns {
         )
     }
 
+    /**
+     * Ante the top card of a player's library — put it into the ante (CR 407.4): "ante the top
+     * card of your library" (Contract from Below), "each player antes the top card of their
+     * library" (Demonic Attorney, under `Effects.ForEachPlayer`). Same Gather → Move pipeline as
+     * [exileTop], destination [Zone.ANTE]. Only the owner can ante a card (407.4), which a
+     * library top always satisfies. Only meaningful in a game played for ante — the only games
+     * these cards are legal in (407.3).
+     */
+    fun anteTop(target: EffectTarget = EffectTarget.Controller): CompositeEffect {
+        val player = effectTargetToPlayer(target)
+        return CompositeEffect(
+            listOf(
+                GatherCardsEffect(
+                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1), player),
+                    storeAs = "anted_top"
+                ),
+                MoveCollectionEffect(
+                    from = "anted_top",
+                    destination = CardDestination.ToZone(Zone.ANTE, player)
+                )
+            )
+        )
+    }
+
     fun shuffleGraveyardIntoLibrary(target: EffectTarget): CompositeEffect {
         val player = effectTargetToPlayer(target)
         return CompositeEffect(
@@ -970,7 +1109,9 @@ object LibraryPatterns {
             SelectFromCollectionEffect(
                 from = "searchable",
                 selection = SelectionMode.ChooseUpTo(count),
-                storeSelected = "found"
+                storeSelected = "found",
+                prompt = searchPrompt("your library", filter, count, SearchDestination.HAND, entersTapped = false),
+                selectedLabel = searchSelectedLabel(SearchDestination.HAND, entersTapped = false)
             ),
             MoveCollectionEffect(
                 from = "found",

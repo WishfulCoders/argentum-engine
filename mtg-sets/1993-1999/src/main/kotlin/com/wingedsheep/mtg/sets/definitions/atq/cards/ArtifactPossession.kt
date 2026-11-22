@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.TapSymbolInCost
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggerBinding
@@ -20,8 +21,9 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  *
  * The single-target ([TriggerBinding.ATTACHED]) member of the Antiquities "tap / activate an
  * artifact" punisher template (cf. Haunting Wind, Powerleech): both triggers fire only off the
- * enchanted artifact. Routed through `AttachmentTriggerDetector`, which exposes the enchanted
- * artifact as the triggering entity, so "that artifact's controller" resolves via
+ * enchanted artifact. Routed through `AttachmentTriggerDetector`; the triggering entity is the
+ * enchanted artifact (tap half) or the activated ability, which reads through to its source's
+ * controller (activate half), so "that artifact's controller" resolves via
  * [EffectTarget.ControllerOfTriggeringEntity] for both halves.
  */
 val ArtifactPossession = card("Artifact Possession") {
@@ -40,7 +42,7 @@ val ArtifactPossession = card("Artifact Possession") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attached.hasAbilityActivatedWithoutTap()
+        trigger = Triggers.attached.hasAbilityActivated(tapInCost = TapSymbolInCost.WITHOUT, includeManaAbilities = true)
         effect = Effects.DealDamage(2, EffectTarget.ControllerOfTriggeringEntity)
     }
 

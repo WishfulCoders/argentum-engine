@@ -108,6 +108,9 @@ data class TargetFilter(
         /** Target creature you control */
         val CreatureYouControl = TargetFilter(GameObjectFilter.Companion.Creature.youControl())
 
+        /** Target land you control — the fortify ability's target (CR 702.67a). */
+        val LandYouControl = TargetFilter(GameObjectFilter.Companion.Land.youControl())
+
         /** Target creature an opponent controls */
         val CreatureOpponentControls = TargetFilter(GameObjectFilter.Companion.Creature.opponentControls())
 
@@ -318,6 +321,12 @@ data class TargetFilter(
         /** Target activated ability on the stack (not triggered, not spells; mana abilities never use the stack) */
         val ActivatedAbilityOnStack = TargetFilter(
             GameObjectFilter(cardPredicates = listOf(CardPredicate.IsActivatedAbility)),
+            zone = Zone.STACK
+        )
+
+        /** Target loyalty ability on the stack (CR 606.2 — an activated ability with a loyalty cost) */
+        val LoyaltyAbilityOnStack = TargetFilter(
+            GameObjectFilter(cardPredicates = listOf(CardPredicate.IsLoyaltyAbility)),
             zone = Zone.STACK
         )
 

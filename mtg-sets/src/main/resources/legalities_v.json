@@ -574,6 +574,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -1397,7 +1398,8 @@
     "GLADIATOR",
     "OATHBREAKER",
     "PREDH",
-    "TIMELESS"
+    "TIMELESS",
+    "VINTAGE_RESTRICTED"
   ],
   "Vampiric Tutor // Vampiric Tutor": [],
   "Vampirism": [
@@ -4900,7 +4902,8 @@
     "MODERN",
     "OATHBREAKER",
     "TIMELESS",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Vexing Beetle": [
     "COMMANDER",
@@ -8749,6 +8752,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

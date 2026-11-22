@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.actions.ability
 
+import com.wingedsheep.engine.mechanics.targeting.withTargetConstraints
+
 import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ActivateAbilityChooseManaXContinuation
@@ -25,19 +27,20 @@ import com.wingedsheep.engine.handlers.CostHandler
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.mechanics.cost.PlayerCounterPayment
+import com.wingedsheep.engine.mechanics.cost.SacrificeCostAssignment
 import com.wingedsheep.engine.mechanics.cost.VariablePermanentsCost
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.mechanics.mana.buildAbilityPaymentContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
-import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
-import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.targets.TargetChooser
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
+import com.wingedsheep.sdk.scripting.util.quantify
 
 /**
  * The announcement-time choices an activation may have to stop and ask for before any cost is paid
@@ -51,7 +54,9 @@ import com.wingedsheep.sdk.scripting.targets.TargetRequirement
 internal class ActivationChoicePauses(
     private val costHandler: CostHandler,
     private val manaSolver: ManaSolver,
-    private val targetFinder: TargetFinder
+    private val targetFinder: TargetFinder,
+    private val castPermissionUtils: com.wingedsheep.engine.legalactions.utils.CastPermissionUtils,
+    private val amountEvaluator: com.wingedsheep.engine.handlers.DynamicAmountEvaluator,
 ) {
 
     /**
@@ -65,9 +70,11 @@ internal class ActivationChoicePauses(
             ?: manaXChoice(state, activation)
             ?: exileXFromGraveyardChoice(state, activation)
             ?: discardXChoice(state, activation)
-            ?: exileFromGraveyardChoice(state, activation)
+            ?: chosenCardExileChoice(state, activation)
+            ?: jointSacrificeChoice(state, activation)
             ?: sacrificeChoice(state, activation)
             ?: putOnLibraryChoice(state, activation)
+            ?: millOrderChoice(state, activation)
             ?: variablePermanentsChoice(state, activation)
             ?: variablePermanentsTargetChoice(state, activation)
 
@@ -113,7 +120,9 @@ internal class ActivationChoicePauses(
         val tapXCost = activation.effectiveCost.extractTapXPermanentsCost()
         val alreadyTapping = (action.costPayment?.tappedPermanents?.isNotEmpty() == true)
         if (tapXCost == null || action.xValue != null || alreadyTapping) return null
+        val excluded = activation.effectiveCost.tapXExcludedSource(action.sourceId)
         val tapTargets = costHandler.findUntappedMatchingPermanentsUnified(state, action.playerId, tapXCost.filter, action.sourceId)
+            .filter { it != excluded }
         val maxX = tapTargets.size
         val continuation = ActivateAbilityChooseXContinuation(
             action = action,
@@ -150,7 +159,8 @@ internal class ActivationChoicePauses(
         val tapXCost = effectiveCost.extractTapXPermanentsCost()
         val manaXCost = effectiveCost.extractManaCost()
         val counterMaxX = PlayerCounterPayment.abilityMaxX(state, action.playerId, effectiveCost)
-        if (!((manaXCost?.hasX == true || effectiveCost == AbilityCost.LoyaltyX || counterMaxX != null) && action.xValue == null && tapXCost == null)) {
+        val loyaltyX = effectiveCost.extractLoyaltyCost() == AbilityCost.LoyaltyX
+        if (!((manaXCost?.hasX == true || loyaltyX || counterMaxX != null) && action.xValue == null && tapXCost == null)) {
             return null
         }
         val fixedMana = manaXCost?.cmc ?: 0 // the non-X portion ({X} alone is 0; {1}{X} is 1)
@@ -160,8 +170,8 @@ internal class ActivationChoicePauses(
             ) - fixedMana).coerceAtLeast(0) /
                 manaXCost.xCount.coerceAtLeast(1)
         } else null
-        val loyaltyMaxX = if (effectiveCost == AbilityCost.LoyaltyX) {
-            activation.container.get<CountersComponent>()?.getCount(CounterType.LOYALTY) ?: 0
+        val loyaltyMaxX = if (loyaltyX) {
+            castPermissionUtils.maxLoyaltyX(state, action.sourceId, action.playerId)
         } else null
         val maxX = listOfNotNull(manaMaxX, loyaltyMaxX, counterMaxX).minOrNull() ?: 0
         // "X can't be 0" abilities (Gogo, Master of Mimicry) set a minimum; clamp it to what the
@@ -220,17 +230,25 @@ internal class ActivationChoicePauses(
             sourceId = action.sourceId
         )
         // A mana `{X}` already fixed the count; otherwise the player is free to exile any
-        // number of matching cards (including none) and that count becomes X.
+        // number of matching cards and that count becomes X — at least the ability's minimum X
+        // ("Exile one or more creature cards", Corpseweft: `minimumXValue = 1`), else none is fine.
         val fixedCount = action.xValue
-        val minSelections = fixedCount ?: 0
+        val minimumX = activation.ability.minimumXValue
+        val minSelections = fixedCount ?: minimumX
         val maxSelections = fixedCount ?: exileXCandidates.size
-        val isRealChoice = exileXCandidates.size > minSelections
         // Not a real choice, so no prompt: either the graveyard has nothing matching (X = 0,
-        // legal) or a mana-fixed X consumes every candidate, which CostHandler pays as-is.
+        // legal unless the ability has a minimum — ActivationValidator rejects that) or a
+        // mana-fixed X consumes every candidate, which CostHandler pays as-is. A free X with a
+        // minimum still pauses when the candidates exactly meet it: X is bound by the selection.
+        val isRealChoice = if (fixedCount != null) exileXCandidates.size > fixedCount
+        else exileXCandidates.isNotEmpty()
         if (!isRealChoice) return null
         val prompt = if (fixedCount != null) {
             "Select $fixedCount card${if (fixedCount > 1) "s" else ""} to exile from " +
                 "graveyard for ${sourceName}"
+        } else if (minimumX > 0) {
+            "Select $minimumX or more cards to exile from graveyard for ${sourceName} " +
+                "(X is the number you choose)"
         } else {
             "Select any number of cards to exile from graveyard for ${sourceName} " +
                 "(X is the number you choose)"
@@ -263,18 +281,26 @@ internal class ActivationChoicePauses(
     // alongside it fixes the count instead. Skipped when the discards are pre-filled
     // (engine-direct path, or the resume after this pause), when X is a bound zero, or when there
     // is no real choice (X equals the candidates, which CostHandler pays as-is).
+    //
+    // "No real choice" is judged by the hand's size, never by which of its cards match a filter
+    // ("discard X creature cards"): a skip there would tell the opponent the hand held no other
+    // eligible card (#3340). With a filtered pool that leaves no choice, the question is still
+    // asked, offering exactly the eligible cards.
     // -------------------------------------------------------------------
     private fun discardXChoice(state: GameState, activation: Activation): ExecutionResult? {
         val action = activation.action
         val sourceName = activation.sourceName
         val discardXCost = activation.effectiveCost.extractDiscardXCost() ?: return null
+        if (discardXCost.count != null) return measuredDiscardChoice(state, activation, discardXCost)
         val settled = (action.costPayment?.discardedCards?.isNotEmpty() == true) || action.xValue == 0
         if (settled) return null
         val candidates = costHandler.discardXCandidates(state, action.playerId, action.sourceId, discardXCost)
         val fixedCount = action.xValue
         val minSelections = fixedCount ?: 0
         val maxSelections = fixedCount ?: candidates.size
-        if (candidates.size <= minSelections) return null
+        if (candidates.size < minSelections) return null
+        val hand = state.getZone(com.wingedsheep.engine.state.ZoneKey(action.playerId, Zone.HAND))
+        if (hand.count { it != action.sourceId } <= minSelections) return null
         val prompt = if (fixedCount != null) {
             "Select $fixedCount card${if (fixedCount > 1) "s" else ""} to discard for $sourceName"
         } else {
@@ -302,7 +328,61 @@ internal class ActivationChoicePauses(
     }
 
     // -------------------------------------------------------------------
-    // ExileFromGraveyard cost-choice pause (legal-actions submission path).
+    // Measured DiscardX pause — "Discard a card with mana value X" (Kozilek, the Great
+    // Distortion; Knollspine Invocation with `{X}` mana). The pick is always asked for, even with
+    // one eligible card, since skipping it would reveal the rest of the hand doesn't fit. Without
+    // `{X}` mana the pick announces X, so only cards that leave every mandatory target a legal
+    // choice are offered and the targets are asked for next; with `{X}` mana only cards of exactly
+    // that mana value are offered.
+    // -------------------------------------------------------------------
+    private fun measuredDiscardChoice(
+        state: GameState,
+        activation: Activation,
+        cost: AbilityCost.DiscardX,
+    ): ExecutionResult? {
+        val action = activation.action
+        if (action.costPayment?.discardedCards?.isNotEmpty() == true) return null
+        val count = cost.count ?: return null
+        val fixedX = action.xValue
+        val candidates = com.wingedsheep.engine.mechanics.cost.CostDefinedX.viableDiscards(
+            state, cost, costHandler.discardXCandidates(state, action.playerId, action.sourceId, cost),
+            fixedX, activation.targetRequirements, action.playerId, action.sourceId, targetFinder
+        )
+        if (candidates.size < count) {
+            return ExecutionResult.error(
+                state,
+                if (fixedX != null) "No card with mana value $fixedX in hand to discard for ${activation.sourceName}"
+                else "No card to discard leaves a legal target for ${activation.sourceName}"
+            )
+        }
+        val noun = if (count == 1) "a card" else "$count cards"
+        val prompt = if (fixedX != null) "Discard $noun with mana value $fixedX for ${activation.sourceName}"
+            else "Discard $noun for ${activation.sourceName} (X is its mana value)"
+        val continuation = ActivateAbilityDiscardXContinuation(
+            action = action,
+            discardCandidates = candidates,
+            fixedCount = count,
+            xMeasure = cost.xMeasure,
+        )
+        return state.suspendForDecision(
+            question = { decisionId ->
+                SelectCardsDecision(
+                    id = decisionId,
+                    playerId = action.playerId,
+                    prompt = prompt,
+                    context = castingContext(action, activation.sourceName),
+                    options = candidates,
+                    minSelections = count,
+                    maxSelections = count
+                )
+            },
+            answer = continuation
+        )
+    }
+
+    // -------------------------------------------------------------------
+    // Chosen-card exile cost pause (graveyard or hand; legal-actions submission path).
+    // Also asks for a hand exile cost ("Exile a card from your hand"), same shape.
     //
     // When the cost is `ExileFromGraveyard(count, filter)` (Rust Harvester:
     // "{2}, {T}, Exile an artifact card from your graveyard: ...") and the
@@ -316,31 +396,39 @@ internal class ActivationChoicePauses(
     // and resumed-replay case) or when candidates <= count (no real
     // choice).
     // -------------------------------------------------------------------
-    private fun exileFromGraveyardChoice(state: GameState, activation: Activation): ExecutionResult? {
+    private fun chosenCardExileChoice(state: GameState, activation: Activation): ExecutionResult? {
         val action = activation.action
         val sourceName = activation.sourceName
-        val exileFromGraveyardCost = activation.effectiveCost.extractExileFromGraveyardCost()
+        val exileCost = activation.effectiveCost.extractChosenCardExileCost()
         val alreadyExiling = (action.costPayment?.exiledCards?.isNotEmpty() == true)
-        if (exileFromGraveyardCost == null || alreadyExiling) return null
+        if (exileCost == null || alreadyExiling) return null
         // The pool follows the atom's own flags, not "the activator's graveyard": Night Soil
         // exiles "two creature cards from a single graveyard", so every player's graveyard is
         // in the pool, and a graveyard holding fewer than `count` matches is dropped because
         // it can't legally supply the whole payment on its own.
         val exileCandidatesByOwner = costHandler
-            .exileCandidatesByOwner(state, exileFromGraveyardCost, action.playerId, action.sourceId)
+            .exileCandidatesByOwner(state, exileCost, action.playerId, action.sourceId)
             .values
         val exileCandidates =
-            if (exileFromGraveyardCost.singleZone) {
-                exileCandidatesByOwner.filter { it.size >= exileFromGraveyardCost.count }.flatten()
+            if (exileCost.singleZone) {
+                exileCandidatesByOwner.filter { it.size >= exileCost.count }.flatten()
             } else {
                 exileCandidatesByOwner.flatten()
             }
-        if (exileCandidates.size <= exileFromGraveyardCost.count) return null
-        val prompt = "Select ${exileFromGraveyardCost.count} card${if (exileFromGraveyardCost.count > 1) "s" else ""} to exile from graveyard for ${sourceName}"
+        if (exileCandidates.size <= exileCost.count) return null
+        val plural = if (exileCost.count > 1) "s" else ""
+        val prompt = if (exileCost.exiles) {
+            val zoneLabel = if (exileCost.zone == Zone.HAND) "your hand" else "graveyard"
+            "Select ${exileCost.count} card$plural to exile from $zoneLabel for ${sourceName}"
+        } else {
+            "Select ${exileCost.count} card$plural to put from ${exileCost.zone.name.lowercase()} into " +
+                "${if (exileCost.count > 1) "their owners'" else "its owner's"} " +
+                "${exileCost.destination.name.lowercase()} for ${sourceName}"
+        }
         val continuation = ActivateAbilityExileFromGraveyardContinuation(
             action = action,
             exileCandidates = exileCandidates,
-            exileCount = exileFromGraveyardCost.count
+            exileCount = exileCost.count
         )
         return state.suspendForDecision(
             question = { decisionId ->
@@ -350,8 +438,8 @@ internal class ActivationChoicePauses(
                     prompt = prompt,
                     context = castingContext(action, sourceName),
                     options = exileCandidates,
-                    minSelections = exileFromGraveyardCost.count,
-                    maxSelections = exileFromGraveyardCost.count
+                    minSelections = exileCost.count,
+                    maxSelections = exileCost.count
                 )
             },
             answer = continuation
@@ -377,6 +465,8 @@ internal class ActivationChoicePauses(
     private fun sacrificeChoice(state: GameState, activation: Activation): ExecutionResult? {
         val action = activation.action
         val sourceName = activation.sourceName
+        // Several sacrifice atoms in one cost are asked atom by atom by [jointSacrificeChoice].
+        if (SacrificeCostAssignment.isJoint(activation.effectiveCost)) return null
         val sacrificeCost = activation.effectiveCost.extractSacrificeCost()
         val alreadySacrificing = (action.costPayment?.sacrificedPermanents?.isNotEmpty() == true)
         if (sacrificeCost == null || alreadySacrificing) return null
@@ -388,6 +478,7 @@ internal class ActivationChoicePauses(
                 sourceId = action.sourceId,
             )
             .let { if (sacrificeCost.excludeSelf) it.filter { id -> id != action.sourceId } else it }
+            .let { com.wingedsheep.engine.mechanics.cost.SacrificeCostLegality.sacrificeableForCost(state, it) }
         // Normally we only pause when there's a real choice (candidates > count); the forced
         // case auto-picks. But "with different names" is always a real choice — the player must
         // pick a distinctly-named set even when candidates == count — so always pause for it.
@@ -416,6 +507,92 @@ internal class ActivationChoicePauses(
     }
 
     // -------------------------------------------------------------------
+    // Joint sacrifice cost (several `Sacrifice` atoms in one composite — Jarad, Golgari Lich Lord's
+    // "Sacrifice a Swamp and a Forest"). Each atom is asked for in cost order, one decision per
+    // permanent, and its picks are appended to `costPayment.sacrificedPermanents` as that atom's segment
+    // ([SacrificeCostAssignment]). Only permanents that leave the later atoms payable are offered,
+    // so the lone Forest-that-is-also-a-Swamp can't be spent on the Swamp slot. Forced atoms were
+    // already filled by [withForcedSacrifices]; this pauses only on a real choice.
+    // -------------------------------------------------------------------
+    private fun jointSacrificeChoice(state: GameState, activation: Activation): ExecutionResult? {
+        val atoms = SacrificeCostAssignment.atoms(activation.effectiveCost)
+        if (atoms.size < 2) return null
+        val action = activation.action
+        val chosen = action.costPayment?.sacrificedPermanents ?: emptyList()
+        var end = 0
+        val index = atoms.indexOfFirst { atom -> end += atom.count; chosen.size < end }
+        if (index < 0) return null
+        val atom = atoms[index]
+        val remaining = end - chosen.size
+        val groups = costHandler.sacrificeAtomGroups(state, activation.effectiveCost, action.playerId, action.sourceId)
+        // "With different names": a name this atom's segment already holds can't be picked again.
+        val segmentNames = if (atom.distinctNames) {
+            chosen.drop(end - atom.count).mapNotNull { state.getEntity(it)?.get<CardComponent>()?.name }.toSet()
+        } else emptySet()
+        val candidates = SacrificeCostAssignment.feasibleCandidates(groups, index, chosen.toSet(), remaining)
+            .filter { segmentNames.isEmpty() || state.getEntity(it)?.get<CardComponent>()?.name !in segmentNames }
+        if (candidates.isEmpty()) {
+            return ExecutionResult.error(state, "Not enough permanents to ${atom.description}")
+        }
+        // One permanent per decision, even for an atom of count 2+: feasibility is checked per
+        // candidate, so a whole set picked at once could be jointly unpayable though each pick looks
+        // legal. Asking slot by slot re-checks after every pick (the resumer appends, re-entry
+        // recomputes), so every offered permanent always leaves the rest of the cost payable.
+        val left = if (remaining > 1) " ($remaining left)" else ""
+        val prompt = "Choose ${quantify(1, atom.filter.description)} to sacrifice for ${activation.sourceName}$left"
+        return state.suspendForDecision(
+            question = { decisionId ->
+                SelectCardsDecision(
+                    id = decisionId,
+                    playerId = action.playerId,
+                    prompt = prompt,
+                    context = castingContext(action, activation.sourceName),
+                    options = candidates,
+                    minSelections = 1,
+                    maxSelections = 1
+                )
+            },
+            answer = ActivateAbilitySacrificeContinuation(
+                action = action,
+                sacrificeCandidates = candidates,
+                sacrificeCount = 1,
+                distinctNames = atom.distinctNames
+            )
+        )
+    }
+
+    /**
+     * [activation] with the forced picks of a joint sacrifice cost filled in, in cost order: an atom
+     * whose payable candidates (given the atoms after it) number exactly what it needs takes them
+     * without asking. Stops at the first atom that is a real choice — [jointSacrificeChoice] asks
+     * it, and the re-entry after the answer fills whatever became forced. A cost with fewer than two
+     * sacrifice atoms is returned unchanged; its forced pick is made by `CostHandler` as before.
+     */
+    fun withForcedSacrifices(state: GameState, activation: Activation): Activation {
+        val atoms = SacrificeCostAssignment.atoms(activation.effectiveCost)
+        if (atoms.size < 2) return activation
+        val action = activation.action
+        val prior = action.costPayment?.sacrificedPermanents ?: emptyList()
+        val chosen = prior.toMutableList()
+        val groups = costHandler.sacrificeAtomGroups(state, activation.effectiveCost, action.playerId, action.sourceId)
+        var end = 0
+        for ((index, atom) in atoms.withIndex()) {
+            end += atom.count
+            if (chosen.size >= end) continue
+            // "With different names" is always a real choice, like its single-atom form.
+            if (atom.distinctNames) break
+            val remaining = end - chosen.size
+            val candidates = SacrificeCostAssignment.feasibleCandidates(groups, index, chosen.toSet(), remaining)
+            if (candidates.size != remaining) break
+            chosen += candidates
+        }
+        if (chosen.size == prior.size) return activation
+        val payment = (action.costPayment ?: com.wingedsheep.sdk.scripting.AdditionalCostPayment())
+            .copy(sacrificedPermanents = chosen)
+        return activation.copy(action = action.copy(costPayment = payment))
+    }
+
+    // -------------------------------------------------------------------
     // Put-from-hand-on-library cost-choice pause (Leashling). Which card goes back is always the
     // player's choice — it decides their next draw — so pause whenever the choice isn't pre-filled
     // and there is more than one way to pay. An exactly-sized hand is forced and CostHandler pays it
@@ -425,16 +602,19 @@ internal class ActivationChoicePauses(
         val action = activation.action
         val putOnLibraryCost = activation.effectiveCost.extractPutOnLibraryCost() ?: return null
         if (!action.costPayment?.cardsPutOnLibrary.isNullOrEmpty()) return null
+        val hand = state.getZone(com.wingedsheep.engine.state.ZoneKey(action.playerId, Zone.HAND))
         val candidates = costHandler.findMatchingCardsUnified(
             state,
-            state.getZone(com.wingedsheep.engine.state.ZoneKey(action.playerId, Zone.HAND)),
+            hand,
             putOnLibraryCost.filter,
             action.playerId
         )
         if (candidates.size < putOnLibraryCost.count) {
             return ExecutionResult.error(state, "Not enough cards in hand to pay ${putOnLibraryCost.description}")
         }
-        if (candidates.size == putOnLibraryCost.count) return null
+        // Forced only when the hand's size says so; a filter that leaves exactly enough matches is
+        // still asked, so the skip doesn't reveal the rest of the hand (#3340).
+        if (hand.size == putOnLibraryCost.count) return null
         val n = putOnLibraryCost.count
         val prompt = "Choose ${if (n == 1) "a card" else "$n cards"} to put on top of your library for ${activation.sourceName}"
         return state.suspendForDecision(
@@ -458,6 +638,38 @@ internal class ActivationChoicePauses(
     }
 
     // -------------------------------------------------------------------
+    // Mill-cost replacement order (Millikin, Deranged Assistant). When two or more mill-amount
+    // replacements apply to the payer and their order changes how many cards the cost mills (a
+    // doubler next to a "+4"), the payer chooses it (CR 616.1) before anything is paid. Skipped when
+    // the order can't matter or the action already carries a count (resumed replay).
+    // -------------------------------------------------------------------
+    private fun millOrderChoice(state: GameState, activation: Activation): ExecutionResult? {
+        val action = activation.action
+        if (action.costPayment?.millCount != null) return null
+        val millCost = activation.effectiveCost.extractMillCost() ?: return null
+        val outcomes = com.wingedsheep.engine.handlers.effects.library.KeywordActionAmountModifier
+            .millOutcomes(state, action.playerId, millCost.count, costHandler.predicateEvaluator)
+        if (outcomes.size <= 1) return null
+        val action0 = com.wingedsheep.engine.handlers.effects.library.KeywordActionAmountModifier.Action.MILL
+        return state.suspendForDecision(
+            question = { decisionId ->
+                ChooseOptionDecision(
+                    id = decisionId,
+                    playerId = action.playerId,
+                    prompt = com.wingedsheep.engine.handlers.effects.library.KeywordActionAmountModifier.prompt(action0),
+                    context = castingContext(action, activation.sourceName),
+                    options = com.wingedsheep.engine.handlers.effects.library.KeywordActionAmountModifier
+                        .optionLabels(action0, outcomes),
+                )
+            },
+            answer = com.wingedsheep.engine.core.ActivateAbilityMillOrderContinuation(
+                action = action,
+                counts = outcomes.map { it.count },
+            )
+        )
+    }
+
+    // -------------------------------------------------------------------
     // VariablePermanents cost-choice pause (legal-actions submission path).
     //
     // "Exile/sacrifice one or more [filter] you control" (Fabrication Foundry, Radiant Lotus).
@@ -473,7 +685,7 @@ internal class ActivationChoicePauses(
         val action = activation.action
         val sourceName = activation.sourceName
         val variablePermanentsCost = activation.variablePermanentsCost
-        if (variablePermanentsCost == null || activation.chosenForCost.isNotEmpty()) return null
+        if (variablePermanentsCost == null || activation.variableCostChosen) return null
         val verb = VariablePermanentsCost.verb(variablePermanentsCost.action)
         val candidates = costHandler
             .findMatchingCardsUnified(
@@ -483,15 +695,34 @@ internal class ActivationChoicePauses(
                 sourceId = action.sourceId,
             )
             .let { if (variablePermanentsCost.excludeSelf) it.filter { id -> id != action.sourceId } else it }
+            .let {
+                if (variablePermanentsCost.action == com.wingedsheep.sdk.scripting.costs.PermanentCostAction.SACRIFICE) {
+                    com.wingedsheep.engine.mechanics.cost.SacrificeCostLegality.sacrificeableForCost(state, it)
+                } else it
+            }
+            // A single-permanent cost announces X by its pick: offer only picks that leave a target.
+            .let {
+                VariablePermanentsCost.viableSinglePicks(
+                    state, variablePermanentsCost, it, activation.targetRequirements,
+                    action.playerId, action.sourceId, targetFinder
+                )
+            }
         val minCount = variablePermanentsCost.minCount
+        val maxCount = variablePermanentsCost.maxCount
         if (candidates.size < minCount) {
-            return ExecutionResult.error(state, "Not enough permanents to $verb for ${sourceName}")
+            return ExecutionResult.error(
+                state,
+                if (maxCount == 1) "No ${variablePermanentsCost.filter.description} to $verb leaves a legal target for ${sourceName}"
+                else "Not enough permanents to $verb for ${sourceName}"
+            )
         }
-        val prompt = "Choose one or more ${variablePermanentsCost.filter.description}s to $verb for ${sourceName}"
+        val prompt = if (maxCount == 1) "Choose ${quantify(1, variablePermanentsCost.filter.description)} to $verb for ${sourceName}"
+            else "Choose ${if (minCount <= 0) "any number of" else "one or more"} ${variablePermanentsCost.filter.description}s to $verb for ${sourceName}"
         val continuation = ActivateAbilityVariablePermanentsContinuation(
             action = action,
             candidates = candidates,
-            minCount = minCount
+            minCount = minCount,
+            maxCount = maxCount
         )
         return state.suspendForDecision(
             question = { decisionId ->
@@ -502,7 +733,7 @@ internal class ActivationChoicePauses(
                     context = castingContext(action, sourceName),
                     options = candidates,
                     minSelections = minCount,
-                    maxSelections = candidates.size
+                    maxSelections = maxCount?.coerceAtMost(candidates.size) ?: candidates.size
                 )
             },
             answer = continuation
@@ -510,7 +741,8 @@ internal class ActivationChoicePauses(
     }
 
     // -------------------------------------------------------------------
-    // Target pause for a VariablePermanents ability (Fabrication Foundry, Radiant Lotus).
+    // Target pause for an ability whose cost pick announces X — a VariablePermanents cost
+    // (Fabrication Foundry, Radiant Lotus) or a measured discard (Kozilek, the Great Distortion).
     //
     // The enumerator deliberately surfaces these abilities with no target gathered up front,
     // because a target may be bounded by X ("mana value X or less") and X isn't known until the
@@ -523,12 +755,23 @@ internal class ActivationChoicePauses(
     private fun variablePermanentsTargetChoice(state: GameState, activation: Activation): ExecutionResult? {
         val action = activation.action
         val sourceName = activation.sourceName
-        if (activation.variablePermanentsCost == null || activation.chosenForCost.isEmpty() || action.targets.isNotEmpty()) {
+        if (!activation.targetsFollowCostChoice || !activation.xDefiningCostChosen || action.targets.isNotEmpty()) {
             return null
         }
         val controllerTargetReqsExec = activation.targetRequirements.filter { it.chooser == TargetChooser.Controller }
-        if (controllerTargetReqsExec.none { it.effectiveMinCount > 0 }) return null
         val xForTargets = activation.effectiveXValue ?: 0
+        // "Return X target creature cards" (Champion of Stray Souls): the count is X itself, fixed by
+        // the cost pick just made, so read it through the one DynamicTargetCount reading — a static
+        // effectiveMinCount is 0 for an X-counted requirement and would skip the choice entirely.
+        val boundsContext = com.wingedsheep.engine.handlers.EffectContext(
+            sourceId = action.sourceId, controllerId = action.playerId, xValue = xForTargets
+        )
+        val bounds = controllerTargetReqsExec.map { req ->
+            com.wingedsheep.engine.mechanics.targeting.DynamicTargetCount.bounds(req, xForTargets) { amount ->
+                amountEvaluator.evaluate(state, amount, boundsContext)
+            }
+        }
+        if (bounds.none { it.min > 0 }) return null
         val finder = targetFinder
         val pipelineContext = PredicateContext(
             controllerId = action.playerId,
@@ -541,17 +784,18 @@ internal class ActivationChoicePauses(
                 state, req, action.playerId, action.sourceId,
                 targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY, pipelineContext = pipelineContext
             )
-            if (legal.isEmpty() && req.effectiveMinCount > 0) {
+            val reqBounds = bounds[index]
+            if (com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.eligible(state, legal, req).size < reqBounds.min) {
                 return ExecutionResult.error(state, "No legal target for ${sourceName}")
             }
-            legalTargets[index] = legal
+            legalTargets[index] = com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.eligible(state, legal, req)
             TargetRequirementInfo(
                 index = index,
                 description = req.description,
                 mustDifferFromEarlier = req is com.wingedsheep.sdk.scripting.targets.TargetOther,
-                minTargets = req.effectiveMinCount,
-                maxTargets = req.count
-            )
+                minTargets = reqBounds.min,
+                maxTargets = reqBounds.max ?: if (req.unlimited) legal.size else req.count
+            ).withTargetConstraints(state, req, legal)
         }
         val prompt = "Choose ${controllerTargetReqsExec.joinToString(" and ") { it.description }} for ${sourceName}"
         val continuation = ActivateAbilityControllerTargetContinuation(
@@ -674,19 +918,19 @@ internal class ActivationChoicePauses(
         val legalTargets = mutableMapOf<Int, List<EntityId>>()
         val requirementInfos = opponentReqs.mapIndexed { index, req ->
             val legal = finder.findLegalTargets(state, req, action.playerId, action.sourceId, targetingSourceType = TargetingSourceType.ACTIVATED_ABILITY)
-            if (legal.isEmpty() && req.effectiveMinCount > 0) {
+            if (com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.eligible(state, legal, req).size < req.effectiveMinCount) {
                 // A required target with no legal choice means the ability can't be activated
                 // (the enumerator gates on this; guard the engine-direct path too).
                 return ExecutionResult.error(state, "No legal target for opponent's choice")
             }
-            legalTargets[index] = legal
+            legalTargets[index] = com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.eligible(state, legal, req)
             TargetRequirementInfo(
                 index = index,
                 description = req.description,
                 mustDifferFromEarlier = req is com.wingedsheep.sdk.scripting.targets.TargetOther,
                 minTargets = req.effectiveMinCount,
-                maxTargets = req.count
-            )
+                maxTargets = if (req.unlimited) legal.size else req.count
+            ).withTargetConstraints(state, req, legal)
         }
 
         // The prompt is shown to the opponent who is making the choice, so the "of an opponent's

@@ -19,7 +19,8 @@ data class EnvConfig(
 
     /**
      * Skip mulligan phase. Default `true` — training loops rarely care about
-     * mulligans and the extra decision points slow rollouts down.
+     * mulligans and the extra decision points slow rollouts down. With `false` the
+     * keep / mulligan / bottom-cards choices are ordinary legal actions for `agentToAct`.
      */
     val skipMulligans: Boolean = true,
 

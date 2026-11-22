@@ -4,33 +4,29 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantDynamicStats
-import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
- * Urza, Lord High Artificer
- * {2}{U}{U}
- * Legendary Creature — Human Artificer
- * 1/4
+ * Urza, Lord High Artificer — Modern Horizons #75
+ * {2}{U}{U} · Legendary Creature — Human Artificer 1/4
+ *
  * When Urza enters, create a 0/0 colorless Construct artifact creature token with "This token gets
  * +1/+1 for each artifact you control."
  * Tap an untapped artifact you control: Add {U}.
  * {5}: Shuffle your library, then exile the top card. Until end of turn, you may play that card
  * without paying its mana cost.
  *
- *  - The Construct counts itself, so it is at least 1/1 (2022-12-08 ruling); its buff is the same
- *    self-scoped [GrantDynamicStats] Karn, Scion of Urza's Construct carries.
- *  - The mana ability taps any untapped artifact — Urza himself is not one — including an artifact
- *    creature that came under your control this turn: tapping it is a cost of Urza's ability, not a
- *    {T} ability of the artifact (CR 302.6 applies only to {T}/{Q} costs of the creature's own).
- *  - The {5} ability's card may be played only this turn and with its normal timing; a land needs
- *    an available land play. Unplayed, it stays in exile.
+ * The Construct is Karn, Scion of Urza's token (a self-scoped dynamic-stats static that counts
+ * itself). The mana ability taps an artifact as a cost rather than with {T}, so summoning sickness
+ * doesn't matter (ruling). The last ability is Mind's Desire's shuffle-exile-play-free pattern.
  */
 val UrzaLordHighArtificer = card("Urza, Lord High Artificer") {
     manaCost = "{2}{U}{U}"
@@ -69,17 +65,12 @@ val UrzaLordHighArtificer = card("Urza, Lord High Artificer") {
         cost = Costs.TapPermanents(1, GameObjectFilter.Artifact)
         effect = Effects.AddMana(Color.BLUE)
         manaAbility = true
-        description = "Tap an untapped artifact you control: Add {U}."
+        timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Mana("{5}")
-        effect = Effects.ShuffleLibrary() then Effects.Pipeline {
-            val exiled = gather(CardSource.TopOfLibrary(1))
-            exile(exiled)
-            run(Effects.GrantMayPlayFromExile(exiled))
-            run(Effects.GrantPlayWithoutPayingCost(exiled))
-        }
+        effect = Patterns.Exile.shuffleAndExileTopPlayFree()
         description = "Shuffle your library, then exile the top card. Until end of turn, you may play " +
             "that card without paying its mana cost."
     }
@@ -89,35 +80,9 @@ val UrzaLordHighArtificer = card("Urza, Lord High Artificer") {
         collectorNumber = "75"
         artist = "Grzegorz Rutkowski"
         imageUri = "https://cards.scryfall.io/normal/front/9/e/9e7fb3c0-5159-4d1f-8490-ce4c9a60f567.jpg?1783933135"
-        ruling(
-            "2022-12-08",
-            "The token created by Urza's first ability will count itself, so it'll be at least 1/1."
-        )
-        ruling(
-            "2022-12-08",
-            "You can tap any untapped artifact you control to pay the cost of the mana ability, including " +
-                "an artifact creature you haven't controlled continuously since the beginning of your " +
-                "most recent turn. Tapping an Equipment this way won't affect its abilities or the " +
-                "equipped creature."
-        )
+        ruling("2022-12-08", "The token created by Urza's first ability will count itself, so it'll be at least 1/1.")
+        ruling("2022-12-08", "You can tap any untapped artifact you control to pay the cost of the mana ability, including an artifact creature you haven't controlled continuously since the beginning of your most recent turn. Tapping an Equipment this way won't affect its abilities or the equipped creature.")
         ruling("2022-12-08", "If you don't play the card exiled with Urza's last ability, it remains in exile.")
-        ruling(
-            "2022-12-08",
-            "Urza's last ability doesn't change when you can play the exiled card. For example, if you " +
-                "exile a sorcery card, you can cast it only during your main phase when the stack is " +
-                "empty. If you exile a land card, you can play it only during your main phase and only " +
-                "if you have an available land play remaining."
-        )
-        ruling(
-            "2022-12-08",
-            "If a spell has {X} in its mana cost, you must choose 0 as the value of X when casting it " +
-                "without paying its mana cost."
-        )
-        ruling(
-            "2022-12-08",
-            "If you cast a card \"without paying its mana cost,\" you can't choose to cast it for any " +
-                "alternative costs. You can, however, pay additional costs. If the card has any mandatory " +
-                "additional costs, you must pay those to cast the card."
-        )
+        ruling("2022-12-08", "If a spell has {X} in its mana cost, you must choose 0 as the value of X when casting it without paying its mana cost.")
     }
 }

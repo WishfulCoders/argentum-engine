@@ -14,6 +14,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.AttachmentHostLeftComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -29,6 +30,8 @@ import com.wingedsheep.sdk.model.EntityId
  *              into a 0/0 Robot artifact creature by Tezzeret, Cruel Captain's emblem.
  *            - The host stops matching the Equipment's own "can be attached only to …"
  *              restriction (Konda's Banner on a creature that stops being legendary).
+ *          A Fortification is the same story with lands (CR 301.6): it unattaches once its host
+ *          stops being a land.
  * 704.5p - A battle or creature attached to an object or player becomes unattached but
  *          remains on the battlefield.
  *
@@ -48,8 +51,8 @@ import com.wingedsheep.sdk.model.EntityId
  * Auras (put into their owners' graveyards as a state-based action) or equipped by Equipment
  * (becomes unattached, stays on the battlefield) that have the stated quality. This covers
  * protection gained *after* the attachment landed — targeting-time protection is enforced by
- * `TargetValidator`. An attachment whose own printed ability grants that very protection to
- * its host is exempt ("This effect doesn't remove this Aura", the Ward cycle).
+ * `TargetValidator`. A protection whose granting effects all spare the attachment doesn't remove
+ * it ("This effect doesn't remove this Aura", the Ward cycle; Spectra Ward's "doesn't remove Auras").
  */
 class UnattachedAurasCheck(
     private val zones: ZoneTransitionService,
@@ -97,7 +100,7 @@ class UnattachedAurasCheck(
             // CR 704.5p: creatures, battles, and permanents without an attachment type come off.
             // This also clears the leave-trigger link retained when a host leaving ended bestow.
             if (projected.isBattle(entityId) || !remainsAttachment ||
-                (projected.isCreature(entityId) && !projected.hasKeyword(entityId, "RECONFIGURE"))) {
+                (projected.isCreature(entityId) && !projected.hasKeyword(entityId, Keyword.RECONFIGURE))) {
                 if (container.has<AttachedToComponent>()) {
                     val (detached, unattachEvents) = unattachEmittingEvent(newState, entityId)
                     newState = detached.updateEntity(entityId) { it.without<AttachmentHostLeftComponent>() }
@@ -106,15 +109,13 @@ class UnattachedAurasCheck(
                 continue
             }
 
-            // Read off the projection like [remainsAttachment]: a permanent can *become* an Aura
-            // (CR 613.1d — Necromancy "becomes an Aura with 'enchant creature put onto the
-            // battlefield with Necromancy'") and is then judged by the Aura rules, unattached or
-            // illegally attached alike (CR 303.4c / 704.5m). A printed Aura that stopped being one
-            // was already handled as a non-attachment above.
+            // An Aura by its projected type line, not its printed one: a card returned "as an Aura
+            // enchantment" (Harold and Bob, First Numens) is held to its enchant ability too.
             val isAura = projected.hasType(entityId, "ENCHANTMENT") && projected.hasSubtype(entityId, "Aura")
             val isEquipment = cardComponent.typeLine.isEquipment
+            val isFortification = cardComponent.typeLine.isFortification
 
-            if (!isAura && !isEquipment) continue
+            if (!isAura && !isEquipment && !isFortification) continue
 
             // A host that died during this SBA pass was still a legal host when the pass
             // began. Its orphaned Aura is a later SBA, above the host in graveyard order.
@@ -169,6 +170,9 @@ class UnattachedAurasCheck(
 
             val attachedTo = container.get<AttachedToComponent>()
             if (attachedTo == null) {
+                // Transformed into an attach-to-a-player Aura face whose player isn't chosen yet
+                // (CR 712.20) — TransformAttachCheck attaches it; it isn't an unattached Aura.
+                if (container.has<com.wingedsheep.engine.state.components.battlefield.PendingTransformAttachComponent>()) continue
                 if (isAura) {
                     // Aura not attached to anything - goes to graveyard
                     val result = SbaZoneMovementHelper.putPermanentInGraveyard(
@@ -222,7 +226,7 @@ class UnattachedAurasCheck(
                         // CR 301.5c / 704.5n: the Equipment itself became a creature, so it
                         // can't equip a creature unless it has reconfigure.
                         (projected.isCreature(entityId) &&
-                            !projected.hasKeyword(entityId, "RECONFIGURE")) ||
+                            !projected.hasKeyword(entityId, Keyword.RECONFIGURE)) ||
                         // The host no longer matches the Equipment's own attach restriction.
                         !AttachmentMover.equipRestrictionAllows(
                             state, predicateEvaluator, cardRegistry, entityId, attachedTo.targetId
@@ -230,6 +234,13 @@ class UnattachedAurasCheck(
                     )
                 ) {
                     // Illegal attachment: the Equipment unattaches but stays on the battlefield.
+                    val (detached, unattachEvents) = unattachEmittingEvent(newState, entityId)
+                    newState = detached
+                    events.addAll(unattachEvents)
+                } else if (isFortification && !projected.hasType(attachedTo.targetId, "LAND")) {
+                    // CR 301.6 / 704.5n: a Fortification can only be attached to a land, so once the
+                    // host stops being one it unattaches and stays on the battlefield. (A
+                    // Fortification that became a creature already came off above, per 704.5p.)
                     val (detached, unattachEvents) = unattachEmittingEvent(newState, entityId)
                     newState = detached
                     events.addAll(unattachEvents)
@@ -341,7 +352,11 @@ class UnattachedAurasCheck(
         ) == true
     }
 
-    /** CR 702.16c/d — see [com.wingedsheep.engine.handlers.predicates.EnchantRestriction.hostProtectedFromAttachment]. */
+    /**
+     * CR 702.16c/d, asked of an attachment already on its host, so a protection whose granting
+     * effects all spare it doesn't remove it — see
+     * [com.wingedsheep.engine.handlers.predicates.EnchantRestriction.hostProtectedFromAttachment].
+     */
     private fun hostProtectedFromAttachment(
         state: GameState,
         projected: ProjectedState,
@@ -349,6 +364,6 @@ class UnattachedAurasCheck(
         attachmentCard: CardComponent,
         hostId: EntityId
     ): Boolean = com.wingedsheep.engine.handlers.predicates.EnchantRestriction.hostProtectedFromAttachment(
-        state, projected, cardRegistry, attachmentId, attachmentCard, hostId
+        state, projected, attachmentId, attachmentCard, hostId, alreadyAttached = true
     )
 }

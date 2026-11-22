@@ -21,11 +21,13 @@ import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.OwnerComponent
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.Effect
+import com.wingedsheep.sdk.scripting.effects.EnteringAttackDefender
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
@@ -64,14 +66,60 @@ class MoveToZoneEffectExecutor(
         effect: MoveToZoneEffect,
         context: EffectContext
     ): EffectResult {
+        val result = move(state, effect, context)
+        return withDepartedPermanent(state, result, context.resolveTarget(effect.target, state))
+    }
+
+    /**
+     * Report the moved permanent's battlefield-exit snapshot as
+     * [EffectResult.updatedDepartedPermanents] when this move took it off the battlefield, so a
+     * later instruction of the same resolution reads "that creature" as it last existed there
+     * (CR 608.2h) — "Return target creature to its owner's hand. You may have Shapeshifters you
+     * control become copies of that creature" (Absorb Identity). The single-target twin of
+     * [com.wingedsheep.engine.handlers.effects.library.MoveCollectionExecutor]'s capture.
+     */
+    private fun withDepartedPermanent(before: GameState, result: EffectResult, targetId: EntityId?): EffectResult {
+        if (targetId == null || targetId !in before.getBattlefield() || targetId in result.state.getBattlefield()) {
+            return result
+        }
+        val snapshot = result.state.getEntity(targetId)
+            ?.get<com.wingedsheep.engine.state.components.battlefield.LastKnownPermanentComponent>()
+            ?.snapshot
+            ?: return result
+        if (result.updatedDepartedPermanents.any { it.entityId == targetId }) return result
+        return result.copy(updatedDepartedPermanents = result.updatedDepartedPermanents + snapshot)
+    }
+
+    private fun move(
+        state: GameState,
+        effect: MoveToZoneEffect,
+        context: EffectContext
+    ): EffectResult {
         var context = context
-        val targetId = context.resolveTarget(effect.target, state)
+        val targetReference = effect.target
+        val targetId = context.resolveTarget(targetReference, state)
             ?: return if (effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.Self ||
                 effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.IterationEntity ||
                 effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity ||
-                effect.target is com.wingedsheep.sdk.scripting.targets.EffectTarget.LibraryTop) {
+                effect.target is com.wingedsheep.sdk.scripting.targets.EffectTarget.LibraryTop ||
+                (targetReference is com.wingedsheep.sdk.scripting.targets.EffectTarget.BoundVariable &&
+                    context.pipeline.declaredTargetNames.any { name ->
+                        targetReference.name == name || targetReference.name.startsWith("$name[")
+                    })) {
                 EffectResult.success(state)
             } else EffectResult.error(state, "No valid target for move to zone")
+
+        // A later instruction of this resolution finds both cards of a departed meld.
+        // Reuse the composite continuation machinery so entry choices can pause between cards.
+        if (effect.target !is com.wingedsheep.sdk.scripting.targets.EffectTarget.SpecificEntity) {
+            val parts = context.objectReferences.meldedCards(targetId, state)
+            if (parts != null) {
+                if (parts.isEmpty()) return EffectResult.success(state)
+                return effectExecutor(state, com.wingedsheep.sdk.scripting.effects.CompositeEffect(parts.map {
+                    effect.copy(target = com.wingedsheep.sdk.scripting.targets.EffectTarget.SpecificEntity(it))
+                }), context)
+            }
+        }
 
         // byDestruction delegates to destroyPermanent (handles indestructible)
         if (effect.byDestruction) {
@@ -111,21 +159,40 @@ class MoveToZoneEffectExecutor(
         // doesn't enter and stays where it was. The transition service enforces this for every move;
         // asking here too keeps a locked card from prompting for an Aura host or an entry choice.
         if (effect.destination == Zone.BATTLEFIELD &&
-            EntryLocks.cantEnter(state, targetId, currentZone.zoneType, cardRegistry, zones.predicateEvaluator)
+            EntryLocks.cantEnter(
+                state, targetId, currentZone.zoneType, cardRegistry, zones.predicateEvaluator,
+                faceDown = effect.faceDown != null
+            )
         ) {
             return EffectResult.success(state)
         }
 
+        // "Enters as a copy" applies first (CR 616.1c): every later question — and whether a
+        // replacement sends the card elsewhere instead — is about the card as it would enter.
         if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
             com.wingedsheep.engine.handlers.effects.copy.EffectCopyEntry.prepare(
                 state, effect, context, mapOf(targetId to controllerId), cardRegistry, zones.predicateEvaluator
             )?.let { return it }
         }
 
-        // "If this would enter, you may [cost] instead" (EntersOnlyIfCostPaid — Mox Diamond): asked
-        // and paid before the move (CR 614.12a); unpaid, the card goes to its owner's graveyard
-        // instead and none of its other as-enters questions are asked.
-        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+        // A card a replacement sends elsewhere instead (Containment Priest's exile) never enters,
+        // so it asks none of the entry questions below; the move itself applies the redirect.
+        val entersHere = effect.destination == Zone.BATTLEFIELD && effect.faceDown == null &&
+            !ZoneMovementUtils.entryRedirected(
+                state, targetId, currentZone.zoneType, controllerId, context.entryCopies[targetId],
+                cardRegistry, zones.predicateEvaluator, effect.entersWith
+            )
+
+        if (entersHere) {
+            // "If this would enter, you may [pay] instead" (EntersOnlyIfPaid) — asked once the entry
+            // copy is settled (CR 614.12: of the card as it would exist on the battlefield), and
+            // before anything else, since it decides whether the card enters at all.
+            com.wingedsheep.engine.handlers.effects.EffectEntryPayments.prepare(
+                state, effect, context, mapOf(targetId to controllerId), cardRegistry, zones.predicateEvaluator
+            )?.let { return it }
+            // The fork's twin (EntersOnlyIfCostPaid): asked and paid before the move (CR 614.12a);
+            // unpaid, the card goes to its owner's graveyard instead and none of its other
+            // as-enters questions are asked.
             val prepared = com.wingedsheep.engine.handlers.effects.EffectEntryCosts.prepare(
                 state, effect, context, mapOf(targetId to controllerId), cardRegistry, costPaymentService?.invoke())
             prepared.pause?.let { return it }
@@ -136,7 +203,7 @@ class MoveToZoneEffectExecutor(
             }
         }
 
-        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+        if (entersHere) {
             val prepared = com.wingedsheep.engine.handlers.effects.copy.CopyAuraEntry.prepare(
                 state, effect, context, mapOf(targetId to controllerId), cardRegistry, targetFinder, zones.predicateEvaluator)
             prepared.pause?.let { return it }
@@ -153,27 +220,45 @@ class MoveToZoneEffectExecutor(
         // during stack resolution and never reach this executor, and the explicit
         // "attached to ..." effect has its own executor, so a generic move-to-battlefield of an
         // Aura is always the choose-as-it-enters case.
-        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null && cardComponent.typeLine.isAura && context.entryCopies[targetId]?.copiedCard == null) {
+        if (entersHere && cardComponent.typeLine.isAura && targetId !in context.entryAuraHosts && context.entryCopies[targetId]?.copiedCard == null) {
             return attachAuraOnEnter(state, targetId, cardComponent, controllerId, context)
         }
 
         // "As this enters, choose …" (CR 614.12a) — asked before the move, of the copied card when
         // the entrant enters as a copy; the transition stamps the answers on arrival.
-        if (effect.destination == Zone.BATTLEFIELD && effect.faceDown == null) {
+        if (entersHere) {
             com.wingedsheep.engine.handlers.effects.EffectEntryChoices.prepare(
-                state, effect, context, mapOf(targetId to controllerId), cardRegistry
+                state, effect, context, mapOf(targetId to controllerId), cardRegistry, zones.predicateEvaluator
             )?.let { return it }
         }
 
+        // Entry-counter counts are read now, while the card is still where it was — "with X +1/+1
+        // counters on it, where X is the number of voyage counters on it" counts the counters it
+        // loses on leaving exile (Cosima, God of the Voyage).
+        val suppliedCounters = effect.entryCounters.mapNotNull { entry ->
+            val count = (entry.count as? com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed)?.amount
+                ?: zones.predicateEvaluator.amounts.evaluate(state, entry.count, context)
+            if (count > 0) com.wingedsheep.engine.handlers.effects.SuppliedEntryCounter(entry.counterType, entry.onlyIf, count) else null
+        }
+
+        // A library depth is read as the effect resolves — "just beneath the top X cards of that
+        // library, where X is the number of Plains you control" counts the Plains now (Quarry Colossus).
+        val libraryDepth = effect.positionFromTop?.takeIf { effect.destination == Zone.LIBRARY }?.let { depth ->
+            (depth as? com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed)?.amount
+                ?: zones.predicateEvaluator.amounts.evaluate(state, depth, context)
+        }
+
         // Build ZoneEntryOptions based on placement and effect properties
-        // A computed library position ("just beneath the top X cards") is read now, on resolution.
-        val dynamicPosition = effect.positionFromTopAmount
-            ?.takeIf { effect.destination == Zone.LIBRARY }
-            ?.let { maxOf(0, zones.predicateEvaluator.amounts.evaluate(state, it, context)) }
-        val entryOptions = buildEntryOptions(effect, cardComponent, controllerId, context.controllerId, dynamicPosition)
+        val entryOptions = buildEntryOptions(effect, libraryDepth, cardComponent, controllerId, context.controllerId)
             .copy(lookBackGrants = context.lookBackGrants[targetId], entryCopy = context.entryCopies[targetId], auraHostId = context.entryAuraHosts[targetId],
                 entryChoices = context.entryChoices[targetId]?.values.orEmpty(),
-                entryCostPaid = context.entryCostsPaid[targetId] == true)
+                entryCostPaid = context.entryCostsPaid[targetId] == true,
+                grantedRiotModes = context.entryChoices[targetId]?.riotModes.orEmpty(),
+                paidToEnter = com.wingedsheep.engine.handlers.effects.EffectEntryPayments.paid(context, targetId),
+                entryCounters = suppliedCounters.takeIf { effect.destination == Zone.BATTLEFIELD }.orEmpty(),
+                entryCounterSourceId = context.sourceId,
+                entryCounterEffectControllerId = context.controllerId,
+                exiledBy = context.controllerId)
 
         val transitionResult = zones.moveToZone(
             state, targetId, effect.destination, entryOptions, currentZone
@@ -188,7 +273,7 @@ class MoveToZoneEffectExecutor(
         // everything else. Skip face-down entries: morph creatures enter as 2/2 nameless
         // creatures with no replacement effects from their face-up identity.
         val actualDestZone = transitionResult.actualDestination
-        if (actualDestZone == Zone.BATTLEFIELD && effect.faceDown == null) {
+        if (actualDestZone == Zone.BATTLEFIELD && effect.faceDown == null && suppliedCounters.isEmpty()) {
             val (counterState, counterEvents) = EntersWithReplacements.applyOnEntry(
                 resultState, targetId, controllerId, cardRegistry,
                 predicateEvaluator = zones.predicateEvaluator, preEntryZone = currentZone
@@ -197,22 +282,27 @@ class MoveToZoneEffectExecutor(
             extraEvents.addAll(counterEvents)
         }
 
-        // "Exile it with a stash counter on it" — one counter of the named type on the card once it
+        if (actualDestZone == Zone.BATTLEFIELD && effect.placement == ZonePlacement.TappedAndAttacking) {
+            resultState = settleEnteringAttack(resultState, targetId, controllerId, effect, context)
+        }
+
+        // "Exile it with a stash counter on it" — each entry's count of its type on the card once it
         // has landed. Mirrors MoveCollectionEffect.addCounterType; no CountersAddedEvent is emitted
         // because the card isn't a permanent in its new zone, so nothing can trigger off it.
-        // `addCounterIf` narrows that to "if a creature enters this way" (Recommission): the card must
-        // have landed where it was sent and match the filter in *projected* state there, so an
-        // effect that makes it a creature on arrival (March of the Machines) counts.
-        val counterAllowed = effect.addCounterIf?.let { filter ->
-            actualDestZone == effect.destination && zones.predicateEvaluator.matches(
-                resultState, resultState.projectedState, targetId, filter,
-                com.wingedsheep.engine.handlers.PredicateContext(controllerId = controllerId, sourceId = context.sourceId)
-            )
-        } ?: true
-        if (counterAllowed) effect.addCounterType?.let { counterType ->
-            resultState = resultState.updateEntity(targetId) { container ->
-                val existing = container.get<CountersComponent>() ?: CountersComponent()
-                container.with(existing.withAdded(counterType, 1))
+        // An entry's `onlyIf` must match the card in *projected* state where it landed. (Battlefield
+        // entries are placed by the zone transition itself, as part of the entry event.)
+        if (actualDestZone == effect.destination && actualDestZone != Zone.BATTLEFIELD) {
+            for (entry in suppliedCounters) {
+                val allowed = entry.onlyIf?.let { filter ->
+                    zones.predicateEvaluator.matches(
+                        resultState, resultState.projectedState, targetId, filter,
+                        com.wingedsheep.engine.handlers.PredicateContext(controllerId = controllerId, sourceId = context.sourceId)
+                    )
+                } ?: true
+                if (allowed) resultState = resultState.updateEntity(targetId) { container ->
+                    val existing = container.get<CountersComponent>() ?: CountersComponent()
+                    container.with(existing.withAdded(entry.counterType, entry.count))
+                }
             }
         }
 
@@ -236,6 +326,7 @@ class MoveToZoneEffectExecutor(
         extraEvents.addAll(
             autoRevealForReturn(
                 fromZone = currentZone.zoneType,
+                wasFaceDown = container.has<FaceDownComponent>(),
                 toZone = effect.destination,
                 targetId = targetId,
                 cardName = cardComponent.name,
@@ -268,7 +359,8 @@ class MoveToZoneEffectExecutor(
         ) {
             val onEnterResult = PermanentEntryReplacements.runOnEnterRunEffect(
                 resultState, targetId, controllerId, cardRegistry, effectExecutor,
-                resolutionDepth = context.resolutionDepth
+                resolutionDepth = context.resolutionDepth,
+                parentOrigin = context.programOrigin,
             )
             if (onEnterResult != null) {
                 resultState = onEnterResult.state
@@ -349,6 +441,7 @@ class MoveToZoneEffectExecutor(
 
     private fun autoRevealForReturn(
         fromZone: Zone,
+        wasFaceDown: Boolean,
         toZone: Zone,
         targetId: com.wingedsheep.sdk.model.EntityId,
         cardName: String,
@@ -357,7 +450,8 @@ class MoveToZoneEffectExecutor(
         sourceId: com.wingedsheep.sdk.model.EntityId?,
         state: GameState
     ): List<com.wingedsheep.engine.core.GameEvent> {
-        val isFromPublic = fromZone == Zone.GRAVEYARD || fromZone == Zone.EXILE
+        // Exile identities must be read before the move clears the face-down marker.
+        val isFromPublic = fromZone == Zone.GRAVEYARD || (fromZone == Zone.EXILE && !wasFaceDown)
         val isToReturnDestination =
             toZone == Zone.HAND || toZone == Zone.LIBRARY || toZone == Zone.BATTLEFIELD
         if (!isFromPublic || !isToReturnDestination) return emptyList()
@@ -382,19 +476,57 @@ class MoveToZoneEffectExecutor(
     }
 
     /**
+     * Finish a tapped-and-attacking entry once the permanent has landed (and taken its entering
+     * counters, so a loyalty-gated animation such as Kaito, Bane of Nightmares' is visible):
+     *  - [EnteringAttackDefender.RETURNED_ATTACKER] re-aims the attack at the defender the creature
+     *    returned to pay the ability's cost was attacking (ninjutsu, CR 702.49c). If that defender
+     *    is no longer a legal attack target the permanent enters but is never attacking
+     *    (CR 506.3c), and likewise when the cost returned no attacker.
+     *  - A permanent that isn't a creature as it enters is never attacking (CR 506.3a).
+     */
+    private fun settleEnteringAttack(
+        state: GameState,
+        entityId: EntityId,
+        controllerId: EntityId,
+        effect: MoveToZoneEffect,
+        context: EffectContext,
+    ): GameState {
+        val defender = when (effect.attackDefender) {
+            EnteringAttackDefender.RETURNED_ATTACKER -> context.returnedAttackerDefenders.firstOrNull()?.takeIf {
+                com.wingedsheep.engine.mechanics.combat.CombatDefenders.isLegalEnteringAttackTarget(state, controllerId, it)
+            }
+            else -> state.getEntity(entityId)
+                ?.get<com.wingedsheep.engine.state.components.combat.AttackingComponent>()?.defenderId
+        }
+        if (defender == null || !state.projectedState.isCreature(entityId)) {
+            return state.updateEntity(entityId) {
+                it.without<com.wingedsheep.engine.state.components.combat.AttackingComponent>()
+            }
+        }
+        if (effect.attackDefender != EnteringAttackDefender.RETURNED_ATTACKER) return state
+        val updated = state.updateEntity(entityId) {
+            it.with(
+                com.wingedsheep.engine.state.components.combat.AttackingComponent(
+                    defender,
+                    defendingPlayerId = com.wingedsheep.engine.mechanics.combat.CombatDefenders.defendingPlayerOf(state, defender),
+                )
+            )
+        }
+        return com.wingedsheep.engine.mechanics.combat.AttackedPermanents.markAttacked(updated, defender)
+    }
+
+    /**
      * Build [ZoneEntryOptions] from the effect's placement and properties.
      */
     private fun buildEntryOptions(
         effect: MoveToZoneEffect,
+        libraryDepth: Int?,
         cardComponent: CardComponent,
         controllerId: com.wingedsheep.sdk.model.EntityId,
         moverId: com.wingedsheep.sdk.model.EntityId,
-        dynamicPosition: Int? = null
     ): ZoneEntryOptions {
         val libraryPlacement = when {
-            dynamicPosition != null -> LibraryPlacement.NthFromTop(dynamicPosition)
-            effect.positionFromTop != null && effect.destination == Zone.LIBRARY ->
-                LibraryPlacement.NthFromTop(effect.positionFromTop!!)
+            libraryDepth != null -> LibraryPlacement.NthFromTop(libraryDepth.coerceAtLeast(0))
             effect.placement == ZonePlacement.Top -> LibraryPlacement.Top
             effect.placement == ZonePlacement.Bottom -> LibraryPlacement.Bottom
             effect.placement == ZonePlacement.Shuffled -> LibraryPlacement.Shuffled
@@ -420,6 +552,7 @@ class MoveToZoneEffectExecutor(
             faceDown = isBattlefieldFaceDown,
             morphData = morphData,
             faceDownMode = if (isBattlefieldFaceDown) faceDownMode else null,
+            entersWith = effect.entersWith,
             // Single-card sibling of the collection path: the player resolving the effect chose
             // this card and saw where it went, so they keep knowing it. The audience policy —
             // including "out of a public zone means the whole table knows" — is
@@ -428,12 +561,18 @@ class MoveToZoneEffectExecutor(
         )
     }
 
+    /**
+     * The zone [entityId] is in. The stack isn't one of [GameState.zones], so a spell moving itself
+     * as part of its own resolution ("put Approach of the Second Sun into its owner's library
+     * seventh from the top") is found through its logical zone — the same fallback
+     * `ZoneTransitionService` uses, which then takes it off the stack.
+     */
     private fun findEntityZone(state: GameState, entityId: com.wingedsheep.sdk.model.EntityId): com.wingedsheep.engine.state.ZoneKey? {
         for ((zoneKey, entities) in state.zones) {
             if (entityId in entities) {
                 return zoneKey
             }
         }
-        return null
+        return state.logicalZone(entityId)?.takeIf { it.zoneType == Zone.STACK }
     }
 }

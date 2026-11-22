@@ -29,7 +29,11 @@ val SettleTheScore = card("Settle the Score") {
         val creature = target(TargetFilter.Creature)
         effect = Effects.Pipeline {
             run(Effects.Exile(creature))
-            val chosenPW = selectTarget(TargetObject(filter = TargetFilter(GameObjectFilter.Planeswalker.youControl())))
+            val chosenPW = selectTarget(
+                TargetObject(filter = TargetFilter(GameObjectFilter.Planeswalker.youControl())),
+                nonTargeting = true,
+                prompt = "Choose a planeswalker you control to get two loyalty counters"
+            )
             run(Effects.AddCountersToCollection(chosenPW, CounterType.LOYALTY, 2))
         }
     }

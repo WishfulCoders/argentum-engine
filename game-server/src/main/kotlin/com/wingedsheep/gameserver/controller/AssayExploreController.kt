@@ -44,6 +44,14 @@ import org.springframework.web.bind.annotation.RestController
  *   bootJar. In production that page answers with its "no goldens found" message rather than an
  *   error; the rest of the explorer is unaffected.
  *
+ * ## The AI reading panel
+ *
+ * `:oracle-assay` cannot see the engine AI, so this is where the explorer gets it: the page's
+ * card view asks the `ai` route what the AI's static readers understand of a card, and
+ * upstream's `AiReadingService` answered from `:ai` — left out of this fork (it kept its own `:ai`, without
+ * the reading audit), so the panel says the reading is unavailable, as standalone does. Standalone `just assay-explore` has no provider and its
+ * panel says the reading needs the game server.
+ *
  *  - GET  /api/assay/explorer          → the page, with its API base rewritten to this prefix
  *  - GET  /api/assay/explorer/{route}  → the read routes (status, overview, cards, declines, …)
  *  - POST /api/assay/explorer/{route}  → the measuring routes (parse, probe)
@@ -57,7 +65,7 @@ class AssayExploreController {
      * and a boot that pays for one nobody asked for is the difference between this being free and
      * this being a tax on every server that mounts it.
      */
-    private val api: ExploreApi by lazy { ExploreApi().also { it.startSweep() } }
+    private val api: ExploreApi by lazy { ExploreApi(aiReading = null).also { it.startSweep() } }
 
     @GetMapping(produces = [MediaType.TEXT_HTML_VALUE])
     fun page(): ResponseEntity<ByteArray> = ResponseEntity.ok()

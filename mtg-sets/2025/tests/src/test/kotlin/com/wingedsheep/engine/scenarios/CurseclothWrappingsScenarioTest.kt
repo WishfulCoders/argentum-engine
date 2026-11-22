@@ -70,6 +70,14 @@ class CurseclothWrappingsScenarioTest : FunSpec({
         return driver
     }
 
+    /** Resolve what's on the stack without passing out of the current step. */
+    fun resolveStack(driver: GameTestDriver) {
+        var guard = 0
+        while (guard++ < 12 && (driver.state.stack.isNotEmpty() || driver.pendingDecision != null)) {
+            if (driver.pendingDecision != null) driver.autoResolveDecision() else driver.bothPass()
+        }
+    }
+
     fun wrappingsAbilityId(driver: GameTestDriver) =
         driver.cardRegistry.getCard("Cursecloth Wrappings")!!.activatedAbilities.first().id
 
@@ -87,7 +95,7 @@ class CurseclothWrappingsScenarioTest : FunSpec({
                 targets = listOf(ChosenTarget.Card(graveyardCard, me, Zone.GRAVEYARD)),
             )
         )
-        repeat(4) { if (driver.pendingDecision != null) driver.autoResolveDecision() else driver.bothPass() }
+        resolveStack(driver)
         return wrappings to graveyardCard
     }
 
@@ -111,7 +119,7 @@ class CurseclothWrappingsScenarioTest : FunSpec({
         driver.submit(
             ActivateAbility(playerId = me, sourceId = bear, abilityId = grant.ability.id)
         )
-        repeat(4) { if (driver.pendingDecision != null) driver.autoResolveDecision() else driver.bothPass() }
+        resolveStack(driver)
 
         withClue("The card is exiled as part of the cost, not left in the graveyard") {
             driver.state.getZone(me, Zone.EXILE) shouldContain bear

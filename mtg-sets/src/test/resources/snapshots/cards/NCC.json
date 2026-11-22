@@ -1,3 +1,84 @@
+// Boss's Chauffeur
+{
+    "name": "Boss's Chauffeur",
+    "manaCost": "{4}{W}",
+    "typeLine": "Creature — Elf Citizen",
+    "oracleText": "This creature enters with a number of +1/+1 counters on it equal to one plus the number of other creatures you control.\nAlliance — Whenever another creature you control enters, put a +1/+1 counter on this creature.\nWhen this creature dies, create a 1/1 green and white Citizen creature token for each +1/+1 counter on it.",
+    "creatureStats": {
+        "power": 0,
+        "toughness": 0
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Boss's Chauffeur:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            },
+            {
+                "id": "Boss's Chauffeur:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "ContextProperty",
+                        "key": "LAST_KNOWN_PLUS_ONE_COUNTER_COUNT"
+                    },
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "GREEN",
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Citizen"
+                    ]
+                }
+            }
+        ],
+        "replacementEffects": [
+            {
+                "type": "EntersWithDynamicCounters",
+                "count": {
+                    "type": "Add",
+                    "left": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "right": {
+                        "type": "AggregateBattlefield",
+                        "player": "You",
+                        "filter": "creature"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "13",
+        "rarity": "RARE",
+        "artist": "Yangtian Li",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/4/147a0ccf-3408-48c7-b4a8-6d81aed39f18.jpg?1783923377"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Currency Converter
 {
     "name": "Currency Converter",
@@ -18,7 +99,10 @@
                         "effects": [
                             {
                                 "type": "GatherCards",
-                                "source": "TriggeringEntity",
+                                "source": {
+                                    "type": "Entity",
+                                    "entity": "TriggeringEntity"
+                                },
                                 "storeAs": "gathered0"
                             },
                             {
@@ -187,6 +271,58 @@
     "colorIdentityOverride": []
 }
 
+// Damning Verdict
+{
+    "name": "Damning Verdict",
+    "manaCost": "{3}{W}{W}",
+    "typeLine": "Sorcery",
+    "oracleText": "Destroy all creatures with no counters on them.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "BattlefieldMatching",
+                        "filter": {
+                            "cardPredicates": [
+                                "IsCreature"
+                            ],
+                            "statePredicates": [
+                                {
+                                    "type": "StateNot",
+                                    "predicate": "HasAnyCounter"
+                                }
+                            ]
+                        }
+                    },
+                    "storeAs": "destroyAll_gathered"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "destroyAll_gathered",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Destroy"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "15",
+        "rarity": "RARE",
+        "artist": "Gaboleps",
+        "flavorText": "\"Guilty as charged!\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/b/5be40c34-6df0-4471-b99b-850ae2be9923.jpg?1783923375"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Extravagant Replication
 {
     "name": "Extravagant Replication",
@@ -278,6 +414,354 @@
         "artist": "Raluca Marinescu",
         "flavorText": "The roar of applause drowned out the melee raging in the lobby.",
         "imageUri": "https://cards.scryfall.io/normal/front/e/0/e09ff04d-cdcc-4798-b89a-9ad08ef52ad9.jpg"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Lethal Scheme
+{
+    "name": "Lethal Scheme",
+    "manaCost": "{2}{B}{B}",
+    "typeLine": "Instant",
+    "oracleText": "Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)\nDestroy target creature or planeswalker. Each creature that convoked this spell connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on that creature.)",
+    "keywords": [
+        "CONVOKE"
+    ],
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "CreaturesThatConvokedSource",
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "ForEach",
+                            "space": {
+                                "type": "IterationSpace.Collection",
+                                "collection": "gathered0"
+                            },
+                            "body": {
+                                "type": "Connive",
+                                "subject": "IterationEntity",
+                                "body": {
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "DrawCards",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "GatherCards",
+                                            "source": {
+                                                "type": "FromZone",
+                                                "zone": "Hand"
+                                            },
+                                            "storeAs": "connive_hand"
+                                        },
+                                        {
+                                            "type": "SelectFromCollection",
+                                            "from": "connive_hand",
+                                            "selection": {
+                                                "type": "ChooseExactly",
+                                                "count": {
+                                                    "type": "Fixed",
+                                                    "amount": 1
+                                                }
+                                            },
+                                            "storeSelected": "connive_discarded",
+                                            "prompt": "Choose a card to discard"
+                                        },
+                                        {
+                                            "type": "MoveCollection",
+                                            "from": "connive_discarded",
+                                            "destination": {
+                                                "type": "ToZone",
+                                                "zone": "Graveyard"
+                                            },
+                                            "moveType": "Discard"
+                                        },
+                                        {
+                                            "type": "ConditionalOnCollection",
+                                            "collection": "connive_discarded",
+                                            "ifNotEmpty": {
+                                                "type": "AddCounters",
+                                                "counterType": "PLUS_ONE_PLUS_ONE",
+                                                "count": 1,
+                                                "target": "IterationEntity"
+                                            },
+                                            "filter": "nonland"
+                                        }
+                                    ],
+                                    "descriptionOverride": "Connive"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetCreatureOrPlaneswalker",
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "36",
+        "rarity": "RARE",
+        "artist": "Tuan Duong Chu",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/5/65864680-9520-4eb3-9774-fa478e54a290.jpg?1783923366",
+        "rulings": [
+            {
+                "date": "2022-04-29",
+                "text": "When multiple creatures are instructed to connive simultaneously, they connive one at a time in the order of their controller's choice."
+            },
+            {
+                "date": "2022-04-29",
+                "text": "If a resolving spell or ability instructs a specific creature to connive but that creature has left the battlefield, the creature still connives. If you discard a nonland card this way, you won't put a +1/+1 counter on anything. Abilities that trigger \"when [that creature] connives\" will trigger."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
+// Life Insurance
+{
+    "name": "Life Insurance",
+    "manaCost": "{3}{W}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "Extort (Whenever you cast a spell, you may pay {W/B}. If you do, each opponent loses 1 life and you gain that much life.)\nWhenever a nontoken creature dies, you lose 1 life and create a Treasure token.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Life Insurance:1",
+                "trigger": "SpellCastEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": {
+                        "type": "Gate.MayPay",
+                        "cost": {
+                            "type": "PayManaCost",
+                            "cost": "{W/B}"
+                        }
+                    },
+                    "then": {
+                        "type": "DrainLife",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                },
+                "descriptionOverride": "Extort (Whenever you cast a spell, you may pay {W/B}. If you do, each opponent loses 1 life and you gain that much life.)"
+            },
+            {
+                "id": "Life Insurance:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature nontoken",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "LoseLife",
+                            "amount": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": "Controller"
+                        },
+                        {
+                            "type": "CreatePredefinedToken",
+                            "tokenType": "Treasure"
+                        }
+                    ]
+                },
+                "descriptionOverride": "Whenever a nontoken creature dies, you lose 1 life and create a Treasure token."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "74",
+        "rarity": "RARE",
+        "artist": "Brian Valeza",
+        "flavorText": "All the money in the world won't buy back a pulse.",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/d/dda58066-d96f-452f-ab83-8635ec478d63.jpg?1783923349",
+        "rulings": [
+            {
+                "date": "2024-01-12",
+                "text": "You may pay {W/B} a maximum of one time for each extort triggered ability. You decide whether to pay when the ability resolves."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "The amount of life you gain from extort is based on the total amount of life lost, not necessarily the number of opponents you have. For example, if your opponent's life total can't change (perhaps because that player controls Platinum Emperion), you won't gain any life."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "The extort ability doesn't target any player."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "The extort ability resolves before the spell that caused it to trigger. The ability resolves even if that spell is countered."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLACK"
+    ]
+}
+
+// Master of Ceremonies
+{
+    "name": "Master of Ceremonies",
+    "manaCost": "{3}{W}",
+    "typeLine": "Creature — Rhino Druid",
+    "oracleText": "At the beginning of your upkeep, each opponent chooses money, friends, or secrets. For each player who chose money, you and that player each create a Treasure token. For each player who chose friends, you and that player each create a 1/1 green and white Citizen creature token. For each player who chose secrets, you and that player each draw a card.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Master of Ceremonies:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Players",
+                        "players": "EachOpponent"
+                    },
+                    "body": {
+                        "type": "ChooseAction",
+                        "choices": [
+                            {
+                                "label": "Money (each of you creates a Treasure)",
+                                "effect": {
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "CreatePredefinedToken",
+                                            "tokenType": "Treasure",
+                                            "controller": "Controller"
+                                        },
+                                        {
+                                            "type": "CreatePredefinedToken",
+                                            "tokenType": "Treasure",
+                                            "controller": {
+                                                "type": "PlayerRef",
+                                                "player": "ControllerOfSource"
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "label": "Friends (each of you creates a 1/1 Citizen)",
+                                "effect": {
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "CreateToken",
+                                            "power": 1,
+                                            "toughness": 1,
+                                            "colors": [
+                                                "GREEN",
+                                                "WHITE"
+                                            ],
+                                            "creatureTypes": [
+                                                "Citizen"
+                                            ],
+                                            "controller": "Controller"
+                                        },
+                                        {
+                                            "type": "CreateToken",
+                                            "power": 1,
+                                            "toughness": 1,
+                                            "colors": [
+                                                "GREEN",
+                                                "WHITE"
+                                            ],
+                                            "creatureTypes": [
+                                                "Citizen"
+                                            ],
+                                            "controller": {
+                                                "type": "PlayerRef",
+                                                "player": "ControllerOfSource"
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "label": "Secrets (each of you draws a card)",
+                                "effect": {
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "DrawCards",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "DrawCards",
+                                            "count": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            },
+                                            "target": {
+                                                "type": "PlayerRef",
+                                                "player": "ControllerOfSource"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "18",
+        "rarity": "RARE",
+        "artist": "Milivoj Ćeran",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/1/d152cfa8-00b7-4aa0-855e-bbd57a5f4b23.jpg?1783923374"
     },
     "colorIdentityOverride": [
         "WHITE"
@@ -393,5 +877,301 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Rose Room Treasurer
+{
+    "name": "Rose Room Treasurer",
+    "manaCost": "{3}{R}",
+    "typeLine": "Creature — Ogre Warrior",
+    "oracleText": "Alliance — Whenever another creature you control enters, create a Treasure token if this is the first or second time this ability has resolved this turn. Otherwise, you may pay {X}. When you do, this creature deals X damage to any target.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Rose Room Treasurer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "OTHER",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        "IncrementAbilityResolutionCount",
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.WhenCondition",
+                                "condition": {
+                                    "type": "Any",
+                                    "conditions": [
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "EntityProperty",
+                                                "entity": "Self",
+                                                "numericProperty": "AbilityResolutionsThisTurn"
+                                            },
+                                            "operator": "EQ",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "Compare",
+                                            "left": {
+                                                "type": "EntityProperty",
+                                                "entity": "Self",
+                                                "numericProperty": "AbilityResolutionsThisTurn"
+                                            },
+                                            "operator": "EQ",
+                                            "right": {
+                                                "type": "Fixed",
+                                                "amount": 2
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "CreatePredefinedToken",
+                                "tokenType": "Treasure"
+                            },
+                            "otherwise": {
+                                "type": "Gated",
+                                "gate": "Gate.MayPayX",
+                                "then": {
+                                    "type": "ReflexiveTrigger",
+                                    "action": {
+                                        "type": "Composite",
+                                        "effects": []
+                                    },
+                                    "optional": false,
+                                    "reflexiveEffect": {
+                                        "type": "DealDamage",
+                                        "amount": "XValue",
+                                        "target": {
+                                            "type": "BoundVariable",
+                                            "name": "t0"
+                                        }
+                                    },
+                                    "reflexiveTargetRequirements": [
+                                        {
+                                            "type": "AnyTarget",
+                                            "id": "t0"
+                                        }
+                                    ],
+                                    "descriptionOverride": "this creature deals X damage to any target"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "Alliance — Whenever another creature you control enters, create a Treasure token if this is the first or second time this ability has resolved this turn. Otherwise, you may pay {X}. When you do, this creature deals X damage to any target."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "51",
+        "rarity": "RARE",
+        "artist": "David Sladek",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/1/2167439d-792d-471e-9137-ee46dbf7a82d.jpg?1783923359"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Shield Broker
+{
+    "name": "Shield Broker",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Creature — Octopus Advisor",
+    "oracleText": "When this creature enters, put a shield counter on target noncommander creature you don't control. You gain control of that creature for as long as it has a shield counter on it. (If it would be dealt damage or destroyed, remove a shield counter from it instead.)",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Shield Broker:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddCounters",
+                            "counterType": "SHIELD",
+                            "count": 1,
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            }
+                        },
+                        {
+                            "type": "GainControl",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t0"
+                            },
+                            "duration": {
+                                "type": "WhileAffectedHasCounter",
+                                "counterType": "SHIELD"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsCreature"
+                            ],
+                            "statePredicates": [
+                                {
+                                    "type": "StateNot",
+                                    "predicate": "IsCommander"
+                                }
+                            ],
+                            "controllerPredicate": {
+                                "type": "ControllerNot",
+                                "predicate": "ControlledByYou"
+                            }
+                        }
+                    },
+                    "id": "t0"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "29",
+        "rarity": "RARE",
+        "artist": "Daniel Ljunggren",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/3/a319afae-019c-408d-a57b-b7bf0b1598bd.jpg?1783923369",
+        "rulings": [
+            {
+                "date": "2022-04-29",
+                "text": "If the creature loses its shield counter during combat, it will be removed from combat when it changes controllers. If it hasn't already assigned combat damage by that time, it won't get to deal combat damage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Tenuous Truce
+{
+    "name": "Tenuous Truce",
+    "manaCost": "{1}{W}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant opponent\nAt the beginning of enchanted opponent's end step, you and that player each draw a card.\nWhen you attack enchanted opponent or a planeswalker they control or when they attack you or a planeswalker you control, sacrifice this Aura.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Tenuous Truce:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "END",
+                    "player": "EnchantedPlayer"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        },
+                        {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            },
+                            "target": {
+                                "type": "PlayerRef",
+                                "player": "EnchantedPlayer"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "At the beginning of enchanted opponent's end step, you and that player each draw a card."
+            },
+            {
+                "id": "Tenuous Truce:2",
+                "trigger": {
+                    "type": "YouAttackEvent",
+                    "attackerFilter": {
+                        "anyOf": [
+                            {
+                                "cardPredicates": [
+                                    "IsCreature"
+                                ],
+                                "statePredicates": [
+                                    {
+                                        "type": "IsAttackingDefenderOf",
+                                        "reference": "EnchantedPermanent"
+                                    },
+                                    {
+                                        "type": "StateNot",
+                                        "predicate": "IsAttackingABattle"
+                                    }
+                                ],
+                                "controllerPredicate": "ControlledByYou"
+                            },
+                            {
+                                "cardPredicates": [
+                                    "IsCreature"
+                                ],
+                                "statePredicates": [
+                                    "IsAttackingYouOrYourPlaneswalkers"
+                                ],
+                                "controllerPredicate": {
+                                    "type": "ControlledByReferencedPlayer",
+                                    "target": {
+                                        "type": "PlayerRef",
+                                        "player": "EnchantedPlayer"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "player": "Each"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "SacrificeTarget",
+                    "target": "Self"
+                },
+                "descriptionOverride": "When you attack enchanted opponent or a planeswalker they control or when they attack you or a planeswalker you control, sacrifice this Aura."
+            }
+        ],
+        "auraTarget": "TargetOpponent"
+    },
+    "metadata": {
+        "collectorNumber": "87",
+        "rarity": "RARE",
+        "artist": "Kari Christensen",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/5/f511555a-09aa-41f8-b240-c21f911a57b4.jpg?1783923346"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }

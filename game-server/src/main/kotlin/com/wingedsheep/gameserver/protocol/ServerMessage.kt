@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.protocol
 
+import com.wingedsheep.engine.legalactions.OwnStackStop
 import com.wingedsheep.engine.view.ClientCommanderDamage
 import com.wingedsheep.engine.view.ClientEvent
 import com.wingedsheep.engine.view.ClientGameState
@@ -44,7 +45,13 @@ sealed interface ServerMessage {
         /** Session/lobby ID the player is currently in */
         val contextId: String? = null,
         val aiEnabled: Boolean = false,
-        val availableSets: List<AvailableSet> = emptyList()
+        val availableSets: List<AvailableSet> = emptyList(),
+        /**
+         * The game's seat roster when [context] is "game". A mid-game refresh gets no second
+         * [GameStarted], so this is how the client recovers per-seat facts only the roster carries
+         * (account avatars).
+         */
+        val players: List<PlayerSeatInfo> = emptyList(),
     ) : ServerMessage
 
     /**
@@ -64,6 +71,8 @@ sealed interface ServerMessage {
     data class PlayerSeatInfo(
         val playerId: String,
         val name: String,
+        /** The seat's avatar id: the account's portrait, an AI persona's preset, or null for guests. */
+        val avatar: String? = null,
         val seatIndex: Int,
         /** True for the recipient's own seat. Always false in spectator/replay rosters. */
         val isYou: Boolean = false,
@@ -119,7 +128,11 @@ sealed interface ServerMessage {
         val sourceName: String? = null,
         /** The spell/ability source entity, so the client can show its card from its own
          *  (already viewer-masked) game state. */
-        val sourceId: String? = null
+        val sourceId: String? = null,
+        /** The source's art, for when the viewer's game state has no entry for it — a spell
+         *  being cast from its controller's hand is announced (its name is already shown) but
+         *  isn't in the viewer's masked state yet. Null when the viewer may not see the source. */
+        val sourceImageUri: String? = null
     )
 
     /**
@@ -155,6 +168,18 @@ sealed interface ServerMessage {
         val takebackRequest: TakebackRequestInfo? = null,
         /** A loop this player just played and may repeat ([ClientMessage.RepeatLoop]); null when there is none. */
         val loopOffer: LoopOfferInfo? = null,
+        /**
+         * The only legal answer to [pendingDecision], when it has exactly one (see
+         * `ForcedDecisionAutoAnswer`). The client may submit it unchanged instead of asking the
+         * player. Browser seats only; null whenever the question is a real choice.
+         */
+        val autoAnswer: com.wingedsheep.engine.core.DecisionResponse? = null,
+        /**
+         * True when everyone at the table can already see that [pendingDecision] has only
+         * [autoAnswer] (`ForcedDecisionAutoAnswer.isPublic`), so answering it at once gives
+         * nothing away. False whenever that is unknown, or could depend on a hidden card.
+         */
+        val autoAnswerPublic: Boolean = false,
     ) : ServerMessage
 
     /**
@@ -231,6 +256,18 @@ sealed interface ServerMessage {
         val takebackRequest: TakebackRequestInfo? = null,
         /** A loop this player just played and may repeat ([ClientMessage.RepeatLoop]); null when there is none. */
         val loopOffer: LoopOfferInfo? = null,
+        /**
+         * The only legal answer to [pendingDecision], when it has exactly one (see
+         * `ForcedDecisionAutoAnswer`). The client may submit it unchanged instead of asking the
+         * player. Browser seats only; null whenever the question is a real choice.
+         */
+        val autoAnswer: com.wingedsheep.engine.core.DecisionResponse? = null,
+        /**
+         * True when everyone at the table can already see that [pendingDecision] has only
+         * [autoAnswer] (`ForcedDecisionAutoAnswer.isPublic`), so answering it at once gives
+         * nothing away. False whenever that is unknown, or could depend on a hidden card.
+         */
+        val autoAnswerPublic: Boolean = false,
     ) : ServerMessage
 
     /**
@@ -239,7 +276,8 @@ sealed interface ServerMessage {
     @Serializable
     data class StopOverrideInfo(
         val myTurnStops: Set<Step>,
-        val opponentTurnStops: Set<Step>
+        val opponentTurnStops: Set<Step>,
+        val ownStackStops: Set<OwnStackStop> = emptySet()
     )
 
     /**
@@ -267,7 +305,9 @@ sealed interface ServerMessage {
          * Clients decide "did I win?" from this; [winnerId] is one representative and stays for
          * the spectator / replay readers that predate teams. Empty for a draw.
          */
-        val winnerIds: List<EntityId> = emptyList()
+        val winnerIds: List<EntityId> = emptyList(),
+        /** What changed hands in a game played for ante (CR 407); null when it wasn't. */
+        val ante: AnteOutcome? = null
     ) : ServerMessage
 
     /**
@@ -435,7 +475,18 @@ sealed interface ServerMessage {
          * spelling the constructed deckbuilder's catalog ships, so the pool search's `kw:` filter
          * reads both alike.
          */
-        val keywords: List<String> = emptyList()
+        val keywords: List<String> = emptyList(),
+        /**
+         * True when this card can be a commander on its own (CR 903.3) — the Commander Draft /
+         * Sealed builder offers its crown from this. Same field as the constructed catalog's.
+         */
+        val canBeCommander: Boolean = false,
+        /**
+         * The partner abilities this card has (CR 702.124), by printed name ("Partner",
+         * "Choose a Background", …) — lets the Commander Draft / Sealed builder offer a second
+         * commander beside it. Whether a pair is legal is the deck validator's call.
+         */
+        val partnerAbilities: List<String> = emptyList(),
     )
 
     /**
@@ -469,6 +520,11 @@ sealed interface ServerMessage {
          * the deckbuilder's usual 4-of cap), so adding a card must not consume it from the pool.
          */
         val poolPlay: Boolean = false,
+        /**
+         * Per-card copy cap for the deck (basic lands exempt), or null when the pool's own copy
+         * count is the only limit — Limited's default. Always set under [poolPlay].
+         */
+        val maxCopiesPerCard: Int? = null,
     ) : ServerMessage
 
     /**
@@ -564,7 +620,12 @@ sealed interface ServerMessage {
         val maxPlayers: Int,
         val pickTimeSeconds: Int = 45,      // Draft only
         val picksPerRound: Int = 1,         // Draft only: 1 or 2 (Pick 2 mode)
+        /** How many times each pair meets in the round-robin — each meeting its own match. */
         val gamesPerMatch: Int = 1,
+        /** Games per match: 1, or 3 for a best-of-three (first to two game wins). */
+        val bestOf: Int = 1,
+        /** Whether players may change their deck between the games of a best-of-three. */
+        val allowsSideboarding: Boolean = true,
         val isPublic: Boolean = false,
         /** Optional deck-construction format (Standard/Modern/Commander/...). Null = no restriction. */
         val deckFormat: String? = null,
@@ -578,6 +639,11 @@ sealed interface ServerMessage {
         val deckSizeMin: Int = 60,
         /** Commander Draft/Sealed only — when true, drafted/sealed decks may include duplicates. */
         val allowDuplicates: Boolean = true,
+        /**
+         * Limited pools only — when true, decks are capped at 4 copies of any non-basic card; when
+         * false (the default), every copy in the pool is playable. Pool Play always caps.
+         */
+        val limitedCopyLimit: Boolean = false,
         /** Commander Draft/Sealed only — "BRAWL" (25 life / 16 cmdr damage) or "COMMANDER" (30/21). */
         val commanderPreset: String = "BRAWL",
         /** When true, each booster mixes cards from the union of all selected sets. */
@@ -592,7 +658,10 @@ sealed interface ServerMessage {
         /** Per-lobby cube summary. Null fields mean catalogued sets are the pack source. */
         val cubeName: String? = null,
         val cubeCardCount: Int? = null,
+        /** Cards per pack — the cube's own size when shuffled, the booster layout's otherwise. */
         val packSize: Int? = null,
+        /** `CubeBoosterStyle` name of the lobby's cube; null without one. */
+        val cubeBoosterStyle: String? = null,
         /**
          * Cube Pool Play: no draft, every player deckbuilds from the whole cube with copies limited
          * only by the 4-of cap. Cube Sealed lobbies only; ignored (and hidden) elsewhere.
@@ -621,6 +690,8 @@ sealed interface ServerMessage {
         val ranked: Boolean = false,
         /** Whether ranked may be enabled: a TOURNAMENT-mode bracket (1v1 matches). */
         val rankedEligible: Boolean = false,
+        /** Whether the lobby's games are played for ante (CR 407). Never true together with [ranked]. */
+        val playingForAnte: Boolean = false,
     )
 
     /**
@@ -649,9 +720,13 @@ sealed interface ServerMessage {
 
     @Serializable
     data class JumpstartState(
-        val pickNumber: Int,
         val selectedPacks: List<String>,
+        /** The packs the first half of the deck is chosen from. */
         val offers: List<JumpstartOffer>,
+        /** The packs the second half is chosen from, offered alongside so the pair is chosen together. */
+        val secondOffers: List<JumpstartOffer> = emptyList(),
+        /** Full contents of the chosen packs. */
+        val selected: List<JumpstartOffer> = emptyList(),
     )
 
     /**
@@ -679,7 +754,8 @@ sealed interface ServerMessage {
         val passDirection: String,     // "LEFT" or "RIGHT"
         val picksPerRound: Int = 1,    // Cards to pick this round (1 or 2)
         val pickedCards: List<SealedCardInfo> = emptyList(),  // Cards already picked (for reconnect)
-        val queuedPacks: Int = 0       // Number of additional packs queued behind this one
+        val queuedPacks: Int = 0,      // Number of additional packs queued behind this one
+        val podSize: Int = 0           // Drafters at the table (0 = unknown)
     ) : ServerMessage
 
     /**
@@ -835,7 +911,10 @@ sealed interface ServerMessage {
         val isBye: Boolean = false,
         /** True when the result was simulated rather than played — an AI-vs-AI match on a server that
          *  has `game.tournament.simulate-ai-matches` on. Such a match has no replay to open. */
-        val isSimulated: Boolean = false
+        val isSimulated: Boolean = false,
+        /** Game wins in this match — 1–0 for a single game, up to 2 in a best-of-three. */
+        val player1GameWins: Int = 0,
+        val player2GameWins: Int = 0,
     )
 
     /**
@@ -862,7 +941,57 @@ sealed interface ServerMessage {
         val lobbyId: String,
         val round: Int,
         val gameSessionId: String,
-        val opponentName: String
+        val opponentName: String,
+        /** Which game of the match this is (1-based). */
+        val gameNumber: Int = 1,
+        /** Games per match — 1, or 3 for a best-of-three. */
+        val bestOf: Int = 1,
+        /** Match score going into this game, from this player's seat. */
+        val yourGameWins: Int = 0,
+        val opponentGameWins: Int = 0,
+    ) : ServerMessage
+
+    /**
+     * A best-of-three match is between two of its games. Sent to each seat when a game ends without
+     * deciding the match, again whenever either seat's sideboarding state changes, and on reconnect —
+     * always the whole picture, so the client replaces rather than merges.
+     *
+     * The seat changes its deck for the rest of the match with `submitMatchDeck` (which also readies
+     * it), and the next game starts once both seats are ready.
+     */
+    @Serializable
+    @SerialName("betweenGames")
+    data class BetweenGames(
+        val lobbyId: String,
+        val round: Int,
+        val opponentName: String,
+        val bestOf: Int,
+        /** The game about to be played (2 or 3). */
+        val nextGameNumber: Int,
+        val yourGameWins: Int,
+        val opponentGameWins: Int,
+        val drawnGames: Int = 0,
+        /** The game that just ended, from this seat: "WIN", "LOSS" or "DRAW". */
+        val lastGameResult: String,
+        /** Whether this format lets the deck change between games; false shows a plain "next game" step. */
+        val canSideboard: Boolean,
+        /** The deck for the next game — the registered deck until this seat sideboards. */
+        val deck: Map<String, Int>,
+        /** What the seat could bring in: pool − deck in Limited, the brought sideboard otherwise. */
+        val sideboard: Map<String, Int>,
+        /** The deck registered for the tournament — what "Reset" returns to. */
+        val registeredDeck: Map<String, Int>,
+        /** Card details for every name in [deck], [sideboard] and [registeredDeck]. */
+        val cards: List<SealedCardInfo>,
+        /** Basic lands the seat may add freely (Limited); empty when basics come from the sideboard. */
+        val basicLands: List<SealedCardInfo> = emptyList(),
+        val minDeckSize: Int = 40,
+        /** True when this seat lost the last game and so picks who takes the first turn (CR 103.1). */
+        val youChoosePlayDraw: Boolean,
+        /** Once the chooser has decided: "YOU" or "OPPONENT" take the first turn; null until then. */
+        val startingPlayer: String? = null,
+        val youAreReady: Boolean,
+        val opponentReady: Boolean,
     ) : ServerMessage
 
     /**
@@ -1062,7 +1191,10 @@ sealed interface ServerMessage {
         val displayText: String,
         val sourceName: String? = null,
         /** The spell/ability source entity; the client resolves its card from the masked spectator state. */
-        val sourceId: String? = null
+        val sourceId: String? = null,
+        /** The source's art, for a source the spectator state has no entry for (a spell still
+         *  being cast from hand). Null when spectators may not see the source. */
+        val sourceImageUri: String? = null
     )
 
     /**
@@ -1117,7 +1249,9 @@ sealed interface ServerMessage {
     @Serializable
     data class SpectatorAttacker(
         val creatureId: String,
-        val blockedBy: List<String> = emptyList()
+        val blockedBy: List<String> = emptyList(),
+        /** Stays true after every blocker leaves combat (CR 509.1h); mirrors `ClientAttacker.isBlocked`. */
+        val isBlocked: Boolean = false
     )
 
     /**
@@ -1147,6 +1281,7 @@ sealed interface ServerMessage {
         val playerName: String,
         val life: Int,
         val poisonCounters: Int = 0,
+        val radCounters: Int = 0,
         val handSize: Int,
         val librarySize: Int,
         val battlefield: List<SpectatorCardInfo>,
@@ -1277,6 +1412,13 @@ sealed interface ServerMessage {
          * decklist behind a "deck" choice never rides the lobby broadcast. Null in a human lobby.
          */
         val aiDeck: com.wingedsheep.gameserver.lobby.AiDeckSpecView? = null,
+        /**
+         * True when matchmaking made this lobby. Its format and ranked flag were agreed in the queue,
+         * so nobody can change them, and it can't be made public or given an AI seat.
+         */
+        val matchmade: Boolean = false,
+        /** Whether the game is played for ante (CR 407). Never true together with [ranked]. */
+        val playingForAnte: Boolean = false,
     ) : ServerMessage
 
     /**
@@ -1299,6 +1441,11 @@ sealed interface ServerMessage {
         /** All set choices for Random decks; empty = "any set". */
         val setCodes: List<String> = listOfNotNull(setCode),
         /**
+         * True when this seat asked the server to roll its deck (the Random tab). Lets a guest who
+         * joins a "Random deck" game default to the same thing instead of being asked for a deck.
+         */
+        val randomDeck: Boolean = false,
+        /**
          * Team membership in a Two-Headed Giant lobby (CR 810): seats sharing a [teamIndex] are
          * teammates. Derived from the seat's join order (0+1 = team 0, 2+3 = team 1). Null in a
          * non-2HG lobby, so the existing 2-player overlay is unaffected.
@@ -1310,6 +1457,58 @@ sealed interface ServerMessage {
     @Serializable
     @SerialName("quickGameLobbyClosed")
     data class QuickGameLobbyClosed(val reason: String) : ServerMessage
+
+    /**
+     * This player's matchmaking state: searching in [mode]/[format]/[ranked], or idle when [searching]
+     * is false. Sent on every change. [notice] explains a change the player didn't cause (the opponent
+     * didn't accept, they missed the accept window). [searchingSince] is the epoch-millis join time,
+     * kept across a requeue so the client's wait timer doesn't reset. [matched] marks the idle status
+     * sent once a confirmed pair has been seated — the client's cue to bring the player to their game.
+     */
+    @Serializable
+    @SerialName("matchmakingStatus")
+    data class MatchmakingStatus(
+        val searching: Boolean,
+        val mode: com.wingedsheep.gameserver.matchmaking.MatchmakingMode? = null,
+        val format: com.wingedsheep.sdk.core.DeckFormat? = null,
+        val ranked: Boolean = false,
+        val searchingSince: Long? = null,
+        val notice: String? = null,
+        val matched: Boolean = false,
+    ) : ServerMessage
+
+    /**
+     * The queue paired this player with [opponentName]. Answer with [ClientMessage.RespondToMatch]
+     * within [acceptWindowMs]; once both accept they are seated: a Constructed match opens a
+     * quick-game lobby to pick decks in, Jump In a two-seat Jump In lobby on its pack choice, and
+     * Random deck and Momir Basic — which have nothing to prepare — start the game outright.
+     * [opponentRating] is shown for ranked matches only.
+     */
+    @Serializable
+    @SerialName("matchFound")
+    data class MatchFound(
+        val matchId: String,
+        val opponentName: String,
+        val mode: com.wingedsheep.gameserver.matchmaking.MatchmakingMode,
+        val format: com.wingedsheep.sdk.core.DeckFormat? = null,
+        val ranked: Boolean = false,
+        val opponentRating: Int? = null,
+        val acceptWindowMs: Long,
+        val youAccepted: Boolean = false,
+    ) : ServerMessage
+
+    /** How many players are searching in each queue. Broadcast to every connected player on change. */
+    @Serializable
+    @SerialName("matchmakingQueues")
+    data class MatchmakingQueues(val queues: List<MatchmakingQueueCount>) : ServerMessage
+
+    @Serializable
+    data class MatchmakingQueueCount(
+        val mode: com.wingedsheep.gameserver.matchmaking.MatchmakingMode,
+        val format: com.wingedsheep.sdk.core.DeckFormat? = null,
+        val ranked: Boolean,
+        val searching: Int,
+    )
 
     /** Broadcast number of human players currently connected via WebSocket. */
     @Serializable
@@ -1329,6 +1528,66 @@ sealed interface ServerMessage {
     @SerialName("friendRequestReceived")
     data class FriendRequestReceived(val fromAccountId: String, val fromName: String) : ServerMessage
 
+    /** One direct message, as pushed live and as listed over REST. */
+    @Serializable
+    data class DirectMessageInfo(val id: String, val senderId: String, val body: String, val createdAt: String)
+
+    /**
+     * A direct message in your conversation with [withAccountId] — one you received, or one you sent
+     * from another tab. [request] is true when, for you, the conversation is a message request you
+     * haven't accepted yet.
+     */
+    @Serializable
+    @SerialName("directMessage")
+    data class DirectMessage(
+        val withAccountId: String,
+        val withName: String,
+        val message: DirectMessageInfo,
+        val request: Boolean,
+    ) : ServerMessage
+
+    /**
+     * Your conversation with [withAccountId] changed in a way other than a new message — read, accepted,
+     * deleted or blocked, possibly from another tab. Refetch it.
+     */
+    @Serializable
+    @SerialName("directMessagesChanged")
+    data class DirectMessagesChanged(val withAccountId: String) : ServerMessage
+
+    /** [playerId] sent the table an [emote]. Not delivered to anyone who has blocked the sender. */
+    @Serializable
+    @SerialName("emote")
+    data class EmoteReceived(val playerId: EntityId, val emote: Emote) : ServerMessage
+
+    /**
+     * What you can do with your opponent after a human 1v1 game, and where each of those stands.
+     * Sent when the game ends and again whenever anything in it changes; the client renders it as-is.
+     *
+     * - [canRematch]: the game can be replayed with the same decks and settings.
+     * - [rematch]: who has asked for one. When both have, the new game starts.
+     * - [opponentLeft]: they left the result screen, so a rematch is off.
+     * - [friendship]: [FriendshipState.UNAVAILABLE] when either seat is a guest (or accounts are off).
+     * - [blocked]: you have blocked them.
+     */
+    @Serializable
+    @SerialName("postGame")
+    data class PostGame(
+        val gameId: String,
+        val opponentName: String,
+        val canRematch: Boolean,
+        val rematch: RematchState,
+        val opponentLeft: Boolean = false,
+        val friendship: FriendshipState,
+        val blocked: Boolean = false,
+        val notice: String? = null,
+    ) : ServerMessage
+
+    @Serializable
+    data class RematchState(val you: Boolean = false, val opponent: Boolean = false, val starting: Boolean = false)
+
+    @Serializable
+    enum class FriendshipState { UNAVAILABLE, NONE, REQUEST_SENT, REQUEST_RECEIVED, FRIENDS }
+
     /** Reply to [ClientMessage.Ping] — always sent, regardless of auth or game state. */
     @Serializable
     @SerialName("pong")
@@ -1343,6 +1602,18 @@ sealed interface ServerMessage {
     @Serializable
     @SerialName("sessionReplaced")
     data object SessionReplaced : ServerMessage
+
+    /**
+     * The server is shutting down for a restart (normally a deploy); the socket closes right
+     * after this. Games and lobbies survive the restart, so the client keeps the player's screen,
+     * tells them to wait, and reconnects on a short fixed interval until the new server answers.
+     */
+    @Serializable
+    @SerialName("serverRestarting")
+    data class ServerRestarting(
+        /** Rough downtime to quote to the player — a hint for the copy, not a deadline. */
+        val expectedDowntimeSeconds: Int,
+    ) : ServerMessage
 }
 
 @Serializable
@@ -1369,3 +1640,38 @@ enum class GameOverReason {
     /** Commander format: 21+ combat damage from a single commander (CR 903.10a). */
     COMMANDER_DAMAGE,
 }
+
+/**
+ * The settlement of a game played for ante, on [ServerMessage.GameOver]. Ante is "for keeps"
+ * (CR 407.1); [scope] says what keeping means here.
+ */
+@Serializable
+data class AnteOutcome(
+    val scope: AnteScope,
+    /** Every card that ended the game owned by someone other than the player who brought it. Empty for a draw. */
+    val transfers: List<AnteTransferInfo>,
+)
+
+@Serializable
+enum class AnteScope {
+    /** A Limited tournament: the cards moved between the players' pools for the rest of the event. */
+    EVENT,
+
+    /** Anywhere else: the cards are a trophy, recorded on the winner's profile as spoils. */
+    SPOILS,
+}
+
+@Serializable
+data class AnteTransferInfo(
+    val cardName: String,
+    val imageUri: String?,
+    val fromPlayerId: EntityId,
+    val fromPlayerName: String,
+    val toPlayerId: EntityId,
+    val toPlayerName: String,
+    /** ANTE = won from the ante (CR 407.2); OWNERSHIP = changed hands by an ante card's effect (CR 407.3). */
+    val cause: String,
+    /** EVENT scope only: the basic land that topped the loser's deck back up to 40, if one was added. */
+    val refilledWith: String? = null,
+)
+

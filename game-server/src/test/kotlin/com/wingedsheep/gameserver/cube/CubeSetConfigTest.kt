@@ -56,7 +56,7 @@ class CubeSetConfigTest : FunSpec({
         }
 
         error.message shouldBe
-            "Cube packs must be dealt through CubeDealer, not BoosterStrategy"
+            "Shuffled cube packs must be dealt through CubeDealer, not BoosterStrategy"
     }
 
     test("unknown basic land source fails with a host-facing message") {

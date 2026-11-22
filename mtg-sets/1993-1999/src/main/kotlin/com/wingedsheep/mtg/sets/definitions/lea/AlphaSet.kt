@@ -21,7 +21,6 @@ object AlphaSet : MtgSet {
     override val code = "LEA"
     override val displayName = "Limited Edition Alpha"
     override val releaseDate = "1993-08-05"
-    override val incomplete = true
 
     override val cards: List<CardDefinition> by lazy {
         CardDiscovery.findIn(CARDS_PACKAGE)

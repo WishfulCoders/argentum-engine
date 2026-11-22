@@ -114,6 +114,7 @@ object Keywords {
         simple(Keyword.FEAR),
         simple(Keyword.SHADOW),
         simple(Keyword.HORSEMANSHIP),
+        simple(Keyword.SKULK),
         // Landwalk
         simple(Keyword.SWAMPWALK),
         simple(Keyword.FORESTWALK),
@@ -121,6 +122,7 @@ object Keywords {
         simple(Keyword.MOUNTAINWALK),
         simple(Keyword.PLAINSWALK),
         simple(Keyword.DESERTWALK),
+        simple(Keyword.LEGENDARY_LANDWALK),
         // Combat
         simple(Keyword.FIRST_STRIKE),
         simple(Keyword.DOUBLE_STRIKE),
@@ -442,7 +444,9 @@ object Keywords {
         costKeyword("foretell", { KeywordAbility.foretell(it.toString()) }) { (it as? KeywordAbility.Foretell)?.cost },
         costKeyword("plot", { KeywordAbility.plot(it.toString()) }) { (it as? KeywordAbility.Plot)?.cost },
         costKeyword("disturb", { KeywordAbility.disturb(it.toString()) }) { (it as? KeywordAbility.Disturb)?.cost },
-        costKeyword("evoke", { KeywordAbility.evoke(it.toString()) }) { (it as? KeywordAbility.Evoke)?.cost },
+        costKeyword("evoke", { KeywordAbility.evoke(it.toString()) }) {
+            (it as? KeywordAbility.Evoke)?.takeIf { it.additionalCost == null }?.cost
+        },
         costKeyword("emerge", { KeywordAbility.emerge(it.toString()) }) { (it as? KeywordAbility.Emerge)?.cost },
         costKeyword("miracle", { KeywordAbility.miracle(it.toString()) }) { (it as? KeywordAbility.Miracle)?.cost },
         costKeyword("dash", { KeywordAbility.dash(it.toString()) }) { (it as? KeywordAbility.Dash)?.cost },
@@ -450,7 +454,10 @@ object Keywords {
         costKeyword("cleave", { KeywordAbility.cleave(it.toString()) }) { (it as? KeywordAbility.Cleave)?.cost },
         costKeyword("harmonize", { KeywordAbility.harmonize(it.toString()) }) { (it as? KeywordAbility.Harmonize)?.cost },
         costKeyword("mayhem", { KeywordAbility.mayhem(it.toString()) }) { (it as? KeywordAbility.Mayhem)?.cost },
-        costKeyword("ninjutsu", { KeywordAbility.ninjutsu(it.toString()) }) { (it as? KeywordAbility.Ninjutsu)?.cost },
+        // No "ninjutsu {cost}" rule: ninjutsu is a hand-activated ability (CR 702.49a) — the
+        // `ninjutsu(cost)` DSL helper pairs the display-only KeywordAbility.Ninjutsu with
+        // `ninjutsuAbility(cost)`. A keyword-line rule would emit only the marker, a ninja that
+        // can't ninjutsu, so the line declines until a band teaches Assay the activated ability.
         costKeyword("sneak", { KeywordAbility.sneak(it.toString()) }) { (it as? KeywordAbility.Sneak)?.cost },
         costKeyword("web-slinging", { KeywordAbility.webSlinging(it.toString()) }) {
             (it as? KeywordAbility.WebSlinging)?.cost
@@ -502,7 +509,10 @@ object Keywords {
     private val casualty: Phrase<KeywordAbility> = phrase("casualty {n}", name = "casualty") {
         slot("n", Primitives.cardinal)
         build { KeywordAbility.casualty(it.int("n")) }
-        match { (it as? KeywordAbility.Casualty)?.let { c -> bind("n" to c.threshold) } }
+        match {
+            (it as? KeywordAbility.Casualty)?.takeIf { c -> !c.isVariable && !c.hasCopyRiders }
+                ?.let { c -> bind("n" to c.threshold!!) }
+        }
     }
 
     private val devour: Phrase<KeywordAbility> = phrase("devour {n}", name = "devour") {

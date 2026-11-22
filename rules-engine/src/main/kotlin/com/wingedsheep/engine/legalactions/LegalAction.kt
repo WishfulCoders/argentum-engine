@@ -33,12 +33,12 @@ data class LegalAction(
      * enumeration time, so this stays a placeholder the client replaces with the chosen X.
      */
     val targetCount: Int = 1,
-    val minTargets: Int = targetCount,
+    override val minTargets: Int = targetCount,
     val targetDescription: String? = null,
     val targetRequirements: List<TargetInfo>? = null,
     /**
      * True when the (single) target requirement filters by "mana value X or less"
-     * (i.e. the requirement's filter contains [CardPredicate.ManaValueAtMostX]).
+     * (i.e. the requirement's filter contains `manaValueAtMostX()`).
      *
      * The enumerator builds [validTargets] permissively because X is unbound at
      * enumeration time. The client must re-filter [validTargets] by the chosen X
@@ -49,7 +49,7 @@ data class LegalAction(
     val xConstrainsTargetManaValue: Boolean = false,
     /**
      * True when the (single) target requirement filters by "mana value X" *exactly* (i.e. the
-     * requirement's filter contains [CardPredicate.ManaValueEqualsX] — Likeness Looter, Rydia,
+     * requirement's filter contains `manaValueEqualsX()` — Likeness Looter, Rydia,
      * Summoner of Mist). The equality sibling of [xConstrainsTargetManaValue]: the enumerator is
      * likewise permissive at X-unbound, and the client narrows [validTargets] to cards whose mana
      * value *equals* the chosen X. For multi-requirement abilities, see
@@ -58,7 +58,7 @@ data class LegalAction(
     val xConstrainsTargetManaValueExactly: Boolean = false,
     /**
      * True when the (single) target requirement filters by "power X" (i.e. the requirement's
-     * filter contains [CardPredicate.PowerEqualsX] — Ent-Draught Basin). The enumerator builds
+     * filter contains a `POWER EQ XValue` [CardPredicate.CompareNumericProperty] — Ent-Draught Basin). The enumerator builds
      * [validTargets] permissively because X is unbound at enumeration time; the client must
      * re-filter [validTargets] to creatures whose power equals the chosen X once the player
      * picks it. For multi-requirement abilities, see [TargetInfo.xConstrainsPower].
@@ -66,7 +66,7 @@ data class LegalAction(
     val xConstrainsTargetPower: Boolean = false,
     /**
      * True when the (single) target requirement's max-count is dynamically driven by the
-     * chosen X (i.e. [TargetObject.dynamicMaxCount] is [DynamicAmount.XValue]).
+     * chosen X (i.e. [TargetRequirement.dynamicMaxCount] is [DynamicAmount.XValue]).
      *
      * At enumeration time X is unbound, so [targetCount] is a placeholder (the static
      * `count` field, typically 1 or 20 from the legacy workaround). After the player
@@ -75,34 +75,68 @@ data class LegalAction(
      * on each requirement.
      */
     val xConstrainsTargetCount: Boolean = false,
+    /**
+     * True when that X-driven count is also the *minimum* — "X target creatures", exactly X
+     * (`TargetRequirement.dynamicMinCount == DynamicAmount.XValue`), as opposed to "up to X target
+     * creatures". Set only alongside [xConstrainsTargetCount]. Once the player picks X the client
+     * requires exactly X selections, not merely at most X; and [maxAffordableX] is already capped
+     * at the number of legal targets, so no X the client offers leaves the spell short of targets
+     * (CR 601.2c). For multi-requirement spells, see [TargetInfo.xConstrainsCountExactly].
+     */
+    val xConstrainsTargetCountExactly: Boolean = false,
 
     // Combat
     override val validAttackers: List<EntityId>? = null,
     val mandatoryAttackers: List<EntityId>? = null,
+    /**
+     * The [validAttackers] that can only attack alone (CR 506.5 — Master of Cruelties): a
+     * declaration with one of them and any other attacker is rejected. Null when there are none.
+     */
+    val loneAttackers: List<EntityId>? = null,
     val validAttackTargets: List<EntityId>? = null,
+    /**
+     * Per-attacker narrowing of [validAttackTargets] (CR 508.1b–c): each attacker chooses its own
+     * defender, and a restriction such as "can't attack unless defending player controls a
+     * Mountain" (Goblin Rock Sled) or "creatures can't attack you" (Blazing Archon) rules out one
+     * defender, not the whole attack. Sparse: only attackers whose legal targets are a strict
+     * subset of [validAttackTargets] appear, listing exactly those targets in the same order; an
+     * absent attacker may attack any of [validAttackTargets]. Read it through [attackTargetsFor].
+     * Null when no attacker is narrowed — always so in a two-player game, where a creature with
+     * no legal defender is simply left out of [validAttackers].
+     */
+    val attackTargetsByAttacker: Map<EntityId, List<EntityId>>? = null,
     override val validBlockers: List<EntityId>? = null,
     /**
      * Pairwise-legal attackers for each eligible blocker. Whole-declaration requirements such as
      * menace and global blocker caps still apply when the final map is submitted.
      */
     val validBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
+    val blockableAttackers: List<EntityId>? = null,
+    /** Previously submitted teammate choices, displayed but not part of this player's input. */
+    val proposedBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
     val blockerMaxBlockCounts: Map<EntityId, Int>? = null,
     val mandatoryBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
 
     // Costs
     val manaCostString: String? = null,
     /**
-     * The mana this spell adds to its own cost for each target beyond the first — "This spell
-     * costs {W}{U} more to cast for each target beyond the first" (Officious Interrogation) sends
-     * `"{W}{U}"`. Null for every spell that does not tax itself per target.
+     * What this spell costs for each number of different targets it can be cast with — keyed by
+     * that count, present only when a cost modifier is priced per target: "This spell costs {W}{U}
+     * more to cast for each target beyond the first" (Officious Interrogation), "Spells you cast
+     * cost {1} less to cast for each target" (Hinata, Dawn-Crowned). Null for every other spell.
      *
-     * When set, [manaCostString] is the *one-target minimum*, not the final price: the real cost
-     * is settled by targeting. The client must therefore run its targeting phase **before** any
-     * manual mana-source phase (the same way an X cost forces `xSelection` first) and scale the
-     * cost it charges there by the number of targets picked. Under auto-tap none of this shows —
-     * the server prices the submitted targets itself and solves.
+     * When set, [manaCostString] is only the cheapest reachable count, not the final price: the
+     * real cost is settled by targeting. The client must therefore run its targeting phase
+     * **before** any manual mana-source phase (the same way an X cost forces `xSelection` first)
+     * and charge the entry for the number of different targets picked. Under auto-tap none of
+     * this shows — the server prices the submitted targets itself and solves.
      */
-    val manaCostPerExtraTarget: String? = null,
+    val manaCostByTargetCount: Map<Int, String>? = null,
+    /**
+     * The caster announces an X for this action. Usually that X is generic mana in the cost, but it
+     * can be announced without being paid as mana (casualty X), so mana-side consumers must check
+     * [manaCostString] for `{X}` rather than reading this flag as "X is mana".
+     */
     val hasXCost: Boolean = false,
     val maxAffordableX: Int? = null,
     val minX: Int = 0,
@@ -186,6 +220,15 @@ data class LegalAction(
     // Damage distribution
     val requiresDamageDistribution: Boolean = false,
     val totalDamageToDistribute: Int? = null,
+    /**
+     * The division's total for each X the caster may announce, keyed by X — present only when the
+     * total reads the announced X: a spell's mana-paid `{X}` (Shatterskull Smashing: "X damage
+     * divided … If X is 6 or more, … twice X damage divided … instead") or an activation's X cost
+     * (Huatli, Warrior Poet's −X). X is announced before targets and the division
+     * (CR 601.2b, 601.2d), so the client looks the total up for the X it chose; the prices are the
+     * server's. When set, [totalDamageToDistribute] is the X-less reading and is not used.
+     */
+    val totalDamageByX: Map<Int, Int>? = null,
     val minDamagePerTarget: Int? = null,
     /**
      * True when the divided total is the X the cast announces ("X damage divided as you choose")
@@ -195,6 +238,14 @@ data class LegalAction(
      * value the server validates the division against (CR 601.2d).
      */
     val damageTotalIsX: Boolean = false,
+    /** What the division divides when it isn't damage — "+1/+1 counter" for a counter division. Null means damage. */
+    val distributionUnit: String? = null,
+    /**
+     * Which target requirement (index into the spell's requirements) the division is among, when it
+     * is scoped to one (Magma Opus divides its damage among its "any number of targets", not the two
+     * permanents it taps). Null means among every chosen target.
+     */
+    val distributionTargetGroup: Int? = null,
 
     // Source zone
     val sourceZone: String? = null,
@@ -233,7 +284,10 @@ data class LegalAction(
     val modalEnumeration: ModalLegalEnumeration? = null,
 
     // When true, prevents auto-pass whenever this action is available
-    override val holdPriority: Boolean = false
+    override val holdPriority: Boolean = false,
+
+    // Why this action would currently do nothing (see [PriorityAction.inertReason])
+    override val inertReason: String? = null
 ) : PriorityAction {
     /** [PriorityAction]'s name for [affordable]. The DTO calls the same thing `isAffordable`. */
     override val isAffordableAction: Boolean get() = affordable
@@ -242,6 +296,13 @@ data class LegalAction(
 
     override val hasUnfillableTargetRequirement: Boolean
         get() = targetRequirements?.any { it.minTargets > 0 && it.validTargets.isEmpty() } ?: false
+
+    /**
+     * What [attackerId] may legally attack in this DeclareAttackers action: its entry in
+     * [attackTargetsByAttacker] when narrowed, otherwise every one of [validAttackTargets].
+     */
+    fun attackTargetsFor(attackerId: EntityId): List<EntityId> =
+        attackTargetsByAttacker?.get(attackerId) ?: validAttackTargets.orEmpty()
 }
 
 /**
@@ -307,39 +368,64 @@ data class TargetInfo(
     val minTargets: Int,
     val maxTargets: Int,
     val validTargets: List<EntityId>,
+    /** Server-computed choices keyed by the comma-joined earlier target IDs, in slot order. */
+    val selectionGroups: List<List<EntityId>>? = null,
+    /** Server-computed disjoint groups; at most one target may be picked from each. */
+    val exclusiveGroups: List<List<EntityId>>? = null,
+    val validTargetsByPrefix: Map<String, List<EntityId>>? = null,
     val targetZone: String? = null,
     /** A target in this slot must differ from every target chosen for an earlier slot. */
     val mustDifferFromEarlier: Boolean = false,
     /**
-     * True when this requirement's filter contains [CardPredicate.ManaValueAtMostX].
+     * True when this requirement's filter contains `manaValueAtMostX()`.
      * The client re-filters [validTargets] by the chosen X after X selection.
      */
     val xConstrainsManaValue: Boolean = false,
     /**
-     * True when this requirement's filter contains [CardPredicate.ManaValueEqualsX].
+     * True when this requirement's filter contains `manaValueEqualsX()`.
      * The client narrows [validTargets] to cards whose mana value *equals* the chosen X
      * after X selection (Likeness Looter, Rydia, Summoner of Mist).
      */
     val xConstrainsManaValueExactly: Boolean = false,
     /**
-     * True when this requirement's filter contains [CardPredicate.PowerEqualsX].
+     * True when this requirement's filter contains a `POWER EQ XValue`
+     * [CardPredicate.CompareNumericProperty].
      * The client re-filters [validTargets] to creatures whose power equals the chosen X
      * after X selection (Ent-Draught Basin).
      */
     val xConstrainsPower: Boolean = false,
     /**
      * True when this requirement's max-count is dynamically driven by the chosen X
-     * (`TargetObject.dynamicMaxCount == DynamicAmount.XValue`). The client should
+     * (`TargetRequirement.dynamicMaxCount == DynamicAmount.XValue`). The client should
      * clamp selectable targets to the chosen X after X selection.
      */
     val xConstrainsCount: Boolean = false,
+    /**
+     * True when the X-driven count is exact — "X target creatures" (`TargetRequirement.dynamicMinCount`
+     * is also [DynamicAmount.XValue]). Set only alongside [xConstrainsCount]: the client requires
+     * exactly the chosen X selections for this requirement.
+     */
+    val xConstrainsCountExactly: Boolean = false,
     /**
      * True when the targets chosen for this requirement must each have a different controller
      * (`TargetObject.differentControllers` — Run Away Together's "two target creatures controlled
      * by different players"). Lets a chooser that fills the slot itself (the AI) spread its picks.
      */
     val differentControllers: Boolean = false,
-)
+    /**
+     * "Up to one target … of each card type / color": each valid target mapped to the categories
+     * it may claim; the picks must each claim a different one
+     * ([com.wingedsheep.engine.mechanics.targeting.OnePerCategoryTargets]).
+     */
+    val distinctCategories: Map<EntityId, List<String>>? = null,
+) {
+    /**
+     * How many of [candidates] can be chosen together: one per [exclusiveGroups] pool that still
+     * holds a candidate ("… with different mana values", one per owner), else every candidate.
+     */
+    fun distinctPickCount(candidates: List<EntityId> = validTargets): Int =
+        exclusiveGroups?.count { group -> group.any { it in candidates } } ?: candidates.size
+}
 
 /**
  * The per-requirement list a [LegalAction] carries in `targetRequirements`. A single requirement
@@ -348,7 +434,8 @@ data class TargetInfo(
  * ([TargetInfo.differentControllers]) the flattened fields can't express.
  */
 fun List<TargetInfo>.surfacedRequirements(): List<TargetInfo>? =
-    takeIf { size > 1 || any { it.differentControllers } }
+    takeIf { size > 1 || any { it.differentControllers || it.selectionGroups != null || it.exclusiveGroups != null ||
+        it.distinctCategories != null } }
 
 /**
  * Information about a creature that can be tapped for Convoke.
@@ -424,6 +511,22 @@ data class AdditionalCostData(
     val validSacrificeTargets: List<EntityId> = emptyList(),
     val sacrificeCount: Int = 1,
     /**
+     * Casualty X (CR 702.153a): the sacrifice must have power at least the X announced with the
+     * cast, so once X is chosen the picker offers only [validSacrificeTargets] whose power is X or
+     * greater (the server re-validates).
+     */
+    val sacrificeMinPowerIsX: Boolean = false,
+    /**
+     * A cost whose count *is* the X announced with the cast (CR 601.2b): the picker must take
+     * exactly that X — not its floor-or-more. "Sacrifice X creatures" (Eliminate the Competition,
+     * `CostAtom.VariablePermanents.exactly`) on the `SacrificeVariable` picker, and "discard X
+     * cards" (Channeled Force, Nahiri's Wrath, `AdditionalCost.VariableCards`) on the `DiscardCard`
+     * picker, whose [discardCount]/[discardMaxCount] are then only the X range. The action carries `hasXCost` with `maxAffordableX` capped at the
+     * candidates (and at the legal targets of an "X target …" requirement); the client asks X
+     * first, then requires exactly that many picks, and skips the picker at X = 0.
+     */
+    val countIsX: Boolean = false,
+    /**
      * The spell's remaining mana cost after sacrificing each candidate in [validSacrificeTargets],
      * keyed by that candidate — emerge (CR 702.119), where the emerge cost is reduced by generic
      * mana equal to the sacrificed creature's mana value.
@@ -450,11 +553,32 @@ data class AdditionalCostData(
     val tapBatchMaxActivations: Int = 1,
     val validDiscardTargets: List<EntityId> = emptyList(),
     val discardCount: Int = 0,
+    /**
+     * Upper bound for a variable discard ("discard X cards", Channeled Force): the caster picks
+     * [discardCount]..[discardMaxCount] cards. `null` means exactly [discardCount].
+     */
+    val discardMaxCount: Int? = null,
     val validBounceTargets: List<EntityId> = emptyList(),
     val bounceCount: Int = 0,
     val validExileTargets: List<EntityId> = emptyList(),
     val exileMinCount: Int = 0,
     val exileMaxCount: Int = 0,
+    /**
+     * Generic mana each pick takes off the spell's total cost — set only on the zero-floor picker of
+     * "you may sacrifice / tap / exile any number of …; this spell costs {N} less for each"
+     * (`AdditionalCost.AnyNumberForCostReduction`), 0 everywhere else. The offer's
+     * `manaCostString` is priced at the largest effective discount (every candidate picked, a
+     * candidate that is also a counted mana source netted at N − 1); with
+     * [genericBeforeReduction] a payer prices any smaller pick exactly — the AI reads both to pick
+     * only as many as the cast needs.
+     */
+    val reductionPerPick: Int = 0,
+    /**
+     * The generic mana in the total cost before that discount — what `manaCostString`'s generic
+     * was before every candidate's [reductionPerPick] came off it, floored at zero (CR 601.2f).
+     * Null when the offer has no such discount.
+     */
+    val genericBeforeReduction: Int? = null,
     /**
      * The **floor on the combined measure** of the exiled cards, and what each offered card is
      * worth toward it — the sum gate shared by every graveyard exile cost whose constraint is a
@@ -502,7 +626,7 @@ data class AdditionalCostData(
      * whatever the caster actually chooses. And **the picker runs after targeting** — a cost
      * determined at CR 601.2f cannot be paid before the targets are announced at 601.2c, so the
      * client moves its cost-payment step behind the targeting step for exactly these costs, the
-     * way `manaCostPerExtraTarget` already defers mana-source selection.
+     * way `manaCostByTargetCount` already defers mana-source selection.
      *
      * A map rather than a boolean because the client must be able to *price* a selection, not just
      * know that it is deferred, and shipping the weights keeps the one sum-gated picker: the same
@@ -520,6 +644,8 @@ data class AdditionalCostData(
     val validRevealTargets: List<EntityId> = emptyList(),
     val revealCount: Int = 0,
     val counterRemovalCreatures: List<CounterRemovalCreatureData> = emptyList(),
+    /** Permanents a "put N counters on a permanent you control" spell cost may place on (Lethal Sting). */
+    val validCounterPlacementTargets: List<EntityId> = emptyList(),
     val validBlightTargets: List<EntityId> = emptyList(),
     val blightAmount: Int = 0,
     /**

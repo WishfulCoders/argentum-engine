@@ -44,7 +44,11 @@ val SeasonOfGathering = card("Season of Gathering") {
                 BudgetMode(
                     cost = 1,
                     effect = Effects.Pipeline {
-                        val chosenCreature = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl))
+                        val chosenCreature = selectTarget(
+                            TargetObject(filter = TargetFilter.CreatureYouControl),
+                            nonTargeting = true,
+                            prompt = "Choose a creature you control to get a +1/+1 counter, vigilance, and trample"
+                        )
                         run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, chosenCreature.asTarget))
                         run(Effects.GrantKeyword(Keyword.VIGILANCE, chosenCreature.asTarget))
                         run(Effects.GrantKeyword(Keyword.TRAMPLE, chosenCreature.asTarget))

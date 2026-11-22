@@ -1,11 +1,12 @@
 import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import './styles/variables.css'
 import './styles/base.css'
 import './styles/responsive.css'
 import 'mana-font/css/mana.min.css'
 import 'keyrune/css/keyrune.min.css'
+import './styles/set-symbols.css'
 import { initAnalytics } from './utils/analytics'
 
 const App = lazy(() => import('./App'))
@@ -36,6 +37,21 @@ const PlaytestPage = lazy(() => import('./components/playtest/PlaytestPage'))
 const AiSandboxPage = lazy(() =>
   import('./components/aiSandbox/AiSandboxPage').then(({ AiSandboxPage }) => ({ default: AiSandboxPage }))
 )
+const LibraryPage = lazy(() =>
+  import('./pages/LibraryPage').then(({ LibraryPage }) => ({ default: LibraryPage }))
+)
+const CardsPage = lazy(() =>
+  import('./pages/CardsPage').then(({ CardsPage }) => ({ default: CardsPage }))
+)
+const CubeBuilderPage = lazy(() =>
+  import('./components/cube/CubeBuilderPage').then(({ CubeBuilderPage }) => ({ default: CubeBuilderPage }))
+)
+const SharedCubePage = lazy(() =>
+  import('./pages/SharedCubePage').then(({ SharedCubePage }) => ({ default: SharedCubePage }))
+)
+const SetGuidePage = lazy(() =>
+  import('./components/setGuide/SetGuidePage').then(({ SetGuidePage }) => ({ default: SetGuidePage }))
+)
 const SetCompletionPage = lazy(() =>
   import('./components/setCompletion/SetCompletionPage').then(({ SetCompletionPage }) => ({ default: SetCompletionPage }))
 )
@@ -45,8 +61,14 @@ const LoginVerifyPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('./pages/ProfilePage').then(({ ProfilePage }) => ({ default: ProfilePage }))
 )
+const PreferencesPage = lazy(() =>
+  import('./pages/PreferencesPage').then(({ PreferencesPage }) => ({ default: PreferencesPage }))
+)
 const FriendsPage = lazy(() =>
   import('./pages/FriendsPage').then(({ FriendsPage }) => ({ default: FriendsPage }))
+)
+const MessagesPage = lazy(() =>
+  import('./pages/MessagesPage').then(({ MessagesPage }) => ({ default: MessagesPage }))
 )
 const StatsPage = lazy(() =>
   import('./pages/StatsPage').then(({ StatsPage }) => ({ default: StatsPage }))
@@ -60,6 +82,15 @@ const HelpPage = lazy(() =>
 const PublicProfilePage = lazy(() =>
   import('./pages/PublicProfilePage').then(({ PublicProfilePage }) => ({ default: PublicProfilePage }))
 )
+
+// Beside the router, not inside `App`: a search keeps running on every route (see the component).
+const MatchmakingLayer = lazy(() => import('./components/matchmaking/MatchmakingLayer'))
+// Same reason: reports the current page to the server (admin Live overview) on every route.
+const ActivityReporter = lazy(() => import('./components/shared/ActivityReporter'))
+// Same reason: direct messages from any screen, a conversation staying open across a navigation.
+const ChatDock = lazy(() => import('./components/messages/ChatDock'))
+// Same reason: a server restart is explained on whatever screen the player is on.
+const ConnectionStatusLayer = lazy(() => import('./components/shared/ConnectionStatusLayer'))
 
 initAnalytics()
 
@@ -76,16 +107,26 @@ createRoot(rootElement).render(
           <Route path="/tournament/:lobbyId" element={<TournamentEntryPage />} />
           <Route path="/join/:lobbyId" element={<JoinLobbyPage />} />
           <Route path="/replay/:gameId" element={<ReplayPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/*" element={<AdminPage />} />
           <Route path="/deckbuilder" element={<DeckbuilderPage />} />
           <Route path="/deckbuilder/:deckId" element={<DeckbuilderPage />} />
+          <Route path="/library" element={<LibraryPage />} />
+          <Route path="/cards" element={<CardsPage />} />
+          <Route path="/cubes" element={<Navigate to="/library?tab=cubes" replace />} />
+          <Route path="/cubes/new" element={<CubeBuilderPage />} />
+          <Route path="/cubes/edit/:cubeId" element={<CubeBuilderPage />} />
+          <Route path="/cubes/shared/:code" element={<SharedCubePage />} />
           <Route path="/scenario" element={<ScenarioBuilderPage />} />
+          <Route path="/sets" element={<SetGuidePage />} />
           <Route path="/set-completion" element={<SetCompletionPage />} />
           <Route path="/login/verify" element={<LoginVerifyPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/preferences" element={<PreferencesPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/u/:userId" element={<PublicProfilePage />} />
           <Route path="/friends" element={<FriendsPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/messages/:accountId" element={<MessagesPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="/help/:section" element={<HelpPage />} />
           <Route path="/learn" element={<LearnPage />} />
@@ -97,6 +138,12 @@ createRoot(rootElement).render(
           <Route path="/ai-sandbox/:lobbyId" element={<AiSandboxPage />} />
           <Route path="*" element={<App />} />
         </Routes>
+      </Suspense>
+      <Suspense fallback={null}>
+        <MatchmakingLayer />
+        <ActivityReporter />
+        <ChatDock />
+        <ConnectionStatusLayer />
       </Suspense>
     </BrowserRouter>
   </StrictMode>

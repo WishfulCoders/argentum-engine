@@ -797,7 +797,8 @@ class LlmAiPlayerController(
         packNumber: Int,
         pickNumber: Int,
         picksRequired: Int,
-        passDirection: String
+        passDirection: String,
+        podSize: Int?,
     ): List<String> {
         // Initialize draft history with system prompt on first pick.
         // Explicit cache breakpoint on the system prompt — stable across all picks.

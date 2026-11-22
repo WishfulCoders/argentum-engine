@@ -161,3 +161,59 @@ describe('targetingSlice — multi-target back navigation', () => {
     })
   })
 })
+
+
+describe('dependent spell targets', () => {
+  it('uses server branches and recomputes after changing the earlier choice', () => {
+    const { store } = makeStore()
+    const s = store.getState() as unknown as TargetingSlice
+    const base = twoRequirementState(store.getState().pipelineState!.accumulatedAction)
+    s.startTargeting({ ...base, targetRequirements: [base.targetRequirements![0]!, {
+      ...base.targetRequirements![1]!, mustDifferFromEarlier: false,
+      validTargetsByPrefix: { a: [id('b')], c: [id('a')] },
+    }] })
+    s.addTarget(id('a'))
+    s.confirmTargeting('test-epoch')
+    expect(targeting(store).validTargets).toEqual([id('b')])
+    store.getState().goBackTargeting()
+    store.getState().removeTarget(id('a'))
+    store.getState().addTarget(id('c'))
+    store.getState().confirmTargeting('test-epoch')
+    expect(targeting(store).validTargets).toEqual([id('a')])
+  })
+})
+
+it('narrows a server-group pool and restores it after the last deselection', () => {
+  const { store } = makeStore()
+  const action = store.getState().pipelineState!.accumulatedAction
+  store.getState().startTargeting({ action, validTargets: [id('a'), id('b'), id('c')], selectedTargets: [], minTargets: 0, maxTargets: 3,
+    selectionGroups: [[id('a'), id('b')], [id('c')]] })
+  store.getState().addTarget(id('a'))
+  expect(targeting(store).validTargets).toEqual([id('a'), id('b')])
+  store.getState().addTarget(id('c'))
+  expect(targeting(store).selectedTargets).toEqual([id('a')])
+  store.getState().removeTarget(id('a'))
+  expect(targeting(store).validTargets).toEqual([id('a'), id('b'), id('c')])
+})
+
+it('keeps selected owner targets visible at the cap, restores them after Back, and permits revision', () => {
+  const { store } = makeStore()
+  const action = store.getState().pipelineState!.accumulatedAction
+  const initial = { action, validTargets: [id('a'), id('b'), id('c')], selectedTargets: [], minTargets: 2, maxTargets: 2,
+    exclusiveGroups: [[id('a'), id('b')], [id('c')]] }
+  store.getState().startTargeting(initial)
+  store.getState().addTarget(id('a'))
+  expect(targeting(store).validTargets).toEqual([id('a'), id('c')])
+  store.getState().addTarget(id('b'))
+  expect(targeting(store).selectedTargets).toEqual([id('a')])
+  store.getState().addTarget(id('c'))
+  expect(targeting(store).validTargets).toEqual([id('a'), id('c')])
+  store.getState().addTarget(id('a'))
+  expect(targeting(store).selectedTargets).toEqual([id('a'), id('c')])
+  store.getState().startTargeting({ ...initial, selectedTargets: [id('a'), id('c')] })
+  expect(targeting(store).validTargets).toEqual([id('a'), id('c')])
+  store.getState().removeTarget(id('a'))
+  expect(targeting(store).validTargets).toEqual([id('a'), id('b'), id('c')])
+  store.getState().addTarget(id('b'))
+  expect(targeting(store).selectedTargets).toEqual([id('c'), id('b')])
+})

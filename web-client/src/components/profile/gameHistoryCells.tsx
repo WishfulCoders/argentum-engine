@@ -7,6 +7,7 @@ import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { GameHistoryEntry } from '@/api/account'
 import { gameModeLabel } from '@/components/admin/statFormat'
+import a from './account.module.css'
 
 /** The game mode as a top-level category with an optional dimmer variant ("Tournament › Draft"). */
 export function GameModeCell({ gameMode, format }: { gameMode: string | null; format: string | null }) {
@@ -29,7 +30,7 @@ export function OpponentCell({ entry }: { entry: GameHistoryEntry }) {
         <span key={`${o.name}-${i}`}>
           {i > 0 && <span style={styles.sep}>, </span>}
           {o.userId ? (
-            <button type="button" style={styles.link} onClick={() => navigate(`/u/${o.userId}`)}>
+            <button type="button" className={a.link} onClick={() => navigate(`/u/${o.userId}`)}>
               {o.name}
             </button>
           ) : (
@@ -67,15 +68,14 @@ export function EloCell({ entry }: { entry: GameHistoryEntry }) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  variant: { color: '#9aa0b5' },
+  variant: { color: '#8f98ac' },
   opponents: { color: 'inherit' },
   sep: { color: '#666' },
-  link: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 'inherit', padding: 0 },
   dim: { color: '#666' },
   elo: { fontVariantNumeric: 'tabular-nums' },
-  eloSelf: { color: '#cdd' },
+  eloSelf: { color: '#d5dae6' },
   eloDeltaUp: { color: '#5fd08a', marginLeft: 4, fontWeight: 600 },
   eloDeltaDown: { color: '#e2686b', marginLeft: 4, fontWeight: 600 },
   eloVs: { color: '#666' },
-  eloOpp: { color: '#9aa0b5' },
+  eloOpp: { color: '#9aa3b8' },
 }

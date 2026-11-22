@@ -135,7 +135,7 @@ describe('browser live action origins', () => {
   it('drops a combat selection from the replaced timeline without relabeling it', () => {
     const combat: CombatState = {
       interactionEpoch: 'original', mode: 'declareBlockers', actingSeat: ME, stickyDefenderId: null,
-      selectedAttackers: [], attackerTargets: {}, validAttackTargets: [],
+      selectedAttackers: [], attackerTargets: {}, validAttackTargets: [], attackTargetsByAttacker: {},
       blockerAssignments: { [MANA]: [TARGET] }, validCreatures: [MANA], mandatoryAttackers: [],
       attackingCreatures: [TARGET], mustBeBlockedAttackers: [], blockerMaxBlockCounts: {}, bands: [],
     }
@@ -159,6 +159,40 @@ describe('browser live action origins', () => {
     expect(send).toHaveBeenCalledWith({
       type: 'submitAction', interactionEpoch: 'replacement',
       action: { type: 'DeclareBlockers', playerId: ME, blockers: { [MANA]: [TARGET] } },
+    })
+  })
+
+  it.each([false, true])('clears the previous seat block draft on a same-epoch handoff (delta=%s)', (delta) => {
+    const nextSeat = entityId('teammate')
+    const combat: CombatState = {
+      interactionEpoch: 'original', mode: 'declareBlockers', actingSeat: ME, stickyDefenderId: null,
+      selectedAttackers: [], attackerTargets: {}, validAttackTargets: [], attackTargetsByAttacker: {},
+      blockerAssignments: { [MANA]: [TARGET] }, validCreatures: [MANA], mandatoryAttackers: [], loneAttackers: [],
+      attackingCreatures: [TARGET], mustBeBlockedAttackers: [], blockerMaxBlockCounts: {}, bands: [],
+    }
+    useGameStore.getState().startCombat(combat)
+    send.mockClear()
+    const nextOffer: LegalActionInfo = {
+      actionType: 'DeclareBlockers', description: 'Choose teammate blockers',
+      action: { type: 'DeclareBlockers', playerId: nextSeat, blockers: {} },
+      validBlockers: [SPELL], blockableAttackers: [TARGET],
+      proposedBlockerAssignments: { [MANA]: [TARGET] },
+    }
+    receive('original', delta, undefined, [nextOffer])
+    expect(useGameStore.getState().combatState).toBeNull()
+    useGameStore.getState().confirmCombat('original')
+    expect(send).not.toHaveBeenCalled()
+
+    // App re-enters from the fresh offer. Prior choices are display-only and aren't resubmitted.
+    useGameStore.getState().startCombat({
+      ...combat, actingSeat: nextSeat, validCreatures: [SPELL],
+      blockerAssignments: { [SPELL]: [TARGET] }, proposedBlockerAssignments: { [MANA]: [TARGET] },
+    })
+    send.mockClear()
+    useGameStore.getState().confirmCombat('original')
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'submitAction', interactionEpoch: 'original',
+      action: { type: 'DeclareBlockers', playerId: nextSeat, blockers: { [SPELL]: [TARGET] } },
     })
   })
 

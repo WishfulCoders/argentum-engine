@@ -8,12 +8,12 @@ import kotlinx.serialization.Serializable
  * Resume after the attacking player selects which mana sources to tap for an attack
  * tax (Propaganda, Ghostly Prison, Windborn Muse, Collective Restraint, etc.).
  *
- * The engine pauses *before* tapping anything and shows a [SelectManaSourcesDecision]
+ * The engine taps non-vigilant attackers, then shows a [SelectManaSourcesDecision]
  * with the auto-pay suggestion pre-selected, mirroring the cast / counter-unless-pays
  * UX. On confirm the resumer taps the selected sources (or runs `ManaSolver.solve` when
  * `autoPay = true`) and commits the attack declaration. An empty manual selection
  * (`autoPay = false` + `selectedSources = []`) is treated as "cancel attack" — a clean
- * no-op that leaves the player in `DECLARE_ATTACKERS`.
+ * rollback of declaration taps that leaves the player in `DECLARE_ATTACKERS`.
  *
  * @property attackingPlayer Player who declared the attack.
  * @property attackers Original [attacker → defender] map from the [DeclareAttackers] action.
@@ -30,34 +30,42 @@ data class AttackTaxManaSelectionContinuation(
     val manaCost: ManaCost,
     val availableSources: List<ManaSourceOption>,
     val autoPaySuggestion: List<EntityId>,
+    val enlistments: List<EnlistPayment> = emptyList(),
+    /** Before declaration taps; restored only when the player cancels this attack. */
+    val rollback: AttackDeclarationCheckpoint? = null,
     val bands: List<Set<EntityId>> = emptyList(),
 ) : AnswerContinuation
 
 /**
- * Resume after the attacking player chooses which permanents to sacrifice to declare an attacker
- * carrying [com.wingedsheep.sdk.scripting.CantAttackUnlessSacrifice] (Leviathan). One frame per
- * paying attacker: [remaining] holds the attackers still owing a sacrifice, so a board with two
+ * Resume after the attacking player chooses which permanents to pay with — sacrifice (Leviathan)
+ * or return to hand (Floodtide Serpent) — to declare an attacker carrying
+ * [com.wingedsheep.sdk.scripting.CantAttackUnlessPermanentCost]. One frame per
+ * paying attacker: [remaining] holds the attackers still owing a permanent cost, so a board with two
  * such creatures asks twice and each choice is made knowing the previous one.
  *
  * Declining is not offered. Affordability was checked before the declaration was accepted, and a
  * player who no longer wants to pay should not have declared the attack — the same contract the
  * generic-mana attack tax has, except that tax *can* be declined because its own pause happens
- * before anything is committed.
+ * before enlist and permanent-cost payments are committed.
  *
  * @property attackingPlayer Player who declared the attack and pays the cost.
- * @property attackers The full declared [attacker → defender] map, replayed on commit.
+ * @property attackers The declared [attacker → defender] map, replayed on commit minus any
+ *   attacker paid away as a cost.
  * @property payingAttacker The attacker whose cost this decision pays.
- * @property count How many permanents must be sacrificed for [payingAttacker].
- * @property remaining Attackers after this one that still owe a sacrifice, with their counts.
+ * @property count How many permanents must be paid for [payingAttacker].
+ * @property action Whether this payment sacrifices them or returns them to hand.
+ * @property remaining Attackers after this one that still owe a permanent cost, with their counts.
  * @property bands Validated band groupings, carried through to the commit.
  */
 @Serializable
-data class AttackSacrificeSelectionContinuation(
+data class AttackPermanentCostSelectionContinuation(
     val attackingPlayer: EntityId,
     val attackers: Map<EntityId, EntityId>,
     val payingAttacker: EntityId,
     val count: Int,
-    val remaining: List<PendingAttackSacrifice> = emptyList(),
+    val action: com.wingedsheep.sdk.scripting.AttackPermanentCostAction =
+        com.wingedsheep.sdk.scripting.AttackPermanentCostAction.SACRIFICE,
+    val remaining: List<PendingAttackPermanentCost> = emptyList(),
     val bands: List<Set<EntityId>> = emptyList(),
 ) : AnswerContinuation
 
@@ -80,9 +88,9 @@ data class AttackExertSelectionContinuation(
     val bands: List<Set<EntityId>> = emptyList(),
 ) : AnswerContinuation
 
-/** One still-unpaid sacrifice cost in an [AttackSacrificeSelectionContinuation]'s queue. */
+/** One still-unpaid permanent cost in an [AttackPermanentCostSelectionContinuation]'s queue. */
 @Serializable
-data class PendingAttackSacrifice(
+data class PendingAttackPermanentCost(
     val attackerId: EntityId,
     val count: Int,
 )
@@ -101,4 +109,31 @@ data class BlockTaxManaSelectionContinuation(
     val manaCost: ManaCost,
     val availableSources: List<ManaSourceOption>,
     val autoPaySuggestion: List<EntityId>,
+    val payingPlayer: EntityId = blockingPlayer,
+    val remainingTaxes: Map<EntityId, Int> = emptyMap(),
+    val selections: List<BlockTaxSelection> = emptyList(),
+) : AnswerContinuation
+
+/** Team payments are collected before any tax is paid, so cancelling never strands a prior payment. */
+@Serializable
+data class BlockTaxSelection(
+    val playerId: EntityId,
+    val manaCost: ManaCost,
+    val availableSources: List<ManaSourceOption>,
+    val response: ManaSourcesSelectedResponse,
+)
+
+/** One chosen instance of enlist; the same attacker may appear several times. */
+@Serializable
+data class EnlistPayment(val attackerId: EntityId, val enlistedId: EntityId)
+
+/** Declaration choices, before any costs have been paid; choosing no card declines one instance. */
+@Serializable
+data class AttackEnlistSelectionContinuation(
+    val attackingPlayer: EntityId,
+    val attackers: Map<EntityId, EntityId>,
+    val remaining: List<EntityId>,
+    val chosen: List<EnlistPayment> = emptyList(),
+    val rollback: AttackDeclarationCheckpoint? = null,
+    val bands: List<Set<EntityId>> = emptyList(),
 ) : AnswerContinuation

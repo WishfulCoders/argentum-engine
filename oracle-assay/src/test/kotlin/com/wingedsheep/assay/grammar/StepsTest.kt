@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
+import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
@@ -721,6 +722,44 @@ class StepsTest : StringSpec({
         roundTrips("Whenever ~ attacks, sacrifice ~ at end of combat.")
         // The bare clause and the deferred one are different models, so neither prints the other.
         roundTrips("Sacrifice ~.")
+    }
+    // Similar.
+    "delayed clauses preserve their scheduling semantics" {
+        val endCombat =
+            "Draw a card at end of combat."
+        val nextEndStep =
+            "Draw a card at the beginning of the next end step."
+        val nextUpkeep =
+            "Draw a card at the beginning of the next turn's upkeep."
+
+        val combat = fragment(endCombat).script.spellEffect
+            .shouldBeInstanceOf<CreateDelayedTriggerEffect>()
+        combat.step shouldBe Step.END_COMBAT
+        combat.timing shouldBe DelayedTriggerTiming.CURRENT_TURN_OR_LATER
+
+        val end = fragment(nextEndStep).script.spellEffect
+            .shouldBeInstanceOf<CreateDelayedTriggerEffect>()
+        end.step shouldBe Step.END
+        end.timing shouldBe DelayedTriggerTiming.CURRENT_TURN_OR_LATER
+
+        val upkeep = fragment(nextUpkeep).script.spellEffect
+            .shouldBeInstanceOf<CreateDelayedTriggerEffect>()
+        upkeep.step shouldBe Step.UPKEEP
+        upkeep.timing shouldBe DelayedTriggerTiming.NEXT_TURN
+
+        listOf(endCombat, nextEndStep, nextUpkeep).forEach {
+            roundTrips(it)
+        }
+    }
+
+    // Later in a line "it" is whatever the earlier clause made, so a delayed rider there has no
+    // source pronoun to read. First in a line, "it" is still the source.
+    "a delayed rider after another clause doesn't read it as the source" {
+        Grammar.abilityLine.parseLine(
+            "Create a 1/1 red Goblin creature token. Exile it at the beginning of the next turn's upkeep."
+        ).shouldBeInstanceOf<ParseOutcome.Declined>()
+        fragment("Exile ~ at the beginning of the next end step.").script.spellEffect
+            .shouldBeInstanceOf<CreateDelayedTriggerEffect>()
     }
 
     // "If you do" gates the second clause on the first having happened, not on the choice: an empty

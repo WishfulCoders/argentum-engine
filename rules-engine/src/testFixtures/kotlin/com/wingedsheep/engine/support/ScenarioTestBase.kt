@@ -92,7 +92,12 @@ abstract class ScenarioTestBase : FunSpec() {
         // "at random" effects vary across repeated builds — scenario tests that run a setup N times
         // to observe both branches of a flip (Goblin Psychopath, Grip of Chaos) depend on this. A
         // bare GameState() would reuse seed 0 every build and freeze the outcome.
-        private var state = GameState(rng = GameRng.seeded(System.nanoTime()))
+        //
+        // A module can pin the default instead through the [SCENARIO_RNG_SEED_PROPERTY] system
+        // property: `:ai` does, because `GameState.rng` also seeds the AI's rollouts and hidden-
+        // information determinizations, and an AI decision test must reach the same verdict on
+        // every run. [withRngSeed] still overrides either default per scenario.
+        private var state = GameState(rng = GameRng.seeded(pinnedScenarioRngSeed() ?: System.nanoTime()))
 
         private var player1Id: EntityId? = null
         private var player2Id: EntityId? = null
@@ -315,14 +320,19 @@ abstract class ScenarioTestBase : FunSpec() {
          * [AttachedToComponent] and the host's [AttachmentsComponent] and registers the Aura's
          * static/replacement effects, so its "enchanted permanent ..." abilities apply immediately —
          * the deterministic alternative to casting + resolving the Aura. The attachment owner/
-         * controller is [playerNumber].
+         * controller is [playerNumber]; [isToken] makes the attachment a token.
          */
-        fun withCardAttachedTo(playerNumber: Int, auraName: String, hostName: String): ScenarioBuilder {
+        fun withCardAttachedTo(
+            playerNumber: Int,
+            auraName: String,
+            hostName: String,
+            isToken: Boolean = false,
+        ): ScenarioBuilder {
             val playerId = if (playerNumber == 1) player1Id!! else player2Id!!
             val hostId = findPermanentInBuilder(hostName)
                 ?: error("Host '$hostName' must already be on the battlefield before attaching '$auraName'")
 
-            withCardOnBattlefield(playerNumber, auraName)
+            withCardOnBattlefield(playerNumber, auraName, isToken = isToken)
             val auraId = findPermanentInBuilder(auraName)
                 ?: error("Failed to place aura '$auraName' on the battlefield")
 
@@ -375,6 +385,23 @@ abstract class ScenarioTestBase : FunSpec() {
             val playerId = if (playerNumber == 1) player1Id!! else player2Id!!
             val cardId = createCard(cardName, playerId)
             state = state.addToZone(ZoneKey(playerId, Zone.EXILE), cardId)
+            return this
+        }
+
+        /**
+         * Add a card a player owns to the ante (CR 407). Pair with [playingForAnte] — the ante
+         * only exists in a game played for ante.
+         */
+        fun withCardInAnte(playerNumber: Int, cardName: String): ScenarioBuilder {
+            val playerId = if (playerNumber == 1) player1Id!! else player2Id!!
+            val cardId = createCard(cardName, playerId)
+            state = state.addToZone(ZoneKey(playerId, Zone.ANTE), cardId)
+            return this
+        }
+
+        /** Mark the game as played for ante (CR 407), as the lobby option does. */
+        fun playingForAnte(): ScenarioBuilder {
+            state = state.copy(playingForAnte = true)
             return this
         }
 
@@ -503,6 +530,8 @@ abstract class ScenarioTestBase : FunSpec() {
         private fun createCard(cardName: String, ownerId: EntityId): EntityId {
             val cardDef = cardRegistry.getCard(cardName)
                 ?: error("Card not found in registry: $cardName")
+            // As GameInitializer does: owners order graveyard arrivals only once a card reads it.
+            if (cardDef.readsGraveyardOrder) state = state.copy(preserveGraveyardOrder = true)
 
             val cardId = EntityId.of("card-${entityIdCounter.incrementAndGet()}")
 
@@ -522,6 +551,7 @@ abstract class ScenarioTestBase : FunSpec() {
                 hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
                 hasActivatedAbility = cardDef.hasActivatedAbility,
                 hasCycling = cardDef.hasCycling,
+                hasKicker = cardDef.hasKicker,
                 originalSetCode = cardDef.setCode,
                 hasAdventure = cardDef.isAdventure,
                 isDoubleFaced = cardDef.isDoubleFaced,
@@ -551,6 +581,17 @@ abstract class ScenarioTestBase : FunSpec() {
      * Create a new scenario builder.
      */
     protected fun scenario(): ScenarioBuilder = ScenarioBuilder()
+
+    companion object {
+        /**
+         * System property that pins every [ScenarioBuilder]'s default RNG seed (a `Long`). Unset,
+         * each build draws a fresh seed from the clock. A test module sets it on its `Test` tasks.
+         */
+        const val SCENARIO_RNG_SEED_PROPERTY = "argentum.scenario.rngSeed"
+
+        private fun pinnedScenarioRngSeed(): Long? =
+            System.getProperty(SCENARIO_RNG_SEED_PROPERTY)?.takeIf { it.isNotBlank() }?.toLong()
+    }
 
     /**
      * Represents a test game that can be queried and advanced.
@@ -856,6 +897,23 @@ abstract class ScenarioTestBase : FunSpec() {
         }
 
         /**
+         * Cast a spell for its awaken cost (CR 702.113). [targets] are the spell's own permanent
+         * targets in order, followed by the land to awaken (CR 702.113b).
+         */
+        fun castSpellWithAwaken(playerNumber: Int, spellName: String, targets: List<EntityId>): ExecutionResult {
+            val playerId = if (playerNumber == 1) player1Id else player2Id
+            val cardId = state.getHand(playerId).find { entityId ->
+                state.getEntity(entityId)?.get<CardComponent>()?.name == spellName
+            } ?: error("Card '$spellName' not found in player $playerNumber's hand")
+            return execute(CastSpell(
+                playerId, cardId,
+                targets = targets.map { ChosenTarget.Permanent(it) },
+                useAlternativeCost = true,
+                alternativeCostType = AlternativeCostType.AWAKEN
+            ))
+        }
+
+        /**
          * Cast a spell for its Overload cost (CR 702.96). An overloaded spell has no targets
          * (CR 702.96b), so none are passed.
          */
@@ -1128,7 +1186,7 @@ abstract class ScenarioTestBase : FunSpec() {
             LegalActionEnumerator(
                 services.cardRegistry, services.manaSolver, services.costCalculator,
                 services.predicateEvaluator, services.conditionEvaluator, services.turnManager
-            ) to LegalActionEnricher(services.manaSolver, services.cardRegistry)
+            ) to LegalActionEnricher(services.manaSolver, services.cardRegistry, services.costCalculator)
         }
 
         /**
@@ -1199,6 +1257,20 @@ abstract class ScenarioTestBase : FunSpec() {
         fun sideboardSize(playerNumber: Int): Int {
             val playerId = if (playerNumber == 1) player1Id else player2Id
             return state.getZone(playerId, Zone.SIDEBOARD).size
+        }
+
+        /** Check if a card with the given name, owned by the player, is in the ante (CR 407). */
+        fun isInAnte(playerNumber: Int, cardName: String): Boolean {
+            val playerId = if (playerNumber == 1) player1Id else player2Id
+            return state.getZone(playerId, Zone.ANTE).any { entityId ->
+                state.getEntity(entityId)?.get<CardComponent>()?.name == cardName
+            }
+        }
+
+        /** Number of cards the player owns in the ante. */
+        fun anteSize(playerNumber: Int): Int {
+            val playerId = if (playerNumber == 1) player1Id else player2Id
+            return state.getZone(playerId, Zone.ANTE).size
         }
 
         /**
@@ -1394,6 +1466,9 @@ abstract class ScenarioTestBase : FunSpec() {
                 is YesNoDecision -> answerYesNo(false)
                 is ReorderLibraryDecision -> {
                     submitDecision(OrderedResponse(decision.id, decision.cards))
+                }
+                is OrderTriggersDecision -> {
+                    submitDecision(TriggerOrderResponse(decision.id, decision.triggers.indices.toList()))
                 }
                 is OrderObjectsDecision -> {
                     submitDecision(OrderedResponse(decision.id, decision.objects))

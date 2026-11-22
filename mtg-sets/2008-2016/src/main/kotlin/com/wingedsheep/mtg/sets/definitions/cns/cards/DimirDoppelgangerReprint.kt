@@ -13,7 +13,7 @@ val DimirDoppelgangerReprint = Printing(
     collectorNumber = "186",
     scryfallId = "61c8b201-1e40-4c52-8fe9-b7fa3562062a",
     artist = "Jim Murray",
-    imageUri = "https://cards.scryfall.io/normal/front/6/1/61c8b201-1e40-4c52-8fe9-b7fa3562062a.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/6/1/61c8b201-1e40-4c52-8fe9-b7fa3562062a.jpg?1783939339",
     releaseDate = "2014-06-06",
     rarity = Rarity.RARE,
 )

@@ -1,0 +1,349 @@
+/*
+ * The lobby's frame, in the landing screen's language: glass over the card art, the display serif
+ * for headings, the amber primary action. The rows inside the panels (settings groups, player rows,
+ * set chips) keep their `GameUI.module.css` styles — they are shared with the AI-deck and tournament
+ * settings components — and only their surfaces are restyled there.
+ *
+ * Wide screens get two columns: who is here on the left, what is being played on the right. One
+ * scroll container (the overlay), as before; the action bar is sticky inside it, not a fixed bar.
+ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  color: var(--text-primary);
+  background: #07080d center center / cover no-repeat;
+}
+
+.artTint {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 7, 12, 0.4) 0%, rgba(6, 7, 12, 0.25) 40%, rgba(6, 7, 12, 0.6) 100%);
+}
+
+.topBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 24px;
+  box-sizing: border-box;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f1f3f9;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
+
+.topBarEnd { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.page {
+  position: relative;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 4px 24px 0;
+  box-sizing: border-box;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.layout[data-two-col='true'] {
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(10, 12, 20, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f4f5f9;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #b4bccd;
+}
+
+.headerEmblem { flex: none; width: 52px; height: 52px; }
+
+/* ── Invite ────────────────────────────────────────────────────────────── */
+
+.invite {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.inviteButton {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 12, 20, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.inviteButton:hover { border-color: rgba(242, 180, 92, 0.5); }
+.inviteButton[data-copied='true'] { border-color: rgba(95, 208, 184, 0.6); background: rgba(16, 40, 36, 0.66); }
+
+.inviteText { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.inviteLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #8f98ac;
+}
+
+.inviteCode {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: #eef0f6;
+  word-break: break-all;
+  user-select: all;
+}
+
+.inviteAction {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #eef0f6;
+}
+.inviteButton[data-copied='true'] .inviteAction { background: rgba(95, 208, 184, 0.25); color: #c9f3e9; }
+
+/* The QR trigger is part of the invite: same height, glass and radius as the code beside it. */
+.qrButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 12, 20, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #b4bccd;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.qrButton:hover { border-color: rgba(242, 180, 92, 0.5); color: #eef0f6; }
+.qrButton:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* ── Action bar ────────────────────────────────────────────────────────── */
+
+.actionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: 16px;
+  padding: 12px 0 16px;
+}
+
+.actionBarInner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(10, 12, 20, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+
+.leave {
+  flex: none;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: #c9cfdc;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.leave:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+.blockReason {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #f2c97a;
+  text-align: right;
+}
+
+.start {
+  flex: 0 1 320px;
+  min-height: 52px;
+  margin-left: auto;
+  padding: 0 24px;
+  border-radius: 13px;
+  border: none;
+  background: #f2b45c;
+  color: #1d1405;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
+  transition: background 0.12s;
+}
+.start:hover:not(:disabled) { background: #f7c67f; }
+.start:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: #8f98ac;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.blockReason + .start { margin-left: 0; }
+
+.leave:focus-visible,
+.start:focus-visible,
+.inviteButton:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* ── Narrow screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 980px) {
+  .layout[data-two-col='true'] {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 680px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topBar { padding: 10px 12px 6px; }
+  .page { padding: 2px 10px 0; }
+  .header { padding: 14px 16px; }
+  .title { font-size: 23px; }
+  .actionBarInner { flex-wrap: wrap; }
+  .blockReason { order: -1; flex: 1 0 100%; text-align: left; }
+  .start { flex: 1 1 auto; }
+}
+
+/* ── Fit the viewport on a desktop ─────────────────────────────────────────
+ * Wide enough for two columns and tall enough to hold a useful slice of each: the page stops
+ * scrolling as a whole, each column scrolls on its own if it must, and the action bar is always on
+ * screen below them. Below either bound it falls back to one scrolling page with a sticky bar. */
+@media (min-width: 981px) and (min-height: 560px) {
+  .overlay {
+    overflow: hidden;
+  }
+
+  .page {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .column {
+    max-height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    /* Room for focus rings and the panels' shadows inside the scroll box. */
+    padding: 2px;
+    margin: -2px;
+  }
+
+  .actionBar {
+    position: static;
+    flex: none;
+    margin-top: 10px;
+    padding: 0 0 14px;
+  }
+}
+
+/* A phone on its side: keep the sticky action bar to one slim row. */
+@media (max-height: 500px) and (max-width: 980px) {
+  .topBar { padding-top: 6px; padding-bottom: 4px; }
+  .actionBar { padding: 6px 0 8px; margin-top: 10px; }
+  .actionBarInner { padding: 6px; flex-wrap: nowrap; }
+  .leave { min-height: 40px; }
+  .start { min-height: 42px; font-size: 15px; }
+  .blockReason { order: 0; flex: 1 1 auto; text-align: right; font-size: 12px; }
+}

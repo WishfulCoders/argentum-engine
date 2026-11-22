@@ -3,6 +3,7 @@ package com.wingedsheep.engine.handlers
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CastRecordComponent
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -32,6 +33,22 @@ object ManaSpentReader {
             return intArrayOf(it.whiteSpent, it.blueSpent, it.blackSpent, it.redSpent, it.greenSpent)
         }
         return IntArray(5)
+    }
+
+    /**
+     * How much mana of [color] was spent to cast [entityId], across the whole cost (generic and
+     * `{X}` included). Backs `DynamicAmount.ManaOfColorSpent`.
+     */
+    fun colorSpent(state: GameState, entityId: EntityId, color: Color): Int =
+        coloredBuckets(state, entityId)[color.ordinal]
+
+    /** [colorSpent] read off a frozen [snapshot] (a cast trigger's own payment record). */
+    fun colorSpent(snapshot: CastRecordComponent, color: Color): Int = when (color) {
+        Color.WHITE -> snapshot.whiteSpent
+        Color.BLUE -> snapshot.blueSpent
+        Color.BLACK -> snapshot.blackSpent
+        Color.RED -> snapshot.redSpent
+        Color.GREEN -> snapshot.greenSpent
     }
 
     /** Colorless mana actually spent, including payment of generic costs. */
@@ -64,12 +81,13 @@ object ManaSpentReader {
             return it.manaSpentWhite + it.manaSpentBlue + it.manaSpentBlack +
                 it.manaSpentRed + it.manaSpentGreen + it.manaSpentColorless
         }
-        container.get<CastRecordComponent>()?.let {
-            return it.whiteSpent + it.blueSpent + it.blackSpent +
-                it.redSpent + it.greenSpent + it.colorlessSpent
-        }
-        return 0
+        return container.get<CastRecordComponent>()?.let(::totalSpent) ?: 0
     }
+
+    /** [totalSpent] read off a frozen [snapshot] (a cast trigger's own payment record). */
+    fun totalSpent(snapshot: CastRecordComponent): Int =
+        snapshot.whiteSpent + snapshot.blueSpent + snapshot.blackSpent +
+            snapshot.redSpent + snapshot.greenSpent + snapshot.colorlessSpent
 
     /**
      * The number of distinct *colors* of mana spent to cast [entityId] (0–5). Colorless is not
@@ -101,6 +119,14 @@ object ManaSpentReader {
         return container.get<SpellOnStackComponent>()?.manaSpentSnow
             ?: container.get<CastRecordComponent>()?.snowSpent ?: 0
     }
+
+    /**
+     * The colors of the snow mana spent to cast [entityId] while it is a spell on the stack (empty
+     * once it has left it, or if no colored snow mana was spent). Backs
+     * `SpellCastPredicate.PaidWithSnowManaOfItsColors`, a cast-trigger read.
+     */
+    fun snowColorsSpent(state: GameState, entityId: EntityId): Set<Color> =
+        state.getEntity(entityId)?.get<SpellOnStackComponent>()?.manaSpentSnowColors ?: emptySet()
 
     /**
      * How many mana units produced by a source of [cardType] were spent to cast [entityId] — same

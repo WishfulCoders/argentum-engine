@@ -28,6 +28,7 @@ import com.wingedsheep.sdk.scripting.AbilityIdentity
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.legalactions.OwnStackStop
 import io.mockk.every
 import io.mockk.mockk
 
@@ -36,6 +37,7 @@ import io.mockk.mockk
  */
 enum class StackItemType {
     ABILITY,
+    TRIGGERED_ABILITY,
     PERMANENT_SPELL,
     AURA_SPELL,
     INSTANT_SORCERY,
@@ -77,7 +79,8 @@ class AutoPassManagerTest : FunSpec({
         defendingPlayerId: EntityId? = null,
         hasAttackers: Boolean = false,
         stackAbilityIdentity: com.wingedsheep.sdk.scripting.AbilityIdentity? = null,
-        priorityPlayerYieldsToStack: Boolean = false
+        priorityPlayerYieldsToStack: Boolean = false,
+        emptyLibraries: Boolean = false,
     ): GameState {
         val state = mockk<GameState>(relaxed = true)
         // Persistent-yield lookup (backlog §C): default off so existing cases are unaffected.
@@ -102,6 +105,8 @@ class AutoPassManagerTest : FunSpec({
         every { state.sharedTurnTeam(player1) } returns listOf(player1)
         every { state.sharedTurnTeam(player2) } returns listOf(player2)
         every { state.isActiveSideGone } returns false
+        // A relaxed mock's library would be empty — the decking-draw window. Give both a card.
+        every { state.getLibrary(any()) } returns if (emptyLibraries) emptyList() else listOf(EntityId.generate())
 
         // Mock BlockersDeclaredThisCombatComponent on defender if blockers have been declared
         if (blockersHaveBeenDeclared) {
@@ -142,6 +147,18 @@ class AutoPassManagerTest : FunSpec({
                     )
                     every { stackEntity.get<com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent>() } returns abilityComponent
                     every { stackEntity.get<com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent>() } returns null
+                    every { stackEntity.get<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>() } returns null
+                }
+                StackItemType.TRIGGERED_ABILITY -> {
+                    val triggerComponent = com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent(
+                        sourceId = EntityId.generate(),
+                        sourceName = "Jaws of Defeat",
+                        controllerId = controllerId,
+                        effect = mockk(relaxed = true),
+                        description = "Target opponent loses life"
+                    )
+                    every { stackEntity.get<com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent>() } returns null
+                    every { stackEntity.get<com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent>() } returns triggerComponent
                     every { stackEntity.get<com.wingedsheep.engine.state.components.stack.SpellOnStackComponent>() } returns null
                 }
                 StackItemType.PERMANENT_SPELL -> {
@@ -271,6 +288,13 @@ class AutoPassManagerTest : FunSpec({
         actionType = "CastFaceDown",
         description = "Cast Krosan Cloudscraper face-down",
         action = CastSpell(playerId, EntityId.generate(), castFaceDown = true),
+        isAffordable = affordable
+    )
+
+    fun pumpAbilityAction(playerId: EntityId, affordable: Boolean = true) = LegalActionInfo(
+        actionType = "ActivateAbility",
+        description = "{2}: +1/+0 until end of turn",
+        action = ActivateAbility(playerId, EntityId.generate(), AbilityId("pump")),
         isAffordable = affordable
     )
 
@@ -504,6 +528,27 @@ class AutoPassManagerTest : FunSpec({
             autoPassManager.shouldAutoPass(state, player2, actions) shouldBe true
         }
 
+        test("STOP during opponent's declare attackers when player can pay for an activated ability") {
+            val state = createMockState(player2, player1, Step.DECLARE_ATTACKERS, hasAttackers = true)
+            val actions = listOf(
+                passPriorityAction(player2),
+                pumpAbilityAction(player2)
+            )
+
+            autoPassManager.shouldAutoPass(state, player2, actions) shouldBe false
+        }
+
+        test("Auto-pass during opponent's declare attackers when the only activated ability is unaffordable") {
+            // "{2}: +1/+0" with no untapped mana is offered greyed out — nothing to stop for (#3672).
+            val state = createMockState(player2, player1, Step.DECLARE_ATTACKERS, hasAttackers = true)
+            val actions = listOf(
+                passPriorityAction(player2),
+                pumpAbilityAction(player2, affordable = false)
+            )
+
+            autoPassManager.shouldAutoPass(state, player2, actions) shouldBe true
+        }
+
         test("Auto-pass during opponent's declare attackers with no instant-speed responses") {
             val state = createMockState(player2, player1, Step.DECLARE_ATTACKERS, hasAttackers = true)
             val actions = listOf(
@@ -522,6 +567,13 @@ class AutoPassManagerTest : FunSpec({
             )
 
             autoPassManager.shouldAutoPass(state, player2, actions) shouldBe true
+        }
+
+        test("Stops mode: STOP during opponent's declare attackers when no attackers, even with nothing to do") {
+            val state = createMockState(player2, player1, Step.DECLARE_ATTACKERS, hasAttackers = false)
+            val actions = listOf(passPriorityAction(player2))
+
+            autoPassManager.shouldAutoPass(state, player2, actions, stopsMode = true) shouldBe false
         }
 
         test("STOP during declare blockers when instants available even without blockers") {
@@ -638,6 +690,19 @@ class AutoPassManagerTest : FunSpec({
             autoPassManager.shouldAutoPass(state, player1, actions) shouldBe true
         }
 
+        test("STOP during my upkeep with an empty library when holding an instant") {
+            // The last window before the draw that loses (CR 704.5b) — a Paradox Shaper activation
+            // there is what saves the game.
+            val state = createMockState(player1, player1, Step.UPKEEP, emptyLibraries = true)
+            val actions = listOf(
+                passPriorityAction(player1),
+                instantSpellAction(player1)
+            )
+
+            autoPassManager.shouldAutoPass(state, player1, actions) shouldBe false
+            autoPassManager.shouldAutoPass(state, player1, listOf(passPriorityAction(player1))) shouldBe true
+        }
+
         test("Auto-pass during my draw step even with instants") {
             val state = createMockState(player1, player1, Step.DRAW)
             val actions = listOf(
@@ -667,6 +732,22 @@ class AutoPassManagerTest : FunSpec({
             )
 
             autoPassManager.shouldAutoPass(state, player1, actions) shouldBe true
+        }
+
+        test("Stops mode: STOP during my declare attackers when no attackers were declared") {
+            // Nothing could attack, so the engine declared no attackers on entering the step
+            val state = createMockState(player1, player1, Step.DECLARE_ATTACKERS)
+            val actions = listOf(passPriorityAction(player1))
+
+            autoPassManager.shouldAutoPass(state, player1, actions) shouldBe true
+            autoPassManager.shouldAutoPass(state, player1, actions, stopsMode = true) shouldBe false
+        }
+
+        test("Stops mode: auto-pass my declare attackers once creatures attack") {
+            val state = createMockState(player1, player1, Step.DECLARE_ATTACKERS, hasAttackers = true)
+            val actions = listOf(passPriorityAction(player1))
+
+            autoPassManager.shouldAutoPass(state, player1, actions, stopsMode = true) shouldBe true
         }
 
         test("STOP during my declare blockers when I have combat tricks") {
@@ -855,6 +936,56 @@ class AutoPassManagerTest : FunSpec({
         }
     }
 
+    context("Rule 4: keeping priority over your own stack objects (Preferences)") {
+        fun ownTriggerOnStack() = createMockState(
+            player1, player1, Step.PRECOMBAT_MAIN,
+            stackEmpty = false, stackControllerId = player1, stackItemType = StackItemType.TRIGGERED_ABILITY
+        )
+
+        test("own trigger still auto-passes by default, even holding a response") {
+            val actions = listOf(passPriorityAction(player1), instantSpellAction(player1))
+            autoPassManager.shouldAutoPass(ownTriggerOnStack(), player1, actions) shouldBe true
+        }
+
+        test("STOP on own trigger when the player keeps priority over triggers and can respond") {
+            // Jaws of Defeat's trigger waiting, Overkill in hand: the window to shrink the creature.
+            val actions = listOf(passPriorityAction(player1), instantSpellAction(player1))
+            autoPassManager.shouldAutoPass(
+                ownTriggerOnStack(), player1, actions,
+                ownStackStops = setOf(OwnStackStop.TRIGGERED_ABILITIES)
+            ) shouldBe false
+        }
+
+        test("own trigger auto-passes when the player keeps priority over triggers but has no response") {
+            val actions = listOf(passPriorityAction(player1), manaAbilityAction(player1))
+            autoPassManager.shouldAutoPass(
+                ownTriggerOnStack(), player1, actions,
+                ownStackStops = setOf(OwnStackStop.TRIGGERED_ABILITIES)
+            ) shouldBe true
+        }
+
+        test("each kind is its own setting — a triggers stop does not hold an own spell or activated ability") {
+            val actions = listOf(passPriorityAction(player1), instantSpellAction(player1))
+            val ownSpell = createMockState(
+                player1, player1, Step.PRECOMBAT_MAIN,
+                stackEmpty = false, stackControllerId = player1, stackItemType = StackItemType.INSTANT_SORCERY
+            )
+            val ownAbility = createMockState(
+                player1, player1, Step.PRECOMBAT_MAIN,
+                stackEmpty = false, stackControllerId = player1, stackItemType = StackItemType.ABILITY
+            )
+            val triggersOnly = setOf(OwnStackStop.TRIGGERED_ABILITIES)
+            autoPassManager.shouldAutoPass(ownSpell, player1, actions, ownStackStops = triggersOnly) shouldBe true
+            autoPassManager.shouldAutoPass(ownAbility, player1, actions, ownStackStops = triggersOnly) shouldBe true
+            autoPassManager.shouldAutoPass(
+                ownSpell, player1, actions, ownStackStops = setOf(OwnStackStop.SPELLS)
+            ) shouldBe false
+            autoPassManager.shouldAutoPass(
+                ownAbility, player1, actions, ownStackStops = setOf(OwnStackStop.ACTIVATED_ABILITIES)
+            ) shouldBe false
+        }
+    }
+
     context("Edge Cases") {
         test("Never auto-pass when there's a pending decision") {
             val state = createMockState(player1, player1, Step.UPKEEP, hasPendingDecision = true)
@@ -1023,7 +1154,7 @@ class AutoPassManagerTest : FunSpec({
         test("from my end step the next turn is an opponent's, not mine") {
             // Stopping in player2's turn: the turn after mine is never mine in a pod.
             val state = podState(active = player1, priority = player1, step = Step.END)
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To opponent's turn"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To Opponent's Turn"
         }
 
         test("an opponent's end step leading into another opponent's turn reads 'Pass'") {
@@ -1032,14 +1163,14 @@ class AutoPassManagerTest : FunSpec({
             autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Pass"
         }
 
-        test("the seat before mine passing into my turn reads 'To my turn'") {
+        test("the seat before mine passing into my turn reads 'To My Turn'") {
             val state = podState(active = player3, priority = player1, step = Step.END)
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To my turn"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To My Turn"
         }
 
         test("without stops on opponents' turns the lookahead walks every seat back to my main") {
             val state = podState(active = player1, priority = player1, step = Step.END)
-            autoPassManager.getNextStopPoint(state, player1, false) shouldBe "Pass to Main"
+            autoPassManager.getNextStopPoint(state, player1, false) shouldBe "To Main 1"
         }
 
         test("a departed player's turn skips its main phase but keeps its end step (CR 800.4j)") {
@@ -1048,7 +1179,7 @@ class AutoPassManagerTest : FunSpec({
             autoPassManager.getNextStopPoint(state, player2, true) shouldBe "Pass"
             // From that end step the next turn is player2's own.
             val atEnd = podState(active = player1, priority = player2, step = Step.END, gone = player1)
-            autoPassManager.getNextStopPoint(atEnd, player2, true) shouldBe "To my turn"
+            autoPassManager.getNextStopPoint(atEnd, player2, true) shouldBe "To My Turn"
         }
 
         test("a departed player's main phase is auto-passed even with responses (CR 800.4j)") {
@@ -1065,10 +1196,10 @@ class AutoPassManagerTest : FunSpec({
             autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Resolve"
         }
 
-        test("returns 'Pass to Main 2' from declare attackers on my turn") {
+        test("returns 'To Main 2' from declare attackers on my turn") {
             // On my turn at declare attackers with no attackers, next stop is postcombat main
             val state = createMockState(player1, player1, Step.DECLARE_ATTACKERS)
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Pass to Main 2"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To Main 2"
         }
 
         test("returns 'End Turn' from postcombat main on my turn") {
@@ -1076,16 +1207,16 @@ class AutoPassManagerTest : FunSpec({
             autoPassManager.getNextStopPoint(state, player1, true) shouldBe "End Turn"
         }
 
-        test("returns 'To my turn' from opponent's end step with meaningful actions") {
+        test("returns 'To My Turn' from opponent's end step with meaningful actions") {
             // We already stopped at end step (due to having responses), so next stop is my turn
             val state = createMockState(player1, player2, Step.END)
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To my turn"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To My Turn"
         }
 
-        test("returns 'Pass to Main' from my end step without meaningful actions") {
+        test("returns 'To Main 1' from my end step without meaningful actions") {
             // Without meaningful actions, skips through opponent's entire turn back to my main phase
             val state = createMockState(player1, player1, Step.END)
-            autoPassManager.getNextStopPoint(state, player1, false) shouldBe "Pass to Main"
+            autoPassManager.getNextStopPoint(state, player1, false) shouldBe "To Main 1"
         }
 
         test("returns 'Pass' from declare attackers on opponent's turn with no attackers and meaningful actions") {
@@ -1151,26 +1282,35 @@ class AutoPassManagerTest : FunSpec({
             return state
         }
 
-        test("at DECLARE_BLOCKERS with attackers and no first strike returns 'Resolve combat damage'") {
+        test("at DECLARE_ATTACKERS on my turn with attackers returns 'To Blockers'") {
+            val attacker = EntityId.generate()
+            val state = createCombatState(
+                step = Step.DECLARE_ATTACKERS,
+                attackerIds = listOf(attacker)
+            )
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To Blockers"
+        }
+
+        test("at DECLARE_BLOCKERS with attackers and no first strike returns 'To Damage'") {
             val attacker = EntityId.generate()
             val state = createCombatState(
                 step = Step.DECLARE_BLOCKERS,
                 attackerIds = listOf(attacker)
             )
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Resolve combat damage"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To Damage"
         }
 
-        test("at DECLARE_BLOCKERS with first strike attacker returns 'Resolve first strike damage'") {
+        test("at DECLARE_BLOCKERS with first strike attacker returns 'To First Strike'") {
             val attacker = EntityId.generate()
             val state = createCombatState(
                 step = Step.DECLARE_BLOCKERS,
                 attackerIds = listOf(attacker),
                 firstStrikeEntityIds = setOf(attacker)
             )
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Resolve first strike damage"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To First Strike"
         }
 
-        test("at DECLARE_BLOCKERS with double strike blocker returns 'Resolve first strike damage'") {
+        test("at DECLARE_BLOCKERS with double strike blocker returns 'To First Strike'") {
             val attacker = EntityId.generate()
             val blocker = EntityId.generate()
             val state = createCombatState(
@@ -1179,23 +1319,23 @@ class AutoPassManagerTest : FunSpec({
                 blockerIds = listOf(blocker),
                 doubleStrikeEntityIds = setOf(blocker)
             )
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Resolve first strike damage"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To First Strike"
         }
 
-        test("at FIRST_STRIKE_COMBAT_DAMAGE with attackers returns 'Resolve combat damage'") {
+        test("at FIRST_STRIKE_COMBAT_DAMAGE with attackers returns 'To Damage'") {
             val attacker = EntityId.generate()
             val state = createCombatState(
                 step = Step.FIRST_STRIKE_COMBAT_DAMAGE,
                 attackerIds = listOf(attacker)
             )
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Resolve combat damage"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To Damage"
         }
 
         test("at DECLARE_BLOCKERS with no attackers falls through to normal logic") {
             // No attackers on battlefield - should not return combat label
             val state = createMockState(player1, player1, Step.DECLARE_BLOCKERS)
             val result = autoPassManager.getNextStopPoint(state, player1, true)
-            result shouldBe "Pass to Main 2"
+            result shouldBe "To Main 2"
         }
 
         test("at DECLARE_BLOCKERS with first strike detected via projectedState") {
@@ -1206,7 +1346,7 @@ class AutoPassManagerTest : FunSpec({
                 firstStrikeEntityIds = setOf(attacker)
             )
             // projectedState always available now, so first strike is correctly detected
-            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "Resolve first strike damage"
+            autoPassManager.getNextStopPoint(state, player1, true) shouldBe "To First Strike"
         }
     }
 
@@ -1360,11 +1500,11 @@ class AutoPassManagerTest : FunSpec({
             // On my turn at end step, normally passes to next main phase
             val state = createMockState(player1, player1, Step.END)
             // Without override and no meaningful actions → skips to next main
-            autoPassManager.getNextStopPoint(state, player1, false) shouldBe "Pass to Main"
+            autoPassManager.getNextStopPoint(state, player1, false) shouldBe "To Main 1"
             // With my-turn override on END from COMBAT_DAMAGE → POSTCOMBAT_MAIN stops first
             // (main phases always stop on my turn)
             val combatState = createMockState(player1, player1, Step.COMBAT_DAMAGE)
-            autoPassManager.getNextStopPoint(combatState, player1, false, myTurnStops = setOf(Step.END)) shouldBe "Pass to Main 2"
+            autoPassManager.getNextStopPoint(combatState, player1, false, myTurnStops = setOf(Step.END)) shouldBe "To Main 2"
         }
 
         test("Opponent-turn stop override in getNextStopPoint") {

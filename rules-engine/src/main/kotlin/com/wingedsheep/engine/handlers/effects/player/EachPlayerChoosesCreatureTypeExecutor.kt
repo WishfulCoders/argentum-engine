@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  *
  * Each player (in APNAP order) chooses a creature type. After all players have chosen,
  * the accumulated chosen types are stored in storedStringLists[storeAs] on the
- * EffectContinuation below on the stack.
+ * EffectProgram below on the stack.
  */
 class EachPlayerChoosesCreatureTypeExecutor : EffectExecutor<EachPlayerChoosesCreatureTypeEffect> {
 

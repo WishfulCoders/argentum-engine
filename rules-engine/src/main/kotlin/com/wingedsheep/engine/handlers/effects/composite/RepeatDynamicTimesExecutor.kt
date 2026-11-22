@@ -15,7 +15,7 @@ import kotlin.reflect.KClass
  *
  * Evaluates the dynamic amount to get count N, then creates a [CompositeEffect]
  * with N copies of the body and delegates execution. This leverages the existing
- * composite effect infrastructure (including [com.wingedsheep.engine.core.EffectContinuation]
+ * composite effect infrastructure (including [com.wingedsheep.engine.core.EffectProgram]
  * for pause/resume) without needing a dedicated continuation type.
  */
 class RepeatDynamicTimesExecutor(

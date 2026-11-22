@@ -1,8 +1,11 @@
 package com.wingedsheep.sdk.scripting
 
+import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.Scope
 import com.wingedsheep.sdk.scripting.text.TextReplacer
+import com.wingedsheep.sdk.scripting.util.pluralNounPhrase
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -92,6 +95,23 @@ data class CantBeBlockedByFewerThan(
 }
 
 /**
+ * This creature can't be blocked unless **every** creature the defending player controls blocks
+ * it (Tromokratis). Like [CantBeBlockedByFewerThan] it may be left unblocked and is enforced over
+ * the whole block declaration: once anything blocks it, each creature the defending player controls
+ * — tapped or otherwise unable to block included — must be among its blockers, so a single creature
+ * that can't or doesn't block it makes it unblockable.
+ *
+ * @property filter What this ability applies to (default: the source creature).
+ */
+@SerialName("CantBeBlockedUnlessAllDefendersBlock")
+@Serializable
+data class CantBeBlockedUnlessAllDefendersBlock(
+    val filter: GroupFilter = GroupFilter.source()
+) : StaticAbility {
+    override val description: String = "can't be blocked unless all creatures defending player controls block it"
+}
+
+/**
  * This creature can only block creatures matching a filter.
  * Generalized "can block only X creatures" — used for the Spirit token from Realm of Koh
  * ("can't block or be blocked by non-Spirit creatures") and any analogous restriction.
@@ -112,6 +132,47 @@ data class CanOnlyBlockCreaturesWith(
     val filter: GroupFilter = GroupFilter.source()
 ) : StaticAbility {
     override val description: String = "can block only ${blockerFilter.description}"
+}
+
+/**
+ * Creatures matching [filter] can block attackers matching [attackers] as though they had reach —
+ * "This creature can block Dragons as though it had reach" (Dragon Hunter):
+ * `CanBlockAsThoughHadReach(GameObjectFilter.Creature.withSubtype(Subtype.DRAGON))`.
+ *
+ * A rule permission scoped by the *attacker*, so it is not [GrantKeyword] of reach (which reaches
+ * every flyer) and not [CanOnlyBlockCreaturesWith] (a restriction on the blocker, the opposite
+ * polarity). It answers exactly the reach question of CR 702.9b / 702.17b — a flying attacker
+ * matching [attackers] can be blocked by a covered creature — and nothing else: the creature doesn't
+ * gain reach (it doesn't count for "creatures with reach"), it still can't block a creature that
+ * "can't be blocked except by creatures with flying" (reach doesn't satisfy that — Treetop Rangers'
+ * ruling), and every other blocking restriction still applies.
+ *
+ * Read at block declaration through `CombatStaticScan` by `BlockAsThoughReach` (engine
+ * `FlyingRule` and the AI's `CombatMath`), never through projection. [attackers] is matched with
+ * the holder as predicate source, so `youControl()` means the holder's controller; [filter] picks
+ * the covered blockers (default: this creature).
+ */
+@SerialName("CanBlockAsThoughHadReach")
+@Serializable
+data class CanBlockAsThoughHadReach(
+    val attackers: GameObjectFilter,
+    val filter: GroupFilter = GroupFilter.source()
+) : StaticAbility {
+    override val description: String =
+        if (filter.scope is Scope.Self) {
+            "can block ${pluralNounPhrase(attackers.description)} as though it had reach"
+        } else {
+            "${pluralNounPhrase(filter.description).replaceFirstChar { it.uppercase() }} can block " +
+                "${pluralNounPhrase(attackers.description)} as though they had reach"
+        }
+
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newAttackers = attackers.applyTextReplacement(replacer)
+        val newFilter = filter.applyTextReplacement(replacer)
+        return if (newAttackers !== attackers || newFilter !== filter) {
+            copy(attackers = newAttackers, filter = newFilter)
+        } else this
+    }
 }
 
 
@@ -189,8 +250,9 @@ data class CantBeBlockedByMoreThan(
  *   [maxValue] ("power **or** toughness"). Only [EntityNumericProperty.Power] and
  *   [EntityNumericProperty.Toughness] are meaningful — no other property is settled in the layers.
  * @property filter Whose creatures it applies to. Defaults to the ability's controller's creatures
- *   (a lord); use [GroupFilter.source] for a creature that only grants it to itself. [description]
- *   renders those two printed shapes; a third filter would need a wording branch here.
+ *   (a lord); use [GroupFilter.source] for a creature that only grants it to itself, or
+ *   [GroupFilter.attachedCreature] for an Equipment (Thieves' Tools). [description] renders those
+ *   three printed shapes; another filter would need a wording branch here.
  */
 @SerialName("CantBeBlockedWhilePropertyAtMost")
 @Serializable
@@ -208,10 +270,12 @@ data class CantBeBlockedWhilePropertyAtMost(
         ).joinToString(" or ")
 
     override val description: String =
-        if (filter.scope is Scope.Self)
-            "This creature can't be blocked if its $propertyDescription is $maxValue or less"
-        else
-            "Creatures you control with $propertyDescription $maxValue or less can't be blocked"
+        when (filter.scope) {
+            is Scope.Self -> "This creature can't be blocked if its $propertyDescription is $maxValue or less"
+            is Scope.AttachedTo ->
+                "Equipped creature can't be blocked as long as its $propertyDescription is $maxValue or less"
+            else -> "Creatures you control with $propertyDescription $maxValue or less can't be blocked"
+        }
 }
 
 /**
@@ -367,5 +431,72 @@ data class CanBlockAsThoughUntapped(
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
         val newFilter = filter.applyTextReplacement(replacer)
         return if (newFilter !== filter) copy(filter = newFilter) else this
+    }
+}
+
+/**
+ * Creatures matching [filter] can be blocked as though they didn't have [landwalks] — the landwalk
+ * evasion of CR 702.14 is ignored for them, and nothing else about the keywords changes.
+ *
+ *  - Battlefield scope (the default) — "Creatures with swampwalk can be blocked as though they
+ *    didn't have swampwalk." (Quagmire, Ur-Drago): `SuppressLandwalkForGroup(Keyword.SWAMPWALK)`.
+ *    "Creatures with swampwalk" is implied by the keyword, so the filter stays at all creatures.
+ *    The group filter is matched against the attacker with the permanent carrying this ability as
+ *    predicate source, so `youControl()` means that permanent's controller.
+ *  - Self / attached scopes — "This creature can be blocked as though it didn't have <X>walk."
+ *    `GroupFilter.source()` is also the shape to hand `Effects.GrantStaticAbility` for "target
+ *    creature can be blocked as though it didn't have <X>walk this turn".
+ *
+ * One printed sentence is one instance: Lord Magnus's two sentences are two instances, while a
+ * single sentence naming several landwalks takes them all in [landwalks].
+ *
+ * The creature still *has* the keyword: it still counts for "creatures with swampwalk" and can
+ * still be granted or lose it. Only the block-legality check changes, so it's read at block
+ * declaration by `LandwalkSuppression`, never through projection. A text change (Magical Hack)
+ * rewrites the land type a basic landwalk names, the way it rewrites the keyword itself.
+ *
+ * Closest neighbours: [SuppressHexproofForGroup] suppresses a keyword for *targeting*, and
+ * [CanBlockAsThoughUntapped] lifts one blocking rule for the *blocker*; neither reads an attacker's
+ * evasion keyword.
+ *
+ * @property landwalks Landwalk keywords (members of [Keyword.LANDWALK]) whose evasion is ignored.
+ * @property filter Which attacking creatures lose the evasion (default: all creatures).
+ */
+@SerialName("SuppressLandwalkForGroup")
+@Serializable
+data class SuppressLandwalkForGroup(
+    val landwalks: Set<Keyword>,
+    val filter: GroupFilter = GroupFilter.AllCreatures
+) : StaticAbility {
+    constructor(landwalk: Keyword, filter: GroupFilter = GroupFilter.AllCreatures) : this(setOf(landwalk), filter)
+
+    init {
+        require(landwalks.isNotEmpty() && landwalks.all { it in Keyword.LANDWALK }) {
+            "SuppressLandwalkForGroup needs landwalk keywords, got $landwalks"
+        }
+    }
+
+    override val description: String = run {
+        val walks = landwalks.joinToString(" or ") { it.displayName.lowercase() }
+        when (filter.scope) {
+            is Scope.Self -> "can be blocked as though it didn't have $walks"
+            is Scope.AttachedTo -> "Enchanted creature can be blocked as though it didn't have $walks"
+            else -> if (filter == GroupFilter.AllCreatures) {
+                "Creatures with $walks can be blocked as though they didn't have $walks"
+            } else {
+                "${filter.description.replaceFirstChar { it.uppercase() }} can be blocked as though they didn't have $walks"
+            }
+        }
+    }
+
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newFilter = filter.applyTextReplacement(replacer)
+        val newLandwalks = landwalks.mapTo(LinkedHashSet()) { walk ->
+            val landType = Subtype.ALL_BASIC_LAND_TYPES.firstOrNull { "${it.uppercase()}WALK" == walk.name }
+                ?: return@mapTo walk
+            Keyword.entries.firstOrNull { it.name == "${replacer.replaceCreatureType(landType).uppercase()}WALK" } ?: walk
+        }
+        return if (newFilter === filter && newLandwalks == landwalks) this
+        else copy(landwalks = newLandwalks, filter = newFilter)
     }
 }

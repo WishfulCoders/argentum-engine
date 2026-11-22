@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import kotlinx.serialization.SerialName
@@ -34,7 +35,60 @@ data class GrantTriggeredAbility(
 }
 
 /**
- * Grants an activated ability to a filtered set of permanents.
+ * Grants a static ability to a filtered set of permanents — "Enchanted creature has
+ * 'You have no maximum hand size'" (Nerd Rage).
+ *
+ * The continuous-grant sibling of [GrantTriggeredAbility] / [GrantActivatedAbility] (whose
+ * fields are typed to their own ability families, so neither can carry a static) and of the
+ * one-shot `GrantStaticAbilityEffect` (a resolved "gains ... until end of turn", not a
+ * characteristic that lasts while the granter is in play). The holder gains [ability] in
+ * Layer 6 (CR 613.1f), so the grant follows the usual ability rules: it ends when the granter
+ * leaves or stops matching, and a holder that loses all abilities loses it too. A
+ * player-facing ability such as "You have no maximum hand size" then applies to the holder's
+ * controller — the "you" of an ability belongs to whoever controls the object that has it.
+ *
+ * Two kinds of [ability] take effect, and the engine fails loudly on any other:
+ * - a [ProjectedStaticAbility], whose point-of-use read consults the holder's projected static
+ *   abilities ("You have no maximum hand size");
+ * - an ability that lowers to a continuous effect (`ModifyStats`, `GrantKeyword`, a
+ *   [CompositeStaticAbility] of them, ...). The holder then *generates* that effect exactly as if
+ *   it were printed on it: sourced from the holder, its filters resolved relative to the holder,
+ *   stopped when the holder loses its abilities, and also stopped when the granter does or the
+ *   grant's condition fails. A Rune's "As long as enchanted permanent is an Equipment, it has
+ *   'Equipped creature gets +1/+1 and has trample'" is
+ *   `ConditionalStaticAbility(GrantStaticAbility(CompositeStaticAbility(ModifyStats(1, 1),
+ *   GrantKeyword(TRAMPLE))), Conditions.EnchantedPermanentMatches(Equipment))` — the default
+ *   attached scope makes the Equipment the holder, and the inner statics' own default attached
+ *   scope is then read from the Equipment.
+ *
+ * @property ability The static ability to grant.
+ * @property filter The permanents that gain the ability, relative to the granting permanent.
+ */
+@SerialName("GrantStaticAbility")
+@Serializable
+data class GrantStaticAbility(
+    val ability: StaticAbility,
+    val filter: GroupFilter = GroupFilter.attachedCreature()
+) : StaticAbility {
+    override val description: String = "${filter.description} have \"${ability.description}\""
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newFilter = filter.applyTextReplacement(replacer)
+        val newAbility = ability.applyTextReplacement(replacer)
+        return if (newFilter !== filter || newAbility !== ability) copy(filter = newFilter, ability = newAbility) else this
+    }
+}
+
+/**
+ * A [StaticAbility] the engine reads off a permanent's *projected* static abilities
+ * (`ProjectedState.getStaticAbilities`) rather than its printed script, so a holder has it
+ * however it got it — printed, or granted by [GrantStaticAbility]. Implementing it is a promise
+ * about the engine half: the ability's point-of-use read must go through projection.
+ */
+@Serializable
+sealed interface ProjectedStaticAbility : StaticAbility
+
+/**
+ * Grants an activated ability to a filtered set of objects in [recipientZone].
  *
  * Use [GroupFilter.attachedCreature] for "enchanted/equipped creature has ..." auras
  * and equipment, [GroupFilter.source] for "this creature has ..." abilities, or any
@@ -43,14 +97,21 @@ data class GrantTriggeredAbility(
  * `LegalActionsCalculator` and `ActivateAbilityHandler` consult this static ability
  * when computing legal activated abilities for each permanent.
  *
+ * The source functions on the battlefield; [recipientZone] selects where the recipients
+ * must be. For a zone-wide group, use the default group scope with an owner filter outside
+ * the battlefield (cards there have owners, not controllers). The ability's own
+ * `activateFromZone` independently determines where it may be activated.
+ *
  * @property ability The activated ability to grant.
- * @property filter The permanents that gain the ability.
+ * @property filter The objects that gain the ability, relative to the granting permanent.
+ * @property recipientZone The zone the recipients must occupy; defaults to battlefield.
  */
 @SerialName("GrantActivatedAbility")
 @Serializable
 data class GrantActivatedAbility(
     val ability: ActivatedAbility,
-    val filter: GroupFilter = GroupFilter.attachedCreature()
+    val filter: GroupFilter = GroupFilter.attachedCreature(),
+    val recipientZone: Zone = Zone.BATTLEFIELD
 ) : StaticAbility {
     override val description: String = "${filter.description} have ${ability.description}"
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
@@ -84,6 +145,24 @@ enum class DonorCards {
      * Anchored to no one: it re-reads each graveyard live, whoever controls the source.
      */
     @SerialName("AllGraveyards") ALL_GRAVEYARDS,
+
+    /**
+     * Every card in exile, whoever owns it and however it got there (Rex, Cyber-Hound — "all cards
+     * in exile with brain counters on them", narrowed by `cardFilter`). The exile twin of
+     * [ALL_GRAVEYARDS]: anchored to no one and re-read live, unlike [LINKED_EXILE], which only sees
+     * the cards *this* source exiled. Counters on an exiled card are its own state, so a
+     * `withCounter(...)` card filter reads them directly.
+     */
+    @SerialName("AllExile") ALL_EXILE,
+
+    /**
+     * The single card on top of the library of the source's *controller* (Conspicuous Snoop — "as
+     * long as the top card of your library is a Goblin card, this has all activated abilities of
+     * that card", narrowed by `cardFilter`). Anchored to the player like [YOUR_GRAVEYARD] and re-read
+     * live, so the grant follows whatever card is on top right now. Pair it with
+     * [RevealTopOfLibrary]: the donor is public only because the card says to play with it revealed.
+     */
+    @SerialName("TopOfYourLibrary") TOP_OF_YOUR_LIBRARY,
 }
 
 /**
@@ -140,6 +219,8 @@ data class HasAllActivatedAbilitiesOfCards(
                 DonorCards.CRAFT_MATERIALS -> " cards exiled to craft this"
                 DonorCards.YOUR_GRAVEYARD -> " cards in your graveyard"
                 DonorCards.ALL_GRAVEYARDS -> " cards in all graveyards"
+                DonorCards.ALL_EXILE -> " cards in exile"
+                DonorCards.TOP_OF_YOUR_LIBRARY -> " card on top of your library"
             }
         )
         if (oncePerTurnEach) append(" (each only once each turn)")

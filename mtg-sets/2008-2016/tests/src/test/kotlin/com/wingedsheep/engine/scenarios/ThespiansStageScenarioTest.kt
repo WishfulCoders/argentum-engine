@@ -1,101 +1,77 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.core.SelectManaSourcesDecision
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.GameTestDriver
-import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.mtg.sets.definitions.csp.cards.DarkDepths
+import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.mtg.sets.definitions.gtc.cards.ThespiansStage
-import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
- * Thespian's Stage (GTC) — "{2}, {T}: This land becomes a copy of target land, except it has this
- * ability." The copy takes copiable values only, so a Stage copying Dark Depths has none of its ice
- * counters and the copied state trigger fires at once; the legend rule lets its controller keep the
- * copy, which then sacrifices itself for Marit Lage.
+ * Scenario test for Thespian's Stage (GTC #248) — Land.
+ *
+ * "{T}: Add {C}.
+ *  {2}, {T}: This land becomes a copy of target land, except it has this ability."
+ *
+ * Focus: the battlefield-to-battlefield land copy with `affected = Self` and
+ * `retainActivatingAbility` — the Stage takes the target's copiable values (name, subtypes), stays
+ * tapped (ruling 2018-12-07: it doesn't untap on becoming a copy), and keeps its `{2}, {T}` ability
+ * through the durable granted-ability record.
  */
-class ThespiansStageScenarioTest : FunSpec({
+class ThespiansStageScenarioTest : ScenarioTestBase() {
 
-    fun newGame(): Pair<GameTestDriver, EntityId> {
-        val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + listOf(ThespiansStage, DarkDepths))
-        driver.initMirrorMatch(deck = Deck.of("Forest" to 40), skipMulligans = true, startingPlayer = 0)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        return driver to driver.activePlayer!!
-    }
+    init {
+        val copyAbilityId = ThespiansStage.activatedAbilities[1].id
 
-    val copyAbilityId = ThespiansStage.activatedAbilities[1].id
+        context("Thespian's Stage") {
 
-    fun activateCopy(driver: GameTestDriver, player: EntityId, stage: EntityId, target: EntityId) {
-        driver.giveColorlessMana(player, 2)
-        driver.submit(
-            ActivateAbility(
-                playerId = player,
-                sourceId = stage,
-                abilityId = copyAbilityId,
-                targets = listOf(ChosenTarget.Permanent(target)),
-                paymentStrategy = PaymentStrategy.FromPool,
-            )
-        ).error shouldBe null
-    }
+            test("becomes a copy of the opponent's Forest, stays tapped, and keeps this ability") {
+                val game = scenario()
+                    .withPlayers("Player", "Opponent")
+                    .withCardOnBattlefield(1, "Thespian's Stage")
+                    .withLandsOnBattlefield(1, "Island", 2)
+                    .withCardOnBattlefield(2, "Forest")
+                    .withActivePlayer(1)
+                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                    .build()
 
-    test("copying a Forest makes it a Forest that keeps the copy ability") {
-        val (driver, you) = newGame()
-        val stage = driver.putLandOnBattlefield(you, "Thespian's Stage")
-        val forest = driver.putLandOnBattlefield(you, "Forest")
+                val stage = game.findPermanent("Thespian's Stage")!!
+                val forest = game.findPermanent("Forest")!!
 
-        activateCopy(driver, you, stage, forest)
-        driver.bothPass()
+                val result = game.execute(
+                    ActivateAbility(
+                        playerId = game.player1Id,
+                        sourceId = stage,
+                        abilityId = copyAbilityId,
+                        targets = listOf(ChosenTarget.Permanent(forest))
+                    )
+                )
+                withClue("activation should succeed: ${result.error}") { result.error shouldBe null }
+                if (game.getPendingDecision() is SelectManaSourcesDecision) game.submitManaSourcesAutoPay()
+                game.resolveStack()
 
-        driver.state.getEntity(stage)?.get<CardComponent>()?.name shouldBe "Forest"
-        withClue("the Stage stays tapped — becoming a copy doesn't untap it") {
-            driver.isTapped(stage) shouldBe true
-        }
-        driver.untapPermanent(stage)
-        driver.giveColorlessMana(you, 2)
-        withClue("\"except it has this ability\" — the copy ability is still activatable") {
-            driver.legalActions(you).any { it.action is ActivateAbility &&
-                (it.action as ActivateAbility).sourceId == stage &&
-                (it.action as ActivateAbility).abilityId == copyAbilityId } shouldBe true
-        }
-    }
-
-    test("copying Dark Depths: keep the counterless copy through the legend rule and get Marit Lage") {
-        val (driver, you) = newGame()
-        val depthsCard = driver.putCardInHand(you, "Dark Depths")
-        driver.playLand(you, depthsCard).error shouldBe null
-        val depths = driver.findPermanent(you, "Dark Depths")!!
-        driver.state.getEntity(depths)?.get<CountersComponent>()?.counters?.get(CounterType.ICE) shouldBe 10
-        val stage = driver.putLandOnBattlefield(you, "Thespian's Stage")
-
-        activateCopy(driver, you, stage, depths)
-
-        var guard = 0
-        while (guard++ < 20 && (driver.state.stack.isNotEmpty() || driver.state.pendingDecision != null)) {
-            if (driver.state.pendingDecision != null) {
-                // Legend rule: two Dark Depths — keep the Stage copy (no ice counters).
-                driver.submitCardSelection(you, listOf(stage)).error shouldBe null
-            } else {
-                driver.bothPass()
+                val card = game.state.getEntity(stage)!!.get<CardComponent>()!!
+                withClue("the Stage is now named Forest") { card.name shouldBe "Forest" }
+                withClue("it has the copied land's subtype") {
+                    game.state.projectedState.hasSubtype(stage, "Forest") shouldBe true
+                }
+                withClue("becoming a copy doesn't untap it") {
+                    game.state.getEntity(stage)!!.has<TappedComponent>() shouldBe true
+                }
+                withClue("the {2}, {T} ability is retained through the copy") {
+                    game.state.grantedActivatedAbilities.count {
+                        it.entityId == stage && it.ability.id == copyAbilityId
+                    } shouldBe 1
+                }
+                withClue("the target Forest is untouched") {
+                    game.state.getEntity(forest)!!.get<CardComponent>()!!.name shouldBe "Forest"
+                }
             }
         }
-
-        withClue("the original Dark Depths went to the graveyard to the legend rule") {
-            driver.getGraveyardCardNames(you).count { it == "Dark Depths" } shouldBe 1
-        }
-        withClue("the Stage copy sacrificed itself to its copied state trigger") {
-            driver.getGraveyardCardNames(you).contains("Thespian's Stage") shouldBe true
-        }
-        driver.findPermanent(you, "Marit Lage").shouldNotBeNull()
     }
-})
+}

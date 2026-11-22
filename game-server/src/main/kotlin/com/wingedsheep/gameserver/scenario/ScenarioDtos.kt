@@ -63,6 +63,14 @@ data class ScenarioRequest(
      * Null keeps the engine default (`MULTIPLE`), so existing scenarios are unchanged.
      */
     val attackMode: com.wingedsheep.sdk.core.AttackMode? = null,
+    /** Play the scenario for ante (CR 407) — shows the ante zones and lets ante cards work. */
+    val playingForAnte: Boolean? = false,
+    /**
+     * Run the scenario as a Commander game (`Format.Commander`): 40 starting life for every seat
+     * that sets no [PlayerConfig.lifeTotal], and commander damage tallied against the 21 threshold.
+     * Pair it with [PlayerConfig.commanders]. Nullable like [teamVsTeam]: an absent field is null.
+     */
+    val commanderFormat: Boolean? = false,
     val phase: Phase? = null,
     val step: Step? = null,
     val activePlayer: Int? = null,
@@ -97,6 +105,12 @@ data class ScenarioRequest(
      * a partially-read card would test green while missing an ability.
      */
     val customCards: List<String>? = null,
+    /** 1-based seat that starts as the monarch (CR 725), or null for no monarch. */
+    val monarch: Int? = null,
+    /** 1-based seat that starts with the initiative (CR 726), or null for nobody. Staged, so nothing triggers. */
+    val initiative: Int? = null,
+    /** The game's day/night designation (CR 731), or null for neither. Staged: nothing transforms until state-based actions are next checked. */
+    val dayNight: com.wingedsheep.sdk.core.DayNight? = null,
 ) {
     /** The effective mode, deriving from [aiPlayer] when [mode] is unset. */
     val effectiveMode: ScenarioMode
@@ -116,6 +130,8 @@ data class ScenarioRequest(
 
 data class PlayerConfig(
     val lifeTotal: Int? = null,
+    /** Staged player counters, e.g. RAD, ENERGY or EXPERIENCE. */
+    val counters: Map<String, Int>? = null,
     val hand: List<String>? = null,
     val battlefield: List<BattlefieldCardConfig>? = null,
     val graveyard: List<String>? = null,
@@ -127,12 +143,38 @@ data class PlayerConfig(
      * Lesson half is simply unreachable without one.
      */
     val sideboard: List<String>? = null,
+    /** Cards this player owns in the ante (CR 407). Implies the game is played for ante. */
+    val ante: List<String>? = null,
     /**
      * Commander card names. Each name becomes a card in the player's command zone with
      * [CommanderComponent] attached and registered in [CommanderRegistryComponent].
      * Provide one name for a standard commander, two for Partner / Background.
      */
-    val commanders: List<String>? = null
+    val commanders: List<String>? = null,
+    /**
+     * A revealed companion (CR 702.139): a card placed in the sideboard and marked as the player's
+     * companion, waiting outside the game for the {3} special action.
+     */
+    val companion: String? = null,
+    /**
+     * Start this player in a dungeon (CR 309): the dungeon card in their command zone with the
+     * venture marker on [DungeonConfig.room]. Nothing triggers — the board is staged as if the
+     * player had already ventured there.
+     */
+    val dungeon: DungeonConfig? = null,
+    /** Dungeons this player has already completed (CR 309.7), by name. */
+    val completedDungeons: List<String>? = null,
+    /**
+     * Spells this player has cast this turn — read by the untap step's day/night check (CR 731.2)
+     * when the turn passes, so a staged turn can make it day or night next turn.
+     */
+    val spellsCastThisTurn: Int? = null
+)
+
+/** A staged dungeon: its name and the room (by name; the topmost room when omitted) the marker is on. */
+data class DungeonConfig(
+    val name: String,
+    val room: String? = null
 )
 
 /**

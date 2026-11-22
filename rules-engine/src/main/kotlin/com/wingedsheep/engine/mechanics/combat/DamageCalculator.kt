@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.combat
 
+import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
@@ -23,9 +24,10 @@ import com.wingedsheep.sdk.scripting.PreventDamage
  * Calculates combat damage assignments according to MTG rules (CR 510).
  *
  * Key rules:
- * - CR 510.1c: Damage must be assigned in order; can't assign to creature N+1
- *   until creature N has been assigned lethal damage.
- * - CR 510.1b: Attacker's controller chooses how to divide damage.
+ * - CR 510.1c/d: A creature blocked by (or blocking) two or more creatures divides its damage
+ *   among them as its controller chooses — there is no damage-assignment order. The
+ *   "lethal to each in turn, remainder to the last" split computed here is only the
+ *   *default* the chooser starts from on the combat resolution board.
  * - CR 702.2b: Deathtouch - any amount of damage is considered lethal.
  * - CR 702.19: Trample - excess damage can be assigned to defending player.
  */
@@ -60,8 +62,9 @@ class DamageCalculator(
     /**
      * Calculate the minimum damage needed to be considered "lethal" for a creature.
      *
-     * Per CR 510.1c: Damage is lethal if it equals or exceeds toughness minus
-     * damage already marked, OR if the source has deathtouch (any nonzero amount).
+     * Damage is lethal if it equals or exceeds toughness (or power, under a lethal-damage-by-power
+     * rule modification) minus damage already marked, OR if the source has deathtouch (any
+     * nonzero amount).
      *
      * @param state Current game state
      * @param creatureId The creature receiving damage
@@ -87,7 +90,7 @@ class DamageCalculator(
         val lethalAmount = if (hasDeathtouch) {
             1
         } else {
-            (toughness - damageMarked).coerceAtLeast(1)
+            (projected.lethalDamageThreshold(creatureId) - damageMarked).coerceAtLeast(1)
         }
 
         return LethalDamageInfo(
@@ -102,7 +105,8 @@ class DamageCalculator(
     /**
      * Auto-calculate optimal damage distribution for an attacker.
      *
-     * This implements the default "assign lethal to each blocker in order" behavior.
+     * This implements the default "assign lethal to each blocker in turn" split; it is not a
+     * legality constraint (CR 510.1c has no damage-assignment order).
      * Players can override this with manual assignment.
      *
      * @param state Current game state
@@ -214,8 +218,8 @@ class DamageCalculator(
         }
 
         // Trample (choose how much spills over) or 2+ blockers always present a choice: the
-        // attacking player picks the damage-assignment order, which decides *which* blockers die
-        // when power is short and where any overkill goes (CR 510.1c) — not just whether there's
+        // attacking player divides the damage as they choose (CR 510.1c), which decides *which*
+        // blockers die when power is short and where any overkill goes — not just whether there's
         // excess to spread. So surface the board whenever there is more than one way to assign.
         return true
     }
@@ -226,10 +230,10 @@ class DamageCalculator(
      * Similar to [calculateAutoDamageDistribution] but for the reverse case: a single
      * blocker dividing its damage among multiple attackers it's blocking.
      *
-     * Uses [AttackerOrderComponent] for the damage assignment order. Assigns lethal
-     * damage to each attacker in order, with the last attacker receiving all remaining damage.
+     * Uses [AttackerOrderComponent] for the default fill order. Assigns lethal
+     * damage to each attacker in turn, with the last attacker receiving all remaining damage.
      *
-     * Per CR 510.1c, "in checking for assigned lethal damage, take into account damage
+     * As with trample (CR 702.19b), "in checking for assigned lethal damage, take into account damage
      * already marked on the creature and damage from other creatures that's being assigned
      * during the same combat damage step." The [pendingDamage] parameter tracks damage
      * being assigned by other blockers in this same step.
@@ -237,7 +241,7 @@ class DamageCalculator(
      * @param state Current game state
      * @param blockerId The blocking creature
      * @param pendingDamage Damage already being assigned to each creature by other sources
-     *        in this same combat damage step (per CR 510.1c)
+     *        in this same combat damage step
      * @return DamageDistribution with assignments to attackers
      */
     fun calculateBlockerDamageDistribution(
@@ -339,8 +343,8 @@ class DamageCalculator(
 
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
-            val replacementComponent = container.get<ReplacementEffectSourceComponent>() ?: continue
-            val sourceControllerId = container.get<ControllerComponent>()?.playerId ?: continue
+            val replacementComponent = state.activeReplacementSource(entityId) ?: continue
+            val sourceControllerId = projected.getController(entityId) ?: container.get<ControllerComponent>()?.playerId ?: continue
 
             for (effect in replacementComponent.replacementEffects) {
                 if (effect !is PreventDamage) continue
@@ -362,7 +366,11 @@ class DamageCalculator(
                 )
 
                 if (recipientMatches) {
-                    totalPrevention += effect.amount ?: 0
+                    totalPrevention += effect.amount?.let {
+                        predicateEvaluator.amounts.evaluate(
+                            state, it, EffectContext(sourceId = entityId, controllerId = sourceControllerId), projected
+                        ).coerceAtLeast(0)
+                    } ?: 0
                 }
             }
         }

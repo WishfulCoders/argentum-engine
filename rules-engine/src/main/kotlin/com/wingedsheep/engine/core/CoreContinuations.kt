@@ -12,22 +12,6 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import kotlinx.serialization.Serializable
 
 /**
- * Resume a composite effect with remaining effects to execute.
- *
- * When a sub-effect of a CompositeEffect pauses for a decision, we push
- * this frame to remember which effects still need to run after the
- * decision is resolved.
- *
- * @property remainingEffects Effects that still need to execute (serialized)
- * @property context The execution context for these effects
- */
-@Serializable
-data class EffectContinuation(
-    val remainingEffects: List<Effect>,
-    val effectContext: EffectContext
-) : AutomaticContinuation
-
-/**
  * Resume placing a triggered ability on the stack after targets have been selected.
  *
  * When a triggered ability requires targets (like Fire Imp's "deal 1 damage to any target"),
@@ -45,6 +29,9 @@ data class TriggeredAbilityContinuation(
     val sourceId: EntityId,
     val sourceName: String,
     val sourceBattlefieldTimestamp: Long? = null,
+    /** The departed source's last-known snapshot, carried from
+     *  [com.wingedsheep.engine.event.PendingTrigger.lastKnownSourceSnapshot] across this pause. */
+    val lastKnownSourceSnapshot: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment =
         com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     val controllerId: EntityId,
@@ -99,6 +86,9 @@ data class TriggerDamageDistributionContinuation(
     val sourceId: EntityId,
     val sourceName: String,
     val sourceBattlefieldTimestamp: Long? = null,
+    /** The departed source's last-known snapshot, carried from
+     *  [com.wingedsheep.engine.event.PendingTrigger.lastKnownSourceSnapshot] across this pause. */
+    val lastKnownSourceSnapshot: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment =
         com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     val controllerId: EntityId,
@@ -120,19 +110,6 @@ data class TriggerDamageDistributionContinuation(
     val isBackup: Boolean = false,
     val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null
 ) : AnswerContinuation
-
-/**
- * Stores remaining pending triggers that still need to be processed.
- *
- * When multiple triggered abilities fire from the same event and the first
- * requires target selection (pausing execution), the remaining triggers are
- * stored in this continuation frame. After the first trigger's targets are
- * selected, the remaining triggers are processed.
- */
-@Serializable
-data class PendingTriggersContinuation(
-    val remainingTriggers: List<PendingTrigger>
-) : AutomaticContinuation
 
 /**
  * Resume spell resolution after target or mode selection.
@@ -205,6 +182,40 @@ data class MayAbilityContinuation(
     val effectIfYes: Effect?,
     val effectIfNo: Effect?,
     val effectContext: EffectContext
+) : AnswerContinuation
+
+/**
+ * One replacement that would perform its effect *instead of* a keyword action — a
+ * [com.wingedsheep.sdk.scripting.ReplaceKeywordAction] found by
+ * [com.wingedsheep.engine.handlers.effects.KeywordActionReplacements.collectInstead].
+ *
+ * @property sourceId The card that printed it (on the battlefield, or in a graveyard).
+ * @property controllerId Its controller — the graveyard's owner for a graveyard card.
+ * @property optional "You may instead": [controllerId] answers yes or no.
+ */
+@Serializable
+data class KeywordActionInsteadOffer(
+    val sourceId: EntityId,
+    val controllerId: EntityId,
+    val sourceName: String,
+    val replacementEffect: Effect,
+    val optional: Boolean
+)
+
+/**
+ * Resume a keyword action after its first optional [offers] entry was put to the player
+ * (CR 614.1a — "if you would learn, you may instead …"). Yes runs that offer's replacement effect,
+ * rooted at its own source, and the action never happens. No moves on to the remaining offers, then
+ * to [reissue] — the action again with its replacements marked applied — in [actionContext].
+ *
+ * @property actionContext The context the keyword action was performed in (the learning player's).
+ */
+@Serializable
+data class KeywordActionInsteadContinuation(
+    val action: com.wingedsheep.engine.handlers.effects.ReplaceableKeywordAction,
+    val offers: List<KeywordActionInsteadOffer>,
+    val reissue: Effect,
+    val actionContext: EffectContext
 ) : AnswerContinuation
 
 /**
@@ -310,7 +321,7 @@ data class TriggerOpponentChooserContinuation(
  * The variant corresponds to (but is deliberately decoupled from) the effect's
  * [com.wingedsheep.sdk.scripting.effects.IterationSpace]: targets iterate [OfTarget],
  * players iterate [OfPlayer], collections/groups iterate [OfEntity], colors iterate
- * [OfColor]. Serializable so a [ForEachContinuation] can carry the remaining items
+ * [OfColor], counter kinds iterate [OfCounterKind]. Serializable so a [ForEachContinuation] can carry the remaining items
  * across a mid-iteration pause.
  */
 @Serializable
@@ -318,14 +329,26 @@ sealed interface ForEachItem {
     @Serializable
     data class OfTarget(val target: ChosenTarget) : ForEachItem
 
+    /**
+     * [boundNumbers] and [keepCollections] carry a captured-controller pass's per-player binding
+     * (`ForEachCapturedControllerEffect`: its count variable, and the outer pipeline collections it
+     * keeps) across a pause — the plain player space binds neither.
+     */
     @Serializable
-    data class OfPlayer(val playerId: EntityId) : ForEachItem
+    data class OfPlayer(
+        val playerId: EntityId,
+        val boundNumbers: Map<String, Int> = emptyMap(),
+        val keepCollections: Boolean = false
+    ) : ForEachItem
 
     @Serializable
     data class OfEntity(val entityId: EntityId) : ForEachItem
 
     @Serializable
     data class OfColor(val color: com.wingedsheep.sdk.core.Color) : ForEachItem
+
+    @Serializable
+    data class OfCounterKind(val counterType: com.wingedsheep.sdk.core.CounterType) : ForEachItem
 }
 
 /**
@@ -376,6 +399,8 @@ data class ForEachContinuation(
  *   on purpose: [effectContext] must stay the pristine pre-loop context so the *next* iteration
  *   re-gathers fresh (a stale collection leaking forward would mask the next pass and the loop
  *   would never terminate — see RepeatWhileExecutor.executeIteration).
+ * @property bodyNumbers [bodyCollections]' twin for pipeline numbers stored this pass — a die
+ *   result a `PlayerChooses.onlyIf` reads must survive the body pausing just as a collection does.
  * @property collectCollections The effect's body-collection → aggregate map
  *   ([com.wingedsheep.sdk.scripting.effects.RepeatWhileEffect.collectCollections]).
  * @property accumulatedCollections The aggregates folded from every *completed* pass before this
@@ -390,6 +415,7 @@ data class RepeatWhileContinuation(
     val sourceName: String?,
     val effectContext: EffectContext,
     val bodyCollections: Map<String, List<EntityId>> = emptyMap(),
+    val bodyNumbers: Map<String, Int> = emptyMap(),
     val collectCollections: Map<String, String> = emptyMap(),
     val accumulatedCollections: Map<String, List<EntityId>> = emptyMap()
 ) : AutomaticContinuation

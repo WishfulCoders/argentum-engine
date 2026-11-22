@@ -13,6 +13,8 @@ class PermanentSbaModule(
 ) : StateBasedActionModule {
     override fun checks(): List<StateBasedActionCheck> = listOf(
         DayNightCheck(cardRegistry),
+        TransformCopyCheck(cardRegistry, zones.predicateEvaluator),
+        TransformAttachCheck(cardRegistry, zones.predicateEvaluator),
         EndedDurationExpiryCheck(),
         AttachedCopyExpiryCheck(cardRegistry),
         AttackedPermanentRemovedFromCombatCheck(),
@@ -20,7 +22,9 @@ class PermanentSbaModule(
         BattleDefenseCheck(zones),
         BattleProtectorCheck(zones),
         LegendRuleCheck(decisionHandler, cardRegistry, predicateEvaluator = zones.predicateEvaluator),
+        WorldRuleCheck(zones),
         CounterAnnihilationCheck(),
+        CounterLimitCheck(),
         UnattachedAurasCheck(zones, cardRegistry),
         SoulbondPairingCheck(),
         SagaSacrificeCheck(zones, cardRegistry),

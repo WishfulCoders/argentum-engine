@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -88,7 +89,7 @@ class GravediggerCombatDeathTest : FunSpec({
         // Gravedigger should be on battlefield
         driver.findPermanent(activePlayer, "Gravedigger") shouldNotBe null
 
-        // The ETB trigger announces its target before the optional effect resolves.
+        // The ETB trigger announces its target before the resolution-time consent.
         driver.isPaused shouldBe true
         driver.pendingDecision.shouldNotBeNull()
         driver.pendingDecision.shouldBeInstanceOf<ChooseTargetsDecision>()
@@ -102,7 +103,9 @@ class GravediggerCombatDeathTest : FunSpec({
         driver.submitTargetSelection(activePlayer, listOf(attackerBears)).error shouldBe null
         driver.pendingDecision shouldBe null
         driver.bothPass().error shouldBe null
+        driver.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
         driver.submitYesNo(activePlayer, true).error shouldBe null
+        driver.pendingDecision shouldBe null
         driver.getGraveyardCardNames(activePlayer).contains("Grizzly Bears") shouldBe false
     }
 })

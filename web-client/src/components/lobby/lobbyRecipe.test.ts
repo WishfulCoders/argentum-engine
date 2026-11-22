@@ -21,6 +21,8 @@ import type { AvailableSet } from '@/types'
 const SETS: readonly AvailableSet[] = [
   { code: 'ECL', name: 'Eclipse' },
   { code: 'BLB', name: 'Bloomburrow' },
+  { code: 'J22', name: 'Jumpstart 2022' },
+  { code: 'J25', name: 'Foundations Jumpstart' },
 ]
 
 /** Every selection the wizard can actually reach — the same space `modeMatrix.test.ts` walks. */
@@ -46,6 +48,7 @@ function defaultAxisFor(kind: (typeof CARDS_KINDS)[number]): CardsAxis {
     case 'BRING_A_DECK': return { kind: 'BRING_A_DECK', legality: null }
     case 'RANDOM': return { kind: 'RANDOM' }
     case 'MOMIR': return { kind: 'MOMIR' }
+    case 'JUMP_IN': return { kind: 'JUMP_IN' }
     case 'SEALED': return { kind: 'SEALED', shape: 'STANDARD' }
     case 'DRAFT': return { kind: 'DRAFT', shape: 'BOOSTER' }
   }
@@ -81,10 +84,11 @@ describe('recipeFromSelection', () => {
     }
   })
 
-  it('carries no settings — a fresh selection has not chosen any', () => {
+  it('chooses the newest published Jumpstart packs (J25) for Jump In and leaves other selections unconfigured', () => {
     // The whole point of Phase 0: the launch path used to invent `['ECL'], 6, 45`.
     for (const selection of everyReachableSelection()) {
-      expect(recipeFromSelection(selection).settings).toEqual({})
+      expect(recipeFromSelection(selection).settings).toEqual(selection.cards.kind === 'JUMP_IN'
+        ? { setCodes: ['J25'], useJumpstart: true, gamesPerMatch: 1, bestOf: 1 } : {})
     }
   })
 
@@ -235,6 +239,13 @@ describe('validateRecipe', () => {
     expect(out?.recipe.settings.boosterCount).toBe(6)
   })
 
+  it('keeps a boolean play-for-ante setting and drops anything else', () => {
+    expect(validateRecipe({ ...base, settings: { ...base.settings, playingForAnte: true } }, ctx)
+      ?.recipe.settings.playingForAnte).toBe(true)
+    expect(validateRecipe({ ...base, settings: { ...base.settings, playingForAnte: 'yes' } }, ctx)
+      ?.recipe.settings.playingForAnte).toBeUndefined()
+  })
+
   it('falls back to no deck when the stored reference is unusable', () => {
     expect(validateRecipe({ ...base, deck: { kind: 'SAVED', name: '' } }, ctx)?.recipe.deck)
       .toEqual({ kind: 'NONE' })
@@ -242,6 +253,14 @@ describe('validateRecipe', () => {
       .toEqual({ kind: 'NONE' })
     expect(validateRecipe({ ...base, deck: { kind: 'SAVED', name: 'Goblins' } }, ctx)?.recipe.deck)
       .toEqual({ kind: 'SAVED', name: 'Goblins' })
+  })
+
+  it('keeps a Random deck\'s sets, dropping ones this server does not have', () => {
+    expect(validateRecipe({ ...base, deck: { kind: 'RANDOM', setCodes: ['ECL'] } }, ctx)?.recipe.deck)
+      .toEqual({ kind: 'RANDOM', setCodes: ['ECL'] })
+    const stale = validateRecipe({ ...base, deck: { kind: 'RANDOM', setCodes: ['XYZ'] } }, ctx)
+    expect(stale?.recipe.deck).toEqual({ kind: 'RANDOM' })
+    expect(stale?.notes.join(' ')).toContain('XYZ')
   })
 
   it('keeps a cube only when it still has cards to build from', () => {

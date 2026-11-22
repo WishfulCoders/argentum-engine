@@ -13,7 +13,7 @@ val BladeSplicerReprint = Printing(
     collectorNumber = "136",
     scryfallId = "8ea1a510-ec87-4c93-bcf2-0c91738b008f",
     artist = "Greg Staples",
-    imageUri = "https://cards.scryfall.io/normal/front/8/e/8ea1a510-ec87-4c93-bcf2-0c91738b008f.jpg?1783910694",
+    imageUri = "https://cards.scryfall.io/normal/front/8/e/8ea1a510-ec87-4c93-bcf2-0c91738b008f.jpg",
     releaseDate = "2024-08-02",
     rarity = Rarity.RARE,
 )

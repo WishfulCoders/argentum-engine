@@ -3,7 +3,6 @@ package com.wingedsheep.engine.handlers.continuations
 import com.wingedsheep.engine.core.AmassContinuation
 import com.wingedsheep.engine.core.CardsSelectedResponse
 import com.wingedsheep.engine.core.DecisionResponse
-import com.wingedsheep.engine.core.EffectContinuation
 import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.ReflexiveTriggerTargetContinuation
@@ -53,7 +52,7 @@ class AmassContinuationResumer(
         // pending frame directly via the shared propagation seam (composite siblings,
         // `When you do, …` reflexive triggers like Foray of Orcs, and DoAction gates all
         // read pipeline.storedCollections off their frame's effectContext).
-        val stateWithArmyExposed = exposeCollectionsToNextFrame(result.state, result.updatedCollections)
+        val stateWithArmyExposed = result.stateWithOutputsHandedOn()
 
         return checkForMore(stateWithArmyExposed, result.events)
     }

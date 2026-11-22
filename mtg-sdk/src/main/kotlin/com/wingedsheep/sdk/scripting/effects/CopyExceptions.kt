@@ -65,12 +65,29 @@ import kotlinx.serialization.Serializable
  *   exception. Applied even when the copied object had no P/T at all (Absorbing Man copying a
  *   land), in which case base P/T are created from scratch.
  * @property toughnessOverride Replaces the copied base toughness.
+ * @property retainPowerToughness "except its power and toughness are equal to this creature's power
+ *   and toughness" (Hulking Metamorph) — the copy keeps the *copying* object's own pre-copy base P/T
+ *   instead of the copied one, the P/T twin of [retainColors]. Reads the copier's current copiable
+ *   P/T, so a prototyped copier (CR 718.3b) keeps its prototype size. Only meaningful on a path with
+ *   a copier — an existing permanent becoming a copy, or a permanent entering as one; a minted token
+ *   has no prior self, so there it leaves the copied P/T alone. Can't combine with a stated
+ *   [powerOverride] / [toughnessOverride].
  * @property noManaCost "except it … has no mana cost" — the copy has no mana cost and so mana
  *   value 0 (Embalm / Eternalize, CR 702.128a).
+ * @property startingLoyalty "except its starting loyalty is N" (Jace, Mirror Mage) — the copy enters
+ *   with N loyalty counters instead of the copied planeswalker's printed loyalty (CR 306.5b). A
+ *   copiable value, so a later copy of the copy starts at N too. Ignored by copies that aren't
+ *   planeswalkers; on a permanent that is already on the battlefield it changes nothing, since
+ *   starting loyalty is only read as the permanent enters.
  * @property addedNumericKeywords Numeric keywords the copy has *in addition* to the ones it copied —
  *   "except it's 1/1 and it has toxic 1" (Kinzu of the Bleak Coven). Kept apart from
  *   [addedKeywords] because the N is part of the ability; instances stack with the copied ones
  *   (toxic 2 copied + toxic 1 added is a total of toxic 3, CR 702.164b).
+ * @property conditional Exceptions that apply only when the copy — its copiable type line with
+ *   every unconditional exception above applied — has a given card type: "and, if it's a
+ *   creature, … has changeling" (Moritte of the Frost). Read against copiable values, not the copied
+ *   object's current characteristics, so copying a land animated by a non-copy effect gives a
+ *   noncreature copy without the conditional exceptions (Moritte's ruling).
  */
 @Serializable
 data class CopyExceptions(
@@ -88,7 +105,9 @@ data class CopyExceptions(
     val retainColors: Boolean = false,
     val powerOverride: Int? = null,
     val toughnessOverride: Int? = null,
+    val retainPowerToughness: Boolean = false,
     val noManaCost: Boolean = false,
+    val startingLoyalty: Int? = null,
     val addedNumericKeywords: List<com.wingedsheep.sdk.scripting.KeywordAbility.Numeric> = emptyList(),
     /** Add the frozen resolving trigger as copiable rules text; no-op outside a triggered ability. */
     val retainResolvingTriggeredAbility: Boolean = false,
@@ -102,10 +121,32 @@ data class CopyExceptions(
      * printed script, so a mana ability here would be offered nowhere — rejected up front instead.
      */
     val addedActivatedAbilities: List<com.wingedsheep.sdk.scripting.ActivatedAbility> = emptyList(),
+    val conditional: List<IfCardType> = emptyList(),
 ) {
+    /**
+     * "if it's a [cardType], [exceptions]" — one [CopyExceptions.conditional] clause. Its
+     * [exceptions] are characteristic changes only: no nested conditions, and no numeric keywords
+     * (those are stamped outside the copied card component, before the copy's type is known).
+     */
+    @Serializable
+    data class IfCardType(val cardType: CardType, val exceptions: CopyExceptions) {
+        init {
+            require(exceptions.conditional.isEmpty() && exceptions.addedNumericKeywords.isEmpty() &&
+                !exceptions.retainResolvingTriggeredAbility) {
+                "CopyExceptions.IfCardType can't nest conditions, add numeric keywords or retain the resolving trigger"
+            }
+        }
+    }
+
     init {
         require(!retainColors || (overrideColors == null && addedColors.isEmpty())) {
             "CopyExceptions.retainColors cannot combine with color additions or overrides"
+        }
+        require(!retainPowerToughness || (powerOverride == null && toughnessOverride == null)) {
+            "CopyExceptions.retainPowerToughness cannot combine with a power/toughness override"
+        }
+        require(startingLoyalty == null || startingLoyalty >= 0) {
+            "CopyExceptions.startingLoyalty can't be negative"
         }
         require(addedActivatedAbilities.none { it.isManaAbility }) {
             "CopyExceptions.addedActivatedAbilities can't carry a mana ability"
@@ -146,13 +187,17 @@ data class CopyExceptions(
             addedColors = if (retainColors) emptySet() else base.addedColors + addedColors,
             overrideColors = if (retainColors) null else overrideColors ?: base.overrideColors,
             retainColors = retainColors || (base.retainColors && overrideColors == null && addedColors.isEmpty()),
-            powerOverride = powerOverride ?: base.powerOverride,
-            toughnessOverride = toughnessOverride ?: base.toughnessOverride,
+            powerOverride = if (retainPowerToughness) null else powerOverride ?: base.powerOverride,
+            toughnessOverride = if (retainPowerToughness) null else toughnessOverride ?: base.toughnessOverride,
+            retainPowerToughness = retainPowerToughness ||
+                (base.retainPowerToughness && powerOverride == null && toughnessOverride == null),
             noManaCost = noManaCost || base.noManaCost,
+            startingLoyalty = startingLoyalty ?: base.startingLoyalty,
             addedNumericKeywords = base.addedNumericKeywords + addedNumericKeywords,
             retainResolvingTriggeredAbility = base.retainResolvingTriggeredAbility || retainResolvingTriggeredAbility,
             addedTriggeredAbilities = base.addedTriggeredAbilities + addedTriggeredAbilities,
             addedActivatedAbilities = base.addedActivatedAbilities + addedActivatedAbilities,
+            conditional = base.conditional + conditional,
         )
     }
 
@@ -163,10 +208,12 @@ data class CopyExceptions(
         val overrides = overrideColors?.mapTo(mutableSetOf(), replacer::replaceColor)
         val triggered = addedTriggeredAbilities.map { it.applyTextReplacement(replacer) }
         val activated = addedActivatedAbilities.map { it.applyTextReplacement(replacer) }
+        val conditions = conditional.map { it.copy(exceptions = it.exceptions.applyTextReplacement(replacer)) }
         return if (colors == addedColors && overrides == overrideColors &&
-            triggered == addedTriggeredAbilities && activated == addedActivatedAbilities) this
+            triggered == addedTriggeredAbilities && activated == addedActivatedAbilities &&
+            conditions == conditional) this
         else copy(addedColors = colors, overrideColors = overrides,
-            addedTriggeredAbilities = triggered, addedActivatedAbilities = activated)
+            addedTriggeredAbilities = triggered, addedActivatedAbilities = activated, conditional = conditions)
     }
 
     /**
@@ -180,6 +227,7 @@ data class CopyExceptions(
         if (powerOverride != null || toughnessOverride != null) {
             add("it's ${powerOverride ?: "*"}/${toughnessOverride ?: "*"}")
         }
+        if (retainPowerToughness) add("its power and toughness are equal to this creature's power and toughness")
         overrideColors?.let { add("it's ${it.joinToString(" ") { c -> c.displayName.lowercase() }}") }
         if (addedColors.isNotEmpty()) {
             add(
@@ -215,6 +263,12 @@ data class CopyExceptions(
         if (retainResolvingTriggeredAbility) add("it has this ability")
         for (ability in addedTriggeredAbilities) add("it has \"${ability.description}\"")
         for (ability in addedActivatedAbilities) add("it has \"${ability.description}\"")
+        for (clause in conditional) {
+            val type = clause.cardType.displayName.lowercase()
+            val article = if (type.first() in "aeiou") "an" else "a"
+            val then = clause.exceptions.clauses()
+            if (then.isNotEmpty()) add("if it's $article $type, ${then.joinToString(" and ")}")
+        }
     }
 
     /**

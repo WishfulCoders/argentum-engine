@@ -313,7 +313,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Rebel permanent card with mana value 3 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -612,7 +614,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -1056,8 +1060,8 @@
                     "amount": {
                         "type": "EntityProperty",
                         "entity": {
-                            "type": "ContextTarget",
-                            "index": 0
+                            "type": "BoundVariable",
+                            "name": "t0"
                         },
                         "numericProperty": "ManaValue"
                     },
@@ -1069,7 +1073,11 @@
             {
                 "type": "TargetObject",
                 "filter": {
-                    "baseFilter": {},
+                    "baseFilter": {
+                        "statePredicates": [
+                            "HasSingleTarget"
+                        ]
+                    },
                     "zone": "Stack"
                 },
                 "id": "t0"
@@ -1094,10 +1102,6 @@
             {
                 "date": "2004-10-04",
                 "text": "You can't make a spell which is on the stack target itself."
-            },
-            {
-                "date": "2004-10-04",
-                "text": "If there is no other legal target for the spell, this does not change the target."
             }
         ]
     },
@@ -2089,6 +2093,75 @@
     ]
 }
 
+// Pongify
+{
+    "name": "Pongify",
+    "manaCost": "{U}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target creature. It can't be regenerated. Its controller creates a 3/3 green Ape creature token.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "CantBeRegenerated",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Graveyard",
+                    "byDestruction": true
+                },
+                {
+                    "type": "CreateToken",
+                    "power": 3,
+                    "toughness": 3,
+                    "colors": [
+                        "GREEN"
+                    ],
+                    "creatureTypes": [
+                        "Ape"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/4/b/4b2ee605-3c7a-4769-978d-3199bdc7c504.jpg?1783911125",
+                    "controller": "TargetController"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "44",
+        "rarity": "UNCOMMON",
+        "artist": "Heather Hudson",
+        "flavorText": "Some spellcrafting mistakes go on to become spells of their own.",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/c/cce74a84-4441-4f2e-89d8-df0b096790ed.jpg?1783943162",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "If the target creature is an illegal target by the time Pongify tries to resolve, the spell won't resolve. No player creates an Ape token. If the target is legal but not destroyed (most likely because it has indestructible), its controller does create an Ape token."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Poultice Sliver
 {
     "name": "Poultice Sliver",
@@ -2874,6 +2947,43 @@
     ]
 }
 
+// Simian Spirit Guide
+{
+    "name": "Simian Spirit Guide",
+    "manaCost": "{2}{R}",
+    "typeLine": "Creature — Ape Spirit",
+    "oracleText": "Exile this card from your hand: Add {R}.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Simian Spirit Guide:1",
+                "cost": "CostExileSelf",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "RED"
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true,
+                "activateFromZone": "Hand",
+                "descriptionOverride": "Exile this card from your hand: Add {R}."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "122",
+        "artist": "Dave DeVries",
+        "flavorText": "\"All my spells smell like burnt hair lately.\"\n—Jaya Ballard, task mage",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/d/5d7f701c-dcdc-4067-8d00-b4b7aadee9ba.jpg?1783943142"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Sinew Sliver
 {
     "name": "Sinew Sliver",
@@ -3016,6 +3126,49 @@
     "colorIdentityOverride": [
         "BLUE"
     ]
+}
+
+// Urborg, Tomb of Yawgmoth
+{
+    "name": "Urborg, Tomb of Yawgmoth",
+    "manaCost": "",
+    "typeLine": "Legendary Land",
+    "oracleText": "Each land is a Swamp in addition to its other land types.",
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantAdditionalTypesToGroup",
+                "filter": {
+                    "baseFilter": "land"
+                },
+                "addSubtypes": [
+                    "Swamp"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "165",
+        "rarity": "RARE",
+        "artist": "John Avon",
+        "flavorText": "\"Yawgmoth's corpse is a wound in the universe. His foul blood seeps out, infecting the land with his final curse.\"\n—Lord Windgrace",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/9/19e1224f-82cb-4f41-8739-f880cba61bbb.jpg?1783943133",
+        "rulings": [
+            {
+                "date": "2021-03-19",
+                "text": "Urborg's ability causes each land on the battlefield to have the land type Swamp. Any land that's a Swamp has the ability \"{T}: Add {B}.\" Nothing else changes about those lands, including their names, other subtypes, other abilities, and whether they're legendary, basic, or snow."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "Land cards not on the battlefield aren't Swamps while Urborg is on the battlefield."
+            },
+            {
+                "date": "2021-03-19",
+                "text": "If an effect such as that of Magus of the Moon causes Urborg to lose its abilities by setting it to a basic land type not in addition to its other types, it won't turn lands into Swamps, no matter in what order those effects started to apply."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Vitaspore Thallid
@@ -3199,5 +3352,87 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Whitemane Lion
+{
+    "name": "Whitemane Lion",
+    "manaCost": "{1}{W}",
+    "typeLine": "Creature — Cat",
+    "oracleText": "Flash\nWhen this creature enters, return a creature you control to its owner's hand.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Whitemane Lion:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "BattlefieldMatching",
+                                "filter": "creature",
+                                "player": "You"
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "gathered0",
+                            "selection": {
+                                "type": "ChooseExactly",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "selected1",
+                            "prompt": "Return a creature you control to its owner's hand",
+                            "useTargetingUI": true
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "selected1",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        }
+                    ]
+                },
+                "descriptionOverride": "When this creature enters, return a creature you control to its owner's hand."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "22",
+        "artist": "Zoltan Boros & Gabor Szikszai",
+        "flavorText": "Saltfield nomads call a sudden storm a \"whitemane.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/c/b/cb1214ff-e959-43ca-8415-79a98d398490.jpg?1783943166",
+        "rulings": [
+            {
+                "date": "2022-12-08",
+                "text": "You may return Whitemane Lion itself to its owner's hand as its triggered ability resolves. If you don't control any other creature, you must return it."
+            },
+            {
+                "date": "2022-12-08",
+                "text": "Whitemane Lion's ability doesn't target any creature, therefore no player may take actions between the time you choose the creature to return and the time you return it."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
     ]
 }

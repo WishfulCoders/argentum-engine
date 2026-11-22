@@ -8,7 +8,9 @@ import type { ReplayData } from '@/replay/reconstructSnapshots.ts'
 import { useDeckLibrary, buildDraftedDeckSave, type SavedDeckEntry } from '@/store/deckLibrary'
 import { useSaveDeck } from '@/store/useSaveDeck'
 import { deriveRoundPhase } from './roundPhase'
+import { SideboardingScreen } from './SideboardingScreen'
 import styles from '../ui/GameUI.module.css'
+import { randomBackground } from '@/utils/background'
 
 /**
  * Tournament overlay showing standings between rounds.
@@ -141,6 +143,13 @@ export function TournamentOverlay({
     return await res.json() as ReplayData
   }, [tournamentState.lobbyId])
 
+  // Between the games of a best-of-three the match isn't over: the sideboarding step owns the screen.
+  // Keyed by game, so game 3 starts from the deck that played game 2, not from stale local edits.
+  const betweenGames = tournamentState.betweenGames
+  if (betweenGames && !isSpectator) {
+    return <SideboardingScreen key={`${betweenGames.round}-${betweenGames.nextGameNumber}`} snapshot={betweenGames} />
+  }
+
   if (showReplays) {
     return (
       <ReplayViewer
@@ -156,7 +165,7 @@ export function TournamentOverlay({
     : null
 
   return (
-    <div className={styles.tournamentOverlay}>
+    <div className={styles.tournamentOverlay} style={tournamentBackdrop}>
       {/* ── Header: title + round + toolbar ── */}
       <div className={styles.trnHeader}>
         <div className={styles.trnHeaderTop}>
@@ -180,10 +189,9 @@ export function TournamentOverlay({
                 onClick={openSaveDeckDialog}
                 className={styles.trnToolbarBtn}
                 style={{
-                  background: deckSavedAt ? 'rgba(108, 192, 74, 0.2)' : 'var(--accent-primary, #6aa3ff)',
-                  borderColor: deckSavedAt ? 'rgba(108, 192, 74, 0.5)' : 'var(--accent-primary, #6aa3ff)',
-                  color: '#fff',
-                  fontWeight: 600,
+                  background: deckSavedAt ? 'rgba(95, 208, 140, 0.16)' : 'rgba(242, 180, 92, 0.18)',
+                  borderColor: deckSavedAt ? 'rgba(95, 208, 140, 0.5)' : 'rgba(242, 180, 92, 0.6)',
+                  color: deckSavedAt ? '#c8f2d8' : '#f6d9a8',
                 }}
                 title={isLoggedIn ? 'Save this drafted deck to your account' : 'Save this drafted deck to your browser My Decks library'}
               >
@@ -230,8 +238,16 @@ export function TournamentOverlay({
               >
                 {isPlayerReady ? '✓ Ready' : readyLabel}
               </button>
-              {!lobbyState?.settings.jumpstartActive && tournamentState.currentRound === 0 && !isPlayerReady && (
-                <button onClick={unsubmitDeck} className={styles.editDeckButton}>
+              {/* Rebuilding from the pool is allowed before round 1 and between matches — "continuous
+                  construction", the casual-event norm. The server refuses it mid-match. */}
+              {!lobbyState?.settings.jumpstartActive && !isPlayerReady && (tournamentState.currentRound === 0 || deckBuildingState) && (
+                <button
+                  onClick={unsubmitDeck}
+                  className={styles.editDeckButton}
+                  title={tournamentState.currentRound === 0
+                    ? 'Change your deck before the first round'
+                    : 'Rebuild your deck from your pool before your next match'}
+                >
                   Edit Deck
                 </button>
               )}
@@ -479,32 +495,43 @@ export function TournamentOverlay({
       )}
 
       {/* ── Last round results ── */}
-      {tournamentState.lastRoundResults && (
+      {tournamentState.lastRoundResults && tournamentState.lastRoundResults.length > 0 && (
         <div className={`${styles.resultsSection} ${styles.trnSection}`}>
           <h3 className={styles.resultsSectionTitle}>
             Round {tournamentState.currentRound} Results
           </h3>
-          {tournamentState.lastRoundResults.map((result, i) => (
-            <div key={i} className={styles.resultRow}>
-              <span>{result.player1Name}</span>
-              <span className={styles.resultOutcome}>
-                {result.isBye
-                  ? 'BYE'
-                  : result.isDraw
-                    ? 'Draw'
-                    : `Winner: ${result.winnerId === result.player1Id ? result.player1Name : result.player2Name}`}
-                {result.isSimulated && (
-                  <span
-                    className={styles.resultSimulated}
-                    title="Both seats were AI, so the server decided this match instead of playing it. There is no replay."
-                  >
-                    simulated
-                  </span>
-                )}
-              </span>
-              <span>{result.isBye ? '' : result.player2Name}</span>
-            </div>
-          ))}
+          {tournamentState.lastRoundResults.map((result, i) => {
+            // The winner's name is lit; the middle says only what a name can't (draw, bye, simulated).
+            const decided = !result.isBye && !result.isDraw
+            const p1Won = decided && result.winnerId === result.player1Id
+            const p2Won = decided && result.winnerId === result.player2Id
+            // A best-of-three reports its game score ("2–1") in place of the bare "vs".
+            const gameWins = (result.player1GameWins ?? 0) + (result.player2GameWins ?? 0)
+            const gameScore = (lobbyState?.settings.bestOf ?? 1) > 1 && !result.isBye && !result.isSimulated && gameWins > 0
+              ? `${result.player1GameWins ?? 0}–${result.player2GameWins ?? 0}`
+              : null
+            return (
+              <div key={i} className={styles.resultRow}>
+                <span className={p1Won ? styles.resultWinner : decided ? styles.resultLoser : undefined}>
+                  {result.player1Name}
+                </span>
+                <span className={styles.resultOutcome}>
+                  {result.isBye ? 'Bye' : gameScore ? (result.isDraw ? `Draw ${gameScore}` : gameScore) : result.isDraw ? 'Draw' : 'vs'}
+                  {result.isSimulated && (
+                    <span
+                      className={styles.resultSimulated}
+                      title="Both seats were AI, so the server decided this match instead of playing it. There is no replay."
+                    >
+                      simulated
+                    </span>
+                  )}
+                </span>
+                <span className={p2Won ? styles.resultWinner : decided ? styles.resultLoser : undefined}>
+                  {result.isBye ? '' : result.player2Name}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -513,11 +540,11 @@ export function TournamentOverlay({
         {tournamentState.isComplete ? (
           <>
             {lobbyState?.isHost && (
-              <button onClick={addExtraRound} className={styles.readyButton}>
+              <button onClick={addExtraRound} className={styles.editDeckButton}>
                 Add Round
               </button>
             )}
-            <button onClick={leaveTournament} className={styles.returnButton}>
+            <button onClick={leaveTournament} className={styles.readyButton}>
               Return to Menu
             </button>
           </>
@@ -531,7 +558,7 @@ export function TournamentOverlay({
                 setTimeout(() => setConfirmLeave(false), 3000)
               }
             }}
-            className={confirmLeave ? styles.leaveButtonConfirm : styles.leaveButton}
+            className={confirmLeave ? styles.trnLeaveConfirm : styles.trnLeave}
           >
             {confirmLeave ? 'Confirm Leave?' : 'Leave Tournament'}
           </button>
@@ -911,4 +938,9 @@ function DeckViewerCardPreview({ card, pos }: { card: SealedCardInfo; pos: { x: 
       </div>
     </div>
   )
+}
+
+/** The card art behind a tint, as on the landing screen; the tint is darker since this is a table. */
+const tournamentBackdrop = {
+  backgroundImage: `linear-gradient(180deg, rgba(6, 7, 12, 0.7) 0%, rgba(6, 7, 12, 0.6) 45%, rgba(6, 7, 12, 0.82) 100%), url(${randomBackground})`,
 }

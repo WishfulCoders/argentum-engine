@@ -468,6 +468,69 @@
     ]
 }
 
+// Black Market
+{
+    "name": "Black Market",
+    "manaCost": "{3}{B}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "Whenever a creature dies, put a charge counter on this enchantment.\nAt the beginning of your first main phase, add {B} for each charge counter on this enchantment.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Black Market:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "CHARGE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            },
+            {
+                "id": "Black Market:2",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "PRECOMBAT_MAIN"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "AddMana",
+                    "color": "BLACK",
+                    "amount": {
+                        "type": "EntityProperty",
+                        "entity": "Self",
+                        "numericProperty": {
+                            "type": "CounterCount",
+                            "counterType": "CHARGE"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "116",
+        "rarity": "RARE",
+        "artist": "Jeff Easley",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/5/05976e5c-b46c-431e-9dbd-1dc5fad3536c.jpg?1783945957",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "Getting the mana is not optional."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Blaster Mage
 {
     "name": "Blaster Mage",
@@ -776,7 +839,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 2 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -857,7 +922,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 4 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -935,7 +1002,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 3 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -1028,7 +1097,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 6 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -1106,7 +1177,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 1 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -1186,7 +1259,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 5 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -1909,7 +1984,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 2
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
                     }
                 },
                 "effect": {
@@ -2336,7 +2414,12 @@
                         "filter": {
                             "cardPredicates": [
                                 "IsCreature",
-                                "ManaValueAtMostX"
+                                {
+                                    "type": "CompareNumericProperty",
+                                    "property": "MANA_VALUE",
+                                    "operator": "LTE",
+                                    "amount": "XValue"
+                                }
                             ]
                         }
                     },
@@ -2653,7 +2736,12 @@
                                 "filter": {
                                     "cardPredicates": [
                                         "IsArtifact",
-                                        "ManaValueAtMostX"
+                                        {
+                                            "type": "CompareNumericProperty",
+                                            "property": "MANA_VALUE",
+                                            "operator": "LTE",
+                                            "amount": "XValue"
+                                        }
                                     ]
                                 }
                             },
@@ -3043,6 +3131,63 @@
     ]
 }
 
+// Invigorate
+{
+    "name": "Invigorate",
+    "manaCost": "{2}{G}",
+    "typeLine": "Instant",
+    "oracleText": "If you control a Forest, rather than pay this spell's mana cost, you may have an opponent gain 3 life.\nTarget creature gets +4/+4 until end of turn.",
+    "script": {
+        "spellEffect": {
+            "type": "ModifyStats",
+            "powerModifier": {
+                "type": "Fixed",
+                "amount": 4
+            },
+            "toughnessModifier": {
+                "type": "Fixed",
+                "amount": 4
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "t0"
+            }
+        ],
+        "selfAlternativeCost": {
+            "manaCost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "OthersGainLife",
+                    "amount": 3
+                }
+            ],
+            "condition": {
+                "type": "Exists",
+                "player": "You",
+                "zone": "Battlefield",
+                "filter": "land Forest"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "254",
+        "artist": "Dan Frazier",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/0/406b343c-90b5-4a4d-91c3-2fddcc9a0e05.jpg?1783945923"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Iron Lance
 {
     "name": "Iron Lance",
@@ -3286,6 +3431,62 @@
     ]
 }
 
+// Last Breath
+{
+    "name": "Last Breath",
+    "manaCost": "{1}{W}",
+    "typeLine": "Instant",
+    "oracleText": "Exile target creature with power 2 or less. Its controller gains 4 life.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GainLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 4
+                    },
+                    "target": "TargetController"
+                },
+                {
+                    "type": "MoveToZone",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    },
+                    "destination": "Exile"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature pow<=2"
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "27",
+        "rarity": "UNCOMMON",
+        "artist": "DiTerlizzi",
+        "flavorText": "\"The River flows. My soul returns.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/b/3b540da2-f8c6-48d6-af6d-db78958f0a17.jpg?1783945979",
+        "rulings": [
+            {
+                "date": "2013-09-15",
+                "text": "If the creature is an illegal target when Last Breath tries to resolve, it won't resolve and none of its effects will happen. Its controller won't gain 4 life."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Lightning Hounds
 {
     "name": "Lightning Hounds",
@@ -3375,6 +3576,144 @@
     },
     "colorIdentityOverride": [
         "BLACK"
+    ]
+}
+
+// Magistrate's Scepter
+{
+    "name": "Magistrate's Scepter",
+    "manaCost": "{3}",
+    "typeLine": "Artifact",
+    "oracleText": "{4}, {T}: Put a charge counter on this artifact.\n{T}, Remove three charge counters from this artifact: Take an extra turn after this one.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Magistrate's Scepter:1",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomMana",
+                                "cost": "{4}"
+                            }
+                        },
+                        "CostTap"
+                    ]
+                },
+                "effect": {
+                    "type": "AddCounters",
+                    "counterType": "CHARGE",
+                    "count": 1,
+                    "target": "Self"
+                }
+            },
+            {
+                "id": "Magistrate's Scepter:2",
+                "cost": {
+                    "type": "CostComposite",
+                    "costs": [
+                        "CostTap",
+                        {
+                            "type": "CostAtomWrapper",
+                            "atom": {
+                                "type": "AtomRemoveCounters",
+                                "counterType": "CHARGE",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 3
+                                },
+                                "self": true
+                            }
+                        }
+                    ]
+                },
+                "effect": "TakeExtraTurn",
+                "descriptionOverride": "Take an extra turn"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "304",
+        "rarity": "RARE",
+        "artist": "Adam Rex",
+        "imageUri": "https://cards.scryfall.io/normal/front/d/4/d4785ed7-c948-4ad2-b24d-2f45806d9fcc.jpg?1783945912",
+        "rulings": [
+            {
+                "date": "2018-07-13",
+                "text": "If multiple extra turns would be taken after this one, perhaps because more than one player has activated the last ability of their Magistrate's Scepter, the most recently created one is taken first."
+            }
+        ]
+    }
+}
+
+// Misdirection
+{
+    "name": "Misdirection",
+    "manaCost": "{3}{U}{U}",
+    "typeLine": "Instant",
+    "oracleText": "You may exile a blue card from your hand rather than pay this spell's mana cost.\nChange the target of target spell with a single target.",
+    "script": {
+        "spellEffect": "ChangeTarget",
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "statePredicates": [
+                            "HasSingleTarget"
+                        ]
+                    },
+                    "zone": "Stack"
+                },
+                "id": "t0"
+            }
+        ],
+        "selfAlternativeCost": {
+            "manaCost": "{0}",
+            "additionalCosts": [
+                {
+                    "type": "AdditionalAtom",
+                    "atom": {
+                        "type": "AtomExileFrom",
+                        "zone": "Hand",
+                        "filter": "blue"
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "87",
+        "rarity": "RARE",
+        "artist": "Paolo Parente",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/8/581ad59c-29e9-4498-a6fd-33bf21e8e7c4.jpg?1783945965",
+        "rulings": [
+            {
+                "date": "2004-10-04",
+                "text": "This only targets the spell being changed, not the original or new target of the spell it is affecting."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "You can't make a spell which is on the stack target itself."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "If there is no other legal target for the spell, this does not change the target."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "This does not check if the current target is legal. It just checks if the spell has a single target."
+            },
+            {
+                "date": "2004-10-04",
+                "text": "You choose the spell to target on announcement, but you pick the new target for that spell on resolution."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
     ]
 }
 
@@ -3844,7 +4183,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Rebel permanent card with mana value 4 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -3923,7 +4264,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Rebel permanent card with mana value 5 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -4002,7 +4345,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Rebel permanent card with mana value 3 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -4080,7 +4425,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Rebel permanent card with mana value 2 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -4161,7 +4508,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Rebel permanent card with mana value 6 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -4800,7 +5149,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Forest land card to put onto the battlefield",
+                                "selectedLabel": "Put onto the battlefield"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4993,7 +5344,10 @@
                     "type": "AdditionalAtom",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 4
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 4
+                        }
                     }
                 }
             ],

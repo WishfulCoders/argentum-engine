@@ -12,7 +12,6 @@ import {
   useIsTeamGame,
   useIsSharedLifeTeamGame,
   useViewerTeamIndex,
-  useAttackNeighbours,
 } from '@/store/selectors'
 import { teamColor, type SeatColor } from '@/styles/seatColors'
 import type { ClientCard, ClientPlayer, EntityId } from '@/types'
@@ -21,27 +20,52 @@ import { SpeedGauge } from './overlay'
 import { HelpTip } from '../help/HelpTip'
 import { isLoneTargetRequirement } from '@/utils/targeting.ts'
 import { defendingPlayerOf } from '@/utils/combatTargets'
-import { attackModeLabel } from '@/utils/attackDirection'
 import { AttackRelationBadge, useAttackRelation } from './AttackRelationTag'
+import { EmoteBubble } from '../tableTalk/EmoteBubble'
+import { SeatPortrait, useHasSeatPortrait } from './SeatPortrait'
 
 /**
  * Total viewport width claimed by the fixed rail column (chip width + left offset + a
  * small gap). The table overview pads the board strip by this much so the leftmost
  * board never renders under the rail.
  */
-export function railReservedWidth(responsive: { isMobile: boolean; isTablet: boolean; isShortDesktop: boolean }): number {
-  return chipSizing(responsive).width + (responsive.isMobile ? 8 : 12) + 8
+type RailResponsive = { isMobile: boolean; isTablet: boolean; isShortDesktop: boolean; viewportHeight: number }
+
+/**
+ * Phone-style compact chips (no names): a phone in portrait, and any viewport too short for the
+ * full column — a landscape phone has tablet width but only ~390px of height, and the named
+ * column ran straight into the center HUD's opponent orb there.
+ */
+function railCompact(responsive: RailResponsive): boolean {
+  return responsive.isMobile || responsive.viewportHeight < 560
+}
+
+export function railReservedWidth(responsive: RailResponsive): number {
+  return chipSizing(responsive).width + (railCompact(responsive) ? 8 : 12) + 8
+}
+
+/**
+ * Whether the all-boards table overview can run at this viewport. Splitting the board into
+ * per-seat cells needs both width and height: a portrait phone has no width for it, and a
+ * landscape phone (844×390) has no height — its cells end up a few pixels tall. Every place
+ * that reads the overview (GameBoard's layout, the default-on effect, the rail's toggle) goes
+ * through this, so the camera never degrades in one place and not another.
+ */
+export function overviewSupported(responsive: { isMobile: boolean; viewportHeight: number }): boolean {
+  return !responsive.isMobile && responsive.viewportHeight >= 560
 }
 
 /**
  * Chip dimensions by screen size. The rail is a fixed-width column, so every chip shares one
  * size; large desktops get noticeably bigger chips (the small default felt cramped there).
  */
-function chipSizing(responsive: { isMobile: boolean; isTablet: boolean; isShortDesktop: boolean }) {
-  const compact = responsive.isMobile
-  const large = !responsive.isMobile && !responsive.isTablet && !responsive.isShortDesktop
+function chipSizing(responsive: RailResponsive) {
+  const compact = railCompact(responsive)
+  const large = !compact && !responsive.isTablet && !responsive.isShortDesktop
   return {
-    width: compact ? 150 : large ? 224 : 188,
+    // Phones hide names, so a compact chip only needs the seat dot, life and hand count — and
+    // every pixel of it sits on top of the viewed opponent's board, which has no room to spare.
+    width: compact ? 86 : large ? 232 : 196,
     height: compact ? 22 : large ? 32 : 26,
     padX: compact ? 7 : large ? 14 : 11,
     gap: compact ? 4 : large ? 9 : 7,
@@ -113,17 +137,6 @@ export function OpponentRail({
   const teamMode = isTeamGame && viewerTeam != null && !spectatorMode
   // Only 2HG pools life per team; Team vs. Team groups by team but shows per-player life on chips.
   const sharedLife = useIsSharedLifeTeamGame()
-  // Attack left / attack right (CR 803.1): Free-for-All only, so it never meets the team rail.
-  // Read off the table rather than your seat, so an eliminated player watching on still sees it;
-  // with two players left the rule restricts nothing and the header stands down.
-  const gameState = useGameStore(selectGameState)
-  const attackMode = gameState?.attackMode
-  const attackHeaderMode =
-    (attackMode === 'LEFT' || attackMode === 'RIGHT') &&
-    (gameState?.players.filter((p) => !p.hasLost).length ?? 0) >= 3
-      ? attackMode
-      : null
-
   if (opponents.length <= 1) return null
 
   const teammates = teamMode ? opponents.filter((o) => teamMap[o.playerId] === viewerTeam) : []
@@ -138,8 +151,8 @@ export function OpponentRail({
   // ~36px tall). A column reads as a clear turn-order list and leaves the board its full height.
   // In replay/spectator mode a fixed playback header sits above the board, so drop the whole
   // column below it (topOffset) — otherwise the top chips render under the header bar.
-  const top = (responsive.isMobile ? 46 : 54) + topOffset
-  const left = responsive.isMobile ? 8 : 12
+  const top = (railCompact(responsive) ? 46 : 54) + topOffset
+  const left = railCompact(responsive) ? 8 : 12
   const columnWidth = chipSizing(responsive).width
 
   return (
@@ -226,7 +239,6 @@ export function OpponentRail({
               the center-HUD orb. In normal play the seat is "you"; while spectating it is whichever
               seat the header's view switcher has anchored (it would otherwise be missing from the
               rail entirely, since it is nobody's "opponent"). */}
-          {attackHeaderMode && <AttackDirectionHeader mode={attackHeaderMode} spectatorMode={spectatorMode} />}
           {self && <BottomSeatRailChip seat={self} isViewerSeat={!spectatorMode} />}
           {opponents.map((opponent) => (
             <RailChip
@@ -241,206 +253,116 @@ export function OpponentRail({
           ))}
         </>
       )}
-      {/* Camera controls (Overview / Follow) are settings, not players — shown in normal play
-          and while spectating alike, since a spectator steers the same multi-board camera. */}
-      {(
-        <>
-          {/* Divider — the camera controls below are *settings*, not players, so set them apart
-              from the chip list above. */}
-          <div aria-hidden style={{ alignSelf: 'stretch', height: 1, margin: '4px 6px 2px', background: 'rgba(255, 255, 255, 0.1)' }} />
-          {/* Overview is desktop/tablet-landscape only — three ~33% board cells are
-              unusable on a portrait phone (GameBoard ignores the mode on isMobile too). */}
-          {!responsive.isMobile && <button
+      {/* Camera controls (Overview / Follow) are settings, not players — one quiet row under the
+          seat list, shown in normal play and while spectating alike (a spectator steers the same
+          multi-board camera). Overview is desktop/tablet-landscape only — three ~33% board cells
+          are unusable on a portrait phone (GameBoard ignores the mode on isMobile too). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, pointerEvents: 'none' }}>
+        {overviewSupported(responsive) && (
+          <CameraToggle
+            label="Overview"
+            on={overviewMode}
+            accent="#b8a4ff"
             onClick={toggleOverviewMode}
             title={
               overviewMode
                 ? 'Table overview: every opponent board is shown side-by-side. Click (or press 0) to focus one board.'
                 : 'Focused camera: one opponent board at a time. Click (or press 0) to see the whole table at once.'
             }
-            style={{
-              alignSelf: 'flex-start',
-              pointerEvents: 'auto',
-              height: 20,
-              padding: '0 9px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              borderRadius: 6,
-              border: `1px solid ${overviewMode ? 'rgba(180, 160, 255, 0.55)' : '#3a3a44'}`,
-              background: overviewMode ? 'rgba(50, 35, 90, 0.7)' : 'rgba(18, 18, 26, 0.7)',
-              color: overviewMode ? '#cbb8ff' : '#888',
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span aria-hidden style={{ fontSize: 11 }}>⊞</span>
-            Overview
-            <span style={{ fontWeight: 800, color: overviewMode ? '#e4daff' : '#666' }}>
-              {overviewMode ? 'On' : 'Off'}
-            </span>
-          </button>}
-          <button
-            onClick={toggleFollowAction}
-            title={
-              followAction
-                ? 'Follow the action: the view slides to the active board automatically. Click for a manual camera.'
-                : 'Manual camera: the view only moves when you switch boards. Click to follow the action.'
-            }
-            style={{
-              // Deliberately unlike a chip: rounded-rect (not a full pill), smaller, narrower
-              // than the fixed-width chips (flex-start), with an eye icon + explicit ON/OFF.
-              alignSelf: 'flex-start',
-              pointerEvents: 'auto',
-              height: 20,
-              padding: '0 9px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              borderRadius: 6,
-              border: `1px solid ${followAction ? 'rgba(110, 200, 255, 0.55)' : '#3a3a44'}`,
-              background: followAction ? 'rgba(20, 50, 80, 0.7)' : 'rgba(18, 18, 26, 0.7)',
-              color: followAction ? '#9fd8ff' : '#888',
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span aria-hidden style={{ fontSize: 11 }}>{followAction ? '◉' : '○'}</span>
-            Follow
-            <span style={{ fontWeight: 800, color: followAction ? '#cdebff' : '#666' }}>
-              {followAction ? 'On' : 'Off'}
-            </span>
-          </button>
-          <span style={{ alignSelf: 'flex-start', pointerEvents: 'auto', paddingLeft: 2 }}>
+          />
+        )}
+        <CameraToggle
+          label="Follow"
+          on={followAction}
+          accent="#7cc8ff"
+          onClick={toggleFollowAction}
+          title={
+            followAction
+              ? 'Follow the action: the view slides to the active board automatically. Click for a manual camera.'
+              : 'Manual camera: the view only moves when you switch boards. Click to follow the action.'
+          }
+        />
+        {!railCompact(responsive) && (
+          <span style={{ pointerEvents: 'auto', marginLeft: 'auto', display: 'inline-flex' }}>
             <HelpTip topicId="multiplayer-camera" label="How the multiplayer camera works" size="sm" />
           </span>
-        </>
-      )}
+        )}
+      </div>
     </div>
   )
 }
 
 /**
- * The attack-left / attack-right rule (CR 803.1), shown above the seat list for the whole game.
- * The rail lists seats in turn order and turn order runs to the left (CR 101.4), so "left" is the
- * seat below in the list and "right" the seat above, wrapping at the ends — the arrow says which.
+ * A camera setting in the rail's footer row: the label plus a tiny switch, so the on/off state
+ * reads at a glance without spelling out "ON"/"OFF". Deliberately unlike a seat chip — small,
+ * quiet, and content-width.
  */
-function AttackDirectionHeader({ mode, spectatorMode }: { mode: 'LEFT' | 'RIGHT'; spectatorMode: boolean }) {
-  const gameState = useGameStore(selectGameState)
-  const neighbours = useAttackNeighbours()
-  // The second line names your two neighbours: the one you can attack, the one who can attack
-  // you. A spectator has no "you", so the header keeps just the rule.
-  const relations = spectatorMode ? null : neighbours
-  const nameOf = (id: EntityId) => gameState?.players.find((p) => p.playerId === id)?.name ?? ''
-  const targetColor = useIdentityColor(relations?.attacks ?? null)
-  const attackerColor = useIdentityColor(relations?.attackedBy ?? null)
-  // Collapsed to the one-line rule by default — the chip badges already mark both neighbours; a
-  // click unfolds the spelled-out lines. Remembered per browser.
-  const [expanded, setExpanded] = useState(readAttackHeaderExpanded)
-  const toggle = () => {
-    const next = !expanded
-    setExpanded(next)
-    try {
-      localStorage.setItem(ATTACK_HEADER_EXPANDED_KEY, next ? '1' : '0')
-    } catch {
-      // Storage blocked (private window) — the toggle still works for this session.
-    }
-  }
-  const title =
-    (mode === 'LEFT'
-      ? 'Attack left: each player can attack only the next player in turn order — the seat below them in this list (the bottom seat attacks the top one).'
-      : 'Attack right: each player can attack only the previous player in turn order — the seat above them in this list (the top seat attacks the bottom one).') +
-    (relations ? (expanded ? '\nClick to hide the details.' : '\nClick to show who you attack and who attacks you.') : '')
+function CameraToggle({
+  label,
+  on,
+  accent,
+  title,
+  onClick,
+}: {
+  label: string
+  on: boolean
+  accent: string
+  title: string
+  onClick: () => void
+}) {
   return (
-    <div
-      role={relations ? 'button' : 'note'}
-      aria-expanded={relations ? expanded : undefined}
-      tabIndex={relations ? 0 : undefined}
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={onClick}
       title={title}
-      onClick={relations ? toggle : undefined}
-      onKeyDown={(e) => {
-        if (relations && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault()
-          toggle()
-        }
-      }}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '3px 10px',
-        borderRadius: 6,
-        border: '1px solid rgba(255, 110, 100, 0.45)',
-        borderLeft: '4px solid rgba(255, 110, 100, 0.8)',
-        background: 'linear-gradient(90deg, rgba(90, 20, 20, 0.6), rgba(10, 12, 20, 0.55))',
-        color: '#ffb3ab',
-        fontSize: 10,
-        fontWeight: 800,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        userSelect: 'none',
         pointerEvents: 'auto',
-        cursor: relations ? 'pointer' : 'help',
+        height: 22,
+        padding: '0 6px 0 8px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        borderRadius: 7,
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'rgba(14, 16, 24, 0.72)',
+        color: on ? '#e6e9f2' : '#8a8f9c',
+        fontSize: 10.5,
+        fontWeight: 600,
+        letterSpacing: '0.01em',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'color 150ms',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span aria-hidden style={{ fontSize: 11, lineHeight: 1 }}>⚔️</span>
-        <span style={{ flex: 1 }}>{attackModeLabel(mode)}</span>
-        <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>{mode === 'LEFT' ? '↓' : '↑'}</span>
-        {relations && (
-          <span aria-hidden style={{ fontSize: 9, lineHeight: 1, opacity: 0.8, width: 8, textAlign: 'center' }}>
-            {expanded ? '▾' : '▸'}
-          </span>
-        )}
-      </div>
-      {relations && expanded && (
-        <div
+      {label}
+      <span
+        aria-hidden
+        style={{
+          position: 'relative',
+          width: 18,
+          height: 10,
+          borderRadius: 999,
+          background: on ? accent : 'rgba(255, 255, 255, 0.14)',
+          transition: 'background 150ms',
+          flexShrink: 0,
+        }}
+      >
+        <span
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            marginTop: 2,
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: 0,
-            textTransform: 'none',
-            color: '#d8c7c4',
+            position: 'absolute',
+            top: 1.5,
+            left: on ? 9.5 : 1.5,
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: on ? '#0d1018' : '#9aa0ad',
+            transition: 'left 150ms',
           }}
-        >
-          <RelationLine glyph="⚔️">
-            You attack <b style={{ color: targetColor.bright, fontWeight: 800 }}>{nameOf(relations.attacks)}</b>
-          </RelationLine>
-          <RelationLine glyph="🛡">
-            <b style={{ color: attackerColor.bright, fontWeight: 800 }}>{nameOf(relations.attackedBy)}</b> attacks you
-          </RelationLine>
-        </div>
-      )}
-    </div>
-  )
-}
-
-const ATTACK_HEADER_EXPANDED_KEY = 'argentum-attack-direction-expanded'
-
-function readAttackHeaderExpanded(): boolean {
-  try {
-    return localStorage.getItem(ATTACK_HEADER_EXPANDED_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-function RelationLine({ glyph, children }: { glyph: string; children: React.ReactNode }) {
-  return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-      <span aria-hidden style={{ width: 12, textAlign: 'center', fontSize: 10, flexShrink: 0 }}>{glyph}</span>
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
-    </span>
+        />
+      </span>
+    </button>
   )
 }
 
@@ -545,10 +467,11 @@ function BottomSeatRailChip({ seat, isViewerSeat }: { seat: ClientPlayer; isView
   const hasPriority = gameState?.priorityPlayerId === playerId && !seat.hasLost
   const isDeciding = opponentDecisionStatus?.playerId === playerId
 
-  const compact = responsive.isMobile
+  const compact = railCompact(responsive)
   const sz = chipSizing(responsive)
   const tomb = seat.hasLost
   const lifeDanger = seat.life <= 5
+  const hasPortrait = useHasSeatPortrait(seat.playerId)
 
   const borderColor = tomb ? '#3a3a44' : color.base
   const background = tomb
@@ -607,24 +530,28 @@ function BottomSeatRailChip({ seat, isViewerSeat }: { seat: ClientPlayer; isView
             ▶
           </span>
         )}
-        {/* Seat dot / skull */}
-        <span
-          aria-hidden
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: sz.dot,
-            height: sz.dot,
-            borderRadius: '50%',
-            background: tomb ? 'transparent' : color.base,
-            boxShadow: tomb ? 'none' : `0 0 5px ${color.base}`,
-            fontSize: 10,
-            flexShrink: 0,
-          }}
-        >
-          {tomb ? '💀' : ''}
-        </span>
+        {/* Seat portrait (ringed in the seat colour) / seat dot / skull */}
+        {hasPortrait && !tomb ? (
+          <SeatPortrait playerId={seat.playerId} size={sz.height - 8} ringColor={color.base} ringWidth={1.5} />
+        ) : (
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: sz.dot,
+              height: sz.dot,
+              borderRadius: '50%',
+              background: tomb ? 'transparent' : color.base,
+              boxShadow: tomb ? 'none' : `0 0 5px ${color.base}`,
+              fontSize: 10,
+              flexShrink: 0,
+            }}
+          >
+            {tomb ? '💀' : ''}
+          </span>
+        )}
 
         {!compact && (
           <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 5, overflow: 'hidden' }}>
@@ -674,8 +601,10 @@ function BottomSeatRailChip({ seat, isViewerSeat }: { seat: ClientPlayer; isView
           </span>
         )}
 
-        {/* Hand count */}
-        {!tomb && (
+        {/* Hand count — only for a seat that isn't yours: your own hand is on screen already,
+            and the number cost the chip the room its name needed. A changed maximum hand size
+            is the exception, since the suffix is the only place it shows. */}
+        {!tomb && (!isViewerSeat || handLimitSuffix(seat.maxHandSize)) && (
           <span
             style={{
               display: 'inline-flex',
@@ -704,6 +633,8 @@ function BottomSeatRailChip({ seat, isViewerSeat }: { seat: ClientPlayer; isView
           <SpeedGauge speed={seat.speed ?? 0} compact />
         )}
 
+        {!tomb && <DesignationGlyphs player={seat} compact={compact} />}
+
         {/* Poison */}
         {!tomb && seat.poisonCounters > 0 && (
           <span
@@ -714,6 +645,10 @@ function BottomSeatRailChip({ seat, isViewerSeat }: { seat: ClientPlayer; isView
           </span>
         )}
 
+        {!tomb && (seat.radCounters ?? 0) > 0 && (
+          <span title="Radiation: at this player's precombat main phase, they mill this many cards. Each nonland costs 1 life and removes a rad counter."
+            style={{ fontSize: 11, fontWeight: 800, color: '#a3e635' }}>☢{seat.radCounters}</span>
+        )}
         {/* Energy (CR 107.14) */}
         {!tomb && (seat.energyCounters ?? 0) > 0 && (
           <span
@@ -721,6 +656,16 @@ function BottomSeatRailChip({ seat, isViewerSeat }: { seat: ClientPlayer; isView
             style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: '#fde68a' }}
           >
             ⚡{seat.energyCounters}
+          </span>
+        )}
+
+        {/* Experience (CR 122.1 — a counter on a player) */}
+        {!tomb && (seat.experienceCounters ?? 0) > 0 && (
+          <span
+            title={`${seat.experienceCounters} experience counters`}
+            style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: '#bfdbfe' }}
+          >
+            XP{seat.experienceCounters}
           </span>
         )}
 
@@ -766,6 +711,53 @@ const DEFAULT_MAX_HAND_SIZE = 7
  * the default 7: "/∞" for no maximum (Reliquary Tower) or "/N" for a finite cap (Cursed Rack). An
  * empty string when the limit is the normal 7 (or absent), so the chip stays uncluttered.
  */
+/**
+ * The rail's markers for a player's single-holder designations and dungeon: 👑 the monarch
+ * (CR 725), 🗝️ the initiative (CR 726), and 🧭 the room their venture marker is on (CR 309). All
+ * read straight off the server's player state — the badges are the same `activeEffects` the HUD shows.
+ */
+function DesignationGlyphs({ player, compact }: { player: ClientPlayer; compact: boolean }) {
+  const effects = player.activeEffects ?? []
+  const monarch = effects.some((e) => e.effectId === 'monarch')
+  const initiative = effects.some((e) => e.effectId === 'initiative')
+  const dungeon = player.dungeon
+  if (!monarch && !initiative && !dungeon) return null
+  const size = compact ? 11 : 13
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+      {monarch && (
+        <span title={`${player.name} is the monarch`} data-testid="rail-monarch" style={{ fontSize: size }}>👑</span>
+      )}
+      {initiative && (
+        <span
+          title={`${player.name} has the initiative`}
+          data-testid="rail-initiative"
+          style={{
+            fontSize: size,
+            padding: '0 3px',
+            borderRadius: 6,
+            background: 'rgba(212, 175, 55, 0.22)',
+            border: '1px solid rgba(212, 175, 55, 0.6)',
+          }}
+        >
+          🗝️
+        </span>
+      )}
+      {dungeon && (
+        // Just the marker: the chip's width belongs to the player's name. The room is in the tooltip
+        // and on the player's command-zone Dungeon tile.
+        <span
+          title={`${dungeon.name} — ${dungeon.rooms[dungeon.currentRoom]?.name ?? ''}`}
+          data-testid="rail-dungeon"
+          style={{ fontSize: size }}
+        >
+          🧭
+        </span>
+      )}
+    </span>
+  )
+}
+
 function handLimitSuffix(maxHandSize?: number | null): string {
   if (maxHandSize === undefined || maxHandSize === DEFAULT_MAX_HAND_SIZE) return ''
   return maxHandSize === null ? '/∞' : `/${maxHandSize}`
@@ -980,9 +972,10 @@ function RailChip({
     }
   }
 
-  const compact = responsive.isMobile
+  const compact = railCompact(responsive)
   const sz = chipSizing(responsive)
   const tomb = opponent.hasLost
+  const hasPortrait = useHasSeatPortrait(playerId)
 
   const borderColor = tomb
     ? '#3a3a44'
@@ -1025,7 +1018,8 @@ function RailChip({
           chipTitle(opponent) +
           (attackRelation === 'target' ? '\nThe only opponent you can attack' : '') +
           (attackRelation === 'attacker' ? '\nThe only opponent who can attack you' : '') +
-          (isAttackRestricted ? "\nCan't be attacked this combat" : '')
+          (isAttackRestricted ? "\nCan't be attacked this combat" : '') +
+          (isAlly ? '\nYour teammate' : '')
         }
         onClick={handleChipClick}
         onKeyDown={(e) => {
@@ -1079,8 +1073,11 @@ function RailChip({
         }}
       >
         {/* Attack relation (attack left/right) — a badge on the chip's left edge, outside the
-            content row: inline words squeezed the name out. The rail header spells it out. */}
+            content row: inline words squeezed the name out. The chip's tooltip spells it out. */}
         {attackRelation && !tomb && <AttackRelationBadge relation={attackRelation} />}
+        {/* While this chip carries the seat's anchors (its board is off screen) it is also where
+            their emotes speak from — out to the right, toward the table. */}
+        {!isBoardVisible && <EmoteBubble playerId={playerId} placement="right" />}
         {/* Attention pulse overlay — keyed so each event restarts the animation
             without remounting the chip (which would drop hover state). */}
         {pulse && (
@@ -1114,24 +1111,28 @@ function RailChip({
             ▶
           </span>
         )}
-        {/* Viewed marker / seat dot / skull */}
-        <span
-          aria-hidden
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: sz.dot,
-            height: sz.dot,
-            borderRadius: '50%',
-            background: tomb ? 'transparent' : seat.base,
-            boxShadow: tomb ? 'none' : `0 0 5px ${seat.base}`,
-            fontSize: 10,
-            flexShrink: 0,
-          }}
-        >
-          {tomb ? '💀' : ''}
-        </span>
+        {/* Seat portrait (ringed in the seat colour, so it still does the dot's job) / seat dot / skull */}
+        {hasPortrait && !tomb ? (
+          <SeatPortrait playerId={playerId} size={sz.height - 8} ringColor={seat.base} ringWidth={1.5} />
+        ) : (
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: sz.dot,
+              height: sz.dot,
+              borderRadius: '50%',
+              background: tomb ? 'transparent' : seat.base,
+              boxShadow: tomb ? 'none' : `0 0 5px ${seat.base}`,
+              fontSize: 10,
+              flexShrink: 0,
+            }}
+          >
+            {tomb ? '💀' : ''}
+          </span>
+        )}
 
         {/* Attack-restriction marker — this seat can't be attacked this combat. */}
         {isAttackRestricted && (
@@ -1158,9 +1159,6 @@ function RailChip({
             >
               {opponent.name}
             </span>
-            {isAlly && !tomb && (
-              <span aria-hidden title="Your teammate" style={{ fontSize: 9, opacity: 0.85, fontWeight: 700, flexShrink: 0, color: seat.bright }}>ALLY</span>
-            )}
             {isViewed && viewPinned && !spectatorMode && (
               <span aria-hidden title="Pinned — follow-the-action paused" style={{ flexShrink: 0 }}>📌</span>
             )}
@@ -1219,6 +1217,9 @@ function RailChip({
           <SpeedGauge speed={opponent.speed ?? 0} compact />
         )}
 
+        {/* Single-holder designations — the monarch (CR 725) and the initiative (CR 726) */}
+        {!tomb && <DesignationGlyphs player={opponent} compact={compact} />}
+
         {/* Poison */}
         {!tomb && opponent.poisonCounters > 0 && (
           <span
@@ -1229,6 +1230,10 @@ function RailChip({
           </span>
         )}
 
+        {!tomb && (opponent.radCounters ?? 0) > 0 && (
+          <span title="Radiation: at this player's precombat main phase, they mill this many cards. Each nonland costs 1 life and removes a rad counter."
+            style={{ fontSize: 11, fontWeight: 800, color: '#a3e635' }}>☢{opponent.radCounters}</span>
+        )}
         {/* Energy (CR 107.14) */}
         {!tomb && (opponent.energyCounters ?? 0) > 0 && (
           <span
@@ -1236,6 +1241,16 @@ function RailChip({
             style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: '#fde68a' }}
           >
             ⚡{opponent.energyCounters}
+          </span>
+        )}
+
+        {/* Experience (CR 122.1 — a counter on a player) */}
+        {!tomb && (opponent.experienceCounters ?? 0) > 0 && (
+          <span
+            title={`${opponent.experienceCounters} experience counters`}
+            style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: '#bfdbfe' }}
+          >
+            XP{opponent.experienceCounters}
           </span>
         )}
 
@@ -1473,7 +1488,9 @@ function chipTitle(opponent: ClientPlayer): string {
     lines.push(`Max hand size ${opponent.maxHandSize ?? '∞ (no maximum)'}`)
   }
   if (opponent.poisonCounters > 0) lines.push(`Poison ${opponent.poisonCounters}/10`)
+  if ((opponent.radCounters ?? 0) > 0) lines.push(`Rad ${opponent.radCounters}`)
   if ((opponent.energyCounters ?? 0) > 0) lines.push(`Energy ${opponent.energyCounters}`)
+  if ((opponent.experienceCounters ?? 0) > 0) lines.push(`Experience ${opponent.experienceCounters}`)
   for (const e of opponent.commanderDamage ?? []) {
     lines.push(`⚔ ${e.commanderName}: ${e.amount}/${e.threshold}`)
   }

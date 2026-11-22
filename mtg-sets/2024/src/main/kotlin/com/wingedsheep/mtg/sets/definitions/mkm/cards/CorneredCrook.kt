@@ -22,8 +22,10 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Crook's controller see the target before committing the artifact and would deny opponents the
  * priority window, both of which the rules forbid.
  *
- * The sacrifice is a resolution-time *choice*, not a target — `SelectTargetEffect` prompts for an
- * artifact its controller owns and `SacrificeTarget` sacrifices it. Any artifact qualifies, including
+ * The sacrifice is a resolution-time *choice*, not a target — `SelectTargetEffect` with
+ * `nonTargeting = true` prompts for an artifact its controller controls and `SacrificeTarget`
+ * sacrifices it. Non-targeting matters: an artifact with shroud, hexproof or protection from red is
+ * still a legal sacrifice, since those only restrict targeting. Any artifact qualifies, including
  * an artifact creature and including Clue tokens, which is the intended Karlov Manor synergy; the
  * Crook itself is not an artifact, so no `.other()` guard is needed.
  *
@@ -44,7 +46,11 @@ val CorneredCrook = card("Cornered Crook") {
         trigger = Triggers.self.enters()
         effect = Effects.ReflexiveTrigger(
             action = Effects.Pipeline {
-                val toSacrifice = selectTarget(TargetObject(filter = TargetFilter.Artifact.youControl()))
+                val toSacrifice = selectTarget(
+                    TargetObject(filter = TargetFilter.Artifact.youControl()),
+                    nonTargeting = true,
+                    prompt = "Choose an artifact to sacrifice"
+                )
                 run(Effects.SacrificeTarget(toSacrifice.asTarget))
             },
             optional = true,

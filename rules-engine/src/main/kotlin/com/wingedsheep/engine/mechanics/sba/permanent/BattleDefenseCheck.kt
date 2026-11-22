@@ -82,6 +82,7 @@ class BattleDefenseCheck(private val zones: ZoneTransitionService) : StateBasedA
     ): Boolean {
         val current = state.objectRef(entityId) ?: return false
         if (current in pendingTriggerSources) return true
+        if (state.waitingTriggers.any { it.objectReferences.origin == current }) return true
         if (state.stack.any { stackId ->
             state.getEntity(stackId)
                 ?.get<com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent>()
@@ -90,12 +91,8 @@ class BattleDefenseCheck(private val zones: ZoneTransitionService) : StateBasedA
         // A stored answer is reached through the suspension that owns it, not off the stack.
         return state.continuationStack.any { frame ->
             when (val entry: Any = if (frame is com.wingedsheep.engine.core.Suspension) frame.answer else frame) {
-                is com.wingedsheep.engine.core.PendingTriggersContinuation ->
-                    entry.remainingTriggers.any { it.objectReferences.origin == current }
                 is com.wingedsheep.engine.core.TriggeredAbilityContinuation -> entry.objectReferences.origin == current
                 is com.wingedsheep.engine.core.MayTriggerContinuation -> entry.trigger.objectReferences.origin == current
-                is com.wingedsheep.engine.core.MayPayManaTriggerContinuation -> entry.trigger.objectReferences.origin == current
-                is com.wingedsheep.engine.core.ManaSourceSelectionContinuation -> entry.trigger.objectReferences.origin == current
                 is com.wingedsheep.engine.core.TriggerModalModeSelectionContinuation -> entry.ability.objectReferences.origin == current
                 is com.wingedsheep.engine.core.TriggerModalTargetSelectionContinuation -> entry.ability.objectReferences.origin == current
                 else -> false

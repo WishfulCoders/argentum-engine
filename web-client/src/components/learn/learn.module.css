@@ -1,21 +1,20 @@
 /**
  * Learn to Play — the course home with its hand of mission cards, and the mission briefs.
  *
- * Its own palette on purpose. The rest of the client is cool-white glass over land art, tuned
- * for a board where every pixel is play space. The course is a doorway into that board, so it
- * gets warm parchment text on the same dark ground, a gold that means "progress" everywhere it
- * appears, and one serif — the register of a card's name line — for titles only. Everything
- * else stays quiet so the hand of cards is the one thing you remember.
+ * Framed by the shared {@link PageShell} (card art, glass, the account menu) like every other
+ * page, with a warmer register inside it: parchment text, the hub's amber meaning "progress"
+ * everywhere it appears, and one serif — the register of a card's name line — for titles only.
+ * Everything else stays quiet so the hand of cards is the one thing you remember.
  */
 
 .root {
   --ln-ink: #0b0c12;
   --ln-paper: #efe6cf;
   --ln-body: #c9c3b4;
-  --ln-muted: #8d877a;
+  --ln-muted: #a29b8c;
   --ln-faint: #5f5a50;
-  --ln-gold: #d9b45c;
-  --ln-gold-glow: rgba(217, 180, 92, 0.22);
+  --ln-gold: #f2b45c;
+  --ln-gold-glow: rgba(242, 180, 92, 0.24);
   --ln-line: rgba(239, 230, 207, 0.12);
   --ln-line-strong: rgba(239, 230, 207, 0.22);
   --ln-panel: rgba(18, 17, 24, 0.72);
@@ -38,13 +37,12 @@
   --font-sm: 14px;
   --font-md: 16px;
 
-  /* `#root` is height:100% / overflow:hidden for the board, so this is its own scroll box. */
+  /* `#root` is height:100% / overflow:hidden for the board, so this is its own scroll box. The
+     page shell inside it paints the art. */
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
-  background:
-    radial-gradient(900px 420px at 50% 108%, var(--ln-gold-glow), transparent 70%),
-    radial-gradient(700px 380px at 8% -8%, rgba(42, 123, 196, 0.12), transparent 65%),
-    var(--ln-ink);
+  overscroll-behavior: contain;
   color: var(--ln-body);
   font-family: var(--ln-sans);
   font-size: var(--font-md);
@@ -59,66 +57,22 @@
 }
 
 /* =========================================================================
- * Top bar — shared by the home and every brief
+ * Top bar progress pips — sit in the page shell's top bar
  * ========================================================================= */
-.topBar {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: rgba(11, 12, 18, 0.78);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  border-bottom: 1px solid var(--ln-line);
-}
-
-.topBarInner {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.topBarLink {
-  background: none;
-  text-decoration: none;
-  border: 1px solid transparent;
-  color: var(--ln-muted);
-  font: inherit;
-  font-size: var(--font-sm);
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.topBarLink:hover {
-  color: var(--ln-paper);
-  border-color: var(--ln-line-strong);
-}
-
-.topBarEyebrow {
-  margin-left: auto;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ln-muted);
-}
-
 /* Progress pips in the top bar: one per mission, gold once complete. */
 .pips {
   display: flex;
   gap: 5px;
   align-items: center;
+  padding: 0 6px;
 }
 
 .pip {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 1px solid var(--ln-line-strong);
-  background: transparent;
+  border: 1px solid rgba(239, 230, 207, 0.45);
+  background: rgba(0, 0, 0, 0.3);
   transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
@@ -130,15 +84,16 @@
 
 .pipCurrent {
   border-color: var(--ln-paper);
+  box-shadow: 0 0 0 2px rgba(239, 230, 207, 0.25);
 }
 
 /* =========================================================================
  * Course home
  * ========================================================================= */
 .home {
-  max-width: 1040px;
+  width: 100%;
   margin: 0 auto;
-  padding: 56px 20px 40px;
+  padding: 28px 0 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -154,6 +109,7 @@
 }
 
 .headline {
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
   font-family: var(--ln-display);
   font-weight: 400;
   font-size: clamp(38px, 6vw, 64px);
@@ -172,7 +128,8 @@
   margin: 20px 0 0;
   max-width: 54ch;
   font-size: 17px;
-  color: var(--ln-body);
+  color: #ddd7c8;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.75);
 }
 
 .heroActions {
@@ -189,24 +146,21 @@
   font-weight: 600;
   font-size: 15px;
   letter-spacing: 0.01em;
-  color: #1a1408;
-  background: linear-gradient(180deg, #ecc96f 0%, #cfa640 100%);
-  border: 1px solid rgba(255, 240, 200, 0.35);
-  border-radius: 8px;
-  padding: 12px 22px;
+  color: #1d1405;
+  background: #f2b45c;
+  border: none;
+  border-radius: 12px;
+  min-height: 46px;
+  padding: 0 24px;
   cursor: pointer;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.35) inset,
-    0 8px 24px rgba(207, 166, 64, 0.28);
+  box-shadow: 0 6px 20px rgba(242, 180, 92, 0.25);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
 }
 
 .cta:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.05);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.4) inset,
-    0 12px 28px rgba(207, 166, 64, 0.36);
+  background: #f7c67f;
+  box-shadow: 0 10px 26px rgba(242, 180, 92, 0.32);
 }
 
 .cta:active {
@@ -215,7 +169,8 @@
 
 .cta:disabled {
   cursor: default;
-  filter: saturate(0.4) brightness(0.8);
+  background: rgba(255, 255, 255, 0.1);
+  color: #8f98ac;
   transform: none;
   box-shadow: none;
 }
@@ -224,32 +179,39 @@
   font: inherit;
   text-decoration: none;
   font-size: 15px;
-  color: var(--ln-body);
-  background: transparent;
-  border: 1px solid var(--ln-line-strong);
-  border-radius: 8px;
-  padding: 12px 18px;
+  color: #eef0f6;
+  background: rgba(10, 12, 20, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 18px;
   cursor: pointer;
   transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .ctaQuiet:hover {
-  color: var(--ln-paper);
-  border-color: var(--ln-gold);
-  background: rgba(217, 180, 92, 0.06);
+  color: #fff;
+  border-color: rgba(242, 180, 92, 0.6);
+  background: rgba(10, 12, 20, 0.7);
 }
 
 .heroNote {
   margin: 14px 0 0;
   font-size: var(--font-sm);
-  color: var(--ln-muted);
+  color: #c9c3b4;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
 }
 
 .heroNote a,
 .textLink {
   color: var(--ln-gold);
   text-decoration: none;
-  border-bottom: 1px solid rgba(217, 180, 92, 0.35);
+  border-bottom: 1px solid rgba(242, 180, 92, 0.4);
   cursor: pointer;
   background: none;
   border-top: 0;
@@ -491,7 +453,8 @@
 .handCaption {
   margin: 8px 0 0;
   font-size: var(--font-sm);
-  color: var(--ln-muted);
+  color: #c9c3b4;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
 }
 
 /* Small screens: the fan becomes a scrolling row. */
@@ -520,9 +483,32 @@
  * Mission brief
  * ========================================================================= */
 .brief {
-  max-width: 920px;
+  width: 100%;
+  max-width: 940px;
   margin: 0 auto;
-  padding: 40px 20px 60px;
+  padding: 28px 32px 32px;
+  box-sizing: border-box;
+  border-radius: 18px;
+  background: rgba(12, 12, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+}
+
+.backLink {
+  display: inline-flex;
+  margin: -6px 0 14px -8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--ln-muted);
+  font-size: var(--font-sm);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--ln-paper);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .briefHeader {
@@ -649,10 +635,14 @@
   font-size: 15px;
   color: var(--ln-paper);
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--ln-line-strong);
-  border-radius: 8px;
-  padding: 11px 14px;
-  min-width: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 300px;
 }
 
 .nameInput:focus {
@@ -670,6 +660,21 @@
   .briefBody {
     grid-template-columns: 1fr;
     gap: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .home {
+    padding-top: 16px;
+  }
+
+  .brief {
+    padding: 20px 16px 22px;
+    border-radius: 14px;
+  }
+
+  .nameInput {
+    max-width: none;
   }
 }
 
@@ -856,9 +861,11 @@
   margin: 36px auto 0;
   max-width: 560px;
   padding: 22px 26px;
-  border-radius: 12px;
-  border: 1px solid rgba(217, 180, 92, 0.45);
-  background: rgba(217, 180, 92, 0.07);
+  border-radius: 16px;
+  border: 1px solid rgba(242, 180, 92, 0.45);
+  background: rgba(30, 24, 12, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   text-align: center;
 }
 

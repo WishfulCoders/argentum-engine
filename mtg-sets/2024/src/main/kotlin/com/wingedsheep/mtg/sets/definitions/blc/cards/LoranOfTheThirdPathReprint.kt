@@ -13,7 +13,7 @@ val LoranOfTheThirdPathReprint = Printing(
     collectorNumber = "143",
     scryfallId = "647e6b32-c755-4700-b151-6a174dbb2bd0",
     artist = "Steven Belledin",
-    imageUri = "https://cards.scryfall.io/normal/front/6/4/647e6b32-c755-4700-b151-6a174dbb2bd0.jpg?1783910691",
+    imageUri = "https://cards.scryfall.io/normal/front/6/4/647e6b32-c755-4700-b151-6a174dbb2bd0.jpg",
     releaseDate = "2024-08-02",
     rarity = Rarity.RARE,
 )

@@ -3,6 +3,7 @@ package com.wingedsheep.gameserver.persistence
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.registry.PrintingRegistry
 import com.wingedsheep.gameserver.stats.DeckProfiler
+import com.wingedsheep.gameserver.stats.EngineAiHistory
 import com.wingedsheep.gameserver.stats.GeoIpService
 import com.wingedsheep.gameserver.stats.StatsQueryService
 import io.kotest.core.spec.style.FunSpec
@@ -14,13 +15,13 @@ import org.flywaydb.core.Flyway
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.testcontainers.DockerClientFactory
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.DriverManager
 
 /**
  * Proves the migrations are valid PostgreSQL and the schema supports the account/deck/stats/friends
- * round-trips — including the win-count query backing [MatchResultRepository.countWinsForUser], the
+ * round-trips — including the per-user win-count query the stats read, the
  * V4 BIGINT→UUID account-id swap (which must preserve existing rows and re-point every foreign key),
  * and the V5 friends schema.
  *
@@ -33,7 +34,7 @@ class FlywayMigrationTest : FunSpec({
     // A fixed account UUID for the round-trip tests (users.id is a UUID from V4 on).
     val alice = "11111111-1111-1111-1111-111111111111"
 
-    fun migrateAll(postgres: PostgreSQLContainer<Nothing>) {
+    fun migrateAll(postgres: PostgreSQLContainer) {
         Flyway.configure()
             .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
             .locations("classpath:db/migration")
@@ -42,7 +43,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("migrations apply and support account/deck/stats round-trips").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -81,7 +82,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V2 migration adds the stats schema and supports its aggregate queries").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -146,7 +147,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V5 migration adds game_replays and supports the history replay join").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -192,7 +193,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V6 migrates BIGINT account ids to UUID, preserving rows and foreign keys").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             // Bring the schema up to V3 — the BIGINT-id era — and seed legacy data.
@@ -250,7 +251,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V7 friends schema supports the request/accept round-trip and cascades").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -295,8 +296,58 @@ class FlywayMigrationTest : FunSpec({
         }
     }
 
+    test("V15 direct messages: one thread per pair, paged newest first, cascades").config(enabled = dockerAvailable) {
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
+        postgres.start()
+        try {
+            migrateAll(postgres)
+            val bob = "22222222-2222-2222-2222-222222222222"
+
+            DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { conn ->
+                conn.createStatement().use { st ->
+                    st.execute("INSERT INTO users(id, email, display_name) VALUES ('$alice', 'a@test.com', 'Alice')")
+                    st.execute("INSERT INTO users(id, email, display_name) VALUES ('$bob', 'b@test.com', 'Bob')")
+                    st.execute(
+                        "INSERT INTO dm_threads(id, user_low, user_high, initiator_id) " +
+                            "VALUES ('33333333-3333-3333-3333-333333333333', '$alice', '$bob', '$alice')"
+                    )
+                    // The pair is unique.
+                    runCatching {
+                        st.execute("INSERT INTO dm_threads(user_low, user_high, initiator_id) VALUES ('$alice', '$bob', '$bob')")
+                    }.isFailure shouldBe true
+
+                    val thread = "33333333-3333-3333-3333-333333333333"
+                    st.execute("INSERT INTO dm_messages(thread_id, sender_id, body, created_at) VALUES ('$thread', '$alice', 'one', now() - interval '2 minutes')")
+                    st.execute("INSERT INTO dm_messages(thread_id, sender_id, body, created_at) VALUES ('$thread', '$bob', 'two', now() - interval '1 minute')")
+                    st.execute("INSERT INTO dm_messages(thread_id, sender_id, body) VALUES ('$thread', '$alice', 'three')")
+
+                    // The page query: newest first, bounded by a clear marker below.
+                    st.executeQuery(
+                        """
+                        SELECT body FROM dm_messages
+                        WHERE thread_id = '$thread' AND created_at > now() - interval '90 seconds'
+                          AND created_at < '9999-01-01T00:00:00Z'
+                        ORDER BY created_at DESC LIMIT 5
+                        """.trimIndent()
+                    ).use { rs ->
+                        rs.next(); rs.getString(1) shouldBe "three"
+                        rs.next(); rs.getString(1) shouldBe "two"
+                        rs.next() shouldBe false
+                    }
+
+                    // Deleting an account cascades its threads and their messages.
+                    st.execute("DELETE FROM users WHERE id = '$bob'")
+                    st.executeQuery("SELECT count(*) FROM dm_threads").use { rs -> rs.next(); rs.getInt(1) shouldBe 0 }
+                    st.executeQuery("SELECT count(*) FROM dm_messages").use { rs -> rs.next(); rs.getInt(1) shouldBe 0 }
+                }
+            }
+        } finally {
+            postgres.stop()
+        }
+    }
+
     test("databaseStats reports per-table row counts and sizes").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -316,6 +367,7 @@ class FlywayMigrationTest : FunSpec({
                 cardRegistry = CardRegistry(),
                 printingRegistry = PrintingRegistry(),
                 geoIp = GeoIpService(),
+                engineAiHistory = EngineAiHistory(),
             ).databaseStats()
 
             stats.databaseName shouldBe postgres.databaseName
@@ -344,7 +396,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V9 adds tournament status and allows null ended_at for in-progress rows").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -385,7 +437,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V10 makes game_replays the only replay home, seat-indexed and status-aware").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)
@@ -474,7 +526,7 @@ class FlywayMigrationTest : FunSpec({
     }
 
     test("V11 gives pins a write-once column that the flush update leaves alone").config(enabled = dockerAvailable) {
-        val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
         postgres.start()
         try {
             migrateAll(postgres)

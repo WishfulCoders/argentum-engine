@@ -69,12 +69,12 @@ curl -s "https://api.scryfall.com/cards/search?order=set&unique=prints&q=e%3A$CO
   (showcase, borderless, Beginner Box); the per-card row Scryfall serves is an arbitrary one of them.
   Reprint rows and variant art are matched by collector number, which only `unique=prints` gives you.
 - **Do not commit** This changes, so this is a snapshot for this test.
-- **Do not reuse `~/.cache/scryfall/<code>.json`.** `scripts/card-status` writes it, but it keeps only
+- **Do not reuse `~/.cache/scryfall/set-<code>.json`.** `scripts/card-status` writes it, but it keeps only
   names plus a flattened per-card subset — no `type_line`, no `mana_cost`, no P/T, no per-face objects. It
   cannot support Stage 2.
 
 `scripts/card-status` also decides *which* cards are in scope: it partitions on Scryfall `booster` into
-draft cards and extras, and drops `coverage/card-exclusions.json` entries (ante, subgames, dexterity) out
+draft cards and extras, and drops `coverage/card-exclusions.json` entries (ante, dexterity) out
 of the denominator. Take its numbers as the set's definition of done, not the raw dump size.
 
 ## Stage 1 — completeness
@@ -218,6 +218,11 @@ Read and update all files in backlogs/sets/<slug>
 
 Ensure that the Set file is no longer incomplete. 
 `com.wingedsheep.mtg.sets.definitions.<setcode>.<SetName>Set.kt` should not have this: `override val incomplete = true`
+
+Announce it: add a `kind: 'set'` entry to the top of
+`web-client/src/components/whatsNew/announcements.ts` (skip if the set already has one) — `setCode`, a
+`body` that pitches what the set is like to play, and `tryIf`. The PR that drops the flag is the one
+that adds it.
 
 
 ```bash

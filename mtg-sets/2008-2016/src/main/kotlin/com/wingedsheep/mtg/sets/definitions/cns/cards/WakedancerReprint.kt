@@ -13,7 +13,7 @@ val WakedancerReprint = Printing(
     collectorNumber = "134",
     scryfallId = "b02c8c59-52b1-4f68-8ebf-4026c78ef9fa",
     artist = "Austin Hsu",
-    imageUri = "https://cards.scryfall.io/normal/front/b/0/b02c8c59-52b1-4f68-8ebf-4026c78ef9fa.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/0/b02c8c59-52b1-4f68-8ebf-4026c78ef9fa.jpg?1783939351",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

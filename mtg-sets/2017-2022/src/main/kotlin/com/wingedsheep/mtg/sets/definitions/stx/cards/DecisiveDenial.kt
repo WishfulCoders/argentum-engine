@@ -1,8 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.stx.cards
 
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -15,30 +13,24 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * Choose one —
  * • Target creature you control fights target creature you don't control.
  * • Counter target noncreature spell unless its controller pays {3}.
- *
- * Savage Smash's fight without the pump, and Complicate's counter-unless-pays over a noncreature
- * spell.
  */
 val DecisiveDenial = card("Decisive Denial") {
     manaCost = "{G}{U}"
     colorIdentity = "GU"
     typeLine = "Instant"
     oracleText = "Choose one —\n" +
-        "• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)\n" +
+        "• Target creature you control fights target creature you don't control. " +
+        "(Each deals damage equal to its power to the other.)\n" +
         "• Counter target noncreature spell unless its controller pays {3}."
 
     spell {
         modal(chooseCount = 1) {
-            mode("Target creature you control fights target creature you don't control.") {
-                val yours = target(TargetObject(
-                    filter = TargetFilter(GameObjectFilter.Creature.youControl())
-                ))
-                val theirs = target(TargetObject(
-                    filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
-                ))
-                effect = Effects.Fight(yours, theirs)
+            mode("Target creature you control fights target creature you don't control") {
+                val yourCreature = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+                val theirCreature = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
+                effect = Effects.Fight(yourCreature, theirCreature)
             }
-            mode("Counter target noncreature spell unless its controller pays {3}.") {
+            mode("Counter target noncreature spell unless its controller pays {3}") {
                 target(TargetFilter.NoncreatureSpellOnStack)
                 effect = Effects.CounterUnlessPays("{3}")
             }

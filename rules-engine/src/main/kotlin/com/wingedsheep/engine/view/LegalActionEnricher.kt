@@ -2,7 +2,10 @@ package com.wingedsheep.engine.view
 
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
+import com.wingedsheep.engine.handlers.actions.spell.altAllows
 import com.wingedsheep.engine.legalactions.*
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.mechanics.mana.SpellPaymentContext
 import com.wingedsheep.engine.mechanics.mana.buildAbilityPaymentContext
@@ -25,7 +28,8 @@ import com.wingedsheep.sdk.scripting.ChoiceSlot
  */
 class LegalActionEnricher(
     private val manaSolver: ManaSolver,
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val costCalculator: CostCalculator = CostCalculator(cardRegistry, PredicateEvaluator(cardRegistry)),
 ) {
     fun enrich(actions: List<LegalAction>, state: GameState, playerId: EntityId): List<LegalActionInfo> {
         val manaSourceInfos = buildManaSourceInfos(state, playerId)
@@ -35,9 +39,25 @@ class LegalActionEnricher(
                 action,
                 manaSourceInfos,
                 eligibleRestrictedMana = if (restrictedMana.isEmpty() || !shouldExposeManaSources(action)) null
-                else buildEligibleRestrictedMana(state, action, restrictedMana)
+                else buildEligibleRestrictedMana(state, action, restrictedMana),
+                targetPriceCountedIds = targetPriceCountedIds(state, action),
             )
         }
+    }
+
+    /**
+     * Which objects count as matching targets in [LegalAction.manaCostByTargetCount]'s key, when a
+     * per-target modifier counts only matching targets ("for each creature it targets" —
+     * Battlefield Thaumaturge). Null for every other action, and for a table keyed by different
+     * targets alone. Derived from the state like the table's own key
+     * ([CostCalculator.targetPriceCountedIds]), so the two agree.
+     */
+    private fun targetPriceCountedIds(state: GameState, action: LegalAction): List<EntityId>? {
+        if (action.manaCostByTargetCount == null) return null
+        val cast = action.action as? CastSpell ?: return null
+        val cardDef = state.getEntity(cast.cardId)?.get<CardComponent>()
+            ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: return null
+        return costCalculator.targetPriceCountedIds(state, cardDef, cast.playerId)
     }
 
     /**
@@ -59,12 +79,16 @@ class LegalActionEnricher(
                     isFromHand = action.sourceZone == null || action.sourceZone == "HAND"
                 )
             } else state.getEntity(gameAction.cardId)?.get<CardComponent>()?.let { card ->
-                spellPaymentContextFor(
-                    card,
+                spellPaymentContextFor(card, colors = state.projectedState.colorSetOf(gameAction.cardId),
                     isKicked = gameAction.declaredCostSlot == ChoiceSlot.KICKED,
                     isFromExile = action.sourceZone == "EXILE",
                     // Null sourceZone means the standard hand cast.
-                    isFromHand = action.sourceZone == null || action.sourceZone == "HAND"
+                    isFromHand = action.sourceZone == null || action.sourceZone == "HAND",
+                    isFromGraveyard = gameAction.cardId in state.getZone(
+                        com.wingedsheep.engine.state.ZoneKey(gameAction.playerId, com.wingedsheep.sdk.core.Zone.GRAVEYARD)
+                    ),
+                    isDisturbCast = gameAction.useAlternativeCost &&
+                        gameAction.altAllows(com.wingedsheep.engine.core.AlternativeCostType.DISTURB),
                 )
             }
             is ActivateAbility -> state.getEntity(gameAction.sourceId)?.get<CardComponent>()?.let { card ->
@@ -88,7 +112,8 @@ class LegalActionEnricher(
     private fun toLegalActionInfo(
         action: LegalAction,
         manaSourceInfos: List<ManaSourceInfo>?,
-        eligibleRestrictedMana: List<ClientRestrictedManaEntry>?
+        eligibleRestrictedMana: List<ClientRestrictedManaEntry>?,
+        targetPriceCountedIds: List<EntityId>? = null,
     ): LegalActionInfo {
         return LegalActionInfo(
             actionType = action.actionType,
@@ -105,10 +130,15 @@ class LegalActionEnricher(
             xConstrainsTargetManaValueExactly = action.xConstrainsTargetManaValueExactly,
             xConstrainsTargetPower = action.xConstrainsTargetPower,
             xConstrainsTargetCount = action.xConstrainsTargetCount,
+            xConstrainsTargetCountExactly = action.xConstrainsTargetCountExactly,
             validAttackers = action.validAttackers,
             mandatoryAttackers = action.mandatoryAttackers,
+            loneAttackers = action.loneAttackers,
             validAttackTargets = action.validAttackTargets,
+            attackTargetsByAttacker = action.attackTargetsByAttacker,
             validBlockers = action.validBlockers,
+            proposedBlockerAssignments = action.proposedBlockerAssignments,
+            blockableAttackers = action.blockableAttackers,
             blockerMaxBlockCounts = action.blockerMaxBlockCounts,
             mandatoryBlockerAssignments = action.mandatoryBlockerAssignments,
             hasXCost = action.hasXCost,
@@ -131,12 +161,16 @@ class LegalActionEnricher(
             hasHarmonize = action.hasHarmonize,
             validHarmonizeCreatures = action.harmonizeCreatures?.map { it.toDto() },
             manaCostString = action.manaCostString,
-            manaCostPerExtraTarget = action.manaCostPerExtraTarget,
+            manaCostByTargetCount = action.manaCostByTargetCount,
+            targetPriceCountedIds = targetPriceCountedIds,
             minimumManaCostString = minimumManaCostString(action),
             requiresDamageDistribution = action.requiresDamageDistribution,
             totalDamageToDistribute = action.totalDamageToDistribute,
+            totalDamageByX = action.totalDamageByX,
             minDamagePerTarget = action.minDamagePerTarget,
             damageTotalIsX = action.damageTotalIsX,
+            distributionUnit = action.distributionUnit,
+            distributionTargetGroup = action.distributionTargetGroup,
             autoTapPreview = action.autoTapPreview,
             availableManaSources = if (shouldExposeManaSources(action)) manaSourceInfos else null,
             eligibleRestrictedMana = eligibleRestrictedMana,
@@ -147,7 +181,8 @@ class LegalActionEnricher(
             tapForPowerCreatures = action.tapForPowerCreatures?.map { it.toDto() },
             maxRepeatableActivations = action.maxRepeatableActivations,
             modalEnumeration = action.modalEnumeration?.toDto(),
-            holdPriority = action.holdPriority
+            holdPriority = action.holdPriority,
+            inertReason = action.inertReason
         )
     }
 
@@ -195,13 +230,24 @@ class LegalActionEnricher(
         return floor.toString().ifEmpty { "{0}" }
     }
 
+    /**
+     * A Phyrexian cost always exposes its sources: the server's [LegalAction.autoTapPreview] solves
+     * the cost with mana only, so `{4}{G/P}` off four Plains has no preview even though it's
+     * affordable with 2 life — and without sources the client's picker can't tap the Plains for
+     * the {4} once the player chooses to pay the pip with life (CR 107.4f).
+     */
     private fun shouldExposeManaSources(action: LegalAction): Boolean =
         action.autoTapPreview != null ||
             (action.hasXCost && action.manaCostString != null) ||
             action.hasConvoke ||
             action.hasTapForGeneric ||
             action.hasDelve ||
-            action.hasHarmonize
+            action.hasHarmonize ||
+            hasPhyrexianPip(action.manaCostString)
+
+    private fun hasPhyrexianPip(manaCostString: String?): Boolean =
+        manaCostString != null && manaCostString.contains("/P}") &&
+            ManaCost.parse(manaCostString).phyrexianSymbols.isNotEmpty()
 
     private fun ModalLegalEnumeration.toDto() = ModalLegalEnumerationInfo(
         chooseCount = chooseCount,
@@ -257,11 +303,16 @@ class LegalActionEnricher(
         minTargets = minTargets,
         maxTargets = maxTargets,
         validTargets = validTargets,
+        validTargetsByPrefix = validTargetsByPrefix,
+        selectionGroups = selectionGroups,
+        exclusiveGroups = exclusiveGroups,
+        distinctCategories = distinctCategories,
         targetZone = targetZone,
         xConstrainsManaValue = xConstrainsManaValue,
         xConstrainsManaValueExactly = xConstrainsManaValueExactly,
         xConstrainsPower = xConstrainsPower,
         xConstrainsCount = xConstrainsCount,
+        xConstrainsCountExactly = xConstrainsCountExactly,
         mustDifferFromEarlier = mustDifferFromEarlier
     )
 
@@ -270,12 +321,15 @@ class LegalActionEnricher(
         costType = costType,
         validSacrificeTargets = validSacrificeTargets,
         sacrificeCount = sacrificeCount,
+        sacrificeMinPowerIsX = sacrificeMinPowerIsX,
+        countIsX = countIsX,
         costAfterSacrifice = costAfterSacrifice,
         validTapTargets = validTapTargets,
         tapCount = tapCount,
         tapBatchMaxActivations = tapBatchMaxActivations,
         validDiscardTargets = validDiscardTargets,
         discardCount = discardCount,
+        discardMaxCount = discardMaxCount,
         validBounceTargets = validBounceTargets,
         bounceCount = bounceCount,
         validExileTargets = validExileTargets,
@@ -292,6 +346,7 @@ class LegalActionEnricher(
         revealCount = revealCount,
         counterRemovalCreatures = counterRemovalCreatures.map { it.toDto() },
         validBlightTargets = validBlightTargets,
+        validCounterPlacementTargets = validCounterPlacementTargets,
         blightAmount = blightAmount,
         blightVariableMaxX = blightVariableMaxX,
         payXLifeMaxX = payXLifeMaxX,

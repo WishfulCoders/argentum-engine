@@ -59,7 +59,13 @@ class SamwiseTheStoutheartedTest : FunSpec({
         driver.bothPass()
 
         driver.submitTargetSelection(active, listOf(bear))
-        while (driver.state.stack.isNotEmpty()) driver.bothPass()
+        // The trigger stays on the stack while the Ring-bearer choice is pending (CR 608.2n).
+        var guard = 0
+        while (guard++ < 20 && driver.state.stack.isNotEmpty()) {
+            if (driver.pendingDecision != null) driver.autoResolveDecision() else driver.bothPass()
+        }
+        driver.state.stack.isEmpty() shouldBe true
+        driver.pendingDecision shouldBe null
 
         driver.getHandSize(active) shouldBe handBefore
         driver.state.getGraveyard(active).contains(bear) shouldBe false
@@ -92,7 +98,13 @@ class SamwiseTheStoutheartedTest : FunSpec({
 
         // Decline the optional target — submit zero selections.
         driver.submitTargetSelection(active, emptyList())
-        while (driver.state.stack.isNotEmpty()) driver.bothPass()
+        // The trigger stays on the stack while the Ring-bearer choice is pending (CR 608.2n).
+        var guard = 0
+        while (guard++ < 20 && driver.state.stack.isNotEmpty()) {
+            if (driver.pendingDecision != null) driver.autoResolveDecision() else driver.bothPass()
+        }
+        driver.state.stack.isEmpty() shouldBe true
+        driver.pendingDecision shouldBe null
 
         // The bear stays in the graveyard (nothing returned) BUT the Ring still tempted you.
         driver.state.getGraveyard(active).contains(bear) shouldBe true

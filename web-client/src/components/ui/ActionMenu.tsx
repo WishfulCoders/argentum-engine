@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState } from 'react'
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import { useCardActions } from '@/hooks/useLegalActions.ts'
 import { useInteraction } from '@/hooks/useInteraction.ts'
@@ -32,6 +32,17 @@ export function ActionMenu() {
     () => buildActionOptions(cardInfo, cardActions),
     [cardInfo, cardActions]
   )
+
+  // Which printed face the big image shows. A double-faced card that offers its back face here
+  // (Pinnacle Monk // Mystic Peak) shows the face of the option under the pointer, and otherwise
+  // the face of the first option that can actually be taken — so a menu whose only live choice is
+  // "Play Mystic Peak" opens on Mystic Peak, not on the creature that can't be cast.
+  const [pointedFace, setPointedFace] = useState<'front' | 'back' | null>(null)
+  useEffect(() => setPointedFace(null), [selectedCardId])
+  const defaultFace =
+    actionOptions.find((o) => o.face && o.isAvailable)?.face ?? actionOptions.find((o) => o.face)?.face ?? 'front'
+  const shownFace = pointedFace ?? defaultFace
+  const offersBothFaces = actionOptions.some((o) => o.face === 'back')
 
   // Check if we should show the modal
   // Show modal when there are multiple options OR when there's at least one action
@@ -90,29 +101,65 @@ export function ActionMenu() {
 
   // Show floating action panel (subtle, no full overlay)
   if (shouldShowModal) {
-    // Get card image URL
-    const cardImageUrl = cardInfo ? getCardImageUrl(cardInfo.name, cardInfo.imageUri, 'large') : null
+    // Get card image URL — of the face being chosen, when the menu offers both
+    const showBack = offersBothFaces && shownFace === 'back' && cardInfo.backFaceName != null
+    const shownName = showBack ? cardInfo.backFaceName! : cardInfo.name
+    const cardImageUrl = showBack
+      ? getCardImageUrl(shownName, cardInfo.backFaceImageUri ?? null, 'large')
+      : getCardImageUrl(cardInfo.name, cardInfo.imageUri, 'large')
+    const imageRotation = showBack
+      ? (cardInfo.backFaceIsLandscape ? 90 : 0)
+      : (cardInfo.cardFaces?.length === 2 ? 90 : 0)
+
+    // A long menu — Nicol Bolas, Dragon-God borrowing every other planeswalker's loyalty abilities,
+    // a land with a handful of activations — no longer fits in a column under a 279px card image.
+    // From four rows up the panel lays the card beside the list instead of above it (wide screens
+    // only; see .panelMany), and the list itself scrolls inside a viewport-capped panel so Cancel
+    // and the top rows always stay on screen.
+    const rowCount = actionOptions.length + (showViewCard ? 1 : 0)
+    const isLongMenu = rowCount >= LONG_MENU_ROWS
 
     return (
       <div className={styles.container}>
-        <div className={styles.panel}>
+        <div className={`${styles.panel} ${isLongMenu ? styles.panelMany : ''}`}>
           {/* Large card image — rotated landscape for split-layout cards (CR 709):
               Rooms and classic split spells like Pain // Suffering are printed portrait
               with the two halves stacked. */}
           {cardImageUrl && (
-            <CardImage
-              imageUrl={cardImageUrl}
-              cardName={cardInfo?.name ?? 'Card'}
-              rotateDeg={cardInfo?.cardFaces?.length === 2 ? 90 : 0}
-            />
+            <div className={styles.cardImageColumn}>
+              <CardImage
+                imageUrl={cardImageUrl}
+                cardName={shownName}
+                rotateDeg={imageRotation}
+              />
+              {/* Front / back switch: the image is the face the highlighted option plays, and on a
+                  touch screen (no hover) this is how the other face gets read before choosing. */}
+              {offersBothFaces && (
+                <div className={styles.faceToggle} role="group" aria-label="Card face">
+                  {(['front', 'back'] as const).map((face) => (
+                    <button
+                      key={face}
+                      type="button"
+                      aria-pressed={shownFace === face}
+                      className={`${styles.faceToggleButton} ${shownFace === face ? styles.faceToggleButtonActive : ''}`}
+                      onClick={() => setPointedFace(face)}
+                    >
+                      {face === 'front' ? cardInfo.name : cardInfo.backFaceName}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
+          <div className={styles.actionsColumn}>
           {/* Action buttons */}
-          <div className={styles.actionsContainer}>
+          <ScrollableActions resetKey={selectedCardId}>
             {actionOptions.map((option) => (
               <ActionOptionButton
                 key={option.key}
                 option={option}
+                onPoint={option.face ? () => setPointedFace(option.face!) : undefined}
                 onClick={() => {
                   if (option.isAvailable && option.action) {
                     executeAction(option.action)
@@ -133,12 +180,13 @@ export function ActionMenu() {
                 View card
               </button>
             )}
-          </div>
+          </ScrollableActions>
 
-          {/* Cancel button */}
+          {/* Cancel button — outside the scrolling list, so it never scrolls away */}
           <button onClick={cancelAction} className={styles.cancelButton}>
-            Cancel (Esc)
+            {hasHover ? 'Cancel (Esc)' : 'Cancel'}
           </button>
+          </div>
         </div>
       </div>
     )
@@ -162,6 +210,55 @@ export function ActionMenu() {
       <button onClick={cancelAction} className={styles.fallbackCancelButton}>
         Cancel
       </button>
+    </div>
+  )
+}
+
+/** Rows (actions plus "View card") from which the card image moves beside the list. */
+const LONG_MENU_ROWS = 4
+
+/**
+ * The action list, scrolling inside the panel once it outgrows the viewport. Edges that hide more
+ * rows fade out (`data-more-above` / `data-more-below`), so a clipped list reads as "there's more"
+ * rather than as the whole menu — the cue a hidden overlay scrollbar (macOS, touch) doesn't give.
+ */
+function ScrollableActions({ children, resetKey }: { children: React.ReactNode; resetKey: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [moreAbove, setMoreAbove] = useState(false)
+  const [moreBelow, setMoreBelow] = useState(false)
+
+  const measure = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    setMoreAbove(el.scrollTop > 1)
+    setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 1)
+  }, [])
+
+  // A newly selected card opens its menu at the top, not where the last one was scrolled to.
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = 0
+    measure()
+  }, [resetKey, measure])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    // Rows change height as their images and mana symbols load, without the list itself resizing.
+    for (const child of Array.from(el.children)) observer.observe(child)
+    return () => observer.disconnect()
+  }, [measure, children])
+
+  return (
+    <div
+      ref={ref}
+      className={styles.actionsContainer}
+      onScroll={measure}
+      data-more-above={moreAbove || undefined}
+      data-more-below={moreBelow || undefined}
+    >
+      {children}
     </div>
   )
 }
@@ -230,6 +327,8 @@ function getActionStyleClass(actionType: ActionOption['actionType'], isAvailable
       return styles.actionCycle ?? ''
     case 'plot':
       return styles.actionCycle ?? ''
+    case 'foretell':
+      return styles.actionCycle ?? ''
     case 'suspend':
       return styles.actionCycle ?? ''
     case 'playLand':
@@ -250,9 +349,12 @@ function getActionStyleClass(actionType: ActionOption['actionType'], isAvailable
 function ActionOptionButton({
   option,
   onClick,
+  onPoint,
 }: {
   option: ActionOption
   onClick: () => void
+  /** Pointer or keyboard focus landed on this option — the menu shows the face it plays. */
+  onPoint?: (() => void) | undefined
 }) {
   const setAutoTapPreview = useGameStore((state) => state.setAutoTapPreview)
   const startManaSelection = useGameStore((state) => state.startManaSelection)
@@ -286,10 +388,12 @@ function ActionOptionButton({
         className={`${styles.actionButton} ${styleClass}`}
         style={hasManaSelection ? { borderTopRightRadius: 0, borderBottomRightRadius: 0 } : undefined}
         onMouseEnter={() => {
+          onPoint?.()
           if (option.action?.autoTapPreview) {
             setAutoTapPreview(option.action.autoTapPreview)
           }
         }}
+        onFocus={onPoint}
         onMouseLeave={() => {
           setAutoTapPreview(null)
         }}
@@ -390,6 +494,10 @@ function ActionButton({
         return styles.fallbackCycle
       case 'PlotCard':
         return styles.fallbackCycle
+      case 'ForetellCard':
+        return styles.fallbackCycle
+      case 'PutCompanionIntoHand':
+        return styles.fallbackCast
       case 'SuspendCardFromHand':
         return styles.fallbackCycle
       case 'ActivateAbility':
@@ -446,6 +554,8 @@ function CardImage({
 }) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
+  // The menu swaps faces in place; a failed front image must not blank the back one.
+  useEffect(() => setImageError(false), [imageUrl])
 
   // For sideways-printed layouts (Rooms), swap the container to landscape and absolutely
   // position the image at its original portrait dimensions, rotated to fit. Same approach

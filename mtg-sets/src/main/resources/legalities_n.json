@@ -1069,7 +1069,8 @@
     "OATHBREAKER",
     "PIONEER",
     "TIMELESS",
-    "TLR"
+    "TLR",
+    "VINTAGE_RESTRICTED"
   ],
   "Narstad Scrapper": [
     "COMMANDER",
@@ -2377,7 +2378,8 @@
     "DUEL",
     "GLADIATOR",
     "OATHBREAKER",
-    "PREDH"
+    "PREDH",
+    "VINTAGE_RESTRICTED"
   ],
   "Necropotence // Necropotence": [],
   "Necropotence Avatar": [],
@@ -6817,6 +6819,7 @@
   "No More Lies": [
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",
@@ -7925,6 +7928,7 @@
     "ALCHEMY",
     "BRAWL",
     "COMMANDER",
+    "COMPETITIVEBRAWL",
     "DUEL",
     "FUTURE",
     "GLADIATOR",

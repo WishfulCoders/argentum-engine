@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""
+Download recent games the engine AI played on the production server, as replay files, for
+misplay analysis. `just ai-replay-logs DIR` then re-simulates them into readable logs.
+
+Source: the admin `recent-games` listing (newest first) and each game's public replay export
+(`/api/public/replays/<id>/export`, the CompactReplay JSON: seed, decks, pinned card definitions,
+the ordered input stream, checkpoints, engineVersion).
+
+Kept: finished games with a replay where at least one seat is the AI and at least one is a human
+(`--include-ai-vs-ai` also keeps all-AI games). Writes:
+  DIR/<gameId>.replay.json   the export, verbatim
+  DIR/index.json             one entry per kept game: mode, format, seats (name, ai, won), winner
+Already-downloaded replays are skipped, and index.json merges with what is already there.
+
+Auth: the admin password comes from WINGEDSHEEP_ADMIN_PASSWORD (never pass it on the command
+line). WINGEDSHEEP_BASE_URL overrides the server (default https://magic.wingedsheep.com).
+
+Usage:
+  export WINGEDSHEEP_ADMIN_PASSWORD=...
+  scripts/fetch-ai-games --out build/ai-games                    # the 20 most recent
+  scripts/fetch-ai-games --out build/ai-games --limit 5 --days 2 --mode QUICK_GAME
+  just ai-replay-logs build/ai-games
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+DEFAULT_BASE_URL = "https://magic.wingedsheep.com"
+PAGE_SIZE = 100
+MAX_PAGES = 50
+REQUEST_TIMEOUT_SEC = 60
+USER_AGENT = "argentum-engine-fetch-ai-games/1.0"
+
+
+def die(message: str) -> None:
+    print(f"fetch-ai-games: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def get(url: str, password: str | None = None) -> tuple[bytes, dict[str, str]]:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    if password is not None:
+        request.add_header("X-Admin-Password", password)
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SEC) as response:
+            return response.read(), {k.lower(): v for k, v in response.headers.items()}
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403) and password is not None:
+            die(f"admin auth failed ({e.code}) — check WINGEDSHEEP_ADMIN_PASSWORD")
+        raise
+
+
+def parse_instant(text: str | None) -> datetime | None:
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def is_ai(player: dict) -> bool:
+    """The server reports AI seats as `isAi`; older builds sent `ai`."""
+    return bool(player.get("isAi", player.get("ai")))
+
+
+def wanted(game: dict, args: argparse.Namespace) -> bool:
+    if not game.get("hasReplay") or not game.get("endedAt"):
+        return False
+    if args.mode and game.get("gameMode", "").upper() != args.mode.upper():
+        return False
+    players = game.get("players") or []
+    ai = sum(1 for p in players if is_ai(p))
+    humans = len(players) - ai
+    if ai == 0:
+        return False
+    return humans > 0 or args.include_ai_vs_ai
+
+
+def summarize(game: dict) -> dict:
+    """The index entry: no user ids or locations, only what a log reader needs."""
+    players = game.get("players") or []
+    return {
+        "gameId": game["gameId"],
+        "endedAt": game.get("endedAt"),
+        "gameMode": game.get("gameMode"),
+        "format": game.get("format"),
+        "tournamentName": game.get("tournamentName"),
+        "players": [{"name": p.get("name"), "ai": bool(is_ai(p)), "won": bool(p.get("won"))} for p in players],
+        "aiSeats": [p.get("name") for p in players if is_ai(p)],
+        "winnerName": game.get("winnerName"),
+        "aiWon": any(is_ai(p) and p.get("won") for p in players),
+        "replayFile": f"{game['gameId']}.replay.json",
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--out", required=True, help="directory to write replays and index.json into")
+    parser.add_argument("--limit", type=int, default=20, help="games to keep (default 20)")
+    parser.add_argument("--days", type=float, help="only games that ended in the last D days")
+    parser.add_argument("--mode", help="only this gameMode (QUICK_GAME, CASUAL, TOURNAMENT, …)")
+    parser.add_argument("--include-ai-vs-ai", action="store_true", help="also keep games with no human seat")
+    args = parser.parse_args()
+
+    password = os.environ.get("WINGEDSHEEP_ADMIN_PASSWORD")
+    if not password:
+        die("WINGEDSHEEP_ADMIN_PASSWORD is not set — `export WINGEDSHEEP_ADMIN_PASSWORD=...` first")
+    base = os.environ.get("WINGEDSHEEP_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    cutoff = datetime.now(timezone.utc) - timedelta(days=args.days) if args.days else None
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    index_path = out / "index.json"
+    index: dict[str, dict] = {}
+    if index_path.exists():
+        index = {e["gameId"]: e for e in json.loads(index_path.read_text())}
+
+    kept: list[dict] = []
+    offset = 0
+    for _ in range(MAX_PAGES):
+        body, headers = get(f"{base}/api/stats/admin/recent-games?limit={PAGE_SIZE}&offset={offset}", password)
+        page = json.loads(body)
+        if not page:
+            break
+        stop = False
+        for game in page:
+            ended = parse_instant(game.get("endedAt"))
+            if cutoff and ended and ended < cutoff:
+                stop = True  # newest first: everything after this is older still
+                break
+            if wanted(game, args):
+                kept.append(game)
+                if len(kept) >= args.limit:
+                    stop = True
+                    break
+        offset += len(page)
+        total = int(headers.get("x-total-count", "0") or 0)
+        if stop or (total and offset >= total):
+            break
+
+    downloaded = skipped = failed = 0
+    for game in kept:
+        game_id = game["gameId"]
+        target = out / f"{game_id}.replay.json"
+        if target.exists() and target.stat().st_size > 0:
+            skipped += 1
+        else:
+            try:
+                body, _ = get(f"{base}/api/public/replays/{game_id}/export")
+            except urllib.error.URLError as e:
+                print(f"  {game_id}: export failed ({e})", file=sys.stderr)
+                failed += 1
+                continue
+            target.write_bytes(body)
+            downloaded += 1
+        entry = summarize(game)
+        index[game_id] = entry
+        seats = " vs ".join(f"{p['name']}{'*' if p['won'] else ''}" for p in entry["players"])
+        print(f"  {entry['endedAt'][:16]}  {entry['gameMode']:<12} {seats}")
+
+    entries = sorted(index.values(), key=lambda e: e.get("endedAt") or "", reverse=True)
+    index_path.write_text(json.dumps(entries, indent=2) + "\n")
+    print(f"{len(kept)} games kept: {downloaded} downloaded, {skipped} already present, {failed} failed "
+          f"(* = winner). Index: {index_path}")
+    if not kept:
+        print("No matching games — widen --days, drop --mode, or add --include-ai-vs-ai.", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

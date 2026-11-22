@@ -24,7 +24,6 @@ class BeaconOfDestinyScenarioTest : ScenarioTestBase() {
                 cardRegistry.getCard("Beacon of Destiny")!!.script.activatedAbilities.single().id)).error shouldBe null
             game.resolveStack()
             game.selectCards(listOf(chosen)).error shouldBe null
-            game.passPriority().error shouldBe null
             game.castSpellTargetingPlayer(2, "Lightning Bolt", 1).error shouldBe null
             game.resolveStack()
             game.getLifeTotal(1) shouldBe 17

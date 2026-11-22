@@ -162,6 +162,45 @@
   color: var(--text-tertiary);
 }
 
+.topicSteps {
+  padding-left: 1.4em;
+}
+
+/* A sub-heading inside a long topic — the wiki-length topics need somewhere to break. */
+.topicSubhead {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  color: var(--text-secondary, var(--text-primary));
+}
+
+.topicTip {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-accent, #4fc3f7);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: var(--font-sm);
+  line-height: 1.55;
+  color: var(--text-tertiary);
+}
+
+.topicTipLabel {
+  margin-right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent, #4fc3f7);
+}
+
+/* A topic's own fact table; the shortcut table's rules, with the first column given weight. */
+.factTable td:first-child {
+  min-width: 7em;
+  color: var(--text-secondary, var(--text-primary));
+}
+
 /* `code` spans inside topic prose — see `withCode` in HelpTopicView. */
 .inlineCode {
   padding: 1px 5px;

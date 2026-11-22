@@ -22,7 +22,11 @@ import com.wingedsheep.engine.state.components.player.PlayerLostComponent
  * Each invocation processes the first lost-but-unprocessed player; the SBA loop re-runs
  * until every one carries [PlayerLeftGameComponent].
  */
-class PlayerLeavesGameCheck(private val zones: ZoneTransitionService) : StateBasedActionCheck {
+class PlayerLeavesGameCheck(
+    private val zones: ZoneTransitionService,
+    /** See [PlayerLeavesGameProcessor.process]. */
+    private val finishAbandonedResolution: (GameState) -> ExecutionResult,
+) : StateBasedActionCheck {
     override val name = "800.4 Leave the Game"
     override val order = SbaOrder.LEAVE_GAME
 
@@ -45,7 +49,7 @@ class PlayerLeavesGameCheck(private val zones: ZoneTransitionService) : StateBas
             ?.get<PlayerLostComponent>()?.reason
             .toGameEndReason()
 
-        return PlayerLeavesGameProcessor.process(zones, state, leaver, reason)
+        return PlayerLeavesGameProcessor.process(zones, state, leaver, reason, finishAbandonedResolution)
     }
 }
 

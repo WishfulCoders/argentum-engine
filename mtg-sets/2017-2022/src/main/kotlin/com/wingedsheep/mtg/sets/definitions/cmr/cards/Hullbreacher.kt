@@ -55,7 +55,7 @@ val Hullbreacher = card("Hullbreacher") {
             ),
             appliesTo = EventPattern.DrawEvent(
                 player = Player.EachOpponent,
-                exceptFirstInDrawStep = true,
+                firstInDrawStep = com.wingedsheep.sdk.scripting.DrawStepFirstCard.EXCLUDED,
             ),
         )
     )

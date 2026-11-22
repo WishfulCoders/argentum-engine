@@ -54,21 +54,26 @@ export function CombatResolutionBoard({ decision }: { decision: CombatResolution
 
   const ownsAnyEditable = decision.edges.some((e) => e.editableBy === playerId && e.maximum > 0)
 
-  // Banding (CR 702.22). A creature has banding if its live keywords say so — neither the attacker
-  // nor blocker payloads carry it, so read it off the masked client state.
-  const hasBanding = (id: EntityId): boolean =>
-    gameState?.cards[id]?.keywords?.includes(Keyword.BANDING) ?? false
+  // Banding (CR 702.22). A creature has banding — or a "bands with other" ability (CR 702.22b) —
+  // if its live projected state says so; neither the attacker nor blocker payloads carry it, so
+  // read it off the masked client state.
+  const bandingLabel = (id: EntityId): string | null => {
+    const card = gameState?.cards[id]
+    if (card?.keywords?.includes(Keyword.BANDING)) return 'banding'
+    return card?.bandsWithOther?.length ? 'bands with other' : null
+  }
+  const hasBanding = (id: EntityId): boolean => bandingLabel(id) != null
   // A source's edges are "banding-inverted" for this player when banding handed them the division:
-  // the order constraint is lifted (CR 702.22j/k) and they're a real combat edge, not a trample
-  // drain. On defense this is how the defender ends up assigning an attacker's damage.
+  // the edge is flagged `orderConstrained: false` (CR 702.22j/k) and it's a real combat edge, not a
+  // trample drain. On defense this is how the defender ends up assigning an attacker's damage.
   const sourceBandingInverted = (sourceId: EntityId): boolean =>
     myEdges.some((e) => e.sourceId === sourceId && !e.orderConstrained && !e.isTrampleDrain)
   const bandingActive =
     decision.attackers.some((a) => a.bandId != null) ||
-    [...decision.attackers, ...decision.blockers].some((c) => hasBanding(c.id))
+    decision.edges.some((e) => !e.orderConstrained && !e.isTrampleDrain)
 
   // Initial / reset assignment. Starts from the engine's lethal-first defaults, but for any source
-  // whose division banding handed to this player (order lifted) we instead dump the source's whole
+  // whose division banding handed to this player we instead dump the source's whole
   // power onto its FIRST target and zero the rest — the canonical banding line: sponge everything
   // onto one creature. This covers both directions symmetrically:
   //   - Defense (CR 702.22j): you block with a banding creature, so you assign the attacker's
@@ -204,14 +209,14 @@ export function CombatResolutionBoard({ decision }: { decision: CombatResolution
 
   // Small purple tag marking a creature that has banding (CR 702.22), so it's obvious in the board
   // which creature is conferring the damage-division benefit.
-  const bandingPill = () => (
+  const bandingPill = (id: EntityId) => (
     <span
       style={{
         padding: '0 5px', borderRadius: 4, backgroundColor: '#7e22ce', color: 'white',
         fontSize: 10, fontWeight: 700, lineHeight: '15px', whiteSpace: 'nowrap',
       }}
     >
-      banding
+      {bandingLabel(id)}
     </span>
   )
 
@@ -236,11 +241,11 @@ export function CombatResolutionBoard({ decision }: { decision: CombatResolution
             <span style={{ color: 'white', fontSize: responsive.fontSize.small, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {cardName(edge.targetId)}
             </span>
-            {hasBanding(edge.targetId) && bandingPill()}
+            {hasBanding(edge.targetId) && bandingPill(edge.targetId)}
           </div>
           {!isDrain && (
             <span style={{ color: atLethal ? '#4ade80' : '#f59e0b', fontSize: responsive.fontSize.small }}>
-              lethal: {edge.lethal}{atLethal ? ' ✓' : ''}{edge.orderConstrained ? '' : ' (any order)'}
+              lethal: {edge.lethal}{atLethal ? ' ✓' : ''}{edge.orderConstrained ? '' : ' (banding)'}
             </span>
           )}
           {sharedTarget && (
@@ -303,8 +308,8 @@ export function CombatResolutionBoard({ decision }: { decision: CombatResolution
               <span style={{ color: 'white', fontSize: responsive.fontSize.small, fontWeight: 600, maxWidth: cardW + 30, textAlign: 'center' }}>
                 {sourceLabel(sourceId)}
               </span>
-              {hasBanding(sourceId) && bandingPill()}
-              {sourceBandingInverted(sourceId) && !hasBanding(sourceId) && (
+              {hasBanding(sourceId) && bandingPill(sourceId)}
+              {sourceBandingInverted(sourceId) && (
                 <span style={{ color: '#c084fc', fontSize: responsive.fontSize.small, maxWidth: cardW + 30, textAlign: 'center', lineHeight: 1.2 }}>
                   Banding: you assign this creature's damage
                 </span>

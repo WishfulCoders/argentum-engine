@@ -2,7 +2,10 @@
  * Selection sub-slice — handles X cost, convoke, crew, delve, mana color,
  * decision selection, and mana source selection flows.
  */
+import { compatibleSelectionPool } from '@/utils/selectionGroups'
+import { wouldExceedTotalCaps } from '@/utils/targeting'
 import { decisionInteractionEpoch } from '@/network/liveAction'
+import { targetEntityId } from './pipelinePhases'
 import type {
   SliceCreator,
   EntityId,
@@ -20,14 +23,36 @@ import type {
   ManaSelectionState,
   ConvokeCreatureSelection,
 } from '../types'
-import type { LegalActionInfo } from '@/types'
+import type { ChosenTarget, LegalActionInfo } from '@/types'
 import {
   parseManaCost as parseManaCostUtil,
   getRemainingCostSymbols,
   computeAutoTapPreview,
   reduceCostByHarmonizeTap,
+  trimAutoTapPreview,
+  manaCostAfterPhyrexianLife,
+  defaultPhyrexianLifePips,
 } from '@/utils/manaCost'
 
+/** Mirrors `CostCalculator.TARGET_PRICE_MATCHED_STRIDE`: how a per-target price key packs matched targets. */
+const TARGET_PRICE_MATCHED_STRIDE = 1000
+
+
+/** Every colour (WUBRG pip letter) the player's sources or floating mana could pay a pip with. */
+function availableManaColors(
+  sources: readonly { producesColors?: readonly string[] }[],
+  pool: { white: number; blue: number; black: number; red: number; green: number } | undefined,
+): Set<string> {
+  const colors = new Set(sources.flatMap((s) => s.producesColors ?? []))
+  if (pool) {
+    if (pool.white > 0) colors.add('W')
+    if (pool.blue > 0) colors.add('U')
+    if (pool.black > 0) colors.add('B')
+    if (pool.red > 0) colors.add('R')
+    if (pool.green > 0) colors.add('G')
+  }
+  return colors
+}
 
 export interface SelectionSliceState {
   modalModeSelectionState: ModalModeSelectionState | null
@@ -86,6 +111,9 @@ export interface SelectionSliceActions {
   cancelManaColorSelection: (interactionEpoch: string | null) => void
   startDecisionSelection: (state: DecisionSelectionState) => void
   toggleDecisionSelection: (cardId: EntityId) => void
+  decrementDecisionSelection: (cardId: EntityId) => void
+  /** Replace the whole pick at once (quick-select "All" / "Recommended" / "Clear"). Ids outside the pool are dropped. */
+  setDecisionSelection: (cardIds: readonly EntityId[]) => void
   cancelDecisionSelection: (decisionId: string) => void
   confirmDecisionSelection: (decisionId: string) => void
   startManaSelection: (actionInfo: LegalActionInfo) => void
@@ -518,20 +546,58 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
 
   // Decision selection actions
   startDecisionSelection: (state) => {
-    set({ decisionSelectionState: state })
+    set({ decisionSelectionState: { ...state, selectionPool: state.validOptions,
+      validOptions: compatibleSelectionPool(state.validOptions, state.selectionGroups, state.selectedOptions, state.exclusiveGroups, state.distinctCategories) } })
+  },
+
+  setDecisionSelection: (cardIds) => {
+    set((state) => {
+      const current = state.decisionSelectionState
+      if (!current || current.selectionLimits != null) return state
+      const pool = current.selectionPool ?? current.validOptions
+      const selectedOptions = [...new Set(cardIds)].filter((id) => pool.includes(id)).slice(0, current.maxSelections)
+      return {
+        decisionSelectionState: {
+          ...current,
+          selectedOptions,
+          validOptions: compatibleSelectionPool(pool, current.selectionGroups, selectedOptions, current.exclusiveGroups, current.distinctCategories),
+          warning: null,
+        },
+      }
+    })
   },
 
   toggleDecisionSelection: (cardId) => {
     set((state) => {
       if (!state.decisionSelectionState) return state
       const { selectedOptions, maxSelections } = state.decisionSelectionState
+      const limits = state.decisionSelectionState.selectionLimits
+      if (limits != null) {
+        const allocated = selectedOptions.filter((id) => id === cardId).length
+        if (!state.decisionSelectionState.validOptions.includes(cardId) ||
+            allocated >= (limits[cardId] ?? 0) || selectedOptions.length >= maxSelections) return state
+        return { decisionSelectionState: { ...state.decisionSelectionState,
+          selectedOptions: [...selectedOptions, cardId], warning: null } }
+      }
       const isSelected = selectedOptions.includes(cardId)
       if (isSelected) {
         return {
           decisionSelectionState: {
             ...state.decisionSelectionState,
             selectedOptions: selectedOptions.filter((id) => id !== cardId),
+            validOptions: compatibleSelectionPool(state.decisionSelectionState.selectionPool ?? state.decisionSelectionState.validOptions,
+              state.decisionSelectionState.selectionGroups, selectedOptions.filter((id) => id !== cardId), state.decisionSelectionState.exclusiveGroups, state.decisionSelectionState.distinctCategories),
             warning: null,
+          },
+        }
+      }
+      if (!state.decisionSelectionState.validOptions.includes(cardId)) return state
+      const overCap = wouldExceedTotalCaps(state.decisionSelectionState.totalCaps ?? [], maxSelections === 1 ? [] : selectedOptions, cardId)
+      if (overCap) {
+        return {
+          decisionSelectionState: {
+            ...state.decisionSelectionState,
+            warning: `The targets' total ${overCap.label} can't exceed ${overCap.cap} — deselect one first to pick this one.`,
           },
         }
       }
@@ -540,6 +606,8 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
           decisionSelectionState: {
             ...state.decisionSelectionState,
             selectedOptions: [...selectedOptions, cardId],
+            validOptions: compatibleSelectionPool(state.decisionSelectionState.selectionPool ?? state.decisionSelectionState.validOptions,
+              state.decisionSelectionState.selectionGroups, [...selectedOptions, cardId], state.decisionSelectionState.exclusiveGroups, state.decisionSelectionState.distinctCategories),
             warning: null,
           },
         }
@@ -568,6 +636,17 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
     })
   },
 
+  decrementDecisionSelection: (cardId) => {
+    set((state) => {
+      const selection = state.decisionSelectionState
+      if (!selection?.selectionLimits) return state
+      const index = selection.selectedOptions.lastIndexOf(cardId)
+      if (index < 0) return state
+      return { decisionSelectionState: { ...selection,
+        selectedOptions: selection.selectedOptions.filter((_, i) => i !== index), warning: null } }
+    })
+  },
+
   cancelDecisionSelection: (decisionId) => {
     if (get().decisionSelectionState?.decisionId !== decisionId) return
     set({ decisionSelectionState: null })
@@ -577,6 +656,9 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
     const { decisionSelectionState, pendingDecision, playerId } = get()
     if (!decisionSelectionState || !pendingDecision || !playerId) return
     if (decisionSelectionState.decisionId !== decisionId || pendingDecision.id !== decisionId) return
+    if (decisionSelectionState.selectionLimits != null &&
+        decisionSelectionState.selectedOptions.length > 0 &&
+        decisionSelectionState.selectedOptions.length !== decisionSelectionState.maxSelections) return
 
     const action = {
       type: 'SubmitDecision' as const,
@@ -612,7 +694,7 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
     // sources to also cover xValue * (number of {X} symbols).
     const action = actionInfo.action as {
       xValue?: number
-      targets?: readonly unknown[]
+      targets?: readonly ChosenTarget[]
       alternativePayment?: { harmonizeCreature?: EntityId | null }
       additionalCostPayment?: { sacrificedPermanents?: readonly EntityId[] }
     }
@@ -624,17 +706,21 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
     const emergeCost = emergeSacrifice
       ? actionInfo.additionalCostInfo?.costAfterSacrifice?.[emergeSacrifice]
       : undefined
-    // "This spell costs {W}{U} more to cast for each target beyond the first" (Officious
-    // Interrogation): the server advertises the one-target minimum, because it prices the cost
-    // before any target exists. `computePhases` puts targeting ahead of this step precisely so the
-    // tax is knowable here — append one copy of the increment per target beyond the first. Same
-    // shape as the emerge/harmonize adjustments around it: the server owns the rule, the client
-    // only applies the choice the player has since made.
-    const perExtraTarget = actionInfo.manaCostPerExtraTarget
-    const extraTargets = Math.max(0, (action.targets?.length ?? 0) - 1)
-    const targetTax =
-      perExtraTarget && extraTargets > 0 ? perExtraTarget.repeat(extraTargets) : ''
-    const manaCost = (emergeCost ?? actionInfo.manaCostString ?? '') + targetTax
+    // A spell priced per target — Officious Interrogation's "{W}{U} more for each target beyond
+    // the first", Hinata's "{1} less for each target": the server advertises the cheapest target
+    // count, because it prices the cost before any target exists, and sends the price of every
+    // count beside it. `computePhases` puts targeting ahead of this step precisely so the count is
+    // knowable here — look up the price for the different targets chosen. Same shape as the
+    // emerge/harmonize adjustments around it: the server owns the rule, the client only applies
+    // the choice the player has since made.
+    // Under a filtered per-target modifier ("for each creature it targets") the key also packs
+    // how many of them are among `targetPriceCountedIds` — see that field.
+    const chosenIds = [...new Set((action.targets ?? []).map(targetEntityId))]
+    const countedIds = actionInfo.targetPriceCountedIds ? new Set(actionInfo.targetPriceCountedIds) : null
+    const priceKey = chosenIds.length +
+      (countedIds ? TARGET_PRICE_MATCHED_STRIDE * chosenIds.filter((id) => countedIds.has(id)).length : 0)
+    const targetPricedCost = actionInfo.manaCostByTargetCount?.[priceKey]
+    const manaCost = emergeCost ?? targetPricedCost ?? actionInfo.manaCostString ?? ''
     // A preceding delve or convoke phase materializes {X} as generic in the cost it hands on, so
     // its exiles/taps can pay the X down (CR 601.2f). Once that has happened the X is already in
     // [manaCost] and must not be added on top of it again.
@@ -651,11 +737,21 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
       ? actionInfo.validHarmonizeCreatures?.find((c) => c.entityId === harmonizeCreatureId)?.power ?? 0
       : 0
 
+    // Phyrexian pips (CR 107.4f): when the server found no mana-only payment, start each pip no
+    // source or floating mana can make on "2 life", so the lands pre-selected below are the ones
+    // that pay the rest — four Plains for Tarkir Duneshaper's {4}{G/P}, not nothing.
+    const actingPlayerId = (actionInfo.action as { playerId?: EntityId }).playerId ?? get().playerId
+    const actingPlayer = get().gameState?.players.find((p) => p.playerId === actingPlayerId)
+    const phyrexianLifePipIndices = manaCost.includes('/P}') && !(actionInfo.autoTapPreview?.length)
+      ? defaultPhyrexianLifePips(manaCost, availableManaColors(sources, actingPlayer?.manaPool), actingPlayer?.life ?? 0)
+      : []
+    const manaOwed = manaCostAfterPhyrexianLife(manaCost, phyrexianLifePipIndices)
+
     // When a creature was tapped, recompute the whole pre-selection from the
     // reduced cost (colored pips + generic remaining after the tap) so we don't
     // over-tap lands for generic the tap already covered.
     if (harmonizeReduction > 0) {
-      const reduced = reduceCostByHarmonizeTap(manaCost, xValue, harmonizeReduction)
+      const reduced = reduceCostByHarmonizeTap(manaOwed, xValue, harmonizeReduction)
       set({
         selectedCardId: null,
         manaSelectionState: {
@@ -668,7 +764,7 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
           harmonizeReduction,
           sourceColors,
           sourceManaAmounts,
-          phyrexianLifePipIndices: [],
+          phyrexianLifePipIndices,
         },
       })
       return
@@ -684,8 +780,8 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
     // left to hand-pick lands.
     // An emerge cast's server preview was solved for the *first* candidate; the player may have
     // picked a different creature, so recompute from the cost that choice actually left.
-    const reducedSymbols = parseManaCostUtil(manaCost)
-    const preSelectedIds: EntityId[] = (!emergeCost && actionInfo.autoTapPreview && actionInfo.autoTapPreview.length > 0)
+    const reducedSymbols = parseManaCostUtil(manaOwed)
+    const preSelectedIds: EntityId[] = (!emergeCost && phyrexianLifePipIndices.length === 0 && actionInfo.autoTapPreview && actionInfo.autoTapPreview.length > 0)
       ? [...actionInfo.autoTapPreview]
       : (reducedSymbols.length > 0 ? computeAutoTapPreview(sources, reducedSymbols) : [])
     if (xManaNeeded > 0) {
@@ -719,7 +815,7 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
         harmonizeReduction: 0,
         sourceColors,
         sourceManaAmounts,
-        phyrexianLifePipIndices: [],
+        phyrexianLifePipIndices,
       },
     })
   },
@@ -742,14 +838,34 @@ export const createSelectionSlice: SliceCreator<SelectionSlice> = (set, get) => 
 
   togglePhyrexianLifePayment: (pipIndex) => {
     set((state) => {
-      if (!state.manaSelectionState) return state
-      const selected = state.manaSelectionState.phyrexianLifePipIndices
+      const selection = state.manaSelectionState
+      if (!selection) return state
+      const selected = selection.phyrexianLifePipIndices
+      const phyrexianLifePipIndices = selected.includes(pipIndex)
+        ? selected.filter((index) => index !== pipIndex)
+        : [...selected, pipIndex]
+      // Re-fit the tapped lands to what mana now owes: paying a pip with life frees the source
+      // that was making it, paying it with mana again picks one up. The player's own picks go
+      // first so the re-fit keeps them wherever they still pay something.
+      const owed = reduceCostByHarmonizeTap(
+        manaCostAfterPhyrexianLife(selection.manaCost, phyrexianLifePipIndices),
+        selection.xValue,
+        selection.harmonizeReduction,
+      )
+      const order = [
+        ...selection.selectedSources,
+        ...selection.validSources.filter((id) => !selection.selectedSources.includes(id)),
+      ]
+      const sources = selection.validSources.map((entityId) => ({
+        entityId,
+        producesColors: selection.sourceColors[entityId] ?? [],
+        manaAmount: selection.sourceManaAmounts[entityId] ?? 1,
+      }))
       return {
         manaSelectionState: {
-          ...state.manaSelectionState,
-          phyrexianLifePipIndices: selected.includes(pipIndex)
-            ? selected.filter((index) => index !== pipIndex)
-            : [...selected, pipIndex],
+          ...selection,
+          phyrexianLifePipIndices,
+          selectedSources: trimAutoTapPreview(order, sources, owed),
         },
       }
     })

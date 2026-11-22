@@ -53,9 +53,6 @@ class EmberFistZuberaScenarioTest : ScenarioTestBase() {
 
                 game.castSpell(1, "Shock", game.findPermanent("Silent-Chant Zubera")!!).error shouldBe null
                 game.settle()
-                // The engine hands priority to the resolved trigger's controller (Player2) rather
-                // than the active player (CR 117.3b); pass it back before casting again.
-                if (game.state.priorityPlayerId == game.player2Id) game.passPriority()
                 val lifeBefore = game.getLifeTotal(2)
                 game.castSpell(1, "Shock", game.findPermanent("Ember-Fist Zubera")!!).error shouldBe null
                 game.settle { listOf(game.player2Id) }

@@ -37,6 +37,7 @@ val ShrapnelSlinger = card("Shrapnel Slinger") {
                 val toSacrifice = selectTarget(
                     TargetObject(filter = TargetFilter.Creature.youControl()),
                     nonTargeting = true,
+                    prompt = "Choose a creature to sacrifice"
                 )
                 run(Effects.SacrificeTarget(toSacrifice.asTarget))
             },

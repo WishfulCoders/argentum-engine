@@ -840,7 +840,8 @@
                             },
                             "id": "t0"
                         }
-                    ]
+                    ],
+                    "description": "Counter target spell"
                 },
                 {
                     "effect": {
@@ -2524,7 +2525,10 @@
                     "type": "MoveToZone",
                     "target": "Self",
                     "destination": "Library",
-                    "positionFromTop": 2
+                    "positionFromTop": {
+                        "type": "Fixed",
+                        "amount": 2
+                    }
                 },
                 "descriptionOverride": "{1}{U}: Put Borborygmos and Fblthp into its owner's library third from the top."
             }
@@ -3014,7 +3018,7 @@
                                 "includeCurrentTurn": false
                             },
                             "nonLandOnly": true,
-                            "singleUse": true
+                            "maxPlays": 1
                         }
                     ]
                 },
@@ -4768,14 +4772,8 @@
                     "scope": "Self"
                 },
                 "sourceFilter": "creature ctrl:opponent",
-                "includeManaAbilities": true
-            },
-            {
-                "type": "SpendAnyManaTypeForActivatedAbilities",
-                "filter": {
-                    "baseFilter": "permanent",
-                    "scope": "Self"
-                }
+                "abilities": "ALL",
+                "spendAsThoughAnyColor": true
             }
         ]
     },
@@ -6339,7 +6337,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -7859,7 +7859,12 @@
                                                     "IsSorcery"
                                                 ]
                                             },
-                                            "ManaValueEqualsX"
+                                            {
+                                                "type": "CompareNumericProperty",
+                                                "property": "MANA_VALUE",
+                                                "operator": "EQ",
+                                                "amount": "XValue"
+                                            }
                                         ]
                                     },
                                     "zone": "Graveyard"
@@ -8749,6 +8754,7 @@
                             "storeMovedAs": "moved2"
                         },
                         "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent",
                         {
                             "type": "GrantMayPlayFromExile",
                             "from": "moved2",
@@ -9449,7 +9455,10 @@
                     },
                     {
                         "type": "DistributeCountersAmongFiltered",
-                        "totalCounters": 3,
+                        "totalCounters": {
+                            "type": "Fixed",
+                            "amount": 3
+                        },
                         "filter": "creature ctrl:you"
                     },
                     {
@@ -9745,7 +9754,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library and/or graveyard and/or sideboard for an instant or sorcery card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -10432,7 +10443,9 @@
                                                 "amount": 1
                                             }
                                         },
-                                        "storeSelected": "found"
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library for a land or battle card to put into your hand",
+                                        "selectedLabel": "Put into your hand"
                                     },
                                     {
                                         "type": "MoveCollection",
@@ -10923,7 +10936,8 @@
                                     ]
                                 }
                             },
-                            "storeAs": "gathered0"
+                            "storeAs": "gathered0",
+                            "search": true
                         },
                         {
                             "type": "SelectFromCollection",
@@ -13840,7 +13854,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for an Aura or God or Demigod card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -14498,7 +14514,9 @@
                                     "amount": 2
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for up to two basic land cards to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -19375,7 +19393,7 @@
                         "IsAttachedToBySource"
                     ]
                 },
-                "nonManaAbilitiesOnly": true
+                "abilities": "NON_MANA"
             }
         ],
         "auraTarget": {
@@ -19520,7 +19538,8 @@
                                 "zone": "Library",
                                 "filter": "Praetor"
                             },
-                            "storeAs": "gathered0"
+                            "storeAs": "gathered0",
+                            "search": true
                         },
                         {
                             "type": "SelectFromCollection",
@@ -19537,7 +19556,8 @@
                                 "zone": "Battlefield"
                             }
                         },
-                        "ShuffleLibrary"
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
                     ]
                 },
                 "descriptionOverride": "{10}, {T}, Sacrifice Realmbreaker: Search your library for any number of Praetor cards, put them onto the battlefield, then shuffle."
@@ -23950,7 +23970,7 @@
                                 "ability": {
                                     "type": "MayCastFromGraveyard",
                                     "filter": "instant|sorcery",
-                                    "exileInsteadOfGraveyard": true,
+                                    "exileCastThisWay": "INSTEAD_OF_GRAVEYARD",
                                     "fromAnyGraveyard": true
                                 },
                                 "target": "Controller"
@@ -24432,7 +24452,9 @@
                                     "amount": 2
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for up to two Forest land cards to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",

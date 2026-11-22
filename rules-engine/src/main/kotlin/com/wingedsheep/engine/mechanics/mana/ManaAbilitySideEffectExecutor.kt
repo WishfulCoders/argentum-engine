@@ -66,14 +66,19 @@ class ManaAbilitySideEffectExecutor(
         // The solver chose these sources off this projection, so it is already built.
         val paymentProjection = state.projectedState
         for (source in solution.sources) {
-            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, controllerId, paymentProjection)
+            val production = solution.manaProduced[source.entityId]
+            val (tappedState, tapEvents) = tapForMana(
+                currentState, source.entityId, controllerId,
+                producedColors = production?.producedColors.orEmpty(),
+                producedAmount = production?.total ?: 1,
+                paymentProjection = paymentProjection,
+            )
             currentState = tappedState
             events.addAll(tapEvents)
 
-            val production = solution.manaProduced[source.entityId]
             // Resolved once and shared: the activation event, the life cost and the side effects
             // all want the same ability, and this loop runs for every auto-tapped source of every payment.
-            val ability = ManaAbilityLifeCost.activatedManaAbility(cardRegistry, currentState, source.entityId, production)
+            val ability = ManaAbilityLifeCost.activatedManaAbility(cardRegistry, currentState, source.entityId, production, controllerId, zones.predicateEvaluator)
 
             // Auto-tapping a source *is* the player activating its mana ability — the fast path is
             // a UI shortcut, not a different game action (CR 605.3). Emit the activation event the
@@ -119,9 +124,9 @@ class ManaAbilitySideEffectExecutor(
      * card (nothing to name in the event).
      *
      * `costsTap` is true by construction — this path only ever reaches sources it taps — so the
-     * Antiquities "without {T} in its activation cost" template correctly ignores these. `isExhaust`
+     * Antiquities "without {T} in its activation cost" template correctly ignores these. `onceOnlyKind`
      * is read off the matching printed ability where one is found; an intrinsic land mana ability
-     * has no [ActivatedAbility] entry to consult and is never exhaust anyway.
+     * has no [ActivatedAbility] entry to consult and is never exhaust or boast anyway.
      */
     fun activationEvent(
         state: GameState,
@@ -129,7 +134,7 @@ class ManaAbilitySideEffectExecutor(
         producedColor: Color?,
         controllerId: EntityId,
     ): AbilityActivatedEvent? = activationEvent(
-        state, sourceId, controllerId, ManaAbilityLifeCost.activatedManaAbility(cardRegistry, state, sourceId, ManaProduction(color = producedColor))
+        state, sourceId, controllerId, ManaAbilityLifeCost.activatedManaAbility(cardRegistry, state, sourceId, ManaProduction(color = producedColor), controllerId, zones.predicateEvaluator)
     )
 
     private fun activationEvent(
@@ -146,7 +151,9 @@ class ManaAbilitySideEffectExecutor(
             abilityEntityId = null,
             costsTap = true,
             isManaAbility = true,
-            isExhaust = matchingAbility?.isExhaust == true
+            onceOnlyKind = matchingAbility?.onceOnlyKind,
+            // This path only ever taps permanents.
+            sourceZone = com.wingedsheep.sdk.core.Zone.BATTLEFIELD,
         )
     }
 
@@ -156,7 +163,7 @@ class ManaAbilitySideEffectExecutor(
         producedColor: Color?,
         controllerId: EntityId,
     ): Pair<GameState, List<GameEvent>> = runSideEffects(
-        state, sourceId, controllerId, ManaAbilityLifeCost.activatedManaAbility(cardRegistry, state, sourceId, ManaProduction(color = producedColor))
+        state, sourceId, controllerId, ManaAbilityLifeCost.activatedManaAbility(cardRegistry, state, sourceId, ManaProduction(color = producedColor), controllerId, zones.predicateEvaluator)
     )
 
     private fun runSideEffects(

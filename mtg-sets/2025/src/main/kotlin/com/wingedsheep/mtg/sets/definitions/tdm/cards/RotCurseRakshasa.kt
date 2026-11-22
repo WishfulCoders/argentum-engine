@@ -20,14 +20,13 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * Renew — {X}{B}{B}, Exile this card from your graveyard: Put a decayed counter on each of
  * X target creatures. Activate only as a sorcery.
  *
- * Trample and Decayed are keyword abilities — the printed Decayed half is composed by the
- * [com.wingedsheep.sdk.dsl.CardBuilder.decayed] helper (a "can't block" static + an
- * attack-triggered end-of-combat sacrifice). The Renew ability is a graveyard-activated,
- * sorcery-speed ability ([com.wingedsheep.sdk.dsl.CardBuilder.renew]) whose {X} clamps the
- * number of targets ([TargetCreature.dynamicMaxCount] = [DynamicAmount.XValue], the
- * Builder's Bane / Icy Blast pattern). [ForEachTargetEffect] puts one decayed counter
+ * Trample and Decayed are keyword abilities — the printed Decayed is authored by the
+ * [com.wingedsheep.sdk.dsl.CardBuilder.decayed] helper as the keyword alone, which the engine
+ * realizes ("can't block" + attack-triggered end-of-combat sacrifice). The Renew ability is a graveyard-activated,
+ * sorcery-speed ability ([com.wingedsheep.sdk.dsl.CardBuilder.renew]) whose {X} is the exact
+ * number of targets (`targets(…, exactly = X)`, the Builder's Bane / Icy Blast pattern). [ForEachTargetEffect] puts one decayed counter
  * ([CounterType.DECAYED]) on each chosen creature — the counter grants Decayed to *any* creature
- * (CR 702.147a), realized by the engine off the counter.
+ * (CR 702.147a) by projecting the Decayed keyword.
  */
 val RotCurseRakshasa = card("Rot-Curse Rakshasa") {
     manaCost = "{1}{B}"
@@ -44,7 +43,7 @@ val RotCurseRakshasa = card("Rot-Curse Rakshasa") {
     decayed()
 
     renew("{X}{B}{B}") {
-        targets(TargetFilter.Creature, dynamicMaxCount = DynamicAmounts.xValue())
+        targets(TargetFilter.Creature, exactly = DynamicAmounts.xValue())
         effect = Effects.ForEachTarget(
             Effects.AddCounters(CounterType.DECAYED, 1, EffectTarget.ContextTarget(0))
         )

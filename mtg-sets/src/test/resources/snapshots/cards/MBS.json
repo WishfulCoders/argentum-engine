@@ -20,7 +20,7 @@
                 "target": "IterationEntity"
             }
         },
-        "selfShuffleIntoLibraryOnResolve": true
+        "selfLibraryPlacementOnResolve": "Shuffled"
     },
     "metadata": {
         "collectorNumber": "39",
@@ -61,7 +61,7 @@
                 "id": "t0"
             }
         ],
-        "selfShuffleIntoLibraryOnResolve": true
+        "selfLibraryPlacementOnResolve": "Shuffled"
     },
     "metadata": {
         "collectorNumber": "20",
@@ -82,6 +82,107 @@
     },
     "colorIdentityOverride": [
         "BLUE"
+    ]
+}
+
+// Consecrated Sphinx
+{
+    "name": "Consecrated Sphinx",
+    "manaCost": "{4}{U}{U}",
+    "typeLine": "Creature — Sphinx",
+    "oracleText": "Flying\nWhenever an opponent draws a card, you may draw two cards.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 6
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Consecrated Sphinx:1",
+                "trigger": {
+                    "type": "DrawEvent",
+                    "player": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "21",
+        "rarity": "MYTHIC",
+        "artist": "Mark Zug",
+        "flavorText": "Blessed by the hands of Jin-Gitaxias.",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/7/b7f6b20c-9871-433c-8557-44493447e914.jpg?1783941389",
+        "rulings": [
+            {
+                "date": "2017-11-17",
+                "text": "You may either draw two cards or not draw at all. You can't choose to draw only one card."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "The ability triggers once for each card an opponent draws. You choose whether to draw two cards as each of those abilities resolves."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "If each player controls a Consecrated Sphinx, their abilities will cause each other to trigger until one player chooses not to draw cards."
+            }
+        ]
+    }
+}
+
+// Creeping Corrosion
+{
+    "name": "Creeping Corrosion",
+    "manaCost": "{2}{G}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Destroy all artifacts.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "BattlefieldMatching",
+                        "filter": "artifact"
+                    },
+                    "storeAs": "destroyAll_gathered"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "destroyAll_gathered",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Graveyard"
+                    },
+                    "moveType": "Destroy"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "78",
+        "rarity": "RARE",
+        "artist": "Ryan Pancoast",
+        "flavorText": "\"We will reveal the futility of their heresy by showing them how fragile their relics are.\"\n—Vorinclex, Voice of Hunger",
+        "imageUri": "https://cards.scryfall.io/normal/front/0/5/05d5a7b3-18b6-4b1d-85cc-2253e605390c.jpg?1783941377"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -116,13 +217,7 @@
         "rarity": "UNCOMMON",
         "artist": "David Rapoza",
         "flavorText": "Having flesh is increasingly a liability on Mirrodin.",
-        "imageUri": "https://cards.scryfall.io/normal/front/1/c/1c665cfc-7e9a-444b-96b5-e8e4ef57a98a.jpg?1783941384",
-        "rulings": [
-            {
-                "date": "2011-06-01",
-                "text": "If the targeted creature is also an artifact when Go for the Throat tries to resolve, it won't resolve."
-            }
-        ]
+        "imageUri": "https://cards.scryfall.io/normal/front/1/c/1c665cfc-7e9a-444b-96b5-e8e4ef57a98a.jpg?1783941384"
     },
     "colorIdentityOverride": [
         "BLACK"
@@ -151,7 +246,12 @@
                                     "type": "HasColor",
                                     "color": "GREEN"
                                 },
-                                "ManaValueAtMostX"
+                                {
+                                    "type": "CompareNumericProperty",
+                                    "property": "MANA_VALUE",
+                                    "operator": "LTE",
+                                    "amount": "XValue"
+                                }
                             ]
                         }
                     },
@@ -168,7 +268,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a green creature card with mana value at most X to put onto the battlefield",
+                    "selectedLabel": "Put onto the battlefield"
                 },
                 {
                     "type": "MoveCollection",
@@ -182,7 +284,7 @@
                 "EmitLibrarySearchedEvent"
             ]
         },
-        "selfShuffleIntoLibraryOnResolve": true
+        "selfLibraryPlacementOnResolve": "Shuffled"
     },
     "metadata": {
         "collectorNumber": "81",
@@ -214,6 +316,95 @@
     ]
 }
 
+// Hero of Bladehold
+{
+    "name": "Hero of Bladehold",
+    "manaCost": "{2}{W}{W}",
+    "typeLine": "Creature — Human Knight",
+    "oracleText": "Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)\nWhenever this creature attacks, create two 1/1 white Soldier creature tokens that are tapped and attacking.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 4
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Hero of Bladehold:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "ForEach",
+                    "space": {
+                        "type": "IterationSpace.Group",
+                        "filter": {
+                            "baseFilter": "creature attacking",
+                            "excludeSelf": true
+                        }
+                    },
+                    "body": {
+                        "type": "ModifyStats",
+                        "powerModifier": {
+                            "type": "Fixed",
+                            "amount": 1
+                        },
+                        "toughnessModifier": {
+                            "type": "Fixed",
+                            "amount": 0
+                        },
+                        "target": "IterationEntity"
+                    }
+                },
+                "descriptionOverride": "Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)"
+            },
+            {
+                "id": "Hero of Bladehold:2",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "CreateToken",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "power": 1,
+                    "toughness": 1,
+                    "colors": [
+                        "WHITE"
+                    ],
+                    "creatureTypes": [
+                        "Soldier"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/7/a/7a563df7-7b9d-4692-ab1b-578be1887b62.jpg?1783941682",
+                    "tapped": true,
+                    "attacking": true,
+                    "attackDefender": "CONTROLLER_CHOOSES"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "8",
+        "rarity": "MYTHIC",
+        "artist": "Austin Hsu",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/a/8a3853ec-e307-46e0-96d7-0706b5c45c5e.jpg?1783941393",
+        "rulings": [
+            {
+                "date": "2011-06-01",
+                "text": "Whenever Hero of Bladehold attacks, both abilities will trigger. You can put them onto the stack in any order. If the token-creating ability resolves first, the tokens each get +1/+0 until end of turn from the battle cry ability."
+            },
+            {
+                "date": "2011-06-01",
+                "text": "You choose which opponent or planeswalker an opponent controls that each token is attacking when it is put onto the battlefield."
+            },
+            {
+                "date": "2011-06-01",
+                "text": "Although the tokens are attacking, they never were declared as attacking creatures (for purposes of abilities that trigger whenever a creature attacks, for example)."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Hexplate Golem
 {
     "name": "Hexplate Golem",
@@ -228,6 +419,62 @@
         "artist": "Matt Cavotta",
         "flavorText": "\"Use everything. Iron, rust, scrap . . . even the ground must join our cause.\"\n—Ezuri, renegade leader",
         "imageUri": "https://cards.scryfall.io/normal/front/4/9/49b913f3-6581-45ae-9cdb-274c2ccd8899.jpg?1783941369"
+    },
+    "colorIdentityOverride": []
+}
+
+// Ichor Wellspring
+{
+    "name": "Ichor Wellspring",
+    "manaCost": "{2}",
+    "typeLine": "Artifact",
+    "oracleText": "When this artifact enters or is put into a graveyard from the battlefield, draw a card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Ichor Wellspring:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "descriptionOverride": "When this artifact enters, draw a card."
+            },
+            {
+                "id": "Ichor Wellspring:2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "descriptionOverride": "When this artifact is put into a graveyard from the battlefield, draw a card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "110",
+        "artist": "Steven Belledin",
+        "flavorText": "\"Our glorious infection has taken hold.\"\n—Elesh Norn, Grand Cenobite",
+        "imageUri": "https://cards.scryfall.io/normal/front/2/d/2d1ea522-a0f6-45a8-8985-6fcca95d60cc.jpg?1783941368",
+        "rulings": [
+            {
+                "date": "2011-06-01",
+                "text": "The ability will trigger when Ichor Wellspring is put into a graveyard from the battlefield, even if the ability that triggered when it entered hasn't resolved yet."
+            }
+        ]
     },
     "colorIdentityOverride": []
 }
@@ -285,6 +532,70 @@
     },
     "colorIdentityOverride": [
         "RED"
+    ]
+}
+
+// Lead the Stampede
+{
+    "name": "Lead the Stampede",
+    "manaCost": "{2}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Look at the top five cards of your library. You may reveal any number of creature cards from among them and put the revealed cards into your hand. Put the rest on the bottom of your library in any order.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "TopOfLibrary",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 5
+                        }
+                    },
+                    "storeAs": "looked"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "looked",
+                    "selection": "ChooseAnyNumber",
+                    "filter": "creature",
+                    "storeSelected": "kept",
+                    "storeRemainder": "rest",
+                    "prompt": "You may reveal any number of creature cards and put them into your hand",
+                    "showAllCards": true
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "kept",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Hand"
+                    },
+                    "revealed": true
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "rest",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Library",
+                        "placement": "Bottom"
+                    },
+                    "order": "ControllerChooses"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "82",
+        "rarity": "UNCOMMON",
+        "artist": "Efrem Palacios",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/6/66ed14c8-38c6-4da5-a6ee-f814478161d2.jpg?1783941375"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
     ]
 }
 
@@ -576,17 +887,7 @@
         "rarity": "RARE",
         "artist": "Kev Walker",
         "flavorText": "Basic senses like sight and taste are reserved for those in power.",
-        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c7bec21-61b0-4e72-848b-82f38e1910e0.jpg?1783941366",
-        "rulings": [
-            {
-                "date": "2020-08-07",
-                "text": "Activated abilities are written in the form \"Cost: Effect.\" Some keywords are activated abilities (such as equip) and will have colons in their reminder texts. Static and triggered abilities of sources with the chosen name are unaffected."
-            },
-            {
-                "date": "2020-08-07",
-                "text": "Phyrexian Revoker's ability affects sources with the chosen name no matter what zone they are in. For example, a cycling ability of a card with the chosen name can't be activated from hand."
-            }
-        ]
+        "imageUri": "https://cards.scryfall.io/normal/front/7/c/7c7bec21-61b0-4e72-848b-82f38e1910e0.jpg?1783941366"
     },
     "colorIdentityOverride": []
 }
@@ -636,6 +937,65 @@
         "imageUri": "https://cards.scryfall.io/normal/front/8/8/88b449a5-634f-47b1-a757-86a6849f6777.jpg?1783941365"
     },
     "colorIdentityOverride": []
+}
+
+// Psychosis Crawler
+{
+    "name": "Psychosis Crawler",
+    "manaCost": "{5}",
+    "typeLine": "Artifact Creature — Phyrexian Horror",
+    "oracleText": "Psychosis Crawler's power and toughness are each equal to the number of cards in your hand.\nWhenever you draw a card, each opponent loses 1 life.",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "Count",
+                "player": "You",
+                "zone": "Hand"
+            }
+        },
+        "toughness": {
+            "type": "Dynamic",
+            "source": {
+                "type": "Count",
+                "player": "You",
+                "zone": "Hand"
+            }
+        }
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Psychosis Crawler:1",
+                "trigger": "DrawEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "LoseLife",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": {
+                        "type": "PlayerRef",
+                        "player": "EachOpponent"
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "126",
+        "rarity": "RARE",
+        "artist": "Stephan Martiniere",
+        "flavorText": "\"If that brain can't figure out the secret of the serum, then add more brains.\"\n—Rhmir, Hand of the Augur",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/d/4dd84701-857e-4948-8cb8-39b8a321a177.jpg?1783941364",
+        "rulings": [
+            {
+                "date": "2011-06-01",
+                "text": "If an effect causes you to draw multiple cards, Psychosis Crawler will trigger that many times."
+            }
+        ]
+    }
 }
 
 // Quilled Slagwurm
@@ -707,7 +1067,7 @@
                 "id": "t0"
             }
         ],
-        "selfShuffleIntoLibraryOnResolve": true
+        "selfLibraryPlacementOnResolve": "Shuffled"
     },
     "metadata": {
         "collectorNumber": "74",
@@ -724,6 +1084,126 @@
     "colorIdentityOverride": [
         "RED"
     ]
+}
+
+// Sangromancer
+{
+    "name": "Sangromancer",
+    "manaCost": "{2}{B}{B}",
+    "typeLine": "Creature — Vampire Shaman",
+    "oracleText": "Flying\nWhenever a creature an opponent controls dies, you may gain 3 life.\nWhenever an opponent discards a card, you may gain 3 life.",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "keywords": [
+        "FLYING"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Sangromancer:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature ctrl:opponent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "GainLife",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
+                    },
+                    "descriptionOverride": "Whenever a creature an opponent controls dies, you may gain 3 life."
+                },
+                "descriptionOverride": "Whenever a creature an opponent controls dies, you may gain 3 life."
+            },
+            {
+                "id": "Sangromancer:2",
+                "trigger": {
+                    "type": "DiscardEvent",
+                    "player": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "GainLife",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
+                    },
+                    "descriptionOverride": "Whenever an opponent discards a card, you may gain 3 life."
+                },
+                "descriptionOverride": "Whenever an opponent discards a card, you may gain 3 life."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "53",
+        "rarity": "RARE",
+        "artist": "Igor Kieryluk",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/c/9c374193-4ebb-4f33-a24d-e567aea57b01.jpg?1783941382",
+        "rulings": [
+            {
+                "date": "2011-06-01",
+                "text": "If one or more creatures an opponent controls are put into the graveyard at the same time as Sangromancer, Sangromancer's first ability will trigger that many times."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
+// Shimmer Myr
+{
+    "name": "Shimmer Myr",
+    "manaCost": "{3}",
+    "typeLine": "Artifact Creature — Myr",
+    "oracleText": "Flash\nYou may cast artifact spells as though they had flash.",
+    "creatureStats": {
+        "power": 2,
+        "toughness": 2
+    },
+    "keywords": [
+        "FLASH"
+    ],
+    "script": {
+        "staticAbilities": [
+            {
+                "type": "GrantFlashToSpellType",
+                "filter": "artifact",
+                "controllerOnly": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "129",
+        "rarity": "RARE",
+        "artist": "Jana Schirmer & Johannes Voss",
+        "flavorText": "It evades Phyrexians by hiding in the spaces between seconds.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/7/478c1a5b-237b-4ecb-be73-3c6dafd5ae53.jpg?1783941364",
+        "rulings": [
+            {
+                "date": "2020-11-10",
+                "text": "Once you announce that you're casting a spell, players can't attempt to remove Shimmer Myr from the battlefield to make that casting illegal. Removing Shimmer Myr after you've cast a spell won't affect that spell."
+            },
+            {
+                "date": "2020-11-10",
+                "text": "Shimmer Myr has no effect on artifact lands because they aren't cast as spells."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
 }
 
 // Slagstorm
@@ -850,6 +1330,41 @@
     "colorIdentityOverride": []
 }
 
+// Vivisection
+{
+    "name": "Vivisection",
+    "manaCost": "{3}{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "As an additional cost to cast this spell, sacrifice a creature.\nDraw three cards.",
+    "script": {
+        "spellEffect": {
+            "type": "DrawCards",
+            "count": {
+                "type": "Fixed",
+                "amount": 3
+            }
+        },
+        "additionalCosts": [
+            {
+                "type": "AdditionalAtom",
+                "atom": {
+                    "type": "AtomSacrifice",
+                    "filter": "creature"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "38",
+        "artist": "Anthony Francisco",
+        "flavorText": "Phyrexians research with the grace of surgeons and the finesse of butchers.",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/8/684a3631-f2d6-4a64-a04a-893f452e3a60.jpg"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // White Sun's Zenith
 {
     "name": "White Sun's Zenith",
@@ -870,7 +1385,7 @@
             ],
             "imageUri": "https://cards.scryfall.io/normal/front/7/d/7d400b41-813d-4a63-848f-5eb4db4bf3bb.jpg?1783903575"
         },
-        "selfShuffleIntoLibraryOnResolve": true
+        "selfLibraryPlacementOnResolve": "Shuffled"
     },
     "metadata": {
         "collectorNumber": "19",

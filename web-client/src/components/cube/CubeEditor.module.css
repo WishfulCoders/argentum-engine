@@ -1,21 +1,37 @@
+/*
+ * The cube editor and its satellites (source panes, card list, stats, share dialog). Same glass-on-art
+ * language as the standalone pages: dark translucent surfaces, the display serif for the cube's own
+ * name, amber for the one primary action. The one visual flourish is the pack strip — a booster drawn
+ * as a row of rarity-coloured slots — and the rarity chips that share its palette.
+ */
+
+/* ---------- frames ---------- */
+
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(4, 5, 9, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1400;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 16, 25, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
 }
 
 .dialog {
   position: fixed;
   inset: 3vh 3vw;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
   z-index: 1401;
-  overflow: hidden;
 }
 
 /* ---------- header ---------- */
@@ -23,28 +39,101 @@
 .header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.titleBlock {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.titleInput,
+.descriptionInput {
+  width: 100%;
+  padding: 2px 6px;
+  margin-left: -6px;
+  color: #f4f5f9;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.titleInput {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.descriptionInput {
+  font-size: var(--font-sm);
+  color: #b9c0cf;
+}
+
+.titleInput:hover,
+.descriptionInput:hover {
+  border-color: var(--border-subtle);
+}
+
+.titleInput:focus,
+.descriptionInput:focus {
+  border-color: var(--color-accent-dark);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.descriptionInput::placeholder,
+.titleInput::placeholder {
+  color: #7d869a;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.saveState {
+  min-width: 0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.saveState[data-dirty='true'] {
+  color: #f2c27c;
+}
+
+.saveState[data-dirty='true']::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  vertical-align: 1px;
+  border-radius: 50%;
+  background: #f2b45c;
+}
+
 .field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .fieldLabel {
   font-size: var(--font-xs);
   color: var(--text-disabled);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.nameField {
-  flex: 1;
-  min-width: 180px;
 }
 
 .input,
@@ -69,11 +158,10 @@
   width: 72px;
 }
 
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
+.packBar .select {
+  width: auto;
+  min-width: 180px;
+  max-width: 260px;
 }
 
 .primaryButton,
@@ -86,9 +174,14 @@
 }
 
 .primaryButton {
-  color: #fff;
-  background-color: var(--color-accent-dark);
-  border: 1px solid var(--color-accent-dark);
+  color: #1d1405;
+  font-weight: 600;
+  background-color: #f2b45c;
+  border: 1px solid #f2b45c;
+}
+
+.primaryButton:not(:disabled):hover {
+  background-color: #f7c67f;
 }
 
 .secondaryButton {
@@ -104,7 +197,165 @@
 }
 
 .secondaryButton:not(:disabled):hover {
-  border-color: var(--color-accent-dark);
+  border-color: rgba(242, 180, 92, 0.6);
+}
+
+.linkButton {
+  padding: 2px 4px;
+  font-size: var(--font-xs);
+  color: #c9cfdc;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+  text-underline-offset: 3px;
+}
+
+.linkButton:hover:not(:disabled) {
+  color: #fff;
+  text-decoration-color: currentColor;
+}
+
+.linkButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.linkButton:focus-visible,
+.segment:focus-visible,
+.sourceTab:focus-visible,
+.rarityChip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.confirmBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-sm);
+  color: #f6dfb6;
+  background: rgba(242, 180, 92, 0.12);
+  border-bottom: 1px solid rgba(242, 180, 92, 0.35);
+}
+
+.confirmBar > span {
+  margin-right: auto;
+}
+
+/* ---------- packs ---------- */
+
+.packBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* In the bar the size and land fields sit inline with the rest; in the builder's rail they share a row. */
+.packBar .packFields { display: contents; }
+
+.packStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.packStack .segmented { align-self: stretch; }
+.packStack .segment { flex: 1 1 0; }
+.packStack .packExplain { flex: none; align-items: flex-start; }
+
+.packFields {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.packStack .landField { flex: 1 1 auto; min-width: 0; }
+
+.packExplain {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 32px;
+}
+
+.packBlurb {
+  font-size: var(--font-xs);
+  line-height: 1.4;
+  color: #b4bccd;
+  max-width: 60ch;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.segment {
+  padding: 5px 12px;
+  font-size: var(--font-sm);
+  color: #b4bccd;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segment:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.segment[aria-checked='true'] {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* A booster drawn as its slots, each the colour of the rarity that fills it. */
+.packStrip {
+  flex: none;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.packSlot {
+  width: 8px;
+  height: 22px;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.slotCommon { background: linear-gradient(170deg, #5b6170, #2c3039); }
+.slotUncommon { background: linear-gradient(170deg, #e4ebf2, #8794a6); }
+.slotRare { height: 26px; background: linear-gradient(170deg, #f4dc8e, #b5862a); }
+.slotWild { background: linear-gradient(180deg, #f08a3c 0%, #f1cf7d 35%, #c9d2de 65%, #4c525f 100%); }
+
+/* A slot the cube can't fill a pack with: hollow, outlined in the warning colour. */
+.slotShort {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #e07a6e;
 }
 
 /* ---------- body ---------- */
@@ -112,7 +363,7 @@
 .body {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.4fr);
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.35fr);
   min-height: 0;
 }
 
@@ -132,10 +383,12 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  min-height: 41px;
+  padding: 0 var(--space-3);
   font-size: var(--font-sm);
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
 }
 
 .columnHeaderTitle {
@@ -143,8 +396,54 @@
   color: var(--text-primary);
 }
 
-.searchRow {
+.sourceTabs {
+  display: flex;
+  gap: 2px;
+  min-height: 41px;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+}
+
+.sourceTab {
+  padding: 0 var(--space-3);
+  font-size: var(--font-sm);
+  color: #a9b1c3;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sourceTab:hover {
+  color: #fff;
+}
+
+.sourceTab[aria-selected='true'] {
+  color: #fff;
+  border-bottom-color: #f2b45c;
+}
+
+.searchRow,
+.listToolbar {
   padding: var(--space-2) var(--space-3);
+}
+
+.listToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filterInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.listToolbar .segment {
+  padding: 3px 9px;
+  font-size: var(--font-xs);
 }
 
 .scroll {
@@ -153,17 +452,51 @@
   padding: 0 var(--space-3) var(--space-3);
 }
 
+.pasteScroll {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-2);
+}
+
 .hint {
   margin: var(--space-2) 0 0;
   font-size: var(--font-xs);
   color: var(--text-disabled);
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.hintInline {
+  font-size: var(--font-xs);
+  color: var(--text-disabled);
+  line-height: 1.35;
 }
 
 .error {
   margin: var(--space-2) 0 0;
   font-size: var(--font-xs);
   color: var(--color-danger, #ef5350);
+}
+
+.emptyList {
+  max-width: 46ch;
+  margin: 48px auto 0;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: #e6e9f1;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* ---------- card rows ---------- */
@@ -178,12 +511,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--space-3);
+  margin: var(--space-3) 0 0;
   padding-bottom: 3px;
   font-size: var(--font-xs);
+  font-weight: 600;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -191,7 +523,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 3px 0;
+  min-height: 28px;
+  padding: 2px 0;
   font-size: var(--font-sm);
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-subtle);
@@ -203,7 +536,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 2px 4px;
+  padding: 3px 4px;
   background: none;
   border: none;
   color: inherit;
@@ -213,12 +546,25 @@
   border-radius: var(--radius-sm);
 }
 
-.rowButton:hover {
+.rowButton:hover:not(:disabled) {
   background-color: var(--bg-surface-4);
+}
+
+.rowButton:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.addGlyph {
+  width: 14px;
+  color: #f2b45c;
+  font-weight: 600;
+  text-align: center;
 }
 
 .rowName {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -241,9 +587,15 @@
   text-align: right;
   font-size: var(--font-xs);
   color: var(--text-disabled);
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
+}
+
+.setGlyph {
+  width: 18px;
+  font-size: 15px;
+  text-align: center;
+  color: #d5dae6;
 }
 
 .countControls {
@@ -277,13 +629,212 @@
   color: var(--text-muted);
 }
 
+/* ---------- rarity ---------- */
+
+.rarityAnchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.rarityChip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: default;
+  box-sizing: border-box;
+}
+
+button.rarityChip {
+  cursor: pointer;
+}
+
+/* Explicit (set for this cube): filled in the rarity's colour. */
+.rarityExplicit.rarityCommon { color: #e7eaf0; background: linear-gradient(170deg, #5b6170, #2c3039); border-color: #737b8c; }
+.rarityExplicit.rarityUncommon { color: #1b2029; background: linear-gradient(170deg, #e4ebf2, #8794a6); }
+.rarityExplicit.rarityRare { color: #2a1d04; background: linear-gradient(170deg, #f4dc8e, #b5862a); }
+.rarityExplicit.rarityMythic { color: #2b0c03; background: linear-gradient(170deg, #f9a65a, #c9411c); }
+
+/* Implicit (the card's own rarity): outlined, so overrides stand out at a glance. */
+.rarityImplicit { background: transparent; }
+.rarityImplicit.rarityCommon { color: #a5adbd; border-color: #5b6170; }
+.rarityImplicit.rarityUncommon { color: #c9d2de; border-color: #8794a6; }
+.rarityImplicit.rarityRare { color: #e9c96f; border-color: #b5862a; }
+.rarityImplicit.rarityMythic { color: #f39252; border-color: #c9411c; }
+
+/* A shuffled cube: rarity decides nothing, so the chip steps back. */
+.rarityMuted { opacity: 0.45; }
+.rarityMuted:hover { opacity: 1; }
+
+.rarityMenu {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 6px);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  transform: translateY(-50%);
+  background: rgba(18, 21, 31, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.rarityMenu .rarityChip[aria-checked='true'] {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.rarityReset {
+  margin-left: 2px;
+  padding: 2px 6px;
+  font-size: var(--font-xs);
+  color: #c9cfdc;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.rarityReset:hover {
+  color: #fff;
+}
+
+/* ---------- add a set ---------- */
+
+.addedNote {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-xs);
+  line-height: 1.4;
+  color: #c8ebc9;
+  background: rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.setHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.setGlyphLarge {
+  font-size: 30px;
+  color: #e6e9f1;
+}
+
+.setHeaderText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setHeaderName {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: #f4f5f9;
+}
+
+.toggleList {
+  margin: 0;
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.toggleRow:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.toggleRow[data-disabled='true'] {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.toggleRow input {
+  margin-top: 3px;
+  accent-color: #f2b45c;
+}
+
+.toggleText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-sm);
+}
+
+.toggleCount {
+  font-size: var(--font-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.setPreview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.setPreview .hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.setPreview .primaryButton {
+  margin-left: auto;
+}
+
+.setPreviewCount {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: #f4f5f9;
+}
+
+.previewRarities {
+  display: inline-flex;
+  gap: var(--space-2);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
 /* ---------- summary ---------- */
 
 .summary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-4);
   padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--border-subtle);
   font-size: var(--font-xs);
@@ -296,16 +847,19 @@
   gap: var(--space-2);
 }
 
+.summaryEnd {
+  margin-left: auto;
+}
+
 .summaryLabel {
   color: var(--text-disabled);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .colorStat {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Multicolour has no printed mana symbol; the gold card frame is the convention it borrows. */
@@ -346,6 +900,9 @@
   color: var(--text-disabled);
 }
 
+.healthOk { color: #b9dcba; }
+.healthBad { color: #f0b4ac; }
+
 .warning {
   display: flex;
   flex-wrap: wrap;
@@ -355,10 +912,10 @@
   font-size: var(--font-xs);
   color: #f0c4c4;
   background: rgba(214, 90, 90, 0.14);
-  border-top: 1px solid rgba(214, 90, 90, 0.4);
+  border-bottom: 1px solid rgba(214, 90, 90, 0.4);
 }
 
-/* ---------- import ---------- */
+/* ---------- paste ---------- */
 
 /*
  * Fixed height on purpose: letting the textarea flex-grow pushes the coverage readout ("N matched
@@ -421,7 +978,104 @@
 
 .importActions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-2) 0 0;
+}
+
+/* ---------- share dialog ---------- */
+
+.shareBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(4, 5, 9, 0.55);
+}
+
+.shareDialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1501;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: min(480px, calc(100vw - 32px));
+  padding: 22px 24px;
+  transform: translate(-50%, -50%);
+  background: rgba(16, 18, 28, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+
+.shareTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: #f4f5f9;
+}
+
+.shareBody {
+  margin: 0;
+  font-size: var(--font-sm);
+  line-height: 1.5;
+  color: #c3c9d7;
+}
+
+.shareLinkRow {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.shareLinkRow .input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+}
+
+.shareFooter {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 760px) {
+  .body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(240px, 45%) 1fr;
+  }
+
+  .column + .column {
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .summaryEnd {
+    margin-left: 0;
+  }
+}
+
+/* Phones: the dialog takes the whole screen. Header, packs and stats leave too little height to
+   share between two stacked panes, so the dialog scrolls as a whole and each pane gets a usable
+   height of its own instead of a one-row sliver. */
+@media (max-width: 640px) {
+  .dialog { inset: 0; border-radius: 0; border: none; }
+  .dialog { overflow-y: auto; }
+  .dialog .body {
+    flex: none;
+    grid-template-rows: 60dvh 75dvh;
+  }
+  .header,
+  .packBar { padding: var(--space-2) var(--space-3); }
+  .titleInput { font-size: 20px; }
 }

@@ -1,8 +1,11 @@
 package com.wingedsheep.sdk.scripting.conditions
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.text.TextReplacer
+import com.wingedsheep.sdk.core.Zone
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -78,16 +81,27 @@ data object TriggeringEntityWasHistoric : Condition {
 /**
  * Condition: "if you cast it" referring to the *triggering* entity (not the ability's source).
  * True when the entering permanent that triggered the ability was cast — i.e. it carries a
- * cast-origin marker (cast from hand or graveyard) — and false when it was put onto the
- * battlefield by another effect (token, reanimation, "put onto the battlefield"). This is the
- * sibling of [com.wingedsheep.sdk.scripting.conditions.WasCast] for "whenever a creature you
- * control enters, if you cast it" triggers, where the source is a separate permanent and the
- * cast subject is the entering creature (e.g. The Sibsig Ceremony).
+ * cast-origin marker — and false when it was put onto the battlefield by another effect (token,
+ * reanimation, "put onto the battlefield"). This is the sibling of
+ * [com.wingedsheep.sdk.scripting.conditions.WasCast] for "whenever a creature you control enters,
+ * if you cast it" triggers, where the source is a separate permanent and the cast subject is the
+ * entering creature (e.g. The Sibsig Ceremony).
+ *
+ * [zone] narrows it to a cast from one zone — `Zone.HAND` reads "if you cast it from your hand",
+ * the triggering-entity sibling of [com.wingedsheep.sdk.scripting.conditions.WasCastFromHand].
+ * Negated, that is Chainer, Nightmare Adept's "if you didn't cast it from your hand", which holds
+ * for a creature cast from another zone *and* for one that wasn't cast at all. Null (the default)
+ * accepts a cast from any zone. The engine records a cast origin for hand, graveyard, library and
+ * exile; any other zone never matches.
  */
 @SerialName("TriggeringEntityWasCast")
 @Serializable
-data object TriggeringEntityWasCast : Condition {
-    override val description: String = "if you cast it"
+data class TriggeringEntityWasCast(val zone: Zone? = null) : Condition {
+    override val description: String = when (zone) {
+        null -> "if you cast it"
+        Zone.HAND -> "if you cast it from your hand"
+        else -> "if you cast it from ${zone.displayName}"
+    }
 }
 
 /**
@@ -119,15 +133,28 @@ data class TriggeringSpellManaSpentAtLeast(val amount: Int) : Condition {
 }
 
 /**
- * Condition: "if it entered or was cast from a graveyard".
- * True when the triggering entity has either EnteredFromGraveyardComponent (reanimated
- * directly from graveyard → battlefield) or CastFromGraveyardComponent (spell was cast
- * from graveyard). Used by Twilight Diviner.
+ * Condition: "if it entered from [zone] or was cast from [zone]" about the triggering entity.
+ * True when the triggering permanent was put onto the battlefield directly from [zone] (a
+ * reanimation, a blink, a library search — the engine's entered-from marker) or resolved from a
+ * spell cast from [zone] (its cast-origin marker). [zone] is any of [PROVENANCE_ZONES].
+ *
+ * The single-entity twin of [AnyEnteredOrWasCastFrom], which reads the same markers over a
+ * batch-enters capture.
+ * - **Twilight Diviner**, **Archfiend's Vessel** — `Zone.GRAVEYARD`.
+ * - **Fblthp, the Lost** — `Zone.LIBRARY` ("if it entered from your library or was cast from your
+ *   library", with the "your" carried by a separate owned-by-you check).
  */
-@SerialName("TriggeringEntityEnteredOrWasCastFromGraveyard")
+@SerialName("TriggeringEntityEnteredOrWasCastFrom")
 @Serializable
-data object TriggeringEntityEnteredOrWasCastFromGraveyard : Condition {
-    override val description: String = "if it entered or was cast from a graveyard"
+data class TriggeringEntityEnteredOrWasCastFrom(val zone: Zone) : Condition {
+    init {
+        require(zone in PROVENANCE_ZONES) {
+            "TriggeringEntityEnteredOrWasCastFrom tracks ${PROVENANCE_ZONES.joinToString()} provenance, not $zone"
+        }
+    }
+
+    override val description: String =
+        "if it entered or was cast from ${provenanceZoneText(zone)}"
 }
 
 /**
@@ -169,39 +196,66 @@ data object TriggeringEntityHadCounters : Condition {
 }
 
 /**
- * Condition: "if it was a <subtype>" (intervening-if for dies/leaves triggers).
- * Reads the last-known **projected** subtypes captured on the triggering entity at the moment it
- * left the battlefield (Rule 603.10 last-known information), so subtypes granted by continuous
- * effects — not just printed ones — count.
+ * Condition: "if it was [filter]" — an intervening-if for dies/leaves triggers that matches the
+ * triggering permanent's **last-known** type line (CR 603.10, 608.2h): the projected card types and
+ * subtypes captured at the moment it left the battlefield, so types set or granted by continuous
+ * effects count, not just the printed ones.
  *
- * Wrap in [com.wingedsheep.sdk.dsl.Conditions.Not] for the "if it wasn't a <subtype>" wording used
- * by self-recursion loop guards such as Infernal Vessel ("When this creature dies, if it wasn't a
- * Demon, return it … It's a Demon in addition to its other types"), where the returned permanent's
- * granted subtype is what stops the second death from triggering again.
- */
-@SerialName("TriggeringEntityHadSubtype")
-@Serializable
-data class TriggeringEntityHadSubtype(val subtype: String) : Condition {
-    override val description: String = "if it was a $subtype"
-}
-
-/**
- * Condition: "if it was a <card type>" (intervening-if for dies/leaves triggers).
- * Reads the last-known **projected** card types captured on the triggering entity at the moment it
- * left the battlefield (Rule 603.10 last-known information), so a type set by a continuous effect —
- * not just the printed type line — counts.
+ * Used by self-recursion loop guards whose returning permanent is a different kind of object:
+ * - Infernal Vessel — `Not(TriggeringEntityWas(Any.withSubtype(DEMON)))`: "if it wasn't a Demon,
+ *   return it … It's a Demon in addition to its other types".
+ * - Tom, Bert, and William — `TriggeringEntityWas(Creature)`: "if they were a creature, return
+ *   them … They're an artifact", so the second death is of an artifact and the loop stops.
  *
- * The card-type sibling of [TriggeringEntityHadSubtype]. Used by self-recursion loop guards that
- * turn the returning permanent into something that is no longer a creature: Tom, Bert, and William
- * ("When this creature dies, if they were a creature, return them to the battlefield. They're an
- * artifact"), where the second death is of an *artifact*, so the guard fails and the loop stops.
  * A card in a graveyard has its printed type line back, so asking the live entity would answer
- * "creature" forever — only the leave-time snapshot can tell the two deaths apart.
+ * the same thing on both deaths — only the leave-time snapshot tells them apart. That snapshot
+ * holds card types and subtypes only, so [filter] may use just those card predicates (and
+ * `And`/`Or`/`Not` over them); anything else is rejected at construction. A trigger whose source
+ * never left the battlefield has no last-known type line, and the condition is false.
  */
-@SerialName("TriggeringEntityHadCardType")
+@SerialName("TriggeringEntityWas")
 @Serializable
-data class TriggeringEntityHadCardType(val cardType: String) : Condition {
-    override val description: String = "if it was a ${cardType.lowercase()}"
+data class TriggeringEntityWas(val filter: GameObjectFilter) : Condition {
+    init {
+        requireTypeLineOnly(filter)
+    }
+
+    override val description: String = "if it was ${filter.indefiniteArticle} ${filter.description}"
+
+    override fun applyTextReplacement(replacer: TextReplacer): Condition {
+        val newFilter = filter.applyTextReplacement(replacer)
+        return if (newFilter !== filter) copy(filter = newFilter) else this
+    }
+
+    private companion object {
+        /**
+         * Rejects anything the last-known type line can't answer, in [filter] and in every `anyOf`
+         * alternative at any depth — the snapshot matcher reports such a predicate unknown, and an
+         * unknown under `Not` must not be read as "wasn't".
+         */
+        fun requireTypeLineOnly(filter: GameObjectFilter) {
+            require(filter.statePredicates.isEmpty() && filter.controllerPredicate == null) {
+                "TriggeringEntityWas reads only the last-known type line; state and controller predicates aren't captured"
+            }
+            val unsupported = filter.cardPredicates.flatMap { unsupportedPredicates(it) }
+            require(unsupported.isEmpty()) {
+                "TriggeringEntityWas reads only card types and subtypes, not $unsupported"
+            }
+            filter.anyOf.forEach { requireTypeLineOnly(it) }
+        }
+
+        /** The card predicates a last-known type line (card types + subtypes) can answer. */
+        fun unsupportedPredicates(predicate: CardPredicate): List<CardPredicate> = when (predicate) {
+            CardPredicate.IsCreature, CardPredicate.IsLand, CardPredicate.IsArtifact,
+            CardPredicate.IsEnchantment, CardPredicate.IsInstant, CardPredicate.IsSorcery,
+            CardPredicate.IsPlaneswalker, CardPredicate.IsBattle, CardPredicate.IsKindred, CardPredicate.IsPermanent,
+            is CardPredicate.HasSubtype -> emptyList()
+            is CardPredicate.Not -> unsupportedPredicates(predicate.predicate)
+            is CardPredicate.And -> predicate.predicates.flatMap { unsupportedPredicates(it) }
+            is CardPredicate.Or -> predicate.predicates.flatMap { unsupportedPredicates(it) }
+            else -> listOf(predicate)
+        }
+    }
 }
 
 /**
@@ -276,7 +330,8 @@ data class TargetIsSource(
  * Reads post-damage state, so chain it AFTER a [com.wingedsheep.sdk.scripting.effects.DealDamageEffect]
  * with `DealDamage(N, t) then Effects.If(IfTargetTookExcessDamage(0), ...)`.
  *
- * What this actually checks is `marked > toughness` on the target at evaluation time,
+ * What this actually checks is `marked > lethal threshold` (toughness, or power under a
+ * lethal-damage-by-power rule) on the target at evaluation time,
  * regardless of which preceding step in the chain dealt the damage. CompositeEffect
  * resolves sub-effects sequentially without an interleaved SBA pass or mid-chain trigger
  * processing, so for the canonical "deal N to a target, then check" pipeline this is

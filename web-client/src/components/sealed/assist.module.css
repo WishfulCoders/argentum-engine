@@ -1,0 +1,232 @@
+/*
+ * The deck builder's AI assistance — Auto-build and card scores — in one
+ * visual voice. Violet is the AI's colour (archetype-highlighted pool cards already wear it); amber
+ * stays reserved for the one action that moves you forward, Submit Deck. Surfaces follow
+ * `limitedScreen.module.css`: translucent raised panels on the dark backdrop.
+ */
+
+.group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 36px;
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid var(--assist-border, rgba(167, 139, 250, 0.32));
+  background: rgba(167, 139, 250, 0.07);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px 0 7px;
+  color: #c9b8f5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #e4dcfb;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn:hover:not(:disabled) { background: rgba(167, 139, 250, 0.16); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn[aria-pressed='true'] {
+  background: rgba(167, 139, 250, 0.24);
+  border-color: rgba(167, 139, 250, 0.55);
+  color: #fff;
+}
+.btn:focus-visible,
+.select:focus-visible,
+.chip:focus-visible,
+.link:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.btn svg { flex: none; }
+
+.select {
+  min-height: 30px;
+  padding: 0 26px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b9a6e0' stroke-width='1.5'/%3E%3C/svg%3E")
+      no-repeat right 9px center,
+    rgba(0, 0, 0, 0.25);
+  color: #ddd5f5;
+  font: inherit;
+  font-size: 12.5px;
+  appearance: none;
+  cursor: pointer;
+}
+.select option { background: #161a26; color: #eef0f6; }
+
+/* ── The strip under the header: what the AI is doing, or just did ──────── */
+
+.strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 7px 20px;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.18);
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.1), rgba(167, 139, 250, 0.03) 70%);
+  font-size: 13px;
+  color: #d9d2ee;
+  animation: stripIn 0.18s ease-out;
+}
+.strip[data-tone='error'] {
+  border-bottom-color: rgba(248, 113, 113, 0.3);
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.12), rgba(248, 113, 113, 0.03) 70%);
+}
+
+@keyframes stripIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.section {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.section:last-child:not(:first-child) { margin-left: auto; }
+
+.label {
+  color: #b9a6e0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.muted { color: #9aa3b8; }
+.error { color: #fecaca; }
+
+/* A candidate deck from Auto-build. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.08);
+  color: #d4c7f5;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.chip:hover:not(:disabled) { background: rgba(167, 139, 250, 0.18); }
+.chip[aria-pressed='true'] {
+  border-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.28);
+  color: #fff;
+}
+.chip:disabled { cursor: default; }
+.chipScore { font-variant-numeric: tabular-nums; color: #f6dca8; }
+.pips { display: inline-flex; gap: 2px; }
+
+.link {
+  padding: 2px 4px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #c9b8f5;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(201, 184, 245, 0.4);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link:hover { color: #fff; text-decoration-color: currentColor; }
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9aa3b8;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.close:hover { background: rgba(255, 255, 255, 0.08); color: #eef0f6; }
+.close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* Card-score legend dots — the same tones as the badges on the cards. */
+.legend { display: inline-flex; align-items: center; gap: 10px; color: #9aa3b8; font-size: 12px; }
+.legendItem { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid rgba(167, 139, 250, 0.25);
+  border-top-color: #c4b5fd;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Score badge on a pool card / deck row. */
+.score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #0b0d14;
+  box-shadow: 0 0 0 1.5px rgba(8, 9, 14, 0.85), 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.score[data-tone='strong'] { background: #5fd08c; }
+.score[data-tone='playable'] { background: #f2b45c; }
+.score[data-tone='weak'] { background: #8f98ac; }
+.score[data-stale='true'] { opacity: 0.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .strip { animation: none; }
+  .spinner { animation-duration: 2.4s; }
+}
+
+/* Phones: the strip sits between the bar and the cards, so keep it to as few lines as it can. */
+@media (max-width: 640px) {
+  .strip { gap: 4px 10px; padding: 6px 12px; font-size: 12.5px; }
+  .legend { gap: 8px; font-size: 11.5px; }
+}

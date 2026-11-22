@@ -184,7 +184,7 @@ class RollDieScenarioTest : ScenarioTestBase() {
                     val game = board("Test Dice Gain")
                     val rolls = game.cast("Test Dice Gain", natural)
                     rolls.size shouldBe 1
-                    rolls.single().naturalResult shouldBe natural
+                    rolls.single().natural shouldBe natural
                     rolls.single().result shouldBe natural
                     rolls.single().sides shouldBe 20
                     rolls.single().playerId shouldBe game.player1Id
@@ -210,7 +210,7 @@ class RollDieScenarioTest : ScenarioTestBase() {
             test("natural 5 - 5 = 0 hits the '0 or less' row") {
                 val game = board("Test Dice Modified")
                 val roll = game.cast("Test Dice Modified", 5).single()
-                roll.naturalResult shouldBe 5
+                roll.natural shouldBe 5
                 roll.result shouldBe 0
                 game.getLifeTotal(1) shouldBe 17
             }

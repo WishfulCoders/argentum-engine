@@ -30,14 +30,14 @@ interface CubeRepository : CrudRepository<CubeRow, Long> {
     fun findByUserIdOrderByUpdatedAtDesc(userId: UUID): List<CubeRow>
     fun findByIdAndUserId(id: Long, userId: UUID): CubeRow?
     fun deleteByIdAndUserId(id: Long, userId: UUID): Int
+    fun findByShareCode(shareCode: String): CubeRow?
 }
 
-interface MatchResultRepository : CrudRepository<MatchResultRow, Long> {
-    @Query("SELECT count(*) FROM match_participants WHERE user_id = :userId")
-    fun countGamesForUser(@Param("userId") userId: UUID): Long
+/** Saves match rows; every read goes through [com.wingedsheep.gameserver.stats.StatsQueryService]. */
+interface MatchResultRepository : CrudRepository<MatchResultRow, Long>
 
-    @Query("SELECT count(*) FROM match_participants WHERE user_id = :userId AND won = true")
-    fun countWinsForUser(@Param("userId") userId: UUID): Long
+interface AnteSpoilRepository : CrudRepository<AnteSpoilRow, Long> {
+    fun findTop200ByUserIdOrderByCreatedAtDesc(userId: UUID): List<AnteSpoilRow>
 }
 
 interface TournamentRepository : CrudRepository<TournamentRow, Long> {
@@ -61,6 +61,49 @@ interface FriendshipRepository : CrudRepository<FriendshipRow, UUID> {
         """
     )
     fun findPair(@Param("a") a: UUID, @Param("b") b: UUID): FriendshipRow?
+}
+
+/** Account blocks, looked up from both sides because a block's effects are mutual. */
+interface UserBlockRepository : CrudRepository<UserBlockRow, UUID> {
+    fun findByBlockerId(blockerId: UUID): List<UserBlockRow>
+    fun findByBlockedId(blockedId: UUID): List<UserBlockRow>
+    fun findByBlockerIdAndBlockedId(blockerId: UUID, blockedId: UUID): UserBlockRow?
+}
+
+/** Direct-message threads; an account's threads are found from either side of the pair. */
+interface DmThreadRepository : CrudRepository<DmThreadRow, UUID> {
+    fun findByUserLowAndUserHigh(userLow: UUID, userHigh: UUID): DmThreadRow?
+
+    @Query("SELECT * FROM dm_threads WHERE user_low = :userId OR user_high = :userId ORDER BY last_message_at DESC LIMIT :limit")
+    fun findRecentFor(@Param("userId") userId: UUID, @Param("limit") limit: Int): List<DmThreadRow>
+}
+
+/**
+ * Messages in a thread. Each read is bounded below by the reader's clear marker, so a conversation
+ * someone deleted stays deleted for them; a null bound uses the epoch.
+ */
+interface DmMessageRepository : CrudRepository<DmMessageRow, UUID> {
+    @Query(
+        """
+        SELECT * FROM dm_messages
+        WHERE thread_id = :threadId AND created_at > :after AND created_at < :before
+        ORDER BY created_at DESC
+        LIMIT :limit
+        """,
+    )
+    fun findPage(
+        @Param("threadId") threadId: UUID,
+        @Param("after") after: Instant,
+        @Param("before") before: Instant,
+        @Param("limit") limit: Int,
+    ): List<DmMessageRow>
+
+    @Query("SELECT count(*) FROM dm_messages WHERE thread_id = :threadId AND sender_id = :senderId AND created_at > :after")
+    fun countFromSince(
+        @Param("threadId") threadId: UUID,
+        @Param("senderId") senderId: UUID,
+        @Param("after") after: Instant,
+    ): Int
 }
 
 interface GameReplayRepository : CrudRepository<GameReplayRow, Long> {

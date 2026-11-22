@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.core.CreatureGoadedEvent
 import com.wingedsheep.engine.state.components.combat.GoadedComponent
 import com.wingedsheep.engine.support.GameTestDriver
@@ -259,10 +260,11 @@ class GoadEffectTest : FunSpec({
         driver.tapPermanent(creature)
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
+        driver.activePlayer shouldBe opponent
 
-        // Declaring no attackers is now legal — the goaded creature is tapped.
-        val noAttack = driver.declareAttackers(opponent, emptyMap())
-        noAttack.outcome shouldBe Outcome.Done
+        // Declaring no attackers is legal — the goaded creature is tapped — so with nothing able
+        // to attack the engine makes that empty declaration itself on entering the step.
+        driver.state.getEntity(opponent)?.has<AttackersDeclaredThisCombatComponent>() shouldBe true
     }
 
     test("CR 701.15c: two distinct goaders compound into the goader set; each expires on its own turn") {

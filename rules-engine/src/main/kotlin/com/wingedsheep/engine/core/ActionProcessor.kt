@@ -82,7 +82,9 @@ class ActionProcessor(
 
         // Handlers never detect triggers or check state-based actions themselves. The one settle
         // boundary does that for every action, paused or not (CR 117.5, 603.3).
-        val executed = services.settler.settle(registry.execute(ControlHistory.initialize(state), action))
+        val executed = services.settler.settle(registry.execute(ControlHistory.initialize(state), action)).let {
+            it.copy(state = com.wingedsheep.engine.handlers.effects.copy.GrantedEntryCopy.settle(it.state))
+        }
         val paymentError = forcedManaPaymentSafety.rejection(state, executed, action)
         val checked = paymentError?.let { ExecutionResult.error(state, it) } ?: executed
 
@@ -111,6 +113,25 @@ class ActionProcessor(
     }
 
     /**
+     * Take a freshly initialized game to the point a player first acts.
+     *
+     * With a mulligan phase, nothing happens here: the last keep or bottom starts the game. With
+     * [GameConfig.skipMulligans] every hand is kept at setup, so this runs the same tail the last
+     * keep would — the opening-hand actions (CR 103.6), then turn 1, whose untap step gives no
+     * one priority (CR 502.4) — and the first decision is a Leyline question or upkeep priority.
+     * Every host that starts a game from [GameInitializer.initializeGame] calls this once.
+     */
+    fun beginGame(state: GameState, events: List<GameEvent> = emptyList()): ExecutionResult {
+        val mulligans = state.turnOrder.map {
+            state.getEntity(it)?.get<com.wingedsheep.engine.state.components.player.MulliganStateComponent>()
+        }
+        if (mulligans.any { it == null || !it.skipped || it.leylinePhaseStarted }) return ExecutionResult.success(state, events)
+        return services.settler.settle(services.mulliganHandler.tryAdvancePastMulliganPhase(
+            ControlHistory.initialize(state), events, services.turnManager,
+        ))
+    }
+
+    /**
      * The verdict [process] gives [action] before executing it: `null` when it is legal, otherwise
      * why not. The legal-action enumerators must never offer a fully-specified action this refuses —
      * `LegalActionsPassValidateTest` holds them to it.
@@ -133,10 +154,10 @@ class ActionProcessor(
             return "Unknown player: ${action.playerId}"
         }
 
-        // Nobody has priority before the first turn (CR 103.8): until every player has kept, only
-        // mulligan decisions are made. A restarted game (CR 727) is back at that point.
+        // Nobody has priority before the first turn (CR 103.8): until every player has kept and
+        // bottomed, only mulligan decisions are made. A restarted game (CR 727) is back at that point.
         if (action !is TakeMulligan && action !is KeepHand && action !is BottomCards && action !is Concede &&
-            state.turnOrder.any { state.getEntity(it)?.get<com.wingedsheep.engine.state.components.player.MulliganStateComponent>()?.hasKept == false }
+            com.wingedsheep.engine.handlers.MulliganHandler.openingHandsPending(state)
         ) {
             return "Opening hands are still being decided"
         }

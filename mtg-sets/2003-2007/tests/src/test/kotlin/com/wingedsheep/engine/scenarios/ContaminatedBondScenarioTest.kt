@@ -48,17 +48,13 @@ class ContaminatedBondScenarioTest : FunSpec({
         val d = driver()
         val victim = d.putCreatureOnBattlefield(d.player2, "Grizzly Bears") // 2/2
         d.removeSummoningSickness(victim)
-        // player1 owns the Aura but controls no creature, so the only combat this game is
-        // player2 swinging back on their own turn.
+        // player1 owns the Aura but controls no creature; the attack is player2's, on their turn.
         d.enchant(d.player1, victim)
 
         val enchanterLifeBefore = d.getLifeTotal(d.player1)
         val victimLifeBefore = d.getLifeTotal(d.player2)
 
-        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        withClue("only player2 has a legal attacker, so combat lands on their turn") {
-            d.activePlayer shouldBe d.player2
-        }
+        d.passPriorityUntil(Step.DECLARE_ATTACKERS, d.player2)
         d.declareAttackers(d.player2, listOf(victim), defendingPlayer = d.player1).error shouldBe null
         resolveStack(d)
 
@@ -99,8 +95,7 @@ class ContaminatedBondScenarioTest : FunSpec({
         d.removeSummoningSickness(plain)
 
         val before = d.getLifeTotal(d.player2)
-        d.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        d.activePlayer shouldBe d.player2
+        d.passPriorityUntil(Step.DECLARE_ATTACKERS, d.player2)
         d.declareAttackers(d.player2, listOf(plain), defendingPlayer = d.player1).error shouldBe null
         resolveStack(d)
 

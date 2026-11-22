@@ -34,15 +34,26 @@ data class StateDelta(
     val activePlayerId: EntityId? = null,
     val priorityPlayerId: EntityId? = null,
     val turnNumber: Int? = null,
+    val roundNumber: Int? = null,
     val isGameOver: Boolean? = null,
     val winnerId: EntityId? = null,
 
     /**
-     * Day/night designation (CR 731). `null` means "unchanged" — which is unambiguous here because the
-     * game never returns to the neither state once a designation is gained (CR 731.1), so a real change
-     * is always to a non-null value.
+     * Day/night designation (CR 731). `null` means "unchanged" — a game never returns to the neither
+     * state once a designation is gained (CR 731.1); [dayNightCleared] covers a subgame starting or
+     * ending, which swaps in a different game.
      */
     val dayNight: com.wingedsheep.sdk.core.DayNight? = null,
+
+    /**
+     * The designation went back to neither day nor night — only possible across a Magic subgame
+     * (CR 729), a separate game with designations of its own.
+     */
+    val dayNightCleared: Boolean? = null,
+
+    /** The subgame in progress (CR 729). Present = changed; [subgameCleared] = the main game resumed. */
+    val subgame: ClientSubgame? = null,
+    val subgameCleared: Boolean? = null,
 
     /** Whether the Void condition holds this turn. `null` means unchanged. */
     val voidActive: Boolean? = null,

@@ -103,6 +103,22 @@ class QuickGameLobby(
     @Volatile
     var ranked: Boolean = false
 
+    /**
+     * Play for ante (CR 407): each player antes a random card before the opening draw, and ante
+     * cards ([com.wingedsheep.sdk.model.CardDefinition.requiresAnte]) become legal in decks
+     * (CR 407.3). Never on together with [ranked] — the handler clears it when ranked is set.
+     */
+    @Volatile
+    var playingForAnte: Boolean = false
+
+    /**
+     * Set when matchmaking paired the two players. Format and [ranked] were the queue they agreed to,
+     * so the host-only settings are locked, and either player leaving closes the lobby — there's no
+     * host to wait for a replacement opponent.
+     */
+    @Volatile
+    var matchmade: Boolean = false
+
     /** Whether this lobby is even allowed to be ranked: standard 1v1, human opponent. */
     val rankedEligible: Boolean get() = !twoHeadedGiant && !vsAi
 
@@ -115,6 +131,15 @@ class QuickGameLobby(
         players.firstOrNull { it.playerId == playerId }
 
     fun allReady(): Boolean = players.size == maxPlayers && players.all { it.ready }
+
+    /**
+     * The set a seat on "Random" with no set of its own builds from, when one is already decided:
+     * the lobby's legacy [setCode], else the first human seat that pinned exactly one set. Null means
+     * nothing is pinned and the caller rolls a set — *once*, for the whole table — so every "Any set"
+     * seat (and the AI's, on its default) plays the same set rather than each rolling its own.
+     */
+    fun pinnedRandomSetCode(): String? =
+        setCode ?: players.firstOrNull { !it.isAi && it.setCode != null }?.setCode
 
     /**
      * The team partition for [Format.TwoHeadedGiant], as seat indices into join order: seats 0+1
@@ -164,6 +189,8 @@ data class QuickGameLobbyPlayer(
      * shape. Resubmitted by the client alongside the deck list.
      */
     var commander: String? = null,
+    /** The other half of a partner pair (CR 702.124), or null. Only meaningful beside [commander]. */
+    var secondCommander: String? = null,
     /**
      * Constructed sideboard ("outside the game", CR 400.11a), card name → count. Submitted
      * alongside the deck list and handed to the engine at game start, so wish effects have
@@ -171,4 +198,11 @@ data class QuickGameLobbyPlayer(
      * constructed sideboard.
      */
     var sideboard: Map<String, Int> = emptyMap(),
+    /** The revealed companion (CR 702.139) submitted with [deckList], or null. A sideboard card. */
+    var companion: String? = null,
+    /**
+     * The format [deckList] was built for, as the client declared it — kept only when the deck is
+     * legal there. Null for a pasted list, a random pool, or a claim that didn't check out.
+     */
+    var deckFormat: com.wingedsheep.sdk.core.DeckFormat? = null,
 )

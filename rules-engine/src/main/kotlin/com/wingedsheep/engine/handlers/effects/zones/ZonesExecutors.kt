@@ -44,8 +44,11 @@ class ZonesExecutors(
         ReturnCreaturesPutInGraveyardThisTurnExecutor(),
         ReturnSameNamedFromGraveyardExecutor(zones),
         ReturnSelfToBattlefieldAttachedExecutor(cardRegistry),
+        PutOntoBattlefieldAsAuraExecutor(zones, cardRegistry),
+        PutOntoBattlefieldAsNonAuraExecutor(zones, cardRegistry),
         PutOntoBattlefieldAttachedToChosenExecutor(zones, cardRegistry, targetFinder),
         ExileOpponentsGraveyardsExecutor(),
-        DestroyAllEquipmentOnTargetExecutor(zones)
+        DestroyAllEquipmentOnTargetExecutor(zones),
+        ChangeOwnershipExecutor()
     )
 }

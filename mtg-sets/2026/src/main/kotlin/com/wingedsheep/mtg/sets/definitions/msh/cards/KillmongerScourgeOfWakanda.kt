@@ -45,7 +45,11 @@ val KillmongerScourgeOfWakanda = card("Killmonger, Scourge of Wakanda") {
         trigger = Triggers.self.enters()
         effect = Effects.ReflexiveTrigger(
             action = Effects.Pipeline {
-                val killmongerSacrifice = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl.other()))
+                val killmongerSacrifice = selectTarget(
+                    TargetObject(filter = TargetFilter.CreatureYouControl.other()),
+                    nonTargeting = true,
+                    prompt = "Choose another creature to sacrifice"
+                )
                 run(Effects.SacrificeTarget(killmongerSacrifice.asTarget))
             },
             optional = true,

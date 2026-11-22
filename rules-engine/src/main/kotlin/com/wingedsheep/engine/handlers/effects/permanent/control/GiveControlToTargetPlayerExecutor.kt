@@ -30,10 +30,10 @@ class GiveControlToTargetPlayerExecutor : EffectExecutor<GiveControlToTargetPlay
         context: EffectContext
     ): EffectResult {
         val targetId = context.resolveTarget(effect.permanent, state)
-            ?: return EffectResult.error(state, "No valid permanent for control change")
+            ?: return EffectResult.success(state)
 
         val targetContainer = state.getEntity(targetId)
-            ?: return EffectResult.error(state, "Target permanent no longer exists")
+            ?: return EffectResult.success(state)
 
         // CR 110.2a — only a permanent has a controller, so a target that has left the battlefield
         // between targeting and resolution simply isn't affected (CR 608.2b). Silently, and with no

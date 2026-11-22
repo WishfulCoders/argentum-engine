@@ -123,7 +123,8 @@ class SafeHavenScenarioTest : FunSpec({
         // the pipeline steps: "You may sacrifice this creature. If you do, look at cards exiled by
         // this permanent. Put those cards onto the battlefield" — wrong noun for a land, a gather
         // described as a look, and no mention of whose control the cards return under. The prompt
-        // is the authored ability text whenever the card supplies one.
+        // is the authored ability text whenever the card supplies one, with the card named in place
+        // of its self-reference.
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
 
@@ -142,7 +143,7 @@ class SafeHavenScenarioTest : FunSpec({
         }
 
         driver.pendingDecision?.prompt shouldBe
-            "At the beginning of your upkeep, you may sacrifice this land. If you do, return each " +
-            "card exiled with this land to the battlefield under its owner's control."
+            "At the beginning of your upkeep, you may sacrifice Safe Haven. If you do, return each " +
+            "card exiled with Safe Haven to the battlefield under its owner's control."
     }
 })

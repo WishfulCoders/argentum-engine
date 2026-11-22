@@ -13,7 +13,7 @@ val SkySpiritReprint = Printing(
     collectorNumber = "192",
     scryfallId = "62eea10f-eddf-43a1-96fe-5f6f37c42415",
     artist = "Rebecca Guay",
-    imageUri = "https://cards.scryfall.io/normal/front/6/2/62eea10f-eddf-43a1-96fe-5f6f37c42415.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/6/2/62eea10f-eddf-43a1-96fe-5f6f37c42415.jpg?1783939338",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

@@ -318,6 +318,9 @@ class ReplayDivergenceReproTest : ScenarioTestBase() {
             is OrderObjectsDecision ->
                 OrderedResponse(decision.id, decision.objects.shuffled(rng))
 
+            is OrderTriggersDecision ->
+                TriggerOrderResponse(decision.id, decision.triggers.indices.shuffled(rng))
+
             is SplitPilesDecision -> {
                 val shuffled = decision.cards.shuffled(rng)
                 val splitPoint = if (shuffled.size > 1) rng.nextInt(1, shuffled.size) else 1
@@ -332,6 +335,14 @@ class ReplayDivergenceReproTest : ScenarioTestBase() {
 
             is CombatResolutionDecision ->
                 CombatResolutionResponse(decision.id, decision.edges.map { DamageEdgeAmount(it.id, it.amount) })
+
+            is FlipOntoBattlefieldDecision -> FlipThrowResponse.toward(
+                decision.id,
+                decision.table,
+                rng.nextDouble() * decision.table.width,
+                rng.nextDouble() * decision.table.height,
+                rng.nextDouble() * 6.0,
+            )
 
             is BudgetModalDecision -> {
                 val selected = mutableListOf<Int>()

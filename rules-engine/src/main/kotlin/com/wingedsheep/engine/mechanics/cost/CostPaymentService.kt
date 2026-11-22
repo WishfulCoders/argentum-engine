@@ -1,5 +1,9 @@
 package com.wingedsheep.engine.mechanics.cost
 
+import com.wingedsheep.engine.mechanics.mana.withReservedSnowBonus
+import com.wingedsheep.engine.handlers.costs.CostAtomAmounts
+import com.wingedsheep.engine.state.LifePaymentPurpose
+
 import com.wingedsheep.engine.mechanics.mana.withSpendingColors
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.engine.core.suspendForDecision
@@ -22,7 +26,7 @@ import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
 import com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
-import com.wingedsheep.engine.handlers.effects.library.MillAmountModifier
+import com.wingedsheep.engine.handlers.effects.library.KeywordActionAmountModifier
 import com.wingedsheep.engine.handlers.effects.life.LifePaymentService
 import com.wingedsheep.engine.mechanics.mana.ManaPool
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
@@ -114,7 +118,9 @@ class CostPaymentService(private val services: EngineServices) {
         if (!canAfford(state, payerId, resolved, sourceId)) {
             return PaymentResult.Unaffordable(state)
         }
-        val sourceName = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: "the source"
+        val sourceSnapshot = ctx.effectContext?.lastKnownSourceSnapshot
+        val sourceName = if (sourceSnapshot?.wasFaceDown == true) "Face-down source" else
+            state.getEntity(sourceId)?.get<CardComponent>()?.name ?: sourceSnapshot?.name ?: "the source"
         // The one source-relative candidate domain — the same list affordability counted above and
         // the resumer validates the response against.
         val candidates = selectionCandidates(state, payerId, resolved, sourceId, predicateEvaluator = predicateEvaluator).orEmpty()
@@ -132,8 +138,10 @@ class CostPaymentService(private val services: EngineServices) {
             is PayCost.Atom -> when (val atom = resolved.atom) {
                 is CostAtom.Mana ->
                     yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "Pay ${atom.cost}?", "Pay ${atom.cost}")
-                is CostAtom.PayLife ->
-                    yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "Pay ${atom.amount} life?", "Pay ${atom.amount} life")
+                is CostAtom.PayLife -> {
+                    val life = CostAtomAmounts.life(state, atom, payerId, predicateEvaluator, sourceId)
+                    yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "Pay $life life?", "Pay $life life")
+                }
                 // Nothing to select — every card goes — so this is a yes/no like a random discard.
                 is CostAtom.DiscardHand ->
                     yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "Discard your hand?", "Discard hand")
@@ -186,8 +194,10 @@ class CostPaymentService(private val services: EngineServices) {
                 // takes the counter, on the battlefield rather than in an overlay.
                 is CostAtom.PutCountersOnPermanent ->
                     selectionPrompt(state, payerId, resolved, sourceId, sourceName, ctx, candidates, 1, useTargetingUI = true)
-                is CostAtom.PayPlayerCounters ->
-                    yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "${atom.description}?", atom.description)
+                is CostAtom.PayPlayerCounters -> {
+                    val label = atom.description.replaceFirstChar { it.uppercase() }
+                    yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, "$label?", label)
+                }
                 is CostAtom.RemoveCounters -> {
                     val count = when (val c = atom.count) {
                         is com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed -> c.amount
@@ -204,8 +214,16 @@ class CostPaymentService(private val services: EngineServices) {
                         // A typed counter cost is player-distributed: selecting the same entity
                         // multiple times assigns multiple counters to it. Any-type costs remain
                         // auto-resolved because their counter type must be chosen per removal.
-                        if (atom.counterType != null && count > 0) {
-                            selectionPrompt(state, payerId, resolved, sourceId, sourceName, ctx, candidates, count, useTargetingUI = true)
+                        val counterType = atom.counterType
+                        if (counterType != null && count > 0) {
+                            val limits = candidates.associateWith { id ->
+                                state.getEntity(id)?.get<CountersComponent>()?.getCount(counterType) ?: 0
+                            }.filterValues { it > 0 }
+                            selectionPrompt(
+                                state, payerId, resolved, sourceId, sourceName, ctx,
+                                limits.keys.toList(), count, useTargetingUI = true,
+                                selectionLimits = limits
+                            )
                         } else {
                             val prompt = "Remove $atom?"
                             yesNoPrompt(state, payerId, resolved, sourceId, sourceName, ctx, prompt, prompt.removeSuffix("?"))
@@ -239,14 +257,16 @@ class CostPaymentService(private val services: EngineServices) {
         prompt: String,
         yesText: String
     ): PaymentResult {
+        // A pay-or-suffer caller names what declining costs: "Pay {E}, or sacrifice Static Prison?"
+        val consequence = ctx.consequence
         val result = decisionHandler.createYesNoDecision(
             state = state,
             playerId = payerId,
             sourceId = sourceId,
             sourceName = sourceName,
-            prompt = prompt,
+            prompt = if (consequence == null) prompt else "${prompt.removeSuffix("?")}, or $consequence?",
             yesText = yesText,
-            noText = "Don't pay",
+            noText = consequence?.replaceFirstChar { it.uppercase() } ?: "Don't pay",
             phase = DecisionPhase.RESOLUTION,
             answer = continuation(payerId, sourceId, sourceName, cost, ctx)
         )
@@ -270,7 +290,8 @@ class CostPaymentService(private val services: EngineServices) {
          * `minSelections` stays 0 regardless: this whole context is "pay or decline", and an empty
          * selection is the decline.
          */
-        minTotalManaValue: Int? = null
+        minTotalManaValue: Int? = null,
+        selectionLimits: Map<EntityId, Int>? = null
     ): PaymentResult {
         val result = decisionHandler.createCardSelectionDecision(
             state = state,
@@ -285,6 +306,7 @@ class CostPaymentService(private val services: EngineServices) {
             phase = DecisionPhase.RESOLUTION,
             useTargetingUI = useTargetingUI,
             minTotalManaValue = minTotalManaValue,
+            selectionLimits = selectionLimits,
             answer = continuation(payerId, sourceId, sourceName, cost, ctx)
         )
         val decision = result.pendingDecision!!
@@ -355,7 +377,12 @@ class CostPaymentService(private val services: EngineServices) {
         payerId: EntityId,
         cost: PayCost,
         sourceId: EntityId,
-        selected: Map<EntityId, Int>
+        selected: Map<EntityId, Int>,
+        /**
+         * For a [CostAtom.Mill]: the count the payer chose when the order of their mill
+         * replacements changes it ([millOrderOutcomes]); ignored otherwise.
+         */
+        millCount: Int? = null
     ): CostPaymentExecution = when (cost) {
         is PayCost.OwnManaCost -> CostPaymentExecution(state, emptyList(), success = false)
         is PayCost.Choice -> CostPaymentExecution(state, emptyList(), success = false)
@@ -364,7 +391,7 @@ class CostPaymentService(private val services: EngineServices) {
         is PayCost.ManaCostOf -> CostPaymentExecution(state, emptyList(), success = false)
         is PayCost.Atom -> when (val atom = cost.atom) {
             is CostAtom.Mana -> payMana(state, payerId, atom.cost, sourceId)
-            is CostAtom.PayLife -> payLife(state, payerId, atom.amount)
+            is CostAtom.PayLife -> payLife(state, payerId, CostAtomAmounts.life(state, atom, payerId, predicateEvaluator, sourceId))
             is CostAtom.Discard ->
                 if (atom.random) discardRandom(state, payerId, atom.filter, atom.count)
                 else discardSelected(state, payerId, selected.keys.toList())
@@ -387,7 +414,7 @@ class CostPaymentService(private val services: EngineServices) {
                     is com.wingedsheep.engine.handlers.costs.CollectEvidenceResolver.Result.Failure ->
                         CostPaymentExecution(state, emptyList(), success = false)
                 }
-            is CostAtom.Mill -> millTop(state, payerId, atom.count)
+            is CostAtom.Mill -> millTop(state, payerId, atom.count, millCount)
             is CostAtom.ExileTopOfLibrary -> exileTop(state, payerId, atom.count)
             is CostAtom.RevealFromHand -> revealSelected(state, payerId, selected.keys.toList())
             is CostAtom.PutFromHandOnTopOfLibrary -> putSelectedOnLibrary(state, selected.keys.toList())
@@ -450,6 +477,8 @@ class CostPaymentService(private val services: EngineServices) {
 
         var remaining = required
         if (atom.self) {
+            // Match affordability even when the source has never had counters.
+            if (required == 0) return CostPaymentExecution(state, emptyList(), success = true)
             val selfId = sourceId
             val container = newState.getEntity(selfId)
                 ?: return CostPaymentExecution(state, emptyList(), success = false)
@@ -462,7 +491,7 @@ class CostPaymentService(private val services: EngineServices) {
                 newState = newState.updateEntity(selfId) { c ->
                     c.with(counters.withRemoved(counterType, required))
                 }
-                events.add(CountersRemovedEvent(selfId, counterType, required, container.get<CardComponent>()?.name ?: "Permanent"))
+                events.add(CountersRemovedEvent(selfId, counterType, required, container.get<CardComponent>()?.name ?: "Permanent", removedBy = payerId))
                 remaining = 0
             } else {
                 var selfRemaining = required
@@ -479,7 +508,8 @@ class CostPaymentService(private val services: EngineServices) {
                             selfId,
                             type,
                             toRemove,
-                            container.get<CardComponent>()?.name ?: "Permanent"
+                            container.get<CardComponent>()?.name ?: "Permanent",
+                            removedBy = payerId
                         )
                     )
                     selfRemaining -= toRemove
@@ -522,7 +552,7 @@ class CostPaymentService(private val services: EngineServices) {
                     c.with(counters.withRemoved(removeType, toRemove))
                 }
                 val name = container.get<CardComponent>()?.name ?: "Permanent"
-                events.add(CountersRemovedEvent(entityId, removeType, toRemove, name))
+                events.add(CountersRemovedEvent(entityId, removeType, toRemove, name, removedBy = payerId))
                 remaining -= toRemove
             }
         }
@@ -536,6 +566,7 @@ class CostPaymentService(private val services: EngineServices) {
             poolComponent.white, poolComponent.blue, poolComponent.black,
             poolComponent.red, poolComponent.green, poolComponent.colorless,
             snowMana = poolComponent.snowMana,
+            manaUnits = poolComponent.manaUnits,
             snowColorless = poolComponent.snowColorless
         ).withSpendingColors(state, payerId)
 
@@ -561,15 +592,14 @@ class CostPaymentService(private val services: EngineServices) {
             // though the solver counted the bonus toward affordability. Mirrors the activate-ability
             // auto-tap path (ActivationAutoTapper.autoTapForManaCost).
             for (source in solution.sources) {
-                if (source.bonusManaPerTap > 0 && source.bonusManaColor != null) {
-                    combined = combined.add(source.bonusManaColor, source.bonusManaPerTap)
-                }
+                for ((color, amount) in source.fixedBonusMana) combined = combined.add(color, amount)
             }
+            combined = combined.withReservedSnowBonus(solution)
         }
 
         val newPool = combined.pay(manaCost) ?: return CostPaymentExecution(state, emptyList(), false)
         current = current.updateEntity(payerId) {
-            it.with(ManaPoolComponent(newPool.white, newPool.blue, newPool.black, newPool.red, newPool.green, newPool.colorless, snowMana = newPool.snowMana, snowColorless = newPool.snowColorless))
+            it.with(ManaPoolComponent(newPool.white, newPool.blue, newPool.black, newPool.red, newPool.green, newPool.colorless, snowMana = newPool.snowMana, manaUnits = newPool.manaUnits, snowColorless = newPool.snowColorless))
         }
 
         val sourceName = state.getEntity(sourceId)?.get<CardComponent>()?.name ?: "the source"
@@ -589,6 +619,7 @@ class CostPaymentService(private val services: EngineServices) {
     }
 
     private fun payLife(state: GameState, payerId: EntityId, amount: Int): CostPaymentExecution {
+        if (amount >= CostAtomAmounts.UNPRICEABLE) return CostPaymentExecution(state, emptyList(), success = false)
         val (newState, events) = LifePaymentService.pay(services.zones, state, payerId, amount)
             ?: return CostPaymentExecution(state, emptyList(), success = false)
         return CostPaymentExecution(newState, events, success = true)
@@ -627,16 +658,32 @@ class CostPaymentService(private val services: EngineServices) {
     }
 
     /**
+     * The distinct counts a [cost] that mills could come to for [payerId] when the order of their
+     * mill replacements matters (CR 616.1), or null when it isn't a mill or no order matters.
+     */
+    fun millOrderOutcomes(state: GameState, payerId: EntityId, cost: PayCost): List<KeywordActionAmountModifier.AmountOutcome>? {
+        val atom = (cost as? PayCost.Atom)?.atom as? CostAtom.Mill ?: return null
+        return KeywordActionAmountModifier.millOutcomes(state, payerId, atom.count, predicateEvaluator)
+            .takeIf { it.size > 1 }
+    }
+
+    /**
      * Mill the top [count] cards as a cost payment (CR 701.17a). Mirrors `CostHandler.payAtom`'s
-     * mill branch: the announced count runs through the [MillAmountModifier] replacement chokepoint
-     * (CR 616) and the library→graveyard moves go through [ZoneTransitionService] so mill triggers
+     * mill branch: the announced count runs through the [KeywordActionAmountModifier] replacement chokepoint
+     * (CR 616.1) and the library→graveyard moves go through [ZoneTransitionService] so mill triggers
      * and animations see the canonical zone changes.
      */
-    private fun millTop(state: GameState, payerId: EntityId, count: Int): CostPaymentExecution {
-        val effectiveCount = MillAmountModifier.apply(state, payerId, count, predicateEvaluator = predicateEvaluator)
+    private fun millTop(state: GameState, payerId: EntityId, count: Int, chosenCount: Int?): CostPaymentExecution {
+        // When the replacements' order matters the payer chose a count first (the resumer's
+        // second step); without one — or with one no order produces — the payment fails closed.
+        val outcomes = KeywordActionAmountModifier.millOutcomes(state, payerId, count, predicateEvaluator)
+        val effectiveCount = outcomes.singleOrNull()?.count
+            ?: chosenCount?.takeIf { chosen -> outcomes.any { it.count == chosen } }
+            ?: return CostPaymentExecution(state, emptyList(), success = false)
         val milled = state.getZone(ZoneKey(payerId, Zone.LIBRARY)).take(effectiveCount)
         val result = services.zones.moveToZoneBatch(state, milled, Zone.GRAVEYARD)
-        return CostPaymentExecution(result.state, result.events, success = true)
+        val (newState, milledEvent) = ZoneTransitionService.trackMill(result.state, result.events, milled)
+        return CostPaymentExecution(newState, result.events + listOfNotNull(milledEvent), success = true)
     }
 
     /**
@@ -722,11 +769,18 @@ class CostPaymentService(private val services: EngineServices) {
         val events = mutableListOf<GameEvent>()
         for (permanentId in selected) {
             val container = newState.getEntity(permanentId) ?: continue
+            // A cost's counters are still a placement (placement replacements apply), but not an
+            // effect's — Doubling Season's "if an effect would put" passes them by.
+            val placed = com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils.applyCounterPlacementModifiers(
+                newState, permanentId, counterType, count, placerId = payerId,
+                predicateEvaluator = predicateEvaluator, byEffect = false
+            )
+            if (placed <= 0) continue
             // Read the counters inside the update so a repeated id accumulates rather than
             // clobbering — no printed cost selects the same permanent twice, but the loop shouldn't
             // depend on that.
             newState = newState.updateEntity(permanentId) { c ->
-                c.with((c.get<CountersComponent>() ?: CountersComponent()).withAdded(counterType, count))
+                c.with((c.get<CountersComponent>() ?: CountersComponent()).withAdded(counterType, placed))
             }
             val (marked, firstThisTurn, firstOfTypeThisTurn) = com.wingedsheep.engine.handlers.effects.DamageUtils
                 .recordCounterPlacement(newState, permanentId, counterType, placerId = payerId)
@@ -735,7 +789,7 @@ class CostPaymentService(private val services: EngineServices) {
                 com.wingedsheep.engine.core.CountersAddedEvent(
                     permanentId,
                     counterType,
-                    count,
+                    placed,
                     container.get<CardComponent>()?.name ?: "Permanent",
                     firstThisTurn,
                     firstOfTypeThisTurn = firstOfTypeThisTurn,
@@ -786,7 +840,15 @@ class CostPaymentService(private val services: EngineServices) {
             cost: PayCost,
             sourceId: EntityId,
             manaSolver: ManaSolver,
-            predicateEvaluator: PredicateEvaluator
+            predicateEvaluator: PredicateEvaluator,
+            /**
+             * Why the cost is paid. Any purpose but [LifePaymentPurpose.OTHER] means it is paid to cast
+             * a spell or activate an ability, which gates two things: a cost-scoped life prohibition
+             * (Karn's Sylex) and the sacrifice pool, which then drops permanents no cost may sacrifice
+             * ([SacrificeCostLegality], Angel of Jubilation). OTHER (a resolving spell's "unless you pay",
+             * a morph cost) is reached by neither.
+             */
+            purpose: LifePaymentPurpose = LifePaymentPurpose.OTHER
         ): Boolean {
             return when (val c = resolve(state, cost, sourceId)) {
                 // Only unresolvable own-mana-costs reach here (missing source/card component) — unpayable.
@@ -794,16 +856,24 @@ class CostPaymentService(private val services: EngineServices) {
                 // Unknowable without the resolving effect's context; see pay().
                 is PayCost.DynamicLife, is PayCost.DynamicMana -> false
                 is PayCost.ManaCostOf -> false
-                is PayCost.Choice -> c.options.any { canAfford(state, payerId, it, sourceId, manaSolver, predicateEvaluator = predicateEvaluator) }
+                is PayCost.Choice -> c.options.any { canAfford(state, payerId, it, sourceId, manaSolver, predicateEvaluator = predicateEvaluator, purpose = purpose) }
                 is PayCost.Atom -> when (val atom = c.atom) {
                     is CostAtom.Mana -> manaSolver.canPay(state, payerId, atom.cost)
                     // CR 119.4 — a player may pay life only if their life total is at least the amount; paying
                     // life that would reduce them to 0 or less is legal (they then lose as a state-based action).
-                    is CostAtom.PayLife -> state.canPayLife(payerId, atom.amount) // CR 119.8 too
+                    is CostAtom.PayLife -> CostAtomAmounts.canPayLife( // CR 119.8 too
+                        state, payerId, CostAtomAmounts.life(state, atom, payerId, predicateEvaluator, sourceId), purpose
+                    )
                     is CostAtom.Discard -> domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator).size >= atom.count
                     // CR 118.3 — an empty hand discards nothing, and a cost of nothing is payable.
                     is CostAtom.DiscardHand -> true
-                    is CostAtom.ExileFrom -> domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator).size >= atom.count
+                    // A processor-style move (destination = GRAVEYARD) is wired for activation and
+                    // spell additional costs only; this "unless you pay" rail reports it unpayable.
+                    is CostAtom.ExileFrom -> atom.exiles && run {
+                        val candidates = domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator)
+                        if (atom.distinctNames) distinctNameCount(state, candidates) >= atom.count
+                        else candidates.size >= atom.count
+                    }
                     // CR 701.59b — unpayable unless the graveyard's *total mana value* reaches N.
                     // Card count says nothing here: five lands total 0 and pay nothing.
                     is CostAtom.CollectEvidence ->
@@ -825,7 +895,10 @@ class CostPaymentService(private val services: EngineServices) {
                     is CostAtom.RevealFromHand -> domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator).size >= atom.count
                     is CostAtom.PutFromHandOnTopOfLibrary -> domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator).size >= atom.count
                     is CostAtom.Sacrifice -> {
+                        // Paid as part of casting or activating (not while something resolves), the
+                        // pool drops what no cost may sacrifice (Angel of Jubilation).
                         val candidates = domain(state, payerId, c, sourceId, predicateEvaluator = predicateEvaluator)
+                            .let { if (purpose == LifePaymentPurpose.OTHER) it else SacrificeCostLegality.sacrificeableForCost(state, it) }
                         if (atom.distinctNames) distinctNameCount(state, candidates) >= atom.count
                         else candidates.size >= atom.count
                     }
@@ -922,7 +995,9 @@ class CostPaymentService(private val services: EngineServices) {
                 is CostAtom.ReturnToHand ->
                     if (atom.youControl) controlledMatching(state, payerId, atom.filter, sourceId, predicateEvaluator = predicateEvaluator)
                     else anyMatching(state, payerId, atom.filter, sourceId, predicateEvaluator = predicateEvaluator)
-                is CostAtom.TapPermanents -> SharedCreatureTypeTapCost.eligible(
+                // The untap mirror is an activated-ability cost only (CostHandler pays it); as a
+                // PayCost it has no candidates, so it is reported unaffordable, never paid as a tap.
+                is CostAtom.TapPermanents -> if (atom.untaps) emptyList() else SharedCreatureTypeTapCost.eligible(
                     state, atom,
                     controlledUntapped(state, payerId, atom.filter, if (atom.excludeSelf) sourceId else null, predicateEvaluator = predicateEvaluator)
                 )
@@ -1081,7 +1156,7 @@ class CostPaymentService(private val services: EngineServices) {
                     c.with(counters.withRemoved(resolvedType, removal.count))
                 }
                 val entityName = container.get<CardComponent>()?.name ?: "Permanent"
-                events.add(CountersRemovedEvent(removal.entityId, resolvedType, removal.count, entityName))
+                events.add(CountersRemovedEvent(removal.entityId, resolvedType, removal.count, entityName, removedBy = playerId))
             }
             return CostPaymentExecution(newState, events, success = true)
         }

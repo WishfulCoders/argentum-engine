@@ -1,130 +1,120 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CastSpell
-import com.wingedsheep.engine.core.AlternativeCostType
-import com.wingedsheep.engine.state.components.player.SpellsCastThisGameComponent
+import com.wingedsheep.engine.core.PaymentStrategy
+import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
-import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.SelfAlternativeCost
-import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.references.Player
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import kotlinx.serialization.json.Json
 
 /**
- * `DynamicAmount.SpellsCastThisGame` — the game-long cast count behind "the first spell you've cast
- * this game" (Once Upon a Time):
+ * `DynamicAmount.SpellsCastThisGame` — how many spells a player has cast this game.
  *
- * - CR 601.2i: a spell counts once its cast completes; the count is per player and never resets at
- *   a turn boundary.
- * - Read while a spell is proposed, it excludes that spell, so a `{0}` self-alternative cost gated
- *   on `count == 0` is available for the first spell of the game and never again — not on a later
- *   turn, not after an opponent's spells (those are theirs).
+ * Rules pinned: a spell counts once cast whether or not it resolves (a countered spell was still
+ * cast); the count is per player and never resets at a turn boundary, unlike the per-turn spell
+ * counts; a multi-player scope sums its players; and a card name narrows the count to spells
+ * with that name, which a face-down spell (it has no name) never matches.
  */
 class SpellsCastThisGameTest : FunSpec({
 
-    val firstFree = card("Test First Free Spell") {
-        manaCost = "{1}{G}"
-        colorIdentity = "G"
-        typeLine = "Instant"
-        oracleText = "If this spell is the first spell you've cast this game, you may cast it without paying its mana cost.\nYou gain 1 life."
-        selfAlternativeCost = SelfAlternativeCost(
-            manaCost = ManaCost.parse("{0}"),
-            condition = Conditions.CompareAmounts(DynamicAmounts.spellsCastThisGame(), ComparisonOperator.EQ, 0),
-        )
-        spell { effect = Effects.GainLife(1) }
-    }
+    val amounts = PredicateEvaluator(cardRegistry = null).amounts
 
-    val cheap = card("Test Cheap Spell") {
-        manaCost = "{G}"
-        colorIdentity = "G"
-        typeLine = "Instant"
-        oracleText = "You gain 1 life."
-        spell { effect = Effects.GainLife(1) }
-    }
-
-    fun newDriver(): GameTestDriver {
+    fun setup(): Triple<GameTestDriver, EntityId, EntityId> {
         val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + listOf(firstFree, cheap))
-        driver.initMirrorMatch(deck = Deck.of("Forest" to 40), skipMulligans = true, startingPlayer = 0)
+        driver.registerCards(TestCards.all)
+        driver.initMirrorMatch(deck = Deck.of("Island" to 40), skipMulligans = true)
+        val you = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        return driver
+        return Triple(driver, you, driver.getOpponent(you))
     }
 
-    fun resolveStack(driver: GameTestDriver) {
-        var guard = 0
-        while (guard++ < 40 && driver.state.stack.isNotEmpty() && !driver.isPaused) driver.bothPass()
+    fun GameTestDriver.castThisGame(viewer: EntityId, player: Player = Player.You): Int =
+        amounts.evaluate(state, DynamicAmounts.spellsCastThisGame(player), EffectContext(sourceId = null, controllerId = viewer))
+
+    fun GameTestDriver.bolt(caster: EntityId, target: EntityId) {
+        val bolt = putCardInHand(caster, "Lightning Bolt")
+        giveMana(caster, Color.RED, 1)
+        castSpell(caster, bolt, listOf(target)).error shouldBe null
     }
 
-    fun count(driver: GameTestDriver, player: EntityId) =
-        driver.state.getEntity(player)?.get<SpellsCastThisGameComponent>()?.count ?: 0
+    test("starts at zero and counts each cast for its caster only") {
+        val (driver, you, opponent) = setup()
+        driver.castThisGame(you) shouldBe 0
 
-    fun castFree(driver: GameTestDriver, player: EntityId, cardId: EntityId) = driver.submit(
-        CastSpell(player, cardId, useAlternativeCost = true, alternativeCostType = AlternativeCostType.SELF_ALTERNATIVE)
-    )
+        driver.bolt(you, opponent)
+        driver.bothPass()
+        driver.bolt(you, opponent)
+        driver.bothPass()
 
-    test("CR 601.2i: the count rises per cast, per player, and survives the turn boundary") {
-        val driver = newDriver()
-        val me = driver.activePlayer!!
-        val opponent = driver.getOpponent(me)
-        count(driver, me) shouldBe 0
-
-        driver.giveMana(me, Color.GREEN, 1)
-        driver.castSpell(me, driver.putCardInHand(me, "Test Cheap Spell")).error shouldBe null
-        count(driver, me) shouldBe 1 // counted on cast, before it resolves
-        resolveStack(driver)
-        count(driver, opponent) shouldBe 0
-
-        driver.passPriorityUntil(Step.END, maxPasses = 300)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, maxPasses = 300)
-        count(driver, me) shouldBe 1
+        driver.castThisGame(you) shouldBe 2
+        withClue("the opponent cast nothing") { driver.castThisGame(opponent) shouldBe 0 }
+        withClue("Player.Each sums both players") { driver.castThisGame(you, Player.Each) shouldBe 2 }
     }
 
-    test("the first spell of the game may be cast for its {0} alternative cost; it doesn't count itself") {
-        val driver = newDriver()
-        val me = driver.activePlayer!!
-        val spell = driver.putCardInHand(me, "Test First Free Spell")
-        val life = driver.getLifeTotal(me)
-        castFree(driver, me, spell).error shouldBe null
-        count(driver, me) shouldBe 1
-        resolveStack(driver)
-        driver.getLifeTotal(me) shouldBe life + 1
+    test("a countered spell was still cast, and so was the counterspell") {
+        val (driver, you, opponent) = setup()
+        val counter = driver.putCardInHand(opponent, "Counterspell")
+        driver.giveMana(opponent, Color.BLUE, 2)
+
+        driver.bolt(you, opponent)
+        val boltOnStack = driver.state.stack.last()
+        driver.passPriority(you)
+        driver.submit(
+            CastSpell(
+                opponent, counter,
+                targets = listOf(ChosenTarget.Spell(boltOnStack)),
+                paymentStrategy = PaymentStrategy.FromPool,
+            )
+        ).error shouldBe null
+        driver.bothPass()
+
+        withClue("the Bolt was countered") { driver.getLifeTotal(opponent) shouldBe 20 }
+        driver.castThisGame(you) shouldBe 1
+        driver.castThisGame(opponent) shouldBe 1
     }
 
-    test("after any earlier spell — even on an earlier turn — the free cast is gone, and the opponent's first is theirs") {
-        val driver = newDriver()
-        val me = driver.activePlayer!!
-        val opponent = driver.getOpponent(me)
-        driver.giveMana(me, Color.GREEN, 1)
-        driver.castSpell(me, driver.putCardInHand(me, "Test Cheap Spell")).error shouldBe null
-        resolveStack(driver)
+    test("the count survives the turn boundary that clears the per-turn counts") {
+        val (driver, you, opponent) = setup()
+        driver.bolt(you, opponent)
+        driver.bothPass()
 
-        driver.passPriorityUntil(Step.END, maxPasses = 300)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, maxPasses = 300) // opponent's turn
-        driver.activePlayer shouldBe opponent
-        val theirs = driver.putCardInHand(opponent, "Test First Free Spell")
-        castFree(driver, opponent, theirs).error shouldBe null
-        resolveStack(driver)
-
-        driver.passPriorityUntil(Step.END, maxPasses = 300)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, maxPasses = 300) // my next turn
-        val mine = driver.putCardInHand(me, "Test First Free Spell")
-        castFree(driver, me, mine).error shouldNotBe null
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN, activePlayer = opponent)
+        withClue("this turn's count reset") {
+            amounts.evaluate(driver.state, DynamicAmounts.spellsCastThisTurn(), EffectContext(sourceId = null, controllerId = you)) shouldBe 0
+        }
+        driver.castThisGame(you) shouldBe 1
     }
 
-    test("SpellsCastThisGame round-trips through serialization") {
-        val amount: DynamicAmount = DynamicAmount.SpellsCastThisGame()
-        Json.decodeFromString(DynamicAmount.serializer(), Json.encodeToString(DynamicAmount.serializer(), amount)) shouldBe amount
+    test("a card name narrows the count to spells with that name; a face-down cast has none") {
+        val (driver, you, opponent) = setup()
+        fun named(name: String): Int = amounts.evaluate(
+            driver.state, DynamicAmounts.spellsCastThisGame(cardName = name), EffectContext(sourceId = null, controllerId = you)
+        )
+
+        driver.bolt(you, opponent)
+        driver.bothPass()
+        driver.bolt(you, opponent)
+        driver.bothPass()
+        val morph = driver.putCardInHand(you, "Morph Test Creature")
+        driver.giveColorlessMana(you, 3)
+        driver.submit(CastSpell(you, morph, castFaceDown = true, paymentStrategy = PaymentStrategy.FromPool)).error shouldBe null
+        driver.bothPass()
+
+        driver.castThisGame(you) shouldBe 3
+        named("Lightning Bolt") shouldBe 2
+        named("Counterspell") shouldBe 0
+        withClue("a face-down spell is nameless, so it counts toward the total only") {
+            named("Morph Test Creature") shouldBe 0
+        }
     }
 })

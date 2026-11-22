@@ -126,6 +126,16 @@ object CardValidator {
                 )
             )
         }
+        // A fortify ability attaches only a Fortification (CR 702.67a, 301.6); on anything else it
+        // takes the mana and attaches nothing.
+        if (card.activatedAbilities.any { it.isFortifyAbility } && !card.typeLine.isFortification) {
+            errors.add(
+                CardValidationError.FortificationMissingSubtype(
+                    cardName = card.name,
+                    message = "Card '${card.name}' has a fortify ability but type line doesn't include Fortification subtype"
+                )
+            )
+        }
     }
 
     /**
@@ -214,6 +224,11 @@ sealed interface CardValidationError {
     ) : CardValidationError
 
     data class EquipmentMissingSubtype(
+        override val cardName: String,
+        override val message: String
+    ) : CardValidationError
+
+    data class FortificationMissingSubtype(
         override val cardName: String,
         override val message: String
     ) : CardValidationError
@@ -312,12 +327,22 @@ sealed interface CardValidationError {
     /**
      * A `TargetChooser` target requirement in a context that doesn't route the selection to the
      * named player. `Opponent` is honored by the activated- and triggered-ability announcement
-     * paths (both pin the deciding opponent before raising the decision); `TriggeringPlayer` and
-     * `ControllerOfTriggeringEntity` by triggered ones only. Anywhere else (a spell, a kicker
+     * paths (both pin the deciding opponent before raising the decision), and so is `Random` (both
+     * draw the target); `TriggeringPlayer` and `ControllerOfTriggeringEntity` by triggered ones only. Anywhere else (a spell, a kicker
      * target, a saga chapter) the controller would silently pick the target instead. Fail at card
      * load rather than mis-resolve.
      */
     data class UnsupportedOpponentChooser(
+        override val cardName: String,
+        override val message: String
+    ) : CardValidationError
+
+    /**
+     * A `TargetObject` whose dynamic target count matches no printed wording: "X target …" is exact
+     * (`dynamicMinCount` = `dynamicMaxCount`), "up to X target …" is `dynamicMaxCount` + `optional`.
+     * See `CardLinter.checkDynamicTargetCounts` for the rejected shapes.
+     */
+    data class AmbiguousDynamicTargetCount(
         override val cardName: String,
         override val message: String
     ) : CardValidationError

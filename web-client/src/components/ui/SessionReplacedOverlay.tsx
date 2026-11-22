@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
+import overlay from '@/components/game/overlay/GameOverlays.module.css'
 
 /**
  * Full-screen overlay shown when the server reports this tab's session was taken over
@@ -23,62 +24,22 @@ export function SessionReplacedOverlay() {
   }
 
   return (
-    <div style={styles.backdrop}>
-      <div style={styles.dialog}>
-        <div style={styles.title}>Opened in another tab</div>
-        <div style={styles.text}>
+    <div className={`${overlay.scrim} ${overlay.scrimFixed}`} role="dialog" aria-modal="true" aria-labelledby="session-replaced-title">
+      <div className={overlay.card}>
+        <p className={overlay.eyebrow}>Session moved</p>
+        <h2 id="session-replaced-title" className={overlay.waitTitle}>Opened in another tab</h2>
+        <p className={overlay.reason}>
           Your session is now active in a different tab or device.
           {storedName ? ' You can take it back and continue playing here.' : ' Refresh the page to continue here.'}
-        </div>
+        </p>
         {storedName && (
-          <button style={styles.button} onClick={reclaim} disabled={reclaiming}>
-            {reclaiming ? 'Reconnecting…' : 'Use here'}
-          </button>
+          <div className={overlay.actions}>
+            <button type="button" className={overlay.primary} onClick={reclaim} disabled={reclaiming}>
+              {reclaiming ? 'Reconnecting…' : 'Use here'}
+            </button>
+          </div>
         )}
       </div>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  dialog: {
-    backgroundColor: 'rgba(20, 20, 28, 0.97)',
-    border: '1px solid #ffc107',
-    borderRadius: 12,
-    padding: '28px 36px',
-    maxWidth: 380,
-    textAlign: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 14,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: '1.2em',
-    fontWeight: 600,
-    color: '#ffc107',
-  },
-  text: {
-    color: '#ccc',
-    lineHeight: 1.5,
-  },
-  button: {
-    padding: '10px 28px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#ffc107',
-    color: '#1a1a22',
-    fontWeight: 600,
-    fontSize: '1em',
-    cursor: 'pointer',
-  },
 }

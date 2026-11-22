@@ -45,10 +45,10 @@ class SneakCastEnumerator : ActionEnumerator {
             if (context.cantCastSpell(cardId)) continue
 
             val cardDef = context.cardRegistry.getCard(cardComponent.name) ?: continue
-            // Printed Sneak or Ninjutsu — both surface the cost via `ninjutsuStyleCost`.
+            // Printed Sneak. (Ninjutsu is a hand-activated ability, not a cast — CR 702.49a.)
             val sneakAbility = cardDef.keywordAbilities
-                .firstOrNull { it.ninjutsuStyleCost != null } ?: continue
-            val sneakKeywordName = sneakAbility.keyword?.displayName ?: "Sneak"
+                .filterIsInstance<com.wingedsheep.sdk.scripting.KeywordAbility.Sneak>().firstOrNull() ?: continue
+            val sneakKeywordName = sneakAbility.keyword.displayName
 
             // Honor cast restrictions exactly like the normal cast path (CR 601.3).
             if (!context.legality.castRestrictionsMet(
@@ -57,9 +57,11 @@ class SneakCastEnumerator : ActionEnumerator {
             ) continue
 
             // Mana portion of the sneak cost (the bounce is paid separately).
-            val sneakMana = context.costCalculator.calculateEffectiveCostWithAlternativeBase(
-                state, cardDef, sneakAbility.ninjutsuStyleCost!!, playerId
+            val sneakPricing = context.costCalculator.priceByTargets(
+                state, cardDef, playerId, cardId, baseCost = sneakAbility.cost, withTable = !context.skipAutoTapPreview,
             )
+            val sneakMana = sneakPricing.min
+            val sneakManaByTargetCount = sneakPricing.byCountStrings()
             if (!context.manaSolver.canPay(state, playerId, sneakMana, precomputedSources = cachedSources)) {
                 continue
             }
@@ -111,6 +113,7 @@ class SneakCastEnumerator : ActionEnumerator {
                     targetDescription = firstReq?.description,
                     targetRequirements = targetReqInfos.surfacedRequirements(),
                     manaCostString = sneakMana.toString(),
+                    manaCostByTargetCount = sneakManaByTargetCount,
                     additionalCostInfo = bounceCostInfo,
                     autoTapPreview = autoTapPreview
                 )
@@ -134,9 +137,12 @@ class SneakCastEnumerator : ActionEnumerator {
                     )
                 ) continue
 
-                val sneakMana = context.costCalculator.calculateEffectiveCostWithAlternativeBase(
-                    state, cardDef, graveyardSneakCost, playerId
+                val sneakPricing = context.costCalculator.priceByTargets(
+                    state, cardDef, playerId, cardId, baseCost = graveyardSneakCost,
+                    withTable = !context.skipAutoTapPreview, fromZone = com.wingedsheep.sdk.core.Zone.GRAVEYARD,
                 )
+                val sneakMana = sneakPricing.min
+                val sneakManaByTargetCount = sneakPricing.byCountStrings()
                 if (!context.manaSolver.canPay(state, playerId, sneakMana, precomputedSources = cachedSources)) continue
 
                 val targetReqs = buildList {
@@ -180,8 +186,11 @@ class SneakCastEnumerator : ActionEnumerator {
                         targetDescription = firstReq?.description,
                         targetRequirements = targetReqInfos.surfacedRequirements(),
                         manaCostString = sneakMana.toString(),
+                        manaCostByTargetCount = sneakManaByTargetCount,
                         additionalCostInfo = bounceCostInfo,
-                        autoTapPreview = autoTapPreview
+                        autoTapPreview = autoTapPreview,
+                        // Without it the client never surfaces the graveyard card as castable.
+                        sourceZone = com.wingedsheep.sdk.core.Zone.GRAVEYARD.name
                     )
                 )
             }

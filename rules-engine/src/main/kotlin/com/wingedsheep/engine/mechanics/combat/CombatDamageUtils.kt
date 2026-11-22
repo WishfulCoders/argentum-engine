@@ -12,13 +12,13 @@ import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.sdk.core.AbilityFlag
-import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AssignCombatDamageAsUnblocked
 import com.wingedsheep.sdk.scripting.AssignDamageEqualToToughness
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.StaticAbility
 import com.wingedsheep.sdk.scripting.filters.unified.Scope
+import com.wingedsheep.engine.state.components.identity.faceUpCardDefinition
 
 /**
  * Helpers for calculating the amount of combat damage a creature assigns.
@@ -33,29 +33,28 @@ internal object CombatDamageUtils {
     enum class CombatSide { ATTACKER, BLOCKER }
 
     /**
-     * Who divides a source's combat damage, and whether CR 510.1c assignment order applies.
+     * Who divides a source's combat damage.
      *
      * @property playerId The player who chooses this source's damage division.
-     * @property orderConstrained False only when banding (CR 702.22j/k) lets the chooser ignore
-     *   the damage-assignment order. Note this is the *only* thing banding relaxes about order:
-     *   a banded attacker's own [ATTACKER][CombatSide.ATTACKER]-side edges stay order-constrained
-     *   unless one of its blockers has banding — band cooperation falls out of CR 510.1c's
-     *   cross-source lethal counting in the validator, not from lifting the attacker's order.
+     * @property orderConstrained False only when banding (CR 702.22j/k) handed the division to
+     *   the other player. Surfaced on [com.wingedsheep.engine.core.DamageEdge.orderConstrained]
+     *   so clients can recognise a banding-inverted source; it gates nothing, since CR 510.1c/d
+     *   no longer have a damage-assignment order.
      */
     data class DamageChooser(val playerId: EntityId, val orderConstrained: Boolean)
 
     /**
-     * Resolve who assigns [sourceId]'s combat damage and whether its assignment order is
-     * constrained, applying the banding inversions (CR 702.22j/k) on top of the normal
-     * CR 510.1c defaults. This single entry point replaces the older split of
+     * Resolve who assigns [sourceId]'s combat damage, applying the banding inversions
+     * (CR 702.22j/k) on top of the normal CR 510.1c/d defaults. This single entry point replaces the older split of
      * `damageAssignmentChooser` / `blockerDamageAssignmentChooser` / `attackerBandHasBanding`.
      *
      * - [ATTACKER][CombatSide.ATTACKER]: default is the attacking player. If any creature
-     *   blocking [sourceId] has banding, CR 702.22j hands the division to the defending player
-     *   and lifts the order constraint.
+     *   blocking [sourceId] has banding (or two of them form a "bands with other" pair —
+     *   [BandsWithOtherRules.invertsDamageAssignment]), CR 702.22j hands the division to the
+     *   defending player.
      * - [BLOCKER][CombatSide.BLOCKER]: default is the blocker's controller ([defaultChooser]).
      *   If any attacker [sourceId] is blocking has banding, CR 702.22k hands the division to the
-     *   active player and lifts the order constraint.
+     *   active player.
      */
     fun combatDamageChooser(
         state: GameState,
@@ -77,10 +76,11 @@ internal object CombatDamageUtils {
     ): DamageChooser {
         val container = state.getEntity(attackerId) ?: return DamageChooser(defaultChooser, orderConstrained = true)
         val blockedBy = container.get<BlockedComponent>()
-        val blockerHasBanding = blockedBy?.blockerIds?.any {
-            it in state.getBattlefield() && projected.hasKeyword(it, Keyword.BANDING)
-        } == true
-        if (!blockerHasBanding) return DamageChooser(defaultChooser, orderConstrained = true)
+        val battlefield = state.getBattlefield()
+        val liveBlockers = blockedBy?.blockerIds?.filter { it in battlefield }.orEmpty()
+        if (!BandsWithOtherRules.invertsDamageAssignment(state, projected, liveBlockers)) {
+            return DamageChooser(defaultChooser, orderConstrained = true)
+        }
 
         // CR 702.22j: the defending player divides this attacker's damage "as they choose".
         val defenderId = container.get<AttackingComponent>()?.defenderId
@@ -98,10 +98,11 @@ internal object CombatDamageUtils {
     ): DamageChooser {
         val blocking = state.getEntity(blockerId)?.get<BlockingComponent>()
             ?: return DamageChooser(defaultChooser, orderConstrained = true)
-        // CR 702.22k: if any blocked attacker has banding, the active player divides this
-        // blocker's damage "as they choose".
-        val attackerHasBanding = blocking.blockedAttackerIds.any { projected.hasKeyword(it, Keyword.BANDING) }
-        return if (attackerHasBanding) {
+        // CR 702.22k: if any blocked attacker has banding — or the blocked attackers include a
+        // [quality] creature with "bands with other [quality]" and another [quality] creature —
+        // the active player divides this blocker's damage "as they choose".
+        val liveAttackers = blocking.blockedAttackerIds.filter { it in state.getBattlefield() }
+        return if (BandsWithOtherRules.invertsDamageAssignment(state, projected, liveAttackers)) {
             DamageChooser(activePlayerId, orderConstrained = false)
         } else {
             DamageChooser(defaultChooser, orderConstrained = true)
@@ -200,8 +201,7 @@ internal object CombatDamageUtils {
         // combat damage, and the list is empty in the overwhelmingly common case.
         val grantsByEntity = state.grantedStaticAbilities.groupBy { it.entityId }
         for (permanentId in state.getBattlefield()) {
-            val permCardId = state.getEntity(permanentId)?.get<CardComponent>()?.cardDefinitionId
-            val printed = permCardId?.let { cardRegistry.getCard(it)?.staticAbilities }.orEmpty()
+            val printed = state.faceUpCardDefinition(permanentId, cardRegistry)?.staticAbilities.orEmpty()
             val granted = grantsByEntity[permanentId]?.map { it.ability }.orEmpty()
             val abilities = if (granted.isEmpty()) printed else printed + granted
             if (abilities.isEmpty()) continue

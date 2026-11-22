@@ -49,13 +49,27 @@ internal class StackTextRenderer(
         spellOnStack: SpellOnStackComponent,
         cardDef: CardDefinition
     ): String? {
+        val text = renderSpellText(state, spellEntityId, spellOnStack, cardDef) ?: return null
+        return if (cardDef.typeLine.isInstant || cardDef.typeLine.isSorcery) nameSelf(text, cardDef.name) else text
+    }
+
+    private fun renderSpellText(
+        state: GameState,
+        spellEntityId: EntityId,
+        spellOnStack: SpellOnStackComponent,
+        cardDef: CardDefinition
+    ): String? {
         // An overloaded or cleaved spell resolves with its variant text (CR 702.96a / 702.148a),
         // so that is what opponents read on the stack.
-        val effect = when {
-            spellOnStack.wasOverloaded -> cardDef.script.overloadSpellEffect
-            spellOnStack.wasCleaved -> cardDef.script.cleaveSpellEffect
-            else -> null
-        } ?: cardDef.script.spellEffect ?: return null
+        // An awakened spell reads its awaken ability after its own text (CR 702.113a).
+        val effect = com.wingedsheep.engine.mechanics.stack.withAwakenAbility(
+            spellOnStack, cardDef,
+            when {
+                spellOnStack.wasOverloaded -> cardDef.script.overloadSpellEffect
+                spellOnStack.wasCleaved -> cardDef.script.cleaveSpellEffect
+                else -> null
+            } ?: cardDef.script.spellEffect,
+        ) ?: return null
 
         // For modal spells with modes chosen at cast time, concatenate all chosen mode
         // descriptions (choose-N commands show every picked mode, in order, one per line).
@@ -72,46 +86,38 @@ internal class StackTextRenderer(
                 ?.get<TargetsComponent>()
                 ?.targets
                 ?: emptyList()
-            val context = EffectContext(
-                sourceId = spellEntityId,
-                controllerId = spellOnStack.casterId,
-                xValue = spellOnStack.xValue,
-                declaredCostSlot = spellOnStack.declaredCostSlot,
-                wasBlightPaid = spellOnStack.wasBlightPaid,
-                sacrificedPermanents = spellOnStack.sacrificedPermanents,
-                discardedAsCostCards = spellOnStack.discardedAsCostCards,
-                revealedAsCostSnapshots = spellOnStack.revealedAsCostSnapshots,
-                chosenEntitySnapshots = spellOnStack.chosenEntitySnapshots,
-                exiledCardCount = spellOnStack.exiledCardCount,
-                additionalCostBlightAmount = spellOnStack.additionalCostBlightAmount,
+            val context = EffectContext.forSpellOnStack(spellEntityId, spellOnStack).copy(
                 targets = chosenTargets,
                 pipeline = PipelineState(
                     storedCollections = buildBeheldStoredCollections(spellOnStack.beheldCards, cardDef)
                 )
             )
-            // Resolve Effects.If at stack-time: opponents see only the branch that
-            // will fire (e.g., Cinder Strike shows "deals 4 damage" vs "deals 2 damage"
-            // depending on whether the optional Blight cost was paid) instead of the full
-            // "if X, do Y. Otherwise, do Z." description.
+            // Collapse an Effects.If whose condition the cast settled to the branch that will
+            // fire (Cinder Strike shows "deals 4 damage" once its blight cost is paid) instead of
+            // the full "If X, do Y. Otherwise, do Z." description. See [CastSettledConditions].
             val resolvedEffect = resolveConditionalForStack(state, effect, context)
             resolvedEffect.runtimeDescription { amount -> evaluator.evaluateForDisplay(state, amount, context) }
+                // Rendered sentences can open with a lowercase effect ("target creature gains …").
+                .replaceFirstChar { it.uppercase() }
         } catch (_: Exception) {
             effect.description
         }
     }
 
     /**
-     * Recursively replace [Effects.If]s in [effect] with the branch the spell will
-     * actually take, using [context] to evaluate each condition. Composite branches are
-     * resolved one level deep so nested conditions also collapse. Conditions that depend
-     * on state not yet captured at cast time fall through to the original effect.
+     * Recursively replace [Effects.If]s in [effect] with the branch the spell will actually take,
+     * using [context] to evaluate each condition, and descending into [CompositeEffect] children so
+     * nested conditions also collapse. Only a condition the cast already settled is evaluated
+     * ([CastSettledConditions]); any other conditional keeps its full text. Evaluating it here would
+     * read the whole [GameState] on behalf of every viewer — telling them what a hidden hand or
+     * library holds — or state a guess about the board at resolution as fact.
      */
     private fun resolveConditionalForStack(
         state: GameState,
         effect: Effect,
         context: EffectContext
     ): Effect {
-        effect.asConditional()?.let { conditional ->
+        effect.asConditional()?.takeIf { CastSettledConditions.isSettled(it.condition) }?.let { conditional ->
             val taken = if (conditionEvaluator.evaluate(state, conditional.condition, context)) {
                 conditional.then
             } else {
@@ -139,17 +145,9 @@ internal class StackTextRenderer(
         modal: ModalEffect
     ): List<String> {
         if (spellOnStack.chosenModes.isEmpty()) return emptyList()
-        val context = EffectContext(
-            sourceId = spellEntityId,
-            controllerId = spellOnStack.casterId,
-            xValue = spellOnStack.xValue,
-            sacrificedPermanents = spellOnStack.sacrificedPermanents,
-            discardedAsCostCards = spellOnStack.discardedAsCostCards,
-            revealedAsCostSnapshots = spellOnStack.revealedAsCostSnapshots,
-            exiledCardCount = spellOnStack.exiledCardCount,
-            additionalCostBlightAmount = spellOnStack.additionalCostBlightAmount
+        return modeDescriptions(
+            state, modal, spellOnStack.chosenModes, EffectContext.forSpellOnStack(spellEntityId, spellOnStack)
         )
-        return modeDescriptions(state, modal, spellOnStack.chosenModes, context)
     }
 
     /**
@@ -363,39 +361,67 @@ internal class StackTextRenderer(
         triggeringPlayerId = triggered.triggerContext?.triggeringPlayerId
     )
 
-    /**
-     * The noun a [com.wingedsheep.sdk.scripting.targets.SELF_NOUN_TOKEN] referring to [entityId]
-     * should render as — "this creature" for a creature (incl. artifact/enchantment creatures), else
-     * the noun matching its projected card type, falling back to [DEFAULT_SELF_NOUN]
-     * ("this permanent") for a multi-type, DFC, or off-battlefield permanent whose type we can't pin
-     * down. Battlefield type reads go through projected state (Rule 613), never base `typeLine`.
-     */
-    fun selfNounFor(state: GameState, entityId: EntityId): String {
-        val types = state.projectedState.getTypes(entityId)
-        return when {
-            "CREATURE" in types -> "this creature"
-            "LAND" in types -> "this land"
-            "ARTIFACT" in types -> "this artifact"
-            "ENCHANTMENT" in types -> "this enchantment"
-            "PLANESWALKER" in types -> "this planeswalker"
-            "BATTLE" in types -> "this battle"
-            else -> DEFAULT_SELF_NOUN
-        }
-    }
-
-    /**
-     * Render [effect]'s display text with any self-noun placeholder resolved to [selfNoun] (the noun
-     * for the source permanent — see [selfNounFor]). Effects that carry no self-reference fall
-     * through to their default-resolved [Effect.description]. This is the type-aware render layer
-     * for [SelfReferentialDescription]: the SDK emits the placeholder token, the client sees the
-     * type-correct noun.
-     */
-    fun effectDisplayText(effect: Effect, selfNoun: String): String =
-        (effect as? SelfReferentialDescription)
-            ?.let { resolveSelfNoun(it.descriptionTemplate, selfNoun) }
-            ?: effect.description
-
     companion object {
+        /**
+         * Name an instant or sorcery where its generated text refers to itself. The SDK renders
+         * [com.wingedsheep.sdk.scripting.targets.EffectTarget.Self] as "this creature" (or, through
+         * [SelfReferentialDescription], "this permanent"), which is right for a permanent's ability and
+         * wrong for a spell that is neither: Oracle names it — "return View from Above to its owner's
+         * hand". Quoted text is left alone, since there "this creature" belongs to an ability the spell
+         * grants or a token it creates ("… gains 'When this creature dies, draw a card'").
+         */
+        internal fun nameSelf(text: String, cardName: String): String = buildString {
+            var from = 0
+            for (quoted in QUOTED_ABILITY.findAll(text)) {
+                append(SPELL_SELF_NOUN.replace(text.substring(from, quoted.range.first), cardName))
+                append(quoted.value)
+                from = quoted.range.last + 1
+            }
+            append(SPELL_SELF_NOUN.replace(text.substring(from), cardName))
+        }
+
+        /** The self-nouns an instant or sorcery's generated text can carry for itself (see [nameSelf]). */
+        private val SPELL_SELF_NOUN = Regex("\\b[Tt]his (creature|permanent)\\b")
+
+        /**
+         * A quoted ability, in either quote style the SDK prints: "…", or '…' opened before a capital
+         * and closed only before a space, punctuation or the end — so the apostrophe in "owner's"
+         * doesn't end the quote.
+         */
+        private val QUOTED_ABILITY = Regex("\"[^\"]*\"|(?<![A-Za-z])'(?=[A-Z]).*?'(?=[\\s.,;:)!?]|$)")
+
+        /**
+         * The noun a [com.wingedsheep.sdk.scripting.targets.SELF_NOUN_TOKEN] referring to [entityId]
+         * should render as — "this creature" for a creature (incl. artifact/enchantment creatures), else
+         * the noun matching its projected card type, falling back to [DEFAULT_SELF_NOUN]
+         * ("this permanent") for a multi-type, DFC, or off-battlefield permanent whose type we can't pin
+         * down. Battlefield type reads go through projected state (Rule 613), never base `typeLine`.
+         */
+        fun selfNounFor(state: GameState, entityId: EntityId): String {
+            val types = state.projectedState.getTypes(entityId)
+            return when {
+                "CREATURE" in types -> "this creature"
+                "LAND" in types -> "this land"
+                "ARTIFACT" in types -> "this artifact"
+                "ENCHANTMENT" in types -> "this enchantment"
+                "PLANESWALKER" in types -> "this planeswalker"
+                "BATTLE" in types -> "this battle"
+                else -> DEFAULT_SELF_NOUN
+            }
+        }
+
+        /**
+         * Render [effect]'s display text with any self-noun placeholder resolved to [selfNoun] (the noun
+         * for the source permanent — see [selfNounFor]). Effects that carry no self-reference fall
+         * through to their default-resolved [Effect.description]. This is the type-aware render layer
+         * for [SelfReferentialDescription]: the SDK emits the placeholder token, the client sees the
+         * type-correct noun.
+         */
+        fun effectDisplayText(effect: Effect, selfNoun: String): String =
+            (effect as? SelfReferentialDescription)
+                ?.let { resolveSelfNoun(it.descriptionTemplate, selfNoun) }
+                ?: effect.description
+
         /** The client's view of a chosen target (an id to draw an arrow to, nothing more). */
         fun toClientTarget(target: ChosenTarget): ClientChosenTarget = when (target) {
             is ChosenTarget.Player -> ClientChosenTarget.Player(target.playerId)

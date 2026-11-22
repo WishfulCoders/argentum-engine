@@ -4,11 +4,11 @@
  * replay. Opened from the Tournaments table on a profile. Player names link to their public profile.
  */
 import { useEffect, useState } from 'react'
-import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { type TournamentDetail, fetchTournamentDetail } from '@/api/account'
 import { gameModeLabel } from '@/components/admin/statFormat'
 import { TournamentStatusBadge } from '@/components/tournament/TournamentStatusBadge'
+import { AccountModal, accountStyles as a } from '@/components/profile/accountUi'
 
 export function TournamentDetailModal({
   tournamentId,
@@ -33,121 +33,130 @@ export function TournamentDetailModal({
     }
   }, [tournamentId])
 
+  // Leaving for a profile or replay doesn't close the modal first: the page unmounts anyway, and a
+  // host that keeps the modal in the URL (the admin screens) reopens it when the player comes Back.
+  // Closing first would race that host's history pop against this push.
   const goProfile = (userId: string | null) => {
-    if (userId) {
-      onClose()
-      navigate(`/u/${userId}`)
-    }
+    if (userId) navigate(`/u/${userId}`)
   }
 
   const mode = detail ? gameModeLabel(detail.gameMode, detail.format) : null
+  const hasForfeits = !!detail?.standings.some((s) => (s.forfeitWins ?? 0) + (s.forfeitLosses ?? 0) > 0)
   const title = detail?.name?.trim() || [detail?.setCodes, mode?.variant ?? mode?.primary].filter(Boolean).join(' ') || 'Tournament'
 
   return (
-    <div style={styles.backdrop} onClick={onClose} role="presentation">
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal>
-        <div style={styles.header}>
-          <span style={styles.titleRow}>
-            <h2 style={styles.title}>{title}</h2>
-            {detail && detail.status !== 'COMPLETED' && <TournamentStatusBadge status={detail.status} />}
-          </span>
-          <button type="button" style={styles.close} onClick={onClose} aria-label="Close">
-            ✕
-          </button>
-        </div>
-        {detail && mode && (
-          <p style={styles.muted}>
-            {mode.primary}
-            {mode.variant ? <span style={styles.variant}> › {mode.variant}</span> : null}
-            {' · '}
-            {detail.playerCount} players · {detail.endedAt.slice(0, 10)}
-          </p>
-        )}
+    <AccountModal
+      title={title}
+      titleExtra={detail && detail.status !== 'COMPLETED' ? <TournamentStatusBadge status={detail.status} /> : null}
+      onClose={onClose}
+    >
+      {detail && mode && (
+        <p className={a.muted} style={{ marginTop: 4 }}>
+          {mode.primary}
+          {mode.variant ? <span className={a.dim}> › {mode.variant}</span> : null}
+          {' · '}
+          {detail.playerCount} players · {detail.endedAt.slice(0, 10)}
+        </p>
+      )}
 
-        {error ? (
-          <p style={styles.error}>{error}</p>
-        ) : !detail ? (
-          <p style={styles.muted}>Loading…</p>
-        ) : (
-          <>
-            <h3 style={styles.section}>{detail.status === 'COMPLETED' ? 'Final standings' : 'Standings so far'}</h3>
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.thNumLeft}>#</th>
-                    <th style={styles.th}>Player</th>
-                    <th style={styles.thNum}>W</th>
-                    <th style={styles.thNum}>L</th>
-                    <th style={styles.thNum}>D</th>
+      {error ? (
+        <p className={a.error} style={{ marginTop: 12 }}>{error}</p>
+      ) : !detail ? (
+        <p className={a.muted} style={{ marginTop: 12 }}>Loading…</p>
+      ) : (
+        <>
+          <h3 className={a.dialogSection}>{detail.status === 'COMPLETED' ? 'Final standings' : 'Standings so far'}</h3>
+          {/* W/L are the matches played; a leaver's forfeits sit in their own column (placement counts them). */}
+          <div className={a.tableWrap}>
+            <table className={a.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: 48 }}>#</th>
+                  <th>Player</th>
+                  <th className={a.num}>W</th>
+                  <th className={a.num}>L</th>
+                  <th className={a.num}>D</th>
+                  {hasForfeits && (
+                    <th className={a.num} title="Matches decided because a player left the tournament — not played">
+                      Forfeits
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {detail.standings.map((s, i) => (
+                  <tr key={`${s.playerName}-${i}`}>
+                    <td className={a.num} style={{ textAlign: 'left', fontWeight: 600, color: s.placement === 1 ? '#f2b45c' : undefined }}>
+                      {s.placement}
+                      {s.placement === 1 ? ' 🏆' : ''}
+                    </td>
+                    <td>
+                      <PlayerName name={s.playerName} userId={s.userId} isAi={s.isAi} onClick={goProfile} />
+                    </td>
+                    <td className={a.num}>{s.wins - (s.forfeitWins ?? 0)}</td>
+                    <td className={a.num}>{s.losses - (s.forfeitLosses ?? 0)}</td>
+                    <td className={a.num}>{s.draws}</td>
+                    {hasForfeits && <td className={`${a.num} ${a.forfeits}`}>{forfeitLabel(s.forfeitWins, s.forfeitLosses)}</td>}
                   </tr>
-                </thead>
-                <tbody>
-                  {detail.standings.map((s, i) => (
-                    <tr key={`${s.playerName}-${i}`}>
-                      <td style={styles.tdRank}>
-                        {s.placement}
-                        {s.placement === 1 ? ' 🏆' : ''}
-                      </td>
-                      <td style={styles.td}>
-                        <PlayerName name={s.playerName} userId={s.userId} isAi={s.isAi} onClick={goProfile} />
-                      </td>
-                      <td style={styles.tdNum}>{s.wins}</td>
-                      <td style={styles.tdNum}>{s.losses}</td>
-                      <td style={styles.tdNum}>{s.draws}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <h3 style={styles.section}>Games</h3>
-            {detail.games.length === 0 ? (
-              <p style={styles.muted}>No game records were stored for this tournament.</p>
-            ) : (
-              <ul style={styles.gameList}>
-                {detail.games.map((g, i) => (
-                  <li key={`${g.gameId}-${i}`} style={styles.gameRow}>
-                    <span style={styles.gamePlayers}>
-                      {g.players.map((p, j) => (
-                        <span key={`${p.name}-${j}`}>
-                          {j > 0 && <span style={styles.vs}> vs </span>}
-                          <span style={p.won ? styles.winner : undefined}>
-                            <PlayerName name={p.name} userId={p.userId} isAi={p.isAi} onClick={goProfile} />
-                            {p.won ? ' ✓' : ''}
-                          </span>
-                        </span>
-                      ))}
-                    </span>
-                    <span style={styles.gameActions}>
-                      <span style={styles.gameDate}>{g.endedAt.slice(0, 10)}</span>
-                      {g.hasReplay ? (
-                        <button
-                          type="button"
-                          style={styles.link}
-                          onClick={() => {
-                            onClose()
-                            navigate(`/replay/${g.gameId}`)
-                          }}
-                        >
-                          Watch
-                        </button>
-                      ) : (
-                        <span style={styles.noReplay}>—</span>
-                      )}
-                    </span>
-                  </li>
                 ))}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+              </tbody>
+            </table>
+          </div>
+          {hasForfeits && (
+            <p className={a.subtle} style={{ marginTop: 8 }}>
+              Wins and losses are matches played. Forfeits — matches a player left before playing — still count toward placement.
+            </p>
+          )}
+
+          <h3 className={a.dialogSection}>Games</h3>
+          {detail.games.length === 0 ? (
+            <p className={a.muted}>No game records were stored for this tournament.</p>
+          ) : (
+            <ul className={a.tGames}>
+              {detail.games.map((g, i) => (
+                <li key={`${g.gameId}-${i}`} className={a.tGame}>
+                  <span>
+                    {g.players.map((p, j) => (
+                      <span key={`${p.name}-${j}`}>
+                        {j > 0 && <span className={a.dim}> vs </span>}
+                        <span className={p.won ? a.tWinner : undefined}>
+                          <PlayerName name={p.name} userId={p.userId} isAi={p.isAi} onClick={goProfile} />
+                          {p.won ? ' ✓' : ''}
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                  <span className={a.tMeta}>
+                    {g.endedAt.slice(0, 10)}
+                    {g.hasReplay ? (
+                      <button
+                        type="button"
+                        className={a.miniButton}
+                        onClick={() => navigate(`/replay/${g.gameId}`)}
+                      >
+                        Watch
+                      </button>
+                    ) : (
+                      <span className={a.dim}>—</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </AccountModal>
   )
 }
 
 /** A player name that links to their public profile when signed in, with an AI tag otherwise. */
+/** A standing's forfeits, e.g. "+1 W" or "+3 L"; a dash when it has none. */
+function forfeitLabel(wins = 0, losses = 0): string {
+  const parts = [wins > 0 ? `+${wins} W` : null, losses > 0 ? `+${losses} L` : null].filter(Boolean)
+  return parts.length > 0 ? parts.join(' ') : '—'
+}
+
 function PlayerName({
   name,
   userId,
@@ -161,75 +170,15 @@ function PlayerName({
 }) {
   if (userId) {
     return (
-      <button type="button" style={styles.playerLink} onClick={() => onClick(userId)}>
+      <button type="button" className={a.link} onClick={() => onClick(userId)}>
         {name}
       </button>
     )
   }
   return (
-    <span style={styles.playerPlain}>
+    <span>
       {name}
-      {isAi ? <span style={styles.aiTag}> AI</span> : null}
+      {isAi ? <span className={a.aiTag}>AI</span> : null}
     </span>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    zIndex: 1000,
-  },
-  modal: {
-    width: 'min(720px, 100%)',
-    maxHeight: '85vh',
-    overflowY: 'auto',
-    backgroundColor: '#12121e',
-    border: '1px solid #2a2a3e',
-    borderRadius: 14,
-    padding: '20px 22px',
-  },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  titleRow: { display: 'inline-flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  title: { margin: 0, color: '#fff', fontSize: 20 },
-  close: { background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: 18 },
-  muted: { margin: '4px 0 0', color: '#888', fontSize: 13 },
-  variant: { color: '#aab' },
-  error: { margin: '8px 0 0', color: '#ff6b6b', fontSize: 13 },
-  section: { margin: '18px 0 8px', color: '#fff', fontSize: 15 },
-  tableWrap: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { textAlign: 'left', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e' },
-  thNum: { textAlign: 'right', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e' },
-  thNumLeft: { textAlign: 'left', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e', width: 48 },
-  td: { textAlign: 'left', color: '#ccc', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  tdNum: { textAlign: 'right', color: '#ccc', padding: '6px 8px', borderBottom: '1px solid #1f1f2e', fontVariantNumeric: 'tabular-nums' },
-  tdRank: { textAlign: 'left', color: '#cdd', padding: '6px 8px', borderBottom: '1px solid #1f1f2e', fontVariantNumeric: 'tabular-nums', fontWeight: 600 },
-  gameList: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 },
-  gameRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
-    backgroundColor: '#171723',
-    border: '1px solid #23233a',
-    borderRadius: 8,
-    padding: '8px 12px',
-  },
-  gamePlayers: { color: '#cdd', fontSize: 13 },
-  vs: { color: '#666' },
-  winner: { color: '#fff', fontWeight: 600 },
-  gameActions: { display: 'inline-flex', alignItems: 'center', gap: 12, flexShrink: 0 },
-  gameDate: { color: '#777', fontSize: 12, fontVariantNumeric: 'tabular-nums' },
-  link: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 13, padding: 0 },
-  noReplay: { color: '#555', fontSize: 13 },
-  playerLink: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 'inherit', padding: 0 },
-  playerPlain: { color: 'inherit' },
-  aiTag: { color: '#888', fontSize: 11 },
 }

@@ -36,7 +36,7 @@ class DoubleDamageToPlayerExecutor : EffectExecutor<DoubleDamageToPlayerEffect> 
         effect: DoubleDamageToPlayerEffect,
         context: EffectContext
     ): EffectResult {
-        val playerId = TargetResolutionUtils.resolvePlayerTarget(effect.target, context)
+        val playerId = TargetResolutionUtils.resolvePlayerTarget(effect.target, context, state)
             ?: return EffectResult.success(state)
 
         val newState = state.addFloatingEffect(

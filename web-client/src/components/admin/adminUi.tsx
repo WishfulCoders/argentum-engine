@@ -1,23 +1,26 @@
 /**
- * Shared chrome and primitives for the admin dashboard's sub-screens (hub, stats, players). The whole
- * app runs inside `#root { height:100%; overflow:hidden }` (the game board is a fixed full-screen
- * surface), so a normal tall page is clipped with no way to scroll. Every admin screen therefore makes
- * itself its OWN scroll container via {@link AdminScreen} (`height:100vh; overflowY:auto`) rather than
- * relying on document scroll — this is the fix for the dashboard running off-screen.
+ * Shared chrome and primitives for the admin dashboard's sub-screens (hub, stats, players). The frame
+ * is {@link DevPage} — the app's page shell over the card art, scrolling itself because `#root` is
+ * `overflow:hidden` for the game board. Panels here are the same glass as the rest of the app.
  */
 import type React from 'react'
+import { DevPage } from './DevPage'
 
 export const adminTheme = {
-  bg: '#0a0a12',
-  panel: '#13131f',
-  panelAlt: '#171724',
-  border: '#23233a',
-  borderSoft: '#1c1c2c',
-  accent: '#8b9bff',
-  accentSolid: '#5b6ee1',
-  text: '#f1f1f6',
-  textSecondary: '#a6a6bd',
-  textMuted: '#6c6c82',
+  /** An inset well inside a panel (map box, inputs) — the art never shows through it. */
+  bg: 'rgba(0, 0, 0, 0.3)',
+  panel: 'rgba(10, 12, 20, 0.72)',
+  /** Opaque enough to read over a chart (tooltips, chips). */
+  panelAlt: 'rgba(22, 25, 36, 0.94)',
+  border: 'rgba(255, 255, 255, 0.1)',
+  borderSoft: 'rgba(255, 255, 255, 0.06)',
+  accent: '#f2c97a',
+  accentSolid: '#f2b45c',
+  /** Text on an `accentSolid` fill. */
+  onAccent: '#1d1405',
+  text: '#f1f3f9',
+  textSecondary: '#b4bccd',
+  textMuted: '#8f98ac',
   good: '#5bd16e',
   bad: '#e15b6e',
 } as const
@@ -42,25 +45,9 @@ export function AdminScreen({
   children: React.ReactNode
 }) {
   return (
-    <div style={shell.screen}>
-      <div style={shell.topbar}>
-        <div style={shell.topbarInner}>
-          <div style={shell.titleBlock}>
-            {onBack && (
-              <button type="button" style={shell.backBtn} onClick={onBack}>
-                {backLabel}
-              </button>
-            )}
-            <div>
-              <h1 style={shell.title}>{title}</h1>
-              {subtitle && <p style={shell.subtitle}>{subtitle}</p>}
-            </div>
-          </div>
-          {right && <div style={shell.right}>{right}</div>}
-        </div>
-      </div>
-      <div style={shell.container}>{children}</div>
-    </div>
+    <DevPage section="Admin" title={title} subtitle={subtitle} onBack={onBack} backLabel={backLabel} right={right}>
+      {children}
+    </DevPage>
   )
 }
 
@@ -104,14 +91,23 @@ export function StatCard({ label, value, accent }: { label: string; value: React
   )
 }
 
-export function Table({ head, children }: { head: React.ReactNode[]; children: React.ReactNode }) {
+/** A table whose first [leftColumns] headers read left-aligned (text); the rest right-aligned (numbers). */
+export function Table({
+  head,
+  children,
+  leftColumns = 1,
+}: {
+  head: React.ReactNode[]
+  children: React.ReactNode
+  leftColumns?: number
+}) {
   return (
     <div style={tableStyle.wrap}>
       <table style={tableStyle.table}>
         <thead>
           <tr>
             {head.map((h, i) => (
-              <th key={i} style={i === 0 ? tableStyle.th : tableStyle.thNum}>
+              <th key={i} style={i < leftColumns ? tableStyle.th : tableStyle.thNum}>
                 {h}
               </th>
             ))}
@@ -131,83 +127,38 @@ export const chartTooltipStyle: React.CSSProperties = {
   fontSize: 12,
 }
 
-const shell: Record<string, React.CSSProperties> = {
-  screen: {
-    height: '100vh',
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    backgroundColor: adminTheme.bg,
-    color: adminTheme.text,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  topbar: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    backgroundColor: 'rgba(10,10,18,0.86)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-    borderBottom: `1px solid ${adminTheme.border}`,
-  },
-  topbarInner: {
-    maxWidth: 1040,
-    margin: '0 auto',
-    padding: '14px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  titleBlock: { display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 },
-  backBtn: {
-    flexShrink: 0,
-    background: 'none',
-    border: `1px solid ${adminTheme.border}`,
-    color: adminTheme.accent,
-    cursor: 'pointer',
-    fontSize: 13,
-    borderRadius: 8,
-    padding: '7px 12px',
-  },
-  title: { margin: 0, color: adminTheme.text, fontSize: 20, fontWeight: 700, letterSpacing: -0.2 },
-  subtitle: { margin: '2px 0 0', color: adminTheme.textMuted, fontSize: 13 },
-  right: { display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 },
-  container: {
-    maxWidth: 1040,
-    margin: '0 auto',
-    padding: '24px 20px 64px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 18,
-  },
-}
-
 const panelStyle: Record<string, React.CSSProperties> = {
   panel: {
+    minWidth: 0,
     backgroundColor: adminTheme.panel,
     border: `1px solid ${adminTheme.border}`,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 18,
+    backdropFilter: 'blur(18px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
   },
   panelHead: {
     display: 'flex',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
     marginBottom: 14,
   },
   panelTitleBlock: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 },
-  panelTitle: { margin: 0, color: adminTheme.text, fontSize: 15, fontWeight: 600 },
+  panelTitle: { margin: 0, color: adminTheme.text, fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600 },
   panelSubtitle: { margin: 0, color: adminTheme.textMuted, fontSize: 12 },
   metric: {
     flex: '1 1 130px',
     backgroundColor: adminTheme.panel,
     border: `1px solid ${adminTheme.border}`,
+    backdropFilter: 'blur(18px)',
+    WebkitBackdropFilter: 'blur(18px)',
     borderRadius: 14,
     padding: '16px 14px',
     textAlign: 'center',
   },
-  metricValue: { color: adminTheme.text, fontSize: 26, fontWeight: 700, lineHeight: 1.1 },
+  metricValue: { color: adminTheme.text, fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 600, lineHeight: 1.1 },
   metricLabel: {
     color: adminTheme.textMuted,
     fontSize: 11,

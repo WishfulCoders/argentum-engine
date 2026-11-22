@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * {U}{R}
  * Creature — Human Monk
  * 2/1
- *
  * Whenever you cast a noncreature spell, create a 1/1 colorless Soldier artifact creature token.
  */
 val ThirdPathIconoclast = card("Third Path Iconoclast") {
@@ -27,10 +26,8 @@ val ThirdPathIconoclast = card("Third Path Iconoclast") {
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
-            colors = emptySet(),
             creatureTypes = setOf("Soldier"),
-            artifactToken = true,
-            imageUri = "https://cards.scryfall.io/normal/front/3/7/37da5b54-ec55-46e3-9f0b-565cbbe1ac7a.jpg?1783919907",
+            artifactToken = true
         )
     }
 
@@ -39,6 +36,6 @@ val ThirdPathIconoclast = card("Third Path Iconoclast") {
         collectorNumber = "223"
         artist = "Manuel Castañón"
         flavorText = "\"When all you have is a hammer, everything looks like a nail. I merely propose expanding our toolbox.\""
-        imageUri = "https://cards.scryfall.io/normal/front/f/1/f1a21287-e244-4960-84fb-c4f6e5c346d9.jpg?1783920025"
+        imageUri = "https://cards.scryfall.io/normal/front/f/1/f1a21287-e244-4960-84fb-c4f6e5c346d9.jpg"
     }
 }

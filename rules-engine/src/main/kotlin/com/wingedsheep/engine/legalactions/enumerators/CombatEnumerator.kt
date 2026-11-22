@@ -5,9 +5,12 @@ import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.legalactions.ActionEnumerator
 import com.wingedsheep.engine.legalactions.EnumerationContext
 import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.engine.mechanics.combat.LoneAttackers
+import com.wingedsheep.engine.mechanics.combat.SharedTeamBlockChoices
 import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombatComponent
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.model.EntityId
 
 /**
  * Enumerates DeclareAttackers and DeclareBlockers actions.
@@ -53,30 +56,37 @@ class CombatEnumerator : ActionEnumerator {
             if (!attackersAlreadyDeclared) {
                 val validAttackers = context.turnManager.getValidAttackers(state, playerId)
                 val projected = context.projected
-                // Opponents this player may attack under the game's AttackMode (CR 802 / 803).
-                // A planeswalker is attackable iff its controller is one of those opponents; a
-                // battle iff its *protector* is (CR 310.9b), which is why a Siege the attacking
-                // player controls themselves shows up here once an opponent protects it.
-                val attackableOpponents = com.wingedsheep.engine.mechanics.combat.CombatDefenders
-                    .legalDefendingPlayers(state, playerId)
-                val attackablePermanents = state.getBattlefield().filter { entityId ->
-                    when {
-                        projected.isBattle(entityId) -> com.wingedsheep.engine.mechanics.battle.Battles
-                            .canBeAttackedBy(state, entityId, playerId, attackableOpponents)
-                        projected.isPlaneswalker(entityId) ->
-                            projected.getController(entityId) in attackableOpponents
-                        else -> false
-                    }
+                // Opponents this player may attack under the game's AttackMode (CR 802 / 803), their
+                // planeswalkers, and the battles they protect.
+                val validAttackTargets = com.wingedsheep.engine.mechanics.combat.CombatDefenders
+                    .attackTargets(state, projected, playerId)
+                // CR 508.1b–c — each attacker picks its own defender, and per-defender
+                // restrictions (Goblin Rock Sled's "unless defending player controls a Mountain",
+                // Blazing Archon's "creatures can't attack you") rule out single defenders. Run the
+                // same rules the declaration enforces, per attacker, and publish only the narrowed
+                // ones. A creature left with no legal defender at all can't attack, even when no
+                // single rule restricts it from every defender (two restrictions, one per seat).
+                // A creature a directed requirement binds (Public Enemy, Gideon, Battle-Forged) may
+                // only attack the players or planeswalkers it names, so its list narrows to them.
+                val narrowedTargets = mutableMapOf<EntityId, List<EntityId>>()
+                val boundDefenders = context.turnManager.boundAttackDefenders(state, playerId)
+                val attackers = validAttackers.filter { attackerId ->
+                    val legal = context.turnManager.legalDefendersFor(state, attackerId, playerId, validAttackTargets)
+                        .let { all -> boundDefenders[attackerId]?.let { bound -> all.filter { it in bound } } ?: all }
+                    if (legal.size < validAttackTargets.size) narrowedTargets[attackerId] = legal
+                    legal.isNotEmpty() || validAttackTargets.isEmpty()
                 }
-                val validAttackTargets = attackableOpponents.toList() + attackablePermanents
+                narrowedTargets.keys.retainAll(attackers.toSet())
                 val mandatoryAttackers = context.turnManager.getMandatoryAttackers(state, playerId)
                 return listOf(LegalAction(
                     actionType = "DeclareAttackers",
                     description = "Declare attackers",
                     action = DeclareAttackers(playerId, emptyMap()),
-                    validAttackers = validAttackers,
+                    validAttackers = attackers,
                     mandatoryAttackers = mandatoryAttackers.ifEmpty { null },
-                    validAttackTargets = validAttackTargets.ifEmpty { null }
+                    loneAttackers = LoneAttackers.of(state, attackers, context.cardRegistry).ifEmpty { null },
+                    validAttackTargets = validAttackTargets.ifEmpty { null },
+                    attackTargetsByAttacker = narrowedTargets.ifEmpty { null },
                 ))
             }
         }
@@ -88,6 +98,8 @@ class CombatEnumerator : ActionEnumerator {
             val blockersAlreadyDeclared = state.getEntity(playerId)
                 ?.get<BlockersDeclaredThisCombatComponent>() != null
             if (!blockersAlreadyDeclared) {
+                val separateChoices = SharedTeamBlockChoices.requiresSeparateChoices(state, playerId)
+                if (separateChoices && state.priorityPlayerId != playerId) return emptyList()
                 if (com.wingedsheep.engine.mechanics.combat.RandomizedBlockerPiles.isActive(state)) {
                     return listOf(LegalAction(
                         actionType = "DeclareBlockers",
@@ -97,7 +109,9 @@ class CombatEnumerator : ActionEnumerator {
                     ))
                 }
                 val validBlockerAssignments =
-                    context.turnManager.getValidBlockerAssignments(state, playerId)
+                    context.turnManager.getValidBlockerAssignments(state, playerId).filterKeys {
+                        !separateChoices || context.projected.getController(it) == playerId
+                    }
                 val validBlockers = validBlockerAssignments.keys.toList()
                 val blockRules = com.wingedsheep.engine.mechanics.combat.BlockStaticRules(
                     state, context.cardRegistry, context.predicateEvaluator)
@@ -105,12 +119,17 @@ class CombatEnumerator : ActionEnumerator {
                     blockRules.maxBlocks(blocker).takeIf { it > 1 }?.let { blocker to it }
                 }.toMap()
                 val mandatoryAssignments = context.turnManager.getMandatoryBlockerAssignments(state, playerId)
+                    .filterKeys { it in validBlockers }
                 return listOf(LegalAction(
                     actionType = "DeclareBlockers",
-                    description = "Declare blockers",
+                    description = SharedTeamBlockChoices.problem(state, playerId)?.let { "Choose blockers again: $it" }
+                        ?: if (separateChoices) "Choose this player's blockers — the team declares together"
+                        else "Declare blockers",
                     action = DeclareBlockers(playerId, emptyMap()),
                     validBlockers = validBlockers,
                     validBlockerAssignments = validBlockerAssignments,
+                    proposedBlockerAssignments = SharedTeamBlockChoices.proposals(state, playerId).ifEmpty { null },
+                    blockableAttackers = com.wingedsheep.engine.mechanics.combat.CombatDefenders.blockableAttackers(state, playerId),
                     blockerMaxBlockCounts = blockerMaxBlockCounts.ifEmpty { null },
                     mandatoryBlockerAssignments = mandatoryAssignments.ifEmpty { null }
                 ))

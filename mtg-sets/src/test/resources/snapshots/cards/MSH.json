@@ -800,13 +800,15 @@
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Food"
-                            }
+                            },
+                            "description": "Create a Food token"
                         },
                         {
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Treasure"
-                            }
+                            },
+                            "description": "Create a Treasure token"
                         }
                     ],
                     "countsAsModalSpell": false
@@ -1047,7 +1049,7 @@
             {
                 "chapter": 2,
                 "effect": {
-                    "type": "ReduceSpellCosts",
+                    "type": "ModifySpellCosts",
                     "spellFilter": {
                         "cardPredicates": [
                             "IsArtifact"
@@ -1431,7 +1433,8 @@
                             }
                         ],
                         "controllerPredicate": "ControlledByYou"
-                    }
+                    },
+                    "attackedPlayer": "Each"
                 },
                 "binding": "ANY",
                 "effect": {
@@ -1604,7 +1607,11 @@
                                                 "filter": "basicland"
                                             },
                                             "storeAs": "gathered0",
-                                            "search": true
+                                            "search": true,
+                                            "searcher": {
+                                                "type": "ControllerOf",
+                                                "targetDescription": "target"
+                                            }
                                         },
                                         {
                                             "type": "SelectFromCollection",
@@ -1635,7 +1642,8 @@
                                         {
                                             "type": "ShuffleLibrary",
                                             "target": "TargetController"
-                                        }
+                                        },
+                                        "EmitLibrarySearchedEvent"
                                     ]
                                 },
                                 "decisionMaker": "TargetController",
@@ -5101,7 +5109,7 @@
                         "filter": "permanent ctrl:you"
                     }
                 },
-                "placedByYou": true
+                "placer": "You"
             }
         ]
     },
@@ -6608,7 +6616,11 @@
                         },
                         "destination": "Battlefield",
                         "placement": "TappedAndAttacking",
-                        "addCounterType": "FINALITY"
+                        "entryCounters": [
+                            {
+                                "counterType": "FINALITY"
+                            }
+                        ]
                     },
                     "reflexiveTargetRequirements": [
                         {
@@ -7655,7 +7667,11 @@
                             "type": "MoveToZone",
                             "target": "Self",
                             "destination": "Battlefield",
-                            "addCounterType": "PLUS_ONE_PLUS_ONE"
+                            "entryCounters": [
+                                {
+                                    "counterType": "PLUS_ONE_PLUS_ONE"
+                                }
+                            ]
                         },
                         {
                             "type": "RemoveAllAbilities",
@@ -8172,7 +8188,7 @@
                     "type": "Fixed",
                     "amount": 3
                 },
-                "powerUpOnly": true
+                "onceOnlyKind": "POWER_UP"
             }
         ]
     },
@@ -9585,7 +9601,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another creature to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -10305,7 +10323,7 @@
                 "trigger": {
                     "type": "BecomesTargetEvent",
                     "byYou": true,
-                    "includePlayerTargets": true,
+                    "playerTargets": "Any",
                     "abilitiesOnly": true
                 },
                 "binding": "ANY",
@@ -10474,7 +10492,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 3
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 3
+                        }
                     }
                 },
                 "effect": {
@@ -10868,7 +10889,9 @@
                                                 "baseFilter": "creature ctrl:you"
                                             }
                                         },
-                                        "storeAs": "target0"
+                                        "storeAs": "target0",
+                                        "nonTargeting": true,
+                                        "prompt": "Choose a creature you control to remove a counter from"
                                     },
                                     {
                                         "type": "Gated",
@@ -11474,7 +11497,10 @@
                         "effects": [
                             {
                                 "type": "GatherCards",
-                                "source": "TriggeringEntity",
+                                "source": {
+                                    "type": "Entity",
+                                    "entity": "TriggeringEntity"
+                                },
                                 "storeAs": "gathered0"
                             },
                             {
@@ -13029,7 +13055,7 @@
                 "isPowerUp": true
             }
         ],
-        "mayStartOnBattlefield": true
+        "beginOnBattlefield": {}
     },
     "metadata": {
         "collectorNumber": "148",
@@ -13618,7 +13644,8 @@
                                 "filter": "basicland"
                             },
                             "storeAs": "gathered0",
-                            "search": true
+                            "search": true,
+                            "searcher": "TargetPlayer"
                         },
                         {
                             "type": "SelectFromCollection",
@@ -13934,7 +13961,7 @@
             {
                 "id": "Robot Domination:1",
                 "trigger": {
-                    "type": "CardsPutIntoYourGraveyardEvent",
+                    "type": "CardsPutIntoGraveyardEvent",
                     "filter": "creature"
                 },
                 "binding": "ANY",
@@ -14046,7 +14073,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 2
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
                     }
                 },
                 "effect": {
@@ -14522,7 +14552,10 @@
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomPayLife",
-                        "amount": 2
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
                     }
                 },
                 "effect": {
@@ -16887,6 +16920,35 @@
     "typeLine": "Enchantment — Aura",
     "oracleText": "Enchant creature\nEnchanted creature gets +2/+2, has first strike and vigilance, and is a legendary Soldier in addition to its other types.\nWhenever enchanted creature attacks or blocks, attach any number of target Equipment you control to it.",
     "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Super-Soldier Serum:1",
+                "trigger": {
+                    "type": "AnyOfEvents",
+                    "events": [
+                        "AttackEvent",
+                        "BlockEvent"
+                    ]
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "ForEach",
+                    "space": "IterationSpace.Targets",
+                    "body": {
+                        "type": "AttachTargetEquipmentToCreature",
+                        "creatureTarget": "EnchantedCreature"
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "unlimited": true,
+                    "filter": {
+                        "baseFilter": "artifact Equipment ctrl:you"
+                    }
+                },
+                "descriptionOverride": "Whenever enchanted creature attacks or blocks, attach any number of target Equipment you control to it."
+            }
+        ],
         "staticAbilities": [
             {
                 "type": "ModifyStats",
@@ -16911,52 +16973,6 @@
                 "filter": {
                     "baseFilter": "permanent",
                     "scope": "AttachedTo"
-                }
-            },
-            {
-                "type": "GrantTriggeredAbility",
-                "ability": {
-                    "id": "Super-Soldier Serum:1",
-                    "trigger": "AttackEvent",
-                    "effect": {
-                        "type": "ForEach",
-                        "space": "IterationSpace.Targets",
-                        "body": {
-                            "type": "AttachTargetEquipmentToCreature",
-                            "creatureTarget": "Self"
-                        }
-                    },
-                    "targetRequirement": {
-                        "type": "TargetObject",
-                        "unlimited": true,
-                        "filter": {
-                            "baseFilter": "artifact Equipment ctrl:you"
-                        }
-                    },
-                    "descriptionOverride": "Whenever this creature attacks, attach any number of target Equipment you control to it."
-                }
-            },
-            {
-                "type": "GrantTriggeredAbility",
-                "ability": {
-                    "id": "Super-Soldier Serum:2",
-                    "trigger": "BlockEvent",
-                    "effect": {
-                        "type": "ForEach",
-                        "space": "IterationSpace.Targets",
-                        "body": {
-                            "type": "AttachTargetEquipmentToCreature",
-                            "creatureTarget": "Self"
-                        }
-                    },
-                    "targetRequirement": {
-                        "type": "TargetObject",
-                        "unlimited": true,
-                        "filter": {
-                            "baseFilter": "artifact Equipment ctrl:you"
-                        }
-                    },
-                    "descriptionOverride": "Whenever this creature blocks, attach any number of target Equipment you control to it."
                 }
             }
         ],
@@ -17753,7 +17769,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Plan card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -18319,9 +18337,12 @@
                         "baseFilter": "creature"
                     },
                     "id": "t0",
-                    "totalManaValueAtMost": {
-                        "type": "Fixed",
-                        "amount": 6
+                    "totalAtMost": {
+                        "property": "MANA_VALUE",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 6
+                        }
                     }
                 }
             },
@@ -18979,7 +19000,11 @@
                             "type": "MoveToZone",
                             "target": "TriggeringEntity",
                             "destination": "Battlefield",
-                            "addCounterType": "FINALITY"
+                            "entryCounters": [
+                                {
+                                    "counterType": "FINALITY"
+                                }
+                            ]
                         },
                         {
                             "type": "AddCreatureType",
@@ -20252,7 +20277,8 @@
                             ]
                         }
                     },
-                    "storeAs": "gathered0"
+                    "storeAs": "gathered0",
+                    "search": true
                 },
                 {
                     "type": "SelectFromCollection",
@@ -21351,7 +21377,9 @@
                                                 "baseFilter": "artifact Equipment ctrl:you"
                                             }
                                         },
-                                        "storeAs": "target0"
+                                        "storeAs": "target0",
+                                        "nonTargeting": true,
+                                        "prompt": "Choose an Equipment you control to attach to Winter Soldier"
                                     },
                                     {
                                         "type": "AttachTargetEquipmentToCreature",
@@ -21532,7 +21560,7 @@
             {
                 "chapter": 1,
                 "effect": {
-                    "type": "GrantNextSpellFreeCast",
+                    "type": "GrantFreeCastThisTurn",
                     "spellFilter": {
                         "cardPredicates": [
                             {

@@ -115,7 +115,18 @@
                     "entityId": "card-1002",
                     "controllerId": "player-2",
                     "typeLine": "Artifact",
-                    "cardDefinitionId": "Sol Ring"
+                    "cardDefinitionId": "Sol Ring",
+                    "copiableCard": {
+                        "cardDefinitionId": "Sol Ring",
+                        "name": "Sol Ring",
+                        "manaCost": "{1}",
+                        "typeLine": "Artifact",
+                        "oracleText": "{T}: Add {C}{C}.",
+                        "ownerId": "player-2",
+                        "imageUri": "https://cards.scryfall.io/normal/front/c/4/c4300d24-1cae-4dd5-be7e-38cc677cf5bd.jpg?1559591399"
+                    },
+                    "manaValue": 1,
+                    "colors": []
                 }
             },
             "com.wingedsheep.engine.state.components.battlefield.GraveyardEntryTurnComponent": {
@@ -185,14 +196,16 @@
             "logicalZone": {
                 "ownerId": "player-1",
                 "zoneType": "Graveyard"
-            }
+            },
+            "previousGeneration": 3
         },
         "card-1002": {
             "generation": 4,
             "logicalZone": {
                 "ownerId": "player-2",
                 "zoneType": "Graveyard"
-            }
+            },
+            "previousGeneration": 2
         }
     },
     "timestamp": 1,

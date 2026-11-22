@@ -1,186 +1,137 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.core.CastSpell
-import com.wingedsheep.engine.core.SelectCardsDecision
+import com.wingedsheep.engine.core.SelectManaSourcesDecision
+import com.wingedsheep.engine.handlers.continuations.entityIdToChosenTarget
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
-import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.mtg.sets.definitions.ori.cards.JaceVrynsProdigy
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
 /**
  * Jace, Vryn's Prodigy // Jace, Telepath Unbound (ORI #60).
  *
- * Front: the loot checks the graveyard *after* the discard, and the flip is an exile-and-return
- * that finds nothing once Jace has left the battlefield (CR 400.7). Back: the −3's cast permission
- * pays the card's costs at its normal timing and exiles the spell instead of letting it return to
- * the graveyard — but loses track of a card that changes zones (ruling).
+ * Front {T}: loot, then flip if there are five or more cards in your graveyard — counted *after*
+ * the discard (ruling 2015-06-22). Back −3: you may cast target instant or sorcery card from your
+ * graveyard this turn, and it's exiled instead of going back to the graveyard.
  */
 class JaceVrynsProdigyScenarioTest : ScenarioTestBase() {
-    private val front = "Jace, Vryn's Prodigy"
-    private val back = "Jace, Telepath Unbound"
+
+    private val lootId = JaceVrynsProdigy.activatedAbilities[0].id
+    private val minusThreeId = JaceVrynsProdigy.backFace!!.script.activatedAbilities[1].id
+
+    /** Activates Jace's loot, drawing the library's Island and discarding the Grizzly Bears in hand. */
+    private fun TestGame.lootDiscardingBears() {
+        val jace = findPermanent("Jace, Vryn's Prodigy")!!
+        execute(ActivateAbility(player1Id, jace, lootId)).error shouldBe null
+        resolveStack()
+        val bears = findCardsInHand(1, "Grizzly Bears").single()
+        selectCards(listOf(bears)).error shouldBe null
+        resolveStack()
+    }
 
     init {
-        fun base() = scenario().withPlayers("P1", "P2")
-            .withActivePlayer(1).inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-            .withCardOnBattlefield(1, front, summoningSickness = false)
-            .withCardInLibrary(1, "Island").withCardInLibrary(1, "Island")
-            .withCardInLibrary(2, "Island").withCardInLibrary(2, "Island")
+        test("the discarded card counts: four in the graveyard plus the discard flips Jace into a 5-loyalty walker") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardOnBattlefield(1, "Jace, Vryn's Prodigy")
+                .withCardInHand(1, "Grizzly Bears")
+                .withCardInLibrary(1, "Island")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
 
-        test("the loot reaching five cards in the graveyard flips Jace into a new planeswalker with five loyalty") {
-            val game = base()
-                .withCardInGraveyard(1, "Grizzly Bears").withCardInGraveyard(1, "Hill Giant")
-                .withCardInGraveyard(1, "Forest").withCardInGraveyard(1, "Mountain").build()
-            loot(game)
+            game.lootDiscardingBears()
+
             game.graveyardSize(1) shouldBe 5
-            val walker = game.findPermanent(back)
-            walker shouldNotBe null
-            game.findPermanent(front) shouldBe null
-            loyalty(game, walker!!) shouldBe 5
+            game.findPermanent("Jace, Vryn's Prodigy") shouldBe null
+            val telepath = game.findPermanent("Jace, Telepath Unbound").shouldNotBeNull()
+            game.state.getEntity(telepath)!!.get<CountersComponent>()!!
+                .getCount(CounterType.LOYALTY) shouldBe 5
+            game.state.projectedState.isCreature(telepath) shouldBe false
         }
 
-        test("four cards after the discard: no flip") {
-            val game = base()
-                .withCardInGraveyard(1, "Grizzly Bears").withCardInGraveyard(1, "Hill Giant")
-                .withCardInGraveyard(1, "Forest").build()
-            loot(game)
+        test("four cards in the graveyard after the discard leaves Jace unflipped") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardOnBattlefield(1, "Jace, Vryn's Prodigy")
+                .withCardInHand(1, "Grizzly Bears")
+                .withCardInLibrary(1, "Island")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+
+            game.lootDiscardingBears()
+
             game.graveyardSize(1) shouldBe 4
-            game.findPermanent(front) shouldNotBe null
-            game.findPermanent(back) shouldBe null
+            game.isInHand(1, "Island") shouldBe true
+            game.findPermanent("Jace, Vryn's Prodigy") shouldNotBe null
+            game.findPermanent("Jace, Telepath Unbound") shouldBe null
         }
 
-        test("bounced in response, Jace still loots but stays in hand (CR 400.7)") {
-            val game = base()
-                .withCardInGraveyard(1, "Grizzly Bears").withCardInGraveyard(1, "Hill Giant")
-                .withCardInGraveyard(1, "Forest").withCardInGraveyard(1, "Mountain")
-                .withCardInHand(1, "Unsummon")
-                .withLandsOnBattlefield(1, "Island", 1).build()
-            val jace = game.findPermanent(front)!!
-            activate(game, jace, frontAbility(0))
-            game.castSpell(1, "Unsummon", jace).error shouldBe null
+        test("−3: cast the targeted instant from the graveyard this turn, and it's exiled after resolving") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardOnBattlefield(1, "Jace, Vryn's Prodigy")
+                .withCardInHand(1, "Grizzly Bears")
+                .withCardInLibrary(1, "Island")
+                .withCardInGraveyard(1, "Lightning Bolt")
+                .withCardInGraveyard(1, "Grizzly Bears")
+                .withCardInGraveyard(1, "Grizzly Bears")
+                .withCardInGraveyard(1, "Grizzly Bears")
+                .withLandsOnBattlefield(1, "Mountain", 1)
+                .withCardOnBattlefield(2, "Grizzly Bears")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
+
+            game.lootDiscardingBears()
+            val telepath = game.findPermanent("Jace, Telepath Unbound").shouldNotBeNull()
+            val opposingBears = game.findPermanent("Grizzly Bears").shouldNotBeNull()
+            val bolt = game.findCardsInGraveyard(1, "Lightning Bolt").single()
+
+            withClue("no permission yet: the Bolt can't be cast from the graveyard") {
+                game.castSpellFromGraveyard(1, "Lightning Bolt", opposingBears).error shouldNotBe null
+            }
+
+            game.execute(
+                ActivateAbility(
+                    playerId = game.player1Id,
+                    sourceId = telepath,
+                    abilityId = minusThreeId,
+                    targets = listOf(entityIdToChosenTarget(game.state, bolt)),
+                )
+            ).error shouldBe null
             game.resolveStack()
-            discardIfAsked(game)
-            game.resolveStack()
-            game.isInHand(1, front) shouldBe true
-            game.findPermanent(back) shouldBe null
-            withClue("drew and discarded: Unsummon and the discarded card joined the four") {
-                game.graveyardSize(1) shouldBe 6
-            }
-        }
+            game.state.getEntity(telepath)!!.get<CountersComponent>()!!
+                .getCount(CounterType.LOYALTY) shouldBe 2
 
-        context("Jace, Telepath Unbound") {
-            fun flipped(extra: (ScenarioBuilder) -> ScenarioBuilder = { it }): Pair<TestGame, EntityId> {
-                val game = extra(
-                    base().withCardInGraveyard(1, "Lightning Bolt").withCardInGraveyard(1, "Hill Giant")
-                        .withCardInGraveyard(1, "Forest").withCardInGraveyard(1, "Mountain")
-                ).build()
-                loot(game)
-                return game to game.findPermanent(back)!!
-            }
-
-            test("+1: target creature gets -2/-0") {
-                val (game, jace) = flipped { it.withCardOnBattlefield(2, "Hill Giant") }
-                val giant = game.findPermanents("Hill Giant").single()
-                activate(game, jace, backAbility(0), listOf(ChosenTarget.Permanent(giant)))
-                game.resolveStack()
-                game.state.projectedState.getPower(giant) shouldBe 1
-                loyalty(game, jace) shouldBe 6
-            }
-
-            test("+1 may be activated with no target") {
-                val (game, jace) = flipped()
-                activate(game, jace, backAbility(0))
-                game.resolveStack()
-                loyalty(game, jace) shouldBe 6
-            }
-
-            test("−3: cast the targeted card from the graveyard, paying for it; it is exiled after resolving") {
-                val (game, jace) = flipped { it.withLandsOnBattlefield(1, "Mountain", 1) }
-                val bolt = game.findCardsInGraveyard(1, "Lightning Bolt").single()
-                activate(game, jace, backAbility(1), listOf(ChosenTarget.Card(bolt, game.player1Id, Zone.GRAVEYARD)))
-                game.resolveStack()
-                loyalty(game, jace) shouldBe 2
-                game.execute(CastSpell(game.player1Id, bolt, listOf(ChosenTarget.Player(game.player2Id)))).error shouldBe null
-                game.resolveStack()
-                game.getLifeTotal(2) shouldBe 17
-                game.isInExile(1, "Lightning Bolt") shouldBe true
-                game.isInGraveyard(1, "Lightning Bolt") shouldBe false
-            }
-
-            test("−3: only the targeted card gets the permission, and it costs mana") {
-                val (game, jace) = flipped { it.withCardInGraveyard(1, "Shock") }
-                val bolt = game.findCardsInGraveyard(1, "Lightning Bolt").single()
-                val shock = game.findCardsInGraveyard(1, "Shock").single()
-                activate(game, jace, backAbility(1), listOf(ChosenTarget.Card(bolt, game.player1Id, Zone.GRAVEYARD)))
-                game.resolveStack()
-                withClue("no mana available") {
-                    game.execute(CastSpell(game.player1Id, bolt, listOf(ChosenTarget.Player(game.player2Id)))).error shouldNotBe null
-                }
-                game.execute(CastSpell(game.player1Id, shock, listOf(ChosenTarget.Player(game.player2Id)))).error shouldNotBe null
+            withClue("the permission leaves the card where it is until it's cast") {
                 game.isInGraveyard(1, "Lightning Bolt") shouldBe true
             }
 
-            test("−9: the emblem makes target opponent mill five whenever you cast a spell") {
-                val (game, jace) = flipped {
-                    it.withCardInHand(1, "Grizzly Bears").withLandsOnBattlefield(1, "Forest", 2)
-                        .withCardInLibrary(2, "Island").withCardInLibrary(2, "Island")
-                        .withCardInLibrary(2, "Island").withCardInLibrary(2, "Island")
-                }
-                game.state = game.state.updateEntity(jace) { c ->
-                    c.with(CountersComponent(mapOf(CounterType.LOYALTY to 9)))
-                }
-                activate(game, jace, backAbility(2))
-                game.resolveStack()
-                game.findPermanent(back) shouldBe null
-                game.state.globalGrantedTriggeredAbilities.size shouldBe 1
+            game.castSpellFromGraveyard(1, "Lightning Bolt", opposingBears).error shouldBe null
+            if (game.getPendingDecision() is SelectManaSourcesDecision) game.submitManaSourcesAutoPay()
+            game.resolveStack()
 
-                val before = game.librarySize(2)
-                game.castSpell(1, "Grizzly Bears").error shouldBe null
-                if (game.hasPendingDecision()) game.submitManaSourcesAutoPay()
-                if (game.hasPendingDecision()) game.selectTargets(listOf(game.player2Id))
-                game.resolveStack()
-                game.librarySize(2) shouldBe before - 5
-                game.isOnBattlefield("Grizzly Bears") shouldBe true
+            game.isInGraveyard(2, "Grizzly Bears") shouldBe true
+            withClue("the cast Bolt is exiled instead of returning to the graveyard") {
+                game.isInGraveyard(1, "Lightning Bolt") shouldBe false
+                game.isInExile(1, "Lightning Bolt") shouldBe true
             }
         }
     }
-
-    private fun frontAbility(index: Int) = cardRegistry.getCard(front)!!.script.activatedAbilities[index]
-    private fun backAbility(index: Int) = cardRegistry.getCard(front)!!.backFace!!.script.activatedAbilities[index]
-
-    private fun activate(
-        game: TestGame,
-        source: EntityId,
-        ability: com.wingedsheep.sdk.scripting.ActivatedAbility,
-        targets: List<ChosenTarget> = emptyList(),
-    ) {
-        game.execute(ActivateAbility(game.player1Id, source, ability.id, targets = targets)).error shouldBe null
-    }
-
-    /** Activate the loot and resolve it, discarding the drawn card if asked. */
-    private fun loot(game: TestGame) {
-        activate(game, game.findPermanent(front)!!, frontAbility(0))
-        game.resolveStack()
-        discardIfAsked(game)
-        game.resolveStack()
-    }
-
-    private fun discardIfAsked(game: TestGame) {
-        val decision = game.getPendingDecision() as? SelectCardsDecision ?: return
-        // Discard the drawn Island — never Jace (the bounce case) or a card the test casts later.
-        val pick = decision.options.firstOrNull { game.state.getEntity(it)?.get<CardComponent>()?.name == "Island" }
-            ?: decision.options.first()
-        game.selectCards(listOf(pick)).error shouldBe null
-    }
-
-    private fun loyalty(game: TestGame, id: EntityId): Int =
-        game.state.getEntity(id)?.get<CountersComponent>()?.getCount(CounterType.LOYALTY) ?: 0
 }

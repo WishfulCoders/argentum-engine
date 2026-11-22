@@ -259,7 +259,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Mercenary permanent card with mana value 2 or less to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",
@@ -716,6 +718,11 @@
             "target": {
                 "type": "BoundVariable",
                 "name": "t0"
+            },
+            "permanents": {
+                "cardPredicates": [
+                    "IsLand"
+                ]
             }
         },
         "targetRequirements": [

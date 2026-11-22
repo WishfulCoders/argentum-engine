@@ -22,15 +22,19 @@ import kotlinx.serialization.json.JsonPrimitive
  * An engine id stays with its card all game, so a seat that once saw a card's id could follow it
  * wherever that id turns up again: a card revealed in hand and later cast face down, or one seen
  * before a shuffle that comes back as a manifest. So each time the seat loses track of a card, the
- * card gets a new name for that seat. It loses track when the card sits in a hidden zone the seat
- * can't see into, or leaves one (hand, library, sideboard) the seat couldn't see as a whole, without
- * the seat being able to identify it where it went. Everything sent to the seat uses its current
- * names, everything it sends back is read through them, and an old name is refused rather than
- * resolved, so it can't be used to probe which card is which.
+ * card gets a new name for that seat. It loses track when a card it saw sits in a hidden zone it
+ * can't see into, and whenever any card leaves a zone (hand, library, sideboard) the seat couldn't
+ * see as a whole: seen there or not, identifiable where it went or not. Renaming only the cards the
+ * seat saw would itself tell: a known card cast from a hand would keep its id while another copy
+ * arrived under one never sent before, and a face-down spell under a seat name would be the one the
+ * seat had seen. Everything sent to the seat uses its current names, everything it sends back is
+ * read through them, and an old name is refused rather than resolved, so it can't be used to probe
+ * which card is which.
  *
- * A card the seat never lost track of keeps its engine id: decks are minted in a shuffled order, so
- * the id says nothing the seat didn't see. The map therefore stays empty, and messages are passed
- * through untouched, until some card the seat saw goes out of its sight.
+ * A card that never left such a zone while the seat watched keeps its engine id: decks are minted
+ * in a shuffled order, so the id says nothing the seat didn't see, and whether a card came out of a
+ * hidden zone is public. Messages are passed through untouched until a card the seat has a name for
+ * is in one.
  */
 internal class SeatIdentities {
     private val nameOf = HashMap<EntityId, EntityId>()
@@ -39,20 +43,24 @@ internal class SeatIdentities {
     private val lastSeen = HashMap<EntityId, Sighting>()
     private var namesIssued = 0
 
-    /** Where the seat last saw a card, and whether it could see that whole zone. */
-    private data class Sighting(val zone: Zone, val zoneOpen: Boolean)
+    /**
+     * Where a card was when the seat last looked, whether it could see that whole zone, and whether
+     * it saw the card itself or only knew it was in there.
+     */
+    private data class Sighting(val zone: Zone, val zoneOpen: Boolean, val seen: Boolean = true)
 
-    /** Give a new name to every card the seat saw and can no longer follow in [state]. */
+    /**
+     * Give a new name to every card the seat can no longer follow in [state], then note every card
+     * in a zone it can't see as a whole, so that card is renamed too once it leaves.
+     */
     fun forgetUntrackable(state: GameState, seat: EntityId, visibility: Visibility) {
-        if (lastSeen.isEmpty()) return
         val keyOf = zoneKeys(state)
         val lost = lastSeen.entries.filter { (id, seen) ->
             val zone = zoneOf(state, keyOf, id) ?: return@filter false
-            if (identified(state, keyOf, id, zone, seat, visibility)) return@filter false
-            val inClosedHiddenZone = zone in HIDDEN_ZONES &&
-                !visibility.isZoneVisibleTo(state, keyOf.getValue(id), seat)
-            val leftClosedHiddenZone = seen.zone in HIDDEN_ZONES && !seen.zoneOpen && zone != seen.zone
-            inClosedHiddenZone || leftClosedHiddenZone
+            if (seen.zone in HIDDEN_ZONES && !seen.zoneOpen && zone != seen.zone) return@filter true
+            seen.seen && zone in HIDDEN_ZONES &&
+                !visibility.isZoneVisibleTo(state, keyOf.getValue(id), seat) &&
+                !identified(state, keyOf, id, zone, seat, visibility)
         }.map { it.key }
         for (id in lost) {
             lastSeen.remove(id)
@@ -60,6 +68,10 @@ internal class SeatIdentities {
             val name = EntityId("h${++namesIssued}")
             nameOf[id] = name
             engineIdOf[name] = id
+        }
+        for ((key, ids) in state.zones) {
+            if (key.zoneType !in HIDDEN_ZONES || visibility.isZoneVisibleTo(state, key, seat)) continue
+            for (id in ids) lastSeen.putIfAbsent(id, Sighting(key.zoneType, zoneOpen = false, seen = false))
         }
     }
 
@@ -112,7 +124,7 @@ internal class SeatIdentities {
     fun toPersistent(): PersistentSeatNames = PersistentSeatNames(
         names = nameOf.entries.associate { (id, name) -> id.value to name.value },
         retired = retired.mapTo(HashSet()) { it.value },
-        lastSeen = lastSeen.entries.associate { (id, seen) -> id.value to PersistentSighting(seen.zone, seen.zoneOpen) },
+        lastSeen = lastSeen.entries.associate { (id, seen) -> id.value to PersistentSighting(seen.zone, seen.zoneOpen, seen.seen) },
         namesIssued = namesIssued,
     )
 
@@ -152,7 +164,7 @@ internal class SeatIdentities {
                 engineIdOf[EntityId(name)] = EntityId(id)
             }
             persistent.retired.mapTo(retired) { EntityId(it) }
-            for ((id, seen) in persistent.lastSeen) lastSeen[EntityId(id)] = Sighting(seen.zone, seen.zoneOpen)
+            for ((id, seen) in persistent.lastSeen) lastSeen[EntityId(id)] = Sighting(seen.zone, seen.zoneOpen, seen.seen)
             namesIssued = persistent.namesIssued
         }
 

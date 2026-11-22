@@ -99,6 +99,8 @@ class SmiteScenarioTest : ScenarioTestBase() {
                 game.castSpell(2, "Shock", bears).error shouldBe null
                 game.resolveStack()
                 game.isInGraveyard(2, "Grizzly Bears") shouldBe true
+                // The attacking player is active and receives priority after Shock resolves (CR 117.3b).
+                game.passPriority()
 
                 val courser = game.findPermanent("Centaur Courser")!!
                 val cast = game.castSpell(2, "Smite", courser)

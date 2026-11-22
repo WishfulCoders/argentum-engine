@@ -78,7 +78,7 @@ class RoxanneStarfallSavantScenarioTest : FunSpec({
 
         // Put Roxanne onto the battlefield directly (skip the enters trigger for this test by
         // resolving it without acting beyond the forced target choice).
-        driver.putCreatureOnBattlefield(me, "Roxanne, Starfall Savant")
+        driver.removeSummoningSickness(driver.putCreatureOnBattlefield(me, "Roxanne, Starfall Savant"))
 
         // Advance to combat and attack with Roxanne.
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)

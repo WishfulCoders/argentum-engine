@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.PendingTriggersContinuation
 import com.wingedsheep.engine.core.engineSerializersModule
 import com.wingedsheep.engine.event.PendingTrigger
 import com.wingedsheep.engine.event.TriggerContext
@@ -99,7 +98,7 @@ class SiegePendingObjectIdentityTest : FunSpec({
                     effect = Effects.GainLife(1)), siege, siegeCard.name,
                     objectReferences = refs, controllerId = d.player1, triggerContext = TriggerContext())
                 val stackId = EntityId.generate()
-                if (storage == "paused") state = state.pushContinuation(PendingTriggersContinuation(listOf(trigger)))
+                if (storage == "paused") state = state.copy(triggersBeingPlaced = listOf(trigger))
                 if (storage == "stack") state = state.withEntity(stackId, ComponentContainer.EMPTY.with(
                     TriggeredAbilityOnStackComponent(sourceId = siege, sourceName = siegeCard.name,
                         controllerId = d.player1, effect = Effects.GainLife(1), description = "unrelated trigger",
@@ -113,7 +112,7 @@ class SiegePendingObjectIdentityTest : FunSpec({
                 // Once the trigger has left the stack (or a pending trigger is declined), its
                 // source gets no lingering reprieve on the next state-based check.
                 if (!stale) {
-                    val cleared = result.state.copy(stack = emptyList(), continuationStack = emptyList())
+                    val cleared = result.state.copy(stack = emptyList(), continuationStack = emptyList(), triggersBeingPlaced = emptyList())
                     val after = check.check(cleared).state
                     (siege in after.getZone(ZoneKey(d.player1, Zone.GRAVEYARD))) shouldBe true
                 }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.predicates
 
+import com.wingedsheep.engine.mechanics.targeting.TypeQualityProtection
 import com.wingedsheep.engine.mechanics.targeting.ColorProtection
 import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
 import com.wingedsheep.engine.handlers.PredicateContext
@@ -11,9 +12,6 @@ import com.wingedsheep.engine.state.components.battlefield.GainedEnchantRestrict
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.scripting.GrantProtection
-import com.wingedsheep.sdk.scripting.GrantProtectionFromChosenColorToGroup
-import com.wingedsheep.sdk.scripting.GrantProtectionFromControlledColors
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -25,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetRequirement
  *
  * Only the requirement's *filter* is evaluated — never targeting legality — because both callers
  * ask about an Aura that isn't being cast: the enchant state-based action (CR 704.5m, an attached
- * Aura isn't re-targeted, so hexproof/shroud don't dislodge it) and `CardPredicate.CouldEnchant`
+ * Aura isn't re-targeted, so hexproof/shroud don't dislodge it) and `CardPredicate.CouldAttachTo`
  * ("an Aura card that could enchant it" — an Aura put onto the battlefield doesn't target,
  * CR 303.4f).
  */
@@ -47,7 +45,7 @@ object EnchantRestriction {
      * enchant restriction **and** doesn't have protection from one of the Aura's colors (CR 702.16c —
      * a permanent with protection can't be enchanted by Auras with that quality). The one question
      * behind "an Aura card that could enchant it" and an effect that names an Aura's host
-     * (`MoveCollectionEffect.attachTo`): an Aura that fails it stays where it is (CR 303.4g) rather
+     * (`MoveCollectionEffect.attachTo`): an Aura that fails it stays where it is (CR 303.4i) rather
      * than attaching and then being put into the graveyard. Fails closed (false) when the restriction
      * can't be judged.
      */
@@ -74,15 +72,16 @@ object EnchantRestriction {
                 return false
             }
         }
-        return !hostProtectedFromAttachment(state, projected, cardRegistry, auraId, auraCard, hostId)
+        return !hostProtectedFromAttachment(state, projected, auraId, auraCard, hostId)
     }
 
     /**
      * The verdict of an enchant ability the Aura *gained* in place of its printed one
      * ([GainedEnchantRestrictionComponent] — Animate Dead's "enchant creature put onto the
      * battlefield with this Aura"), or null when the Aura has none and its printed `auraTarget`
-     * still rules. The host must be the very object recorded (CR 400.7: one that left and returned
-     * is a new object), still on the battlefield, and still match the gained filter.
+     * still rules. The host must be on the battlefield and match the gained filter — and, when the
+     * ability names particular objects, be the very object recorded (CR 400.7: one that left and
+     * returned is a new object).
      */
     fun gainedRestrictionAdmits(
         state: GameState,
@@ -94,7 +93,7 @@ object EnchantRestriction {
     ): Boolean? {
         val gained = state.getEntity(auraId)?.get<GainedEnchantRestrictionComponent>() ?: return null
         if (hostId !in state.getBattlefield()) return false
-        if (gained.hosts.none { it.entityId == hostId && state.isCurrentObject(it) }) return false
+        if (gained.hosts != null && gained.hosts.none { it.entityId == hostId && state.isCurrentObject(it) }) return false
         return predicateEvaluator.matches(
             state, projected, hostId, gained.filter, PredicateContext(controllerId = controllerId, sourceId = auraId)
         )
@@ -136,49 +135,58 @@ object EnchantRestriction {
     /**
      * True when [hostId] has protection from one of the attachment's colors, CR 702.16c/d. The
      * attachment's colors are its projected ones while it is on the battlefield, else its card's
-     * (an Aura about to enter from a library or exile). An attachment whose own printed
-     * [GrantProtection] grants that color's protection is exempt — the Ward cycle's "This effect
-     * doesn't remove this Aura" — and one with a dynamic protection grant is exempt entirely
-     * (Pledge of Loyalty). (Approximation: the exemption is per-color rather than per-effect.)
+     * (an Aura about to enter from a library or exile).
+     *
+     * [alreadyAttached] asks the state-based-action question (CR 704.5m/n) about an attachment that
+     * is already on [hostId]: there, a color protection whose every granting effect spares it
+     * ([com.wingedsheep.sdk.scripting.ProtectionSpares] — the Ward cycle's "This effect doesn't
+     * remove this Aura", Spectra Ward's "doesn't remove Auras") doesn't remove it. The sparing is
+     * per effect: the same protection from any other source still does. Attaching anew (targeting,
+     * entering, moving) never consults the sparing — the protected permanent still can't *become*
+     * enchanted by an Aura with the quality.
      */
     fun hostProtectedFromAttachment(
         state: GameState,
         projected: ProjectedState,
-        cardRegistry: CardRegistry,
         attachmentId: EntityId,
         attachmentCard: CardComponent,
-        hostId: EntityId
+        hostId: EntityId,
+        alreadyAttached: Boolean = false
     ): Boolean {
         val battlefield = attachmentId in state.getBattlefield()
         val types = if (battlefield) projected.getTypes(attachmentId) else attachmentCard.typeLine.cardTypes.map { it.name }.toSet()
         if (types.any { projected.hasKeyword(hostId, "PROTECTION_FROM_CARDTYPE_$it") }) return true
         val subtypes = if (battlefield) projected.getSubtypes(attachmentId) else attachmentCard.typeLine.subtypes.map { it.value }.toSet()
-        if (subtypes.any { projected.hasKeyword(hostId, "PROTECTION_FROM_SUBTYPE_${it.uppercase()}") }) return true
         val supertypes = if (battlefield) projected.getSupertypes(attachmentId) else attachmentCard.typeLine.supertypes.map { it.name }.toSet()
-        if (supertypes.any { projected.hasKeyword(hostId, "PROTECTION_FROM_SUPERTYPE_${it.uppercase()}") }) return true
+        if (TypeQualityProtection.matchedQuality(projected, hostId, subtypes, supertypes, types) != null) return true
         // An Aura or Equipment that was cast this turn (CR 702.16c/d) — Emrakul, the World Anew.
         if (SourceKindProtection.isProtectedFromObject(state, hostId, attachmentId)) return true
+        // An attached creature an opponent controls, against "from creatures your opponents control".
+        val attachmentControllerNow = projected.getController(attachmentId)
+            ?: state.getEntity(attachmentId)?.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
+        if (com.wingedsheep.engine.mechanics.targeting.OpponentCardTypeProtection.matchedType(
+                state, projected, hostId, types, attachmentControllerNow
+            ) != null
+        ) return true
         if (projected.hasKeyword(hostId, "PROTECTION_FROM_EACH_OPPONENT")) {
             val hostController = projected.getController(hostId)
             val attachmentController = projected.getController(attachmentId)
                 ?: state.getEntity(attachmentId)?.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
             if (hostController != null && attachmentController in state.getOpponents(hostController)) return true
         }
-        val colors: Set<String> = if (attachmentId in state.getBattlefield()) projected.getColors(attachmentId)
-        else attachmentCard.colors.map { it.name }.toSet()
+        val colors: Set<String> = projected.colorsOf(attachmentId)
         // A colorless attachment meets protection from colorless (CR 105.2c, 702.16c/d).
         if (colors.isEmpty()) return projected.hasKeyword(hostId, ColorProtection.PROTECTION_FROM_COLORLESS)
         // A multicolored attachment meets protection from multicolored (CR 105.2b).
         if (colors.size >= 2 && projected.hasKeyword(hostId, ColorProtection.PROTECTION_FROM_MULTICOLORED)) return true
-        val statics = cardRegistry.getCard(attachmentCard)?.staticAbilities.orEmpty()
-        if (statics.any { it is GrantProtectionFromControlledColors || it is GrantProtectionFromChosenColorToGroup }) {
-            return false
-        }
-        val selfGrantedColors: Set<Color> = statics.filterIsInstance<GrantProtection>().map { it.color }.toSet()
+        val isAura = "Aura" in subtypes
         return Color.entries.any { color ->
-            color.name in colors &&
-                color !in selfGrantedColors &&
-                projected.hasKeyword(hostId, "PROTECTION_FROM_${color.name}")
+            val keyword = "PROTECTION_FROM_${color.name}"
+            color.name in colors && if (alreadyAttached && battlefield) {
+                projected.protectionRemovesAttachment(hostId, keyword, attachmentId, isAura)
+            } else {
+                projected.hasKeyword(hostId, keyword)
+            }
         }
     }
 

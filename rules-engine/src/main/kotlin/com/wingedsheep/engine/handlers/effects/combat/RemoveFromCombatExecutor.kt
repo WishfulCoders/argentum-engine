@@ -24,7 +24,9 @@ class RemoveFromCombatExecutor : EffectExecutor<RemoveFromCombatEffect> {
         effect: RemoveFromCombatEffect,
         context: EffectContext
     ): EffectResult {
-        val targetId = context.resolveTarget(effect.target)
+        // The state-aware overload: relational references (EffectTarget.EnchantedCreature — Imprison)
+        // resolve to null without it.
+        val targetId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.success(state)
         val updated = CombatRemovalHelper.removeFromCombat(
             state,

@@ -30,14 +30,22 @@ import com.wingedsheep.sdk.model.EntityId
 object BattlefieldEntry {
 
     /**
-     * Add [entityId] to [controllerId]'s battlefield and record the ETB-by-type.
+     * Add [entityId] to [controllerId]'s battlefield and record the ETB-by-type. [putBy] names the
+     * player putting it there when that isn't read off the resolving object (a permanent spell's
+     * caster — see [PermanentEntryTracker.record]).
      *
      * A card that was also a creature only because it wasn't on the battlefield (Grist, the Hunger
      * Tide — CR 113.6c) gets its printed characteristics back first, so an ad-hoc return (from
      * linked exile, say) doesn't put it onto the battlefield as a creature and the ETB-by-type
      * record sees what actually entered.
      */
-    fun place(state: GameState, controllerId: EntityId, entityId: EntityId): GameState {
+    fun place(
+        state: GameState,
+        controllerId: EntityId,
+        entityId: EntityId,
+        putBy: EntityId? = null,
+        spellCopy: Boolean = false
+    ): GameState {
         val battlefieldZone = ZoneKey(controllerId, Zone.BATTLEFIELD)
         val printed = if (state.getEntity(entityId)
                 ?.has<com.wingedsheep.engine.state.components.identity.OffBattlefieldCharacteristicsComponent>() == true
@@ -49,6 +57,6 @@ object BattlefieldEntry {
             state
         }
         val withZone = printed.addToZone(battlefieldZone, entityId)
-        return PermanentEntryTracker.record(withZone, controllerId, entityId)
+        return PermanentEntryTracker.record(withZone, controllerId, entityId, putBy = putBy, spellCopy = spellCopy)
     }
 }

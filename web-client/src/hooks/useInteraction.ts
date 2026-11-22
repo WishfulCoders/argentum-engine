@@ -3,6 +3,7 @@ import { useGameStore } from '@/store/gameStore'
 import type { EntityId, GameAction, LegalActionInfo } from '@/types'
 import { resolveAction, needsInteraction } from './interaction/actionResolvers'
 import { useOpenCardMenuOnTap } from './useOpenCardMenuOnTap'
+import { isActionOnCard } from './useLegalActions'
 import type { ActionContext } from './interaction/actionResolvers'
 
 /**
@@ -54,31 +55,7 @@ export function useInteraction() {
    */
   const getCardActions = useCallback(
     (cardId: EntityId): LegalActionInfo[] => {
-      return useGameStore.getState().legalActions.filter((action) => {
-        const a = action.action
-        switch (a.type) {
-          case 'PlayLand':
-            return a.cardId === cardId
-          case 'CastSpell':
-            return a.cardId === cardId
-          case 'CycleCard':
-            return a.cardId === cardId
-          case 'TypecycleCard':
-            return a.cardId === cardId
-          case 'ActivateAbility':
-            return a.sourceId === cardId
-          case 'TurnFaceUp':
-            return a.sourceId === cardId
-          case 'CrewVehicle':
-            return a.vehicleId === cardId
-          case 'SaddleMount':
-            return a.mountId === cardId
-          case 'UnlockRoomDoor':
-            return a.roomId === cardId
-          default:
-            return false
-        }
-      })
+      return useGameStore.getState().legalActions.filter((action) => isActionOnCard(action, cardId))
     },
     []
   )
@@ -205,7 +182,7 @@ export function useInteraction() {
           }
         }
 
-        if (canAutoExecute(actionInfo)) {
+        if (canAutoExecute(actionInfo) && actionInfo.inertReason == null) {
           // Auto-execute simple action
           submitAction(actionInfo.action, actionInfo.interactionEpoch)
           selectCard(null)

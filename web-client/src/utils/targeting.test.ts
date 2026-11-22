@@ -116,6 +116,16 @@ describe('routeTargetsByZone', () => {
     expect(describePileZones([courser, exiled])).toBe('Graveyard / Exile')
     expect(routeTargetsByZone([bears.id, exiled.id], cards).pileZoneLabel).toBe('Exile')
   })
+
+  it('routes ante cards (Darkpact) through the pile picker, labelled Ante', () => {
+    const anted = card('anted', ZoneType.ANTE)
+    const route = routeTargetsByZone([anted.id], { ...cards, [anted.id]: anted })
+    expect(route.mode).toBe('pile')
+    expect(route.pileZoneLabel).toBe('Ante')
+    // A card whose zone hasn't reached the client yet falls back to the server's zone hint.
+    const unseen = card('unseen', null)
+    expect(routeTargetsByZone([unseen.id], { [unseen.id]: unseen }, 'Ante').mode).toBe('pile')
+  })
 })
 
 describe('partitionTargetsByZone', () => {
@@ -213,7 +223,7 @@ describe('derivePileAction', () => {
   it('labels a shuffle-into-library effect', () => {
     expect(derivePileAction('Shuffle target card from a graveyard into its owner\'s library')).toEqual({
       confirmText: 'Shuffle into Library',
-      verb: 'shuffle into your library',
+      verb: "shuffle into their owner's library",
     })
   })
 

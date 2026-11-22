@@ -67,7 +67,7 @@ class SagaLandAndManaCostScenarioTest : FunSpec({
         oracleText = "Search your library for an artifact card with mana cost {0} or {1}, reveal it, put it into your hand, then shuffle."
         spell {
             effect = Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.Artifact.withManaCost("{0}", "{1}"),
+                filter = GameObjectFilter.Artifact.manaCostIs("{0}", "{1}"),
                 count = 1,
                 reveal = true,
             )

@@ -34,17 +34,15 @@ function store(overrides: Record<string, unknown> = {}): GameStore {
     harmonizeSelectionState: null,
     combatState: null,
     draggingAttackerId: null,
-    draggingAttackerHasBanding: null,
     draggingBlockerId: null,
     ...overrides,
   } as unknown as GameStore
 }
 
-const input = (cardId: string, extra: Partial<{ isCreature: boolean; isOpponentCard: boolean; hasBanding: boolean }> = {}) => ({
+const input = (cardId: string, extra: Partial<{ isCreature: boolean; isOpponentCard: boolean }> = {}) => ({
   cardId: id(cardId),
   isCreature: true,
   isOpponentCard: false,
-  hasBanding: false,
   ...extra,
 })
 
@@ -54,6 +52,7 @@ function combat(overrides: Record<string, unknown>) {
     selectedAttackers: [],
     attackerTargets: {},
     validAttackTargets: [],
+    attackTargetsByAttacker: {},
     blockerAssignments: {},
     validCreatures: [],
     attackingCreatures: [],
@@ -88,6 +87,31 @@ describe('selectCardInteraction', () => {
     const hotseat = store({ combatState: c, gameState: { hotseat: true, combat: null } })
     expect(selectCardInteraction(hotseat, input('bear', { isOpponentCard: true })).isValidAttacker).toBe(true)
     expect(selectCardInteraction(hotseat, input('bear', { isCreature: false })).isValidAttacker).toBe(false)
+  })
+
+  it('lets you pick every server-listed blocker regardless of its board row', () => {
+    // Brutal Hordechief / Master Warcraft: the legal action is the opponent's DeclareBlockers.
+    const routed = combat({ mode: 'declareBlockers', actingSeat: id('p2'), validCreatures: [id('giant')] })
+    const mine = combat({ mode: 'declareBlockers', actingSeat: id('p1'), validCreatures: [id('giant')] })
+    const theirGiant = input('giant', { isOpponentCard: true })
+    expect(selectCardInteraction(store({ playerId: id('p1'), combatState: routed }), theirGiant).isValidBlocker).toBe(true)
+    // A shared-turn teammate's creature is selectable in our joint declaration, too.
+    expect(selectCardInteraction(store({ playerId: id('p1'), combatState: mine }), theirGiant).isValidBlocker).toBe(true)
+    expect(selectCardInteraction(store({ playerId: id('p1'), combatState: mine }), input('other', { isOpponentCard: true })).isValidBlocker).toBe(false)
+  })
+
+  it('shows a submitted teammate block without making it editable by the next chooser', () => {
+    const state = store({ combatState: combat({
+      mode: 'declareBlockers',
+      validCreatures: [id('mine')],
+      attackingCreatures: [id('attacker')],
+      proposedBlockerAssignments: { ally: [id('attacker')] },
+    }) })
+    expect(selectCardInteraction(state, input('ally', { isOpponentCard: true }))).toMatchObject({
+      isSelectedAsBlocker: true,
+      isValidBlocker: false,
+    })
+    expect(selectCardInteraction(state, input('attacker'))).toMatchObject({ isAttackingInBlockerMode: true })
   })
 
   it('reads hotseat and server combat from the spectated game when spectating', () => {
@@ -147,4 +171,14 @@ describe('selectCardInteraction', () => {
     expect(selectCardInteraction(s, input('k20'))).toMatchObject({ isValidConvokeCreature: true, isSelectedConvokeCreature: true, isValidTapForPowerCreature: true, isSelectedTapForPowerCreature: false })
     expect(selectCardInteraction(s, input('nope'))).toMatchObject({ isValidConvokeCreature: false, isValidTapForPowerCreature: false })
   })
+})
+
+it('equality-group decisions highlight the narrowed selection pool', () => {
+  const state = store({
+    pendingDecision: { type: 'ChooseTargetsDecision', targetRequirements: [{ index: 0 }], legalTargets: { 0: [id('a'), id('b')] }, context: {} },
+    decisionSelectionState: { validOptions: [id('a')], selectedOptions: [id('a')] },
+  })
+  const result = selectCardInteraction(state, input('b'))
+  expect(result.isValidDecisionTarget).toBe(false)
+  expect(result.isValidDecisionSelection).toBe(false)
 })

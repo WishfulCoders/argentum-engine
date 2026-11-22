@@ -428,19 +428,21 @@ class TemptingWurmTest : FunSpec({
         selectDecision.shouldBeInstanceOf<SelectCardsDecision>()
         driver.submitCardSelection(opponent, listOf(goblin, pacifism))
 
-        // Goblin should already be on the battlefield (non-aura goes directly)
-        val opponentBattlefield = driver.state.getZone(ZoneKey(opponent, Zone.BATTLEFIELD))
-        opponentBattlefield.contains(goblin) shouldBe true
+        // Choose the Aura's host before the selected permanents enter together.
+        driver.state.getZone(ZoneKey(opponent, Zone.HAND)).contains(goblin) shouldBe true
+        driver.state.getZone(ZoneKey(opponent, Zone.HAND)).contains(pacifism) shouldBe true
 
-        // Now we should be asked to choose a target for Pacifism
         val targetDecision = driver.pendingDecision
         targetDecision.shouldBeInstanceOf<ChooseTargetsDecision>()
+        targetDecision.legalTargets[0]!!.contains(goblin) shouldBe false
+        targetDecision.legalTargets[0]!! shouldContain targetCreature
 
         // Select the active player's creature
         driver.submitTargetSelection(opponent, listOf(targetCreature))
 
         // Pacifism should be on the battlefield attached to the target creature
         val updatedBattlefield = driver.state.getZone(ZoneKey(opponent, Zone.BATTLEFIELD))
+        updatedBattlefield.contains(goblin) shouldBe true
         updatedBattlefield.contains(pacifism) shouldBe true
 
         val attachedTo = driver.state.getEntity(pacifism)?.get<AttachedToComponent>()

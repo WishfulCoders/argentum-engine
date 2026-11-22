@@ -1,104 +1,149 @@
 /* Standalone deckbuilder — three-column layout. */
 
-.page {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-canvas, #12131b);
-  color: var(--text-primary);
-  display: grid;
-  grid-template-columns: 260px 1fr 340px;
-  grid-template-rows: 56px 1fr;
-  grid-template-areas:
-    'topbar topbar topbar'
-    'left center right';
-  overflow: hidden;
-}
+/*
+ * The standalone deckbuilder, framed by `PageShell` (card art, top bar, account menu). The tool
+ * itself is a toolbar plus a workspace of glass panes — filters, card grid, deck — that each scroll
+ * on their own, so the page never does. On a phone the panes become tabs.
+ *
+ * The inner pieces (chips, search bar, card grid, help popover) are also used by the scenario
+ * builder's CardBrowser and the sealed builder's search help, so they stay neutral: translucent
+ * whites, amber for "selected / in the deck".
+ */
 
-.topbar {
-  grid-area: topbar;
+/* ── Toolbar ───────────────────────────────────────────────────────────── */
+
+.toolbar {
+  position: relative;
+  flex: none;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  gap: 8px;
+  min-width: 0;
 }
 
-.title {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--text-primary);
-  margin: 0;
+.toolbarSpacer { flex: 1; }
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.topbarSpacer {
-  flex: 1;
-}
-
-.iconButton {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  padding: 5px var(--space-3);
-  cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 500;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.iconButton:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: var(--text-primary);
-}
-
-/* ------------- View toggle (topbar) -------------
-   Sits next to the title and flips the layout between the original "cards to add" view and the
-   Moxfield-style "deck centric" view. Same visual language as the segmented mana-mode control
-   below, but a touch larger because it's a primary topbar control. */
-.viewToggle {
+.toolButton,
+.moreButton,
+.newDeckButton {
   display: inline-flex;
-  margin-left: var(--space-2);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 12, 20, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #e3e7f0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.toolButton:hover:not(:disabled),
+.moreButton:hover,
+.newDeckButton:hover { background: rgba(40, 44, 58, 0.8); border-color: rgba(255, 255, 255, 0.24); color: #fff; }
+.toolButton:disabled { opacity: 0.45; cursor: not-allowed; }
+.newDeckButton { font-weight: 600; }
+
+.toolButton:focus-visible,
+.moreButton:focus-visible,
+.newDeckButton:focus-visible,
+.paneTab:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+/* The overflow menu and the deck-library button only exist below the three-column width. */
+.moreButton { display: none; }
+.toolButtonCompactOnly { display: none; }
+.toolsBackdrop { display: none; }
+
+/* ── Workspace ─────────────────────────────────────────────────────────── */
+
+.workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr) 336px;
+  grid-template-areas: 'left center right';
+  gap: 12px;
+}
+
+.workspaceDeckMode {
+  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-areas: 'left center';
+}
+
+/* Glass panes. The blur sits on a pseudo-element: `backdrop-filter` on the pane itself would make
+   it the containing block for the fixed-position popovers and hover previews inside it. */
+.left,
+.center,
+.right,
+.centerDeck {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 16px;
   overflow: hidden;
 }
+.left::before,
+.center::before,
+.right::before,
+.centerDeck::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(10, 12, 20, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+}
 
-.viewToggleButton {
-  background: transparent;
+/* Phone pane switcher (cards view only). */
+.paneTabs { display: none; }
+
+.paneTab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border-radius: 9px;
   border: none;
-  color: var(--text-muted);
-  padding: 4px 12px;
-  font-size: 0.78rem;
-  letter-spacing: 0.02em;
+  background: transparent;
+  color: #b4bccd;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
+.paneTab[aria-selected='true'] { background: rgba(255, 255, 255, 0.14); color: #fff; }
 
-.viewToggleButton:last-child {
-  border-right: none;
-}
-
-.viewToggleButton:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-}
-
-.viewToggleButtonActive {
-  composes: viewToggleButton;
-  background: rgba(106, 163, 255, 0.22);
-  color: var(--text-primary);
-  font-weight: 600;
+.paneTabCount {
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(242, 180, 92, 0.22);
+  color: #f6d9a8;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .left {
   grid-area: left;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -130,13 +175,29 @@
   display: block;
 }
 
+/* Card-shaped, so the rail keeps its layout when a hovered card's image replaces it. */
 .deckHoverPreviewEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  padding: var(--space-4);
   color: var(--text-muted);
   font-size: 0.82rem;
+  line-height: 1.45;
   text-align: center;
-  padding: var(--space-4) var(--space-2);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-md);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255, 255, 255, 0.04), transparent 70%),
+    rgba(0, 0, 0, 0.18);
+}
+
+.deckHoverPreviewEmptyIcon {
+  opacity: 0.5;
 }
 
 .section {
@@ -147,6 +208,7 @@
 
 .sectionHeader {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
@@ -189,7 +251,7 @@
 
 .modeButtonActive {
   composes: modeButton;
-  background: rgba(106, 163, 255, 0.2);
+  background: rgba(255, 255, 255, 0.14);
   color: var(--text-primary);
 }
 
@@ -205,7 +267,7 @@
 
 .textInput:focus {
   outline: none;
-  border-color: var(--accent-primary, #6aa3ff);
+  border-color: #f2b45c;
 }
 
 .helpIcon {
@@ -250,8 +312,8 @@
   flex-direction: column;
   gap: 2px;
   padding: 6px 8px;
-  background: rgba(106, 163, 255, 0.08);
-  border: 1px solid rgba(106, 163, 255, 0.2);
+  background: rgba(242, 180, 92, 0.08);
+  border: 1px solid rgba(242, 180, 92, 0.2);
   border-radius: var(--radius-sm);
   min-width: 0;
 }
@@ -292,13 +354,19 @@
 }
 
 .savedBrowseButton:hover:not(:disabled) {
-  background: rgba(106, 163, 255, 0.14);
-  border-color: var(--accent-primary, #6aa3ff);
+  background: rgba(242, 180, 92, 0.14);
+  border-color: #f2b45c;
 }
 
 .savedBrowseButton:disabled {
   cursor: default;
   opacity: 0.55;
+  color: var(--text-muted);
+}
+
+.savedNone {
+  padding: 0 2px;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
@@ -337,9 +405,9 @@
   bottom: 5vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-surface-3, #1c1f25);
+  background: rgba(14, 16, 24, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
   z-index: 201;
   overflow: hidden;
@@ -388,7 +456,7 @@
 
 .browserSearch:focus {
   outline: none;
-  border-color: var(--accent-primary, #6aa3ff);
+  border-color: #f2b45c;
 }
 
 .browserColorChips {
@@ -464,10 +532,9 @@
 }
 
 .chipActive {
-  background: rgba(106, 163, 255, 0.28);
-  border-color: var(--accent-primary, #6aa3ff);
-  color: var(--text-primary);
-  box-shadow: 0 0 0 1px var(--accent-primary, #6aa3ff), 0 0 8px rgba(106, 163, 255, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #fff;
 }
 
 /* Mana-icon chip variant. Tighter padding + centered SVG so the symbol reads as the chip's
@@ -494,15 +561,14 @@
 }
 
 .chipMana.chipActive {
-  background: rgba(106, 163, 255, 0.32);
-  box-shadow: 0 0 0 2px var(--accent-primary, #6aa3ff), 0 0 10px rgba(106, 163, 255, 0.45);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
   transform: translateY(-1px);
 }
 
 .chipMana.chipActive img {
   opacity: 1;
   filter: none;
-  /* Slight white glow behind the symbol so it pops on the blue active ring. */
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.55));
 }
 
@@ -515,7 +581,9 @@
 }
 
 .numericInput {
-  width: 56px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
@@ -556,14 +624,14 @@
   top: calc(100% + 4px);
   left: var(--space-3);
   right: var(--space-3);
-  max-width: 600px;
-  max-height: 70vh;
+  max-width: 760px;
+  max-height: 72vh;
   overflow-y: auto;
   background: var(--bg-surface-3, #1c1f25);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  padding: var(--space-3);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  padding: var(--space-3) var(--space-4, 16px) var(--space-4, 16px);
   z-index: 91;
 }
 
@@ -571,55 +639,109 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1, 4px);
+  font-size: 0.95rem;
+}
+
+.helpClose {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.helpClose:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.helpLead {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3) 0;
 }
 
 .helpHint {
   font-size: 0.75rem;
   color: var(--text-muted);
-  margin: 0 0 var(--space-2) 0;
+  margin: var(--space-2) 0 0 0;
 }
 
-.helpList {
+.helpLead code,
+.helpHint code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+/* Cheat-sheet groups flow into as many columns as fit; one on a phone. */
+.helpGroups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-3) var(--space-4, 16px);
+}
+
+.helpGroup h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.helpGroup ul {
   list-style: none;
   margin: 0;
   padding: 0;
+  /* One grid per group, rows flattened into it, so the example column is as wide as the
+     group's longest example and nothing gets cut off. */
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px var(--space-3);
-  font-size: 0.8rem;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--space-2);
+  align-items: center;
 }
 
-.helpList li {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  gap: var(--space-2);
-  align-items: center;
+.helpGroup li {
+  display: contents;
 }
 
 .helpExample {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
-  padding: 2px 6px;
+  padding: 3px 8px;
   cursor: pointer;
   text-align: left;
+  white-space: nowrap;
 }
 
-.helpExample:hover {
-  background: rgba(106, 163, 255, 0.15);
-  border-color: var(--accent-primary, #6aa3ff);
+.helpExample:hover,
+.helpExample:focus-visible {
+  background: rgba(242, 180, 92, 0.12);
+  border-color: #f2b45c;
+  outline: none;
 }
 
 .helpExample code {
   font-family: var(--font-mono, monospace);
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: var(--text-primary);
 }
 
 .helpDesc {
-  color: var(--text-muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.3;
 }
 
 .searchInput {
@@ -637,7 +759,7 @@
 
 .searchInput:focus {
   outline: none;
-  border-color: var(--accent-primary, #6aa3ff);
+  border-color: #f2b45c;
 }
 
 .searchInputError {
@@ -680,6 +802,96 @@
   align-items: baseline;
 }
 
+/* "Did you mean pow:?" as a one-click edit — the error's fix, applied to the query. */
+.searchFix {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  padding: 0 6px;
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.searchFix:hover,
+.searchFix:focus-visible {
+  border-color: #f2b45c;
+  background: rgba(242, 180, 92, 0.15);
+  outline: none;
+}
+
+.searchFix code {
+  background: none;
+  color: #f2b45c;
+  padding: 0;
+}
+
+/* How the query was read, in words. A full-width row of the wrapping search bar, so it sits
+   under the input without covering the results. */
+.searchExplanation {
+  flex-basis: 100%;
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchExplanationLead {
+  color: var(--text-secondary, #9aa3ad);
+  font-weight: 600;
+}
+
+.helpAllKeys {
+  margin-top: var(--space-4, 16px);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+}
+
+.helpAllKeys summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.helpAllKeys ul {
+  list-style: none;
+  margin: var(--space-2) 0 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 4px var(--space-4, 16px);
+}
+
+.helpAllKeys li {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+}
+
+.helpAllKeys li code {
+  font-family: var(--font-mono, monospace);
+  color: #f2b45c;
+}
+
+.helpAliases {
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .helpGroups,
+  .helpAllKeys ul {
+    grid-template-columns: 1fr;
+  }
+}
+
 .searchErrors code {
   font-family: var(--font-mono, monospace);
   background: rgba(0, 0, 0, 0.4);
@@ -687,16 +899,6 @@
   border-radius: 2px;
   color: #ffd0c8;
   flex-shrink: 0;
-}
-
-.advancedBanner {
-  margin: var(--space-2) var(--space-3);
-  padding: 6px 8px;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  border: 1px dashed rgba(106, 163, 255, 0.4);
-  border-radius: var(--radius-sm);
-  background: rgba(106, 163, 255, 0.06);
 }
 
 .filterFieldset {
@@ -707,11 +909,196 @@
   display: contents;
 }
 
-.filterFieldset[disabled] .chip,
-.filterFieldset[disabled] select,
-.filterFieldset[disabled] input {
-  opacity: 0.45;
-  cursor: not-allowed;
+/* "Filters (3) · Clear all" — the panel's own header. */
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.filterTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.filterCount {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f2b45c;
+  color: #1a1a1a;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.filterClear {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.filterClear:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.filterClear:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.filterNote {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  border-left: 2px solid rgba(242, 180, 92, 0.6);
+  background: rgba(242, 180, 92, 0.06);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.filterNote code {
+  font-family: var(--font-mono, monospace);
+  color: var(--text-primary);
+}
+
+.filterHint {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.colorRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rarityDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: 1px;
+}
+
+/* Mana value 0–7+: one connected strip, a selected range lights up as a run. */
+.mvRow {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.mvChip {
+  background: rgba(255, 255, 255, 0.03);
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 0;
+  cursor: pointer;
+}
+
+.mvChip:last-child {
+  border-right: none;
+}
+
+.mvChip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.mvChipActive {
+  background: rgba(242, 180, 92, 0.22);
+  color: #fff;
+  font-weight: 600;
+}
+
+.mvChipActive:hover {
+  background: rgba(242, 180, 92, 0.32);
+}
+
+.collapseHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.collapseHeader:hover .sectionLabel {
+  color: var(--text-secondary);
+}
+
+.collapseChevron {
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--text-muted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.12s ease;
+}
+
+.collapseChevronOpen {
+  composes: collapseChevron;
+  transform: rotate(90deg);
+}
+
+.rangeRow {
+  display: grid;
+  grid-template-columns: 76px 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.rangeLabel {
+  color: var(--text-secondary);
+}
+
+/* Commander colour-identity filter toggle in the catalogue search bar. */
+.identityChip,
+.identityChipOn {
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.identityChipOn {
+  background: #3a2b00;
+  color: #ffd76b;
+  border-color: #daa520;
 }
 
 .resultCount {
@@ -752,13 +1139,9 @@
    active set reads as the "primary lens" on the catalogue. */
 .setPickerSection {
   padding: var(--space-3);
-  border: 1px solid rgba(106, 163, 255, 0.25);
-  border-radius: var(--radius-md);
-  background: linear-gradient(
-    180deg,
-    rgba(106, 163, 255, 0.08) 0%,
-    rgba(106, 163, 255, 0.02) 100%
-  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
   gap: var(--space-2);
 }
 
@@ -781,13 +1164,13 @@
 }
 
 .setComboInput:hover {
-  border-color: rgba(106, 163, 255, 0.45);
+  border-color: rgba(242, 180, 92, 0.45);
 }
 
 .setComboInput:focus-within,
 .setComboInputOpen {
-  border-color: rgba(106, 163, 255, 0.8);
-  box-shadow: 0 0 0 2px rgba(106, 163, 255, 0.2);
+  border-color: rgba(242, 180, 92, 0.8);
+  box-shadow: 0 0 0 2px rgba(242, 180, 92, 0.2);
 }
 
 .setComboIcon {
@@ -837,7 +1220,7 @@
   max-width: min(440px, 92vw);
   z-index: 300;
   background: rgba(14, 18, 26, 0.98);
-  border: 1px solid rgba(106, 163, 255, 0.35);
+  border: 1px solid rgba(242, 180, 92, 0.35);
   border-radius: var(--radius-sm);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   overflow: hidden;
@@ -883,11 +1266,11 @@
 }
 
 .setComboOptionActive {
-  background: rgba(106, 163, 255, 0.12);
+  background: rgba(242, 180, 92, 0.12);
 }
 
 .setComboOptionSelected {
-  border-left-color: rgba(106, 163, 255, 0.85);
+  border-left-color: rgba(242, 180, 92, 0.85);
   color: #fff;
 }
 
@@ -970,6 +1353,16 @@
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
 }
 
+/* Bigger tiles for the card browser page, where looking at the cards is the whole job. */
+.gridLarge {
+  composes: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+@media (max-width: 560px) {
+  .gridLarge { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+}
+
 .showMoreRow {
   display: flex;
   justify-content: center;
@@ -991,8 +1384,13 @@
   contain-intrinsic-size: 210px 294px;
 }
 
+.cardTile:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .cardTile:hover {
-  border-color: var(--accent-primary, #6aa3ff);
+  border-color: #f2b45c;
   transform: translateY(-1px);
   transition: transform 0.1s ease, border-color 0.1s ease;
 }
@@ -1030,8 +1428,8 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  background: var(--accent-primary, #6aa3ff);
-  color: #fff;
+  background: #f2b45c;
+  color: #1d1405;
   border-radius: 999px;
   padding: 2px 6px;
   font-size: 0.7rem;
@@ -1051,29 +1449,9 @@
 /* ------------- Right pane ------------- */
 .right {
   grid-area: right;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.deckHeader {
-  padding: var(--space-3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.nameInput {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-sm);
-  padding: 6px 8px;
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-weight: 600;
 }
 
 .deckList {
@@ -1088,8 +1466,8 @@
 
 /* Active drop state while a card is dragged over the deck list (or the deck-centric columns). */
 .deckListDrop {
-  background: rgba(106, 163, 255, 0.1);
-  box-shadow: inset 0 0 0 2px var(--accent-primary, #6aa3ff);
+  background: rgba(242, 180, 92, 0.1);
+  box-shadow: inset 0 0 0 2px #f2b45c;
 }
 
 .deckGroup {
@@ -1134,7 +1512,43 @@
 }
 
 .deckRow:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* The row's own controls stay quiet until the row is in use: on a pointer device the steppers
+   fade in from a faint outline, and the unpinned printing glyph and an inactive commander crown
+   appear on hover. They keep their place in the grid, so nothing shifts. Touch has no hover, so
+   there everything stays visible. */
+@media (hover: hover) {
+  .deckRow .deckRowStep {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.32);
+  }
+  .deckRow:hover .deckRowStep,
+  .deckRow:focus-within .deckRowStep {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-muted);
+  }
+  .deckRow .deckRowStep:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--text-primary);
+  }
+  .deckRow .deckRowPrintingChip:not(.deckRowPrintingChipActive),
+  .deckRow .deckRowCrown:not(.deckRowCrownActive) {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .deckRow:hover .deckRowPrintingChip,
+  .deckRow:focus-within .deckRowPrintingChip,
+  .deckRow:hover .deckRowCrown:not(:disabled),
+  .deckRow:focus-within .deckRowCrown:not(:disabled) {
+    opacity: 1;
+  }
+  .deckRow:hover .deckRowCrown:disabled {
+    opacity: 0.25;
+  }
 }
 
 .deckRowIllegal .deckRowName,
@@ -1192,6 +1606,58 @@
   vertical-align: middle;
 }
 
+/* Primordial: the row spends a rare or uncommon slot of the deck's budget. */
+.deckRowRareTag,
+.deckRowUncommonTag {
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 999px;
+  vertical-align: middle;
+  border: 1px solid;
+}
+
+.deckRowRareTag {
+  color: #e8c15a;
+  background: rgba(232, 193, 90, 0.12);
+  border-color: rgba(232, 193, 90, 0.4);
+}
+
+.deckRowUncommonTag {
+  color: #c4ccd6;
+  background: rgba(196, 204, 214, 0.1);
+  border-color: rgba(196, 204, 214, 0.35);
+}
+
+.footerPrimordial {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.footerPrimordialPool {
+  font-weight: 600;
+  color: var(--text-primary, inherit);
+  margin-right: 4px;
+}
+
+.deckRowPointsTag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: #b9a6ff;
+  background: rgba(185, 166, 255, 0.1);
+  border: 1px solid rgba(185, 166, 255, 0.3);
+  border-radius: 999px;
+  font-weight: 600;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .formatPickerRow {
   display: flex;
   align-items: center;
@@ -1240,9 +1706,9 @@
  * dimensions (intent vs. legality) visually distinct. */
 .formatBadgeSaved {
   composes: formatBadge;
-  background: rgba(106, 163, 255, 0.16);
+  background: rgba(242, 180, 92, 0.16);
   color: #b9d4ff;
-  border-color: rgba(106, 163, 255, 0.45);
+  border-color: rgba(242, 180, 92, 0.45);
 }
 
 .deckRowCount {
@@ -1358,14 +1824,19 @@
 }
 
 .deckRowPrintingChipActive {
-  color: #6cd2ff;
-  background: rgba(108, 210, 255, 0.1);
+  color: rgba(142, 205, 235, 0.72);
+  background: transparent;
+  border-color: transparent;
+}
+
+.deckRow:hover .deckRowPrintingChipActive {
+  color: #8edcff;
   border-color: rgba(108, 210, 255, 0.3);
 }
 
 .deckRowPrintingChipActive:hover {
   color: #8edcff;
-  background: rgba(108, 210, 255, 0.18);
+  background: rgba(108, 210, 255, 0.14);
 }
 
 /* Sticky 0-count placeholder row — used for the basic-land rows synthesized into the Lands
@@ -1390,9 +1861,9 @@
 }
 
 .basicLandsSuggest {
-  background: rgba(106, 163, 255, 0.15);
-  color: #a8c5ff;
-  border: 1px solid rgba(106, 163, 255, 0.35);
+  background: rgba(242, 180, 92, 0.15);
+  color: #f6d9a8;
+  border: 1px solid rgba(242, 180, 92, 0.35);
   border-radius: var(--radius-sm);
   padding: 2px 8px;
   font-size: 0.7rem;
@@ -1402,7 +1873,7 @@
 }
 
 .basicLandsSuggest:hover:not(:disabled) {
-  background: rgba(106, 163, 255, 0.25);
+  background: rgba(242, 180, 92, 0.25);
 }
 
 .basicLandsSuggest:disabled {
@@ -1532,14 +2003,14 @@
   gap: var(--space-2);
   padding: var(--space-3);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(106, 163, 255, 0.04);
+  background: rgba(242, 180, 92, 0.04);
   transition: background 0.12s ease, box-shadow 0.12s ease;
 }
 
 /* Active drop state while a card is dragged over the panel. */
 .sideboardPanelDrop {
-  background: rgba(106, 163, 255, 0.14);
-  box-shadow: inset 0 0 0 2px var(--accent-primary, #6aa3ff);
+  background: rgba(242, 180, 92, 0.14);
+  box-shadow: inset 0 0 0 2px #f2b45c;
 }
 
 .sideboardHeader {
@@ -1563,6 +2034,62 @@
   line-height: 1.3;
 }
 
+/* "Your wishes / Learn cards fetch from here" — the reason a sideboard matters in a game. */
+.sideboardReach {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #c4b5fd;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.sideboardReachWarn {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.sideboardOverCap {
+  color: #fca5a5;
+}
+
+/* The companion picker (CR 702.139): one toggle per sideboard card with a companion ability. */
+.companionStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.companionToggle {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(158, 201, 232, 0.4);
+  border-radius: 4px;
+  color: #9ec9e8;
+  font-size: 0.74rem;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.companionToggle:hover {
+  background: rgba(158, 201, 232, 0.1);
+}
+
+.companionToggleOn {
+  background: rgba(158, 201, 232, 0.18);
+  border-color: #9ec9e8;
+  font-weight: 600;
+}
+
+.companionIssue {
+  font-size: 0.72rem;
+  color: #ff8a80;
+  line-height: 1.3;
+}
+
 .sideboardEmpty {
   margin: 0;
   font-size: 0.76rem;
@@ -1580,18 +2107,22 @@
 
 .primaryButton {
   flex: 1;
-  background: var(--accent-primary, #6aa3ff);
-  color: #fff;
+  background: #f2b45c;
+  color: #1d1405;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
+  min-height: 40px;
   padding: 8px;
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
+.primaryButton:hover:not(:disabled) { background: #f7c67f; }
+
 .primaryButton:disabled {
-  opacity: 0.4;
+  background: rgba(255, 255, 255, 0.08);
+  color: #8f98ac;
   cursor: not-allowed;
 }
 
@@ -1599,7 +2130,8 @@
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
+  min-height: 40px;
   transition: background var(--transition-fast), color var(--transition-fast);
   padding: 8px 12px;
   cursor: pointer;
@@ -1636,9 +2168,9 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4);
-  background: var(--bg-surface-3, #1c1f25);
+  background: rgba(14, 16, 24, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
   z-index: 101;
 }
@@ -1680,7 +2212,7 @@
 
 .importTextarea:focus {
   outline: none;
-  border-color: var(--accent-primary, #6aa3ff);
+  border-color: #f2b45c;
 }
 
 .importPreview {
@@ -1710,6 +2242,18 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 999px;
   padding: 1px 8px;
+}
+
+/* A one-line explanation of what the import inferred or kept aside (commander, companion). */
+.importNote {
+  font-size: 0.75rem;
+  color: #ffd76b;
+  background: rgba(218, 165, 32, 0.1);
+  border: 1px solid rgba(218, 165, 32, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .importBadBadge {
@@ -1785,8 +2329,8 @@
 
 .formatSwitcherChipActive,
 .formatSwitcherChipActive:hover {
-  background: rgba(106, 163, 255, 0.18);
-  border-color: rgba(106, 163, 255, 0.55);
+  background: rgba(242, 180, 92, 0.18);
+  border-color: rgba(242, 180, 92, 0.55);
   color: #cfdfff;
 }
 
@@ -1799,21 +2343,14 @@
    =========================================================================== */
 
 /* Deck mode: drop the right rail entirely so the deck columns get the full width. The toggle
-   in the topbar is the only way to bring it back; everything that lived in the rail moved into
+   in the toolbar is the only way to bring it back; everything that lived in the rail moved into
    the centerDeck pane (header, search-and-add bar, footer with stats + save buttons). */
-.pageDeckMode {
-  grid-template-columns: 260px minmax(0, 1fr);
-  grid-template-areas:
-    'topbar topbar'
-    'left center';
-}
 
 .centerDeck {
   grid-area: center;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.18);
 }
 
 /* Search-and-add strip below the deck-name header. Single text input that pops a dropdown
@@ -1840,8 +2377,8 @@
 
 .addCardInput:focus {
   outline: none;
-  border-color: var(--accent-primary, #6aa3ff);
-  box-shadow: 0 0 0 2px rgba(106, 163, 255, 0.18);
+  border-color: #f2b45c;
+  box-shadow: 0 0 0 2px rgba(242, 180, 92, 0.18);
 }
 
 .addCardInput::placeholder {
@@ -1849,9 +2386,9 @@
 }
 
 .addCardBasicsButton {
-  background: rgba(106, 163, 255, 0.15);
-  color: #a8c5ff;
-  border: 1px solid rgba(106, 163, 255, 0.35);
+  background: rgba(242, 180, 92, 0.15);
+  color: #f6d9a8;
+  border: 1px solid rgba(242, 180, 92, 0.35);
   border-radius: var(--radius-sm);
   padding: 0 12px;
   font-size: 0.78rem;
@@ -1861,7 +2398,7 @@
 }
 
 .addCardBasicsButton:hover:not(:disabled) {
-  background: rgba(106, 163, 255, 0.25);
+  background: rgba(242, 180, 92, 0.25);
   color: #cfdfff;
 }
 
@@ -1903,7 +2440,7 @@
 }
 
 .addCardResult:hover:not(:disabled) {
-  background: rgba(106, 163, 255, 0.14);
+  background: rgba(242, 180, 92, 0.14);
 }
 
 .addCardResult:disabled {
@@ -1930,23 +2467,6 @@
   gap: 1px;
 }
 
-/* Deck name + format picker + count badge — the "header strip" at the top of the
-   deck-centric center pane. Mirrors the right-rail .deckHeader visually but lays
-   out horizontally because the center pane is wide. */
-.deckHeaderInline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.deckHeaderInline .nameInput {
-  flex: 0 1 360px;
-  min-width: 200px;
-}
-
 /* Scrollable deck body. Uses CSS multi-column so groups flow into 1–4 columns
    based on available width, with each group treated as an indivisible block
    (`break-inside: avoid`) so a "Creatures" group never gets split mid-list. */
@@ -1967,29 +2487,60 @@
   padding: var(--space-6);
 }
 
+.deckCentricEmptyText {
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+/* Balanced columns, laid out by `deckColumns.ts`: the column count and each column's contents are
+   computed from the pane width, so this is a plain grid. Columns cap at a readable width and sit
+   left, rather than stretching a card name a screen away from its mana cost. */
 .deckCentricColumns {
-  column-count: auto;
-  column-width: 280px;
-  column-gap: var(--space-4);
+  display: grid;
+  column-gap: 24px;
+  align-items: start;
+}
+
+.deckCentricColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .deckCentricGroup {
-  break-inside: avoid;
-  margin-bottom: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .deckCentricGroupLabel {
-  font-size: 0.78rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   color: var(--text-secondary);
   margin: 0 0 4px 0;
-  padding-bottom: 4px;
+  padding: 0 4px 5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.deckCentricGroupCont {
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+.deckCentricGroupCount {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 /* Footer strip below the deck columns: deck size + status + colour pips, the colored mana
@@ -2106,3 +2657,120 @@
   }
 }
 
+
+/* ── Responsive ────────────────────────────────────────────────────────────
+ * ≥1181px: three panes, every tool inline. Down to 901px the side panes narrow and the secondary
+ * tools fold into a "More" menu. At 900px and below one pane shows at a time, picked by tabs
+ * (Cards · Filters · Deck) that replace the view toggle. */
+
+.workspace { grid-template-rows: minmax(0, 1fr); }
+
+@media (max-width: 1180px) {
+  .workspace { grid-template-columns: 232px minmax(0, 1fr) 284px; gap: 10px; }
+  .workspaceDeckMode { grid-template-columns: 232px minmax(0, 1fr); }
+}
+
+@media (max-width: 1100px) {
+  .moreButton { display: inline-flex; }
+  .toolButtonCompactOnly { display: inline-flex; }
+
+  .tools {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 40;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    min-width: 200px;
+    padding: 6px;
+    border-radius: 14px;
+    background: rgba(16, 18, 28, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  }
+  .tools[data-open='true'] { display: flex; }
+  .tools .toolButton {
+    justify-content: flex-start;
+    border-color: transparent;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .tools .toolButton:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+
+  .toolsBackdrop { display: block; position: fixed; inset: 0; z-index: 39; }
+}
+
+@media (max-width: 900px) {
+  .workspace,
+  .workspaceDeckMode {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+  }
+  .workspace > * { grid-area: auto; }
+
+  .workspaceDeckMode > .left { display: none; }
+  .workspace:not(.workspaceDeckMode)[data-pane='cards'] > .left,
+  .workspace:not(.workspaceDeckMode)[data-pane='cards'] > .right,
+  .workspace:not(.workspaceDeckMode)[data-pane='filters'] > .center,
+  .workspace:not(.workspaceDeckMode)[data-pane='filters'] > .right { display: none; }
+
+  /* The pane tabs below take over the view toggle's job (BuilderViewToggle, tagged with this class). */
+  /* Scoped under .toolbar: BuilderViewToggle's own sheet loads after this one, and its
+     `display: inline-flex` would otherwise win at equal specificity. */
+  .toolbar .viewToggle { display: none; }
+
+  /* The tabs share the toolbar row with More / New deck. */
+  .toolbarSpacer { display: none; }
+  .paneTabs {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(10, 12, 20, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
+@media (max-width: 560px) {
+  .toolbar { gap: 6px; }
+  .paneTab { gap: 4px; padding: 0 4px; font-size: 13px; }
+  .moreButton,
+  .newDeckButton { padding: 0 12px; }
+  .left::before,
+  .center::before,
+  .right::before,
+  .centerDeck::before { border-radius: 14px; }
+}
+
+/* An empty sideboard is one line, not a paragraph — the deck list above needs the height. */
+.sideboardPanel:has(.sideboardEmpty) { gap: 2px; padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.sideboardPanel:has(.sideboardEmpty) .sideboardHint { display: none; }
+.sideboardPanel:has(.sideboardEmpty) .sideboardEmpty { padding: 0; text-align: left; }
+
+@media (max-height: 820px) {
+  .curveBarTrack { height: 24px; }
+  .deckSummaryWrap { padding: var(--space-2) var(--space-3); }
+}
+
+/* One pane at a time: the pane scrolls as a whole, so the deck list isn't squeezed between the
+   sideboard and the summary on a short phone screen. */
+@media (max-width: 900px) {
+  .right,
+  .centerDeck { overflow-y: auto; }
+  .deckList,
+  .deckCentric { flex: 1 0 auto; overflow: visible; }
+  .cardActionHint { display: none; }
+}
+
+@media (max-width: 560px) {
+  .addCardSearch { flex-wrap: wrap; padding: var(--space-2) var(--space-3); }
+  .addCardInput { flex: 1 1 100%; }
+  .deckCentric { padding: var(--space-3); }
+}

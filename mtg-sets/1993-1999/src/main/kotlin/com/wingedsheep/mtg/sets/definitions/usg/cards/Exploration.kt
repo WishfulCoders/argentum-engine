@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.scripting.GrantAdditionalLandDrop
  * Enchantment
  * You may play an additional land on each of your turns.
  *
- * [GrantAdditionalLandDrop] grants are additive, so two Explorations give two extra land drops.
+ * The extra land drop is a static [GrantAdditionalLandDrop] (cumulative with other such effects).
  */
 val Exploration = card("Exploration") {
     manaCost = "{G}"
@@ -26,9 +26,8 @@ val Exploration = card("Exploration") {
         rarity = Rarity.RARE
         collectorNumber = "250"
         artist = "Brian Snõddy"
-        flavorText = "The first explorers found Argoth a storehouse of natural wealth—towering forests grown over rich veins of ore."
+        flavorText = "The first explorers found Argoth a storehouse of natural wealth—towering forests " +
+            "grown over rich veins of ore."
         imageUri = "https://cards.scryfall.io/normal/front/2/f/2f09e451-0246-45a2-8bfd-07d3c65ddfe6.jpg?1783946316"
-
-        ruling("2022-12-08", "Exploration's ability is cumulative with other effects that allow you to play additional lands, including ones created by other Explorations you control.")
     }
 }

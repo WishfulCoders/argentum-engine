@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.legalactions
 
+import com.wingedsheep.engine.state.LifePaymentPurpose
+
 import com.wingedsheep.engine.legality.LegalityKernel
 import com.wingedsheep.engine.core.TurnManager
 import com.wingedsheep.engine.handlers.ConditionEvaluator
@@ -17,7 +19,7 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.forcedPlayFor
 import com.wingedsheep.engine.state.components.player.CantActivateLoyaltyAbilitiesComponent
-import com.wingedsheep.engine.state.components.player.CantCastSpellsComponent
+import com.wingedsheep.engine.state.components.player.bindingCastBans
 import com.wingedsheep.engine.state.components.player.CantCastFromNonHandZonesComponent
 import com.wingedsheep.engine.state.components.player.PlayerCantPlayFromHandComponent
 import com.wingedsheep.sdk.core.ManaCost
@@ -52,6 +54,12 @@ class EnumerationContext(
     val turnManager: TurnManager,
     val mode: EnumerationMode = EnumerationMode.FULL
 ) {
+    val reservedLife: Int by lazy {
+        costCalculator.optionalCostPayments.sumOf { costCalculator.optionalModifier(state, it)?.optionalLifePayment ?: 0 }
+    }
+    /** Whether the caster can pay [amount] more life toward a spell they are casting. */
+    fun canPayLife(amount: Int): Boolean = state.canPayLife(playerId, amount + reservedLife, LifePaymentPurpose.CAST_SPELL)
+
     val skipAutoTapPreview: Boolean get() = mode == EnumerationMode.ACTIONS_ONLY
     // Granted-keyword resolver (e.g., convoke granted by Eirdu via GrantKeywordToOwnSpells)
     val grantedKeywordResolver by lazy { GrantedKeywordResolver(cardRegistry) }
@@ -61,12 +69,9 @@ class EnumerationContext(
     val castPermissionUtils by lazy { CastPermissionUtils(cardRegistry, predicateEvaluator, conditionEvaluator) }
     // The one legality kernel the handlers' `validate` also asks, so what is offered is what is accepted.
     val legality by lazy { LegalityKernel(cardRegistry, conditionEvaluator) }
-    // Plot (CR 718) cost reduction — Doc Aurlock-style "plotting cards costs {N} less".
-    val plotCostReducer by lazy { com.wingedsheep.engine.mechanics.mana.PlotCostReducer(cardRegistry) }
-
-    // Door-unlock (CR 709.5e) cost reduction — Inquisitive-Glimmer-style "Unlock costs you pay
-    // cost {N} less". Kept in lockstep with UnlockRoomDoorHandler's own reducer.
-    val unlockCostReducer by lazy { com.wingedsheep.engine.mechanics.mana.UnlockCostReducer(cardRegistry) }
+    // Special-action (CR 116.2) cost modification — plot, unlock, foretell ("plotting cards costs
+    // {N} less"). Kept in lockstep with each action handler's own reducer.
+    val specialActionCostReducer by lazy { com.wingedsheep.engine.mechanics.mana.SpecialActionCostReducer(cardRegistry) }
 
     // Projected state
     val projected: ProjectedState by lazy { state.projectedState }
@@ -89,7 +94,7 @@ class EnumerationContext(
 
     // Mana-relevant battlefield statics (aura color overrides, mana-ability grants, tap bonuses).
     // Built once per pass instead of once per permanent being labelled — see ManaStaticsIndex.
-    val manaStatics: ManaStaticsIndex by lazy { ManaStaticsIndex.build(state, cardRegistry) }
+    val manaStatics: ManaStaticsIndex by lazy { ManaStaticsIndex.build(state, cardRegistry, conditionEvaluator) }
 
     // Timing flags. CR 805.5a — on a shared team turn either teammate may take sorcery-speed
     // actions, so this is gated on the active *team*, not the single active player.
@@ -128,14 +133,16 @@ class EnumerationContext(
      * and mirrored in `PlayLandHandler` so the offered list and the handler agree.
      */
     fun cantPlayLand(cardId: EntityId): Boolean =
-        filteredLandLockPresent &&
-            com.wingedsheep.engine.legalactions.utils.LandDropUtils
-                .playerCantPlayLands(state, playerId, cardRegistry, landCardId = cardId, conditionEvaluator = conditionEvaluator)
+        com.wingedsheep.engine.mechanics.HandObjectRestrictions.isCantBePlayed(state, cardId) ||
+            (filteredLandLockPresent &&
+                com.wingedsheep.engine.legalactions.utils.LandDropUtils
+                    .playerCantPlayLands(state, playerId, cardRegistry, landCardId = cardId, conditionEvaluator = conditionEvaluator))
 
     // Cast restrictions — blanket, spell-independent locks (a Silence-style CantCastSpellsComponent
     // or a RestrictSpellsCastPerTurn per-turn limit). Cached once per enumeration pass.
     val cantCastSpells: Boolean by lazy {
-        state.getEntity(playerId)?.has<CantCastSpellsComponent>() == true ||
+        state.bindingCastBans(playerId)
+            .any { it.spellFilter == com.wingedsheep.sdk.scripting.GameObjectFilter.Any } ||
             castPermissionUtils.hasReachedSpellCastLimit(state, playerId)
     }
 
@@ -161,18 +168,23 @@ class EnumerationContext(
 
     // Whether any per-spell cast restriction (Mana Maze, PlayersCantCastSpells) is in play at all —
     // a cheap guard so cantCastSpell() stays O(1) when none exists (the common case).
-    private val perSpellCastRestrictionPresent: Boolean by lazy {
+    val perSpellCastRestrictionPresent: Boolean by lazy {
         castPermissionUtils.anyPerSpellCastRestrictionPresent(state)
     }
 
     /**
      * Whether this player can't cast the specific card [cardId] right now — the blanket lock, the
      * CR 205.4e legendary-instant/sorcery restriction, OR a per-spell static restriction (Mana
-     * Maze's color sharing, a filtered [PlayersCantCastSpells]). Every cast-enumeration site that
+     * Maze's color sharing, a blanket [PlayersCantCastSpells]). Every cast-enumeration site that
      * has a candidate card consults this, so the prohibitions are honoured across every casting zone.
+     * A filtered [PlayersCantCastSpells] depends on the face being cast, so it is applied to the
+     * final offers instead (`CastPermissionUtils.blockedByResolvedCastRestriction`).
      */
     fun cantCastSpell(cardId: EntityId): Boolean =
         cantCastSpells ||
+            // "… and can't play it" on this very hand object (Firestorm Phoenix) — one component
+            // lookup, so it stays cheap on the per-card enumeration path.
+            com.wingedsheep.engine.mechanics.HandObjectRestrictions.isCantBePlayed(state, cardId) ||
             castPermissionUtils.lacksLegendaryControlForLegendarySpell(state, playerId, cardId) ||
             (perSpellCastRestrictionPresent &&
                 castPermissionUtils.spellSpecificallyRestricted(state, playerId, cardId))
@@ -203,6 +215,25 @@ class EnumerationContext(
             ?: return costCalculator.hasFreeCastPermission(state, playerId, null, castFromZone)
         return costCalculator.hasFreeCastPermission(state, playerId, cardDef, castFromZone)
     }
+
+    /**
+     * The mana a cast of [cardDef] "without paying its mana cost" from [fromZone] still owes: {0}
+     * unless a cost increase applies to it (CR 601.2f) — see [CostCalculator.calculateFreeCastCost].
+     */
+    fun freeCastCost(
+        cardDef: com.wingedsheep.sdk.model.CardDefinition?,
+        fromZone: com.wingedsheep.sdk.core.Zone,
+        spellId: EntityId? = null,
+    ): com.wingedsheep.sdk.core.ManaCost =
+        cardDef?.let { costCalculator.calculateFreeCastCost(state, it, playerId, fromZone = fromZone, spellId = spellId) }
+            ?: com.wingedsheep.sdk.core.ManaCost.ZERO
+
+    /** Whether the player can pay [cost] from their available sources — trivially true for {0}. */
+    fun canPayMana(
+        cost: com.wingedsheep.sdk.core.ManaCost,
+        spellContext: com.wingedsheep.engine.mechanics.mana.SpellPaymentContext? = null,
+    ): Boolean = cost.isEmpty() ||
+        manaSolver.canPay(state, playerId, cost, spellContext = spellContext, precomputedSources = availableManaSources)
 
     // Alternative casting costs from battlefield permanents (e.g., Jodah's WUBRG, or Conspiracy
     // Unraveler's "collect evidence 10" in the grant's non-mana half).

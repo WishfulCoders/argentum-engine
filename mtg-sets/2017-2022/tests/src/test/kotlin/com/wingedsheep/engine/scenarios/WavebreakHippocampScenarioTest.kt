@@ -48,6 +48,7 @@ class WavebreakHippocampScenarioTest : ScenarioTestBase() {
                 withClue("the trigger sits above the probe") { game.state.stack.size shouldBe 2 }
                 game.resolveStack()
                 withClue("one probe left in hand plus the drawn card") { game.handSize(1) shouldBe 2 }
+                game.passPriority() // Player2 is active and receives priority after the resolution (CR 117.3b)
 
                 game.castSpell(1, "Flash Probe").error shouldBe null
                 withClue("the second spell this turn does not trigger") { game.state.stack.size shouldBe 1 }

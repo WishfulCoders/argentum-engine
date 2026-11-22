@@ -13,8 +13,10 @@ import kotlin.reflect.KClass
 /**
  * Executor for SelectTargetEffect — mid-resolution pipeline targeting.
  *
- * Finds legal targets using [TargetFinder], then:
+ * Finds legal targets using [TargetFinder], minus anything already in the
+ * [SelectTargetEffect.excluding] collections, then:
  * - **No legal targets** → stores empty collection, pipeline continues
+ * - **[SelectTargetEffect.atRandom]** → the engine picks one uniformly with the seeded RNG, no decision
  * - **Single legal target (non-optional)** → auto-selects, stores in [updatedCollections]
  * - **Multiple legal targets, or a single one the player may decline** → creates
  *   [ChooseTargetsDecision], pushes [SelectTargetPipelineContinuation], returns paused
@@ -37,6 +39,11 @@ class SelectTargetPipelineExecutor(
         val controllerId = context.controllerId
         val sourceId = context.sourceId
 
+        // Earlier picks of the same resolution that this one must differ from ("choose a second
+        // player", Gluntch) — read from the pipeline, so they survive any pause in between.
+        val excluded = effect.excluding
+            .flatMapTo(HashSet()) { context.pipeline.storedCollections[it].orEmpty() }
+
         val legalTargets = targetFinder.findLegalTargets(
             state = state,
             requirement = effect.requirement,
@@ -46,18 +53,29 @@ class SelectTargetPipelineExecutor(
             ignoreTargetingRestrictions = effect.nonTargeting,
             // Carry the resolving ability's granter so a target filter can exclude it via
             // StatePredicate.IsGrantingPermanent — e.g. Dire Blunderbuss's "an artifact other than
-            // Dire Blunderbuss" (CR 201.5a). Only granterId is threaded; other context fields keep
-            // their prior (null) defaults so no existing SelectTargetEffect changes behavior.
+            // Dire Blunderbuss" (CR 201.5a). The pipeline's earlier picks are threaded too, so a
+            // filter can scope to a player an earlier step chose — "a planeswalker that player
+            // controls" over ControlledByReferencedPlayer(PipelineTarget) (Vial Smasher the Fierce).
             pipelineContext = com.wingedsheep.engine.handlers.PredicateContext(
                 controllerId = controllerId,
-                granterId = context.granterId
+                granterId = context.granterId,
+                storedCollections = context.pipeline.storedCollections
             )
-        )
+        ).let { found -> if (excluded.isEmpty()) found else found.filterNot { it in excluded } }
 
         if (legalTargets.isEmpty()) {
             // No legal targets — store empty collection, pipeline continues gracefully
             return EffectResult.success(state).copy(
                 updatedCollections = mapOf(effect.storeAs to emptyList())
+            )
+        }
+
+        if (effect.atRandom) {
+            // "Choose … at random" — the engine draws one candidate with the game's seeded RNG;
+            // no player makes this choice, so nothing is presented.
+            val (pick, advanced) = state.nextRandom { nextInt(legalTargets.size) }
+            return EffectResult.success(advanced).copy(
+                updatedCollections = mapOf(effect.storeAs to listOf(legalTargets[pick]))
             )
         }
 

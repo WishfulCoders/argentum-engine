@@ -13,7 +13,7 @@ val StabWoundReprint = Printing(
     collectorNumber = "281",
     scryfallId = "4e8dd5c5-823a-47f2-8b12-8005d89fe948",
     artist = "Scott Chou",
-    imageUri = "https://cards.scryfall.io/normal/front/4/e/4e8dd5c5-823a-47f2-8b12-8005d89fe948.jpg?1783930406",
+    imageUri = "https://cards.scryfall.io/normal/front/4/e/4e8dd5c5-823a-47f2-8b12-8005d89fe948.jpg",
     releaseDate = "2020-07-17",
     rarity = Rarity.UNCOMMON,
 )

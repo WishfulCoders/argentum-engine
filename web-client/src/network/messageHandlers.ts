@@ -34,6 +34,7 @@ import type {
   TournamentByeMessage,
   RoundCompleteMessage,
   MatchCompleteMessage,
+  BetweenGamesMessage,
   PlayerReadyForRoundMessage,
   TournamentCompleteMessage,
   TournamentResumedMessage,
@@ -54,8 +55,16 @@ import type {
   QuickGameLobbyStateMessage,
   QuickGameLobbyClosedMessage,
   OnlinePlayersCountMessage,
+  MatchmakingStatusMessage,
+  MatchFoundMessage,
+  MatchmakingQueuesMessage,
   FriendPresenceMessage,
   FriendRequestReceivedMessage,
+  DirectMessageMessage,
+  DirectMessagesChangedMessage,
+  EmoteMessage,
+  PostGameMessage,
+  ServerRestartingMessage,
 } from '@/types'
 
 /**
@@ -103,6 +112,7 @@ export interface MessageHandlers {
   onTournamentBye: (message: TournamentByeMessage) => void
   onRoundComplete: (message: RoundCompleteMessage) => void
   onMatchComplete: (message: MatchCompleteMessage) => void
+  onBetweenGames: (message: BetweenGamesMessage) => void
   onPlayerReadyForRound: (message: PlayerReadyForRoundMessage) => void
   onTournamentComplete: (message: TournamentCompleteMessage) => void
   onTournamentResumed: (message: TournamentResumedMessage) => void
@@ -129,13 +139,24 @@ export interface MessageHandlers {
   onQuickGameLobbyClosed: (message: QuickGameLobbyClosedMessage) => void
   // Presence handlers
   onOnlinePlayersCount: (message: OnlinePlayersCountMessage) => void
+  // Matchmaking handlers
+  onMatchmakingStatus: (message: MatchmakingStatusMessage) => void
+  onMatchFound: (message: MatchFoundMessage) => void
+  onMatchmakingQueues: (message: MatchmakingQueuesMessage) => void
   // Friends handlers
   onFriendPresence: (message: FriendPresenceMessage) => void
   onFriendRequestReceived: (message: FriendRequestReceivedMessage) => void
+  onDirectMessage: (message: DirectMessageMessage) => void
+  onDirectMessagesChanged: (message: DirectMessagesChangedMessage) => void
+  // Table talk and after the game
+  onEmote: (message: EmoteMessage) => void
+  onPostGame: (message: PostGameMessage) => void
   // Liveness handlers
   onPong: () => void
   // Session takeover handlers
   onSessionReplaced: () => void
+  // Server lifecycle handlers
+  onServerRestarting: (message: ServerRestartingMessage) => void
 }
 
 /**
@@ -254,6 +275,9 @@ export function handleServerMessage(message: ServerMessage, handlers: MessageHan
     case 'matchComplete':
       handlers.onMatchComplete(message)
       break
+    case 'betweenGames':
+      handlers.onBetweenGames(message)
+      break
     case 'playerReadyForRound':
       handlers.onPlayerReadyForRound(message)
       break
@@ -317,17 +341,41 @@ export function handleServerMessage(message: ServerMessage, handlers: MessageHan
     case 'onlinePlayersCount':
       handlers.onOnlinePlayersCount(message)
       break
+    case 'matchmakingStatus':
+      handlers.onMatchmakingStatus(message)
+      break
+    case 'matchFound':
+      handlers.onMatchFound(message)
+      break
+    case 'matchmakingQueues':
+      handlers.onMatchmakingQueues(message)
+      break
     case 'friendPresence':
       handlers.onFriendPresence(message)
       break
     case 'friendRequestReceived':
       handlers.onFriendRequestReceived(message)
       break
+    case 'directMessage':
+      handlers.onDirectMessage(message)
+      break
+    case 'directMessagesChanged':
+      handlers.onDirectMessagesChanged(message)
+      break
+    case 'emote':
+      handlers.onEmote(message)
+      break
+    case 'postGame':
+      handlers.onPostGame(message)
+      break
     case 'pong':
       handlers.onPong()
       break
     case 'sessionReplaced':
       handlers.onSessionReplaced()
+      break
+    case 'serverRestarting':
+      handlers.onServerRestarting(message)
       break
     default: {
       // TypeScript exhaustiveness check

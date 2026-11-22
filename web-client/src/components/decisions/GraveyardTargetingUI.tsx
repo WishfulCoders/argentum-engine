@@ -1,3 +1,4 @@
+import { compatibleSelectionPool } from '@/utils/selectionGroups'
 import { useState, useMemo } from 'react'
 import { useGameStore } from '@/store/gameStore.ts'
 import { ZoneType } from '@/types'
@@ -5,7 +6,8 @@ import type { EntityId, ChooseTargetsDecision, ClientCard } from '@/types'
 import { calculateFittingCardWidth, decisionCardMaxWidth, type ResponsiveSizes } from '@/hooks/useResponsive.ts'
 import { ZoneSelectionUI, type ZoneCardInfo } from './ZoneSelectionUI'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
-import { derivePileAction } from '@/utils/targeting.ts'
+import { derivePileAction, totalCapSum, totalCapsFor, wouldExceedTotalCaps } from '@/utils/targeting.ts'
+import type { SelectionTotalCap } from '@/store/slices/types'
 import styles from './DecisionUI.module.css'
 
 /**
@@ -104,7 +106,7 @@ export function GraveyardTargetingUI({
   // The list is homogenous-zone by construction (the caller's filter routes mixed-zone
   // sets elsewhere), so we read the first card's zone to pick wording for everything.
   const pileZoneType = graveyardCards[0]?.zone?.zoneType ?? ZoneType.GRAVEYARD
-  const pileNoun = pileZoneType === ZoneType.EXILE ? 'Exile' : 'Graveyard'
+  const pileNoun = pileZoneType === ZoneType.EXILE ? 'Exile' : pileZoneType === ZoneType.ANTE ? 'Ante' : 'Graveyard'
 
   // Get player names for tabs
   const getPlayerLabel = (ownerId: EntityId): string => {
@@ -126,7 +128,11 @@ export function GraveyardTargetingUI({
   const isOptionalTarget = minTargets === 0
   const isMultiTarget = maxTargets > 1
   const sourceName = decision.context.sourceName ?? 'this ability'
-  const baseTitle = isOptionalTarget ? `Resolve ${sourceName}` : `Choose from ${pileNoun}`
+  // Targets chosen while casting belong to a spell, not a resolving trigger: "Cast X" / "Choose
+  // None", where an optional trigger target reads "Resolve X" / "Decline Trigger".
+  const isCasting = decision.context.phase === 'CASTING'
+  const declineLabel = isCasting ? 'Choose None' : 'Decline Trigger'
+  const baseTitle = isOptionalTarget ? `${isCasting ? 'Cast' : 'Resolve'} ${sourceName}` : `Choose from ${pileNoun}`
   const title = totalRequirements > 1
     ? `${baseTitle} (${requirementIndex + 1}/${totalRequirements})`
     : baseTitle
@@ -167,6 +173,8 @@ export function GraveyardTargetingUI({
     ? 'Choose a new target, or keep the original target.'
     : isOptionalTarget
     ? `Optional: choose ${countPhrase} to ${actionVerb}, or decline.`
+    : targetReq?.exclusiveGroups
+    ? `Choose ${countPhrase} to ${actionVerb}, one from each eligible ${pileNoun.toLowerCase()}.`
     : `Choose ${countPhrase} to ${actionVerb}.`
 
   // Lift selection state to persist across tab switches. Seeded from initialSelection so stepping
@@ -186,11 +194,15 @@ export function GraveyardTargetingUI({
         minSelections={minTargets}
         maxSelections={maxTargets}
         initialSelection={initialSelection}
+        selectionGroups={targetReq?.selectionGroups ?? null}
+        exclusiveGroups={targetReq?.exclusiveGroups ?? null}
+        distinctCategories={targetReq?.distinctCategories ?? null}
+        totalCaps={totalCapsFor(targetReq)}
         responsive={responsive}
         onConfirm={handleConfirm}
         confirmText={isOptionalTarget ? optionalConfirmText : 'Confirm Target'}
         showFailToFind={isOptionalTarget || !!targetReq?.emptyChoiceLabel}
-        failToFindText={targetReq?.emptyChoiceLabel ?? 'Decline Trigger'}
+        failToFindText={targetReq?.emptyChoiceLabel ?? declineLabel}
         confirmRequiresSelection={isOptionalTarget || !!targetReq?.emptyChoiceLabel}
         sortByType={true}
         useGlobalHover={true}
@@ -275,13 +287,16 @@ export function GraveyardTargetingUI({
         onSelectedCardsChange={setSelectedCards}
         minSelections={minTargets}
         maxSelections={maxTargets}
-        totalManaValueAtMost={targetReq?.totalManaValueAtMost ?? null}
+        totalCaps={totalCapsFor(targetReq)}
+        selectionGroups={targetReq?.selectionGroups ?? null}
+        exclusiveGroups={targetReq?.exclusiveGroups ?? null}
+        distinctCategories={targetReq?.distinctCategories ?? null}
         responsive={responsive}
         onConfirm={handleConfirm}
         onMinimize={() => setMinimized(true)}
         {...(onViewBattlefield ? { onViewBattlefield } : {})}
         confirmText={isOptionalTarget ? optionalConfirmText : 'Confirm Target'}
-        declineText={targetReq?.emptyChoiceLabel ?? (isOptionalTarget ? 'Decline Trigger' : undefined)}
+        declineText={targetReq?.emptyChoiceLabel ?? (isOptionalTarget ? declineLabel : undefined)}
         confirmRequiresSelection={isOptionalTarget || !!targetReq?.emptyChoiceLabel}
         {...(onBack ? { onBack } : {})}
       />
@@ -294,12 +309,15 @@ export function GraveyardTargetingUI({
  * Now accepts selectedCards as a prop to persist across tab switches.
  */
 function GraveyardCardSelection({
+  selectionGroups,
+  exclusiveGroups,
+  distinctCategories,
   cards,
   selectedCards,
   onSelectedCardsChange,
   minSelections,
   maxSelections,
-  totalManaValueAtMost,
+  totalCaps,
   responsive,
   onConfirm,
   onMinimize,
@@ -314,7 +332,12 @@ function GraveyardCardSelection({
   onSelectedCardsChange: (cards: EntityId[]) => void
   minSelections: number
   maxSelections: number
-  totalManaValueAtMost?: number | null
+  /** "… with total power / mana value N or less" — see [totalCapsFor]. */
+  totalCaps: readonly SelectionTotalCap[]
+  selectionGroups?: readonly (readonly EntityId[])[] | null
+  exclusiveGroups?: readonly (readonly EntityId[])[] | null
+  /** Each candidate's claimable categories; picks must each claim a different one ("of each color"). */
+  distinctCategories?: Readonly<Record<EntityId, readonly string[]>> | null
   responsive: ResponsiveSizes
   onConfirm: (selectedCards: EntityId[]) => void
   onMinimize: () => void
@@ -361,38 +384,26 @@ function GraveyardCardSelection({
     60
   )
 
-  // Running "total mana value ≤ cap" limit (Fire Lord Sozin). Selecting a card that would push the
-  // summed mana value over the cap is blocked, mirroring the server-side aggregate target rule.
-  const manaValueOf = (id: EntityId) => cards.find((c) => c.id === id)?.manaValue ?? 0
-  const selectedManaValue = selectedCards.reduce((sum, id) => sum + manaValueOf(id), 0)
-
+  // Running "total mana value / power ≤ cap" limit (Fire Lord Sozin, Nethroi). Selecting a card
+  // that would push the sum over the cap is blocked, mirroring the server-side aggregate target rule.
   const toggleCard = (cardId: EntityId) => {
     if (selectedCards.includes(cardId)) {
       onSelectedCardsChange(selectedCards.filter((id) => id !== cardId))
       return
     }
+    if ((maxSelections > 1 || distinctCategories) && !compatibleSelectionPool(cards.map((c) => c.id), selectionGroups, maxSelections > 1 ? selectedCards : [], exclusiveGroups, distinctCategories).includes(cardId)) return
     if (selectedCards.length >= maxSelections) {
       // Single-select slot at its cap: clicking a different card replaces the pick, the same rule
       // the board path uses (toggleDecisionSelection). It also unblocks a mixed
       // `battlefield ∪ pile` requirement — the pick carried in from the board fills the only slot
       // and isn't in this ribbon, so without replacement no graveyard card could ever be clicked.
       if (maxSelections === 1) {
-        if (
-          totalManaValueAtMost != null &&
-          manaValueOf(cardId) > totalManaValueAtMost
-        ) {
-          return
-        }
+        if (wouldExceedTotalCaps(totalCaps, [], cardId)) return
         onSelectedCardsChange([cardId])
       }
       return
     }
-    if (
-      totalManaValueAtMost != null &&
-      selectedManaValue + manaValueOf(cardId) > totalManaValueAtMost
-    ) {
-      return
-    }
+    if (wouldExceedTotalCaps(totalCaps, selectedCards, cardId)) return
     onSelectedCardsChange([...selectedCards, cardId])
   }
 
@@ -430,14 +441,14 @@ function GraveyardCardSelection({
           {' / '}
           {maxSelections}
         </span>
-        {totalManaValueAtMost != null && (
-          <span>
-            {' · '}Total mana value:{' '}
-            <span className={styles.selectionCount}>{selectedManaValue}</span>
+        {totalCaps.map((c) => (
+          <span key={c.label}>
+            {' · '}Total {c.label}:{' '}
+            <span className={styles.selectionCount}>{totalCapSum(c, selectedCards)}</span>
             {' / '}
-            {totalManaValueAtMost}
+            {c.cap}
           </span>
-        )}
+        ))}
       </div>
 
       {/* Card ribbon */}

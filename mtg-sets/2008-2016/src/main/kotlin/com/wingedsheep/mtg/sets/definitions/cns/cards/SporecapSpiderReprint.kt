@@ -13,7 +13,7 @@ val SporecapSpiderReprint = Printing(
     collectorNumber = "179",
     scryfallId = "b554978a-4465-448d-8505-3a377d6be0c0",
     artist = "Lars Grant-West",
-    imageUri = "https://cards.scryfall.io/normal/front/b/5/b554978a-4465-448d-8505-3a377d6be0c0.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/b/5/b554978a-4465-448d-8505-3a377d6be0c0.jpg?1783939341",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

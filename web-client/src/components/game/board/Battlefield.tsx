@@ -10,6 +10,7 @@ import type { ResponsiveSizes } from '@/hooks/useResponsive'
 import { styles } from './styles'
 import { CardStack } from '../card'
 import { GameCard } from '../card'
+import { CounterAllocationControls } from '../card/CounterAllocationControls'
 import { GroupedCard } from '@/store/selectors.ts'
 import type { ClientCard, EntityId } from '@/types'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
@@ -628,7 +629,8 @@ function AttachmentsBrowser({
     // Targeting / selection modes take precedence — same precedence GameCard uses.
     if (decisionSelectionState?.validOptions.includes(cardId)) {
       toggleDecisionSelection(cardId)
-      onClose()
+      // A repeated-unit allocation needs several gestures and must remain correctable here.
+      if (decisionSelectionState.selectionLimits == null) onClose()
       return
     }
     if (targetingState?.validTargets.includes(cardId)) {
@@ -704,6 +706,7 @@ function AttachmentsBrowser({
           }}
           onError={(e) => handleImageError(e, card.name, 'normal')}
         />
+        {!isExile && <CounterAllocationControls cardId={card.id} cardName={card.name} cardWidth={cardWidth} />}
         {selected && (
           <div
             aria-hidden
@@ -792,7 +795,7 @@ function AttachmentsBrowser({
       <div style={styles.exileBrowserContent} onClick={(e) => e.stopPropagation()}>
         <div style={styles.exileBrowserHeader}>
           <h2 style={styles.exileBrowserTitle}>Attached to {parentName}</h2>
-          <button style={styles.exileCloseButton} onClick={onClose}>✕</button>
+          <button aria-label="Close attachments" style={styles.exileCloseButton} onClick={onClose}>✕</button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
           {renderSection('attachment', attachments)}

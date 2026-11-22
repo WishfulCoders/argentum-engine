@@ -35,11 +35,13 @@ import type {
   UserTournamentEntry,
 } from '@/api/account'
 import { colorForIdentity, colorLabel, splitModeBucket } from '@/components/admin/statFormat'
-import { formatDateTime } from '@/utils/datetime'
 import { HoverCardPreview } from '@/components/ui/HoverCardPreview'
-import { EloCell, GameModeCell, OpponentCell } from '@/components/profile/gameHistoryCells'
+import { pageStyles as p } from '@/components/ui/PageShell'
 import { TournamentDetailModal } from '@/components/profile/TournamentDetailModal'
-import { TournamentStatusBadge } from '@/components/tournament/TournamentStatusBadge'
+import { GameHistoryList, TournamentList } from '@/components/profile/accountUi'
+import type { StatsFilter } from '@/api/statsFilter'
+import { NotCountedNote, OpponentSplit, StatsFilterBar } from '@/components/stats/StatsFilterBar'
+import a from './account.module.css'
 
 export interface StatsDashboardData {
   stats: AccountStats | null
@@ -56,6 +58,9 @@ export interface StatsDashboardData {
   tournaments: UserTournamentEntry[]
   /** When provided, a compact read-only recent-games list is appended (public profiles). */
   recentGames?: GameHistoryEntry[]
+  /** The slice every game-derived panel shows; with [onFilterChange], the filter bar is drawn. */
+  filter?: StatsFilter
+  onFilterChange?: (next: StatsFilter) => void
 }
 
 const MODE_LABELS: Record<RankedModeName, string> = {
@@ -64,9 +69,9 @@ const MODE_LABELS: Record<RankedModeName, string> = {
   COMMANDER: 'Commander',
 }
 const MODE_COLORS: Record<RankedModeName, string> = {
-  LIMITED: '#5bd1a0',
-  CONSTRUCTED: '#5b6ee1',
-  COMMANDER: '#d18b5b',
+  LIMITED: '#5fd0b8',
+  CONSTRUCTED: '#7d9bff',
+  COMMANDER: '#f2b45c',
 }
 const TYPE_COLORS: Record<string, string> = {
   Creature: '#5bd1a0',
@@ -78,58 +83,74 @@ const TYPE_COLORS: Record<string, string> = {
   Land: '#8a7a5b',
   Other: '#7a7f8c',
 }
-const PALETTE = ['#5b6ee1', '#5bd1a0', '#d15b9a', '#d1b85b', '#5bb8d1', '#d18b5b', '#9a7ad1', '#b0b6c0']
+const PALETTE = ['#7d9bff', '#5bd1a0', '#d15b9a', '#d1b85b', '#5bb8d1', '#d18b5b', '#9a7ad1', '#b0b6c0']
+const paletteColor = (i: number): string => PALETTE[i % PALETTE.length]!
 
 export function StatsDashboard(props: StatsDashboardData) {
-  const { stats, ratings, ratingHistory, colors, cardTypes, curve, creatureTypes, modes, sets, topCards, opponents, tournaments, recentGames } = props
+  const { stats, ratings, ratingHistory, colors, cardTypes, curve, creatureTypes, modes, sets, topCards, opponents, tournaments, recentGames, filter, onFilterChange } = props
   const navigate = useNavigate()
   const hasData = (stats?.games ?? 0) > 0
   const [openTournament, setOpenTournament] = useState<number | null>(null)
 
   return (
     <>
-      {/* Overview: record + win-rate donut */}
-      <div style={styles.overviewRow}>
-        <div style={styles.tiles}>
-          <Stat label="Games" value={stats?.games ?? 0} />
-          <Stat label="Wins" value={stats?.wins ?? 0} />
-          <Stat label="Losses" value={stats?.losses ?? 0} />
-          <Stat label="Win rate" value={stats ? `${Math.round(stats.winRate * 100)}%` : '—'} />
-        </div>
-        {hasData && stats && (
-          <div style={styles.donutCard}>
-            <ResponsiveContainer width="100%" height={150}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Wins', value: stats.wins },
-                    { name: 'Losses', value: stats.losses },
-                  ]}
-                  dataKey="value"
-                  innerRadius={45}
-                  outerRadius={64}
-                  startAngle={90}
-                  endAngle={-270}
-                  stroke="none"
-                >
-                  <Cell fill="#5bd16e" />
-                  <Cell fill="#e15b6e" />
-                </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div style={styles.donutCenter}>
-              <div style={styles.donutPct}>{Math.round(stats.winRate * 100)}%</div>
-              <div style={styles.donutLabel}>win rate</div>
+      {filter && onFilterChange && <StatsFilterBar filter={filter} onChange={onFilterChange} />}
+
+      {/* Overview: record + win-rate donut, the period's split by opponent, and what isn't counted */}
+      <section className={p.panel}>
+        <div className={a.overview} data-donut={hasData}>
+          <div className={a.overviewMain}>
+            <div className={a.tiles}>
+              <Stat label="Games" value={stats?.games ?? 0} />
+              <Stat label="Wins" value={stats?.wins ?? 0} />
+              <Stat label="Losses" value={stats?.losses ?? 0} />
+              <Stat label="Win rate" value={stats && hasData ? `${Math.round(stats.winRate * 100)}%` : '—'} />
             </div>
+            {stats && (
+              <div className={a.overviewFoot}>
+                {filter && onFilterChange && (stats.vsHumans.games > 0 || stats.vsAi.games > 0) && (
+                  <OpponentSplit vsHumans={stats.vsHumans} vsAi={stats.vsAi} filter={filter} onChange={onFilterChange} />
+                )}
+                <NotCountedNote count={stats.notCounted} />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+          {hasData && stats && (
+            <div className={a.donut}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Wins', value: stats.wins },
+                      { name: 'Losses', value: stats.losses },
+                    ]}
+                    dataKey="value"
+                    innerRadius={52}
+                    outerRadius={70}
+                    startAngle={90}
+                    endAngle={-270}
+                    stroke="none"
+                    paddingAngle={stats.wins > 0 && stats.losses > 0 ? 2 : 0}
+                  >
+                    <Cell fill="#5fd08a" />
+                    <Cell fill="#e2686b" />
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className={a.donutCenter}>
+                <div className={a.donutPct}>{Math.round(stats.winRate * 100)}%</div>
+                <div className={a.donutLabel}>win rate</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Ranked rating */}
       {ratings.some((r) => r.gamesPlayed > 0) && (
-        <Panel title="Ranked rating" wide>
-          <div style={styles.ratingRow}>
+        <Panel title="Ranked rating">
+          <div className={a.ratingRow}>
             {ratings.map((r) => (
               <RatingCard key={r.mode} rating={r} />
             ))}
@@ -138,7 +159,7 @@ export function StatsDashboard(props: StatsDashboardData) {
         </Panel>
       )}
 
-      <div style={styles.grid}>
+      <div className={a.grid}>
         {colors.length > 0 && (
           <Panel title="Colors you play">
             <ColorsList colors={colors} />
@@ -149,20 +170,20 @@ export function StatsDashboard(props: StatsDashboardData) {
           <Panel title="Card types">
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
-                <Pie data={cardTypes} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={78} stroke="none">
+                <Pie data={cardTypes} dataKey="count" nameKey="label" cx="50%" cy="50%" innerRadius={44} outerRadius={78} stroke="none" paddingAngle={1}>
                   {cardTypes.map((t, i) => (
-                    <Cell key={t.label} fill={TYPE_COLORS[t.label] ?? PALETTE[i % PALETTE.length]} />
+                    <Cell key={t.label} fill={TYPE_COLORS[t.label] ?? paletteColor(i)} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
               </PieChart>
             </ResponsiveContainer>
-            <div style={styles.legend}>
+            <div className={a.legend}>
               {cardTypes.map((t, i) => (
-                <span key={t.label} style={styles.legendItem}>
-                  <span style={{ ...styles.legendSwatch, backgroundColor: TYPE_COLORS[t.label] ?? PALETTE[i % PALETTE.length] }} />
-                  <span style={styles.legendName}>{t.label}</span>
-                  <span style={styles.legendCount}>{t.count}</span>
+                <span key={t.label} className={a.legendItem}>
+                  <span className={a.legendSwatch} style={{ backgroundColor: TYPE_COLORS[t.label] ?? paletteColor(i) }} />
+                  {t.label}
+                  <span className={a.legendCount}>{t.count}</span>
                 </span>
               ))}
             </div>
@@ -171,13 +192,13 @@ export function StatsDashboard(props: StatsDashboardData) {
 
         {curve.some((c) => c.count > 0) && (
           <Panel title="Mana curve">
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={curve} margin={{ top: 8, right: 8, bottom: 4, left: -16 }}>
-                <CartesianGrid stroke="#1f1f2e" vertical={false} />
-                <XAxis dataKey="label" stroke="#888" fontSize={11} />
-                <YAxis stroke="#666" fontSize={11} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#ffffff10' }} />
-                <Bar dataKey="count" fill="#5b6ee1" radius={[4, 4, 0, 0]} />
+                <CartesianGrid stroke={GRID} vertical={false} />
+                <XAxis dataKey="label" stroke={AXIS} tickLine={false} fontSize={11} />
+                <YAxis stroke={AXIS} tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} cursor={{ fill: 'rgba(255,255,255,0.06)' }} />
+                <Bar dataKey="count" fill="#f2b45c" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Panel>
@@ -187,10 +208,10 @@ export function StatsDashboard(props: StatsDashboardData) {
           <Panel title="Creature types you play most">
             <ResponsiveContainer width="100%" height={Math.max(160, creatureTypes.length * 26)}>
               <BarChart data={creatureTypes} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
-                <XAxis type="number" stroke="#666" fontSize={11} allowDecimals={false} />
-                <YAxis type="category" dataKey="label" stroke="#aaa" fontSize={11} width={92} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#ffffff10' }} />
-                <Bar dataKey="count" fill="#5bd1a0" radius={[0, 4, 4, 0]} />
+                <XAxis type="number" stroke={AXIS} tickLine={false} fontSize={11} allowDecimals={false} />
+                <YAxis type="category" dataKey="label" stroke={AXIS} tick={{ fill: '#c3c9d7' }} tickLine={false} axisLine={false} fontSize={11} width={92} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} cursor={{ fill: 'rgba(255,255,255,0.06)' }} />
+                <Bar dataKey="count" fill="#5fd0b8" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Panel>
@@ -198,12 +219,12 @@ export function StatsDashboard(props: StatsDashboardData) {
 
         {modes.length > 0 && (
           <Panel title="Game modes">
-            <div style={styles.chipRow}>
+            <div className={a.chips}>
               {mergeModes(modes).map((m) => (
-                <span key={`${m.primary}-${m.variant ?? ''}`} style={styles.chip}>
+                <span key={`${m.primary}-${m.variant ?? ''}`} className={a.chip}>
                   {m.primary}
-                  {m.variant ? <span style={styles.chipVariant}> › {m.variant}</span> : null}
-                  <span style={styles.chipCount}> · {m.count}</span>
+                  {m.variant ? <span className={a.chipVariant}>› {m.variant}</span> : null}
+                  <span className={a.chipCount}>· {m.count}</span>
                 </span>
               ))}
             </div>
@@ -212,30 +233,48 @@ export function StatsDashboard(props: StatsDashboardData) {
 
         {sets.length > 0 && (
           <Panel title="Sets you play">
-            <ChipList items={sets.map((sb) => `${sb.label} · ${sb.count}`)} />
+            <div className={a.chips}>
+              {sets.map((sb) => (
+                <span key={sb.label} className={a.chip}>
+                  {sb.label}
+                  <span className={a.chipCount}>· {sb.count}</span>
+                </span>
+              ))}
+            </div>
           </Panel>
         )}
 
         {opponents.length > 0 && (
           <Panel title="Head to head">
-            <p style={styles.subtle}>Most-played human opponents (AI excluded).</p>
-            <SimpleTable head={['Opponent', { label: 'W', numeric: true }, { label: 'L', numeric: true }]}>
-              {opponents.map((o, i) => (
-                <tr key={`${o.opponent}-${i}`}>
-                  <td style={styles.td}>
-                    {o.opponentUserId ? (
-                      <button type="button" style={styles.opponentLink} onClick={() => navigate(`/u/${o.opponentUserId}`)}>
-                        {o.opponent}
-                      </button>
-                    ) : (
-                      o.opponent
-                    )}
-                  </td>
-                  <td style={styles.tdNum}>{o.wins}</td>
-                  <td style={styles.tdNum}>{o.losses}</td>
-                </tr>
-              ))}
-            </SimpleTable>
+            <p className={a.subtle}>Most-played human opponents (AI excluded).</p>
+            <div className={a.tableWrap}>
+              <table className={a.table}>
+                <thead>
+                  <tr>
+                    <th>Opponent</th>
+                    <th className={a.num}>W</th>
+                    <th className={a.num}>L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {opponents.map((o, i) => (
+                    <tr key={`${o.opponent}-${i}`}>
+                      <td>
+                        {o.opponentUserId ? (
+                          <button type="button" className={a.link} onClick={() => navigate(`/u/${o.opponentUserId}`)}>
+                            {o.opponent}
+                          </button>
+                        ) : (
+                          o.opponent
+                        )}
+                      </td>
+                      <td className={`${a.num} ${a.win}`}>{o.wins}</td>
+                      <td className={`${a.num} ${a.loss}`}>{o.losses}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Panel>
         )}
 
@@ -246,62 +285,16 @@ export function StatsDashboard(props: StatsDashboardData) {
         )}
 
         {tournaments.length > 0 && (
-          <Panel title="Tournaments">
-            <p style={styles.subtle}>Open a tournament to see its final standings and every game’s replay.</p>
-            <SimpleTable
-              head={['Date', 'Tournament', { label: 'Mode' }, { label: 'Status' }, { label: 'Place', numeric: true }]}
-            >
-              {tournaments.map((t, i) => (
-                <tr
-                  key={`${t.id}-${i}`}
-                  style={styles.clickableRow}
-                  onClick={() => setOpenTournament(t.id)}
-                >
-                  <td style={styles.td}>{t.endedAt.slice(0, 10)}</td>
-                  <td style={styles.tdLink}>{t.name?.trim() || 'Tournament'}</td>
-                  <td style={styles.td}>
-                    <GameModeCell gameMode={t.gameMode} format={t.format} />
-                  </td>
-                  <td style={styles.td}>
-                    <TournamentStatusBadge status={t.status} />
-                  </td>
-                  <td style={styles.tdNum}>{t.status === 'COMPLETED' ? `${t.placement}/${t.playerCount}` : '—'}</td>
-                </tr>
-              ))}
-            </SimpleTable>
+          <Panel title="Tournaments" wide>
+            <p className={a.subtle}>Open a tournament to see its final standings and every game’s replay.</p>
+            <TournamentList tournaments={tournaments} onOpen={setOpenTournament} />
           </Panel>
         )}
       </div>
 
       {recentGames && recentGames.length > 0 && (
-        <Panel title="Recent games" wide>
-          <SimpleTable head={['Date', 'Mode', 'Colors', 'Opponent', { label: 'Elo' }, { label: 'Result', numeric: true }]}>
-            {recentGames.map((g, i) => (
-              <tr key={`${g.gameId}-${i}`}>
-                <td style={styles.td}>{formatDateTime(g.endedAt)}</td>
-                <td style={styles.td}>
-                  <GameModeCell gameMode={g.gameMode} format={g.format} />
-                </td>
-                <td style={styles.td}>
-                  {g.colors ? (
-                    <span style={styles.colorsCell}>
-                      <span style={{ ...styles.colorDot, backgroundColor: colorForIdentity(g.colors) }} />
-                      {colorLabel(g.colors)}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td style={styles.td}>
-                  <OpponentCell entry={g} />
-                </td>
-                <td style={styles.td}>
-                  <EloCell entry={g} />
-                </td>
-                <td style={{ ...styles.tdNum, color: g.won ? '#5bd16e' : '#e15b6e' }}>{g.won ? 'Win' : 'Loss'}</td>
-              </tr>
-            ))}
-          </SimpleTable>
+        <Panel title="Recent games">
+          <GameHistoryList games={recentGames} />
         </Panel>
       )}
 
@@ -316,16 +309,16 @@ export function StatsDashboard(props: StatsDashboardData) {
 function TopCards({ cards }: { cards: CardStat[] }) {
   const [hover, setHover] = useState<{ name: string; imageUri: string | null; pos: { x: number; y: number } } | null>(null)
   return (
-    <div style={styles.cardChips}>
+    <div className={a.chips}>
       {cards.map((c) => (
         <span
           key={c.cardName}
-          style={styles.cardChip}
+          className={a.cardChip}
           onMouseEnter={(e) => setHover({ name: c.cardName, imageUri: c.imageUri, pos: { x: e.clientX, y: e.clientY } })}
           onMouseMove={(e) => setHover({ name: c.cardName, imageUri: c.imageUri, pos: { x: e.clientX, y: e.clientY } })}
           onMouseLeave={() => setHover(null)}
         >
-          <span style={styles.cardChipCount}>{c.copies}×</span>
+          <span className={a.cardChipCount}>{c.copies}×</span>
           {c.cardName}
         </span>
       ))}
@@ -354,18 +347,16 @@ function mergeModes(modes: StatBucket[]): { primary: string; variant: string | n
 function ColorsList({ colors }: { colors: StatBucket[] }) {
   const max = Math.max(1, ...colors.map((c) => c.count))
   return (
-    <div style={styles.colorList}>
+    <div className={a.colorList}>
       {colors.map((c) => (
-        <div key={c.label || 'colorless'} style={styles.colorRow}>
-          <div style={styles.colorHead}>
-            <span style={styles.colorPips}>{manaPips(c.label)}</span>
-            <span style={styles.colorName}>{colorLabel(c.label)}</span>
-            <span style={styles.colorCount}>{c.count}</span>
+        <div key={c.label || 'colorless'} className={a.colorRow}>
+          <div className={a.colorHead}>
+            <span className={a.colorPips}>{manaPips(c.label)}</span>
+            <span className={a.colorName}>{colorLabel(c.label)}</span>
+            <span className={a.colorCount}>{c.count}</span>
           </div>
-          <span style={styles.colorBarTrack}>
-            <span
-              style={{ ...styles.colorBarFill, width: `${(c.count / max) * 100}%`, backgroundColor: colorForIdentity(c.label) }}
-            />
+          <span className={a.barTrack}>
+            <span className={a.barFill} style={{ width: `${(c.count / max) * 100}%`, backgroundColor: colorForIdentity(c.label) }} />
           </span>
         </div>
       ))}
@@ -378,15 +369,15 @@ function manaPips(label: string) {
   const chars = label ? [...label] : ['C']
   return chars.map((ch, i) => (
     // eslint-disable-next-line react/no-array-index-key
-    <i key={i} className={`ms ms-${ch.toLowerCase()} ms-cost`} style={{ marginRight: 3 }} aria-hidden />
+    <i key={i} className={`ms ms-${ch.toLowerCase()} ms-cost`} aria-hidden />
   ))
 }
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div style={styles.tile}>
-      <div style={styles.tileValue}>{value}</div>
-      <div style={styles.tileLabel}>{label}</div>
+    <div className={p.stat}>
+      <span className={p.statValue}>{value}</span>
+      <span className={p.statLabel}>{label}</span>
     </div>
   )
 }
@@ -406,7 +397,7 @@ function tierColor(tier: string): string {
     case 'Bronze':
       return '#c08a5b'
     default:
-      return '#888'
+      return '#9aa3b8'
   }
 }
 
@@ -419,11 +410,11 @@ function RatingCard({ rating }: { rating: RatingEntry }) {
         ? `${games}/10 placement`
         : `${rating.wins}–${rating.losses}${rating.draws ? `–${rating.draws}` : ''}`
   return (
-    <div style={{ ...styles.ratingCard, borderColor: `${MODE_COLORS[rating.mode]}55` }}>
-      <div style={styles.ratingMode}>{MODE_LABELS[rating.mode]}</div>
-      <div style={styles.ratingValue}>{rating.rating}</div>
-      <div style={{ ...styles.ratingTier, color: tierColor(rating.tier) }}>{rating.tier}</div>
-      <div style={styles.ratingRecord}>{record}</div>
+    <div className={a.ratingCard} style={{ borderTopColor: MODE_COLORS[rating.mode] }}>
+      <span className={a.ratingMode}>{MODE_LABELS[rating.mode]}</span>
+      <span className={a.ratingValue}>{rating.rating}</span>
+      <span className={a.ratingTier} style={{ color: tierColor(rating.tier) }}>{rating.tier}</span>
+      <span className={a.ratingRecord}>{record}</span>
     </div>
   )
 }
@@ -431,13 +422,13 @@ function RatingCard({ rating }: { rating: RatingEntry }) {
 /** Rating over time, one filled line per mode (each connected across its own games). */
 function RatingChart({ points }: { points: RatingPoint[] }) {
   if (points.length === 0) {
-    return <p style={styles.muted}>Play ranked games to see your rating over time.</p>
+    return <p className={a.muted} style={{ marginTop: 12 }}>Play ranked games to see your rating over time.</p>
   }
   const sorted = [...points].sort((a, b) => a.endedAt.localeCompare(b.endedAt))
   const data = sorted.map((p, i) => ({ idx: i, label: p.endedAt.slice(0, 10), [p.mode]: p.ratingAfter }))
   const modes = Array.from(new Set(points.map((p) => p.mode)))
   return (
-    <div style={{ marginTop: 14 }}>
+    <div className={a.chart}>
       <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: -8 }}>
           <defs>
@@ -448,10 +439,10 @@ function RatingChart({ points }: { points: RatingPoint[] }) {
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid stroke="#1f1f2e" />
-          <XAxis dataKey="label" stroke="#666" fontSize={11} minTickGap={32} />
-          <YAxis stroke="#666" fontSize={11} domain={['dataMin - 30', 'dataMax + 30']} allowDecimals={false} width={44} />
-          <Tooltip contentStyle={tooltipStyle} />
+          <CartesianGrid stroke={GRID} vertical={false} />
+          <XAxis dataKey="label" stroke={AXIS} tickLine={false} fontSize={11} minTickGap={32} />
+          <YAxis stroke={AXIS} tickLine={false} axisLine={false} fontSize={11} domain={['dataMin - 30', 'dataMax + 30']} allowDecimals={false} width={44} />
+          <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
           {modes.map((m) => (
             <Area
               key={m}
@@ -467,11 +458,11 @@ function RatingChart({ points }: { points: RatingPoint[] }) {
           ))}
         </AreaChart>
       </ResponsiveContainer>
-      <div style={styles.legend}>
+      <div className={a.legend}>
         {modes.map((m) => (
-          <span key={m} style={styles.legendItem}>
-            <span style={{ ...styles.legendSwatch, backgroundColor: MODE_COLORS[m] }} />
-            <span style={styles.legendName}>{MODE_LABELS[m]}</span>
+          <span key={m} className={a.legendItem}>
+            <span className={a.legendSwatch} style={{ backgroundColor: MODE_COLORS[m] }} />
+            {MODE_LABELS[m]}
           </span>
         ))}
       </div>
@@ -481,167 +472,23 @@ function RatingChart({ points }: { points: RatingPoint[] }) {
 
 function Panel({ title, children, wide }: { title: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div style={{ ...styles.panel, ...(wide ? styles.panelWide : {}) }}>
-      <h2 style={styles.panelTitle}>{title}</h2>
+    <section className={`${p.panel} ${wide ? a.wide : ''}`}>
+      <h2 className={p.panelTitle} style={{ marginBottom: 14 }}>
+        {title}
+      </h2>
       {children}
-    </div>
+    </section>
   )
 }
 
-function ChipList({ items }: { items: string[] }) {
-  return (
-    <div style={styles.chipRow}>
-      {items.map((it) => (
-        <span key={it} style={styles.chip}>
-          {it}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-/** A table-head cell: a plain string (left-aligned) or `{ label, numeric }` for a right-aligned column. */
-type HeadCell = string | { label: string; numeric?: boolean }
-
-/**
- * A minimal table whose header alignment matches its body columns. Pass a plain string for a normal
- * left-aligned column and `{ label, numeric: true }` for a right-aligned numeric column — so headers
- * always sit over the data they describe (previously every non-first header was forced right).
- */
-function SimpleTable({ head, children }: { head: HeadCell[]; children: React.ReactNode }) {
-  return (
-    <div style={styles.tableWrap}>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            {head.map((h) => {
-              const label = typeof h === 'string' ? h : h.label
-              const numeric = typeof h === 'string' ? false : (h.numeric ?? false)
-              return (
-                <th key={label} style={numeric ? styles.thNum : styles.th}>
-                  {label}
-                </th>
-              )
-            })}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
-  )
-}
+const GRID = 'rgba(255,255,255,0.07)'
+const AXIS = '#7c8498'
 
 const tooltipStyle: React.CSSProperties = {
-  backgroundColor: '#12121e',
-  border: '1px solid #2a2a3e',
-  borderRadius: 6,
-  color: '#ddd',
+  backgroundColor: 'rgba(14,16,26,0.95)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  borderRadius: 8,
+  color: '#eef0f6',
   fontSize: 12,
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  muted: { margin: 0, color: '#888', fontSize: 14 },
-  subtle: { margin: '0 0 8px', color: '#777', fontSize: 12 },
-  overviewRow: { display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' },
-  tiles: { display: 'flex', gap: 12, flexWrap: 'wrap', flex: '2 1 360px' },
-  tile: {
-    flex: '1 1 110px',
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '16px 12px',
-    textAlign: 'center',
-  },
-  tileValue: { color: '#fff', fontSize: 26, fontWeight: 700 },
-  tileLabel: { color: '#888', fontSize: 12, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  donutCard: {
-    position: 'relative',
-    flex: '1 1 180px',
-    minWidth: 180,
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '10px 8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  donutCenter: {
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'none',
-  },
-  donutPct: { color: '#fff', fontSize: 24, fontWeight: 800, lineHeight: 1 },
-  donutLabel: { color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 },
-  panel: { backgroundColor: '#14141f', border: '1px solid #2a2a3e', borderRadius: 12, padding: '16px 18px' },
-  panelWide: { gridColumn: '1 / -1' },
-  panelTitle: { margin: '0 0 12px', color: '#fff', fontSize: 16 },
-  ratingRow: { display: 'flex', gap: 12, flexWrap: 'wrap' },
-  ratingCard: {
-    flex: '1 1 140px',
-    backgroundColor: '#1a1a28',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '14px 12px',
-    textAlign: 'center',
-  },
-  ratingMode: { color: '#9aa', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  ratingValue: { color: '#fff', fontSize: 30, fontWeight: 800, lineHeight: 1.1, marginTop: 4 },
-  ratingTier: { fontSize: 14, fontWeight: 700, marginTop: 2 },
-  ratingRecord: { color: '#888', fontSize: 12, marginTop: 4 },
-  // Two rows per colour: pips + name + count on top (wraps for many colours), full-width bar below —
-  // so a five-colour identity never overflows the panel the way a single fixed-width row did.
-  colorList: { display: 'flex', flexDirection: 'column', gap: 12 },
-  colorRow: { display: 'flex', flexDirection: 'column', gap: 5 },
-  colorHead: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  colorPips: { display: 'inline-flex', flexWrap: 'wrap', fontSize: 15, flexShrink: 0 },
-  colorName: { color: '#cdd', fontSize: 13, flex: '1 1 auto', minWidth: 0 },
-  colorBarTrack: { width: '100%', height: 8, backgroundColor: '#1d1d2e', borderRadius: 999, overflow: 'hidden' },
-  colorBarFill: { display: 'block', height: '100%', borderRadius: 999 },
-  colorCount: { color: '#aab', fontSize: 12, marginLeft: 'auto', flexShrink: 0, fontVariantNumeric: 'tabular-nums' },
-  legend: { display: 'flex', flexWrap: 'wrap', gap: '6px 14px', marginTop: 8, justifyContent: 'center' },
-  legendItem: { display: 'inline-flex', alignItems: 'center', gap: 6, color: '#bbc', fontSize: 12 },
-  legendSwatch: { width: 10, height: 10, borderRadius: 3, display: 'inline-block' },
-  legendName: { color: '#cdd' },
-  legendCount: { color: '#7f8694', fontVariantNumeric: 'tabular-nums' },
-  chipRow: { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: '#1d1d2e',
-    border: '1px solid #2a2a3e',
-    borderRadius: 999,
-    padding: '4px 12px',
-    color: '#cdd',
-    fontSize: 13,
-  },
-  chipVariant: { color: '#9aa0b5' },
-  chipCount: { color: '#7f8694' },
-  cardChips: { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  cardChip: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#1d1d2e',
-    border: '1px solid #2a2a3e',
-    borderRadius: 8,
-    padding: '4px 10px',
-    color: '#cdd',
-    fontSize: 13,
-  },
-  cardChipCount: { color: '#8b9bff', fontWeight: 700, fontVariantNumeric: 'tabular-nums' },
-  tableWrap: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { textAlign: 'left', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e' },
-  thNum: { textAlign: 'right', color: '#888', fontWeight: 600, padding: '6px 8px', borderBottom: '1px solid #2a2a3e' },
-  td: { textAlign: 'left', color: '#ccc', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  tdNum: { textAlign: 'right', color: '#ccc', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  tdLink: { textAlign: 'left', color: '#8b9bff', padding: '6px 8px', borderBottom: '1px solid #1f1f2e' },
-  clickableRow: { cursor: 'pointer' },
-  opponentLink: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 13, padding: 0 },
-  colorsCell: { display: 'inline-flex', alignItems: 'center', gap: 6 },
-  colorDot: { width: 9, height: 9, borderRadius: 999, display: 'inline-block' },
-}
+const tooltipItemStyle: React.CSSProperties = { color: '#eef0f6' }

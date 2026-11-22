@@ -12,23 +12,21 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Fling
  * {1}{R}
  * Instant
+ *
  * As an additional cost to cast this spell, sacrifice a creature.
  * Fling deals damage equal to the sacrificed creature's power to any target.
- *
- * Final Strike's sacrifice cost and sacrificed power (last known on the battlefield, 2024-04-12
- * ruling), to any target.
  */
 val Fling = card("Fling") {
     manaCost = "{1}{R}"
     colorIdentity = "R"
     typeLine = "Instant"
-    oracleText = "As an additional cost to cast this spell, sacrifice a creature.\n" +
-        "Fling deals damage equal to the sacrificed creature's power to any target."
+    oracleText = "As an additional cost to cast this spell, sacrifice a creature.\nFling deals damage equal to the sacrificed creature's power to any target."
+
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Creature))
 
     spell {
-        val t = target(Targets.Any)
-        effect = Effects.DealDamage(DynamicAmounts.sacrificedPower(), t)
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(DynamicAmounts.sacrificedPower(), anyTarget)
     }
 
     metadata {

@@ -13,7 +13,7 @@ val AirServantReprint = Printing(
     collectorNumber = "90",
     scryfallId = "4c46fa99-d9a9-4d4a-a8c7-ad3adba1354b",
     artist = "Lars Grant-West",
-    imageUri = "https://cards.scryfall.io/normal/front/4/c/4c46fa99-d9a9-4d4a-a8c7-ad3adba1354b.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/4/c/4c46fa99-d9a9-4d4a-a8c7-ad3adba1354b.jpg?1783939361",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

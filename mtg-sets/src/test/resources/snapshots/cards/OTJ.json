@@ -3214,7 +3214,7 @@
                     "effects": [
                         {
                             "type": "GatherCards",
-                            "source": "CreaturesThatSaddledSource",
+                            "source": "CreaturesThatCrewedOrSaddledSource",
                             "storeAs": "gathered0"
                         },
                         {
@@ -3249,7 +3249,7 @@
                         },
                         {
                             "type": "GatherCards",
-                            "source": "CreaturesThatSaddledSource",
+                            "source": "CreaturesThatCrewedOrSaddledSource",
                             "storeAs": "gathered3"
                         },
                         {
@@ -3686,7 +3686,9 @@
                                                 "amount": 1
                                             }
                                         },
-                                        "storeSelected": "found"
+                                        "storeSelected": "found",
+                                        "prompt": "Search your library for a Plains land card to put onto the battlefield tapped",
+                                        "selectedLabel": "Put onto the battlefield tapped"
                                     },
                                     {
                                         "type": "MoveCollection",
@@ -3709,9 +3711,13 @@
                                 "condition": {
                                     "type": "Compare",
                                     "left": {
-                                        "type": "AggregateBattlefield",
-                                        "player": "EachOpponent",
-                                        "filter": "land"
+                                        "type": "GreatestAmongPlayers",
+                                        "players": "EachOpponent",
+                                        "inner": {
+                                            "type": "AggregateBattlefield",
+                                            "player": "You",
+                                            "filter": "land"
+                                        }
                                     },
                                     "operator": "GT",
                                     "right": {
@@ -3747,7 +3753,9 @@
                                                     "amount": 1
                                                 }
                                             },
-                                            "storeSelected": "found"
+                                            "storeSelected": "found",
+                                            "prompt": "Search your library for a Plains land card to put onto the battlefield tapped",
+                                            "selectedLabel": "Put onto the battlefield tapped"
                                         },
                                         {
                                             "type": "MoveCollection",
@@ -3769,9 +3777,13 @@
                 "interveningIf": {
                     "type": "Compare",
                     "left": {
-                        "type": "AggregateBattlefield",
-                        "player": "EachOpponent",
-                        "filter": "land"
+                        "type": "GreatestAmongPlayers",
+                        "players": "EachOpponent",
+                        "inner": {
+                            "type": "AggregateBattlefield",
+                            "player": "You",
+                            "filter": "land"
+                        }
                     },
                     "operator": "GT",
                     "right": {
@@ -3858,7 +3870,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a Desert land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -4299,7 +4313,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land or land Desert card to put onto the battlefield",
+                                "selectedLabel": "Put onto the battlefield"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4880,8 +4896,8 @@
                 }
             },
             {
-                "type": "ModifyPlotCost",
-                "target": "YouPlotFromHand",
+                "type": "ModifySpecialActionCost",
+                "action": "PLOT",
                 "modification": {
                     "type": "ReduceGeneric",
                     "amount": 2
@@ -4942,7 +4958,8 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "CopyTargetSpell",
-                    "target": "TriggeringEntity"
+                    "target": "TriggeringEntity",
+                    "mayChooseNewTargets": false
                 },
                 "descriptionOverride": "Whenever you cast an outlaw spell, copy that spell."
             }
@@ -6403,7 +6420,7 @@
                         "effects": [
                             {
                                 "type": "GatherCards",
-                                "source": "CreaturesThatSaddledSource",
+                                "source": "CreaturesThatCrewedOrSaddledSource",
                                 "storeAs": "gathered0"
                             },
                             {
@@ -6422,7 +6439,10 @@
                             },
                             {
                                 "type": "GatherCards",
-                                "source": "Self",
+                                "source": {
+                                    "type": "Entity",
+                                    "entity": "Self"
+                                },
                                 "storeAs": "gathered2"
                             },
                             {
@@ -8646,7 +8666,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -10586,7 +10608,10 @@
                     ]
                 },
                 "binding": "ANY",
-                "effect": "MarkSpellPlotOnResolve",
+                "effect": {
+                    "type": "MarkSpellExileOnResolve",
+                    "then": "BECOMES_PLOTTED"
+                },
                 "descriptionOverride": "Whenever you cast a multicolored instant or sorcery spell from your hand, exile that spell instead of putting it into your graveyard as it resolves. It becomes plotted."
             }
         ]
@@ -10650,7 +10675,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card to put into your graveyard",
+                                "selectedLabel": "Put into your graveyard"
                             },
                             {
                                 "type": "MoveCollection",
@@ -11350,7 +11377,9 @@
                             "amount": 2
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for up to two basic land or land Desert cards to put onto the battlefield tapped",
+                    "selectedLabel": "Put onto the battlefield tapped"
                 },
                 {
                     "type": "MoveCollection",
@@ -12969,7 +12998,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land or land Desert card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -15383,6 +15414,9 @@
                             "type": "TargetObject",
                             "filter": {
                                 "baseFilter": {
+                                    "statePredicates": [
+                                        "HasSingleTarget"
+                                    ],
                                     "anyOf": [
                                         {},
                                         {
@@ -16145,7 +16179,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another creature to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -16693,7 +16729,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -17190,7 +17228,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land or land Desert card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -17779,7 +17819,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land or land Desert card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -17999,8 +18041,16 @@
             "gate": {
                 "type": "Gate.WhenCondition",
                 "condition": {
-                    "type": "CastTimeFlagSet",
-                    "flag": "controlledMount"
+                    "type": "Compare",
+                    "left": {
+                        "type": "CapturedAtCast",
+                        "captureName": "controlledMount"
+                    },
+                    "operator": "GT",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 0
+                    }
                 }
             },
             "then": {
@@ -18050,12 +18100,23 @@
         ],
         "castTimeCaptures": [
             {
-                "flag": "controlledMount",
-                "condition": {
-                    "type": "Exists",
-                    "player": "You",
-                    "zone": "Battlefield",
-                    "filter": "creature Mount"
+                "captureName": "controlledMount",
+                "value": {
+                    "type": "Conditional",
+                    "condition": {
+                        "type": "Exists",
+                        "player": "You",
+                        "zone": "Battlefield",
+                        "filter": "creature Mount"
+                    },
+                    "ifTrue": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "ifFalse": {
+                        "type": "Fixed",
+                        "amount": 0
+                    }
                 }
             }
         ]
@@ -18784,75 +18845,6 @@
     ]
 }
 
-// Terror of the Peaks
-{
-    "name": "Terror of the Peaks",
-    "manaCost": "{3}{R}{R}",
-    "typeLine": "Creature — Dragon",
-    "oracleText": "Flying\nSpells your opponents cast that target this creature cost an additional 3 life to cast.\nWhenever another creature you control enters, this creature deals damage equal to that creature's power to any target.",
-    "creatureStats": {
-        "power": 5,
-        "toughness": 4
-    },
-    "keywords": [
-        "FLYING"
-    ],
-    "script": {
-        "triggeredAbilities": [
-            {
-                "id": "Terror of the Peaks:1",
-                "trigger": {
-                    "type": "ZoneChangeEvent",
-                    "filter": "creature ctrl:you",
-                    "to": "Battlefield"
-                },
-                "binding": "OTHER",
-                "effect": {
-                    "type": "DealDamage",
-                    "amount": {
-                        "type": "EntityProperty",
-                        "entity": "TriggeringEntity",
-                        "numericProperty": "Power"
-                    },
-                    "target": {
-                        "type": "BoundVariable",
-                        "name": "t0"
-                    }
-                },
-                "targetRequirement": {
-                    "type": "AnyTarget",
-                    "id": "t0"
-                }
-            }
-        ],
-        "staticAbilities": [
-            {
-                "type": "ModifySpellCost",
-                "target": {
-                    "type": "OpponentsCastTargeting",
-                    "targetFilter": {
-                        "baseFilter": "permanent",
-                        "scope": "Self"
-                    }
-                },
-                "modification": {
-                    "type": "IncreaseLife",
-                    "amount": 3
-                }
-            }
-        ]
-    },
-    "metadata": {
-        "collectorNumber": "149",
-        "rarity": "MYTHIC",
-        "artist": "Joshua Raphael",
-        "imageUri": "https://cards.scryfall.io/normal/front/9/0/904ff94a-4db4-44a6-8593-89c32905b3fc.jpg?1712355862"
-    },
-    "colorIdentityOverride": [
-        "RED"
-    ]
-}
-
 // The Gitrog, Ravenous Ride
 {
     "name": "The Gitrog, Ravenous Ride",
@@ -18892,7 +18884,7 @@
                     "effects": [
                         {
                             "type": "GatherCards",
-                            "source": "CreaturesThatSaddledSource",
+                            "source": "CreaturesThatCrewedOrSaddledSource",
                             "storeAs": "gathered0"
                         },
                         {
@@ -20031,7 +20023,10 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomPayLife",
-                                "amount": 1
+                                "amount": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
                             }
                         }
                     ]
@@ -20325,7 +20320,9 @@
                                         "baseFilter": "creature ctrl:you"
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose a creature to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",

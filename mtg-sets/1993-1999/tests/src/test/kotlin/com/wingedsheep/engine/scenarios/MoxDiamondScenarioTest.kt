@@ -1,94 +1,61 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.SelectCardsDecision
-import com.wingedsheep.engine.core.ZoneChangeEvent
-import com.wingedsheep.engine.state.components.player.ManaPoolComponent
-import com.wingedsheep.engine.support.GameTestDriver
-import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.mtg.sets.definitions.sth.cards.MoxDiamond
-import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.model.EntityId
-import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Mox Diamond (STH #138) — "If this artifact would enter, you may discard a land card instead. If you
- * do, put this artifact onto the battlefield. If you don't, put it into its owner's graveyard.
- * {T}: Add one mana of any color."
- *
- * 2008-05-01 ruling: if you don't discard a land card, Mox Diamond never enters.
+ * Mox Diamond — "If this artifact would enter, you may discard a land card instead. If you do, put
+ * this artifact onto the battlefield. If you don't, put it into its owner's graveyard. {T}: Add
+ * one mana of any color." The replacement itself is pinned by `EntersOnlyIfPaidScenarioTest`; this
+ * covers the card end to end: discard a land, then spend its mana.
  */
-class MoxDiamondScenarioTest : FunSpec({
+class MoxDiamondScenarioTest : ScenarioTestBase() {
+    init {
+        test("discarding a land puts it onto the battlefield, and it taps for any color") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardInHand(1, "Mox Diamond")
+                .withCardInHand(1, "Swamp")
+                .withCardInHand(1, "Llanowar Elves")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
 
-    fun driver(): GameTestDriver = GameTestDriver().apply {
-        registerCards(TestCards.all + listOf(MoxDiamond))
-        initMirrorMatch(deck = Deck.of("Grizzly Bears" to 40), startingLife = 20)
-        passPriorityUntil(Step.PRECOMBAT_MAIN)
-    }
+            game.castSpell(1, "Mox Diamond").error shouldBe null
+            game.resolveStack()
+            game.getPendingDecision().shouldBeInstanceOf<SelectCardsDecision>()
+            game.selectCards(game.findCardsInHand(1, "Swamp")).error shouldBe null
+            game.resolveStack()
 
-    fun GameTestDriver.enteredBattlefield(id: EntityId): Boolean =
-        events.any { it is ZoneChangeEvent && it.entityId == id && it.toZone == Zone.BATTLEFIELD }
+            game.isOnBattlefield("Mox Diamond") shouldBe true
+            game.isInGraveyard(1, "Swamp") shouldBe true
 
-    test("discard a land card: Mox Diamond enters and taps for any color") {
-        val d = driver()
-        val you = d.activePlayer!!
-        val forest = d.putCardInHand(you, "Forest")
-        val mountain = d.putCardInHand(you, "Mountain")
-        val mox = d.putCardInHand(you, "Mox Diamond")
-        d.castSpell(you, mox).error shouldBe null
-        d.bothPass()
+            // A Swamp was discarded, yet the Mox still pays {G}.
+            game.castSpell(1, "Llanowar Elves").error shouldBe null
+            game.resolveStack()
+            game.isOnBattlefield("Llanowar Elves") shouldBe true
+        }
 
-        val ask = d.pendingDecision.shouldBeInstanceOf<SelectCardsDecision>()
-        ask.options shouldContainExactlyInAnyOrder listOf(forest, mountain)
-        d.submitCardSelection(you, listOf(mountain)).error shouldBe null
+        test("keeping the land puts it into the graveyard") {
+            val game = scenario()
+                .withPlayers("Player1", "Player2")
+                .withCardInHand(1, "Mox Diamond")
+                .withCardInHand(1, "Swamp")
+                .withActivePlayer(1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .build()
 
-        d.findPermanent(you, "Mox Diamond") shouldBe mox
-        d.getGraveyard(you) shouldContain mountain
-        d.getHand(you) shouldContain forest
+            game.castSpell(1, "Mox Diamond").error shouldBe null
+            game.resolveStack()
+            game.selectCards(emptyList()).error shouldBe null
+            game.resolveStack()
 
-        val ability = MoxDiamond.script.activatedAbilities.single().id
-        d.submit(ActivateAbility(playerId = you, sourceId = mox, abilityId = ability, manaColorChoice = Color.BLUE))
-            .error shouldBe null
-        (d.state.getEntity(you)?.get<ManaPoolComponent>()?.blue ?: 0) shouldBe 1
-    }
-
-    test("don't discard: it goes to the graveyard and never enters") {
-        val d = driver()
-        val you = d.activePlayer!!
-        val forest = d.putCardInHand(you, "Forest")
-        val mox = d.putCardInHand(you, "Mox Diamond")
-        d.castSpell(you, mox).error shouldBe null
-        d.bothPass()
-        d.pendingDecision.shouldBeInstanceOf<SelectCardsDecision>()
-
-        d.submitCardSelection(you, emptyList()).error shouldBe null
-
-        d.findPermanent(you, "Mox Diamond").shouldBeNull()
-        d.getGraveyard(you) shouldContain mox
-        d.getHand(you) shouldContain forest
-        withClue("never on the battlefield, so nothing that watches for entering could see it") {
-            d.enteredBattlefield(mox) shouldBe false
+            game.isInGraveyard(1, "Mox Diamond") shouldBe true
+            game.isInHand(1, "Swamp") shouldBe true
         }
     }
-
-    test("no land card in hand: straight to the graveyard, nobody is asked") {
-        val d = driver()
-        val you = d.activePlayer!!
-        val mox = d.putCardInHand(you, "Mox Diamond")
-        d.castSpell(you, mox).error shouldBe null
-        d.bothPass()
-
-        d.pendingDecision.shouldBeNull()
-        d.getGraveyard(you) shouldContain mox
-        d.enteredBattlefield(mox) shouldBe false
-    }
-})
+}

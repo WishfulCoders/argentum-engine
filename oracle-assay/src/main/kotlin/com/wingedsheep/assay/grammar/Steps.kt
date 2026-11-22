@@ -36,6 +36,7 @@ import com.wingedsheep.sdk.scripting.effects.ChooseNumberThenEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
+import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
@@ -1074,7 +1075,8 @@ object Steps {
                 slot("n", Cardinals.word)
                 build { scriptFor(it.int("n")) }
                 match { script ->
-                    val count = (script.spellEffect as? PlayAdditionalLandsEffect)?.count ?: return@match null
+                    val count = ((script.spellEffect as? PlayAdditionalLandsEffect)?.count
+                        as? DynamicAmount.Fixed)?.amount ?: return@match null
                     if (!Cardinals.spellable(count) || script != scriptFor(count)) return@match null
                     bind("n" to count)
                 }
@@ -1138,7 +1140,8 @@ object Steps {
      * script takes the amount alone, and this sentence's script takes the amount and the filter — so
      * sharing the shape would mean parameterizing it over an arity nothing else needs. What is
      * shared is what matters: one `scriptFor`, one reconstruction, and the same domain split
-     * (`Fixed` is the numeral, everything else is the clause).
+     * (`Fixed` is the numeral, the literal X is `XValue` — [xDamageSteps]' noun-phrase sibling —
+     * and everything else is the clause).
      */
     private val damageToTargetPermanent: List<Phrase<CardScript>> = run {
         fun scriptFor(
@@ -1206,6 +1209,25 @@ object Steps {
                 }
             }
         } + listOf(
+            phrase<CardScript>(
+                "{self} deals X damage to target {filter}",
+                name = "deals X damage to target permanent",
+            ) {
+                slot("self", Primitives.self)
+                slot("filter", Filters.filter)
+
+                build {
+                    scriptFor(bare, DynamicAmount.XValue, it.value("filter"))
+                }
+
+                match { script ->
+                    val (_, filter) = readBack(bare, script) {
+                        it == DynamicAmount.XValue
+                    } ?: return@match null
+
+                    bind("self" to Unit, "filter" to filter)
+                }
+            },
             clause(
                 "{self} deals damage to target {filter} equal to {amount}",
                 "deals damage to target permanent, by a count",
@@ -2166,7 +2188,7 @@ object Steps {
             spellEffect = Effects.GrantKeyword(
                 AbilityFlag.DOESNT_UNTAP,
                 Targets.bound(),
-                Duration.UntilAfterAffectedControllersNextUntap,
+                Duration.UntilAfterAffectedControllersNextUntap(),
             ),
             targetRequirements = listOf(Targets.permanent(filter)),
         )
@@ -3610,41 +3632,67 @@ object Steps {
         /**
          * "…sacrifice it **at end of combat**." — Dorothea and Mardu Blazebringer; "…destroy that
          * creature at end of combat." — the old deathtouch templating; "…remove a +1/+1 counter
-         * from it at end of combat." — Fire Ants and the fading attackers.
+         * from it at end of combat." — Fire Ants and the fading attackers. "…at the beginning of
+         * the next end step." and "…at the beginning of the next turn's upkeep." are the same rider
+         * over a different step.
          *
          * A wrapper for [mayClause]'s reason: the clause says *what* happens and the rider says
          * *when*, so writing it into each verb's template would be one rule per verb for a phrase
          * that composes with all of them. `CreateDelayedTriggerEffect` is the SDK's own shape for
          * that split — a step and the effect it defers — and CR 603.7a is the rule it spells: the
-         * delayed trigger is created on resolution and fires once, at the next end-of-combat step.
+         * delayed trigger is created on resolution and fires once, at the step the surface names.
+         * Each surface is a row rather than a slot over `Step`, because the surfaces are not one
+         * phrase with a word in it: the upkeep row also carries `NEXT_TURN` timing, which no other
+         * row does.
          *
-         * Only end of combat, and that is the corpus rather than a limit of the shape. Oracle's
-         * other deferrals name a *step of a turn* ("at the beginning of the next end step"), which
-         * is the same SDK field with a different `Step` and a different printed clause; each is a
-         * row of this rule the day someone counts it. What this rider must not become is a slot
-         * over `Step`, because the surfaces are not one phrase with a word in it.
+         * [inner] is the clause vocabulary of the position the rider sits in. First in a line it is
+         * [atom], where "it" is the source; later in a line it is [laterAtom] plus the source's
+         * *name*, with no source pronoun, for [laterClause]'s reason — after "Create a 1/1 red Pirate
+         * creature token…" the "it" of "Exile it at the beginning of the next end step" is the
+         * token, and after "Target creature you control gains flying…" (Krovikan Elementalist) it is
+         * that creature. Reading either as the source exiled or sacrificed the card itself. The token
+         * cleanups are [Tokens]' own rows instead.
          */
-        private val delayedClause: Phrase<CardScript> =
-            phrase("{inner} at end of combat", name = "at end of combat$tag") {
-                slot("inner", atom)
-                build { bindings ->
-                    wrap(bindings.value("inner")) {
-                        CreateDelayedTriggerEffect(step = Step.END_COMBAT, effect = it)
-                    }
-                }
-                match { script ->
-                    val delayed = script.spellEffect as? CreateDelayedTriggerEffect ?: return@match null
-                    val inner = CardScript(
-                        spellEffect = delayed.effect,
-                        targetRequirements = script.targetRequirements,
-                    )
-                    val rebuilt = wrap(inner) {
-                        CreateDelayedTriggerEffect(step = Step.END_COMBAT, effect = it)
-                    }
-                    if (rebuilt != script) return@match null
-                    bind("inner" to inner)
-                }
+        private fun delayedAt(
+            inner: Phrase<CardScript>,
+            position: String,
+            surface: String,
+            step: Step,
+            timing: DelayedTriggerTiming = DelayedTriggerTiming.CURRENT_TURN_OR_LATER,
+        ): Phrase<CardScript> = phrase("{inner} $surface", name = "$surface$position$tag") {
+            slot("inner", inner)
+            fun scriptFor(inner: CardScript): CardScript? =
+                wrap(inner) { CreateDelayedTriggerEffect(step = step, effect = it, timing = timing) }
+            build { bindings -> scriptFor(bindings.value("inner")) }
+            match { script ->
+                val delayed = script.spellEffect as? CreateDelayedTriggerEffect ?: return@match null
+                val inner = CardScript(spellEffect = delayed.effect, targetRequirements = script.targetRequirements)
+                if (scriptFor(inner) != script) return@match null
+                bind("inner" to inner)
             }
+        }
+
+        private fun delayedClause(inner: Phrase<CardScript>, position: String): Phrase<CardScript> = oneOf(
+            "a delayed effect$position$tag",
+            listOf(
+                delayedAt(inner, position, "at end of combat", Step.END_COMBAT),
+                delayedAt(inner, position, "at the beginning of the next end step", Step.END),
+                delayedAt(
+                    inner,
+                    position,
+                    "at the beginning of the next turn's upkeep",
+                    Step.UPKEEP,
+                    timing = DelayedTriggerTiming.NEXT_TURN,
+                ),
+            ),
+        )
+
+        private val delayedClause: Phrase<CardScript> = delayedClause(atom, "")
+
+        private val laterDelayedClause: Phrase<CardScript> = delayedClause(
+            oneOf("a later delayed effect$tag", listOf(laterAtom, SelfSteps.sacrificeNamed) + SelfSteps.named),
+            ", later",
+        )
 
         /**
          * "You may pay {B}{B}{B}. If you do, return it to your hand." — Ghastly Remains, Skirk
@@ -3808,7 +3856,7 @@ object Steps {
             // card in any sentence and no earlier mention can capture it — so [SelfSteps.named] is
             // a member here, which is what lets "Draw a card. Put a +1/+1 counter on ~." and
             // "{T}: Add {C}. Put a point counter on ~." read at all.
-            nonAnaphoric + mayClause + delayedClause + positionScoped +
+            nonAnaphoric + mayClause + laterDelayedClause + positionScoped +
                 Continuations.all + targetLifeByProperty + targetControllerLosesLife + SelfSteps.named,
         )
 

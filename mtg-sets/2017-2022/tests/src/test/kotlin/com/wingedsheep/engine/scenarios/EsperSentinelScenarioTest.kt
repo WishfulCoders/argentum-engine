@@ -1,127 +1,157 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.YesNoDecision
-import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.engine.state.components.player.ManaPoolComponent
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.mtg.sets.definitions.mh2.cards.EsperSentinel
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.model.EntityId
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Esper Sentinel (MH2 #12) — "Whenever an opponent casts their first noncreature spell each turn,
- * draw a card unless that player pays {X}, where X is this creature's power."
+ * Esper Sentinel — "Whenever an opponent casts their first noncreature spell each turn, draw a card
+ * unless that player pays {X}, where X is this creature's power."
+ *
+ * Pins the parts a reader can't confirm from the script: the caster is the one asked and charged,
+ * the draw is the *unpaid* branch, only the first noncreature spell counts (a creature spell neither
+ * triggers nor closes the window), and X is the Sentinel's last-known power when it has died.
  */
-class EsperSentinelScenarioTest : ScenarioTestBase() {
-    init {
-        cardRegistry.register(card("Sentinel Test Instant") {
-            manaCost = "{0}"
-            typeLine = "Instant"
-            spell { effect = Effects.GainLife(1) }
-        })
-        cardRegistry.register(card("Sentinel Test Creature") {
-            manaCost = "{0}"
-            typeLine = "Creature — Construct"
-            power = 1
-            toughness = 1
-        })
+class EsperSentinelScenarioTest : FunSpec({
 
-        fun TestGame.hand1() = state.getHand(player1Id).size
-
-        fun board(opponentLands: Int) = scenario().withPlayers("P1", "P2")
-            .withCardOnBattlefield(1, "Esper Sentinel")
-            .withCardInHand(2, "Sentinel Test Instant")
-            .withCardInHand(2, "Sentinel Test Instant")
-            .withCardInHand(2, "Sentinel Test Creature")
-            .withLandsOnBattlefield(2, "Plains", opponentLands)
-            .withCardInLibrary(1, "Plains")
-            .withCardInLibrary(1, "Plains")
-            .withCardInLibrary(2, "Plains")
-            .withActivePlayer(2)
-            .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-
-        test("the opponent's first noncreature spell: decline and you draw; a second one doesn't trigger") {
-            val game = board(2).build()
-            val before = game.hand1()
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.state.stack.size shouldBe 2 // spell + trigger
-            game.resolveStack()
-            val decision = game.state.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
-            decision.playerId shouldBe game.player2Id
-            decision.prompt shouldContain "{1}"
-            game.answerYesNo(false).error shouldBe null
-            game.resolveStack()
-            game.hand1() shouldBe before + 1
-
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.state.stack.size shouldBe 1
-            game.resolveStack()
-            game.hand1() shouldBe before + 1
-        }
-
-        test("paying {X} stops the draw") {
-            val game = board(2).build()
-            val before = game.hand1()
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.resolveStack()
-            game.answerYesNo(true).error shouldBe null
-            // Paying opens the mana-source window (CR 605.3a); auto-tap a Plains.
-            game.submitManaSourcesAutoPay().error shouldBe null
-            game.state.pendingDecision shouldBe null
-            game.resolveStack()
-            game.hand1() shouldBe before
-        }
-
-        test("a creature spell neither triggers it nor uses up the turn's first noncreature spell") {
-            val game = board(2).build()
-            val before = game.hand1()
-            game.castSpell(2, "Sentinel Test Creature").error shouldBe null
-            game.state.stack.size shouldBe 1
-            game.resolveStack()
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.state.stack.size shouldBe 2
-            game.resolveStack()
-            game.answerYesNo(false).error shouldBe null
-            game.resolveStack()
-            game.hand1() shouldBe before + 1
-        }
-
-        test("an opponent who can't pay just lets you draw") {
-            val game = board(0).build()
-            val before = game.hand1()
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.resolveStack()
-            game.state.pendingDecision shouldBe null
-            game.hand1() shouldBe before + 1
-        }
-
-        test("a noncreature spell cast before it entered was already that turn's first") {
-            val game = scenario().withPlayers("P1", "P2")
-                .withCardInHand(1, "Esper Sentinel")
-                .withLandsOnBattlefield(1, "Plains", 1)
-                .withCardInHand(2, "Sentinel Test Instant")
-                .withCardInHand(2, "Sentinel Test Instant")
-                .withCardInLibrary(1, "Plains")
-                .withCardInLibrary(2, "Plains")
-                .withActivePlayer(1)
-                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
-                .build()
-            // P1 casts Esper Sentinel; P2 responds with a noncreature spell while it is still on the stack.
-            game.castSpell(1, "Esper Sentinel").error shouldBe null
-            game.passPriority().error shouldBe null
-            game.state.priorityPlayerId shouldBe game.player2Id
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.state.stack.size shouldBe 2 // Sentinel isn't on the battlefield yet: no trigger
-            game.resolveStack()
-            game.isOnBattlefield("Esper Sentinel") shouldBe true
-
-            // Same turn, P2's second noncreature spell isn't their first: no trigger (2021-06-18 ruling).
-            game.passPriority().error shouldBe null
-            game.state.priorityPlayerId shouldBe game.player2Id
-            game.castSpell(2, "Sentinel Test Instant").error shouldBe null
-            game.state.stack.size shouldBe 1
-        }
+    fun createDriver(): GameTestDriver {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(EsperSentinel))
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), startingLife = 20)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver
     }
-}
+
+    fun GameTestDriver.redFloating(playerId: EntityId): Int =
+        (state.getEntity(playerId)!!.get<ManaPoolComponent>() ?: ManaPoolComponent()).red
+
+    /** The caster bolts the Sentinel's controller with [red] red mana floating; resolves up to the pay prompt. */
+    fun GameTestDriver.castBoltIntoSentinel(caster: EntityId, sentinelOwner: EntityId, red: Int) {
+        val bolt = putCardInHand(caster, "Lightning Bolt")
+        giveMana(caster, Color.RED, red)
+        castSpell(caster, bolt, targets = listOf(sentinelOwner)).error shouldBe null
+        stackSize shouldBe 2
+        bothPass()
+    }
+
+    test("the caster declines to pay - the Sentinel's controller draws") {
+        val d = createDriver()
+        val caster = d.activePlayer!!
+        val owner = d.getOpponent(caster)
+        d.putCreatureOnBattlefield(owner, "Esper Sentinel")
+        val handBefore = d.getHandSize(owner)
+
+        d.castBoltIntoSentinel(caster, owner, red = 2)
+        val prompt = d.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
+        prompt.playerId shouldBe caster
+        d.submitYesNo(caster, false)
+
+        d.getHandSize(owner) shouldBe handBefore + 1
+        d.redFloating(caster) shouldBe 1
+    }
+
+    test("the caster pays {X} = the Sentinel's power - no draw") {
+        val d = createDriver()
+        val caster = d.activePlayer!!
+        val owner = d.getOpponent(caster)
+        d.putCreatureOnBattlefield(owner, "Esper Sentinel")
+        val handBefore = d.getHandSize(owner)
+
+        d.castBoltIntoSentinel(caster, owner, red = 2)
+        d.submitYesNo(caster, true)
+
+        d.getHandSize(owner) shouldBe handBefore
+        d.redFloating(caster) shouldBe 0
+    }
+
+    test("a caster who can't pay isn't asked - the draw happens") {
+        val d = createDriver()
+        val caster = d.activePlayer!!
+        val owner = d.getOpponent(caster)
+        d.putCreatureOnBattlefield(owner, "Esper Sentinel")
+        val handBefore = d.getHandSize(owner)
+
+        d.castBoltIntoSentinel(caster, owner, red = 1)
+
+        d.pendingDecision shouldBe null
+        d.getHandSize(owner) shouldBe handBefore + 1
+    }
+
+    test("only the first noncreature spell each turn triggers it") {
+        val d = createDriver()
+        val caster = d.activePlayer!!
+        val owner = d.getOpponent(caster)
+        d.putCreatureOnBattlefield(owner, "Esper Sentinel")
+
+        d.castBoltIntoSentinel(caster, owner, red = 1)
+        while (d.stackSize > 0) d.bothPass()
+
+        val second = d.putCardInHand(caster, "Lightning Bolt")
+        d.giveMana(caster, Color.RED, 1)
+        d.castSpell(caster, second, targets = listOf(owner)).error shouldBe null
+        d.stackSize shouldBe 1
+    }
+
+    test("a creature spell neither triggers it nor uses up the first noncreature spell") {
+        val d = createDriver()
+        val caster = d.activePlayer!!
+        val owner = d.getOpponent(caster)
+        d.putCreatureOnBattlefield(owner, "Esper Sentinel")
+
+        val bears = d.putCardInHand(caster, "Grizzly Bears")
+        d.giveMana(caster, Color.GREEN, 2)
+        d.castSpell(caster, bears).error shouldBe null
+        d.stackSize shouldBe 1
+        d.bothPass()
+        val handBefore = d.getHandSize(owner)
+
+        // The Bolt is still their first noncreature spell: castBoltIntoSentinel sees the trigger.
+        d.castBoltIntoSentinel(caster, owner, red = 1)
+        d.getHandSize(owner) shouldBe handBefore + 1
+    }
+
+    test("its own controller's noncreature spells don't trigger it") {
+        val d = createDriver()
+        val me = d.activePlayer!!
+        val opp = d.getOpponent(me)
+        d.putCreatureOnBattlefield(me, "Esper Sentinel")
+        val bolt = d.putCardInHand(me, "Lightning Bolt")
+        d.giveMana(me, Color.RED, 1)
+        d.castSpell(me, bolt, targets = listOf(opp)).error shouldBe null
+        d.stackSize shouldBe 1
+    }
+
+    test("X is the Sentinel's last-known power if it died before the trigger resolved") {
+        val d = createDriver()
+        val caster = d.activePlayer!!
+        val owner = d.getOpponent(caster)
+        val sentinel = d.putCreatureOnBattlefield(owner, "Esper Sentinel")
+
+        val bolt = d.putCardInHand(caster, "Lightning Bolt")
+        val kill = d.putCardInHand(caster, "Lightning Bolt")
+        d.giveMana(caster, Color.RED, 3)
+        d.castSpell(caster, bolt, targets = listOf(owner)).error shouldBe null
+        d.stackSize shouldBe 2
+        // The second Bolt is not their first noncreature spell, so it adds no trigger.
+        d.castSpell(caster, kill, targets = listOf(sentinel)).error shouldBe null
+        d.stackSize shouldBe 3
+        d.bothPass()
+        d.getGraveyard(owner) shouldContain sentinel
+
+        d.bothPass()
+        d.pendingDecision.shouldBeInstanceOf<YesNoDecision>().playerId shouldBe caster
+        d.submitYesNo(caster, true)
+        // The last-known power was 1, so paying cost exactly the one red left floating.
+        d.redFloating(caster) shouldBe 0
+    }
+})

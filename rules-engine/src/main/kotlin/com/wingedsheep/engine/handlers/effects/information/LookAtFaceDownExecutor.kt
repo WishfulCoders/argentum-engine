@@ -58,7 +58,7 @@ class LookAtFaceDownExecutor : EffectExecutor<LookAtFaceDownEffect> {
         context: EffectContext,
         viewingPlayerId: com.wingedsheep.sdk.model.EntityId
     ): EffectResult {
-        val targetPlayerId = context.resolvePlayerTarget(effect.target)
+        val targetPlayerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid target player for look at all face-down creatures")
 
         val battlefield = state.controlledBattlefield(targetPlayerId)

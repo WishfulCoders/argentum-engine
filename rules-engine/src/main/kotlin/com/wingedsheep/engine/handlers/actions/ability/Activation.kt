@@ -19,8 +19,6 @@ import com.wingedsheep.sdk.scripting.targets.TargetRequirement
  */
 internal data class Activation(
     val action: ActivateAbility,
-    /** The id the ability will have on the stack; also keys its object-reference environment. */
-    val abilityEntityId: EntityId,
     val activationReferences: ObjectReferenceEnvironment,
     val container: ComponentContainer,
     val cardComponent: CardComponent,
@@ -41,15 +39,41 @@ internal data class Activation(
     /** The ability's target requirements with text-changing effects applied. */
     val targetRequirements: List<TargetRequirement>
         get() = if (textReplacement != null) {
-            ability.targetRequirements.map { it.applyTextReplacement(textReplacement) }
+            (ability.targetRequirements + modalTargetRequirements()).map { it.applyTextReplacement(textReplacement) }
         } else {
-            ability.targetRequirements
+            ability.targetRequirements + modalTargetRequirements()
         }
+
+    private fun modalTargetRequirements(): List<TargetRequirement> =
+        ((ability.effect as? com.wingedsheep.sdk.scripting.effects.ModalEffect))?.let { modal ->
+            action.chosenModes.orEmpty().flatMap { modal.modes[it].targetRequirements }
+        } ?: emptyList()
 
     val variablePermanentsCost: CostAtom.VariablePermanents?
         get() = effectiveCost.extractVariablePermanentsCost()
 
-    /** The permanents chosen for a variable-permanents cost, when the action carries them. */
+    /**
+     * The permanents chosen for a variable-permanents cost, when the action carries them. Empty for
+     * both "not chosen" and "chose none" — ask [variableCostChosen] which one it is.
+     */
     val chosenForCost: List<EntityId>
         get() = action.costPayment?.variableCostPermanents ?: emptyList()
+
+    /** Whether the payer has answered the variable-permanents choice — possibly with none. */
+    val variableCostChosen: Boolean
+        get() = action.costPayment?.variableCostPermanents != null
+
+    /**
+     * Whether the controller's targets are chosen *after* a cost pick that announces X
+     * (CR 601.2b) — a variable-permanents cost, or a measured discard with no `{X}` mana to fix X
+     * first. The enumerator surfaces such an ability with no targets and the handler pauses for
+     * them once the pick is in ([xDefiningCostChosen]).
+     */
+    val targetsFollowCostChoice: Boolean
+        get() = effectiveCost.targetsFollowCostChoice()
+
+    /** Whether the X-announcing cost pick behind [targetsFollowCostChoice] has been made. */
+    val xDefiningCostChosen: Boolean
+        get() = if (variablePermanentsCost != null) variableCostChosen
+            else action.costPayment?.discardedCards?.isNotEmpty() == true
 }

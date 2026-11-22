@@ -13,7 +13,7 @@ val RecklessSpiteReprint = Printing(
     collectorNumber = "123",
     scryfallId = "f553bd63-9594-4c0f-a706-821f06902307",
     artist = "Karl Kopinski",
-    imageUri = "https://cards.scryfall.io/normal/front/f/5/f553bd63-9594-4c0f-a706-821f06902307.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/f/5/f553bd63-9594-4c0f-a706-821f06902307.jpg?1783939354",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

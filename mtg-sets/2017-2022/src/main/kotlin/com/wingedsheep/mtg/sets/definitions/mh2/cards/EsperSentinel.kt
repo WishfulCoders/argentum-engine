@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.mh2.cards
 
-import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,18 +10,20 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Esper Sentinel
- * {W}
- * Artifact Creature — Human Soldier
- * 1/1
+ * Esper Sentinel — Modern Horizons 2 #12 (canonical printing; the earlier pmh2 #12s is a promo)
+ * {W} · Artifact Creature — Human Soldier · 1/1
  *
  * Whenever an opponent casts their first noncreature spell each turn, draw a card unless that
  * player pays {X}, where X is this creature's power.
  *
- * "First noncreature spell each turn" counts every noncreature spell that opponent cast this turn,
- * including ones cast before Esper Sentinel was on the battlefield (2021-06-18 ruling). X is read as
- * the ability resolves — by last-known information if Esper Sentinel has left — and a negative X is
- * {0}, which the opponent may still decline to pay ([Costs.pay.PayDynamicMana]).
+ *  - The trigger is The Queen of Dale's `castsNth(1, Noncreature)`: the count reads the caster's
+ *    cast history, so a noncreature spell cast before the Sentinel arrived closes the window
+ *    (ruling).
+ *  - "Draw unless that player pays {X}" is a [Effects.MayPay] whose *decision maker and payer* are
+ *    the caster ([Player.TriggeringPlayer]) and whose `otherwise` is your draw. X is read when the
+ *    ability resolves, from the Sentinel's last-known power if it has left (ruling); a negative
+ *    power pays {0}, which the caster may still decline (ruling). An unaffordable X skips the prompt
+ *    straight to the draw.
  */
 val EsperSentinel = card("Esper Sentinel") {
     manaCost = "{W}"
@@ -35,12 +36,18 @@ val EsperSentinel = card("Esper Sentinel") {
 
     triggeredAbility {
         trigger = Triggers.anOpponent.castsNth(1, GameObjectFilter.Noncreature)
-        effect = Effects.PayOrSuffer(
-            cost = Costs.pay.PayDynamicMana(DynamicAmounts.sourcePower()),
-            suffer = Effects.DrawCards(1),
-            player = EffectTarget.PlayerRef(Player.TriggeringPlayer),
-            consequenceDescription = "let Esper Sentinel's controller draw a card",
+        effect = Effects.MayPay(
+            cost = Effects.PayDynamicMana(
+                amount = DynamicAmounts.sourcePower(),
+                payer = Player.TriggeringPlayer
+            ),
+            then = Effects.Nothing,
+            otherwise = Effects.DrawCards(1),
+            decisionMaker = EffectTarget.PlayerRef(Player.TriggeringPlayer),
+            descriptionOverride = "Pay {X}, where X is Esper Sentinel's power, so its controller doesn't draw a card?"
         )
+        description = "Whenever an opponent casts their first noncreature spell each turn, draw a card " +
+            "unless that player pays {X}, where X is this creature's power."
     }
 
     metadata {

@@ -27,6 +27,13 @@ class CardRegistry(private val parent: CardRegistry? = null) {
     private val cardsByName = mutableMapOf<String, CardDefinition>()
     // Secondary index: "CardName#CollectorNumber" -> CardDefinition (for variants like basic lands)
     private val cardsByNameAndNumber = mutableMapOf<String, CardDefinition>()
+    // The same variants grouped by plain name, in registration order, so [getCardsByName] is a
+    // lookup rather than a scan of every variant key — called once per name while the server
+    // builds its printing and booster indexes, a scan made startup quadratic in the corpus size.
+    private val variantsByName = mutableMapOf<String, MutableMap<String, CardDefinition>>()
+    // Composite definitions of merged permanents, built on first lookup. Concurrent: the registry
+    // is shared by every game the server runs, and these entries appear mid-game.
+    private val mergedDefinitions = java.util.concurrent.ConcurrentHashMap<String, CardDefinition>()
     // Reverse DFC index: back face name -> front face name
     private val backFaceToFrontFace = mutableMapOf<String, String>()
 
@@ -51,6 +58,7 @@ class CardRegistry(private val parent: CardRegistry? = null) {
                 "${card.name}#$collectorNumber"
             }
             cardsByNameAndNumber[key] = card
+            variantsByName.getOrPut(card.name) { mutableMapOf() }[key] = card
         }
 
         // Auto-register the back face as a standalone entry so lookups by its name succeed.
@@ -95,7 +103,14 @@ class CardRegistry(private val parent: CardRegistry? = null) {
         // ~20k-entry map (mtg-draft-ai `docs/56` §3 item 5).
         if (name.indexOf('#') >= 0) cardsByNameAndNumber[name]?.let { return it }
         // Fall back to name-only lookup, then to the parent registry for an overlay.
-        return cardsByName[name] ?: parent?.getCard(name)
+        cardsByName[name]?.let { return it }
+        // A merged permanent's composite id (mutate, CR 730) — built from this registry's own
+        // lookups, so an overlay resolves its components the same way it resolves anything else.
+        if (MergedCardDefinitions.isComposite(name)) {
+            return mergedDefinitions[name]
+                ?: MergedCardDefinitions.build(name, ::getCard).also { mergedDefinitions.putIfAbsent(name, it) }
+        }
+        return parent?.getCard(name)
     }
 
     /**
@@ -144,19 +159,16 @@ class CardRegistry(private val parent: CardRegistry? = null) {
      * Get the names of every registered card whose type line includes Land (e.g. for
      * Petrified Hamlet's "choose a land card name"). Unique names only.
      */
-    fun landCardNames(): Set<String> {
-        val own = cardsByName.values.filter { it.isLand }.map { it.name }.toSet()
-        // An overlay only shadows definitions; a name is a land name if it is one in either layer.
-        return if (parent == null) own else own + parent.landCardNames().filter { it !in cardsByName }
-    }
+    fun landCardNames(): Set<String> = namesWhere { it.isLand }
 
     /**
-     * Get the names of every registered card whose type line does *not* include Land (Skyseer's
-     * Chariot's "choose a nonland card name"). Unique names only; the mirror of [landCardNames].
+     * The registered names whose definition matches [predicate]. Unique names only. An overlay
+     * only shadows definitions: a name the overlay redefines is judged by the overlay's definition
+     * alone, every other name by the parent's.
      */
-    fun nonlandCardNames(): Set<String> {
-        val own = cardsByName.values.filter { !it.isLand }.map { it.name }.toSet()
-        return if (parent == null) own else own + parent.nonlandCardNames().filter { it !in cardsByName }
+    private fun namesWhere(predicate: (CardDefinition) -> Boolean): Set<String> {
+        val own = cardsByName.values.filter(predicate).map { it.name }.toSet()
+        return if (parent == null) own else own + parent.namesWhere(predicate).filter { it !in cardsByName }
     }
 
     /**
@@ -167,7 +179,12 @@ class CardRegistry(private val parent: CardRegistry? = null) {
     fun cardNamesIn(pool: com.wingedsheep.sdk.scripting.CardNamePool): Set<String> = when (pool) {
         com.wingedsheep.sdk.scripting.CardNamePool.ANY -> allCardNames()
         com.wingedsheep.sdk.scripting.CardNamePool.LAND -> landCardNames()
-        com.wingedsheep.sdk.scripting.CardNamePool.NONLAND -> nonlandCardNames()
+        com.wingedsheep.sdk.scripting.CardNamePool.NONLAND -> namesWhere { !it.isLand }
+        com.wingedsheep.sdk.scripting.CardNamePool.NONBASIC_LAND -> namesWhere { it.isLand && !it.typeLine.isBasicLand }
+        com.wingedsheep.sdk.scripting.CardNamePool.ARTIFACT -> namesWhere { it.isArtifact }
+        com.wingedsheep.sdk.scripting.CardNamePool.NONARTIFACT_NONLAND -> namesWhere { !it.isArtifact && !it.isLand }
+        com.wingedsheep.sdk.scripting.CardNamePool.NONCREATURE_NONLAND -> namesWhere { !it.isCreature && !it.isLand }
+        com.wingedsheep.sdk.scripting.CardNamePool.CREATURE -> namesWhere { it.isCreature }
     }
 
     /**
@@ -177,10 +194,8 @@ class CardRegistry(private val parent: CardRegistry? = null) {
      * @return All cards with that name, including variants
      */
     fun getCardsByName(name: String): List<CardDefinition> {
-        val own = cardsByNameAndNumber.entries
-            .filter { (key, _) -> key.startsWith("$name#") }
-            .map { it.value }
-            .ifEmpty { listOfNotNull(cardsByName[name]) }
+        val own = variantsByName[name]?.values?.toList()
+            ?: listOfNotNull(cardsByName[name])
         if (parent == null) return own
         // Overlay entries shadow the parent's variant with the same identity, but the parent may
         // hold printings this overlay never pinned — keep both, overlay first.
@@ -216,6 +231,7 @@ class CardRegistry(private val parent: CardRegistry? = null) {
         ownVersion++
         cardsByName.clear()
         cardsByNameAndNumber.clear()
+        variantsByName.clear()
         backFaceToFrontFace.clear()
     }
 }

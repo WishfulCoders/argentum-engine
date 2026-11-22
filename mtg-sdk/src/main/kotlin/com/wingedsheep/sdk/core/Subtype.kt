@@ -202,8 +202,10 @@ value class Subtype(val value: String) {
 
         // Enchantment subtypes
         val AURA = Subtype("Aura")
+        val BACKGROUND = Subtype("Background")
         val CASE = Subtype("Case")
         val CLASS = Subtype("Class")
+        val CURSE = Subtype("Curse")
         val ROLE = Subtype("Role")
         val ROOM = Subtype("Room")
         val SAGA = Subtype("Saga")
@@ -215,6 +217,7 @@ value class Subtype(val value: String) {
         // Artifact subtypes
         val EQUIPMENT = Subtype("Equipment")
         val FOOD = Subtype("Food")
+        val FORTIFICATION = Subtype("Fortification")
         val LANDER = Subtype("Lander")
         val TREASURE = Subtype("Treasure")
         val VEHICLE = Subtype("Vehicle")
@@ -267,6 +270,17 @@ value class Subtype(val value: String) {
         )
 
         /**
+         * All land types per comprehensive rules 205.3i — the basic ones plus Cave, Desert, Gate,
+         * Lair, Locus, Mine, Planet, Power-Plant, Sphere, Tower, Town and Urza's. A land whose
+         * subtype an effect *sets* loses every one of these it had (Rule 305.7), and "loses all
+         * land types" strips exactly these, leaving any non-land subtypes (e.g. Dryad Arbor's Dryad).
+         */
+        val ALL_LAND_TYPES: Set<String> = ALL_BASIC_LAND_TYPES + setOf(
+            "Cave", "Desert", "Gate", "Lair", "Locus", "Mine", "Planet", "Power-Plant", "Sphere",
+            "Tower", "Town", "Urza's"
+        )
+
+        /**
          * Creature types that make a card, spell, or permanent an *outlaw*
          * (Outlaws of Thunder Junction). A card is an outlaw if it has one or
          * more of these subtypes; "outlaw" itself is not a creature type.
@@ -276,6 +290,22 @@ value class Subtype(val value: String) {
          * `notAnyOfSubtypes`, so future outlaw-matters cards reuse the same group.
          */
         val OUTLAW_TYPES: List<Subtype> = listOf(ASSASSIN, MERCENARY, PIRATE, ROGUE, WARLOCK)
+
+        /**
+         * All official planeswalker types per comprehensive rules 205.3j, alphabetical — the options
+         * of a "choose a planeswalker type" decision.
+         */
+        val ALL_PLANESWALKER_TYPES: List<String> = listOf(
+            "Ajani", "Aminatou", "Angrath", "Arlinn", "Ashiok", "Bahamut", "Basri", "Bolas", "Calix",
+            "Chandra", "Comet", "Dack", "Dakkon", "Daretti", "Davriel", "Dellian", "Dihada", "Domri",
+            "Dovin", "Ellywick", "Elminster", "Elspeth", "Estrid", "Freyalise", "Garruk", "Gideon",
+            "Grist", "Guff", "Huatli", "Jace", "Jared", "Jaya", "Jeska", "Kaito", "Karn", "Kasmina",
+            "Kaya", "Kiora", "Koth", "Liliana", "Lolth", "Lukka", "Minsc", "Mordenkainen", "Nahiri",
+            "Narset", "Niko", "Nissa", "Nixilis", "Oko", "Quintorius", "Ral", "Rowan", "Saheeli",
+            "Samut", "Sarkhan", "Serra", "Sivitri", "Sorin", "Szat", "Tamiyo", "Tasha", "Teferi",
+            "Teyo", "Tezzeret", "Tibalt", "Tyvar", "Ugin", "Urza", "Venser", "Vivien", "Vraska",
+            "Vronos", "Will", "Windgrace", "Wrenn", "Xenagos", "Yanggu", "Yanling", "Zariel"
+        )
 
         /**
          * All official creature types per comprehensive rules 205.3m.
@@ -300,14 +330,14 @@ value class Subtype(val value: String) {
             "Faerie", "Ferret", "Fish", "Flagbearer", "Fox", "Fractal", "Frog",
             "Fungus",
             "Gamer", "Gamma", "Gargoyle", "Germ", "Giant", "Gith", "Glimmer",
-            "Gnoll", "Gnome", "Goat", "Goblin", "God", "Golem", "Gorgon",
+            "Gnoll", "Gnome", "Goat", "Goblin", "God", "Golem", "Gorgon", "Gorn",
             "Graveborn", "Gremlin", "Griffin", "Guest",
             "Hag", "Halfling", "Hamster", "Harpy", "Hedgehog", "Hellion", "Hero",
             "Hippo", "Hippogriff", "Homarid", "Homunculus", "Horror", "Horse",
             "Human", "Hydra", "Hyena",
             "Illusion", "Imp", "Incarnation", "Inkling", "Inquisitor", "Insect",
             "Jackal", "Jellyfish", "Juggernaut",
-            "Kangaroo", "Kavu", "Kirin", "Kithkin", "Knight", "Kobold", "Kor",
+            "Kangaroo", "Kavu", "Kirin", "Kithkin", "Klingon", "Knight", "Kobold", "Kor",
             "Kraken",
             "Lamia", "Lammasu", "Leech", "Lemur", "Leviathan", "Lhurgoyf", "Licid",
             "Lizard", "Llama", "Lobster",
@@ -316,7 +346,7 @@ value class Subtype(val value: String) {
             "Moogle", "Moonfolk", "Mount", "Mouse", "Mutant", "Myr", "Mystic",
             "Nautilus", "Necron", "Nephilim", "Nightmare", "Nightstalker", "Ninja",
             "Noble", "Noggle", "Nomad", "Nymph",
-            "Octopus", "Ogre", "Ooze", "Orb", "Orc", "Orgg", "Otter", "Ouphe", "Ox",
+            "Octopus", "Officer", "Ogre", "Ooze", "Orb", "Orc", "Orgg", "Otter", "Ouphe", "Ox",
             "Oyster",
             "Pangolin", "Peasant", "Pegasus", "Pentavite", "Performer", "Pest",
             "Phelddagrif", "Phoenix", "Phyrexian", "Pilot", "Pincher", "Pirate",
@@ -337,12 +367,65 @@ value class Subtype(val value: String) {
             "Time Lord", "Toy", "Treefolk", "Trilobite", "Triskelavite", "Troll",
             "Turtle", "Tyranid",
             "Unicorn", "Utrom",
-            "Vampire", "Varmint", "Vedalken", "Villain", "Volver",
+            "Vampire", "Varmint", "Vedalken", "Villain", "Volver", "Vulcan",
             "Wall", "Walrus", "Warlock", "Warrior", "Weasel", "Weird", "Werewolf",
             "Whale", "Wizard", "Wolf", "Wolverine", "Wombat", "Worm", "Wraith",
             "Wurm",
             "Yeti",
-            "Zombie", "Zubera"
+            "Zombie", "Zubera",
+            // Star Trek (TRK) species and creature types.
+            "Aenar", "Android", "Bajoran", "Betazoid", "Bolian", "Borg", "Brikar",
+            "Cardassian", "Denobulan", "El-Aurian", "Excalbian", "Ferengi", "Hirogen",
+            "Illyrian", "Jem'Hadar", "Kelpien", "Kwejian", "Medusan", "Melkotian",
+            "Na'kuhl", "Orion", "Q", "Romulan", "Talaxian", "Talosian", "Tamarian",
+            "Tellarite", "Tholian", "Tribble", "Trill", "Vau-N'Akat", "Vorta", "Xindi"
         ).sorted()
+
+        /** All artifact types per comprehensive rules 205.3g. */
+        val ALL_ARTIFACT_TYPES: Set<String> = setOf(
+            "Attraction", "Blood", "Bobblehead", "Book", "Clue", "Communicator", "Contraption", "Equipment", "Food",
+            "Fortification", "Gold", "Heartwood", "Incubator", "Infinity", "Junk", "Lander", "Map",
+            "Mutagen", "Powerstone", "Spacecraft", "Stone", "Treasure", "Vehicle", "Vibranium"
+        )
+
+        /** All enchantment types per comprehensive rules 205.3h. */
+        val ALL_ENCHANTMENT_TYPES: Set<String> = setOf(
+            "Aura", "Background", "Cartouche", "Case", "Class", "Curse", "Plan", "Role", "Room",
+            "Rune", "Saga", "Shard", "Shrine"
+        )
+
+        /** All spell types (shared by instants and sorceries) per comprehensive rules 205.3k. */
+        val ALL_SPELL_TYPES: Set<String> = setOf("Adventure", "Arcane", "Lesson", "Omen", "Trap")
+
+        /** All battle types per comprehensive rules 205.3q. */
+        val ALL_BATTLE_TYPES: Set<String> = setOf("Siege")
+
+        private val CREATURE_TYPE_SET: Set<String> by lazy { ALL_CREATURE_TYPES.toSet() }
+        private val PLANESWALKER_TYPE_SET: Set<String> by lazy { ALL_PLANESWALKER_TYPES.toSet() }
+
+        /**
+         * The card types a subtype is correlated with (CR 205.3) — the types whose subtype list it
+         * belongs to. Creature types are shared by creatures and kindreds (205.3m), spell types by
+         * instants and sorceries (205.3k). Empty for a string that is no official subtype, so callers
+         * that prune on it leave unknown subtypes alone.
+         */
+        fun correlatedCardTypes(subtype: String): Set<CardType> = when (subtype) {
+            in CREATURE_TYPE_SET -> CREATURE_AND_KINDRED
+            in ALL_LAND_TYPES -> LAND_ONLY
+            in ALL_ARTIFACT_TYPES -> ARTIFACT_ONLY
+            in ALL_ENCHANTMENT_TYPES -> ENCHANTMENT_ONLY
+            in PLANESWALKER_TYPE_SET -> PLANESWALKER_ONLY
+            in ALL_SPELL_TYPES -> INSTANT_AND_SORCERY
+            in ALL_BATTLE_TYPES -> BATTLE_ONLY
+            else -> emptySet()
+        }
+
+        private val CREATURE_AND_KINDRED = setOf(CardType.CREATURE, CardType.KINDRED)
+        private val LAND_ONLY = setOf(CardType.LAND)
+        private val ARTIFACT_ONLY = setOf(CardType.ARTIFACT)
+        private val ENCHANTMENT_ONLY = setOf(CardType.ENCHANTMENT)
+        private val PLANESWALKER_ONLY = setOf(CardType.PLANESWALKER)
+        private val INSTANT_AND_SORCERY = setOf(CardType.INSTANT, CardType.SORCERY)
+        private val BATTLE_ONLY = setOf(CardType.BATTLE)
     }
 }

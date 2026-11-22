@@ -1,0 +1,315 @@
+/* Order your triggers (CR 603.3b) — a short list that reads like the stack it builds. */
+
+.panel {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, rgba(28, 26, 36, 0.97), rgba(16, 16, 24, 0.97));
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-panel);
+}
+
+@media (max-width: 639px) {
+  .panel {
+    padding: var(--space-4);
+    gap: var(--space-2);
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.lede {
+  margin: 0 auto;
+  max-width: 44ch;
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+.endLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-2);
+  color: var(--color-highlight);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.endLabelLast {
+  color: var(--text-muted);
+}
+
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.endArrow {
+  font-size: 9px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto 52px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel-light);
+  border: 1px solid var(--border-medium);
+  cursor: grab;
+  transition: background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.row:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-strong);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The first row is the one that resolves first: give it the same warm edge as the label above it. */
+.row:first-child {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.09), rgba(255, 255, 255, 0.03) 60%);
+}
+
+.rowDragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.rowDropAbove {
+  box-shadow: 0 -3px 0 0 var(--color-highlight);
+}
+
+.rowDropBelow {
+  box-shadow: 0 3px 0 0 var(--color-highlight);
+}
+
+.rowMoved {
+  animation: moved 700ms ease-out;
+}
+
+@keyframes moved {
+  from {
+    background: rgba(251, 191, 36, 0.22);
+  }
+}
+
+.rank {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-surface-6);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.row:first-child .rank {
+  background: var(--color-highlight);
+  color: #1a1408;
+}
+
+.grip {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: -3px;
+  user-select: none;
+}
+
+.thumb {
+  width: 52px;
+  aspect-ratio: 488 / 680;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+  cursor: zoom-in;
+}
+
+.body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.source {
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.35;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+
+.targetsChip {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 119, 6, 0.55);
+  color: #f5b25a;
+}
+
+.checksChip {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #7dd3fc;
+  cursor: help;
+}
+
+.arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.arrow {
+  width: 30px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-4);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.arrow:hover:not(:disabled) {
+  background: var(--bg-surface-6);
+  color: var(--text-primary);
+}
+
+.arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+@media (max-width: 639px) {
+  .row {
+    grid-template-columns: auto 40px 1fr auto;
+    gap: var(--space-2);
+  }
+
+  .grip {
+    display: none;
+  }
+
+  .thumb {
+    width: 40px;
+  }
+
+  /* Bigger touch targets: there is no drag on a phone. */
+  .arrow {
+    width: 36px;
+    height: 32px;
+  }
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.resetButton {
+  padding: 2px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--font-xs);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.resetButton:hover {
+  color: var(--text-primary);
+}
+
+.stopAsking {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+
+.stopAsking input {
+  margin-top: 3px;
+  accent-color: var(--color-highlight);
+}
+
+.stopAskingHint {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}

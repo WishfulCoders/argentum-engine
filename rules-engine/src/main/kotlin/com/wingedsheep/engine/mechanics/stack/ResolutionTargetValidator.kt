@@ -1,5 +1,8 @@
 package com.wingedsheep.engine.mechanics.stack
 
+import com.wingedsheep.engine.mechanics.targeting.TypeQualityProtection
+import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils.toEntityId
+
 import com.wingedsheep.engine.mechanics.targeting.HexproofFromRules
 import com.wingedsheep.engine.mechanics.targeting.ColorProtection
 import com.wingedsheep.engine.core.*
@@ -12,6 +15,7 @@ import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.mechanics.targeting.HexproofSuppression
 import com.wingedsheep.engine.mechanics.targeting.SourceKindProtection
+import com.wingedsheep.engine.mechanics.targeting.UntargetableByRules
 import com.wingedsheep.engine.mechanics.targeting.PlayerTargetRestriction
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -21,6 +25,7 @@ import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.stack.*
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.*
@@ -71,6 +76,8 @@ internal class ResolutionTargetValidator(
             ObjectReferenceEnvironment(),
         lastKnownSourceSnapshot: EntitySnapshot? = null,
         resolution: EffectContext? = null,
+        /** [TargetsComponent.targetingAttachmentHost] — the source's host when these targets were chosen. */
+        targetingAttachmentHost: EntityId? = null,
     ): List<ChosenTarget> {
         // Always project state for shroud/hexproof checks (Rule 702.18, 702.11)
         val projected = state.projectedState
@@ -92,6 +99,7 @@ internal class ResolutionTargetValidator(
             targets = targets,
             namedTargets = (resolution?.pipeline?.namedTargets ?: emptyMap()) +
                 EffectContext.buildNamedTargets(targetRequirements, targets),
+            targetingAttachmentHost = targetingAttachmentHost,
         )
 
         val individuallyLegal = targets.indices.filter { index ->
@@ -99,18 +107,17 @@ internal class ResolutionTargetValidator(
             anyTargetStillMatches(state, projected, index, target, targetRequirements, predicateContext) &&
                 when (target) {
                     is ChosenTarget.Player ->
-                        isPlayerTargetLegal(state, index, target, targetRequirements, controllerId, sourceId)
+                        isPlayerTargetLegal(state, index, target, targetRequirements, controllerId, sourceId, predicateContext)
 
                     is ChosenTarget.Permanent -> isPermanentTargetLegal(
                         state, projected, index, target, targetRequirements, sourceColors, sourceSubtypes,
                         controllerId, sourceId, targetingSourceType, targetEntryStamps, predicateContext
                     )
 
-                    is ChosenTarget.Card -> {
-                        // Card is valid if in expected zone
-                        val zoneKey = ZoneKey(target.ownerId, target.zone)
-                        target.cardId in state.getZone(zoneKey)
-                    }
+                    is ChosenTarget.Card -> isCardTargetLegal(
+                        state, projected, index, target, targets, targetRequirements, controllerId,
+                        sourceId, targetingSourceType, predicateContext
+                    )
 
                     is ChosenTarget.Spell -> {
                         // Spell is valid if still on stack
@@ -119,8 +126,84 @@ internal class ResolutionTargetValidator(
                 }
         }.toSet()
         val sharingController = targetsSharingAController(projected, state, targets, individuallyLegal, targetRequirements)
-        return targets.filterIndexed { index, _ -> index in individuallyLegal && index !in sharingController }
+        val sharingValue = targetsSharingADifferentValue(state, targets, individuallyLegal, targetRequirements) +
+            targetsOverTotalCap(state, targets, individuallyLegal, targetRequirements, predicateContext)
+        if (targetRequirements.none { (it as? TargetObject)?.sameNumericProperty != null }) {
+            return targets.filterIndexed { index, _ ->
+                index in individuallyLegal && index !in sharingController && index !in sharingValue
+            }
+        }
+        val unequal = (individuallyLegal - sharingController).groupBy { index ->
+            requirementIndexOf(index, targetRequirements)
+        }.flatMap { (group, indices) ->
+                val property = (group?.let { targetRequirements[it] } as? TargetObject)?.sameNumericProperty
+                if (property != null && !com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.isSatisfied(
+                        state, indices.map { targets[it].toEntityId() }, property
+                    )) indices else emptyList()
+            }.toSet()
+        return targets.filterIndexed { index, _ ->
+            index in individuallyLegal && index !in sharingController && index !in unequal && index !in sharingValue
+        }
     }
+
+    /**
+     * "… with total power N or less" (Nethroi, Apex of Death) restricts the *set* of targets: when the
+     * still-legal targets of a `totalAtMost` requirement now exceed its cap (a `*` power card grew in
+     * the graveyard), every one of them is illegal and nothing is returned (the card's ruling).
+     * Grouped per requirement, so two requirements with equal caps are summed apart.
+     */
+    private fun targetsOverTotalCap(
+        state: GameState,
+        targets: List<ChosenTarget>,
+        legalIndices: Set<Int>,
+        targetRequirements: List<TargetRequirement>,
+        predicateContext: PredicateContext,
+    ): Set<Int> {
+        if (targetRequirements.none { (it as? TargetObject)?.totalAtMost != null }) return emptySet()
+        val context = predicateContext.toEffectContext()
+        return legalIndices
+            .groupBy { index -> requirementIndexOf(index, targetRequirements) }
+            .flatMap { (group, indices) ->
+                val cap = (group?.let { targetRequirements[it] } as? TargetObject)?.totalAtMost ?: return@flatMap emptyList()
+                val max = com.wingedsheep.engine.mechanics.targeting.TotalCaps.resolve(
+                    state, cap, predicateEvaluator.amounts, context
+                ) ?: return@flatMap emptyList()
+                val total = indices.sumOf {
+                    com.wingedsheep.engine.mechanics.targeting.TotalCaps.valueOf(state, targets[it].toEntityId(), cap.property)
+                }
+                if (total > max) indices else emptyList()
+            }.toSet()
+    }
+
+    /** Which requirement the flat target [index] belongs to (each requirement owns `count` slots). */
+    private fun requirementIndexOf(index: Int, targetRequirements: List<TargetRequirement>): Int? {
+        var offset = 0
+        return targetRequirements.indices.firstOrNull { group ->
+            val end = offset + targetRequirements[group].count
+            val contains = index in offset until end
+            offset = end
+            contains
+        }
+    }
+
+    /**
+     * "… with different mana values" (Long Rest) restricts the *set* of targets, so it is re-checked
+     * at resolution like [targetsSharingAController]: still-legal targets of a
+     * `differentNumericProperty` requirement that now share a value are all illegal.
+     */
+    private fun targetsSharingADifferentValue(
+        state: GameState,
+        targets: List<ChosenTarget>,
+        legalIndices: Set<Int>,
+        targetRequirements: List<TargetRequirement>,
+    ): Set<Int> = legalIndices
+        .groupBy { index -> (getRequirementForTargetIndex(index, targetRequirements) as? TargetObject)?.differentNumericProperty }
+        .flatMap { (property, indices) ->
+            if (property == null) return@flatMap emptyList()
+            indices.groupBy { index ->
+                com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.value(state, targets[index].toEntityId(), property)
+            }.values.filter { it.size > 1 }.flatten()
+        }.toSet()
 
     /**
      * "Two target creatures controlled by different players" (Run Away Together) is a restriction on
@@ -192,20 +275,31 @@ internal class ResolutionTargetValidator(
         target: ChosenTarget.Player,
         targetRequirements: List<TargetRequirement>,
         controllerId: EntityId,
-        sourceId: EntityId?
+        sourceId: EntityId?,
+        predicateContext: PredicateContext
     ): Boolean {
         // Player is valid if they exist and haven't lost...
         if (!state.hasEntity(target.playerId)) return false
+        if (com.wingedsheep.engine.mechanics.targeting.ControllerShroud.appliesTo(
+                state, target.playerId, predicateEvaluator = predicateEvaluator)) return false
+        if (com.wingedsheep.engine.mechanics.targeting.ControllerHexproof.appliesAgainst(
+                state, target.playerId, controllerId, predicateEvaluator = predicateEvaluator)) return false
+        if (com.wingedsheep.engine.mechanics.targeting.PlayerProtectionRules.blocksTargeting(
+                state, target.playerId, sourceId, controllerId, predicateEvaluator = predicateEvaluator)) return false
         // ...and (CR 608.2b) the player-target restriction still holds. A player who
         // gained life above the threshold, or whose "lost life this turn" never
         // happened, is removed at resolution.
         val requirement = getRequirementForTargetIndex(index, targetRequirements)
+        if ((requirement is TargetOpponent || requirement is TargetOpponentOrPlaneswalker) &&
+            target.playerId == controllerId) return false
         val restriction = when (requirement) {
             is TargetPlayer -> requirement.restriction
             is TargetOpponent -> requirement.restriction
             else -> null
         }
-        return PlayerTargetRestriction.isSatisfied(state, restriction, target.playerId, controllerId, sourceId, predicateEvaluator = predicateEvaluator)
+        // A trigger's restriction may read Player.TriggeringPlayer ("another target player", The Lord of Pain).
+        return PlayerTargetRestriction.isSatisfied(state, restriction, target.playerId, controllerId, sourceId,
+            predicateContext.triggeringEntityId, predicateContext.triggeringPlayerId, predicateEvaluator = predicateEvaluator)
     }
 
     private fun isPermanentTargetLegal(
@@ -236,10 +330,16 @@ internal class ResolutionTargetValidator(
             return false
         }
 
+        // CardsInZonesCantBeTargeted over the battlefield (Tomik) arriving after targeting (CR 608.2b).
+        if (UntargetableByRules.zoneLockError(
+                state, target.entityId, controllerId, predicateEvaluator, sourceId, targetingSourceType
+            ) != null) return false
+
         val entityController = projected.getController(target.entityId)
             ?: state.getEntity(target.entityId)?.get<ControllerComponent>()?.playerId
         return passesTargetingRestrictions(
-            state, projected, target, entityController, controllerId, sourceId, sourceColors, targetingSourceType
+            state, projected, target, entityController, controllerId, sourceId, sourceColors, targetingSourceType,
+            getRequirementForTargetIndex(index, targetRequirements), sourceSubtypes
         ) &&
             passesProtection(state, projected, target, entityController, controllerId, sourceId, sourceColors, sourceSubtypes) &&
             stillMatchesRequirementFilter(state, projected, index, target, targetRequirements, predicateContext)
@@ -254,7 +354,9 @@ internal class ResolutionTargetValidator(
         controllerId: EntityId,
         sourceId: EntityId?,
         sourceColors: Set<Color>,
-        targetingSourceType: TargetingSourceType
+        targetingSourceType: TargetingSourceType,
+        requirement: TargetRequirement?,
+        sourceSubtypes: Set<String>
     ): Boolean {
         // Check shroud — can't be targeted by anyone (Rule 702.18)
         if (projected.hasKeyword(target.entityId, "SHROUD")) return false
@@ -265,6 +367,15 @@ internal class ResolutionTargetValidator(
         // permanent that gained the restriction after being targeted is dropped here.
         if (targetingSourceType == TargetingSourceType.SPELL &&
             projected.hasKeyword(target.entityId, AbilityFlag.CANT_BE_TARGETED_BY_SPELLS)
+        ) {
+            return false
+        }
+
+        // CantBeTargetedBy (Tetsuo Umezawa) — read against the face on the stack.
+        if (UntargetableByRules.targetingError(
+                state, target.entityId, sourceId, targetingSourceType, requirement, sourceSubtypes.ifEmpty { null },
+                sourceColors.mapTo(mutableSetOf()) { it.name }
+            ) != null
         ) {
             return false
         }
@@ -307,11 +418,12 @@ internal class ResolutionTargetValidator(
         }
 
         // Artifact Ward family: can't be the target of abilities from sources of a
-        // given card type. Keys off the ability's source (CR 113.7) by card type, not
-        // controller — applies even to the warded creature's own controller's sources.
+        // given card type. Keys off the ability's source (CR 113.7) by card type; the default
+        // form applies even to the warded creature's own controller's sources, the
+        // opponents-only form (Species 8472) only to its controller's opponents'.
         // Spells bypass (abilities-only).
         if (SourceTypeTargeting.cantBeTargetedBySourceTypeAbility(
-                state, target.entityId, sourceId, targetingSourceType
+                state, target.entityId, sourceId, controllerId, targetingSourceType
             )
         ) {
             return false
@@ -337,11 +449,6 @@ internal class ResolutionTargetValidator(
         ) {
             return false
         }
-        for (subtype in sourceSubtypes) {
-            if (projected.hasKeyword(target.entityId, "PROTECTION_FROM_SUBTYPE_${subtype.uppercase()}")) {
-                return false
-            }
-        }
         // Check protection from the source's card type, e.g. "protection from creatures"
         // (Rule 702.16). Prefer projected types (permanent sources); fall back to the
         // card's printed card types for spell/ability sources not in the projection.
@@ -358,7 +465,24 @@ internal class ResolutionTargetValidator(
                     return false
                 }
             }
-        }
+            // "From creatures your opponents control" (Crypsis): the type plus an opponent controller.
+            val sourceController = (if (projectedTypes.isNotEmpty()) projected.getController(sourceId) else null) ?: controllerId
+            if (com.wingedsheep.engine.mechanics.targeting.OpponentCardTypeProtection.matchedType(
+                    state, projected, target.entityId, sourceCardTypes, sourceController
+                ) != null
+            ) return false
+            // Protection from a subtype or supertype, optionally narrowed to a card type
+            // ("protection from God creatures").
+            val sourceSupertypes = if (projectedTypes.isNotEmpty()) projected.getSupertypes(sourceId)
+                else state.getEntity(sourceId)?.get<CardComponent>()?.typeLine?.supertypes?.map { it.name }.orEmpty()
+            if (TypeQualityProtection.matchedQuality(
+                    projected, target.entityId, sourceSubtypes, sourceSupertypes, sourceCardTypes
+                ) != null
+            ) return false
+        } else if (TypeQualityProtection.matchedQuality(
+                projected, target.entityId, sourceSubtypes, emptySet(), emptySet()
+            ) != null
+        ) return false
 
         // Check protection from each opponent (Rule 702.16e)
         if (projected.hasKeyword(target.entityId, "PROTECTION_FROM_EACH_OPPONENT") &&
@@ -367,6 +491,52 @@ internal class ResolutionTargetValidator(
         }
         return true
     }
+
+    /**
+     * A card target outside the battlefield (graveyard, exile, …) is legal if it is still in the
+     * zone it was chosen from *and* still matches the requirement's filter (CR 608.2b). The filter
+     * re-check matters for dynamic caps read off the game — Unforgiving One's "creature card with
+     * mana value X or less, where X is the number of modified creatures you control" no longer
+     * resolves once X drops below the card's mana value. The context mirrors the cast-time one in
+     * `TargetValidator`: the card's owner, and the separately-chosen player for "target player's
+     * graveyard" relations.
+     */
+    private fun isCardTargetLegal(
+        state: GameState,
+        projected: ProjectedState,
+        index: Int,
+        target: ChosenTarget.Card,
+        targets: List<ChosenTarget>,
+        targetRequirements: List<TargetRequirement>,
+        controllerId: EntityId,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType,
+        predicateContext: PredicateContext
+    ): Boolean {
+        if (target.cardId !in state.getZone(ZoneKey(target.ownerId, target.zone))) return false
+        // CardsInZonesCantBeTargeted (Ground Seal) entering after the target was chosen (CR 608.2b).
+        if (UntargetableByRules.zoneLockError(
+                state, target.cardId, controllerId, predicateEvaluator, sourceId, targetingSourceType
+            ) != null) return false
+        val filter = extractTargetFilter(getRequirementForTargetIndex(index, targetRequirements)) ?: return true
+        val cardContext = predicateContext.copy(
+            ownerId = target.ownerId,
+            targetPlayerId = predicateContext.targetPlayerId
+                ?: targets.firstNotNullOfOrNull { (it as? ChosenTarget.Player)?.playerId },
+        )
+        return clausesForZone(filter, target.zone).any { clause ->
+            predicateEvaluator.matches(state, projected, target.cardId, clause.baseFilter, cardContext)
+        }
+    }
+
+    /**
+     * The filters a target in [zone] is re-checked against (CR 608.2b). A cross-zone union
+     * ("target permanent or suspended card", Clockspinning) re-checks only the clauses for the zone
+     * the target sits in, so an alternative clause's object isn't judged by the primary clause's
+     * predicate; a non-union filter is its own single clause, as before.
+     */
+    private fun clausesForZone(filter: TargetFilter, zone: Zone): List<TargetFilter> =
+        if (filter.isUnion) filter.clauses().filter { it.zone == zone } else listOf(filter)
 
     private fun stillMatchesRequirementFilter(
         state: GameState,
@@ -378,16 +548,10 @@ internal class ResolutionTargetValidator(
     ): Boolean {
         // Re-validate target filter (Rule 608.2b)
         val requirement = getRequirementForTargetIndex(index, targetRequirements)
-        val filter = extractTargetFilter(requirement)
-        if (filter != null) {
-            if (!predicateEvaluator.matches(
-                    state, projected, target.entityId, filter.baseFilter, predicateContext
-                )
-            ) {
-                return false
-            }
+        val filter = extractTargetFilter(requirement) ?: return true
+        return clausesForZone(filter, Zone.BATTLEFIELD).any { clause ->
+            predicateEvaluator.matches(state, projected, target.entityId, clause.baseFilter, predicateContext)
         }
-        return true
     }
 
     /**

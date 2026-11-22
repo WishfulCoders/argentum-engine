@@ -10,23 +10,23 @@ import com.wingedsheep.sdk.scripting.TimingRule
 
 /**
  * Ignoble Hierarch — Modern Horizons 2 #166
- * {G} · Creature — Goblin Shaman · 0 / 1
+ * {G} · Creature — Goblin Shaman · 0/1
  *
  * Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)
  * {T}: Add {B}, {R}, or {G}.
  *
- * Exalted is the printed keyword; the engine derives its trigger (see
- * [com.wingedsheep.sdk.scripting.Exalted]). The printed "or" is a choice between three separate
- * mana abilities sharing [Costs.Tap], the same shape as Druid of the Anima.
+ * Printed exalted is the bare keyword; the engine derives the trigger from it
+ * (see [com.wingedsheep.sdk.scripting.Exalted]). The three-colour mana ability is three
+ * separate {T} mana abilities, the shape every Jund tri-land uses.
  */
 val IgnobleHierarch = card("Ignoble Hierarch") {
     manaCost = "{G}"
     colorIdentity = "BRG"
     typeLine = "Creature — Goblin Shaman"
+    oracleText = "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 " +
+        "until end of turn.)\n{T}: Add {B}, {R}, or {G}."
     power = 0
     toughness = 1
-    oracleText = "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n" +
-        "{T}: Add {B}, {R}, or {G}."
 
     keywords(Keyword.EXALTED)
 
@@ -58,10 +58,10 @@ val IgnobleHierarch = card("Ignoble Hierarch") {
 
         ruling(
             "2021-06-18",
-            "A creature attacks alone if it's the only creature declared as an attacker during the declare " +
-                "attackers step (including creatures controlled by your teammates, if applicable). For example, " +
-                "exalted won't trigger if you attack with multiple creatures and all but one of them are removed " +
-                "from combat."
+            "A creature attacks alone if it's the only creature declared as an attacker during the " +
+                "declare attackers step (including creatures controlled by your teammates, if " +
+                "applicable). For example, exalted won't trigger if you attack with multiple creatures " +
+                "and all but one of them are removed from combat."
         )
     }
 }

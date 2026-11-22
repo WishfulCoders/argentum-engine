@@ -128,6 +128,15 @@ sealed interface Recipient {
         /** "An opponent or battle" — Bloodfeather Phoenix's "deals damage to an opponent or battle". */
         val OpponentOrBattle: Recipient = AnyOf(listOf(Opponent, Object(GameObjectFilter.Battle)))
 
+        /**
+         * "A permanent or player" — Ghyrson Starn, Kelermorph's "deals exactly 1 damage to a permanent
+         * or player". It reaches every damage recipient [Any] does, but it is a *recipient-restricted*
+         * form: simultaneous combat damage one source deals to several recipients stays one trigger per
+         * recipient instead of folding into one trigger carrying the total, as the unrestricted [Any]
+         * does ("whenever this deals damage"). Keep it distinct from [Any].
+         */
+        val PermanentOrPlayer: Recipient = AnyOf(listOf(AnyPermanent, AnyPlayer))
+
         /** "A creature or player" — Ertha Jo, Frontier Mentor's "an ability that targets a creature or player". */
         val CreatureOrPlayer: Recipient = AnyOf(listOf(Object(GameObjectFilter.Creature), AnyPlayer))
 
@@ -266,7 +275,7 @@ sealed interface SpellCastPredicate {
             Zone.HAND -> "from your hand"
             Zone.GRAVEYARD -> "from your graveyard"
             Zone.EXILE -> "from exile"
-            else -> "from your ${zone.displayName.lowercase()}"
+            else -> "from your ${zone.noun}"
         }
     }
 
@@ -282,7 +291,7 @@ sealed interface SpellCastPredicate {
     data class CastFromZoneOtherThan(val zone: Zone) : SpellCastPredicate {
         override val description = when (zone) {
             Zone.HAND -> "from anywhere other than your hand"
-            else -> "from anywhere other than your ${zone.displayName.lowercase()}"
+            else -> "from anywhere other than your ${zone.noun}"
         }
     }
 
@@ -319,6 +328,23 @@ sealed interface SpellCastPredicate {
     data class PaidWithManaFromCardType(val cardType: CardType, val atLeast: Int = 1) : SpellCastPredicate {
         override val description = if (atLeast <= 1) "using mana from a ${cardType.displayName.lowercase()}"
             else "with $atLeast or more mana from ${cardType.displayName.lowercase()}s spent to cast it"
+    }
+
+    /**
+     * Snow mana of at least one of the spell's own colors was spent on the cast — Boreal Outrider's
+     * "if {S} of any of that spell's colors was spent to cast it". Snow mana is mana from a snow
+     * source (CR 107.4h), so this asks whether some colored unit spent on the cast came from a snow
+     * source *and* shares a color with the spell; snow colorless mana never counts (colorless is not
+     * a color), nor does a colorless spell. Neighbours: [PaidWithManaFromCardType] and
+     * [PaidWithManaFromSubtype] read the source's types but not the mana's color, and
+     * `DynamicAmount.SnowManaSpent` counts snow mana of any color spent on the ability's own source,
+     * not on a triggering spell. Like them the payment never changes, so it reads the same when the
+     * trigger is put on the stack and when it resolves.
+     */
+    @SerialName("SpellPaidWithSnowManaOfItsColors")
+    @Serializable
+    data object PaidWithSnowManaOfItsColors : SpellCastPredicate {
+        override val description = "if {S} of any of that spell's colors was spent to cast it"
     }
 
     /**
@@ -376,7 +402,7 @@ sealed interface SpellCastPredicate {
      * chosen targets: a spell targeting both the source and another permanent satisfies
      * [TargetsSource] but not this. A spell with **no** targets never satisfies it either. A spell
      * with several instances of "target" all pointed at the source does — the copies made by
-     * [com.wingedsheep.sdk.scripting.effects.CopyForEachOtherPossibleTargetEffect] then have to
+     * [com.wingedsheep.sdk.scripting.effects.CopyForOtherPossibleTargetsEffect] then have to
      * be legal for each of those instances (CR 707.10d).
      */
     @SerialName("SpellTargetsOnlySource")
@@ -386,15 +412,43 @@ sealed interface SpellCastPredicate {
     }
 
     /**
+     * The spell **could target another object** matching [filter] — one that is a legal target for
+     * every instance of the word "target" on it and that it doesn't already target (the CR 707.10d
+     * candidate set of [com.wingedsheep.sdk.scripting.effects.CopyForOtherPossibleTargetsEffect]).
+     * [filter] is read relative to the trigger's controller and source.
+     *
+     * This is the trigger-time half of an intervening "if" (CR 603.4) — Beamsplitter Mage's "if you
+     * control one or more other creatures that spell could target" is
+     * `CouldTargetOther(GameObjectFilter.Creature.youControl())`; the copy effect re-checks the same
+     * set as the ability resolves. Closest neighbours: [TargetsMatching] reads the targets the spell
+     * *did* choose, and [TargetsOnlySource] only who they are — neither asks what it *could* target.
+     */
+    @SerialName("SpellCouldTargetOther")
+    @Serializable
+    data class CouldTargetOther(val filter: GameObjectFilter) : SpellCastPredicate {
+        override val description = "that could target another ${filter.description}"
+    }
+
+    /**
      * The spell was cast with at least one chosen target matching [filter]
      * ("a spell that targets a creature you don't control" — Legolas, Master Archer).
      * The filter is evaluated against each chosen target relative to the trigger
      * controller (so `youControl()` / opponent-controlled predicates resolve correctly).
+     * A filter that names no zone means permanents on the battlefield (CR 109.2), as for
+     * [com.wingedsheep.sdk.scripting.predicates.CardPredicate.TargetsMatching].
+     *
+     * [only] is "a spell that targets **only a single** [filter]" (Ivy, Gleeful Spellthief; Vesuvan
+     * Duplimancy): every instance of the word "target" on the spell — player targets included —
+     * points at one and the same object, and that object matches [filter]. Several instances all
+     * aimed at the same creature still count as a single creature (Ivy's 2022-09-09 ruling); a spell
+     * that also targets a player or a second object does not. The "those creatures" capture is the
+     * same either way, so with [only] the payoff acts on exactly that one object.
      */
     @SerialName("SpellTargetsMatching")
     @Serializable
-    data class TargetsMatching(val filter: GameObjectFilter) : SpellCastPredicate {
-        override val description = "that targets ${filter.description}"
+    data class TargetsMatching(val filter: GameObjectFilter, val only: Boolean = false) : SpellCastPredicate {
+        override val description =
+            if (only) "that targets only a single ${filter.description}" else "that targets ${filter.description}"
     }
 
     /**
@@ -549,6 +603,25 @@ sealed interface AttackPredicate {
     }
 
     /**
+     * The creatures declared as attackers this combat have a total **projected** power of at least
+     * [n] — the pack tactics condition (AFR: "Whenever this creature attacks, if you attacked with
+     * creatures with total power 6 or greater this combat, …"). The power-sum sibling of
+     * [AttackerCountAtLeast]: same band (every declared attacker, counting the trigger's own), summed
+     * instead of counted.
+     *
+     * The sum is read when attackers are declared (the trigger checks it then), so a creature put onto
+     * the battlefield attacking never contributes, and a power change after declaration neither adds a
+     * trigger nor stops one that already triggered. Powers are summed as they are, so a negative power
+     * lowers the total, as `sumPower()` does. Not per-attacker: it reads the whole band, so it works on
+     * any binding, though pack tactics uses `SELF`.
+     */
+    @SerialName("AttackersTotalPowerAtLeast")
+    @Serializable
+    data class AttackersTotalPowerAtLeast(val n: Int) : AttackPredicate {
+        override val description = "with creatures with total power $n or greater"
+    }
+
+    /**
      * The attacker is attacking *for the first time this turn* — it had not been
      * declared as an attacker in any earlier combat phase this turn. The matcher
      * consults the per-turn attacker set (the same union that backs raid / "you
@@ -556,9 +629,9 @@ sealed interface AttackPredicate {
      * second combat phase (extra-combat effects like Fear of Missing Out) does not
      * re-fire. The window resets at the start of each turn.
      *
-     * Per-attacker by design: it gates against the trigger's own source, so use it
-     * with a `SELF` binding — "Whenever this creature attacks for the first time
-     * each turn, …".
+     * Per-attacker by design: it gates on the trigger's own attacker — the source on a
+     * `SELF` binding ("Whenever this creature attacks for the first time each turn, …"),
+     * each attacker it fires for on `ANY`/`OTHER`.
      */
     @SerialName("AttacksFirstTimeEachTurn")
     @Serializable
@@ -576,8 +649,8 @@ sealed interface AttackPredicate {
      * defender kind is fixed at declaration, so the matcher reads it from the stamped
      * `AttackersDeclaredEvent.attackersAgainstPlayer` set rather than post-declaration state.
      *
-     * Per-attacker by design: it gates against the trigger's own source, so use it with a
-     * `SELF` binding (or an ANY-binding attacker filter that already scopes to one creature).
+     * Per-attacker by design: it gates on the trigger's own attacker — the source on a `SELF`
+     * binding, each attacker it fires for on `ANY`/`OTHER`.
      */
     @SerialName("AttacksDefenderIsPlayer")
     @Serializable
@@ -592,12 +665,38 @@ sealed interface AttackPredicate {
      * Slasher). Like [DefenderIsPlayer] the defender kind is fixed at declaration, so the matcher
      * reads the stamped `AttackersDeclaredEvent.attackersAgainstBattle` set.
      *
-     * Per-attacker by design: use it with a `SELF` binding.
+     * Per-attacker by design, like [DefenderIsPlayer].
      */
     @SerialName("AttacksDefenderIsBattle")
     @Serializable
     data object DefenderIsBattle : AttackPredicate {
         override val description = "a battle"
+    }
+
+    /**
+     * The attacker **attacks a player alone** (CR 506.6): it was declared as attacking a player,
+     * and no other creature was declared as attacking that same player. Other creatures may attack
+     * a different player, a planeswalker or a battle in the same combat. Jiang Yanggu, Alone and
+     * Yuriko, Blade of the Mighty: "Whenever a creature you control attacks a player alone, …".
+     *
+     * Closest neighbours, and why neither takes this axis:
+     * - [Alone] is CR 506.5 — the only attacker in the *whole* combat. "Alone + [DefenderIsPlayer]"
+     *   is strictly narrower than 506.6: it misses a creature attacking a player while another
+     *   attacks a planeswalker, a battle or a second opponent.
+     * - [DefenderIsPlayer] reads only the attacker's own defender kind and nothing about the rest
+     *   of the declaration.
+     *
+     * Like the other declaration facts it's fixed when attackers are declared — a creature put onto
+     * the battlefield attacking is never "declared", so it neither qualifies nor spoils another's
+     * claim — and the matcher reads the stamped `AttackersDeclaredEvent.attackersAloneAgainstPlayer`.
+     *
+     * Per-attacker by design: it gates on the trigger's own attacker — the source on a `SELF`
+     * binding, each attacker it fires for on `ANY`/`OTHER` (both FRA cards are the latter).
+     */
+    @SerialName("AttacksPlayerAlone")
+    @Serializable
+    data object AloneAgainstPlayer : AttackPredicate {
+        override val description = "a player alone"
     }
 
     /**
@@ -613,8 +712,8 @@ sealed interface AttackPredicate {
      * condition is checked); the comparison is strict (`>`), so an equal-power partner does not
      * satisfy it.
      *
-     * Per-attacker by design: it gates against the trigger's own source, so use it with a `SELF`
-     * binding — "Whenever this creature trains, …".
+     * Per-attacker by design: it gates on the trigger's own attacker — the source on a `SELF`
+     * binding ("Whenever this creature trains, …"), each attacker it fires for on `ANY`/`OTHER`.
      */
     @SerialName("AttacksAlongsideGreaterPower")
     @Serializable

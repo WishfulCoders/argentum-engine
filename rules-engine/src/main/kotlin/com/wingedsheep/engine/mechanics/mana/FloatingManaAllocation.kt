@@ -3,7 +3,7 @@ package com.wingedsheep.engine.mechanics.mana
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
-import com.wingedsheep.sdk.scripting.effects.ManaRestriction
+import com.wingedsheep.sdk.scripting.effects.ManaSpentAsAnyColor
 
 /** An entire pool payment: fixed pips and X compete for the same exact units. */
 internal data class FloatingManaAllocation(
@@ -23,9 +23,9 @@ internal fun ManaPool.allocateFloating(
     xAmount: Int = 0,
     xColors: Set<Color> = emptySet(),
 ): FloatingManaAllocation? {
-    val available = total + if (context == null) restrictedMana.count { it.restriction == ManaRestriction.AnySpend }
-        else getTotalEligibleRestricted(context)
-    if (xAmount > available) return null
+    val available = total + getTotalEligibleRestricted(context)
+    // Only mana that may pay generic covers {X} (not ManaRestriction.CannotPayGenericCosts).
+    if (xAmount > total + getTotalEligibleRestricted(context, forGeneric = true)) return null
     val fixed = cost.symbols.filter { it !is ManaSymbol.X && it !is ManaSymbol.MonocolorHybrid }
     val hybrids = cost.symbols.filterIsInstance<ManaSymbol.MonocolorHybrid>().groupingBy { it }.eachCount()
     var best: FloatingManaAllocation? = null
@@ -66,6 +66,8 @@ private data class PoolUnits(
     val capacity: Int,
     val restrictedIndex: Int? = null,
     val obligations: Set<String> = emptySet(),
+    /** False for mana that can't pay a generic symbol (ManaRestriction.CannotPayGenericCosts). */
+    val paysGeneric: Boolean = true,
 )
 
 private fun ManaPool.matchFloating(
@@ -75,10 +77,10 @@ private fun ManaPool.matchFloating(
 ): FloatingManaAllocation? {
     val units = buildList {
         restrictedMana.forEachIndexed { index, entry ->
-            val eligible = if (context == null) entry.restriction == ManaRestriction.AnySpend
-                else entry.restriction.isSatisfiedBy(context)
+            val eligible = entry.restriction.isEligibleForPayment(context)
             if (eligible) add(PoolUnits(entry.color,
-                entry.source?.isSnow == true, 1, index, entry.obligationIds - dischargedObligations))
+                entry.source?.isSnow == true, 1, index, entry.obligationIds - dischargedObligations,
+                entry.restriction.paysGeneric))
         }
         for (color in Color.entries.map { it as Color? } + null) {
             val count = if (color == null) colorless else get(color)
@@ -108,16 +110,20 @@ private fun ManaPool.matchFloating(
     }
     val assignments = mutableListOf<Triple<Int, Int, AllocationNetwork.Edge>>()
     fun acceptsColor(unit: PoolUnits, color: Color) = unit.color == color ||
-        unit.color in spendingColors[color].orEmpty() || (unit.color == null && context?.colorlessAsAnyColor == true)
+        unit.color in spendingColors[color].orEmpty() || when (context?.spendAsAnyColor) {
+            ManaSpentAsAnyColor.COLORLESS -> unit.color == null
+            ManaSpentAsAnyColor.SNOW -> unit.snow
+            null -> false
+        }
     fun accepts(unit: PoolUnits, pip: PoolPip): Boolean {
-        if (pip.isX) return xColors.isEmpty() || unit.color in xColors
+        if (pip.isX) return unit.paysGeneric && (xColors.isEmpty() || unit.color in xColors)
         return when (val symbol = pip.symbol) {
             is ManaSymbol.Colored -> acceptsColor(unit, symbol.color)
             is ManaSymbol.Colorless -> unit.color == null
             is ManaSymbol.Hybrid, is ManaSymbol.HybridPhyrexian ->
                 acceptsColor(unit, symbol.color1) || acceptsColor(unit, symbol.color2)
             is ManaSymbol.Phyrexian -> acceptsColor(unit, symbol.color)
-            is ManaSymbol.Generic -> true
+            is ManaSymbol.Generic -> unit.paysGeneric
             ManaSymbol.Snow -> unit.snow
             is ManaSymbol.X, is ManaSymbol.MonocolorHybrid -> error("Unexpanded allocation pip")
         }
@@ -160,7 +166,10 @@ private fun ManaPool.matchFloating(
         } else {
             // Deduct the selected snow/plain bucket exactly, independent of pip visitation order.
             val color = unit.color
+            pool = pool.copy(manaUnits = pool.manaUnits.consume(color,
+                if (unit.snow) 0 else count, if (unit.snow) count else 0))
             pool = if (color == null) pool.copy(colorless = pool.colorless - count,
+                manaUnits = pool.manaUnits,
                 snowColorless = pool.snowColorless - if (unit.snow) count else 0)
             else {
                 val nextSnow = (pool.snowMana[color] ?: 0) - if (unit.snow) count else 0

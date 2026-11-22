@@ -1,0 +1,631 @@
+/*
+ * Dexterity flip (Chaos Orb): a top-down card table under a warm lamp, a brass drop-height
+ * gauge, and the orb itself — a real card that spins in 3D.
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(48, 38, 24, 0.6), rgba(0, 0, 0, 0.97) 72%),
+    rgba(6, 5, 4, 0.96);
+  color: var(--text-primary);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: overlayIn 260ms ease-out;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- Header ------------------------------------------------------------------------------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px 6px;
+  min-height: 64px;
+}
+
+.headerArt {
+  width: 40px;
+  height: 56px;
+  border-radius: 3px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 220, 150, 0.25);
+  flex-shrink: 0;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  color: #f6e7c8;
+  line-height: 1.15;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: rgba(246, 231, 200, 0.62);
+  line-height: 1.35;
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.ghostButton {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.ghostButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* ---- Stage -------------------------------------------------------------------------------- */
+
+.stageFrame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  touch-action: none;
+}
+
+.stage.aiming {
+  cursor: grab;
+}
+
+.stage.flicking {
+  cursor: grabbing;
+}
+
+/* The swipe the thrower is making, fading out behind the pointer. */
+.trail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 24;
+  overflow: visible;
+}
+
+.trail polyline {
+  fill: none;
+  stroke: rgba(255, 226, 160, 0.75);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(255, 214, 102, 0.6));
+}
+
+.stage.shake {
+  animation: tableShake 260ms ease-out;
+}
+
+@keyframes tableShake {
+  0% { translate: 0 0; }
+  20% { translate: -2px 1.5px; }
+  40% { translate: 2px -1px; }
+  60% { translate: -1px 1px; }
+  80% { translate: 1px 0; }
+  100% { translate: 0 0; }
+}
+
+.felt {
+  position: absolute;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(255, 236, 190, 0.13), transparent 62%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #1c4a35, #143a2a 55%, #10301f);
+  box-shadow:
+    0 0 0 7px #4a2e19,
+    0 0 0 9px #2c1a0d,
+    0 0 0 10px rgba(255, 210, 150, 0.12),
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    inset 0 0 60px rgba(0, 0, 0, 0.55);
+}
+
+.band {
+  position: absolute;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.bandYours {
+  background: rgba(120, 200, 160, 0.04);
+}
+
+.bandLabel {
+  position: absolute;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: var(--font-weight-semibold);
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bandDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.centreLine {
+  position: absolute;
+  height: 0;
+  border-top: 1px solid rgba(255, 236, 190, 0.08);
+}
+
+.handLip {
+  position: absolute;
+  height: 36px;
+  border-radius: 0 0 40px 40px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 220, 150, 0.1), transparent 70%);
+  pointer-events: none;
+}
+
+/* ---- Cards on the table ------------------------------------------------------------------- */
+
+.card {
+  position: absolute;
+  pointer-events: none;
+  transition: filter 140ms ease, opacity 300ms ease;
+}
+
+.cardFace {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 63px;
+  height: 88px;
+  border-radius: 3.2px;
+  background-color: #222;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.55), 0 0 0 0.5px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 140ms ease, transform 300ms ease;
+}
+
+.cardTarget .cardFace {
+  box-shadow: 0 0 0 2px #ff5a4f, 0 0 14px 2px rgba(255, 70, 60, 0.75);
+}
+
+.cardOwn .cardFace {
+  box-shadow: 0 0 0 2px #ffb547, 0 0 14px 2px rgba(255, 170, 50, 0.7);
+}
+
+.cardImmune {
+  filter: saturate(0.4) brightness(0.8);
+}
+
+.cardImmune .cardFace {
+  box-shadow: 0 0 0 1.5px rgba(200, 210, 220, 0.6);
+}
+
+/* Struck and still standing: the impact glow without the destroyed card's crack and fade. */
+.cardHit .cardFace {
+  box-shadow: 0 0 0 2px #ff3b30, 0 0 22px 6px rgba(255, 50, 40, 0.85);
+}
+
+.cardDestroyed .cardFace {
+  box-shadow: 0 0 0 2px #ff3b30, 0 0 22px 6px rgba(255, 50, 40, 0.85);
+  animation: destroyed 1600ms ease-in forwards;
+}
+
+.cardDestroyed .cardFace::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(115deg, transparent 46%, rgba(20, 0, 0, 0.85) 47%, transparent 49%),
+    linear-gradient(62deg, transparent 52%, rgba(20, 0, 0, 0.8) 53%, transparent 55%),
+    linear-gradient(160deg, transparent 30%, rgba(20, 0, 0, 0.7) 31%, transparent 33%),
+    rgba(180, 20, 10, 0.32);
+  animation: crack 260ms ease-out;
+}
+
+@keyframes crack {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes destroyed {
+  0%, 50% { opacity: 1; filter: none; }
+  100% { opacity: 0.55; filter: grayscale(0.85) brightness(0.55); }
+}
+
+.cardSpared .cardFace {
+  box-shadow: 0 0 0 2px rgba(190, 220, 255, 0.9), 0 0 14px 3px rgba(150, 200, 255, 0.55);
+}
+
+.chip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 8px;
+  line-height: 1.3;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  /* Above a landed orb, so a card it came to rest on still says what happened to it. */
+  z-index: 35;
+}
+
+.chipDanger { background: #ff3b30; color: #fff; }
+.chipWarn { background: #ffb547; color: #2a1800; }
+.chipCalm { background: rgba(30, 40, 52, 0.92); color: #d9e6f5; border: 0.5px solid rgba(200, 220, 255, 0.4); }
+
+.crosshair {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  pointer-events: none;
+  z-index: 21;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 240, 210, 0.95);
+}
+
+.crosshair::before { left: 6.25px; top: 0; width: 1.5px; height: 14px; }
+.crosshair::after { top: 6.25px; left: 0; height: 1.5px; width: 14px; }
+
+.aimLabel {
+  position: absolute;
+  transform: translate(-50%, 0);
+  margin-top: 50px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(10, 10, 10, 0.82);
+  font-size: 9px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 22;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ---- The orb ------------------------------------------------------------------------------ */
+
+.orbAnchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.orbShadow {
+  position: absolute;
+  width: 63px;
+  height: 88px;
+  margin: -44px 0 0 -31.5px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  filter: blur(3px);
+  z-index: 29;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  width: 63px;
+  height: 88px;
+  margin: -44px 0 0 -31.5px;
+  transform-style: preserve-3d;
+}
+
+.orbFace {
+  position: absolute;
+  inset: 0;
+  border-radius: 3.2px;
+  background-size: cover;
+  background-position: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.7);
+}
+
+.orbBack {
+  transform: rotateX(180deg);
+}
+
+.orbInHand {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+
+.orbGlow {
+  box-shadow: 0 0 0 1.5px rgba(255, 220, 140, 0.9), 0 0 18px 4px rgba(255, 200, 100, 0.45);
+}
+
+.impact {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 236, 190, 0.9);
+  pointer-events: none;
+  z-index: 28;
+  animation: impact 700ms ease-out forwards;
+}
+
+@keyframes impact {
+  from { transform: scale(0.6); opacity: 1; }
+  to { transform: scale(9); opacity: 0; }
+}
+
+.landingCallout {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  margin-top: -56px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  animation: calloutIn 300ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.calloutBad { background: #ffb547; color: #2a1800; }
+.calloutMiss { background: rgba(30, 40, 52, 0.95); color: #d9e6f5; }
+.calloutHit { background: #ff3b30; color: #fff; }
+
+@keyframes calloutIn {
+  from { transform: translate(-50%, -80%) scale(0.7); opacity: 0; }
+  to { transform: translate(-50%, -100%) scale(1); opacity: 1; }
+}
+
+/* ---- Spin gauge ------------------------------------------------------------------------ */
+
+.gauge {
+  position: absolute;
+  width: 34px;
+  pointer-events: none;
+  z-index: 35;
+}
+
+.gaugeTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 17px;
+  background: linear-gradient(180deg, #2b2116, #1a140d);
+  box-shadow:
+    inset 0 0 0 1.5px #b8893d,
+    inset 0 0 0 3px #3a2a14,
+    0 6px 18px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.gaugeZone {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+}
+
+.zoneSoft {
+  background: repeating-linear-gradient(-45deg, rgba(255, 90, 70, 0.55) 0 3px, rgba(255, 90, 70, 0.3) 3px 6px);
+  border-radius: 0 0 12px 12px;
+}
+
+.zoneWild {
+  background: repeating-linear-gradient(-45deg, rgba(255, 90, 70, 0.55) 0 3px, rgba(255, 90, 70, 0.3) 3px 6px);
+  border-radius: 12px 12px 0 0;
+}
+
+.zoneClean {
+  background: linear-gradient(90deg, #f7d27a, #ffe9a8, #f7d27a);
+  box-shadow: 0 0 10px rgba(255, 214, 102, 0.7);
+  border-radius: 2px;
+}
+
+.gaugeNeedle {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+}
+
+.gaugeTick {
+  position: absolute;
+  left: 100%;
+  margin-left: 6px;
+  transform: translateY(-50%);
+  font-size: 8.5px;
+  color: rgba(255, 236, 200, 0.6);
+  white-space: nowrap;
+}
+
+.gaugeReadout {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  margin-bottom: 7px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #ffe9a8;
+  white-space: nowrap;
+}
+
+.gaugeReadout[data-tone='off'] {
+  color: #ff9d7a;
+}
+
+.hintWarn {
+  color: #ffb39a;
+}
+
+/* ---- Footer ------------------------------------------------------------------------------- */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 10px 20px 18px;
+  min-height: 64px;
+  flex-wrap: wrap;
+}
+
+.steps {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  transition: all 160ms ease;
+}
+
+.stepActive {
+  background: rgba(255, 214, 102, 0.14);
+  border-color: rgba(255, 214, 102, 0.55);
+  color: #ffe9a8;
+}
+
+.stepNum {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stepActive .stepNum {
+  background: #f7d27a;
+  color: #2a1800;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  animation: overlayIn 260ms ease-out;
+}
+
+.summaryTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: #f6e7c8;
+}
+
+.summaryBody {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 640px;
+}
+
+.primaryButton {
+  background: linear-gradient(180deg, #f7d27a, #d9a640);
+  color: #2a1800;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(217, 166, 64, 0.35);
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.primaryButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(217, 166, 64, 0.5);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .header { padding: 10px 12px 4px; min-height: 52px; }
+  .title { font-size: 18px; }
+  .subtitle { font-size: 12px; }
+  .footer { padding: 8px 10px 12px; gap: 10px; }
+  .step { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .summary, .landingCallout { animation: none; }
+  .stage.shake { animation: none; }
+  .impact { display: none; }
+}

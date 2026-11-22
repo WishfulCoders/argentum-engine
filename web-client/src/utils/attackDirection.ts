@@ -37,8 +37,3 @@ export function attackNeighbours(
     ? { mode, attacks: next, attackedBy: previous }
     : { mode, attacks: previous, attackedBy: next }
 }
-
-/** Short label for the rule, e.g. the rail header. */
-export function attackModeLabel(mode: 'LEFT' | 'RIGHT'): string {
-  return mode === 'LEFT' ? 'Attack left' : 'Attack right'
-}

@@ -5,7 +5,7 @@
  * player's own profile uses — so there's a single deck look across the app. Data comes from the
  * admin endpoints (`/api/admin/users/{id}/games/{gameId}/decks` and `.../decks`).
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type React from 'react'
 import {
   type AdminUserDeck,
@@ -18,24 +18,59 @@ import { DeckCardBody, GameDeckColumns } from '@/components/deck/GameDeckView'
 import { Panel, adminTheme, cellStyle } from './adminUi'
 import { colorLabel } from './statFormat'
 
-/** A dark modal shell shared by both admin deck viewers. */
-function ModalShell({ title, subtitle, onClose, children }: {
-  title: string
-  subtitle?: string | undefined
+/** Close callbacks of the open admin modals, innermost last — Escape closes only the top one. */
+const openModals: Array<{ current: () => void }> = []
+
+/**
+ * A dark modal shell shared by the admin deck viewers. `title` may carry markup (a name with a tag);
+ * `actions` sit beside the close button; `width` widens it for side-by-side decks. Escape closes the
+ * topmost open shell, so a deck opened over a player's games closes back to the list.
+ */
+export function ModalShell({ title, subtitle, actions, width = 820, onClose, children }: {
+  title: React.ReactNode
+  subtitle?: React.ReactNode
+  actions?: React.ReactNode
+  width?: number
   onClose: () => void
   children: React.ReactNode
 }) {
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    const entry = { current: () => closeRef.current() }
+    openModals.push(entry)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && openModals[openModals.length - 1] === entry) {
+        e.preventDefault()
+        entry.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      openModals.splice(openModals.indexOf(entry), 1)
+    }
+  }, [])
   return (
     <div style={styles.backdrop} onClick={onClose} role="presentation">
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal>
+      <div
+        style={{ ...styles.modal, width: `min(${width}px, 100%)` }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal
+        aria-label={typeof title === 'string' ? title : undefined}
+      >
         <div style={styles.header}>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <h2 style={styles.title}>{title}</h2>
             {subtitle && <p style={styles.subtitle}>{subtitle}</p>}
           </div>
-          <button type="button" style={styles.close} onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <div style={styles.headerActions}>
+            {actions}
+            <button type="button" style={styles.close} onClick={onClose} aria-label="Close">
+              ✕
+            </button>
+          </div>
         </div>
         <div style={styles.bodyWrap}>{children}</div>
       </div>
@@ -170,14 +205,15 @@ const styles: Record<string, React.CSSProperties> = {
     width: 'min(820px, 100%)',
     maxHeight: '85vh',
     overflowY: 'auto',
-    backgroundColor: '#12121e',
-    border: '1px solid #2a2a3e',
+    backgroundColor: 'rgba(16, 18, 28, 0.96)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
     borderRadius: 14,
     padding: '20px 22px',
   },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   title: { margin: 0, color: '#fff', fontSize: 20 },
-  subtitle: { margin: '4px 0 0', color: '#888', fontSize: 13 },
+  subtitle: { margin: '4px 0 0', color: '#9aa3b8', fontSize: 13 },
+  headerActions: { display: 'flex', alignItems: 'center', gap: 12, flex: 'none' },
   close: { background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: 18 },
   bodyWrap: { marginTop: 14 },
   error: { margin: '8px 0 0', color: '#ff6b6b', fontSize: 13 },

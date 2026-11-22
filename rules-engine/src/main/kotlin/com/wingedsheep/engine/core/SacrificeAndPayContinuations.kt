@@ -21,6 +21,11 @@ import kotlinx.serialization.Serializable
  * @property remainingPlayers Players still to process for "each opponent" sacrifice effects
  * @property filter Filter for valid sacrifice targets (needed to chain remaining players)
  * @property count Number of permanents each player must sacrifice
+ * @property chosen Edict choices already made by earlier players in APNAP order. Nothing is
+ *   sacrificed until the last player has chosen; then every choice is sacrificed at once
+ *   (CR 101.4).
+ * @property perPlayerCounts Each remaining player's own count when the edict reads it per player
+ *   ("half the creatures they control"); a player missing from it sacrifices [count].
  */
 @Serializable
 data class SacrificeContinuation(
@@ -30,8 +35,17 @@ data class SacrificeContinuation(
     val remainingPlayers: List<EntityId> = emptyList(),
     val filter: GameObjectFilter? = null,
     val count: Int = 1,
+    val chosen: List<SacrificeChoice> = emptyList(),
+    val perPlayerCounts: Map<EntityId, Int> = emptyMap(),
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
+
+/** The permanents [playerId] chose for a multi-player edict, held until every player has chosen. */
+@Serializable
+data class SacrificeChoice(
+    val playerId: EntityId,
+    val permanentIds: List<EntityId>,
+)
 
 /**
  * Resume after a player picked the one permanent they keep for a single category of a
@@ -144,6 +158,10 @@ data class PayOrSufferContinuation(
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
+    /** The label the creating effect ran under; the program its resume runs keeps it. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val programOrigin: com.wingedsheep.engine.core.ProgramOrigin? = null,
 ) : AnswerContinuation
 
 /**
@@ -240,9 +258,14 @@ data class AnyPlayerMayPayContinuation(
     val sourceId: EntityId,
     val sourceName: String,
     val controllerId: EntityId,
-    val cost: PayCost,
+    /** Null for a free choice — the asked player answers [prompt] yes or no. */
+    val cost: PayCost?,
     val consequence: Effect? = null,
     val consequenceIfNonePaid: Effect? = null,
+    /** The free choice's yes/no question (null [cost]); unused for a payment. */
+    val prompt: String? = null,
+    /** Pipeline collection the consequence reads the paying player from (`PipelineTarget`). */
+    val storePayerAs: String? = null,
     val requiredCount: Int,
     val filter: GameObjectFilter,
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
@@ -250,6 +273,10 @@ data class AnyPlayerMayPayContinuation(
     val triggeringPlayerId: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
     val resolvingTriggeredAbility: com.wingedsheep.sdk.scripting.TriggeredAbility? = null,
+    /** The label the creating effect ran under; the program its resume runs keeps it. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val programOrigin: com.wingedsheep.engine.core.ProgramOrigin? = null,
 ) : AnswerContinuation
 
 /**

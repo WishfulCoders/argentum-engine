@@ -8,12 +8,15 @@ import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.permissions.addMayPlayPermission
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.mtg.sets.definitions.blb.cards.FestivalOfEmbers
 import com.wingedsheep.mtg.sets.definitions.blb.cards.OtterballAntics
 import com.wingedsheep.mtg.sets.definitions.dom.cards.MuldrothaTheGravetide
 import com.wingedsheep.mtg.sets.definitions.dom.cards.SqueeTheImmortal
 import com.wingedsheep.mtg.sets.definitions.one.cards.ViralSpawning
+import com.wingedsheep.mtg.sets.definitions.snc.cards.FalcoSparaPactweaver
+import com.wingedsheep.mtg.sets.definitions.woe.cards.JohannApprenticeSorcerer
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -234,6 +237,73 @@ class CastFromZoneEnumeratorTest : FunSpec({
         }
     }
 
+    context("Top of library with a costed permission (CastSpellTypesFromTopOfLibrary.additionalCost)") {
+
+        test("Falco Spara alone: with no counter to remove, the top card isn't offered") {
+            val driver = setupP1(
+                battlefield = listOf("Falco Spara, Pactweaver", "Mountain"),
+                extraSetCards = listOf(FalcoSparaPactweaver),
+            )
+            val boltId = driver.game.putCardOnTopOfLibrary(driver.player1, "Lightning Bolt")
+
+            // Like every top-of-library cast, an unpayable one is not listed at all.
+            driver.enumerateFor(driver.player1).castActions()
+                .filter { (it.action as CastSpell).cardId == boltId }
+                .shouldBeEmpty()
+        }
+
+        test("a cost-free permission covering the same card waives the costed one's cost") {
+            val driver = setupP1(
+                battlefield = listOf("Falco Spara, Pactweaver", "Future Sight", "Mountain"),
+                extraSetCards = listOf(FalcoSparaPactweaver),
+            )
+            val boltId = driver.game.putCardOnTopOfLibrary(driver.player1, "Lightning Bolt")
+
+            val cast = driver.enumerateFor(driver.player1).castActions()
+                .single { (it.action as CastSpell).cardId == boltId }
+            cast.additionalCostInfo shouldBe null
+            cast.affordable shouldBe true
+
+            val result = driver.game.submit(
+                CastSpell(
+                    playerId = driver.player1,
+                    cardId = boltId,
+                    targets = listOf(com.wingedsheep.engine.state.components.stack.ChosenTarget.Player(driver.player2)),
+                    paymentStrategy = com.wingedsheep.engine.core.PaymentStrategy.AutoPay,
+                )
+            )
+            result.outcome shouldBe com.wingedsheep.engine.core.Outcome.Done
+        }
+
+        test("a limited free grant that waives the cost spends its use; the next cast owes the cost") {
+            val driver = setupP1(
+                battlefield = listOf("Falco Spara, Pactweaver", "Johann, Apprentice Sorcerer", "Mountain", "Mountain"),
+                extraSetCards = listOf(FalcoSparaPactweaver, JohannApprenticeSorcerer),
+            )
+            val p1 = driver.player1
+            val firstBolt = driver.game.putCardOnTopOfLibrary(p1, "Lightning Bolt")
+
+            // Johann's once-per-turn grant covers the Bolt, so Falco's counter cost isn't owed.
+            val first = driver.enumerateFor(p1).castActions()
+                .single { (it.action as CastSpell).cardId == firstBolt }
+            first.additionalCostInfo shouldBe null
+            driver.game.submit(
+                CastSpell(
+                    playerId = p1,
+                    cardId = firstBolt,
+                    targets = listOf(com.wingedsheep.engine.state.components.stack.ChosenTarget.Player(driver.player2)),
+                    paymentStrategy = com.wingedsheep.engine.core.PaymentStrategy.AutoPay,
+                )
+            ).outcome shouldBe com.wingedsheep.engine.core.Outcome.Done
+
+            // Johann's use is spent: the next Bolt goes through Falco, whose counter can't be paid.
+            val secondBolt = driver.game.putCardOnTopOfLibrary(p1, "Lightning Bolt")
+            driver.enumerateFor(p1).castActions()
+                .filter { (it.action as CastSpell).cardId == secondBolt }
+                .shouldBeEmpty()
+        }
+    }
+
     // -------------------------------------------------------------------------
     context("Intrinsic zone cast (MayCastSelfFromZones — Squee)") {
 
@@ -264,6 +334,19 @@ class CastFromZoneEnumeratorTest : FunSpec({
                 .castActionsFor("Squee, the Immortal").first()
 
             cast.sourceZone shouldBe "EXILE"
+        }
+
+        test("Squee exiled face down has no characteristics, so no cast from exile (CR 406.3a)") {
+            val driver = setupP1(
+                battlefield = listOf("Mountain", "Mountain", "Mountain"),
+                exile = listOf("Squee, the Immortal"),
+                extraSetCards = listOf(SqueeTheImmortal)
+            )
+            val squeeId = driver.game.state.getZone(ZoneKey(driver.player1, Zone.EXILE)).single()
+            val hidden = driver.game.state.getEntity(squeeId)!!.with(FaceDownComponent)
+            driver.game.replaceState(driver.game.state.withEntity(squeeId, hidden))
+
+            driver.enumerateFor(driver.player1) shouldNotContainCastOf "Squee, the Immortal"
         }
 
         test("Squee with no mana is shown as unaffordable") {

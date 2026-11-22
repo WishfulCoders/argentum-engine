@@ -17,9 +17,8 @@
  *
  * - **A human 1v1 rematch.** Every input above is decidable on *this* client, which is exactly why
  *   it works against the AI; a human opponent has to be asked, re-seated and have their deck
- *   resubmitted, and that is server work (a `RequestRematch` on the game session, modelled on
- *   `FreeForAllHandler.handleReadyForNextGame`). Offering a button that quietly opened a lobby the
- *   other player knew nothing about would be worse than offering none.
+ *   resubmitted, and that is server work — `PostGameService` and the result screen's
+ *   `PostGamePanel`, which replay the finished lobby's own recipe once both players ask.
  * - **A tournament rematch.** Pods and brackets already have one — `readyForNextRound` keeps the
  *   same seats and the same decks, which is strictly better than rebuilding the lobby.
  */

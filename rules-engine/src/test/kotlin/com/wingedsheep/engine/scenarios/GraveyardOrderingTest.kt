@@ -17,6 +17,60 @@ import io.kotest.matchers.shouldBe
 
 class GraveyardOrderingTest : ScenarioTestBase() {
     init {
+        /** A card that reads graveyard order, as Nether Shadow does ("creature cards above it"). */
+        val positional = com.wingedsheep.sdk.dsl.card("Positional Shade") {
+            manaCost = "{B}"
+            typeLine = "Creature — Spirit"
+            power = 1
+            toughness = 1
+            triggeredAbility {
+                trigger = com.wingedsheep.sdk.dsl.Triggers.you.beginningOf(Step.UPKEEP)
+                triggerZone = Zone.GRAVEYARD
+                effect = Effects.GainLife(DynamicAmounts.cardsAboveInGraveyard(filter = GameObjectFilter.Creature))
+            }
+        }
+        fun startGame(vararg extra: Pair<String, Int>): GameState {
+            val registry = com.wingedsheep.engine.registry.CardRegistry().apply {
+                register(com.wingedsheep.engine.support.TestCards.all); register(positional)
+            }
+            val deck = com.wingedsheep.sdk.model.Deck.of("Forest" to 10, "Grizzly Bears" to 10, *extra)
+            return GameInitializer(registry).initializeGame(GameConfig(
+                players = listOf(PlayerConfig("Owner", deck), PlayerConfig("Opponent", deck)),
+                skipMulligans = true, startingPlayerIndex = 0, seed = 7L)).state
+        }
+        fun millDistinctPair(state: GameState, sourceId: com.wingedsheep.sdk.model.EntityId?): EffectResult {
+            val owner = state.turnOrder.first()
+            val library = state.getZone(com.wingedsheep.engine.state.ZoneKey(owner, Zone.LIBRARY))
+            fun named(name: String) = library.first { state.getEntity(it)?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()?.name == name }
+            val cards = listOf(named("Forest"), named("Grizzly Bears"))
+            return services.effectExecutorRegistry.execute(state,
+                MoveCollectionEffect("cards", CardDestination.ToZone(Zone.GRAVEYARD)),
+                EffectContext(controllerId = owner, sourceId = sourceId,
+                    pipeline = PipelineState(storedCollections = mapOf("cards" to cards))))
+        }
+        test("a game with no card that reads graveyard order never asks to order arrivals") {
+            val state = startGame()
+            state.preserveGraveyardOrder shouldBe false
+            val result = millDistinctPair(state, sourceId = null)
+            result.outcome shouldBe Outcome.Done
+            result.state.pendingDecision shouldBe null
+            result.state.getGraveyard(state.turnOrder.first()).size shouldBe 2
+        }
+        test("a positional card in a deck turns ordering on and the prompt names its source") {
+            positional.readsGraveyardOrder shouldBe true
+            val state = startGame("Positional Shade" to 1)
+            state.preserveGraveyardOrder shouldBe true
+            val owner = state.turnOrder.first()
+            val source = state.getHand(owner).first()
+            val sourceName = state.getEntity(source)!!.get<com.wingedsheep.engine.state.components.identity.CardComponent>()!!.name
+            val result = millDistinctPair(state, sourceId = source)
+            (result.outcome is Outcome.Paused) shouldBe true
+            val question = result.state.pendingDecision as OrderObjectsDecision
+            question.playerId shouldBe owner
+            question.context.sourceId shouldBe source
+            question.context.sourceName shouldBe sourceName
+            question.prompt shouldBe "Order the cards $sourceName put into your graveyard (top card first)"
+        }
         test("positional queries exclude the reference, filter cards, and keep order after removals") {
             val game = scenario().withPlayers("Owner", "Opponent").withCardInGraveyard(1, "Grizzly Bears")
                 .withCardInGraveyard(1, "Swamp").withCardInGraveyard(1, "Island")
@@ -70,6 +124,19 @@ class GraveyardOrderingTest : ScenarioTestBase() {
             game.state.getGraveyard(game.player1Id).takeLast(2) shouldBe cards.reversed()
             cards.map { game.state.objectRef(it) } shouldBe refs
             game.state.getGraveyard(game.player1Id).first() shouldBe game.findCardsInGraveyard(1, "Swamp").single()
+        }
+        test("copies of one card arriving together are not offered for ordering") {
+            val game = scenario().withPlayers("Owner", "Opponent").withCardInGraveyard(1, "Swamp")
+                .withCardInHand(1, "Grizzly Bears").withCardInHand(1, "Grizzly Bears").build()
+            game.state = game.state.copy(preserveGraveyardOrder = true)
+            val cards = game.state.getHand(game.player1Id)
+            val result = services.effectExecutorRegistry.execute(game.state,
+                MoveCollectionEffect("cards", CardDestination.ToZone(Zone.GRAVEYARD)),
+                EffectContext(controllerId = game.player1Id, sourceId = null, pipeline = PipelineState(storedCollections = mapOf("cards" to cards))))
+            result.outcome shouldBe Outcome.Done
+            result.state.pendingDecision shouldBe null
+            result.state.getGraveyard(game.player1Id).takeLast(2).toSet() shouldBe cards.toSet()
+            result.events.filterIsInstance<ZoneChangeEvent>().all { it.graveyardOrderFinalized } shouldBe true
         }
         test("mixed owners order their own arrivals in APNAP order") {
             val game = scenario().withPlayers("Owner", "Opponent").withCardInHand(1, "Island").withCardInHand(1, "Swamp")

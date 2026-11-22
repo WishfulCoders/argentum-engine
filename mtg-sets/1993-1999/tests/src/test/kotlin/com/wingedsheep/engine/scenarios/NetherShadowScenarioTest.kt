@@ -84,6 +84,10 @@ class NetherShadowScenarioTest : ScenarioTestBase() {
             game.state.step shouldBe Step.UPKEEP
             game.state.stack.size shouldBe 0
         }
+        test("Nether Shadow reads graveyard order, so a game holding it asks for it") {
+            cardRegistry.requireCard("Nether Shadow").readsGraveyardOrder shouldBe true
+            cardRegistry.requireCard("Grizzly Bears").readsGraveyardOrder shouldBe false
+        }
         test("simultaneous destruction is owner-ordered before Wrath reaches the graveyard") {
             val game = scenario().withPlayers("Owner", "Opponent")
                 .withCardInHand(1, "Wrath of God").withLandsOnBattlefield(1, "Plains", 4)
@@ -91,11 +95,16 @@ class NetherShadowScenarioTest : ScenarioTestBase() {
                 .withCardOnBattlefield(1, "Llanowar Elves").withCardOnBattlefield(1, "Hill Giant")
                 .withCardInLibrary(1, "Plains").withCardInLibrary(2, "Forest")
                 .withActivePlayer(1).withPriorityPlayer(1).inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN).build()
-            game.state = game.state.copy(preserveGraveyardOrder = true)
+            // No manual switch: a game with Nether Shadow in it orders graveyard arrivals.
+            game.state.preserveGraveyardOrder shouldBe true
             val shadow = game.findPermanent("Nether Shadow")!!
+            val wrath = game.findCardsInHand(1, "Wrath of God").single()
             game.castSpell(1, "Wrath of God").error shouldBe null
             game.resolveStack()
             val question = game.state.pendingDecision as OrderObjectsDecision
+            question.context.sourceId shouldBe wrath
+            question.context.sourceName shouldBe "Wrath of God"
+            question.prompt shouldBe "Order the cards Wrath of God put into your graveyard (top card first)"
             val topFirst = question.objects.filter { it != shadow } + shadow
             game.submitDecision(OrderedResponse(question.id, topFirst)).error shouldBe null
             game.state.getGraveyard(game.player1Id).first() shouldBe shadow

@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dmu.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,32 +13,22 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Serra Paragon — Dominaria United #32
- * {2}{W}{W} · Creature — Angel · 3/4
  *
- * Flying
- * Once during each of your turns, you may play a land from your graveyard or cast a permanent spell
- * with mana value 3 or less from your graveyard. If you do, it gains "When this permanent is put
- * into a graveyard from the battlefield, exile it and you gain 2 life."
- *
- * One [MayCastFromGraveyard] grant with `playLands = true`: the land play and the permanent cast
- * share its single once-per-turn allowance (tracked on this Paragon, so a second Paragon brings a
- * second use, and a Paragon that leaves and returns is a new object with a fresh one). A land's mana
- * value is 0, so `Permanent.manaValueAtMost(3)` reads both halves — lands are played, never cast (CR
- * 305.9). `gainsAbility` hands the spell (CR 400.7h) or land (CR 400.7i) the death trigger; a
- * permanent spell keeps it as it becomes a permanent (CR 400.7b), and the permanent keeps it even if
- * Paragon leaves. The play/cast still follows normal timing: a land only as the land-play special
- * action with a land drop left, a spell at its normal timing and for its mana cost.
+ * One graveyard grant covers both halves: `playsLands` lets it play land cards, and a land's mana
+ * value is 0, so `Permanent.manaValueAtMost(3)` admits every land as well as the cheap permanent
+ * spells. The once-per-turn allowance sits on Serra Paragon, so a land and a spell share it. The
+ * granted trigger rides the grant onto whatever entered through it, and stays after Paragon leaves.
  */
 val SerraParagon = card("Serra Paragon") {
     manaCost = "{2}{W}{W}"
     colorIdentity = "W"
     typeLine = "Creature — Angel"
+    power = 3
+    toughness = 4
     oracleText = "Flying\n" +
         "Once during each of your turns, you may play a land from your graveyard or cast a permanent " +
         "spell with mana value 3 or less from your graveyard. If you do, it gains \"When this permanent " +
         "is put into a graveyard from the battlefield, exile it and you gain 2 life.\""
-    power = 3
-    toughness = 4
 
     keywords(Keyword.FLYING)
 
@@ -46,10 +37,13 @@ val SerraParagon = card("Serra Paragon") {
             filter = GameObjectFilter.Permanent.manaValueAtMost(3),
             duringYourTurnOnly = true,
             oncePerTurn = true,
-            playLands = true,
-            gainsAbility = TriggeredAbility.create(
+            playsLands = true,
+            grantedAbilityOnEntry = TriggeredAbility.create(
                 trigger = Triggers.self.dies(),
-                effect = Effects.Exile(EffectTarget.Self) then Effects.GainLife(2),
+                effect = Effects.Move(EffectTarget.Self, Zone.EXILE, fromZone = Zone.GRAVEYARD) then
+                    Effects.GainLife(2),
+                descriptionOverride = "When this permanent is put into a graveyard from the battlefield, " +
+                    "exile it and you gain 2 life.",
             ),
         )
     }

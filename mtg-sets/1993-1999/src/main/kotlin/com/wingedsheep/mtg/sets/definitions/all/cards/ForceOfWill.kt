@@ -12,17 +12,15 @@ import com.wingedsheep.sdk.scripting.SelfAlternativeCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
- * Force of Will
- * {3}{U}{U}
- * Instant
+ * Force of Will — Alliances #28 (canonical printing)
+ * {3}{U}{U} · Instant
  *
  * You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.
  * Counter target spell.
  *
- * The free alternative is a [SelfAlternativeCost] whose costs are both non-mana:
- * [Costs.additional.PayLife] (1) and [Costs.additional.ExileCards] of one blue card from hand —
- * the unconditional sibling of Force of Negation's pitch cost. Force of Will is on the stack while
- * its costs are paid (CR 601.2a before 601.2h), so it can never pitch itself.
+ * The pitch cost is a [SelfAlternativeCost] of {0} plus two non-mana additional costs — 1 life and
+ * one blue card exiled from hand — with no condition, so unlike Force of Negation it works on any
+ * turn. Mana value stays 5 whichever cost is paid (ruling).
  */
 val ForceOfWill = card("Force of Will") {
     manaCost = "{3}{U}{U}"
@@ -44,7 +42,7 @@ val ForceOfWill = card("Force of Will") {
     )
 
     spell {
-        val t = target(TargetFilter.SpellOnStack)
+        target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpell()
     }
 
@@ -53,11 +51,6 @@ val ForceOfWill = card("Force of Will") {
         collectorNumber = "28"
         artist = "Terese Nielsen"
         imageUri = "https://cards.scryfall.io/normal/front/9/a/9a879b60-4381-447d-8a5a-8e0b6a1d49ca.jpg?1783947196"
-        ruling(
-            "2022-12-08",
-            "To determine the total cost of a spell, start with the mana cost or alternative cost you're " +
-                "paying (such as the alternative cost of Force of Will), add any cost increases, then apply " +
-                "any cost reductions. Force of Will's mana value is always 5, no matter what you paid to cast it."
-        )
+        ruling("2022-12-08", "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as the alternative cost of Force of Will), add any cost increases, then apply any cost reductions. Force of Will's mana value is always 5, no matter what you paid to cast it.")
     }
 }

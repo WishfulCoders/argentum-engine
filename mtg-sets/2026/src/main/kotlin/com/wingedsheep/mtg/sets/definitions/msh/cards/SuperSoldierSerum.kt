@@ -11,28 +11,10 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.GrantSupertype
-import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-
-/**
- * "attach ... to it" — one attach per chosen Equipment. [EffectTarget.Self] is the granted
- * ability's source, i.e. the enchanted creature.
- */
-private val attachEquipmentToSelf = Effects.ForEachTarget(
-    Effects.AttachTargetEquipmentToCreature(
-        equipmentTarget = EffectTarget.ContextTarget(0),
-        creatureTarget = EffectTarget.Self,
-    )
-)
-
-/** "any number of target Equipment you control" — `unlimited` implies a minimum of zero. */
-private fun equipmentYouControl(): TargetObject = TargetObject(filter = TargetFilter(
-        baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
-    ), unlimited = true)
 
 /**
  * Super-Soldier Serum — Marvel Super Heroes #38
@@ -49,20 +31,11 @@ private fun equipmentYouControl(): TargetObject = TargetObject(filter = TargetFi
  * explicitly to [Filters.EnchantedCreature] (GrantSubtype defaults to the *source*, so an Aura
  * that omits the filter would silently make itself a Soldier).
  *
- * The combat ability is one printed ability with two trigger conditions, so it is modeled as two
- * granted triggered abilities — the Astrologian's Planisphere idiom: [GrantTriggeredAbility] over
- * [Filters.EnchantedCreature] installs the trigger *on the enchanted creature*, where
- * `Triggers.self.attacks()` and `Triggers.self.blocks()` both fire with SELF binding and "it"
- * ([EffectTarget.Self]) is the creature itself. "Any number of target Equipment you control" is a
- * `TargetPermanent(unlimited = true)` (minimum zero) fanned out with [ForEachTargetEffect] so each
- * chosen Equipment is attached independently by [Effects.AttachTargetEquipmentToCreature].
- *
- * Known deviation: because the ability is granted to the creature rather than kept on the Aura,
- * its controller is the *creature's* controller, so "Equipment you control" reads from that
- * player. That only differs from the printed card when the Aura is attached to a creature its
- * controller doesn't control. Keeping it on the Aura is not an option: the engine's
- * `AttachmentTriggerDetector` has no block branch, so an `ATTACHED`-bound blocks trigger would
- * never fire at all.
+ * The combat ability stays on the Aura: `Triggers.or(attached.attacks(), attached.blocks())`, so
+ * "you" is the Aura's controller and "it" is [EffectTarget.EnchantedCreature]. "Any number of
+ * target Equipment you control" is a `TargetObject(unlimited = true)` (minimum zero) fanned out
+ * with [Effects.ForEachTarget] so each chosen Equipment is attached independently by
+ * [Effects.AttachTargetEquipmentToCreature].
  */
 val SuperSoldierSerum = card("Super-Soldier Serum") {
     manaCost = "{1}{W}"
@@ -92,32 +65,20 @@ val SuperSoldierSerum = card("Super-Soldier Serum") {
         ability = GrantSubtype("Soldier", Filters.EnchantedCreature)
     }
 
-    // "Whenever enchanted creature attacks ..."
-    staticAbility {
-        ability = GrantTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.self.attacks(),
-                effect = attachEquipmentToSelf,
-                targetRequirement = equipmentYouControl(),
-                descriptionOverride = "Whenever this creature attacks, attach any number of " +
-                    "target Equipment you control to it.",
-            ),
-            filter = Filters.EnchantedCreature,
+    triggeredAbility {
+        trigger = Triggers.or(Triggers.attached.attacks(), Triggers.attached.blocks())
+        target = TargetObject(
+            filter = TargetFilter(baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()),
+            unlimited = true,
         )
-    }
-
-    // "... or blocks, attach any number of target Equipment you control to it."
-    staticAbility {
-        ability = GrantTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.self.blocks(),
-                effect = attachEquipmentToSelf,
-                targetRequirement = equipmentYouControl(),
-                descriptionOverride = "Whenever this creature blocks, attach any number of " +
-                    "target Equipment you control to it.",
-            ),
-            filter = Filters.EnchantedCreature,
+        effect = Effects.ForEachTarget(
+            Effects.AttachTargetEquipmentToCreature(
+                equipmentTarget = EffectTarget.ContextTarget(0),
+                creatureTarget = EffectTarget.EnchantedCreature,
+            )
         )
+        description = "Whenever enchanted creature attacks or blocks, attach any number of target " +
+            "Equipment you control to it."
     }
 
     metadata {

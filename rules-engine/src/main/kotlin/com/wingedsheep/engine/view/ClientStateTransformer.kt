@@ -4,6 +4,7 @@ import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.PlayerYields
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.player.HotseatControlComponent
@@ -61,8 +62,8 @@ class ClientStateTransformer(
         ),
     )
     private val stackItemProjector = StackItemProjector(cardRegistry, visibility, stackText)
-    private val playerProjector = PlayerProjector(cardRegistry, conditionEvaluator, PlayerActiveEffectsProjector(predicateEvaluator = predicateEvaluator))
-    private val combatProjector = CombatProjector()
+    private val playerProjector = PlayerProjector(cardRegistry, conditionEvaluator, PlayerActiveEffectsProjector(predicateEvaluator = predicateEvaluator, visibility = visibility))
+    private val combatProjector = CombatProjector(visibility)
     private val deckListProjector = DeckListProjector(cardRegistry, visibility)
 
     /**
@@ -194,11 +195,11 @@ class ClientStateTransformer(
 
         // Build player information
         val players = state.turnOrder.map { playerId ->
-            playerProjector.project(state, playerId)
+            playerProjector.project(state, playerId, viewingPlayerId, isSpectator)
         }
 
         // Build combat state if in combat
-        val combat = combatProjector.project(state)
+        val combat = combatProjector.project(state, viewingPlayerId, isSpectator)
 
         // Get active and priority players, defaulting to first player if not set
         val activePlayerId = state.activePlayerId ?: state.turnOrder.firstOrNull() ?: viewingPlayerId
@@ -245,17 +246,45 @@ class ClientStateTransformer(
             activePlayerId = activePlayerId,
             priorityPlayerId = priorityPlayerId,
             turnNumber = state.turnNumber,
+            roundNumber = maxOf(state.roundNumber, minOf(state.turnNumber, 1)),
             isGameOver = state.gameOver,
             winnerId = state.winnerId,
             combat = combat,
             voidActive = state.nonlandPermanentLeftBattlefieldThisTurn || state.spellWarpedThisTurn,
             dayNight = state.dayNight,
             attackMode = state.attackMode.takeIf { it != com.wingedsheep.sdk.core.AttackMode.MULTIPLE },
+            playingForAnte = state.playingForAnte,
             youAreHijacking = youAreHijacking,
             youAreHijackedBy = youAreHijackedBy,
             hotseat = hotseat,
             activeYields = activeYields,
-            deck = deck
+            deck = deck,
+            subgame = projectSubgame(state),
+        )
+    }
+
+    /** The games waiting on [state] when it is a subgame (CR 729), outermost first. */
+    private fun projectSubgame(state: GameState): ClientSubgame? {
+        if (state.mainGame == null) return null
+        val waiting = generateSequence(state.mainGame) { it.mainGame }.toList().asReversed()
+        return ClientSubgame(
+            depth = waiting.size,
+            waitingGames = waiting.map { game ->
+                val source = game.pendingSubgame?.followUp?.context?.sourceId
+                    ?.let { game.getEntity(it)?.get<CardComponent>() }
+                ClientWaitingGame(
+                    sourceName = game.pendingSubgame?.sourceName,
+                    sourceImageUri = source?.imageUri,
+                    sourceOracleText = source?.oracleText,
+                    players = game.turnOrder.map { playerId ->
+                        ClientWaitingPlayer(
+                            playerId = playerId,
+                            life = game.lifeTotal(playerId),
+                            hasLost = game.getEntity(playerId)?.has<com.wingedsheep.engine.state.components.player.PlayerLostComponent>() == true,
+                        )
+                    },
+                )
+            },
         )
     }
 

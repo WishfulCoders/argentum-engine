@@ -38,7 +38,10 @@ interface TargetDeclarations {
 
     /** Declare one target of any shape — `target(Targets.Player)`, `target(Targets.Any)`. */
     fun target(requirement: TargetRequirement): EffectTarget.BoundVariable =
-        EffectTarget.BoundVariable(declareTarget(requirement))
+        EffectTarget.BoundVariable(
+            declareTarget(requirement),
+            requirement.description.takeIf { requirement.count == 1 && !requirement.unlimited }
+        )
 
     /**
      * Declare one target of any shape that may be left unchosen — `target(Targets.CreatureOrPlaneswalker,
@@ -71,44 +74,72 @@ interface TargetDeclarations {
      * Declare several object targets under one requirement — "up to two target creatures" is
      * `targets(TargetFilter.Creature, count = 2, optional = true)`. Returns one handle per slot;
      * an ability that treats the targets uniformly ignores them and uses `Effects.ForEachTarget`.
+     * "Any number of target creatures" is `unlimited = true`; "one or more target creatures" adds
+     * the floor, `unlimited = true, minCount = 1` (Touch of Darkness).
      *
      * The cross-target constraints are [TargetObject]'s: see its fields for what each enforces.
+     *
+     * A count only known at cast or trigger time takes one of two spellings, and the Oracle text
+     * says which: "**up to** X target creatures" is `optional = true, dynamicMaxCount = X`, and
+     * "X target creatures" — exactly X, no fewer — is `exactly = X`
+     * (`targets(TargetFilter.Creature, exactly = DynamicAmounts.xValue())`, Icy Blast). `exactly`
+     * stands alone: it is the whole count, so it can't be combined with `dynamicMaxCount`,
+     * `optional` or `unlimited`.
      */
     fun targets(
         filter: TargetFilter,
         count: Int = 1,
-        minCount: Int = count,
+        minCount: Int? = null,
         optional: Boolean = false,
         unlimited: Boolean = false,
         dynamicMaxCount: DynamicAmount? = null,
+        exactly: DynamicAmount? = null,
         sameController: Boolean = false,
         sameOwner: Boolean = false,
+        ownerDistribution: com.wingedsheep.sdk.scripting.targets.OwnerDistribution? = null,
+        sameNumericProperty: com.wingedsheep.sdk.scripting.values.CardNumericProperty? = null,
+        differentNumericProperty: com.wingedsheep.sdk.scripting.values.CardNumericProperty? = null,
         sameCreatureType: Boolean = false,
         sameCardType: Boolean = false,
-        totalManaValueAtMost: DynamicAmount? = null,
+        totalAtMost: com.wingedsheep.sdk.scripting.targets.TotalCap? = null,
         differentNames: Boolean = false,
         differentControllers: Boolean = false,
         onePerCardType: Boolean = false,
+        onePerColor: Boolean = false,
         chooser: TargetChooser = TargetChooser.Controller,
-    ): List<EffectTarget.BoundVariable> = targets(
-        TargetObject(
-            count = count,
-            minCount = minCount,
-            optional = optional,
-            unlimited = unlimited,
-            filter = filter,
-            dynamicMaxCount = dynamicMaxCount,
-            sameController = sameController,
-            sameOwner = sameOwner,
-            sameCreatureType = sameCreatureType,
-            sameCardType = sameCardType,
-            totalManaValueAtMost = totalManaValueAtMost,
-            differentNames = differentNames,
-            differentControllers = differentControllers,
-            onePerCardType = onePerCardType,
-            chooser = chooser,
+    ): List<EffectTarget.BoundVariable> {
+        require(ownerDistribution == null ||
+            (count == 1 && (minCount ?: count) == 1 && !optional && !unlimited && dynamicMaxCount == null && exactly == null)) {
+            "ownerDistribution is the whole target count; use UP_TO_ONE for optional per-owner targets"
+        }
+        require(exactly == null || (dynamicMaxCount == null && !optional && !unlimited)) {
+            "targets(exactly = …) is the whole count; don't combine it with dynamicMaxCount, optional or unlimited"
+        }
+        return targets(
+            TargetObject(
+                count = count,
+                minCount = minCount ?: if (unlimited) 0 else count,
+                optional = optional,
+                unlimited = unlimited,
+                filter = filter,
+                dynamicMaxCount = exactly ?: dynamicMaxCount,
+                dynamicMinCount = exactly,
+                sameController = sameController,
+                sameOwner = sameOwner,
+                ownerDistribution = ownerDistribution,
+                sameNumericProperty = sameNumericProperty,
+                differentNumericProperty = differentNumericProperty,
+                sameCreatureType = sameCreatureType,
+                sameCardType = sameCardType,
+                totalAtMost = totalAtMost,
+                differentNames = differentNames,
+                differentControllers = differentControllers,
+                onePerCardType = onePerCardType,
+                onePerColor = onePerColor,
+                chooser = chooser,
+            )
         )
-    )
+    }
 }
 
 /**

@@ -5,10 +5,12 @@
  * accept/unfriend. Prompts sign-in when anonymous, and reports gracefully when accounts are disabled.
  */
 import { useEffect, useState } from 'react'
-import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setPresenceHidden } from '@/api/friends'
+import { type BlockedPlayer, fetchBlocked, unblock } from '@/api/blocks'
 import { LoginModal } from '@/components/auth/LoginModal'
+import { AccountPage, Avatar, MessageCard, accountStyles as a } from '@/components/profile/accountUi'
+import { pageStyles as p } from '@/components/ui/PageShell'
 import { useAuthStore } from '@/store/authStore'
 import { useFriendsStore } from '@/store/friendsStore'
 
@@ -98,50 +100,45 @@ export function FriendsPage() {
 
   if (status === 'authenticated' && user) {
     return (
-      <div style={styles.wrap}>
-        <div style={styles.container}>
-          <div style={styles.header}>
-            <button type="button" style={styles.link} onClick={() => navigate('/')}>
-              ← Home
-            </button>
-            <button type="button" style={styles.link} onClick={() => navigate('/profile')}>
-              Profile
-            </button>
-          </div>
+      <AccountPage title="Friends">
+        <div>
+          <h1 className={p.h1}>Friends</h1>
+          <p className={p.lede}>
+            {friends.length === 0
+              ? 'Share your friend code to add people, then see when they’re online.'
+              : `${friends.length} friend${friends.length === 1 ? '' : 's'}${onlineFriendCount > 0 ? ` · ${onlineFriendCount} online now` : ''}`}
+          </p>
+        </div>
 
-          <h1 style={styles.title}>Friends</h1>
-
+        <div className={a.friendsGrid}>
           {/* Your friend code + presence visibility */}
-          <div style={styles.sectionBlock}>
-            <h2 style={styles.section}>Your friend code</h2>
-            <p style={styles.muted}>Share this so others can add you — it isn't your email.</p>
-            <div style={styles.codeRow}>
-              <code style={styles.code}>{user.id}</code>
-              <button type="button" style={styles.smallPrimary} onClick={() => void copyCode()}>
+          <section className={`${p.panel} ${a.stack}`}>
+            <h2 className={p.panelTitle}>Your friend code</h2>
+            <p className={a.muted}>Share this so others can add you — it isn’t your email.</p>
+            <div className={a.codeRow}>
+              <code className={a.code}>{user.id}</code>
+              <button type="button" className={p.button} onClick={() => void copyCode()}>
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <label style={styles.toggleRow}>
-              <input
-                type="checkbox"
-                checked={user.hidePresence}
-                disabled={hideBusy}
-                onChange={() => void toggleHidden()}
-              />
-              <span style={styles.toggleText}>
+            <label className={a.toggle}>
+              <input type="checkbox" checked={user.hidePresence} disabled={hideBusy} onChange={() => void toggleHidden()} />
+              <span>
                 Hide my online status
-                <span style={styles.muted}> — friends will always see you as offline</span>
+                <span className={a.dim}> — friends will always see you as offline</span>
               </span>
             </label>
-          </div>
+          </section>
 
           {/* Add a friend */}
-          <div style={styles.sectionBlock}>
-            <h2 style={styles.section}>Add a friend</h2>
-            <div style={styles.addRow}>
+          <section className={`${p.panel} ${a.stack}`}>
+            <h2 className={p.panelTitle}>Add a friend</h2>
+            <p className={a.muted}>Paste the friend code they shared with you.</p>
+            <div className={a.addRow}>
               <input
-                style={styles.input}
-                placeholder="Paste a friend code"
+                className={p.input}
+                placeholder="Friend code"
+                aria-label="Friend code"
                 value={codeInput}
                 onChange={(e) => {
                   setCodeInput(e.target.value)
@@ -152,206 +149,175 @@ export function FriendsPage() {
                   if (e.key === 'Enter') void submitCode()
                 }}
               />
-              <button type="button" style={styles.smallPrimary} disabled={sending} onClick={() => void submitCode()}>
+              <button
+                type="button"
+                className={p.buttonPrimary}
+                disabled={sending || !codeInput.trim()}
+                onClick={() => void submitCode()}
+              >
                 {sending ? 'Sending…' : 'Send request'}
               </button>
             </div>
-            {addError && <p style={styles.error}>{addError}</p>}
-            {addNotice && <p style={styles.notice}>{addNotice}</p>}
-          </div>
+            {addError && <p className={a.error}>{addError}</p>}
+            {addNotice && <p className={a.notice}>{addNotice}</p>}
+          </section>
 
           {/* Incoming requests */}
           {incoming.length > 0 && (
-            <div style={styles.sectionBlock}>
-              <h2 style={styles.section}>Friend requests</h2>
+            <section className={`${p.panel} ${a.full}`}>
+              <div className={a.sectionHead}>
+                <h2 className={a.sectionTitle}>Friend requests</h2>
+                <span className={a.count}>{incoming.length}</span>
+              </div>
               {incoming.map((r) => (
-                <div key={r.requestId} style={styles.personRow}>
-                  <span style={styles.personName}>{r.displayName}</span>
-                  <div style={styles.rowActions}>
-                    <button type="button" style={styles.smallPrimary} onClick={() => void accept(r.requestId)}>
+                <div key={r.requestId} className={a.personRow}>
+                  <span className={a.person}>
+                    <Avatar name={r.displayName} avatar={r.avatar} small />
+                    <span className={a.personName}>{r.displayName}</span>
+                  </span>
+                  <span className={a.rowActions}>
+                    <button type="button" className={p.buttonPrimary} onClick={() => void accept(r.requestId)}>
                       Accept
                     </button>
-                    <button type="button" style={styles.smallGhost} onClick={() => void removeRequest(r.requestId)}>
+                    <button type="button" className={p.buttonGhost} onClick={() => void removeRequest(r.requestId)}>
                       Decline
                     </button>
-                  </div>
+                  </span>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Outgoing requests */}
-          {outgoing.length > 0 && (
-            <div style={styles.sectionBlock}>
-              <h2 style={styles.section}>Pending (sent)</h2>
-              {outgoing.map((r) => (
-                <div key={r.requestId} style={styles.personRow}>
-                  <span style={styles.personName}>{r.displayName}</span>
-                  <div style={styles.rowActions}>
-                    <span style={styles.pendingTag}>Awaiting reply</span>
-                    <button type="button" style={styles.smallGhost} onClick={() => void removeRequest(r.requestId)}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            </section>
           )}
 
           {/* Friends list */}
-          <div style={styles.sectionBlock}>
-            <h2 style={styles.section}>
-              Your friends{' '}
+          <section className={`${p.panel} ${a.full}`}>
+            <div className={a.sectionHead}>
+              <h2 className={a.sectionTitle}>Your friends</h2>
               {friends.length > 0 && (
-                <span style={styles.muted}>
-                  ({friends.length}
-                  {onlineFriendCount > 0 && <span style={{ color: '#5bd16e' }}> · {onlineFriendCount} online</span>})
+                <span className={a.count}>
+                  {friends.length}
+                  {onlineFriendCount > 0 && <span className={a.win}> · {onlineFriendCount} online</span>}
                 </span>
               )}
-            </h2>
-            {storeError && <p style={styles.error}>{storeError}</p>}
+            </div>
+            {storeError && <p className={a.error}>{storeError}</p>}
             {friends.length === 0 ? (
-              <p style={styles.muted}>{loading ? 'Loading…' : 'No friends yet. Share your code to get started.'}</p>
+              <p className={a.muted}>{loading ? 'Loading…' : 'No friends yet. Share your code to get started.'}</p>
             ) : (
               friends.map((f) => (
-                <div key={f.accountId} style={styles.personRow}>
-                  <span style={styles.personName}>
-                    <span style={{ ...styles.dot, backgroundColor: f.online ? '#5bd16e' : '#555' }} />
-                    {f.displayName}
-                    <span style={styles.statusText}>{f.online ? 'Online' : 'Offline'}</span>
+                <div key={f.accountId} className={a.personRow}>
+                  <span className={a.person}>
+                    <Avatar name={f.displayName} avatar={f.avatar} small online={f.online} />
+                    <span className={a.cellStack}>
+                      <span className={a.personName}>{f.displayName}</span>
+                      <span className={a.personStatus} data-online={f.online}>{f.online ? 'Online' : 'Offline'}</span>
+                    </span>
                   </span>
-                  <span style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" style={styles.smallGhost} onClick={() => navigate(`/u/${f.accountId}`)}>
-                      View profile
+                  <span className={a.rowActions}>
+                    <button type="button" className={a.miniButton} onClick={() => navigate(`/messages/${f.accountId}`)}>
+                      Message
                     </button>
-                    <button type="button" style={styles.smallGhost} onClick={() => void unfriend(f.accountId)}>
+                    <button type="button" className={a.miniButton} onClick={() => navigate(`/u/${f.accountId}`)}>
+                      Profile
+                    </button>
+                    <button type="button" className={a.miniButton} onClick={() => void unfriend(f.accountId)}>
                       Unfriend
                     </button>
                   </span>
                 </div>
               ))
             )}
-          </div>
+          </section>
+
+          {/* Outgoing requests */}
+          {outgoing.length > 0 && (
+            <section className={`${p.panel} ${a.full}`}>
+              <div className={a.sectionHead}>
+                <h2 className={a.sectionTitle}>Sent requests</h2>
+                <span className={a.count}>{outgoing.length}</span>
+              </div>
+              {outgoing.map((r) => (
+                <div key={r.requestId} className={a.personRow}>
+                  <span className={a.person}>
+                    <Avatar name={r.displayName} avatar={r.avatar} small />
+                    <span className={a.cellStack}>
+                      <span className={a.personName}>{r.displayName}</span>
+                      <span className={a.pendingTag}>Awaiting reply</span>
+                    </span>
+                  </span>
+                  <button type="button" className={a.miniButton} onClick={() => void removeRequest(r.requestId)}>
+                    Cancel
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
+
+          <BlockedPlayersSection />
         </div>
-      </div>
+      </AccountPage>
     )
   }
 
   const resolving = status === 'idle' || status === 'loading'
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.container}>
-        <button type="button" style={styles.link} onClick={() => navigate('/')}>
-          ← Home
-        </button>
-        <h1 style={styles.title}>Friends</h1>
+    <AccountPage title="Friends">
+      <MessageCard>
+        <h1 className={p.h1}>Friends</h1>
         {accountsEnabled ? (
           <>
-            <p style={styles.muted}>Sign in to add friends and see when they're online.</p>
-            <button type="button" style={styles.primary} onClick={() => setLoginOpen(true)}>
+            <p className={p.lede}>Sign in to add friends and see when they’re online.</p>
+            <button type="button" className={`${p.buttonPrimary} ${a.fullButton}`} onClick={() => setLoginOpen(true)}>
               Sign in
             </button>
             <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
           </>
         ) : resolving ? (
-          <p style={styles.muted}>Loading…</p>
+          <p className={a.muted}>Loading…</p>
         ) : (
-          <p style={styles.muted}>Accounts aren't available on this server.</p>
+          <p className={a.muted}>Accounts aren’t available on this server.</p>
         )}
-      </div>
-    </div>
+      </MessageCard>
+    </AccountPage>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { height: '100vh', overflowY: 'auto', backgroundColor: '#0a0a15', padding: '32px 16px' },
-  container: { maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 },
-  header: { display: 'flex', justifyContent: 'space-between' },
-  link: { background: 'none', border: 'none', color: '#8b9bff', cursor: 'pointer', fontSize: 14, padding: 0 },
-  title: { margin: '8px 0 0', color: '#fff', fontSize: 28 },
-  muted: { margin: 0, color: '#888', fontSize: 14 },
-  error: { margin: '8px 0 0', color: '#ff6b6b', fontSize: 13 },
-  notice: { margin: '8px 0 0', color: '#5bd16e', fontSize: 13 },
-  section: { margin: '0 0 10px', color: '#fff', fontSize: 18 },
-  sectionBlock: {
-    marginTop: 8,
-    backgroundColor: '#14141f',
-    border: '1px solid #2a2a3e',
-    borderRadius: 12,
-    padding: '16px 18px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  codeRow: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  code: {
-    flex: '1 1 240px',
-    minWidth: 0,
-    backgroundColor: '#0e0e18',
-    border: '1px solid #2a2a3e',
-    borderRadius: 8,
-    padding: '8px 12px',
-    color: '#cdd',
-    fontFamily: 'monospace',
-    fontSize: 13,
-    wordBreak: 'break-all',
-  },
-  toggleRow: { display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', marginTop: 4 },
-  toggleText: { color: '#ddd', fontSize: 14 },
-  addRow: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  input: {
-    flex: '1 1 220px',
-    minWidth: 0,
-    backgroundColor: '#0e0e18',
-    border: '1px solid #2a2a3e',
-    borderRadius: 8,
-    padding: '8px 12px',
-    color: '#fff',
-    fontSize: 14,
-  },
-  personRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    padding: '8px 0',
-    borderTop: '1px solid #1f1f2e',
-  },
-  personName: { display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 15 },
-  statusText: { color: '#888', fontSize: 12 },
-  rowActions: { display: 'flex', alignItems: 'center', gap: 8 },
-  pendingTag: { color: '#c9a227', fontSize: 12 },
-  dot: { display: 'inline-block', width: 9, height: 9, borderRadius: 999 },
-  smallPrimary: {
-    padding: '8px 14px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontWeight: 600,
-    fontSize: 13,
-    cursor: 'pointer',
-  },
-  smallGhost: {
-    padding: '8px 14px',
-    borderRadius: 8,
-    border: '1px solid #2a2a3e',
-    backgroundColor: 'transparent',
-    color: '#aaa',
-    fontSize: 13,
-    cursor: 'pointer',
-  },
-  primary: {
-    marginTop: 8,
-    padding: '10px 18px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: '#5b6ee1',
-    color: '#fff',
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: 'pointer',
-    alignSelf: 'flex-start',
-  },
+/**
+ * Players you blocked from a result screen. Absent until there is one — most people never block
+ * anyone, and an empty "Blocked" heading would only suggest they should.
+ */
+function BlockedPlayersSection() {
+  const [blocked, setBlocked] = useState<BlockedPlayer[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetchBlocked().then((list) => { if (!cancelled) setBlocked(list) }).catch(() => { /* not essential */ })
+    return () => { cancelled = true }
+  }, [])
+  if (blocked.length === 0) return null
+
+  const doUnblock = (accountId: string) => {
+    setBlocked((list) => list.filter((b) => b.accountId !== accountId))
+    void unblock(accountId).catch(() => fetchBlocked().then(setBlocked).catch(() => {}))
+  }
+
+  return (
+    <section className={`${p.panel} ${a.full}`}>
+      <div className={a.sectionHead}>
+        <h2 className={a.sectionTitle}>Blocked</h2>
+        <span className={a.count}>{blocked.length}</span>
+      </div>
+      <p className={a.muted}>You won’t be matched with these players, and their messages and emotes don’t reach you.</p>
+      {blocked.map((b) => (
+        <div key={b.accountId} className={a.personRow}>
+          <span className={a.person}>
+            <Avatar name={b.displayName} avatar={b.avatar} small />
+            <span className={a.personName}>{b.displayName}</span>
+          </span>
+          <button type="button" className={a.miniButton} onClick={() => doUnblock(b.accountId)}>
+            Unblock
+          </button>
+        </div>
+      ))}
+    </section>
+  )
 }

@@ -36,8 +36,8 @@ class GutTrueSoulZealotScenarioTest : ScenarioTestBase() {
             game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
             game.declareAttackers(mapOf(gut to 2)).error shouldBe null
             game.resolveStack()
-            game.getPendingDecision().shouldBeInstanceOf<YesNoDecision>()
-            game.answerYesNo(true).error shouldBe null
+            // Upstream offers an optional sacrifice as one select-or-decline prompt; older flow asked yes/no first.
+            if (game.getPendingDecision() is YesNoDecision) game.answerYesNo(true).error shouldBe null
             (game.getPendingDecision() as? SelectCardsDecision)?.let {
                 game.selectCards(listOf(game.findPermanent("Grizzly Bears")!!)).error shouldBe null
             }
@@ -65,7 +65,7 @@ class GutTrueSoulZealotScenarioTest : ScenarioTestBase() {
             game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
             game.declareAttackers(mapOf("Hill Giant" to 2)).error shouldBe null
             game.resolveStack()
-            game.answerYesNo(true).error shouldBe null
+            if (game.getPendingDecision() is YesNoDecision) game.answerYesNo(true).error shouldBe null
             val decision = game.getPendingDecision()
             decision.shouldBeInstanceOf<SelectCardsDecision>()
             withClue("Hill Giant and Sol Ring, but not Gut itself") {
@@ -82,7 +82,8 @@ class GutTrueSoulZealotScenarioTest : ScenarioTestBase() {
             game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
             game.declareAttackers(mapOf(gut to 2)).error shouldBe null
             game.resolveStack()
-            game.answerYesNo(false).error shouldBe null
+            if (game.getPendingDecision() is YesNoDecision) game.answerYesNo(false).error shouldBe null
+            else game.selectCards(emptyList()).error shouldBe null
             game.resolveStack()
             game.isOnBattlefield("Grizzly Bears") shouldBe true
             skeletons(game).size shouldBe 0

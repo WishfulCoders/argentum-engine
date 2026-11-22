@@ -39,16 +39,20 @@ internal class ActivationCostTotaller(
      *
      * Order matters: each step prices the cost the previous one produced.
      *
-     * This is the *execute* total. The validate path additionally lowers an attached-permanent
-     * mana cost (Merseine) to a plain mana atom via [totalForValidation]; payment leaves that atom
-     * for `CostHandler` to price itself.
+     * A cost naming another mana cost — Merseine's attached permanent's, a granted scavenge's own
+     * ([AbilityCost.OwnManaCost]) — is lowered to a plain mana atom first, so validation, payment
+     * and every reduction see one shape. An [AbilityCost.OwnManaCost] whose source has no mana
+     * cost stays un-lowered, and `CostHandler` reports it unpayable.
+     *
+     * Null when the ability's `payOnlyWithManaOf` leaves no mana able to pay it (see
+     * [CastPermissionUtils.applyPayOnlyWithManaOf]); the activation is then refused.
      */
     fun total(
         state: GameState,
         action: ActivateAbility,
         ability: ActivatedAbility,
         textReplacement: TextReplacementComponent?,
-    ): AbilityCost {
+    ): AbilityCost? {
         // Apply text-changing effects to cost
         val rawCost = if (textReplacement != null) {
             ability.cost.applyTextReplacement(textReplacement)
@@ -56,8 +60,16 @@ internal class ActivationCostTotaller(
             ability.cost
         }
         val equipTargetIdForCost = action.targets.filterIsInstance<ChosenTarget.Permanent>().firstOrNull()?.entityId
-        val costWithDefinedX =
-            castPermissionUtils.applyDefinedXValue(rawCost, ability, state, action.sourceId, action.playerId)
+        // A cost naming a mana cost (Merseine's attached permanent's, a granted scavenge's own) is
+        // priced first, so the reductions below see the mana they apply to (CR 602.2b, 601.2f).
+        val costWithDefinedX = castPermissionUtils.applyDefinedXValue(
+            castPermissionUtils.lowerReferencedManaCost(
+                state, action.sourceId,
+                // Carth the Lion's [+1] surcharge nets into the one loyalty payment.
+                castPermissionUtils.applyLoyaltyCostSurcharge(state, rawCost, action.playerId, action.xValue)
+            ),
+            ability, state, action.sourceId, action.playerId
+        )
         val costAfterConditionalReduction = AbilityCostReduction.applyConditional(
             costWithDefinedX, ability, state, action.sourceId, action.playerId, conditionEvaluator
         )
@@ -65,8 +77,10 @@ internal class ActivationCostTotaller(
             costAfterConditionalReduction, ability, state, action.sourceId, action.playerId, action.targets
         )
         val costAfterAbilityReduction = castPermissionUtils.applyActivatedAbilityCostReduction(
-            costAfterGenericReduction, state, action.sourceId, ability.isExhaust, ability.isPowerUp,
-            ability.isManaAbility, chosenTargetIds = action.targets.filterIsInstance<ChosenTarget.Permanent>().map { it.entityId }
+            costAfterGenericReduction, state, action.sourceId, action.playerId, ability.onceOnlyKind,
+            ability.isManaAbility, chosenTargetIds = action.targets.filterIsInstance<ChosenTarget.Permanent>().map { it.entityId },
+            abilityKeyword = ability.keyword,
+            isLoyaltyAbility = ability.isPlaneswalkerAbility,
         )
         val costAfterEquipReduction = castPermissionUtils.applyEquipCostReduction(
             costAfterAbilityReduction, ability, state, action.playerId, equipTargetIdForCost,
@@ -75,23 +89,13 @@ internal class ActivationCostTotaller(
         val costAfterEquipDiscount = castPermissionUtils.applyFreeFirstEquipDiscount(
             costAfterEquipReduction, ability, state, action.playerId
         )
-        return castPermissionUtils.relaxAbilityCostColorsIfAny(
-            state, action.sourceId, costAfterEquipDiscount, action.playerId
+        return castPermissionUtils.applyPayOnlyWithManaOf(
+            castPermissionUtils.relaxAbilityCostColorsIfAny(
+                state, action.sourceId, costAfterEquipDiscount, action.playerId
+            ),
+            ability, state, action.sourceId, action.playerId
         )
     }
-
-    /**
-     * [total], then — last of all — lower an attached-permanent mana cost (Merseine) to a plain
-     * mana atom, so nothing downstream in validation has to know that shape existed.
-     */
-    fun totalForValidation(
-        state: GameState,
-        action: ActivateAbility,
-        ability: ActivatedAbility,
-        textReplacement: TextReplacementComponent?,
-    ): AbilityCost = castPermissionUtils.lowerAttachedManaCost(
-        state, action.sourceId, total(state, action, ability, textReplacement)
-    )
 
     /**
      * Apply [ActivatedAbility.genericCostReduction] to the mana portion of [cost].

@@ -13,7 +13,7 @@ val UncontrollableAngerReprint = Printing(
     collectorNumber = "155",
     scryfallId = "abd16c43-098c-4f38-b0e2-9ad84dd09eb9",
     artist = "Kev Walker",
-    imageUri = "https://cards.scryfall.io/normal/front/a/b/abd16c43-098c-4f38-b0e2-9ad84dd09eb9.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/a/b/abd16c43-098c-4f38-b0e2-9ad84dd09eb9.jpg?1783939347",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

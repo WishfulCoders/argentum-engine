@@ -28,6 +28,7 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.GrantWard
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -84,9 +85,7 @@ class TriggerAbilityResolver(
         // re-added counter resurrecting the grant lives in EndedDurationExpiryCheck.
         val grantedAbilities = buildList {
             for (grant in state.grantedTriggeredAbilities) {
-                if (grant.entityId == entityId &&
-                    GrantDurationGate.holds(state, grant.entityId, grant.sourceId, grant.duration)
-                ) {
+                if (grant.entityId == entityId && GrantDurationGate.triggeredGrantLive(state, grant)) {
                     add(grant.ability)
                 }
             }
@@ -114,8 +113,8 @@ class TriggerAbilityResolver(
 
         val ringBearerAbilities = getRingBearerAbilities(entityId, state)
 
-        // A suspended card (CR 702.62) gains the owner's-upkeep countdown-and-cast ability
-        // while it carries the marker. Component-driven, so it works for an arbitrary card
+        // A suspended card (CR 702.62) gains the owner's-upkeep countdown and the last-counter
+        // cast ability while it carries the marker. Component-driven, so it works for an arbitrary card
         // with no printed suspend (e.g. a spell exiled by Taigam, Master Opportunist).
         val suspendAbilities = getSuspendTriggeredAbilities(entityId, state)
         val paradigmAbilities = getParadigmTriggeredAbilities(entityId, state)
@@ -125,7 +124,7 @@ class TriggerAbilityResolver(
         // and one that stops being a Siege loses it.
         val siegeAbilities = getSiegeDefeatAbilities(entityId, state)
 
-        // Vanishing N (CR 702.62) — the upkeep countdown and the last-counter sacrifice are
+        // Vanishing N (CR 702.63) — the upkeep countdown and the last-counter sacrifice are
         // intrinsic to the keyword, printed on no card as separate lines. Derived from the
         // projected keywords, so granted vanishing works and "loses all abilities" strips it.
         val vanishingAbilities = getVanishingTriggeredAbilities(entityId, state)
@@ -139,18 +138,35 @@ class TriggerAbilityResolver(
         val fabricateAbilities = getFabricateTriggeredAbilities(entityId, cardDefinitionId, state)
 
         // Renown N (CR 702.112) — the combat-damage trigger is intrinsic to the keyword, printed
-        // on no card as a separate line. Same derivation shape as fabricate: the projected keyword
-        // gates it, the printed KeywordAbility.Numeric supplies N.
+        // on no card as a separate line. One trigger per printed instance (gated on the projected
+        // keyword) plus one per granted `RENOWN_<n>` instance (Aragorn, Hornburg Hero).
         val renownAbilities = getRenownTriggeredAbilities(entityId, cardDefinitionId, state)
 
-        // Bushido N (CR 702.45) — the blocks-or-becomes-blocked pump is intrinsic to the keyword,
-        // printed on no card as a separate line. Printed instances as renown; a granted
-        // `BUSHIDO_<n>` (Sensei Golden-Tail) adds one more trigger for its N.
-        val bushidoAbilities = getBushidoTriggeredAbilities(entityId, cardDefinitionId, state)
+        // Bushido N (CR 702.45), rampage N (CR 702.23) and afflict N (CR 702.130) — the combat
+        // trigger is intrinsic to the keyword, printed on no card as a separate line. Printed
+        // instances as renown; a granted `BUSHIDO_<n>` (Sensei Golden-Tail) / `RAMPAGE_<n>` (Rapid
+        // Fire) adds one more trigger.
+        val bushidoAbilities = getBushidoTriggeredAbilities(entityId, cardDefinitionId, state) +
+            getRampageTriggeredAbilities(entityId, cardDefinitionId, state) +
+            getAfflictTriggeredAbilities(entityId, cardDefinitionId, state)
 
         // Exalted (CR 702.83) — one "attacks alone" pump per instance: the printed keyword plus
         // one per exalted counter (CR 122.1b).
         val exaltedAbilities = getExaltedTriggeredAbilities(entityId, cardDefinitionId, state)
+
+        // Myriad (CR 702.116) — one "copy attacking each other opponent" trigger per instance.
+        val myriadAbilities = getMyriadTriggeredAbilities(entityId, cardDefinitionId, state)
+
+        // Ingest (CR 702.115) — one "that player exiles the top card of their library" combat
+        // damage trigger per instance.
+        val ingestAbilities = getIngestTriggeredAbilities(entityId, cardDefinitionId, state)
+
+        // Granted offspring (CR 702.175a) — a spell that gained offspring as it was cast and had the
+        // cost paid becomes a permanent with the token-copy trigger no card prints.
+        val grantedOffspringAbilities = getGrantedOffspringAbilities(entityId, state)
+
+        // Blitz (CR 702.152a) — "when this permanent dies, draw a card" while its blitz cost was paid.
+        val blitzAbilities = getBlitzTriggeredAbilities(entityId, state)
 
         val allGranted = buildList {
             addAll(grantedAbilities)
@@ -169,6 +185,10 @@ class TriggerAbilityResolver(
             addAll(renownAbilities)
             addAll(bushidoAbilities)
             addAll(exaltedAbilities)
+            addAll(myriadAbilities)
+            addAll(ingestAbilities)
+            addAll(grantedOffspringAbilities)
+            addAll(blitzAbilities)
         }
         val copyAbilities = if (state.projectedState.hasLostAllAbilities(entityId)) emptyList()
             else state.getEntity(entityId)?.get<CardComponent>()?.copyTriggeredAbilities.orEmpty()
@@ -184,13 +204,48 @@ class TriggerAbilityResolver(
     }
 
     /**
-     * Grant [com.wingedsheep.sdk.scripting.Suspend.countdownAbility] to any card carrying the
-     * [SuspendedComponent] marker. The ability functions only in exile (`activeZones == {EXILE}`),
-     * so it is inert anywhere else and harmless to return universally.
+     * Grant suspend's two exile triggers ([com.wingedsheep.sdk.scripting.Suspend.exileAbilities]:
+     * the upkeep countdown and the last-counter cast) to any card carrying the [SuspendedComponent]
+     * marker. Both function only in exile (`activeZones == {EXILE}`), so they are inert anywhere
+     * else and harmless to return universally.
      */
     private fun getSuspendTriggeredAbilities(entityId: EntityId, state: GameState): List<TriggeredAbility> =
         if (state.getEntity(entityId)?.has<SuspendedComponent>() == true) {
-            listOf(com.wingedsheep.sdk.scripting.Suspend.countdownAbility)
+            com.wingedsheep.sdk.scripting.Suspend.exileAbilities
+        } else {
+            emptyList()
+        }
+
+    /**
+     * Grant [com.wingedsheep.sdk.scripting.Offspring.tokenCopyAbility] to a permanent whose cast
+     * paid a *granted* offspring cost — [com.wingedsheep.sdk.scripting.ChoiceSlot.OFFSPRING] in its
+     * durable cast choices ([com.wingedsheep.sdk.scripting.GrantOffspringToOwnSpells], Zinnia,
+     * Valley's Voice). Keyed off the payment, not the granter, so the trigger fires even if the
+     * granter left before the spell resolved; a permanent that has lost all abilities as it enters
+     * doesn't have it (the offspring rulings). The bag is stripped when the permanent leaves the
+     * battlefield, and a token copy doesn't inherit it, so the copy never triggers again.
+     */
+    private fun getGrantedOffspringAbilities(entityId: EntityId, state: GameState): List<TriggeredAbility> {
+        val choices = state.getEntity(entityId)
+            ?.get<com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent>()
+            ?: return emptyList()
+        if (com.wingedsheep.sdk.scripting.ChoiceSlot.OFFSPRING !in choices.chosen) return emptyList()
+        if (state.projectedState.hasLostAllAbilities(entityId)) return emptyList()
+        return listOf(com.wingedsheep.sdk.scripting.Offspring.tokenCopyAbility)
+    }
+
+    /**
+     * Grant [com.wingedsheep.sdk.scripting.Blitz.diesDrawAbility] to a permanent carrying the
+     * [com.wingedsheep.engine.state.components.battlefield.BlitzedComponent] marker, unless it has
+     * lost all abilities — the trigger is an ability of the permanent (CR 702.152a). The marker is
+     * stripped as the permanent leaves, so a departed one's comes from its exit snapshot instead
+     * ([getDepartedTriggeredAbilities]).
+     */
+    private fun getBlitzTriggeredAbilities(entityId: EntityId, state: GameState): List<TriggeredAbility> =
+        if (state.getEntity(entityId)?.has<com.wingedsheep.engine.state.components.battlefield.BlitzedComponent>() == true &&
+            !state.projectedState.hasLostAllAbilities(entityId)
+        ) {
+            listOf(com.wingedsheep.sdk.scripting.Blitz.diesDrawAbility)
         } else {
             emptyList()
         }
@@ -258,9 +313,7 @@ class TriggerAbilityResolver(
         // Same per-read "for as long as …" gate as the other lookup path above.
         val grantedAbilities = buildList {
             for (grant in state.grantedTriggeredAbilities) {
-                if (grant.entityId == entityId &&
-                    GrantDurationGate.holds(state, grant.entityId, grant.sourceId, grant.duration)
-                ) {
+                if (grant.entityId == entityId && GrantDurationGate.triggeredGrantLive(state, grant)) {
                     add(grant.ability)
                 }
             }
@@ -299,7 +352,7 @@ class TriggerAbilityResolver(
         // and one that stops being a Siege loses it.
         val siegeAbilities = getSiegeDefeatAbilities(entityId, state)
 
-        // Vanishing N (CR 702.62) — the upkeep countdown and the last-counter sacrifice are
+        // Vanishing N (CR 702.63) — the upkeep countdown and the last-counter sacrifice are
         // intrinsic to the keyword, printed on no card as separate lines. Derived from the
         // projected keywords, so granted vanishing works and "loses all abilities" strips it.
         val vanishingAbilities = getVanishingTriggeredAbilities(entityId, state)
@@ -313,18 +366,35 @@ class TriggerAbilityResolver(
         val fabricateAbilities = getFabricateTriggeredAbilities(entityId, cardDefinitionId, state)
 
         // Renown N (CR 702.112) — the combat-damage trigger is intrinsic to the keyword, printed
-        // on no card as a separate line. Same derivation shape as fabricate: the projected keyword
-        // gates it, the printed KeywordAbility.Numeric supplies N.
+        // on no card as a separate line. One trigger per printed instance (gated on the projected
+        // keyword) plus one per granted `RENOWN_<n>` instance (Aragorn, Hornburg Hero).
         val renownAbilities = getRenownTriggeredAbilities(entityId, cardDefinitionId, state)
 
-        // Bushido N (CR 702.45) — the blocks-or-becomes-blocked pump is intrinsic to the keyword,
-        // printed on no card as a separate line. Printed instances as renown; a granted
-        // `BUSHIDO_<n>` (Sensei Golden-Tail) adds one more trigger for its N.
-        val bushidoAbilities = getBushidoTriggeredAbilities(entityId, cardDefinitionId, state)
+        // Bushido N (CR 702.45), rampage N (CR 702.23) and afflict N (CR 702.130) — the combat
+        // trigger is intrinsic to the keyword, printed on no card as a separate line. Printed
+        // instances as renown; a granted `BUSHIDO_<n>` (Sensei Golden-Tail) / `RAMPAGE_<n>` (Rapid
+        // Fire) adds one more trigger.
+        val bushidoAbilities = getBushidoTriggeredAbilities(entityId, cardDefinitionId, state) +
+            getRampageTriggeredAbilities(entityId, cardDefinitionId, state) +
+            getAfflictTriggeredAbilities(entityId, cardDefinitionId, state)
 
         // Exalted (CR 702.83) — one "attacks alone" pump per instance: the printed keyword plus
         // one per exalted counter (CR 122.1b).
         val exaltedAbilities = getExaltedTriggeredAbilities(entityId, cardDefinitionId, state)
+
+        // Myriad (CR 702.116) — one "copy attacking each other opponent" trigger per instance.
+        val myriadAbilities = getMyriadTriggeredAbilities(entityId, cardDefinitionId, state)
+
+        // Ingest (CR 702.115) — one "that player exiles the top card of their library" combat
+        // damage trigger per instance.
+        val ingestAbilities = getIngestTriggeredAbilities(entityId, cardDefinitionId, state)
+
+        // Granted offspring (CR 702.175a) — a spell that gained offspring as it was cast and had the
+        // cost paid becomes a permanent with the token-copy trigger no card prints.
+        val grantedOffspringAbilities = getGrantedOffspringAbilities(entityId, state)
+
+        // Blitz (CR 702.152a) — "when this permanent dies, draw a card" while its blitz cost was paid.
+        val blitzAbilities = getBlitzTriggeredAbilities(entityId, state)
 
         val allGranted = buildList {
             addAll(grantedAbilities)
@@ -343,6 +413,10 @@ class TriggerAbilityResolver(
             addAll(renownAbilities)
             addAll(bushidoAbilities)
             addAll(exaltedAbilities)
+            addAll(myriadAbilities)
+            addAll(ingestAbilities)
+            addAll(grantedOffspringAbilities)
+            addAll(blitzAbilities)
         }
         val copyAbilities = if (state.projectedState.hasLostAllAbilities(entityId)) emptyList()
             else state.getEntity(entityId)?.get<CardComponent>()?.copyTriggeredAbilities.orEmpty()
@@ -398,7 +472,7 @@ class TriggerAbilityResolver(
                 // condition of its own).
                 if (entry.grant.filter.scope is Scope.SoulbondPair) {
                     if (SoulbondPairing.isInPairOf(state, entry.sourceEntityId, entityId)) {
-                        add(perGranter(entry.grant.ability, entry.sourceEntityId))
+                        add(perGranter(state, entry.grant.ability, entry.sourceEntityId))
                     }
                     continue
                 }
@@ -407,7 +481,7 @@ class TriggerAbilityResolver(
                 if (entry.grant.filter.excludeSelf && entityId == entry.sourceEntityId) continue
                 val context = PredicateContext(controllerId = entry.sourceControllerId, sourceId = entry.sourceEntityId)
                 if (predicateEvaluator.matches(state, projected, entityId, entry.grant.filter.baseFilter, context)) {
-                    add(perGranter(entry.grant.ability, entry.sourceEntityId))
+                    add(perGranter(state, entry.grant.ability, entry.sourceEntityId))
                 }
             }
         }
@@ -417,14 +491,21 @@ class TriggerAbilityResolver(
      * Give a firing-capped granted ability ("This ability triggers only twice each turn") an id of
      * its own per granting permanent. The cap trackers are keyed by `(source, AbilityId)`, and every
      * copy of the granting card prints the same id — so without this, two Nadus' grants on one
-     * creature would share one allowance, and a Nadu that left and came back would inherit the old
-     * one's spent count. Per the Nadu, Winged Wisdom rulings each grant is a separate ability with
-     * its own count, and a new granting object grants a new ability (CR 400.7). Uncapped grants keep
-     * the printed id: nothing counts them.
+     * creature would share one allowance. Per the Nadu, Winged Wisdom rulings each grant is a
+     * separate ability with its own count.
+     *
+     * The id also names the granter's object *generation*: an [EntityId] survives zone changes, but
+     * a permanent that leaves and returns is a new object (CR 400.7), and the ability the new object
+     * grants is a different ability from the old one's. So a Tyvar the Bellicose or Nadu that leaves
+     * and comes back the same turn grants a fresh "only once/twice each turn" allowance, even to a
+     * creature whose ability from the old object already triggered (the Tyvar rulings). Uncapped
+     * grants keep the printed id: nothing counts them.
      */
-    private fun perGranter(ability: TriggeredAbility, granterId: EntityId): TriggeredAbility =
-        if (ability.perTurnTriggerCap == null && !ability.triggersOnce) ability
-        else ability.copy(id = AbilityId("granted_${granterId.value}_${ability.id.value}"))
+    private fun perGranter(state: GameState, ability: TriggeredAbility, granterId: EntityId): TriggeredAbility {
+        if (ability.perTurnTriggerCap == null && !ability.triggersOnce) return ability
+        val generation = state.objectRef(granterId)?.generation ?: 0
+        return ability.copy(id = AbilityId("granted_${granterId.value}_g${generation}_${ability.id.value}"))
+    }
 
     /**
      * The permanents whose `GrantTriggeredAbility` static granted the triggered ability [abilityId]
@@ -545,7 +626,9 @@ class TriggerAbilityResolver(
             // A snapshot is the look-back: an attachment still on the battlefield now may not
             // have been there as the permanent left, and one that left with it is gone.
             attachmentGrants = event.lastKnown?.let { it.lookBackGrants?.attachmentGrantedTriggers.orEmpty() },
-        ).filterNot { it.id in currentCopyAbilityIds } + event.lastKnown?.copyTriggeredAbilities.orEmpty()
+        ).filterNot { it.id in currentCopyAbilityIds } + event.lastKnown?.copyTriggeredAbilities.orEmpty() +
+            // A blitzed permanent's draw trigger, looked back to off the snapshot (CR 603.10a).
+            listOfNotNull(com.wingedsheep.sdk.scripting.Blitz.diesDrawAbility.takeIf { event.lastKnown?.wasBlitzed == true })
         val frozenIds = event.lastKnown?.lookBackGrants?.conditionalSelfGrantIds ?: return live
         val liveIds = live.mapTo(HashSet()) { it.id }
         return live + ConditionalSelfGrants.byIds(cardDefinitionId, frozenIds, cardRegistry)
@@ -604,6 +687,41 @@ class TriggerAbilityResolver(
                         result.add(createWardTriggeredAbility(ka.cost, "intrinsic"))
                     }
                 }
+                // "This creature has ward {N} [as long as <condition>]" — a Scope.Self GrantWard on
+                // its own definition (The Tarrasque, Yuna). The layer system already projects the
+                // WARD keyword through the grant; the trigger has to be built here too, with the
+                // condition read the same way the projection reads it (this permanent as source).
+                val classLevel = targetContainer.get<ClassLevelComponent>()?.currentLevel
+                cardDef.script.effectiveStaticAbilities(classLevel).forEachIndexed { index, ability ->
+                    val ward = when (ability) {
+                        is GrantWard -> ability
+                        is ConditionalStaticAbility -> (ability.ability as? GrantWard)?.takeIf {
+                            val controllerId = projected.getController(entityId)
+                            controllerId != null && conditionEvaluator.evaluate(
+                                state, ability.condition, EffectContext(sourceId = entityId, controllerId = controllerId)
+                            )
+                        }
+                        else -> null
+                    }
+                    if (ward != null && ward.filter.scope is Scope.Self) {
+                        result.add(createWardTriggeredAbility(ward.cost, "self_$index"))
+                    }
+                }
+            }
+        }
+
+        // 1b. Ward this permanent gained from a resolved effect — "until end of turn, this land
+        // becomes a 7/7 blue Giant creature with ward {3}" (Hall of Storm Giants) composes the
+        // animation with a Scope.Self GrantWard handed over by GrantStaticAbilityEffect. The layer
+        // system already projects the WARD keyword through that record, so the projected keyword
+        // is the gate: a later "loses all abilities" takes the trigger away along with the keyword.
+        if (state.grantedStaticAbilities.isNotEmpty() && projected.hasKeyword(entityId, Keyword.WARD)) {
+            state.grantedStaticAbilities.forEachIndexed { index, grant ->
+                if (grant.entityId != entityId || grant.layerTimestamp == null) return@forEachIndexed
+                val ward = grant.ability as? GrantWard ?: return@forEachIndexed
+                if (ward.filter.scope !is Scope.Self) return@forEachIndexed
+                if (!GrantDurationGate.holds(state, entityId, grant.sourceId, grant.duration)) return@forEachIndexed
+                result.add(createWardTriggeredAbility(ward.cost, "gained_$index"))
             }
         }
 
@@ -705,15 +823,15 @@ class TriggerAbilityResolver(
         }
 
     /**
-     * Vanishing N (CR 702.62) as two keyword-derived triggered abilities: the upkeep countdown
-     * (702.62b) and the last-time-counter sacrifice (702.62c). A vanishing card prints one keyword
+     * Vanishing N (CR 702.63) as two keyword-derived triggered abilities: the upkeep countdown
+     * and the last-time-counter sacrifice (both CR 702.63a). A vanishing card prints one keyword
      * line and a reminder, never these two abilities, so the engine supplies them — the same shape
      * as flanking, ward and the Siege defeat trigger.
      *
      * Keyed on the *projected* keyword, which buys three things at once: a token created "with
      * vanishing 3" and a creature that *gains* vanishing both count down, and a permanent that has
      * lost all abilities stops counting down (the keyword is stripped in projection) — matching
-     * CR 702.62, where all three vanishing abilities are abilities of the permanent.
+     * CR 702.63a, where all three vanishing abilities are abilities of the permanent.
      *
      * The N-carrying half — "enters with N time counters" — is not here: it is a replacement
      * effect applied at entry from the printed [com.wingedsheep.sdk.scripting.KeywordAbility.Numeric],
@@ -780,14 +898,16 @@ class TriggerAbilityResolver(
      * [com.wingedsheep.sdk.scripting.Renown] for why "if it isn't renowned" is an intervening-`if`
      * rather than a check inside the effect.
      *
-     * **Two sources, deliberately**, exactly as fabricate: the *gate* is the projected keyword, so
-     * a creature that has lost all abilities has no renown trigger; the *parameter* is the printed
-     * [KeywordAbility.Numeric], because a projected keyword set carries no N. The one card that
-     * grants renown (Aragorn, Hornburg Hero) is not in the corpus, and a granted renown has no N
-     * to read — the same limitation vanishing's granted case has for its entry counters.
+     * **Printed and granted, derived apart**:
+     * - **Printed**: gated on the projected *bare* `RENOWN` keyword (so a creature that has lost
+     *   all abilities has no printed renown trigger), N from the printed [KeywordAbility.Numeric].
+     * - **Granted**: each projected `RENOWN_<n>` (Aragorn, Hornburg Hero) carries its own N and
+     *   needs no printed source. Projection keeps distinct Ns apart and tallies identical grants
+     *   ([com.wingedsheep.engine.mechanics.layers.ProjectedState.grantedKeywordInstances]), so
+     *   two "have renown 1" grants derive two triggers — never one fused renown 2.
      *
-     * **One trigger per printed instance**, not one per summed N — CR 702.112c: *"If a creature
-     * has multiple instances of renown, each triggers separately."* The first to resolve makes the
+     * **One trigger per instance**, not one per summed N — CR 702.112c: *"If a creature has
+     * multiple instances of renown, each triggers separately."* The first to resolve makes the
      * creature renowned and the rest find their intervening-`if` false.
      */
     private fun getRenownTriggeredAbilities(
@@ -795,19 +915,30 @@ class TriggerAbilityResolver(
         cardDefinitionId: String,
         state: GameState,
     ): List<TriggeredAbility> {
-        if (!state.projectedState.hasKeyword(entityId, com.wingedsheep.sdk.core.Keyword.RENOWN)) {
-            return emptyList()
+        val projected = state.projectedState
+        val keywords = projected.getKeywords(entityId)
+        if (keywords.isEmpty()) return emptyList()
+        val printed = if (com.wingedsheep.sdk.core.Keyword.RENOWN.name in keywords) {
+            cardRegistry.getCard(cardDefinitionId)
+                ?.let(com.wingedsheep.sdk.scripting.Renown::printedCounts)
+                .orEmpty()
+                .mapIndexed { instance, n -> com.wingedsheep.sdk.scripting.Renown.combatDamageTrigger(n, instance) }
+        } else {
+            emptyList()
         }
-        val cardDef = cardRegistry.getCard(cardDefinitionId) ?: return emptyList()
-        return com.wingedsheep.sdk.scripting.Renown.printedCounts(cardDef)
-            .mapIndexed { instance, n ->
-                com.wingedsheep.sdk.scripting.Renown.combatDamageTrigger(n, instance)
-            }
+        if (keywords.none { com.wingedsheep.sdk.scripting.Renown.grantedN(it) != null }) return printed
+        // Sorted so the granted instances' ability ids are stable across projections.
+        val grantedNs = keywords.mapNotNull { com.wingedsheep.sdk.scripting.Renown.grantedN(it)?.let { n -> it to n } }
+            .sortedBy { it.second }
+            .flatMap { (keyword, n) -> List(projected.grantedKeywordInstances(entityId, keyword)) { n } }
+        return printed + grantedNs.mapIndexed { instance, n ->
+            com.wingedsheep.sdk.scripting.Renown.combatDamageTrigger(n, instance, granted = true)
+        }
     }
 
     /**
      * Bushido N (CR 702.45) as the keyword-derived triggered ability it is — the shape of
-     * [getRenownTriggeredAbilities], plus the granted half renown lacks. See
+     * [getRenownTriggeredAbilities], except that granted bushido sums into one trigger. See
      * [com.wingedsheep.sdk.scripting.Bushido].
      *
      * - **Printed**: gated on the projected bare `BUSHIDO` keyword (stripped by "loses all
@@ -821,22 +952,68 @@ class TriggerAbilityResolver(
         entityId: EntityId,
         cardDefinitionId: String,
         state: GameState,
+    ): List<TriggeredAbility> = getNumericKeywordTriggeredAbilities(
+        entityId, cardDefinitionId, state, com.wingedsheep.sdk.core.Keyword.BUSHIDO,
+        printedCounts = com.wingedsheep.sdk.scripting.Bushido::printedCounts,
+        trigger = com.wingedsheep.sdk.scripting.Bushido::trigger,
+    )
+
+    /**
+     * Rampage N (CR 702.23) — the same printed + granted derivation as bushido. See
+     * [com.wingedsheep.sdk.scripting.Rampage].
+     */
+    private fun getRampageTriggeredAbilities(
+        entityId: EntityId,
+        cardDefinitionId: String,
+        state: GameState,
+    ): List<TriggeredAbility> = getNumericKeywordTriggeredAbilities(
+        entityId, cardDefinitionId, state, com.wingedsheep.sdk.core.Keyword.RAMPAGE,
+        printedCounts = com.wingedsheep.sdk.scripting.Rampage::printedCounts,
+        trigger = com.wingedsheep.sdk.scripting.Rampage::trigger,
+    )
+
+    /**
+     * Afflict N (CR 702.130) — the same printed derivation as bushido: one "becomes blocked,
+     * defending player loses N life" trigger per printed instance (CR 702.130b) while the projected
+     * bare `AFFLICT` keyword survives. See [com.wingedsheep.sdk.scripting.Afflict].
+     */
+    private fun getAfflictTriggeredAbilities(
+        entityId: EntityId,
+        cardDefinitionId: String,
+        state: GameState,
+    ): List<TriggeredAbility> = getNumericKeywordTriggeredAbilities(
+        entityId, cardDefinitionId, state, com.wingedsheep.sdk.core.Keyword.AFFLICT,
+        printedCounts = com.wingedsheep.sdk.scripting.Afflict::printedCounts,
+        trigger = com.wingedsheep.sdk.scripting.Afflict::trigger,
+    )
+
+    /**
+     * The shared shape of a numeric keyword whose triggered ability the engine derives (bushido,
+     * rampage, afflict): one trigger per printed instance while the projected bare [keyword] survives, plus
+     * one for the summed N of every projected granted `<KEYWORD>_<n>`.
+     */
+    private fun getNumericKeywordTriggeredAbilities(
+        entityId: EntityId,
+        cardDefinitionId: String,
+        state: GameState,
+        keyword: com.wingedsheep.sdk.core.Keyword,
+        printedCounts: (com.wingedsheep.sdk.model.CardDefinition) -> List<Int>,
+        trigger: (n: Int, instance: Int, granted: Boolean) -> TriggeredAbility,
     ): List<TriggeredAbility> {
         val keywords = state.projectedState.getKeywords(entityId)
         if (keywords.isEmpty()) return emptyList()
-        val bushido = com.wingedsheep.sdk.core.Keyword.BUSHIDO.name
-        val printed = if (bushido in keywords) {
+        val name = keyword.name
+        val printed = if (name in keywords) {
             cardRegistry.getCard(cardDefinitionId)
-                ?.let { com.wingedsheep.sdk.scripting.Bushido.printedCounts(it) }
+                ?.let(printedCounts)
                 .orEmpty()
-                .mapIndexed { instance, n -> com.wingedsheep.sdk.scripting.Bushido.trigger(n, instance) }
+                .mapIndexed { instance, n -> trigger(n, instance, false) }
         } else {
             emptyList()
         }
-        val prefix = "${bushido}_"
+        val prefix = "${name}_"
         val grantedN = keywords.sumOf { if (it.startsWith(prefix)) it.removePrefix(prefix).toIntOrNull() ?: 0 else 0 }
-        return if (grantedN > 0) printed + com.wingedsheep.sdk.scripting.Bushido.trigger(grantedN, granted = true)
-        else printed
+        return if (grantedN > 0) printed + trigger(grantedN, 0, true) else printed
     }
 
     /**
@@ -860,6 +1037,42 @@ class TriggerAbilityResolver(
         ) 1 else 0
         val instances = maxOf(printed + counters, 1)
         return List(instances) { com.wingedsheep.sdk.scripting.Exalted.trigger(it) }
+    }
+
+    /**
+     * Myriad (CR 702.116) as the keyword-derived triggered ability it is — see
+     * [com.wingedsheep.sdk.scripting.Myriad]. Gated on the projected keyword; one trigger per
+     * printed instance (CR 702.116b) unless all abilities are lost, and exactly one when the
+     * keyword is present only through a static grant.
+     */
+    private fun getMyriadTriggeredAbilities(
+        entityId: EntityId,
+        cardDefinitionId: String,
+        state: GameState,
+    ): List<TriggeredAbility> {
+        val projected = state.projectedState
+        if (!projected.hasKeyword(entityId, com.wingedsheep.sdk.core.Keyword.MYRIAD)) return emptyList()
+        val printed = if (projected.hasLostAllAbilities(entityId)) 0 else
+            cardRegistry.getCard(cardDefinitionId)?.let { com.wingedsheep.sdk.scripting.Myriad.printedCount(it) } ?: 0
+        return List(maxOf(printed, 1)) { com.wingedsheep.sdk.scripting.Myriad.trigger(it) }
+    }
+
+    /**
+     * Ingest (CR 702.115) as the keyword-derived triggered ability it is — see
+     * [com.wingedsheep.sdk.scripting.Ingest]. The same shape as myriad: gated on the projected
+     * keyword; one trigger per printed instance (CR 702.115b) unless all abilities are lost, and
+     * exactly one when the keyword is present only through a static grant.
+     */
+    private fun getIngestTriggeredAbilities(
+        entityId: EntityId,
+        cardDefinitionId: String,
+        state: GameState,
+    ): List<TriggeredAbility> {
+        val projected = state.projectedState
+        if (!projected.hasKeyword(entityId, com.wingedsheep.sdk.core.Keyword.INGEST)) return emptyList()
+        val printed = if (projected.hasLostAllAbilities(entityId)) 0 else
+            cardRegistry.getCard(cardDefinitionId)?.let { com.wingedsheep.sdk.scripting.Ingest.printedCount(it) } ?: 0
+        return List(maxOf(printed, 1)) { com.wingedsheep.sdk.scripting.Ingest.trigger(it) }
     }
 
     private fun createWardTriggeredAbility(cost: WardCost, source: String): TriggeredAbility {

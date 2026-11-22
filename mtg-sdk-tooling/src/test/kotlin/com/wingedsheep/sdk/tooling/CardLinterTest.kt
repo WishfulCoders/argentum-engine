@@ -48,6 +48,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetChooser
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
@@ -266,6 +267,21 @@ class CardLinterTest : DescribeSpec({
             CardLinter.lint(card).shouldBeEmpty()
         }
 
+        it("reads AnyPlayerMayPay's storePayerAs as a written collection") {
+            val card = instant(
+                "Payer Stored",
+                CardScript(
+                    spellEffect = com.wingedsheep.sdk.scripting.effects.AnyPlayerMayPayEffect(
+                        cost = null,
+                        prompt = "Take 1 damage?",
+                        consequence = DealDamageEffect(DynamicAmount.Fixed(1), EffectTarget.PipelineTarget("taker")),
+                        storePayerAs = "taker",
+                    ),
+                ),
+            )
+            CardLinter.lint(card).shouldBeEmpty()
+        }
+
         it("flags a bare BoundVariable on a multi-slot requirement") {
             // "Return one or two target creature cards ... to your hand" handed straight to a
             // single-target effect: the two chosen targets are keyed `cards[0]` / `cards[1]`, so
@@ -336,6 +352,30 @@ class CardLinterTest : DescribeSpec({
                 .message shouldContain "KICKED"
         }
 
+        it("reads a chosen-card-type predicate from its explicit slot") {
+            val card = card("Mode-Typed Reducer") {
+                manaCost = "{W}{U}"
+                typeLine = "Creature — Human Wizard"
+                power = 2
+                toughness = 2
+                replacementEffect(
+                    com.wingedsheep.sdk.scripting.EntersWithChoice(
+                        choiceType = com.wingedsheep.sdk.scripting.ChoiceType.MODE,
+                        modeOptions = listOf(com.wingedsheep.sdk.scripting.ModeOption(id = "Sorcery", label = "Sorcery")),
+                    )
+                )
+                staticAbility {
+                    ability = com.wingedsheep.sdk.scripting.ModifySpellCost(
+                        target = com.wingedsheep.sdk.scripting.SpellCostTarget.YouCast(
+                            GameObjectFilter.Any.ofChosenCardTypeComponent(ChoiceSlot.MODE)
+                        ),
+                        modification = com.wingedsheep.sdk.scripting.CostModification.ReduceGeneric(1),
+                    )
+                }
+            }
+            CardLinter.lint(card).shouldBeEmpty()
+        }
+
         it("accepts a KICKED read when a kicker effect is declared") {
             val card = instant(
                 "Kicked",
@@ -349,6 +389,64 @@ class CardLinterTest : DescribeSpec({
                 ),
             )
             CardLinter.lint(card).shouldBeEmpty()
+        }
+    }
+
+    describe("dynamic target counts") {
+        fun tapEach(requirement: TargetObject) = instant(
+            "Dynamic Count Probe",
+            CardScript(
+                spellEffect = Effects.TapEachTarget(),
+                targetRequirements = listOf(requirement),
+            ),
+        )
+
+        it("accepts \"X target\" (exact) and \"up to X target\" (optional cap)") {
+            val x = DynamicAmount.XValue
+            CardLinter.lint(tapEach(TargetObject(filter = TargetFilter.Creature, dynamicMaxCount = x, dynamicMinCount = x)))
+                .filterIsInstance<CardValidationError.AmbiguousDynamicTargetCount>().shouldBeEmpty()
+            CardLinter.lint(tapEach(TargetObject(filter = TargetFilter.Creature, optional = true, dynamicMaxCount = x)))
+                .filterIsInstance<CardValidationError.AmbiguousDynamicTargetCount>().shouldBeEmpty()
+        }
+
+        it("flags a dynamic cap that is neither exact nor optional — \"one to X targets\" is printed nowhere") {
+            val findings = CardLinter.lint(tapEach(TargetObject(filter = TargetFilter.Creature, dynamicMaxCount = DynamicAmount.XValue)))
+                .filterIsInstance<CardValidationError.AmbiguousDynamicTargetCount>()
+            findings.shouldHaveSize(1)
+            findings[0].message shouldContain "exactly = X"
+        }
+
+        it("holds AnyTarget to the same rule: \"up to X targets\" must be optional") {
+            fun lint(requirement: AnyTarget) = CardLinter.lint(instant("Dynamic Any Probe",
+                CardScript(spellEffect = Effects.ForEachTarget(DealDamageEffect(DynamicAmount.Fixed(1), EffectTarget.ContextTarget(0))),
+                    targetRequirements = listOf(requirement))))
+                .filterIsInstance<CardValidationError.AmbiguousDynamicTargetCount>()
+            lint(AnyTarget(optional = true, dynamicMaxCount = DynamicAmount.XValue)).shouldBeEmpty()
+            lint(AnyTarget(dynamicMaxCount = DynamicAmount.XValue)).shouldHaveSize(1)
+        }
+
+        it("flags a dynamic floor that optional waives") {
+            val x = DynamicAmount.XValue
+            CardLinter.lint(tapEach(TargetObject(filter = TargetFilter.Creature, optional = true, dynamicMaxCount = x, dynamicMinCount = x)))
+                .filterIsInstance<CardValidationError.AmbiguousDynamicTargetCount>().shouldHaveSize(1)
+        }
+    }
+
+
+    describe("owner-distribution counts") {
+        it("rejects conflicting raw serialized shapes and accepts both whole-count modes") {
+            val base = TargetObject(filter = TargetFilter.Creature,
+                ownerDistribution = com.wingedsheep.sdk.scripting.targets.OwnerDistribution.EXACTLY_ONE)
+            fun lint(requirement: TargetObject) = CardLinter.lint(instant("Owner Count Probe",
+                CardScript(spellEffect = Effects.TapEachTarget(), targetRequirements = listOf(requirement))))
+                .filterIsInstance<CardValidationError.AmbiguousDynamicTargetCount>()
+            lint(base).shouldBeEmpty()
+            lint(base.copy(ownerDistribution = com.wingedsheep.sdk.scripting.targets.OwnerDistribution.UP_TO_ONE)).shouldBeEmpty()
+            listOf(base.copy(count = 2, minCount = 2), base.copy(minCount = 0), base.copy(optional = true),
+                base.copy(unlimited = true), base.copy(dynamicMaxCount = DynamicAmount.XValue),
+                base.copy(dynamicMinCount = DynamicAmount.XValue, dynamicMaxCount = DynamicAmount.XValue)).forEach {
+                lint(it).shouldHaveSize(1)
+            }
         }
     }
 
@@ -451,6 +549,64 @@ class CardLinterTest : DescribeSpec({
                 .filterIsInstance<CardValidationError.UnsupportedOpponentChooser>()
             findings.shouldHaveSize(1)
             findings[0].message shouldContain "a triggered ability"
+        }
+
+        // Goblin Test Pilot: the activation path draws a random target too, so an activated
+        // ability may carry one; a spell has no path that draws it.
+        it("accepts a TargetChooser.Random target on an activated ability") {
+            val card = instant(
+                "Randomly Aimed",
+                CardScript(
+                    activatedAbilities = listOf(
+                        ActivatedAbility(
+                            id = AbilityId("CardLinterTest_7"),
+                            cost = AbilityCost.Tap,
+                            effect = DealDamageEffect(DynamicAmount.Fixed(2), EffectTarget.ContextTarget(0)),
+                            targetRequirements = listOf(AnyTarget(chooser = TargetChooser.Random)),
+                        )
+                    ),
+                ),
+            )
+            CardLinter.lint(card).filterIsInstance<CardValidationError.UnsupportedOpponentChooser>()
+                .shouldBeEmpty()
+        }
+
+        it("flags a TargetChooser.Random target on a spell") {
+            val card = instant(
+                "Wrongly Random-Chosen",
+                CardScript(
+                    spellEffect = DealDamageEffect(DynamicAmount.Fixed(1), EffectTarget.ContextTarget(0)),
+                    targetRequirements = listOf(AnyTarget(chooser = TargetChooser.Random)),
+                ),
+            )
+            val findings = CardLinter.lint(card)
+                .filterIsInstance<CardValidationError.UnsupportedOpponentChooser>()
+            findings.shouldHaveSize(1)
+            findings[0].message shouldContain "chosen at random"
+            findings[0].message shouldContain "an activated or triggered ability"
+        }
+
+        it("rejects a random target that isn't one mandatory target") {
+            shouldThrow<IllegalArgumentException> {
+                TargetObject(filter = TargetFilter.Creature, optional = true, chooser = TargetChooser.Random)
+            }
+            shouldThrow<IllegalArgumentException> {
+                TriggeredAbility(
+                    id = AbilityId("CardLinterTest_8"),
+                    trigger = EventPattern.CastThisSpellEvent,
+                    effect = DealDamageEffect(DynamicAmount.Fixed(1), EffectTarget.ContextTarget(0)),
+                    targetRequirement = AnyTarget(chooser = TargetChooser.Random),
+                    additionalTargetRequirements = listOf(AnyTarget()),
+                )
+            }
+            shouldThrow<IllegalArgumentException> {
+                ActivatedAbility(
+                    id = AbilityId("CardLinterTest_RandomPair"),
+                    cost = AbilityCost.Tap,
+                    effect = DealDamageEffect(DynamicAmount.Fixed(1), EffectTarget.ContextTarget(0)),
+                    targetRequirements = listOf(AnyTarget(chooser = TargetChooser.Random), AnyTarget()),
+                )
+            }
         }
     }
 
@@ -826,6 +982,29 @@ class CardLinterTest : DescribeSpec({
                 ),
             )
             findings(aura).shouldBeEmpty()
+        }
+
+        // The Fate Reforged Forms: a plain Enchantment whose enters trigger makes it an Aura and
+        // attaches it, so its printed "enchanted creature has flying" is live once attached.
+        it("accepts attached stats on an enchantment whose own trigger makes it an Aura") {
+            fun form(effect: com.wingedsheep.sdk.scripting.effects.Effect) = CardDefinition(
+                name = "Becomes Aura",
+                manaCost = ManaCost.parse("{1}{U}{U}"),
+                typeLine = TypeLine.enchantment(),
+                script = CardScript(
+                    triggeredAbilities = listOf(
+                        TriggeredAbility.create(
+                            id = AbilityId("CardLinterTest_form"),
+                            trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
+                            effect = effect,
+                        ),
+                    ),
+                    staticAbilities = listOf(ModifyStats(1, 1)),
+                ),
+            )
+            findings(form(Effects.BecomeAura(GameObjectFilter.Creature, EffectTarget.PipelineTarget("manifested"))))
+                .shouldBeEmpty()
+            findings(form(Effects.GainLife(1))).shouldHaveSize(1)
         }
 
         it("accepts the same grant on an Equipment") {

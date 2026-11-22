@@ -23,11 +23,8 @@ object StepActionHelper {
         priorEvents: MutableList<GameEvent>
     ): ExecutionResult {
         val sbaResult = sbaChecker.checkAndApply(state)
-        if (sbaResult.outcome is Outcome.Paused) {
-            return ExecutionResult.propagatePause(
-                sbaResult.state,
-                priorEvents + sbaResult.events
-            )
+        if (sbaResult.outcome !is Outcome.Done) {
+            return sbaResult.copy(events = priorEvents + sbaResult.events)
         }
         var newState = sbaResult.newState
         priorEvents.addAll(sbaResult.events)

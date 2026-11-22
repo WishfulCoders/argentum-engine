@@ -11,6 +11,7 @@
  * button out of a spectated game — comes back to the same sandbox rather than an empty form.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { DevPage } from '@/components/admin/DevPage'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AvailableSet } from '@/types/messages'
 import { SetPickerModal } from '@/components/ui/SetPickerModal'
@@ -113,11 +114,7 @@ export function AiSandboxPage() {
   }, [autoWatch, status])
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.h1}>🤖 AI Sandbox <span style={styles.devTag}>dev</span></h1>
-        <a href="/" style={styles.homeLink}>← Home</a>
-      </header>
+    <DevPage section="Dev tools" title="AI sandbox" dev width="normal">
 
       {error && (
         <div style={styles.errorBar} onClick={() => setError(null)}>
@@ -147,7 +144,7 @@ export function AiSandboxPage() {
           }}
         />
       )}
-    </div>
+    </DevPage>
   )
 }
 
@@ -167,7 +164,7 @@ function SetupForm({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [playerCount, setPlayerCount] = useState(2)
   const [gamesPerMatch, setGamesPerMatch] = useState(3)
-  const [deckbuild, setDeckbuild] = useState<'heuristic' | 'llm'>('heuristic')
+  const [deckbuild, setDeckbuild] = useState<'draftsim' | 'llm'>('draftsim')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -204,7 +201,7 @@ function SetupForm({
           setCodes,
           playerCount,
           gamesPerMatch,
-          heuristicDeckbuilding: deckbuild === 'heuristic',
+          skipLlmDeckbuilding: deckbuild === 'draftsim',
         }),
       })
       const data = await res.json() as { lobbyId: string; message: string }
@@ -255,8 +252,8 @@ function SetupForm({
       <label style={styles.label}>Deck building</label>
       <div style={styles.radioRow}>
         <label style={styles.radioLabel}>
-          <input type="radio" checked={deckbuild === 'heuristic'} onChange={() => setDeckbuild('heuristic')} />
-          Heuristic (fast)
+          <input type="radio" checked={deckbuild === 'draftsim'} onChange={() => setDeckbuild('draftsim')} />
+          Draftsim (fast)
         </label>
         <label style={styles.radioLabel}>
           <input type="radio" checked={deckbuild === 'llm'} onChange={() => setDeckbuild('llm')} />
@@ -392,43 +389,24 @@ function statePillColor(state: string): React.CSSProperties {
 // ============================================================================
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    padding: '20px 28px',
-    fontFamily: 'system-ui, sans-serif',
-  },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  h1: { fontSize: 26, margin: 0, display: 'flex', alignItems: 'center', gap: 10 },
-  devTag: {
-    fontSize: 11,
-    background: '#7f1d1d',
-    color: '#fecaca',
-    padding: '2px 8px',
-    borderRadius: 999,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  homeLink: { color: '#7dd3fc', textDecoration: 'none' },
-  h2: { fontSize: 16, margin: '0 0 12px', color: '#cbd5e1' },
-  errorBar: { background: '#7f1d1d', color: '#fecaca', padding: '10px 14px', borderRadius: 8, marginBottom: 14, cursor: 'pointer' },
-  card: { background: '#11131d', border: '1px solid #1f2433', borderRadius: 12, padding: 18, marginBottom: 16, maxWidth: 760 },
-  label: { display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 },
-  hint: { fontSize: 12, color: '#64748b', marginTop: 6 },
-  formRow: { display: 'flex', gap: 18, alignItems: 'flex-start', margin: '0 0 16px' },
+  h2: { fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 600, margin: '0 0 14px', color: '#f1f3f9' },
+  errorBar: { background: 'rgba(127, 29, 29, 0.75)', border: '1px solid rgba(248, 113, 113, 0.5)', color: '#fecaca', padding: '10px 14px', borderRadius: 10, marginBottom: 0, cursor: 'pointer' },
+  card: { background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)', border: '1px solid rgba(255, 255, 255, 0.09)', borderRadius: 16, padding: 18, marginBottom: 0, maxWidth: 760 },
+  label: { display: 'block', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#a3abbd', marginBottom: 7 },
+  hint: { fontSize: 12, color: '#8f98ac', marginTop: 6 },
+  formRow: { display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-start', margin: '0 0 16px' },
   select: {
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    border: '1px solid #2a3142',
+    background: 'rgba(0, 0, 0, 0.32)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 10px',
     fontSize: 13,
   },
   setButton: {
-    background: '#0a0a12',
-    color: '#e2e8f0',
-    border: '1px solid #2a3142',
+    background: 'rgba(0, 0, 0, 0.32)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 12px',
     fontSize: 13,
@@ -439,37 +417,38 @@ const styles: Record<string, React.CSSProperties> = {
   radioRow: { display: 'flex', gap: 14, paddingTop: 6 },
   radioLabel: { fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' },
   primaryBtn: {
-    background: '#2563eb',
-    color: 'white',
+    background: '#f2b45c',
+    color: '#1d1405',
     border: 'none',
-    borderRadius: 8,
-    padding: '10px 18px',
+    borderRadius: 10,
+    padding: '11px 20px',
+    boxShadow: '0 4px 16px rgba(242, 180, 92, 0.22)',
     fontSize: 14,
     cursor: 'pointer',
     fontWeight: 600,
   },
-  smallNote: { fontSize: 11, color: '#64748b', marginTop: 12, lineHeight: 1.5 },
+  smallNote: { fontSize: 11, color: '#8f98ac', marginTop: 12, lineHeight: 1.5 },
   pacingBar: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: 12,
-    background: '#11131d',
-    border: '1px solid #1f2433',
+    background: 'rgba(10, 12, 20, 0.72)', backdropFilter: 'blur(18px) saturate(140%)', WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+    border: '1px solid rgba(255, 255, 255, 0.09)',
     borderRadius: 12,
     padding: '12px 16px',
-    marginBottom: 16,
+    marginBottom: 0,
     maxWidth: 760,
   },
   statusGroup: { display: 'flex', alignItems: 'center', gap: 12 },
   statusPill: { fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 999, letterSpacing: 0.5 },
-  metaText: { fontSize: 12, color: '#94a3b8' },
+  metaText: { fontSize: 12, color: '#a3abbd' },
   controlsGroup: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   ctrlBtn: {
-    background: '#1e293b',
-    color: '#e2e8f0',
-    border: '1px solid #334155',
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 14px',
     fontSize: 13,
@@ -478,8 +457,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   secondaryBtn: {
     background: 'transparent',
-    color: '#7dd3fc',
-    border: '1px solid #334155',
+    color: '#eef0f6',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 8,
     padding: '8px 14px',
     fontSize: 13,
@@ -501,16 +480,16 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     gap: 12,
     padding: '10px 0',
-    borderTop: '1px solid #1f2433',
+    borderTop: '1px solid rgba(255, 255, 255, 0.09)',
   },
   gameNames: { fontSize: 14, fontWeight: 600 },
   botList: { display: 'flex', flexWrap: 'wrap', gap: 8 },
   botChip: {
-    background: '#1e293b',
-    border: '1px solid #334155',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 999,
     padding: '4px 12px',
     fontSize: 12,
-    color: '#cbd5e1',
+    color: '#d5dae6',
   },
 }

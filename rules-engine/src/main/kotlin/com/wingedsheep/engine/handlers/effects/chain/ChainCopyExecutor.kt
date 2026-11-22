@@ -7,11 +7,11 @@ import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
-import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -98,7 +98,7 @@ class ChainCopyExecutor(
                     ?: state.getEntity(targetId)?.get<CardComponent>()?.ownerId
             }
             CopyRecipient.TARGET_PLAYER -> {
-                context.resolvePlayerTarget(effect.target)
+                context.resolvePlayerTarget(effect.target, state)
             }
             CopyRecipient.AFFECTED_PLAYER -> {
                 val targetId = context.resolveTarget(effect.target, state)
@@ -134,8 +134,9 @@ class ChainCopyExecutor(
         // option can't be taken (CR 101.2, the Tamiyo ruling).
         val chainController = context.effectControllerId ?: context.controllerId
         val forbidden = when ((effect.copyCost as? PayCost.Atom)?.atom) {
-            is CostAtom.Sacrifice -> com.wingedsheep.engine.mechanics.SacrificeImmunity
-                .appliesTo(state, recipientPlayerId, chainController, predicateEvaluator)
+            is CostAtom.Sacrifice -> com.wingedsheep.engine.mechanics.CompelledActionImmunity.appliesTo(
+                state, recipientPlayerId, chainController,
+                com.wingedsheep.sdk.scripting.CompelledAction.SACRIFICE, predicateEvaluator)
             is CostAtom.Discard -> com.wingedsheep.engine.mechanics.DiscardImmunity
                 .appliesTo(state, recipientPlayerId, chainController, predicateEvaluator)
             else -> false
@@ -155,18 +156,14 @@ class ChainCopyExecutor(
             state.getEntity(sourceId)?.get<CardComponent>()?.name
         } ?: "this spell"
 
-        val copyCost = effect.copyCost
+        val copyCost = effect.copyCostText?.replaceFirstChar { it.uppercase() }
         val prompt = if (copyCost == null) {
             "Copy $sourceName and choose a new target?"
         } else {
-            "${copyCostLabel(copyCost)} to copy $sourceName and choose a new target?"
+            "$copyCost to copy $sourceName and choose a new target?"
         }
 
-        val (yesText, noText) = if (copyCost == null) {
-            "Copy" to "Decline"
-        } else {
-            copyCostLabel(copyCost) to "Decline"
-        }
+        val (yesText, noText) = (copyCost ?: "Copy") to "Decline"
 
         val decision = { decisionId: String -> YesNoDecision(
             id = decisionId,
@@ -210,6 +207,9 @@ class ChainCopyExecutor(
         ): Boolean {
             if (cost == null) return true
             return when (val atom = (cost as? PayCost.Atom)?.atom) {
+                // The broad "payable at all" check: the payment window lets the payer activate any
+                // mana ability (CR 605.3a), not just the ones auto-pay would tap.
+                is CostAtom.Mana -> manaSolver.canPay(state, playerId, atom.cost)
                 is CostAtom.Sacrifice -> {
                     findMatchingPermanents(state, playerId, atom.filter, predicateEvaluator = predicateEvaluator).size >= atom.count
                 }
@@ -218,14 +218,9 @@ class ChainCopyExecutor(
                     val hand = state.getZone(handZone)
                     hand.size >= atom.count
                 }
-                is CostAtom.Mana -> manaSolver.canPay(state, playerId, atom.cost)
                 else -> false
             }
         }
-
-        /** Button / prompt label for a copy cost: "Pay {R}{R}", "Discard a card", "Sacrifice a land". */
-        fun copyCostLabel(cost: PayCost): String =
-            ChainCopyEffect.costPhrase(cost).replaceFirstChar { it.uppercase() }
 
         fun findMatchingPermanents(
             state: GameState,

@@ -1,0 +1,338 @@
+package com.wingedsheep.engine.state
+
+import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.core.TurnPart
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.ProtectionScope
+import com.wingedsheep.sdk.scripting.SkipStepOrPhase
+import com.wingedsheep.sdk.scripting.StaticAbility
+import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
+import com.wingedsheep.sdk.scripting.conditions.Condition
+import com.wingedsheep.sdk.scripting.conditions.TriggeringEntityWas
+import com.wingedsheep.sdk.scripting.effects.SkipDuration
+import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.values.CardNumericProperty
+import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * Reads games persisted before the SDK consolidation of 2026-10 folded narrow types into general
+ * ones. A card's script travels inside the persisted state (its spell effect, granted statics,
+ * abilities on the stack), so an in-flight game can still hold a retired discriminator, and an
+ * unknown polymorphic discriminator fails the whole decode. This rewrites each retired SDK object
+ * to the shape its cards author today, before decoding. Objects with a current discriminator pass
+ * through untouched.
+ */
+internal object RetiredSdkTypeLift {
+    private val json = Json {
+        encodeDefaults = true
+        classDiscriminator = "type"
+    }
+
+    private fun <T> encode(serializer: KSerializer<T>, value: T): JsonObject =
+        json.encodeToJsonElement(serializer, value).jsonObject
+
+    private fun predicate(value: CardPredicate) = encode(CardPredicate.serializer(), value)
+    private fun condition(value: Condition) = encode(Condition.serializer(), value)
+    private fun static(value: StaticAbility) = encode(StaticAbility.serializer(), value)
+
+    private fun xComparison(property: CardNumericProperty, operator: ComparisonOperator) =
+        predicate(CardPredicate.CompareNumericProperty(property, operator, DynamicAmount.XValue))
+
+    private fun skipEffect(part: TurnPart, duration: SkipDuration, target: JsonElement?) = JsonObject(
+        buildMap {
+            put("type", JsonPrimitive("SkipStepOrPhaseEffect"))
+            put("part", JsonPrimitive(part.name))
+            put("duration", JsonPrimitive(duration.name))
+            if (target != null) put("target", target)
+        }
+    )
+
+    private fun hexproofGrant(scope: ProtectionScope, old: JsonObject) = JsonObject(
+        buildMap {
+            put("type", JsonPrimitive("GrantHexproofFromToGroup"))
+            put("scope", encode(ProtectionScope.serializer(), scope))
+            old["filter"]?.let { put("filter", it) }
+        }
+    )
+
+    private fun nameNotShared(filter: GameObjectFilter, excludeSelf: Boolean) = predicate(
+        CardPredicate.Not(CardPredicate.SharesNameWithYourCard(filter, excludeSelf))
+    )
+
+    private val cardTypeFilters = mapOf(
+        "CREATURE" to GameObjectFilter.Creature,
+        "ARTIFACT" to GameObjectFilter.Artifact,
+        "ENCHANTMENT" to GameObjectFilter.Enchantment,
+        "LAND" to GameObjectFilter.Land,
+        "PLANESWALKER" to GameObjectFilter.Planeswalker,
+    )
+
+    private fun JsonObject.int(key: String): Int = getValue(key).jsonPrimitive.int
+    private fun JsonObject.string(key: String): String = getValue(key).jsonPrimitive.content
+
+    /** Retired discriminator → the current object for it. */
+    private val rewrites: Map<String, (JsonObject) -> JsonObject> = mapOf(
+        // CardPredicate — the X comparisons and the name-not-shared pair
+        "PowerEqualsX" to { _ -> xComparison(CardNumericProperty.POWER, ComparisonOperator.EQ) },
+        "PowerAtLeastX" to { _ -> xComparison(CardNumericProperty.POWER, ComparisonOperator.GTE) },
+        "ToughnessAtMostX" to { _ -> xComparison(CardNumericProperty.TOUGHNESS, ComparisonOperator.LTE) },
+        "ManaValueEqualsX" to { _ -> xComparison(CardNumericProperty.MANA_VALUE, ComparisonOperator.EQ) },
+        "ManaValueAtMostX" to { _ -> xComparison(CardNumericProperty.MANA_VALUE, ComparisonOperator.LTE) },
+        "NameNotSharedWithControlledToken" to { _ -> nameNotShared(GameObjectFilter.Token, excludeSelf = false) },
+        "NameNotSharedWithAnotherControlledPermanent" to { _ ->
+            nameNotShared(GameObjectFilter.Permanent, excludeSelf = true)
+        },
+        // Renamed when it gained its zone axis; the battlefield is the old meaning and the default.
+        "SharesNameWithPermanentYouControl" to { old ->
+            JsonObject(old + ("type" to JsonPrimitive("SharesNameWithYourCard")))
+        },
+        // Condition — the life comparisons and the last-known type checks
+        "AnOpponentLifeAtMost" to { old -> condition(Conditions.AnOpponentLifeAtMost(old.int("threshold"))) },
+        "EachPlayerLifeAtMost" to { old -> condition(Conditions.EachPlayerLifeAtMost(old.int("threshold"))) },
+        "APlayerLifeAtMost" to { old -> condition(Conditions.APlayerLifeAtMost(old.int("threshold"))) },
+        "TriggeringEntityHadSubtype" to { old ->
+            condition(TriggeringEntityWas(GameObjectFilter.Any.withSubtype(Subtype(old.string("subtype")))))
+        },
+        "TriggeringEntityHadCardType" to { old ->
+            val cardType = old.string("cardType")
+            val filter = cardTypeFilters[cardType.uppercase()]
+                ?: throw UnsupportedGameStateFormatException("Unsupported GameState format: TriggeringEntityHadCardType($cardType)")
+            condition(TriggeringEntityWas(filter))
+        },
+        // Condition — the cast-time flag reader, now a comparison over the numeric capture
+        "CastTimeFlagSet" to { old -> condition(Conditions.CapturedAtCast(old.string("flag"))) },
+        // Effect — the skip effects, now one type over a duration
+        "SkipNextDrawStep" to { old -> skipEffect(TurnPart.DRAW_STEP, SkipDuration.NEXT, old["target"]) },
+        "SkipNextUntapStep" to { old -> skipEffect(TurnPart.UNTAP_STEP, SkipDuration.NEXT, old["target"]) },
+        "SkipStepOrPhaseThisTurn" to { old ->
+            skipEffect(TurnPart.valueOf(old.string("part")), SkipDuration.THIS_TURN, old["target"])
+        },
+        // StaticAbility — the standing skips and the hexproof-from grants
+        "SkipUntapStep" to { old ->
+            JsonObject(
+                buildMap {
+                    put("type", JsonPrimitive("SkipStepOrPhase"))
+                    put("part", JsonPrimitive(TurnPart.UNTAP_STEP.name))
+                    old["player"]?.let { put("player", it) }
+                }
+            )
+        },
+        "SkipDrawStep" to { _ -> static(SkipStepOrPhase(TurnPart.DRAW_STEP)) },
+        "GrantHexproofFromMonocoloredToGroup" to { old -> hexproofGrant(ProtectionScope.Monocolored, old) },
+        "GrantHexproofFromMulticoloredToGroup" to { old -> hexproofGrant(ProtectionScope.Multicolored, old) },
+        // Effect — the single-stamp next-spell rider, now the general one carrying a ManaSpellRider
+        "MakeNextSpellUncounterable" to { old ->
+            JsonObject(
+                buildMap {
+                    put("type", JsonPrimitive("GrantNextSpellRider"))
+                    put("rider", JsonObject(mapOf("type" to JsonPrimitive("MakesSpellUncounterable"))))
+                    old["spellFilter"]?.let { put("spellFilter", it) }
+                }
+            )
+        },
+        // StaticAbility — the toughness-only base setter, now the null-power half of the fixed one
+        "SetBaseToughnessForCreatureGroup" to { old ->
+            JsonObject(old + ("type" to JsonPrimitive("SetBasePowerToughnessStatic")) + ("power" to JsonNull))
+        },
+    )
+
+    /**
+     * Retired *fields* on current types. The may-play `singleUse` flag became a play cap:
+     * `GrantMayPlayFromExileEffect.maxPlays` in a card script, `MayPlayPermission.playsRemaining` on
+     * a stored grant. A true flag is a cap of one; a false one is the uncapped default.
+     */
+    private fun withoutRetiredFields(element: JsonObject, type: String?): JsonObject =
+        withTotalCap(element)
+            .let { withRetiredFieldsLifted(it, type) }
+
+    private fun withRetiredFieldsLifted(element: JsonObject, type: String?): JsonObject =
+        withoutSacrificeTrackers(element, type).takeIf { it !== element } ?: withDynamicLandCount(withoutSkipUntapFlags(withoutLandEntersTapped(
+            withoutCreaturesOnly(
+                withoutSingleEntryCounter(withoutCastTimeFlags(withoutColorlessAsAnyColor(withoutSingleUse(element, type))), type)
+            )
+        ), type), type)
+
+    /**
+     * The mana-value-only aggregate target cap became a cap over any numeric property: a card
+     * script's `TargetObject.totalManaValueAtMost` amount is now `totalAtMost = TotalCap(MANA_VALUE,
+     * amount)`, and a stored target pause's resolved `totalManaValueAtMost` integer is now
+     * `totalCap` labelled "mana value" (its per-candidate `targetValues` weren't stored, so that
+     * pause's picker no longer pre-checks the sum; `TargetValidator` still enforces it). A null
+     * field was the uncapped default.
+     */
+    private fun withTotalCap(element: JsonObject): JsonObject {
+        val old = element["totalManaValueAtMost"] ?: return element
+        val rest = element - "totalManaValueAtMost"
+        return when (old) {
+            is JsonObject -> JsonObject(rest + ("totalAtMost" to JsonObject(mapOf(
+                "property" to JsonPrimitive(CardNumericProperty.MANA_VALUE.name),
+                "amount" to old,
+            ))))
+            is JsonPrimitive -> if (old is JsonNull) JsonObject(rest) else JsonObject(
+                rest + ("totalCap" to old) + ("totalCapLabel" to JsonPrimitive(CardNumericProperty.MANA_VALUE.description))
+            )
+            else -> JsonObject(rest)
+        }
+    }
+
+    /** The four retired sacrifice trackers, each the filter it is over the per-turn sacrifice record. */
+    private val sacrificeTrackerFilters = mapOf(
+        "PERMANENTS_SACRIFICED" to GameObjectFilter.Any,
+        "NONTOKEN_PERMANENTS_SACRIFICED" to GameObjectFilter.Any.nontoken(),
+        "ARTIFACT_SACRIFICED" to GameObjectFilter.Artifact,
+        "FOOD_SACRIFICED" to GameObjectFilter.Any.withSubtype(Subtype.FOOD),
+    )
+
+    /**
+     * `TurnTracking(player, PERMANENTS_SACRIFICED / NONTOKEN_PERMANENTS_SACRIFICED /
+     * ARTIFACT_SACRIFICED / FOOD_SACRIFICED)` became `PermanentsSacrificedThisTurn(player, filter)`.
+     * The two indicators (0 or 1) become counts; every card read them as "at least one", which a
+     * count answers the same.
+     */
+    private fun withoutSacrificeTrackers(element: JsonObject, type: String?): JsonObject {
+        if (type != "TurnTracking") return element
+        val filter = sacrificeTrackerFilters[(element["tracker"] as? JsonPrimitive)?.content] ?: return element
+        return JsonObject(
+            buildMap {
+                put("type", JsonPrimitive("PermanentsSacrificedThisTurn"))
+                element["player"]?.let { put("player", it) }
+                put("filter", encode(GameObjectFilter.serializer(), filter))
+            }
+        )
+    }
+
+    /**
+     * `PlayAdditionalLandsEffect.count` was a bare number; it is now a `DynamicAmount`, so a stored
+     * `2` becomes `Fixed(2)`.
+     */
+    private fun withDynamicLandCount(element: JsonObject, type: String?): JsonObject {
+        if (type != "PlayAdditionalLands") return element
+        val count = element["count"] as? JsonPrimitive ?: return element
+        return JsonObject(element + ("count" to encode(DynamicAmount.serializer(), DynamicAmount.Fixed(count.int))))
+    }
+
+    /**
+     * "Don't untap during their next untap step" carried `affectsCreatures` / `affectsLands` flags; it
+     * now carries a permanent filter — `permanents` on `SkipUntapEffect` in a card script, a list of
+     * them on a player's pending `SkipUntapComponent`. Both flags default to true, as they did.
+     */
+    private fun withoutSkipUntapFlags(element: JsonObject, type: String?): JsonObject {
+        if ("affectsCreatures" !in element && "affectsLands" !in element) return element
+        val creatures = (element["affectsCreatures"] as? JsonPrimitive)?.content != "false"
+        val lands = (element["affectsLands"] as? JsonPrimitive)?.content != "false"
+        val rest = element - "affectsCreatures" - "affectsLands"
+        val filter = when {
+            creatures && lands -> GameObjectFilter.Creature or GameObjectFilter.Land
+            creatures -> GameObjectFilter.Creature
+            lands -> GameObjectFilter.Land
+            else -> null
+        }
+        val encoded = filter?.let { encode(GameObjectFilter.serializer(), it) }
+        return when {
+            type != "SkipUntap" -> JsonObject(rest + ("permanents" to JsonArray(listOfNotNull(encoded))))
+            encoded != null -> JsonObject(rest + ("permanents" to encoded))
+            else -> JsonObject(rest)
+        }
+    }
+
+    /**
+     * The may-play `colorlessAsAnyColor` flag became `spendAsAnyColor`, naming *which* mana stands in
+     * for a color — on `GrantMayPlayFromExileEffect` in a card script and `MayPlayPermission` on a
+     * stored grant. A true flag is `COLORLESS`; a false one is the unset default.
+     */
+    private fun withoutColorlessAsAnyColor(element: JsonObject): JsonObject {
+        val flag = element["colorlessAsAnyColor"] as? JsonPrimitive ?: return element
+        val rest = element - "colorlessAsAnyColor"
+        return JsonObject(if (flag.content == "true") rest + ("spendAsAnyColor" to JsonPrimitive("COLORLESS")) else rest)
+    }
+
+    /**
+     * The damage-redirection shield's `creaturesOnly` flag became `protectedFilter` — on
+     * `RedirectNextDamageEffect` in a card script and on the stored `RedirectNextDamage` shield. A
+     * true flag protects every creature; a false one is the unset default.
+     */
+    private fun withoutCreaturesOnly(element: JsonObject): JsonObject {
+        val flag = element["creaturesOnly"] as? JsonPrimitive ?: return element
+        val rest = element - "creaturesOnly"
+        return JsonObject(
+            if (flag.content == "true") rest + ("protectedFilter" to encode(GameObjectFilter.serializer(), GameObjectFilter.Creature))
+            else rest
+        )
+    }
+
+    /**
+     * The may-play `landEntersTapped` flag became `entersTapped`, a filter naming which played cards
+     * enter tapped — on `GrantMayPlayFromExileEffect` in a card script and `MayPlayPermission` on a
+     * stored grant. A true flag is the land filter; a false one is the unset default.
+     */
+    private fun withoutLandEntersTapped(element: JsonObject): JsonObject {
+        val flag = element["landEntersTapped"] as? JsonPrimitive ?: return element
+        val rest = element - "landEntersTapped"
+        return JsonObject(
+            if (flag.content == "true") rest + ("entersTapped" to encode(GameObjectFilter.serializer(), GameObjectFilter.Land))
+            else rest
+        )
+    }
+
+    /**
+     * `MoveToZoneEffect` carried one entry counter as `addCounterType` + `addCounterIf`; it now
+     * carries a list of them (`entryCounters`), each with its own `onlyIf`.
+     */
+    private fun withoutSingleEntryCounter(element: JsonObject, type: String?): JsonObject {
+        if (type != "MoveToZone" || ("addCounterType" !in element && "addCounterIf" !in element)) return element
+        val counterType = element["addCounterType"]?.takeIf { it !is JsonNull }
+        val rest = element - "addCounterType" - "addCounterIf"
+        val entries = if (counterType == null) JsonArray(emptyList()) else JsonArray(listOf(JsonObject(
+            buildMap {
+                put("counterType", counterType)
+                element["addCounterIf"]?.takeIf { it !is JsonNull }?.let { put("onlyIf", it) }
+            }
+        )))
+        return JsonObject(rest + ("entryCounters" to entries))
+    }
+
+    /**
+     * A spell on the stack recorded its "as you cast this spell" captures as the names whose
+     * condition held (`castTimeFlags`); it now records every capture as a number (`castTimeValues`),
+     * a condition capture being 1 when it held.
+     */
+    private fun withoutCastTimeFlags(element: JsonObject): JsonObject {
+        val flags = element["castTimeFlags"] as? JsonArray ?: return element
+        val values = JsonObject(flags.associate { it.jsonPrimitive.content to JsonPrimitive(1) })
+        return JsonObject(element - "castTimeFlags" + ("castTimeValues" to values))
+    }
+
+    private fun withoutSingleUse(element: JsonObject, type: String?): JsonObject {
+        val singleUse = element["singleUse"] as? JsonPrimitive ?: return element
+        val capKey = if (type == "GrantMayPlayFromExile") "maxPlays" else "playsRemaining"
+        val rest = element - "singleUse"
+        return JsonObject(if (singleUse.content == "true") rest + (capKey to JsonPrimitive(1)) else rest)
+    }
+
+    /** Returns [element] itself (no copy) when nothing in it needs rewriting — the common case. */
+    fun lift(element: JsonElement): JsonElement = when (element) {
+        is JsonArray -> {
+            val children = element.map(::lift)
+            if (children.indices.all { children[it] === element[it] }) element else JsonArray(children)
+        }
+        is JsonObject -> {
+            val type = (element["type"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            val rewritten = withoutRetiredFields(type?.let { rewrites[it] }?.invoke(element) ?: element, type)
+            val children = rewritten.mapValues { (_, value) -> lift(value) }
+            if (rewritten === element && children.all { (key, value) -> value === element[key] }) element
+            else JsonObject(children)
+        }
+        else -> element
+    }
+}

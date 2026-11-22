@@ -161,7 +161,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a creature card to put into your hand",
+                    "selectedLabel": "Put into your hand"
                 },
                 {
                     "type": "MoveCollection",
@@ -1127,7 +1129,6 @@
         "targetRequirements": [
             {
                 "type": "TargetObject",
-                "minCount": 0,
                 "unlimited": true,
                 "filter": {
                     "baseFilter": "creature"
@@ -2460,6 +2461,135 @@
     ]
 }
 
+// Mystic Remora
+{
+    "name": "Mystic Remora",
+    "manaCost": "{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "Cumulative upkeep {1} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)\nWhenever an opponent casts a noncreature spell, you may draw a card unless that player pays {4}.",
+    "keywords": [
+        "CUMULATIVE_UPKEEP"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mystic Remora:1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "AddCounters",
+                            "counterType": "AGE",
+                            "count": 1,
+                            "target": "Self"
+                        },
+                        {
+                            "type": "Gated",
+                            "gate": {
+                                "type": "Gate.MayPay",
+                                "cost": {
+                                    "type": "PayDynamicManaCost",
+                                    "amount": {
+                                        "type": "Multiply",
+                                        "amount": {
+                                            "type": "EntityProperty",
+                                            "entity": "Self",
+                                            "numericProperty": {
+                                                "type": "CounterCount",
+                                                "counterType": "AGE"
+                                            }
+                                        },
+                                        "multiplier": 1
+                                    }
+                                }
+                            },
+                            "then": {
+                                "type": "Composite",
+                                "effects": []
+                            },
+                            "otherwise": {
+                                "type": "SacrificeTarget",
+                                "target": "Self"
+                            },
+                            "descriptionOverride": "Pay cumulative upkeep ({1} for each age counter), or sacrifice this permanent?"
+                        }
+                    ]
+                },
+                "interveningIf": {
+                    "type": "SourceInZone",
+                    "zones": [
+                        "Battlefield"
+                    ]
+                },
+                "descriptionOverride": "Cumulative upkeep {1} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)"
+            },
+            {
+                "id": "Mystic Remora:2",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    },
+                    "player": "EachOpponent"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "PayOrSuffer",
+                    "cost": {
+                        "type": "PayAtom",
+                        "atom": {
+                            "type": "AtomMana",
+                            "cost": "{4}"
+                        }
+                    },
+                    "suffer": {
+                        "type": "Gated",
+                        "gate": "Gate.MayDecide",
+                        "then": {
+                            "type": "DrawCards",
+                            "count": {
+                                "type": "Fixed",
+                                "amount": 1
+                            }
+                        }
+                    },
+                    "player": {
+                        "type": "PlayerRef",
+                        "player": "TriggeringPlayer"
+                    },
+                    "consequenceDescription": "let Mystic Remora's controller draw a card"
+                },
+                "descriptionOverride": "Whenever an opponent casts a noncreature spell, you may draw a card unless that player pays {4}."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "87",
+        "artist": "Ken Meyer, Jr.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/8/58e93dff-b774-4765-b7bd-d3957e42ff4a.jpg?1783947511",
+        "rulings": [
+            {
+                "date": "2025-10-02",
+                "text": "Paying cumulative upkeep is always optional. If it's not paid, the permanent with cumulative upkeep is sacrificed. Partial payments of the total cumulative upkeep cost can't be made. For example, if Mystic Remora has three age counters on it when its cumulative upkeep ability triggers, it gets another age counter and then its controller chooses to either pay {4} or sacrifice it."
+            },
+            {
+                "date": "2025-10-02",
+                "text": "Cumulative upkeep is a triggered ability that imposes an increasing cost on a permanent. \"Cumulative upkeep [cost]\" means \"At the beginning of your upkeep, if this permanent is on the battlefield, put an age counter on this permanent. Then you may pay [cost] for each age counter on it. If you don't, sacrifice it.\""
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Nacre Talisman
 {
     "name": "Nacre Talisman",
@@ -2550,7 +2680,9 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "found"
+                    "storeSelected": "found",
+                    "prompt": "Search your library for a Forest land card to put onto the battlefield",
+                    "selectedLabel": "Put onto the battlefield"
                 },
                 {
                     "type": "MoveCollection",
@@ -2574,6 +2706,129 @@
     },
     "colorIdentityOverride": [
         "GREEN"
+    ]
+}
+
+// Necropotence
+{
+    "name": "Necropotence",
+    "manaCost": "{B}{B}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "Skip your draw step.\nWhenever you discard a card, exile that card from your graveyard.\nPay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of your next end step.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Necropotence:1",
+                "trigger": "DiscardEvent",
+                "binding": "ANY",
+                "effect": {
+                    "type": "MoveToZone",
+                    "target": "TriggeringEntity",
+                    "destination": "Exile",
+                    "fromZone": "Graveyard"
+                },
+                "descriptionOverride": "Whenever you discard a card, exile that card from your graveyard."
+            }
+        ],
+        "activatedAbilities": [
+            {
+                "id": "Necropotence:2",
+                "cost": {
+                    "type": "CostAtomWrapper",
+                    "atom": {
+                        "type": "AtomPayLife",
+                        "amount": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Exile"
+                            },
+                            "faceDown": "HIDDEN"
+                        },
+                        {
+                            "type": "CreateDelayedTrigger",
+                            "step": "END",
+                            "effect": {
+                                "type": "Composite",
+                                "effects": [
+                                    {
+                                        "type": "MoveCollection",
+                                        "from": "gathered0",
+                                        "destination": {
+                                            "type": "ToZone",
+                                            "zone": "Hand"
+                                        }
+                                    }
+                                ]
+                            },
+                            "timing": "NextEndStep",
+                            "fireOnPlayer": {
+                                "type": "PlayerRef",
+                                "player": "You"
+                            },
+                            "carryCollections": [
+                                "gathered0"
+                            ]
+                        }
+                    ]
+                },
+                "descriptionOverride": "Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of your next end step."
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "SkipStepOrPhase",
+                "part": "DRAW_STEP"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "154",
+        "rarity": "RARE",
+        "artist": "Mark Tedin",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/4/54d7a0c1-efb4-4a8d-ad92-a96d43835052.jpg?1783947497",
+        "rulings": [
+            {
+                "date": "2023-09-01",
+                "text": "You can't look at the cards exiled by the last ability while they're face down."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "If a discarded card isn't put into your graveyard (due to an effect such as that of Obstinate Baloth) or leaves your graveyard (perhaps because another effect returned it to your hand), it won't be exiled."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "If you discard a card with madness and wish to cast it, Necropotence's ability won't exile that card. If you don't wish to cast it, you choose whether it ends up exiled or in your graveyard."
+            },
+            {
+                "date": "2017-11-17",
+                "text": "Necropotence's last ability creates a delayed triggered ability that will put the exiled card into your hand. That ability still triggers even if Necropotence is removed from the battlefield before your end step."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
     ]
 }
 

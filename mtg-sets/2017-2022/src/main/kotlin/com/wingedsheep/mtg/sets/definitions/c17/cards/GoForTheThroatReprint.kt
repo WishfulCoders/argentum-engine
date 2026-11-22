@@ -4,7 +4,8 @@ import com.wingedsheep.sdk.model.Printing
 import com.wingedsheep.sdk.model.Rarity
 
 /**
- * Go for the Throat reprint in Commander 2017. Canonical CardDefinition lives in its earliest set.
+ * Go for the Throat reprint in Commander 2017. Canonical
+ * [com.wingedsheep.sdk.model.CardDefinition] lives in MBS.
  */
 val GoForTheThroatReprint = Printing(
     oracleId = "2f092562-9e17-43cd-aeb8-d0567f99363e",

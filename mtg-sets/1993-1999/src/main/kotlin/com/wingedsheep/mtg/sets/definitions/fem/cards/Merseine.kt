@@ -75,7 +75,9 @@ val Merseine = card("Merseine") {
             )
         )
         effect = Effects.RemoveCounters(CounterType.NET, 1, EffectTarget.Self)
-        description = "Pay enchanted creature's mana cost: Remove a net counter from this Aura. Only the controller of the enchanted creature may activate this ability."
+        // The button only ever shows to the one player who may press it, so the "only the
+        // controller of the enchanted creature" clause is left to the card text.
+        description = "Pay enchanted creature's mana cost: Remove a net counter from this Aura."
     }
 
     metadata {

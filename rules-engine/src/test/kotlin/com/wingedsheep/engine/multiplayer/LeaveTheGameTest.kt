@@ -6,7 +6,7 @@ import com.wingedsheep.engine.core.MayAbilityContinuation
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.Concede
 import com.wingedsheep.engine.core.DecisionContext
-import com.wingedsheep.engine.core.EffectContinuation
+import com.wingedsheep.engine.core.EffectProgram
 import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.handlers.EffectContext
@@ -48,6 +48,18 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.engine.core.AbilityResolvedEvent
+import com.wingedsheep.engine.core.ResolvedEvent
+import com.wingedsheep.engine.core.SelectCardsDecision
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.engine.support.GameTestDriver
+import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.dsl.card
 
 /**
  * Phase 1.2 of `backlog/multiplayer.md` — "leaving the game" (CR 800.4a–c). When a player
@@ -68,6 +80,8 @@ class LeaveTheGameTest : FunSpec({
 
     fun registry(): CardRegistry = CardRegistry().also { it.register(bear) }
     val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+    // The engine's own finisher for a resolution abandoned when its chooser leaves.
+    val finish = com.wingedsheep.engine.core.EngineServices(registry()).finishAbandonedResolution
 
     fun initGame(playerCount: Int): Pair<GameState, List<EntityId>> {
         val deck = Deck(cards = List(40) { "Leave Test Bear" })
@@ -150,7 +164,7 @@ class LeaveTheGameTest : FunSpec({
 
         val (afterLeave, _) = PlayerLeavesGameProcessor.process(
             zones,
-            withCreature, players[1], GameEndReason.CONCESSION
+            withCreature, players[1], GameEndReason.CONCESSION, finish
         ).let { it.newState to it.events }
 
         afterLeave.getEntity(creatureId).shouldBeNull()
@@ -168,7 +182,7 @@ class LeaveTheGameTest : FunSpec({
 
         val afterLeave = PlayerLeavesGameProcessor.process(
             zones,
-            withTheft, players[1], GameEndReason.CONCESSION
+            withTheft, players[1], GameEndReason.CONCESSION, finish
         ).newState
 
         // The creature is still in the game (owned by players[0]) and back under their control.
@@ -187,7 +201,7 @@ class LeaveTheGameTest : FunSpec({
 
         val afterLeave = PlayerLeavesGameProcessor.process(
             zones,
-            withTheft, players[1], GameEndReason.CONCESSION
+            withTheft, players[1], GameEndReason.CONCESSION, finish
         ).newState
 
         // Owned by the leaver, so it leaves the game even though players[0] controlled it.
@@ -215,7 +229,7 @@ class LeaveTheGameTest : FunSpec({
 
         val afterLeave = PlayerLeavesGameProcessor.process(
             zones,
-            state, players[1], GameEndReason.CONCESSION
+            state, players[1], GameEndReason.CONCESSION, finish
         ).newState
 
         afterLeave.getEntity(abilityId).shouldBeNull()
@@ -245,7 +259,7 @@ class LeaveTheGameTest : FunSpec({
 
         val afterLeave = PlayerLeavesGameProcessor.process(
             zones,
-            state, players[1], GameEndReason.CONCESSION
+            state, players[1], GameEndReason.CONCESSION, finish
         ).newState
 
         afterLeave.getEntity(attackerId).shouldBeNull()
@@ -263,7 +277,7 @@ class LeaveTheGameTest : FunSpec({
             .updateEntity(atB) { it.with(AttackingComponent(defenderId = players[1])) }
             .updateEntity(atC) { it.with(AttackingComponent(defenderId = players[2])) }
 
-        val afterLeave = PlayerLeavesGameProcessor.process(zones, state, players[2], GameEndReason.CONCESSION).newState
+        val afterLeave = PlayerLeavesGameProcessor.process(zones, state, players[2], GameEndReason.CONCESSION, finish).newState
 
         // Nothing is left for the second bear to deal damage to — it is out of combat …
         afterLeave.getEntity(atC)?.has<AttackingComponent>() shouldBe false
@@ -322,7 +336,7 @@ class LeaveTheGameTest : FunSpec({
         val (s4, anthemSource) = s3.withCreature(owner = players[1])
         val (state, anthem) = s4.pumpEffect(ownCreature, controller = players[1], sourceId = anthemSource, duration = Duration.WhileSourceOnBattlefield())
 
-        val afterLeave = PlayerLeavesGameProcessor.process(zones, state, players[1], GameEndReason.CONCESSION).newState
+        val afterLeave = PlayerLeavesGameProcessor.process(zones, state, players[1], GameEndReason.CONCESSION, finish).newState
 
         afterLeave.floatingEffects.any { it.id == pump } shouldBe true
         afterLeave.floatingEffects.any { it.id == anthem } shouldBe false
@@ -362,6 +376,88 @@ class LeaveTheGameTest : FunSpec({
         state.floatingEffects.any { it.id == fx } shouldBe false
     }
 
+    test("a departed player's 'until the end of your next turn' cast ban ends when that turn would have begun (CR 800.4m)") {
+        val (base, players) = initGame(4)
+        val processor = ActionProcessor(registry())
+        val ban = com.wingedsheep.engine.state.components.player.SpellCastRestriction(
+            removeOn = com.wingedsheep.engine.state.components.player.PlayerEffectRemoval.EndOfYourNextTurn,
+            controllerId = players[1],
+            expiresAfterTurn = base.turnNumber + 1
+        )
+        val armed = base.updateEntity(players[2]) {
+            it.with(com.wingedsheep.engine.state.components.player.CantCastSpellsComponent(listOf(ban)))
+        }
+        fun banned(s: GameState) =
+            s.getEntity(players[2])?.has<com.wingedsheep.engine.state.components.player.CantCastSpellsComponent>() == true
+
+        // The ban's controller concedes; the turn they would have taken next never comes, so the
+        // ban ends when it would have begun rather than lasting forever.
+        var state = processor.process(armed, Concede(players[1])).result.newState
+        banned(state) shouldBe true
+        var safety = 0
+        while (state.activePlayerId == players[0]) {
+            check(++safety < 500) { "stuck at ${state.step}" }
+            val prio = state.priorityPlayerId ?: break
+            val pending = state.pendingDecision
+            if (pending is com.wingedsheep.engine.core.SelectCardsDecision) {
+                val resp = com.wingedsheep.engine.core.CardsSelectedResponse(pending.id, pending.options.take(pending.minSelections))
+                state = processor.process(state, com.wingedsheep.engine.core.SubmitDecision(pending.playerId, resp)).result.newState
+                continue
+            }
+            if (state.step == com.wingedsheep.sdk.core.Step.DECLARE_ATTACKERS && state.isActiveTurnFor(prio) &&
+                state.getEntity(prio)?.has<com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent>() != true
+            ) {
+                state = processor.process(state, com.wingedsheep.engine.core.DeclareAttackers(prio, emptyMap())).result.newState
+                continue
+            }
+            state = processor.process(state, PassPriority(prio)).result.newState
+        }
+        state.activePlayerId shouldBe players[2]
+        banned(state) shouldBe false
+    }
+
+    test("a departed player's 'until the end of your next turn' phase-in lock ends when that turn would have begun (CR 800.4m)") {
+        val (base, players) = initGame(4)
+        val processor = ActionProcessor(registry())
+        val (s1, creature) = base.withCreature(owner = players[2])
+        val lock = com.wingedsheep.engine.state.components.battlefield.PhaseInLock.UntilEndOfControllersNextTurn(
+            controllerId = players[1],
+            expiresAfterTurn = base.turnNumber + 1
+        )
+        val armed = s1.updateEntity(creature) {
+            it.with(com.wingedsheep.engine.state.components.battlefield.PhasedOutComponent(players[2], phaseInLock = lock))
+        }
+        fun locked(s: GameState) =
+            s.getEntity(creature)?.get<com.wingedsheep.engine.state.components.battlefield.PhasedOutComponent>()?.phaseInLock != null
+
+        // The lock's controller concedes; Teferi's ruling: the effect "neither expires immediately
+        // nor lasts indefinitely" — it ends when that player's next turn would have begun.
+        var state = processor.process(armed, Concede(players[1])).result.newState
+        locked(state) shouldBe true
+        var safety = 0
+        while (state.activePlayerId == players[0]) {
+            check(++safety < 500) { "stuck at ${state.step}" }
+            val prio = state.priorityPlayerId ?: break
+            val pending = state.pendingDecision
+            if (pending is com.wingedsheep.engine.core.SelectCardsDecision) {
+                val resp = com.wingedsheep.engine.core.CardsSelectedResponse(pending.id, pending.options.take(pending.minSelections))
+                state = processor.process(state, com.wingedsheep.engine.core.SubmitDecision(pending.playerId, resp)).result.newState
+                continue
+            }
+            if (state.step == com.wingedsheep.sdk.core.Step.DECLARE_ATTACKERS && state.isActiveTurnFor(prio) &&
+                state.getEntity(prio)?.has<com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent>() != true
+            ) {
+                state = processor.process(state, com.wingedsheep.engine.core.DeclareAttackers(prio, emptyMap())).result.newState
+                continue
+            }
+            state = processor.process(state, PassPriority(prio)).result.newState
+        }
+        state.activePlayerId shouldBe players[2]
+        locked(state) shouldBe false
+        // Released before players[2]'s untap step, so the creature phased in during it.
+        (creature in state.getBattlefield()) shouldBe true
+    }
+
     test("priority held by the leaver passes to the next player still in the game (CR 800.4a)") {
         val (base, players) = initGame(4)
         // Give players[1] priority, then mark them lost (priority is still on them at this point).
@@ -372,7 +468,7 @@ class LeaveTheGameTest : FunSpec({
 
         val afterLeave = PlayerLeavesGameProcessor.process(
             zones,
-            state, players[1], GameEndReason.CONCESSION
+            state, players[1], GameEndReason.CONCESSION, finish
         ).newState
         afterLeave.priorityPlayerId shouldBe players[2]
     }
@@ -404,10 +500,7 @@ class LeaveTheGameTest : FunSpec({
 
     /** Pause the game on a yes/no decision addressed to [chooser], with a resolution frame beneath it. */
     fun GameState.pausedOn(chooser: EntityId): GameState = pushContinuation(
-        EffectContinuation(
-            remainingEffects = emptyList(),
-            effectContext = EffectContext(sourceId = null, controllerId = chooser)
-        )
+        EffectProgram.queued(emptyList(), EffectContext(sourceId = null, controllerId = chooser), origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null))
     ).suspendForDecision(
         question = { id -> YesNoDecision(
             id = id,
@@ -461,8 +554,160 @@ class LeaveTheGameTest : FunSpec({
         }.updateEntity(players[1]) {
             it.with(PlayerLostComponent(com.wingedsheep.engine.state.components.player.LossReason.CONCESSION))
         }
-        val afterLeave = PlayerLeavesGameProcessor.process(zones, state, players[1], GameEndReason.CONCESSION).newState
+        val afterLeave = PlayerLeavesGameProcessor.process(zones, state, players[1], GameEndReason.CONCESSION, finish).newState
         afterLeave.pendingDecision.shouldBeNull()
         afterLeave.priorityPlayerId shouldBe players[2]
+    }
+
+    // --- A surviving player's resolution whose chooser leaves mid-resolution -------------------
+    //
+    // The leaver's decision is abandoned and the resolution ends early, but its final part still
+    // happens (CR 608.2n): the surviving player's spell or ability leaves the stack and reports
+    // resolving exactly once, rather than staying there to resolve a second time.
+
+    // "When you cast this spell, target player discards a card." The discarding player picks.
+    val castDiscarder = card("Leave Test Cast Discarder") {
+        manaCost = "{1}"
+        typeLine = "Creature — Test"
+        power = 1
+        toughness = 1
+        triggeredAbility {
+            trigger = Triggers.self.isCast()
+            val victim = target(Targets.Player)
+            effect = Patterns.Hand.discardCards(1, victim)
+        }
+    }
+
+    // "Whenever a player casts a spell, target player loses 1 life." Its controller picks the target.
+    val targetedCastWatcher = card("Leave Test Targeted Cast Watcher") {
+        manaCost = "{1}"
+        typeLine = "Enchantment"
+        triggeredAbility {
+            trigger = Triggers.anyPlayer.casts()
+            val victim = target(Targets.Player)
+            effect = com.wingedsheep.sdk.dsl.Effects.LoseLife(1, victim)
+        }
+    }
+
+    // "Whenever a player casts a spell, you gain 1 life."
+    val castWatcher = card("Leave Test Cast Watcher") {
+        manaCost = "{1}"
+        typeLine = "Enchantment"
+        triggeredAbility {
+            trigger = Triggers.anyPlayer.casts()
+            effect = com.wingedsheep.sdk.dsl.Effects.GainLife(1)
+        }
+    }
+
+    fun threePlayerDriver(): Pair<GameTestDriver, List<EntityId>> {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + castDiscarder + targetedCastWatcher + castWatcher)
+        val players = driver.initMultiplayer(List(3) { Deck.of("Swamp" to 40) })
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        return driver to players
+    }
+
+    test("a surviving controller's ability finishes once when its chooser concedes mid-resolution") {
+        val (d, players) = threePlayerDriver()
+        val (a, _, c) = players
+        d.activePlayer shouldBe a
+
+        val spell = d.putCardInHand(a, "Leave Test Cast Discarder")
+        d.giveColorlessMana(a, 1)
+        d.castSpell(a, spell).error shouldBe null
+        // The cast trigger goes on the stack targeting C.
+        d.submitTargetSelection(a, listOf(c))
+        val trigger = d.state.stack.last()
+        d.state.getEntity(trigger)?.has<TriggeredAbilityOnStackComponent>() shouldBe true
+
+        // Everyone passes; the trigger resolves and waits on C's choice of discard.
+        while (d.pendingDecision == null) d.passPriority(d.state.priorityPlayerId!!).error shouldBe null
+        (d.pendingDecision as SelectCardsDecision).playerId shouldBe c
+        d.state.stack shouldContainExactly listOf(spell, trigger)
+
+        d.submit(Concede(c)).outcome shouldBe Outcome.Done
+        d.pendingDecision.shouldBeNull()
+        // The trigger left the stack as it finished; the spell under it is untouched.
+        d.state.stack shouldContainExactly listOf(spell)
+        d.state.hasEntity(trigger) shouldBe false
+        d.state.continuationStack shouldContainExactly emptyList()
+        d.state.priorityPlayerId shouldBe a
+
+        // Resolve what's left: the trigger never resolves a second time.
+        var guard = 0
+        while (guard++ < 20 && d.state.stack.isNotEmpty()) d.passPriority(d.state.priorityPlayerId!!)
+        d.state.stack shouldContainExactly emptyList()
+        d.events.count { it is AbilityResolvedEvent && it.sourceId == spell } shouldBe 1
+    }
+
+    test("a surviving caster's spell finishes once when its chooser concedes mid-resolution") {
+        val (d, players) = threePlayerDriver()
+        val (a, _, c) = players
+
+        val mindRot = d.putCardInHand(a, "Mind Rot")
+        d.giveMana(a, Color.BLACK, 1)
+        d.giveColorlessMana(a, 2)
+        d.castSpellWithTargets(a, mindRot, listOf(ChosenTarget.Player(c))).error shouldBe null
+
+        while (d.pendingDecision == null) d.passPriority(d.state.priorityPlayerId!!).error shouldBe null
+        (d.pendingDecision as SelectCardsDecision).playerId shouldBe c
+        d.state.stack shouldContainExactly listOf(mindRot)
+
+        d.submit(Concede(c)).outcome shouldBe Outcome.Done
+        d.pendingDecision.shouldBeNull()
+        // Mind Rot finished resolving: off the stack and into its owner's graveyard.
+        d.state.stack shouldContainExactly emptyList()
+        (mindRot in d.getGraveyard(a)).shouldBeTrue()
+        d.state.continuationStack shouldContainExactly emptyList()
+        d.events.count { it is ResolvedEvent && it.entityId == mindRot } shouldBe 1
+    }
+
+    test("an ability whose controller is also its chooser leaves with them and never reports resolving") {
+        val (d, players) = threePlayerDriver()
+        val (a, _, _) = players
+
+        val spell = d.putCardInHand(a, "Leave Test Cast Discarder")
+        d.giveColorlessMana(a, 1)
+        d.castSpell(a, spell).error shouldBe null
+        d.submitTargetSelection(a, listOf(a))
+        val trigger = d.state.stack.last()
+
+        while (d.pendingDecision == null) d.passPriority(d.state.priorityPlayerId!!).error shouldBe null
+        (d.pendingDecision as SelectCardsDecision).playerId shouldBe a
+        d.state.stack shouldContainExactly listOf(spell, trigger)
+
+        d.submit(Concede(a)).outcome shouldBe Outcome.Done
+        d.pendingDecision.shouldBeNull()
+        // The trigger left the game with its controller (CR 800.4a): its finish frame is dropped,
+        // so it never reports resolving.
+        d.state.hasEntity(trigger) shouldBe false
+        d.state.stack shouldContainExactly emptyList()
+        d.state.continuationStack shouldContainExactly emptyList()
+        d.events.none { it is AbilityResolvedEvent && it.sourceId == spell }.shouldBeTrue()
+        d.state.priorityPlayerId shouldNotBe a
+    }
+
+    test("a surviving player's trigger waiting behind the leaver's target choice still goes on the stack") {
+        val (d, players) = threePlayerDriver()
+        val (a, b, c) = players
+        d.putPermanentOnBattlefield(b, "Leave Test Targeted Cast Watcher")
+        d.putPermanentOnBattlefield(c, "Leave Test Cast Watcher")
+
+        val mindRot = d.putCardInHand(a, "Mind Rot")
+        d.giveMana(a, Color.BLACK, 1)
+        d.giveColorlessMana(a, 2)
+        d.castSpellWithTargets(a, mindRot, listOf(ChosenTarget.Player(c))).error shouldBe null
+
+        // APNAP: B's targeted trigger is placed first and waits on B's target; C's waits behind it.
+        d.pendingDecision?.playerId shouldBe b
+
+        d.submit(Concede(b)).outcome shouldBe Outcome.Done
+        d.pendingDecision.shouldBeNull()
+        val triggerControllers = d.state.stack.mapNotNull {
+            d.state.getEntity(it)?.get<TriggeredAbilityOnStackComponent>()?.controllerId
+        }
+        triggerControllers shouldContainExactly listOf(c)
+        d.state.stack.first() shouldBe mindRot
+        d.state.pendingTriggers shouldContainExactly emptyList()
     }
 })

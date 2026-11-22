@@ -13,7 +13,7 @@ val RunedServitorReprint = Printing(
     collectorNumber = "203",
     scryfallId = "0c79d7f3-2857-41cb-bb0d-ffaf9cf12fd1",
     artist = "Mike Bierek",
-    imageUri = "https://cards.scryfall.io/normal/front/0/c/0c79d7f3-2857-41cb-bb0d-ffaf9cf12fd1.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/0/c/0c79d7f3-2857-41cb-bb0d-ffaf9cf12fd1.jpg?1783939336",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

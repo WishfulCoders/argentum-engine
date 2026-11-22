@@ -236,6 +236,17 @@ class StateProjector(val state: GameState) {
 This effectively solves the hardest logic problem in the engine while keeping the core `GameAction` logic pure and
 simple.
 
+### Where the timestamps come from (Rule 613.7)
+
+When no dependency decides, effects apply in timestamp order. A floating effect takes
+`state.timestamp` when it is created (613.7b). A static ability's effect takes its permanent's
+`TimestampComponent` (613.7a), stamped on battlefield entry by `PermanentEntryTracker.record`
+(613.7d) and renewed by `LayerTimestamps.renew` when an Aura or Equipment becomes attached (613.7e),
+when the permanent turns face up or face down (613.7f), and when it transforms (613.7g). So an older
+Confiscate loses its layer-2 fight against a later "each player gains control of all permanents they
+own" (The Fall of Lord Konda), and a later Confiscate beats an earlier Act of Treason. A static
+ability granted by an effect takes the later of its holder's timestamp and the grant's.
+
 ### Affects-filter dependencies inside Layer 4
 
 `EffectSorter.dependsOn` compares the two effects' **already-resolved** `affectedEntities` sets, which
@@ -257,6 +268,22 @@ Phase 2 is the dependency: such an effect applies after every Layer 4 type chang
 timestamp, which is what CR 613.8a requires. A CR 613.6 locked group keeps its frozen set through the
 re-resolve (`lockAffected` short-circuits), and the extra work is one filter re-resolution for the small
 subset of Layer 4 effects that read creature status.
+
+### Keyword-filter dependencies inside Layer 6
+
+The same blind spot exists in Layer 6 for an effect whose affected set **reads keywords** — "creatures with
+flying have vigilance". A Jump that resolves after it grants flying in the same layer, but the grant's set was
+resolved before Jump applied. `EffectSorter.dependsOn` therefore makes such an effect (its filter's
+`HasKeyword`/`NotKeyword` predicates, read through `And`/`Or`/`Not` by `keywordsReadBy`) depend on every
+same-layer `GrantKeyword`/`RemoveKeyword` of one of those keywords, and on `RemoveAllAbilities`,
+`GrantLandwalkFromChosen` and `GrantKeywordsOfCards`; `StateProjector` re-resolves the keyword-reading set
+where it applies (a CR 613.6 locked group keeps its frozen set).
+
+"Can't attack" and "can't block" are not characteristics but rules effects, applied after all other
+continuous effects (CR 613.11), so `StateProjector` defers `SetCantAttack` and `SetCantBlock` past Layer 6 and
+re-resolves their keyword-reading sets there: Moat's "creatures without flying can't attack" sees the flying
+a newer Jump granted. Layer 7 re-resolves keyword-reading filters too, so "creatures with flying get +1/+1"
+sees the flying Layer 6 settled.
 
 ## 6. Cross-Layer Grouping (Rule 613.6)
 

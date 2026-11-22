@@ -1585,62 +1585,42 @@
     "oracleText": "As an additional cost to cast this spell, discard a card or pay 3 life.\nDestroy target creature or planeswalker.",
     "script": {
         "spellEffect": {
-            "type": "Modal",
-            "modes": [
-                {
-                    "effect": {
-                        "type": "MoveToZone",
-                        "target": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        },
-                        "destination": "Graveyard",
-                        "byDestruction": true
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetCreatureOrPlaneswalker",
+                "id": "t0"
+            }
+        ],
+        "additionalCosts": [
+            {
+                "type": "ChoiceCost",
+                "options": [
+                    {
+                        "type": "AdditionalAtom",
+                        "atom": "AtomDiscard"
                     },
-                    "targetRequirements": [
-                        {
-                            "type": "TargetCreatureOrPlaneswalker",
-                            "id": "t0"
-                        }
-                    ],
-                    "description": "Discard a card — destroy target creature or planeswalker",
-                    "additionalCosts": [
-                        {
-                            "type": "AdditionalAtom",
-                            "atom": "AtomDiscard"
-                        }
-                    ]
-                },
-                {
-                    "effect": {
-                        "type": "MoveToZone",
-                        "target": {
-                            "type": "BoundVariable",
-                            "name": "t1"
-                        },
-                        "destination": "Graveyard",
-                        "byDestruction": true
-                    },
-                    "targetRequirements": [
-                        {
-                            "type": "TargetCreatureOrPlaneswalker",
-                            "id": "t1"
-                        }
-                    ],
-                    "description": "Pay 3 life — destroy target creature or planeswalker",
-                    "additionalCosts": [
-                        {
-                            "type": "AdditionalAtom",
-                            "atom": {
-                                "type": "AtomPayLife",
+                    {
+                        "type": "AdditionalAtom",
+                        "atom": {
+                            "type": "AtomPayLife",
+                            "amount": {
+                                "type": "Fixed",
                                 "amount": 3
                             }
                         }
-                    ]
-                }
-            ],
-            "countsAsModalSpell": false
-        }
+                    }
+                ],
+                "choiceSlot": "ADDITIONAL_COST_BRANCH"
+            }
+        ]
     },
     "metadata": {
         "collectorNumber": "91",
@@ -2091,7 +2071,10 @@
                                 "type": "MoveToZone",
                                 "target": "Self",
                                 "destination": "Library",
-                                "positionFromTop": 2
+                                "positionFromTop": {
+                                    "type": "Fixed",
+                                    "amount": 2
+                                }
                             }
                         ]
                     },
@@ -2405,7 +2388,8 @@
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Treasure"
-                            }
+                            },
+                            "description": "Create a Treasure token"
                         },
                         {
                             "effect": {
@@ -3570,7 +3554,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic Plains card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -3894,7 +3880,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic land or land Cave card to put on top of your library",
+                                "selectedLabel": "Put on top of your library"
                             },
                             "ShuffleLibrary",
                             {
@@ -4000,7 +3988,8 @@
                             },
                             "id": "t0"
                         }
-                    ]
+                    ],
+                    "description": "Counter target spell unless its controller pays {4}"
                 }
             ]
         }
@@ -4328,7 +4317,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Cave land card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -4626,7 +4617,12 @@
                                 "filter": {
                                     "cardPredicates": [
                                         "IsArtifact",
-                                        "ManaValueEqualsX"
+                                        {
+                                            "type": "CompareNumericProperty",
+                                            "property": "MANA_VALUE",
+                                            "operator": "EQ",
+                                            "amount": "XValue"
+                                        }
                                     ]
                                 }
                             },
@@ -5065,7 +5061,9 @@
                                                 "excludeSelf": true
                                             }
                                         },
-                                        "storeAs": "target0"
+                                        "storeAs": "target0",
+                                        "nonTargeting": true,
+                                        "prompt": "Choose another creature you control for this creature to copy"
                                     },
                                     {
                                         "type": "EachPermanentBecomesCopyOfTarget",
@@ -5606,7 +5604,9 @@
                                                 }
                                             }
                                         },
-                                        "storeAs": "target0"
+                                        "storeAs": "target0",
+                                        "nonTargeting": true,
+                                        "prompt": "Choose an artifact other than Dire Blunderbuss to sacrifice"
                                     },
                                     {
                                         "type": "SacrificeTarget",
@@ -6636,7 +6636,12 @@
                             "baseFilter": {
                                 "cardPredicates": [
                                     "IsArtifact",
-                                    "ManaValueAtMostX"
+                                    {
+                                        "type": "CompareNumericProperty",
+                                        "property": "MANA_VALUE",
+                                        "operator": "LTE",
+                                        "amount": "XValue"
+                                    }
                                 ],
                                 "controllerPredicate": "OwnedByYou"
                             },
@@ -6804,7 +6809,10 @@
                                 "type": "CostAtomWrapper",
                                 "atom": {
                                     "type": "AtomPayLife",
-                                    "amount": 1
+                                    "amount": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
                                 }
                             }
                         ]
@@ -7167,7 +7175,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a basic Forest card to put onto the battlefield tapped",
+                                "selectedLabel": "Put onto the battlefield tapped"
                             },
                             {
                                 "type": "MoveCollection",
@@ -7252,7 +7262,9 @@
                                         "excludeSelf": true
                                     }
                                 },
-                                "storeAs": "target0"
+                                "storeAs": "target0",
+                                "nonTargeting": true,
+                                "prompt": "Choose another creature or artifact to sacrifice"
                             },
                             {
                                 "type": "SacrificeTarget",
@@ -8396,7 +8408,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put into your hand",
+                            "selectedLabel": "Put into your hand"
                         },
                         {
                             "type": "MoveCollection",
@@ -8510,7 +8524,9 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found"
+                                "storeSelected": "found",
+                                "prompt": "Search your library for a Dinosaur creature card to put into your hand",
+                                "selectedLabel": "Put into your hand"
                             },
                             {
                                 "type": "MoveCollection",
@@ -9450,44 +9466,53 @@
                         }
                     },
                     "then": {
-                        "type": "DealDamage",
-                        "amount": {
-                            "type": "EntityProperty",
-                            "entity": {
+                        "type": "ReflexiveTrigger",
+                        "action": {
+                            "type": "Composite",
+                            "effects": []
+                        },
+                        "optional": false,
+                        "reflexiveEffect": {
+                            "type": "DealDamage",
+                            "amount": {
+                                "type": "EntityProperty",
+                                "entity": {
+                                    "type": "BoundVariable",
+                                    "name": "t0"
+                                },
+                                "numericProperty": "Power"
+                            },
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "t1"
+                            },
+                            "damageSource": {
                                 "type": "BoundVariable",
                                 "name": "t0"
-                            },
-                            "numericProperty": "Power"
-                        },
-                        "target": {
-                            "type": "BoundVariable",
-                            "name": "t1"
-                        },
-                        "damageSource": {
-                            "type": "BoundVariable",
-                            "name": "t0"
-                        }
-                    }
-                },
-                "targetRequirement": {
-                    "type": "TargetObject",
-                    "filter": {
-                        "baseFilter": "creature Dinosaur ctrl:you"
-                    },
-                    "id": "t0"
-                },
-                "additionalTargetRequirements": [
-                    {
-                        "type": "TargetOther",
-                        "baseRequirement": {
-                            "type": "TargetObject",
-                            "filter": {
-                                "baseFilter": "creature"
                             }
                         },
-                        "id": "t1"
+                        "reflexiveTargetRequirements": [
+                            {
+                                "type": "TargetObject",
+                                "filter": {
+                                    "baseFilter": "creature Dinosaur ctrl:you"
+                                },
+                                "id": "t0"
+                            },
+                            {
+                                "type": "TargetOther",
+                                "baseRequirement": {
+                                    "type": "TargetObject",
+                                    "filter": {
+                                        "baseFilter": "creature"
+                                    }
+                                },
+                                "id": "t1"
+                            }
+                        ],
+                        "descriptionOverride": "target Dinosaur you control deals damage equal to its power to another target creature."
                     }
-                ]
+                }
             }
         ]
     },
@@ -13813,8 +13838,12 @@
                     "imageUri": "https://cards.scryfall.io/normal/front/0/4/0484390e-1167-4407-84de-7ddc726e8926.jpg?1783913608"
                 },
                 "triggerRestriction": {
-                    "type": "PlayerHasMostLife",
-                    "player": "DefendingPlayer"
+                    "type": "PlayerHasMost",
+                    "player": "DefendingPlayer",
+                    "amount": {
+                        "type": "LifeTotal",
+                        "player": "You"
+                    }
                 }
             },
             {
@@ -13841,8 +13870,12 @@
                     ]
                 },
                 "triggerRestriction": {
-                    "type": "PlayerHasMostLife",
-                    "player": "You"
+                    "type": "PlayerHasMost",
+                    "player": "You",
+                    "amount": {
+                        "type": "LifeTotal",
+                        "player": "You"
+                    }
                 }
             }
         ]
@@ -13957,7 +13990,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -15851,7 +15886,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for a basic land or land Cave card to put onto the battlefield tapped",
+                            "selectedLabel": "Put onto the battlefield tapped"
                         },
                         {
                             "type": "MoveCollection",
@@ -17728,7 +17765,9 @@
                                             }
                                         }
                                     },
-                                    "storeAs": "target0"
+                                    "storeAs": "target0",
+                                    "nonTargeting": true,
+                                    "prompt": "Sacrifice Sunfire Torch"
                                 },
                                 {
                                     "type": "SacrificeTarget",
@@ -21026,8 +21065,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 1
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 1
+                                    }
                                 }
                             },
                             "then": {
@@ -21043,8 +21091,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 2
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 2
+                                    }
                                 }
                             },
                             "then": {
@@ -21064,8 +21121,17 @@
                             "gate": {
                                 "type": "Gate.WhenCondition",
                                 "condition": {
-                                    "type": "SourceAbilityResolvedNTimesThisTurn",
-                                    "count": 3
+                                    "type": "Compare",
+                                    "left": {
+                                        "type": "EntityProperty",
+                                        "entity": "Self",
+                                        "numericProperty": "AbilityResolutionsThisTurn"
+                                    },
+                                    "operator": "EQ",
+                                    "right": {
+                                        "type": "Fixed",
+                                        "amount": 3
+                                    }
                                 }
                             },
                             "then": {
@@ -21188,7 +21254,9 @@
                                                     "amount": 1
                                                 }
                                             },
-                                            "storeSelected": "found"
+                                            "storeSelected": "found",
+                                            "prompt": "Search your library for a basic land card to put onto the battlefield",
+                                            "selectedLabel": "Put onto the battlefield"
                                         },
                                         {
                                             "type": "MoveCollection",

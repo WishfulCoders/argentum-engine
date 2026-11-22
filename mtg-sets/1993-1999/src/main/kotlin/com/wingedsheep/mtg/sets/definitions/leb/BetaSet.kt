@@ -28,7 +28,6 @@ object BetaSet : MtgSet {
     override val code = "LEB"
     override val displayName = "Limited Edition Beta"
     override val releaseDate = "1993-10-04"
-    override val incomplete = true
 
     override val cards: List<CardDefinition> by lazy {
         CardDiscovery.findIn(CARDS_PACKAGE)

@@ -99,7 +99,7 @@ class ScopedManaChoicePlanningTest : FunSpec({
         result.state.remainingManaObligations(d.activePlayer!!) shouldBe false
         result.state.continuationStack.filterIsInstance<ScopedManaProductionContinuation>() shouldBe emptyList()
         result.events.filterIsInstance<AbilityActivatedEvent>().size shouldBe 1
-        result.events.filterIsInstance<LandTappedForManaEvent>().size shouldBe 1
+        result.events.filterIsInstance<PermanentTappedForManaEvent>().size shouldBe 1
         result.events.filterIsInstance<ManaAddedEvent>().single { it.sourceName == producer.name }.total shouldBe ManaCost.parse(cost).cmc
     }
 
@@ -169,7 +169,7 @@ class ScopedManaChoicePlanningTest : FunSpec({
         original.obligationIds shouldBe plan.state.activeManaSpendingScope(p)!!.pendingIds
         pool(plan.state, d).blue shouldBe 1
         plan.events.filterIsInstance<ManaAddedEvent>().size shouldBe 2
-        plan.events.filterIsInstance<LandTappedForManaEvent>().size shouldBe 1
+        plan.events.filterIsInstance<PermanentTappedForManaEvent>().size shouldBe 1
         val paid = pay(d, initial, "{G}{U}")
         paid.error shouldBe null
         paid.state.remainingManaObligations(p) shouldBe false
@@ -230,8 +230,8 @@ class ScopedManaChoicePlanningTest : FunSpec({
     test("choice resumption stops before unrelated caller effects") {
         val d = driver(); val p = d.activePlayer!!
         d.putLandOnBattlefield(p, pips.name)
-        val caller = EffectContinuation(listOf(Effects.GainLife(7), Effects.May(Effects.GainLife(1))),
-            EffectContext(sourceId = null, controllerId = p))
+        val caller = EffectProgram.queued(listOf(Effects.GainLife(7), Effects.May(Effects.GainLife(1))),
+            EffectContext(sourceId = null, controllerId = p), origin = com.wingedsheep.engine.core.ProgramOrigin.BuiltBy("Test", null))
         val initial = scoped(d).pushContinuation(caller)
         val plan = (ScopedManaActivationPlanner(d.services).plan(initial, p, ManaCost.parse("{W}{U}"), context) as ScopedManaPlanResult.Found).execution
         plan.state.continuationStack.last() shouldBe caller

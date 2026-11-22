@@ -8,24 +8,18 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 
 /**
- * Skullclamp
- * {1}
- * Artifact — Equipment
+ * Skullclamp — Darksteel #140 (canonical printing)
+ * {1} · Artifact — Equipment
+ *
  * Equipped creature gets +1/-1.
  * Whenever equipped creature dies, draw two cards.
  * Equip {1}
- *
- * The draw is the Equipment controller's ("you"). A 1-toughness creature dies to the state-based
- * check the moment Skullclamp attaches, and the dies trigger still fires: it looks back at the
- * creature as it last existed on the battlefield, equipped (CR 603.10a).
  */
 val Skullclamp = card("Skullclamp") {
     manaCost = "{1}"
     colorIdentity = ""
     typeLine = "Artifact — Equipment"
-    oracleText = "Equipped creature gets +1/-1.\n" +
-        "Whenever equipped creature dies, draw two cards.\n" +
-        "Equip {1}"
+    oracleText = "Equipped creature gets +1/-1.\nWhenever equipped creature dies, draw two cards.\nEquip {1}"
 
     staticAbility {
         ability = ModifyStats(+1, -1, Filters.EquippedCreature)

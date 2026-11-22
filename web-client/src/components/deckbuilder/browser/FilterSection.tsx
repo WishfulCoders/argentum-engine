@@ -1,20 +1,30 @@
 /**
  * Menu-style filter panel over the catalogue query: set picker, colour chips (with an
- * includes / exactly / at-most mode), type + subtype + rarity + keyword chips, and numeric
- * range rows for mana value / power / toughness.
+ * includes / exactly / at-most mode), type + subtype + rarity + keyword chips, mana-value chips
+ * and power / toughness ranges.
  *
  * Every control round-trips through the raw query string (via the `cardFilter` chip helpers),
- * so the panel and the free-text search bar always agree. When the query uses `or` / parens —
- * features the flat chip helpers can't rewrite without mangling what the user authored — the
- * panel goes read-only (`advanced`).
+ * so the panel and the free-text search bar always agree. The helpers work on the query's
+ * top-level terms as the shared parser reads them, so the panel stays usable whatever was typed:
+ * with `or` at the top, a chip brackets the query and narrows all of it.
  *
- * Shared between the deckbuilder page (left rail) and the scenario builder's card browser.
+ * Shared between the deckbuilder page (left rail), the card browser, the cube builder and the
+ * scenario builder's card browser.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ManaSymbol } from '@/components/ui/ManaSymbols'
 import { SetIcon } from '@/components/ui/SetIcon'
-import { addToken, hasToken, removeToken, toggleToken, type CardSummary } from '../cardFilter'
+import {
+  addToken,
+  appendTerm,
+  hasToken,
+  queryTerms,
+  removeTerms,
+  removeToken,
+  toggleToken,
+  type CardSummary,
+} from '../cardFilter'
 import styles from '../deckbuilder.module.css'
 import type { SetInfo } from './useCardCatalog'
 
@@ -36,7 +46,22 @@ const TYPE_TOKENS = [
   'Land',
 ]
 
-const RARITY_TOKENS = ['common', 'uncommon', 'rare', 'mythic']
+const RARITY_TOKENS: Array<{ value: string; dot: string }> = [
+  { value: 'common', dot: '#9a9a9a' },
+  { value: 'uncommon', dot: '#b8c7d1' },
+  { value: 'rare', dot: '#d9b450' },
+  { value: 'mythic', dot: '#e8662e' },
+]
+
+/** Mana-value chips; the last one is "7 or more". */
+const MANA_VALUES = [0, 1, 2, 3, 4, 5, 6, 7]
+const MV_TOP = 7
+
+const COLOR_MODE_HINT: Record<ColorOp, string> = {
+  ':': 'Cards with every colour you pick — and maybe others.',
+  '=': 'Cards with exactly the colours you pick.',
+  '<=': 'Cards you could play using only the colours you pick.',
+}
 
 // Evergreen keywords most commonly used as filters. Surface as chips; the rest
 // remain reachable via free-text `kw:` / `is:` tokens.
@@ -69,19 +94,11 @@ export function FilterSection({
   onQueryChange: (next: string) => void
   catalog: CardSummary[]
   setInfos: SetInfo[]
-  /**
-   * `true` when the query uses or / parens — features the flat chip helpers can't
-   * round-trip without rewriting expressions the user authored. We surface a hint
-   * banner and freeze chip toggles instead. The active-state detection still runs
-   * (chips stay visually inert because hasToken is whole-term and won't match
-   * anything inside parens), so the panel reads as "snapshot" rather than "stale".
-   */
+  /** `true` when the query uses or / brackets; the panel says its chips narrow all of it. */
   advanced: boolean
 }) {
-  const toggle = (token: string) => {
-    if (advanced) return
-    onQueryChange(toggleToken(query, token))
-  }
+  const toggle = (token: string) => onQueryChange(toggleToken(query, token))
+  const terms = useMemo(() => queryTerms(query), [query])
 
   // Numeric range filters parse current values out of the query so the boxes
   // round-trip with whatever the user typed.
@@ -111,19 +128,25 @@ export function FilterSection({
   }, [setInfos, catalog])
 
   const activeSet = useMemo(() => {
-    const m = query.match(/(?:^|\s)s:([^\s]+)/)
-    return m ? m[1]! : ''
-  }, [query])
+    for (const t of terms) {
+      const m = t.match(SET_TERM_RE)
+      if (m) return m[1]!.toUpperCase()
+    }
+    return ''
+  }, [terms])
 
   const onSetChange = (next: string) => {
-    const without = query.replace(/(?:^|\s)s:[^\s]+(?=\s|$)/g, '').trim()
-    onQueryChange(next ? (without ? `${without} s:${next}` : `s:${next}`) : without)
+    const without = removeTerms(query, (t) => SET_TERM_RE.test(t))
+    onQueryChange(next ? appendTerm(without, `s:${next}`) : without)
   }
 
   // Color mode is derived from the query so a directly typed `c=wu` immediately
   // re-selects the "Exactly" segment without a separate state to drift.
-  const colorOp = useMemo(() => detectColorOp(query), [query])
-  const colorLetters = useMemo(() => collectColorLetters(query), [query])
+  const colorOp = useMemo(() => detectColorOp(terms), [terms])
+  const colorLetters = useMemo(() => collectColorLetters(terms), [terms])
+
+  const keywordCount = KEYWORD_TOKENS.filter((k) => terms.includes(keywordToken(k))).length
+  const statCount = [powMin, powMax, touMin, touMax].filter((v) => v !== null).length
 
   const toggleColorLetter = (letter: string) => {
     const next = new Set(colorLetters)
@@ -137,11 +160,25 @@ export function FilterSection({
   }
 
   return (
-    <fieldset className={styles.filterFieldset} disabled={advanced}>
+    <fieldset className={styles.filterFieldset}>
+      <div className={styles.filterHeader}>
+        <h2 className={styles.filterTitle}>
+          Filters
+          {terms.length > 0 && <span className={styles.filterCount}>{terms.length}</span>}
+        </h2>
+        <button
+          type="button"
+          className={styles.filterClear}
+          onClick={() => onQueryChange('')}
+          disabled={query.trim().length === 0}
+        >
+          Clear all
+        </button>
+      </div>
       {advanced && (
-        <div className={styles.advancedBanner} role="status">
-          Advanced query — chips disabled. Edit the search bar directly.
-        </div>
+        <p className={styles.filterNote} role="status">
+          Your search uses <code>or</code> or brackets — filters picked here narrow all of it.
+        </p>
       )}
       {availableSets.length > 0 && (
         <section className={`${styles.section} ${styles.setPickerSection}`}>
@@ -154,19 +191,21 @@ export function FilterSection({
           <h2 className={styles.sectionLabel}>Colour</h2>
           <ColorModeSegmented op={colorOp} onChange={changeColorMode} />
         </div>
-        <div className={styles.filterRow}>
-          {COLOR_TOKENS.map(({ letter, label }) => {
+        <div className={styles.colorRow}>
+          {COLOR_TOKENS.map(({ letter, label, key }) => {
             const active = colorLetters.has(letter)
+            const name = key[0] + key.slice(1).toLowerCase()
             return (
               <button
                 key={letter}
                 className={`${styles.chip} ${styles.chipMana} ${active ? styles.chipActive : ''}`}
                 onClick={() => toggleColorLetter(letter)}
                 type="button"
-                aria-label={label}
-                title={label}
+                aria-label={name}
+                aria-pressed={active}
+                title={name}
               >
-                <ManaSymbol symbol={label} size={16} />
+                <ManaSymbol symbol={label} size={20} />
               </button>
             )
           })}
@@ -175,11 +214,13 @@ export function FilterSection({
             onClick={() => toggle('is:colorless')}
             type="button"
             aria-label="Colourless"
-            title="Colourless cards"
+            aria-pressed={hasToken(query, 'is:colorless')}
+            title="Colourless"
           >
-            <ManaSymbol symbol="C" size={16} />
+            <ManaSymbol symbol="C" size={20} />
           </button>
         </div>
+        <p className={styles.filterHint}>{COLOR_MODE_HINT[colorOp]}</p>
       </section>
 
       <section className={styles.section}>
@@ -194,6 +235,7 @@ export function FilterSection({
                 className={`${styles.chip} ${active ? styles.chipActive : ''}`}
                 onClick={() => toggle(token)}
                 type="button"
+                aria-pressed={active}
               >
                 {label}
               </button>
@@ -201,11 +243,8 @@ export function FilterSection({
           })}
           {(() => {
             // Legendary lives next to the type chips because it's the most common supertype
-            // filter players reach for (commander eligibility, "your commander said legendary
-            // matters", etc.). `is:legendary` resolves via supertypes — distinct from `t:` which
-            // matches across cardTypes/supertypes/subtypes by substring. The crown glyph (♛)
-            // is the same one the deck-row commander toggle uses, so the visual cue carries
-            // across the deckbuilder.
+            // filter players reach for. `is:legendary` resolves via supertypes. The crown glyph
+            // (♛) is the one the deck-row commander toggle uses, so the cue carries across.
             const token = 'is:legendary'
             const active = hasToken(query, token)
             return (
@@ -214,6 +253,7 @@ export function FilterSection({
                 className={`${styles.chip} ${active ? styles.chipActive : ''}`}
                 onClick={() => toggle(token)}
                 type="button"
+                aria-pressed={active}
               >
                 <span aria-hidden="true" style={{ marginRight: 4, color: '#d4a017' }}>♛</span>
                 Legendary
@@ -223,22 +263,24 @@ export function FilterSection({
         </div>
       </section>
 
-      <SubtypeSection query={query} onQueryChange={onQueryChange} catalog={catalog} />
+      <SubtypeSection query={query} terms={terms} onQueryChange={onQueryChange} catalog={catalog} />
 
       <section className={styles.section}>
         <h2 className={styles.sectionLabel}>Rarity</h2>
         <div className={styles.filterRow}>
-          {RARITY_TOKENS.map((label) => {
-            const token = `r:${label}`
+          {RARITY_TOKENS.map(({ value, dot }) => {
+            const token = `r:${value}`
             const active = hasToken(query, token)
             return (
               <button
-                key={label}
+                key={value}
                 className={`${styles.chip} ${active ? styles.chipActive : ''}`}
                 onClick={() => toggle(token)}
                 type="button"
+                aria-pressed={active}
               >
-                {label[0]!.toUpperCase() + label.slice(1)}
+                <span className={styles.rarityDot} style={{ background: dot }} aria-hidden="true" />
+                {value[0]!.toUpperCase() + value.slice(1)}
               </button>
             )
           })}
@@ -247,41 +289,50 @@ export function FilterSection({
 
       <section className={styles.section}>
         <h2 className={styles.sectionLabel}>Mana value</h2>
-        <RangeRow
-          token="cmc"
-          min={cmcMin}
-          max={cmcMax}
-          onMin={(v) => onQueryChange(setRange(query, 'cmc', v, cmcMax))}
-          onMax={(v) => onQueryChange(setRange(query, 'cmc', cmcMin, v))}
-        />
+        <div className={styles.mvRow} role="group" aria-label="Mana value">
+          {MANA_VALUES.map((v) => {
+            const active = mvSelected(cmcMin, cmcMax, v)
+            return (
+              <button
+                key={v}
+                type="button"
+                className={`${styles.mvChip} ${active ? styles.mvChipActive : ''}`}
+                aria-pressed={active}
+                aria-label={v === MV_TOP ? 'Mana value 7 or more' : `Mana value ${v}`}
+                onClick={() => {
+                  const [lo, hi] = mvClick(cmcMin, cmcMax, v)
+                  onQueryChange(setRange(query, 'cmc', lo, hi))
+                }}
+              >
+                {v === MV_TOP ? '7+' : v}
+              </button>
+            )
+          })}
+        </div>
+        <p className={styles.filterHint}>Click one value, then another to pick a range.</p>
       </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionLabel}>Power / Toughness</h2>
+      <CollapsibleSection title="Power / toughness" activeCount={statCount}>
         <RangeRow
-          token="pow"
-          label="Pow"
+          label="Power"
           min={powMin}
           max={powMax}
           onMin={(v) => onQueryChange(setRange(query, 'pow', v, powMax))}
           onMax={(v) => onQueryChange(setRange(query, 'pow', powMin, v))}
         />
         <RangeRow
-          token="tou"
-          label="Tou"
+          label="Toughness"
           min={touMin}
           max={touMax}
           onMin={(v) => onQueryChange(setRange(query, 'tou', v, touMax))}
           onMax={(v) => onQueryChange(setRange(query, 'tou', touMin, v))}
         />
-      </section>
+      </CollapsibleSection>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionLabel}>Keywords</h2>
+      <CollapsibleSection title="Keywords" activeCount={keywordCount}>
         <div className={styles.filterRow}>
           {KEYWORD_TOKENS.map((label) => {
-            const token = `kw:${label.toLowerCase().replace(/\s+/g, '_')}`
-            // KEYWORD enum names use underscores; the parser is case-insensitive.
+            const token = keywordToken(label)
             const active = hasToken(query, token)
             return (
               <button
@@ -289,24 +340,57 @@ export function FilterSection({
                 className={`${styles.chip} ${active ? styles.chipActive : ''}`}
                 onClick={() => toggle(token)}
                 type="button"
+                aria-pressed={active}
               >
                 {label}
               </button>
             )
           })}
         </div>
-      </section>
-
-      <section className={styles.section}>
-        <button
-          className={styles.linkButton}
-          onClick={() => onQueryChange('')}
-          disabled={query.length === 0}
-        >
-          Clear filters
-        </button>
-      </section>
+      </CollapsibleSection>
     </fieldset>
+  )
+}
+
+/** `kw:first_strike` for "First strike" — KEYWORD enum names use underscores. */
+function keywordToken(label: string): string {
+  return `kw:${label.toLowerCase().replace(/\s+/g, '_')}`
+}
+
+const SET_TERM_RE = /^(?:s|set|e|edition):([^\s]+)$/i
+
+/**
+ * A section that folds away when nothing in it is in use — the rarely-touched filters (power,
+ * keywords) don't push the common ones off screen. It opens by itself when one of its filters
+ * becomes active (say, typed into the search bar), and its header counts them while folded.
+ */
+function CollapsibleSection({
+  title,
+  activeCount,
+  children,
+}: {
+  title: string
+  activeCount: number
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(activeCount > 0)
+  useEffect(() => {
+    if (activeCount > 0) setOpen(true)
+  }, [activeCount])
+  return (
+    <section className={styles.section}>
+      <button
+        type="button"
+        className={styles.collapseHeader}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={open ? styles.collapseChevronOpen : styles.collapseChevron} aria-hidden="true" />
+        <span className={styles.sectionLabel}>{title}</span>
+        {activeCount > 0 && <span className={styles.filterCount}>{activeCount}</span>}
+      </button>
+      {open && children}
+    </section>
   )
 }
 
@@ -599,10 +683,12 @@ function SetCombobox({
 
 function SubtypeSection({
   query,
+  terms,
   onQueryChange,
   catalog,
 }: {
   query: string
+  terms: string[]
   onQueryChange: (next: string) => void
   catalog: CardSummary[]
 }) {
@@ -620,17 +706,15 @@ function SubtypeSection({
   const activeSubtypes = useMemo(() => {
     if (allSubtypes.length === 0) return [] as Array<{ token: string; label: string }>
     const subSet = new Set(allSubtypes.map((s) => s.toLowerCase()))
-    const tokens = query.match(/(?:^|\s)(-?t:(?:"[^"]+"|[^\s]+))/g) ?? []
     const out: Array<{ token: string; label: string }> = []
-    for (const raw of tokens) {
-      const trimmed = raw.trim()
-      const m = trimmed.match(/^-?t:"?([^"]+?)"?$/)
-      if (m && subSet.has(m[1]!.toLowerCase())) {
-        out.push({ token: trimmed, label: m[1]! })
+    for (const term of terms) {
+      const m = term.match(/^(-?)t:"?([^"]+?)"?$/)
+      if (m && subSet.has(m[2]!.toLowerCase())) {
+        out.push({ token: term, label: m[1] ? `not ${m[2]}` : m[2]! })
       }
     }
     return out
-  }, [query, allSubtypes])
+  }, [terms, allSubtypes])
 
   const addSubtype = (raw: string) => {
     const trimmed = raw.trim()
@@ -654,9 +738,10 @@ function SubtypeSection({
               className={`${styles.chip} ${styles.chipActive}`}
               onClick={() => onQueryChange(removeToken(query, token))}
               type="button"
-              title="Click to remove"
+              title="Remove"
+              aria-label={`Remove ${label}`}
             >
-              {label} ✕
+              {label} <span aria-hidden="true">×</span>
             </button>
           ))}
         </div>
@@ -679,7 +764,8 @@ function SubtypeSection({
           const exact = allSubtypes.find((s) => s.toLowerCase() === input.trim().toLowerCase())
           if (exact) addSubtype(exact)
         }}
-        placeholder="Goblin, Wizard, Beast…"
+        placeholder="Type a tribe — Goblin, Wizard…"
+        aria-label="Add a subtype"
       />
       <datalist id="deckbuilder-subtypes">
         {allSubtypes.map((s) => (
@@ -706,7 +792,7 @@ function ColorModeSegmented({
   const options: Array<{ op: ColorOp; label: string; title: string }> = [
     { op: ':', label: 'Includes', title: 'Cards that include the chosen colour(s)' },
     { op: '=', label: 'Exactly', title: 'Cards whose colours are exactly the chosen set' },
-    { op: '<=', label: 'At most', title: 'Cards whose colours are a subset of the chosen set' },
+    { op: '<=', label: 'At most', title: 'Cards you could play using only the chosen colours' },
   ]
   return (
     <div className={styles.modeSegmented} role="group" aria-label="Colour comparison mode">
@@ -714,6 +800,7 @@ function ColorModeSegmented({
         <button
           key={opt.op}
           className={op === opt.op ? styles.modeButtonActive : styles.modeButton}
+          aria-pressed={op === opt.op}
           onClick={() => onChange(opt.op)}
           title={opt.title}
           type="button"
@@ -725,37 +812,69 @@ function ColorModeSegmented({
   )
 }
 
-const C_TOKEN_RE = /(?:^|\s)c(<=|=|:)([wubrg]+)(?=\s|$)/gi
+const COLOR_TERM_RE = /^c(<=|=|:)([wubrg]+)$/i
 
-function detectColorOp(query: string): ColorOp {
-  C_TOKEN_RE.lastIndex = 0
-  const match = C_TOKEN_RE.exec(query)
-  return ((match?.[1] as ColorOp) ?? ':')
+function detectColorOp(terms: string[]): ColorOp {
+  for (const t of terms) {
+    const m = t.match(COLOR_TERM_RE)
+    if (m) return m[1] as ColorOp
+  }
+  return ':'
 }
 
-function collectColorLetters(query: string): Set<string> {
+function collectColorLetters(terms: string[]): Set<string> {
   const out = new Set<string>()
-  C_TOKEN_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = C_TOKEN_RE.exec(query)) !== null) {
-    for (const ch of m[2]!.toLowerCase()) out.add(ch)
+  for (const t of terms) {
+    const m = t.match(COLOR_TERM_RE)
+    if (m) for (const ch of m[2]!.toLowerCase()) out.add(ch)
   }
   return out
 }
 
 function rewriteColorTokens(query: string, op: ColorOp, letters: Set<string>): string {
-  // Strip every existing colour token regardless of operator so we don't
-  // leave stale `c:X` behind when switching to exactly/at-most.
-  const cleaned = query.replace(/(?:^|\s)c(?:<=|=|:)[wubrgWUBRG]+(?=\s|$)/g, '').trim()
-  if (letters.size === 0) return cleaned
+  // Strip every existing colour term regardless of operator so we don't leave a stale
+  // `c:X` behind when switching to exactly / at most.
+  let next = removeTerms(query, (t) => COLOR_TERM_RE.test(t))
+  if (letters.size === 0) return next
   const sorted = [...letters].sort().join('')
   if (op === ':') {
-    // Per-letter tokens — "must contain each chosen colour" reads cleanly
-    // and stays compatible with the existing chip-toggle UX.
-    const tokens = [...sorted].map((l) => `c:${l}`).join(' ')
-    return cleaned ? `${cleaned} ${tokens}` : tokens
+    // Per-letter terms — "must contain each chosen colour" reads cleanly.
+    for (const l of sorted) next = appendTerm(next, `c:${l}`)
+    return next
   }
-  return cleaned ? `${cleaned} c${op}${sorted}` : `c${op}${sorted}`
+  return appendTerm(next, `c${op}${sorted}`)
+}
+
+/** Whether mana-value chip [v] (7 = "7+") lies in the selected range. */
+function mvSelected(min: number | null, max: number | null, v: number): boolean {
+  if (min === null && max === null) return false
+  const lo = min ?? 0
+  const hi = max ?? Infinity
+  return v === MV_TOP ? hi >= MV_TOP : lo <= v && v <= hi
+}
+
+/**
+ * The range after clicking mana-value chip [v]: an empty selection becomes that value; a value
+ * outside the range stretches it; an end of a wider range shrinks it; the lone selected value
+ * clears it; a value inside narrows to just that one.
+ */
+export function mvClick(min: number | null, max: number | null, v: number): [number | null, number | null] {
+  const top = v === MV_TOP
+  if (min === null && max === null) return top ? [MV_TOP, null] : [v, v]
+  const lo = min ?? 0
+  const hi = max ?? Infinity
+  const single = top ? lo === MV_TOP && hi === Infinity : lo === v && hi === v
+  if (single) return [null, null]
+  const inside = top ? hi >= MV_TOP : lo <= v && v <= hi
+  if (!inside) {
+    const nlo = Math.min(lo, top ? MV_TOP : v)
+    const nhi = top || hi === Infinity ? null : Math.max(hi, v)
+    return [nlo === 0 ? null : nlo, nhi]
+  }
+  if (top) return [lo === 0 ? null : lo, MV_TOP - 1]
+  if (v === lo) return [v + 1, hi === Infinity ? null : hi]
+  if (v === hi) return [lo === 0 ? null : lo, v - 1]
+  return [v, v]
 }
 
 function RangeRow({
@@ -765,32 +884,36 @@ function RangeRow({
   onMin,
   onMax,
 }: {
-  token: string
-  label?: string
+  label: string
   min: number | null
   max: number | null
   onMin: (v: string) => void
   onMax: (v: string) => void
 }) {
   return (
-    <div className={styles.numericRow}>
-      {label && <span style={{ minWidth: 32 }}>{label}</span>}
-      <span>min</span>
+    <div className={styles.rangeRow}>
+      <span className={styles.rangeLabel}>{label}</span>
       <input
         type="number"
+        inputMode="numeric"
         min={0}
         max={20}
         className={styles.numericInput}
         value={min ?? ''}
+        placeholder="any"
+        aria-label={`${label} at least`}
         onChange={(e) => onMin(e.target.value)}
       />
-      <span>max</span>
+      <span aria-hidden="true">to</span>
       <input
         type="number"
+        inputMode="numeric"
         min={0}
         max={20}
         className={styles.numericInput}
         value={max ?? ''}
+        placeholder="any"
+        aria-label={`${label} at most`}
         onChange={(e) => onMax(e.target.value)}
       />
     </div>
@@ -800,33 +923,49 @@ function RangeRow({
 // ---------------------------------------------------------------------------
 // Range helpers (numeric inputs ↔ query string)
 //
-// Manipulate `<key>>=N` and `<key><=N` tokens directly so the menu and the
-// raw query string stay in sync. Generic over key (cmc, pow, tou).
+// Read and write `<key>>=N`, `<key><=N` and `<key>=N` terms so the panel and the raw query
+// stay in sync. Typed aliases (`mv<=2`, `power>=4`) count too.
 // ---------------------------------------------------------------------------
 
+const RANGE_ALIASES: Record<string, string> = {
+  cmc: 'cmc|mv|manavalue',
+  pow: 'pow|power',
+  tou: 'tou|toughness',
+}
+
+function rangeTermRe(key: string): RegExp {
+  return new RegExp(`^(?:${RANGE_ALIASES[key] ?? key})(>=|<=|=|:)(\\d+)$`, 'i')
+}
+
 export function extractRange(query: string, key: string): [number | null, number | null] {
-  const minRe = new RegExp(`(?:^|\\s)${key}>=(\\d+)(?:\\s|$)`)
-  const maxRe = new RegExp(`(?:^|\\s)${key}<=(\\d+)(?:\\s|$)`)
-  const minMatch = query.match(minRe)
-  const maxMatch = query.match(maxRe)
-  return [
-    minMatch ? parseInt(minMatch[1]!, 10) : null,
-    maxMatch ? parseInt(maxMatch[1]!, 10) : null,
-  ]
+  const re = rangeTermRe(key)
+  let min: number | null = null
+  let max: number | null = null
+  for (const t of queryTerms(query)) {
+    const m = t.match(re)
+    if (!m) continue
+    const n = parseInt(m[2]!, 10)
+    if (m[1] === '>=') min = n
+    else if (m[1] === '<=') max = n
+    else min = max = n
+  }
+  return [min, max]
 }
 
 export function setRange(
   query: string,
   key: string,
   min: string | number | null,
-  max: string | number | null
+  max: string | number | null,
 ): string {
-  const minRe = new RegExp(`(?:^|\\s)${key}>=\\d+(?=\\s|$)`, 'g')
-  const maxRe = new RegExp(`(?:^|\\s)${key}<=\\d+(?=\\s|$)`, 'g')
-  let next = query.replace(minRe, '').replace(maxRe, '').trim()
+  const re = rangeTermRe(key)
+  let next = removeTerms(query, (t) => re.test(t))
   const minN = typeof min === 'string' ? (min === '' ? null : parseInt(min, 10)) : min
   const maxN = typeof max === 'string' ? (max === '' ? null : parseInt(max, 10)) : max
-  if (minN !== null && Number.isFinite(minN)) next = `${next} ${key}>=${minN}`.trim()
-  if (maxN !== null && Number.isFinite(maxN)) next = `${next} ${key}<=${maxN}`.trim()
+  const lo = minN !== null && Number.isFinite(minN) ? minN : null
+  const hi = maxN !== null && Number.isFinite(maxN) ? maxN : null
+  if (lo !== null && lo === hi) return appendTerm(next, `${key}=${lo}`)
+  if (lo !== null) next = appendTerm(next, `${key}>=${lo}`)
+  if (hi !== null) next = appendTerm(next, `${key}<=${hi}`)
   return next
 }

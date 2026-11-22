@@ -13,7 +13,7 @@ val FiresOfYavimayaReprint = Printing(
     collectorNumber = "188",
     scryfallId = "33283200-3d1a-41be-ad22-9fc7d56cff66",
     artist = "Izzy",
-    imageUri = "https://cards.scryfall.io/normal/front/3/3/33283200-3d1a-41be-ad22-9fc7d56cff66.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/3/3/33283200-3d1a-41be-ad22-9fc7d56cff66.jpg?1783939339",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

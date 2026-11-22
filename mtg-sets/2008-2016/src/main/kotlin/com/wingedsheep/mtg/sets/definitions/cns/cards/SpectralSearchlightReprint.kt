@@ -13,7 +13,7 @@ val SpectralSearchlightReprint = Printing(
     collectorNumber = "205",
     scryfallId = "ca4d347a-ab62-491c-b5cd-3e6c7d1d3334",
     artist = "Martina Pilcerova",
-    imageUri = "https://cards.scryfall.io/normal/front/c/a/ca4d347a-ab62-491c-b5cd-3e6c7d1d3334.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/c/a/ca4d347a-ab62-491c-b5cd-3e6c7d1d3334.jpg?1783939335",
     releaseDate = "2014-06-06",
     rarity = Rarity.UNCOMMON,
 )

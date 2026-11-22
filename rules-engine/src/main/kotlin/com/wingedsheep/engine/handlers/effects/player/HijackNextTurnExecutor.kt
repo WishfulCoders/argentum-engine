@@ -35,7 +35,7 @@ class HijackNextTurnExecutor : EffectExecutor<HijackNextTurnEffect> {
         effect: HijackNextTurnEffect,
         context: EffectContext
     ): EffectResult {
-        val hijackedPlayerId = context.resolvePlayerTarget(effect.target)
+        val hijackedPlayerId = context.resolvePlayerTarget(effect.target, state)
             ?: return EffectResult.error(state, "No target player for HijackNextTurnEffect")
 
         val sourceId = context.sourceId ?: hijackedPlayerId

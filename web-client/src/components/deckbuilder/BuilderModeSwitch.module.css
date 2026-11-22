@@ -1,0 +1,50 @@
+.crumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  vertical-align: middle;
+}
+
+.library {
+  color: #d5dae6;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.library:hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+.library:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+
+.sep { color: rgba(255, 255, 255, 0.3); font-size: 18px; }
+
+/* Narrow top bars keep the mode switch; the shelf is one tap away from the wordmark's home. */
+@media (max-width: 640px) {
+  .library, .sep { display: none; }
+}
+
+.switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(10, 12, 20, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  vertical-align: middle;
+}
+
+.option {
+  min-height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #b4bccd;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.option:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.option[aria-selected='true'] { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.option:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }

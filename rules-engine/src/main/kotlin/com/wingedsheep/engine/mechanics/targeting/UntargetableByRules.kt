@@ -1,0 +1,313 @@
+package com.wingedsheep.engine.mechanics.targeting
+
+import com.wingedsheep.engine.handlers.TargetingSourceType
+import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.engine.handlers.PredicateContext
+import com.wingedsheep.engine.mechanics.ControllerGrants
+import com.wingedsheep.engine.mechanics.durations.GrantDurationGate
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.CardsInZonesCantBeTargeted
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.ProtectionScope
+import com.wingedsheep.sdk.scripting.UntargetableBy
+import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.targets.TargetRequirement
+
+/**
+ * The one reading of [com.wingedsheep.sdk.scripting.CantBeTargetedBy] — "can't be the target of
+ * Aura spells" (Tetsuo Umezawa), "… of spells that can target only Walls or of abilities that can
+ * target only Walls" (Wall of Shadows), "… of nongreen spells or abilities from nongreen sources"
+ * (Gaea's Revenge) — shared by every targeting site: legal-target enumeration
+ * (`TargetFinder`, `TargetEnumerationUtils`), cast/activation validation (`TargetValidator`) and
+ * the resolution re-check (`ResolutionTargetValidator`), so the four can't drift apart.
+ *
+ * The restriction is projected onto the permanent as a keyword per [UntargetableBy] quality (see
+ * [keyword]), so losing all abilities drops it. A targeting attempt computes the keywords that
+ * would block it once ([blockingKeywords]) — from the kind of source (spell or ability), the
+ * spell's subtypes, and the subtypes the target requirement structurally demands — and each
+ * candidate is then a set lookup. Not controller-gated: it binds the permanent's own controller.
+ *
+ * It also reads [CardsInZonesCantBeTargeted] ("Cards in graveyards can't be the targets of spells
+ * or abilities"; Tomik's "lands on the battlefield and land cards in graveyards … your opponents
+ * control") — read off the holder's projected statics ([zoneLocks]) because a card in a graveyard
+ * has no projection entry to carry a keyword, and because its controller scope is relative to the
+ * lock's controller rather than each permanent's.
+ */
+object UntargetableByRules {
+
+    /** The projected keyword a permanent carries for [quality]. */
+    fun keyword(quality: UntargetableBy): String = when (quality) {
+        is UntargetableBy.SpellsWithSubtype ->
+            "CANT_BE_TARGETED_BY_SUBTYPE_SPELLS_${quality.subtype.value.uppercase()}"
+        is UntargetableBy.TargetingOnly ->
+            "CANT_BE_TARGETED_BY_TARGETING_ONLY_${quality.subtype.value.uppercase()}"
+        is UntargetableBy.SourcesOfColor -> when (val scope = quality.scope) {
+            is ProtectionScope.Color -> colorKeywords.getValue(scope.color)
+            is ProtectionScope.NonColor -> nonColorKeywords.getValue(scope.color)
+            else -> error("UntargetableBy.SourcesOfColor rejects $scope at construction")
+        }
+    }
+
+    private val colorKeywords: Map<Color, String> =
+        Color.entries.associateWith { "CANT_BE_TARGETED_BY_COLOR_${it.name}_SOURCES" }
+    private val nonColorKeywords: Map<Color, String> =
+        Color.entries.associateWith { "CANT_BE_TARGETED_BY_NON_${it.name}_SOURCES" }
+
+    /** Every "… of <color> spells or abilities from <color> sources" keyword (Rebel Informer). */
+    val COLOR_SOURCE_KEYWORDS: Set<String> = colorKeywords.values.toSet()
+
+    /** Every "… of non<color> spells or abilities from non<color> sources" keyword (Gaea's Revenge). */
+    val NON_COLOR_SOURCE_KEYWORDS: Set<String> = nonColorKeywords.values.toSet()
+
+    /**
+     * The [UntargetableBy.SourcesOfColor] keywords a source with [colorNames] trips: for each
+     * colour, "<color> sources" when it has it, else "non<color> sources" — a colorless source is
+     * non-every-colour (CR 105.2c), a green-white one is neither nongreen nor nonwhite.
+     */
+    private fun sourceColorKeywords(colorNames: Set<String>): List<String> =
+        Color.entries.map { if (it.name in colorNames) colorKeywords.getValue(it) else nonColorKeywords.getValue(it) }
+
+    /**
+     * The keywords that bar a target from a spell or ability from [sourceId] choosing it for
+     * [requirement], narrowed to those some permanent actually has. Empty — the common case — when
+     * nothing could apply, so callers skip the per-candidate check. An ANY-typed caller is resolved
+     * to "spell" only when the source is a spell on the stack; otherwise a spell-only restriction is
+     * never applied on a guess.
+     *
+     * [spellSubtypes] is the face actually being cast, when the caller knows it — a disturb card
+     * cast as its Aura back (Lanterns' Lift) is still its front face on the entity. Null falls back
+     * to the source's projected or printed subtypes.
+     *
+     * The colour qualities ([UntargetableBy.SourcesOfColor]) cover spells and abilities alike, so
+     * they apply whatever the source kind, but only to a source that is known: [sourceColors] when
+     * the caller passes the cast face's colours (non-empty), else the source's projected colours
+     * (printed off the battlefield). An unknown source trips none — "colorless" can't be told from
+     * "no information".
+     */
+    fun blockingKeywords(
+        state: GameState,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType,
+        requirement: TargetRequirement?,
+        spellSubtypes: Set<String>? = null,
+        sourceColors: Set<String>? = null
+    ): List<String> {
+        // Nothing in play carries a CantBeTargetedBy quality — the common case — so nothing blocks.
+        val inPlay = state.projectedState.cantBeTargetedByKeywordsInPlay
+        if (inPlay.isEmpty()) return emptyList()
+        return candidateKeywords(state, sourceId, targetingSourceType, requirement, spellSubtypes, sourceColors)
+            .filter { it in inPlay }
+    }
+
+    private fun candidateKeywords(
+        state: GameState,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType,
+        requirement: TargetRequirement?,
+        spellSubtypes: Set<String>?,
+        sourceColors: Set<String>?
+    ): List<String> {
+        val colorNames = sourceColors?.takeIf { it.isNotEmpty() }
+            ?: sourceId?.takeIf { state.hasEntity(it) }?.let { state.projectedState.colorsOf(it) }
+        val colorKeywords = colorNames?.let(::sourceColorKeywords).orEmpty()
+        val isSpell = when (targetingSourceType) {
+            TargetingSourceType.SPELL -> true
+            TargetingSourceType.ACTIVATED_ABILITY, TargetingSourceType.TRIGGERED_ABILITY -> false
+            TargetingSourceType.ANY ->
+                if (sourceId != null && SourceKindProtection.isSpell(state, sourceId)) true else return colorKeywords
+        }
+        val required = requirement?.let(::soleTargetFilter)?.let(::requiredSubtypes).orEmpty()
+        val subtypes = when {
+            !isSpell -> emptySet()
+            spellSubtypes != null -> spellSubtypes
+            sourceId != null -> sourceSubtypes(state, sourceId)
+            else -> emptySet()
+        }
+        if (required.isEmpty() && subtypes.isEmpty()) return colorKeywords
+        return colorKeywords + subtypes.map { keyword(UntargetableBy.SpellsWithSubtype(Subtype(it))) } +
+            required.map { keyword(UntargetableBy.TargetingOnly(it)) }
+    }
+
+    /**
+     * True when [targetId] carries any of [keywords] (from [blockingKeywords]). Only battlefield
+     * permanents have projected keywords, so no zone check is needed.
+     */
+    fun isBlocked(state: GameState, targetId: EntityId, keywords: List<String>): Boolean {
+        if (keywords.isEmpty()) return false
+        val projected = state.projectedState
+        return keywords.any { projected.hasKeyword(targetId, it) }
+    }
+
+    /** Why [targetId] can't be chosen for [requirement] by a spell or ability from [sourceId], or null. */
+    fun targetingError(
+        state: GameState,
+        targetId: EntityId,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType,
+        requirement: TargetRequirement?,
+        spellSubtypes: Set<String>? = null,
+        sourceColors: Set<String>? = null
+    ): String? {
+        val keywords = blockingKeywords(state, sourceId, targetingSourceType, requirement, spellSubtypes, sourceColors)
+        if (!isBlocked(state, targetId, keywords)) return null
+        val name = state.getEntity(targetId)?.get<CardComponent>()?.name ?: "That permanent"
+        return "$name can't be the target of this ${if (targetingSourceType == TargetingSourceType.SPELL) "spell" else "ability"}"
+    }
+
+    /**
+     * One [CardsInZonesCantBeTargeted] in force: the [lock], the object that holds it ([holderId] —
+     * a permanent printing or granted it, or a player a resolving spell granted it to for a turn)
+     * and the player it belongs to ([controllerId]), whom its "you" and "your opponents" mean.
+     */
+    data class ZoneLock(
+        val holderId: EntityId,
+        val controllerId: EntityId,
+        val lock: CardsInZonesCantBeTargeted
+    )
+
+    /**
+     * The zone locks in force — every [CardsInZonesCantBeTargeted] ("Cards in graveyards can't be
+     * the targets of spells or abilities") among the battlefield's projected static abilities, plus
+     * those a resolving spell granted to a player for a duration ("permanents you control can't be
+     * the targets of blue or black spells your opponents control this turn" — Display of Dominance).
+     * Read off projection, so a printed lock, a granted one and ability loss are all handled the way
+     * projection handles them; a player-held lock is a rule about the game and lasts out its
+     * duration. Empty in the common case; callers compute it once per targeting attempt and consult
+     * it for every non-player candidate.
+     */
+    fun zoneLocks(state: GameState): List<ZoneLock> {
+        val projected = state.projectedState
+        var locks: MutableList<ZoneLock>? = null
+        for (id in state.getBattlefield()) {
+            for (ability in projected.getStaticAbilities(id)) {
+                if (ability is CardsInZonesCantBeTargeted) {
+                    val controller = ControllerGrants.granterController(state, id) ?: continue
+                    (locks ?: mutableListOf<ZoneLock>().also { locks = it }).add(ZoneLock(id, controller, ability))
+                }
+            }
+        }
+        for (grant in state.grantedStaticAbilities) {
+            val ability = grant.ability
+            if (ability is CardsInZonesCantBeTargeted && grant.entityId in state.turnOrder &&
+                GrantDurationGate.holds(state, grant.entityId, grant.sourceId, grant.duration)
+            ) {
+                (locks ?: mutableListOf<ZoneLock>().also { locks = it })
+                    .add(ZoneLock(grant.entityId, grant.entityId, ability))
+            }
+        }
+        return locks ?: emptyList()
+    }
+
+    /**
+     * True when one of [locks] (from [zoneLocks]) forbids a spell or ability from [sourceId],
+     * controlled by [targetingController], from targeting [objectId] where it is now — a card in a
+     * locked zone, or a permanent when a lock covers [Zone.BATTLEFIELD]. A lock scoped to "your
+     * opponents" ([CardsInZonesCantBeTargeted.sourceController] = [Player.EachOpponent]) binds only
+     * a [targetingController] who is an opponent of the lock's controller; with no known targeting
+     * controller it never binds. A spell-only lock ([CardsInZonesCantBeTargeted.spellFilter]) binds
+     * only a source known to be a spell matching it — an ANY-typed caller counts as a spell only
+     * when the source is a spell on the stack, as in [blockingKeywords]. Players and spells are
+     * never in a locked zone.
+     */
+    fun isZoneLocked(
+        state: GameState,
+        objectId: EntityId,
+        targetingController: EntityId?,
+        locks: List<ZoneLock>,
+        predicateEvaluator: PredicateEvaluator,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType
+    ): Boolean {
+        if (locks.isEmpty()) return false
+        val zone = state.logicalZone(objectId)?.zoneType ?: return false
+        return locks.any { (holderId, controller, lock) ->
+            if (zone !in lock.zones) return@any false
+            if (lock.sourceController == Player.EachOpponent &&
+                (targetingController == null || targetingController !in state.getOpponents(controller))
+            ) return@any false
+            val context = PredicateContext(controllerId = controller, sourceId = holderId)
+            val spellFilter = lock.spellFilter
+            if (spellFilter != null &&
+                !isMatchingSpell(state, sourceId, targetingSourceType, spellFilter, context, predicateEvaluator)
+            ) return@any false
+            if (lock.filter == GameObjectFilter.Any) return@any true
+            predicateEvaluator.matches(state, state.projectedState, objectId, lock.filter, context)
+        }
+    }
+
+    private fun isMatchingSpell(
+        state: GameState,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType,
+        spellFilter: GameObjectFilter,
+        context: PredicateContext,
+        predicateEvaluator: PredicateEvaluator
+    ): Boolean {
+        if (sourceId == null || !state.hasEntity(sourceId)) return false
+        val isSpell = when (targetingSourceType) {
+            TargetingSourceType.SPELL -> true
+            TargetingSourceType.ACTIVATED_ABILITY, TargetingSourceType.TRIGGERED_ABILITY -> false
+            TargetingSourceType.ANY -> SourceKindProtection.isSpell(state, sourceId)
+        }
+        if (!isSpell) return false
+        return spellFilter == GameObjectFilter.Any ||
+            predicateEvaluator.matches(state, state.projectedState, sourceId, spellFilter, context)
+    }
+
+    /**
+     * Why [objectId] can't be targeted by a spell or ability from [sourceId] that
+     * [targetingController] controls where it is, or null — [zoneLocks] and [isZoneLocked] in one.
+     */
+    fun zoneLockError(
+        state: GameState,
+        objectId: EntityId,
+        targetingController: EntityId?,
+        predicateEvaluator: PredicateEvaluator,
+        sourceId: EntityId?,
+        targetingSourceType: TargetingSourceType
+    ): String? {
+        val locks = zoneLocks(state)
+        if (!isZoneLocked(state, objectId, targetingController, locks, predicateEvaluator, sourceId, targetingSourceType)) {
+            return null
+        }
+        val name = state.getEntity(objectId)?.get<CardComponent>()?.name ?: "That card"
+        return "$name can't be the target of this ${if (targetingSourceType == TargetingSourceType.SPELL) "spell" else "spell or ability"} where it is"
+    }
+
+    /**
+     * The filter a requirement restricts its targets to, when that filter is *all* it can target:
+     * a plain object requirement ("target Wall", "enchant Wall"), through any "other" wrapper.
+     * Requirements that can also reach a player or a spell ("target Wall or player") return null —
+     * they can target something other than the subtype.
+     */
+    private fun soleTargetFilter(requirement: TargetRequirement): GameObjectFilter? = when (requirement) {
+        is TargetOther -> soleTargetFilter(requirement.baseRequirement)
+        is TargetObject -> requirement.filter.takeUnless { it.isUnion }?.baseFilter
+        else -> null
+    }
+
+    /**
+     * Subtypes [filter] structurally demands of every match: a top-level `HasSubtype`, or one
+     * shared by every branch of an `anyOf` union. Conservative — anything looser isn't "only".
+     */
+    private fun requiredSubtypes(filter: GameObjectFilter): Set<Subtype> {
+        val own = filter.cardPredicates.filterIsInstance<CardPredicate.HasSubtype>().mapTo(mutableSetOf()) { it.subtype }
+        if (filter.anyOf.isNotEmpty()) {
+            own += filter.anyOf.map(::requiredSubtypes).reduce { acc, s -> acc intersect s }
+        }
+        return own
+    }
+
+    /** A spell's subtypes — projected when present, else its printed type line (at cast it's still in hand). */
+    private fun sourceSubtypes(state: GameState, sourceId: EntityId): Set<String> =
+        state.projectedState.getSubtypes(sourceId).ifEmpty {
+            state.getEntity(sourceId)?.get<CardComponent>()?.typeLine?.subtypes?.mapTo(mutableSetOf()) { it.value }.orEmpty()
+        }
+}

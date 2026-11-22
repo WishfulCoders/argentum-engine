@@ -4,11 +4,14 @@ import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.ForEachContinuation
 import com.wingedsheep.engine.core.ForEachItem
+import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.effects.token.TokenEntryGroups
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
+import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils.toEntityId
 import com.wingedsheep.engine.mechanics.layers.Layer
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
@@ -45,16 +48,18 @@ import com.wingedsheep.engine.core.Outcome
  *   storedCollections wiped.
  * - Players: `controllerId` rebound to the current player
  *   relative to them, storedCollections wiped.
- * - Collection / Group: the current entity bound, with its identity, as the context's
+ * - TargetsOf / Collection / Group: the current entity bound, with its identity, as the context's
  *   iteration object — what `EffectTarget.IterationEntity` names (`Self` stays the source);
  *   outer collections preserved.
  * - ColorsOf: `chosenColor` set — the same channel `ChooseColorThen` feeds.
+ * - CounterKindsAmong / CounterKindsOn: `chosenCounterType` set; outer collections preserved.
  */
 class ForEachExecutor(
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
     private val predicateEvaluator: PredicateEvaluator,
     /** For the group look-back freeze in [execute]; the continuation resumer needs none. */
-    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry? = null
+    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry? = null,
+    private val damageExecutor: com.wingedsheep.engine.handlers.effects.damage.DealDamageExecutor? = null
 ) : EffectExecutor<ForEachEffect> {
 
     override val effectType: KClass<ForEachEffect> = ForEachEffect::class
@@ -81,10 +86,23 @@ class ForEachExecutor(
             }
         }
 
+        val damage = simultaneousDamageOf(effect)
+        if (damage != null && damageExecutor != null) {
+            // Atomic damage is one instruction across all recipients. A composite body remains
+            // a per-item sequence; it can contain intervening choices or state-changing effects.
+            // Preparation is already in the paused state. Replaying the damage instruction
+            // must not install another copy of each no-regeneration floating effect.
+            val replayEffect = if (space is IterationSpace.Group && space.noRegenerate) {
+                effect.copy(space = space.copy(noRegenerate = false))
+            } else effect
+            return damageExecutor.executeSimultaneously(currentState, damage,
+                items.map { bindIterationContext(currentState, context, it) }, replayEffect, context, aggregateExcess = true)
+        }
+
         // A group loop is one simultaneous event: freeze each member's look-back grants
         // before the first iteration moves anything, for its leaves-the-battlefield look-back
         // (CR 603.10a). Carried on the outer context, so it survives a mid-loop pause.
-        val loopContext = if (space is IterationSpace.Group && cardRegistry != null) {
+        val lookBackContext = if (space is IterationSpace.Group && cardRegistry != null) {
             val frozen = com.wingedsheep.engine.event.LookBackGrants.frozen(
                 state, items.mapNotNull { (it as? ForEachItem.OfEntity)?.entityId },
                 cardRegistry, predicateEvaluator.conditions
@@ -92,12 +110,21 @@ class ForEachExecutor(
             if (frozen.isEmpty()) context else context.copy(lookBackGrants = context.lookBackGrants + frozen)
         } else context
 
+        // "For each creature, create a token …" is one instruction: every token it makes enters
+        // at once and sees the others enter (CR 603.6a), so the iterations share one entry group.
+        // Carried on the outer context, so it survives a mid-loop pause.
+        val loopContext = if (TokenEntryGroups.createsTokens(effect.body) && TokenEntryGroups.group(context) == null) {
+            val (group, allocated) = currentState.newRoutingId()
+            currentState = allocated
+            TokenEntryGroups.withGroup(lookBackContext, group)
+        } else lookBackContext
+
         val move = effect.body as? com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
         // An atomic move over a group or all chosen targets is one instruction. A
         // per-target composite still executes its instructions in sequence and must
         // finalize each move before the next instruction reads the graveyard.
         val simultaneousMove = move?.destination == Zone.GRAVEYARD && when (space) {
-            is IterationSpace.Group -> move.target == EffectTarget.IterationEntity
+            is IterationSpace.Group, is IterationSpace.TargetsOf -> move.target == EffectTarget.IterationEntity
             IterationSpace.Targets -> move.target == EffectTarget.ContextTarget(0)
             else -> false
         }
@@ -207,6 +234,24 @@ class ForEachExecutor(
         is IterationSpace.Targets ->
             context.targets.map { ForEachItem.OfTarget(it) }
 
+        // One declaration's targets, in slot order: the named-target map holds only still-legal
+        // targets (it is built from the 608.2b-aligned list), so an illegal one is never visited.
+        is IterationSpace.TargetsOf -> {
+            val named = context.pipeline.namedTargets
+            val single = named[space.group]
+            if (single != null) listOf(ForEachItem.OfEntity(single.toEntityId()))
+            else {
+                val prefix = "${space.group}["
+                named.entries
+                    .mapNotNull { (key, target) ->
+                        key.takeIf { it.startsWith(prefix) && it.endsWith("]") }
+                            ?.substring(prefix.length, key.length - 1)?.toIntOrNull()?.let { it to target }
+                    }
+                    .sortedBy { it.first }
+                    .map { ForEachItem.OfEntity(it.second.toEntityId()) }
+            }
+        }
+
         is IterationSpace.Players ->
             resolvePlayers(space.players, state, context).map { ForEachItem.OfPlayer(it) }
 
@@ -215,7 +260,7 @@ class ForEachExecutor(
                 .map { ForEachItem.OfEntity(it) }
 
         is IterationSpace.Group ->
-            resolveGroup(state, space, context).map { ForEachItem.OfEntity(it) }
+            BattlefieldFilterUtils.resolveGroup(state, space.filter, context, predicateEvaluator).map { ForEachItem.OfEntity(it) }
 
         is IterationSpace.ColorsOf -> {
             val sourceId = TargetResolutionUtils.resolveEntity(space.source, context, state)
@@ -227,6 +272,25 @@ class ForEachExecutor(
                 Color.entries.filter { it.name in colorNames }.map { ForEachItem.OfColor(it) }
             }
         }
+
+        is IterationSpace.CounterKindsAmong ->
+            BattlefieldFilterUtils.resolveGroup(state, space.filter, context, predicateEvaluator)
+                .flatMap { id ->
+                    state.getEntity(id)?.get<CountersComponent>()?.counters
+                        ?.filterValues { it > 0 }?.keys.orEmpty()
+                }
+                .distinct()
+                // Canonical id order for deterministic event sequencing.
+                .sortedBy { it.name }
+                .map { ForEachItem.OfCounterKind(it) }
+
+        is IterationSpace.CounterKindsOn ->
+            TargetResolutionUtils.resolveEntity(space.entity, context, state)
+                ?.let { state.getEntity(it)?.get<CountersComponent>()?.counters }
+                ?.filterValues { it > 0 }?.keys.orEmpty()
+                // Canonical id order for deterministic event sequencing.
+                .sortedBy { it.name }
+                .map { ForEachItem.OfCounterKind(it) }
     }
 
     /**
@@ -254,7 +318,10 @@ class ForEachExecutor(
             // carry it through nested player loops, so sub-effects that need the original effect
             // controller (e.g. an activating-player-relative duration) can read it.
             effectControllerId = outerContext.effectControllerId ?: outerContext.controllerId,
-            pipeline = outerContext.pipeline.copy(storedCollections = emptyMap())
+            pipeline = outerContext.pipeline.copy(
+                storedCollections = if (item.keepCollections) outerContext.pipeline.storedCollections else emptyMap(),
+                storedNumbers = outerContext.pipeline.storedNumbers + item.boundNumbers
+            )
         )
 
         is ForEachItem.OfEntity -> outerContext.copy(
@@ -264,15 +331,21 @@ class ForEachExecutor(
         )
 
         is ForEachItem.OfColor -> outerContext.copy(chosenColor = item.color)
+
+        is ForEachItem.OfCounterKind -> outerContext.copy(chosenCounterType = item.counterType)
     }
 
     private fun resolvePlayers(player: Player, state: GameState, context: EffectContext): List<EntityId> {
         return when (player) {
             Player.EachDefendingPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.allDefendingPlayersInApnapOrder(state)
+            Player.EachAttackedPlayer -> com.wingedsheep.engine.mechanics.combat.CombatDefenders.attackedPlayersInApnapOrder(state)
             Player.Each -> state.activePlayers
             Player.ActivePlayerFirst -> state.apnapOrder
+            Player.EachStartingWithYou -> state.turnOrderStartingWith(context.controllerId)
+            Player.EachStartingWithNextOpponent -> state.turnOrderStartingWithNextOpponent(context.controllerId)
             Player.You -> listOf(context.controllerId)
             Player.EachOpponent -> state.getOpponents(context.controllerId)
+            Player.EachOtherPlayer -> state.getOtherPlayers(context.controllerId)
             // Distinct owners of the cards still in the source's linked-exile pile. Resolve to
             // exactly those owners (empty when the pile is empty) — never the activePlayers
             // fallback below, so "the exiled card's owner does X" does nothing when nothing was
@@ -307,59 +380,13 @@ class ForEachExecutor(
     }
 
     /**
-     * Resolve a group filter to the battlefield entities it matches, honoring a
-     * chosen-subtype key and the filter's excludeSelf flag.
-     */
-    private fun resolveGroup(
-        state: GameState,
-        space: IterationSpace.Group,
-        context: EffectContext
-    ): List<EntityId> {
-        val filter = space.filter
-
-        // If the filter references a chosen subtype, resolve it from context
-        val chosenSubtype = filter.chosenSubtypeKey?.let { key ->
-            context.pipeline.chosenValues[key]
-        }
-        // If a chosen subtype key is specified but no value was chosen, return empty
-        if (filter.chosenSubtypeKey != null && chosenSubtype == null) {
-            return emptyList()
-        }
-
-        val excludeSelfId = if (filter.excludeSelf) context.sourceId else null
-        // excludeTarget removes the spell/ability's first chosen target — used for "each other X
-        // with the same controller" relative to a targeted permanent (Fear, Fire, Foes!).
-        val excludeTargetId = if (filter.excludeTarget) {
-            when (val first = context.targets.firstOrNull()) {
-                is ChosenTarget.Permanent -> first.entityId
-                is ChosenTarget.Card -> first.cardId
-                else -> null
-            }
-        } else null
-        val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, filter.baseFilter, context, excludeSelfId, predicateEvaluator = predicateEvaluator)
-            .filter { excludeTargetId == null || it != excludeTargetId }
-            .filter { !filter.excludeTriggeringEntity || it != context.triggeringEntityId }
-
-        // Additionally filter by chosen subtype if specified
-        return if (chosenSubtype != null) {
-            val projected = state.projectedState
-            matched.filter { projected.hasSubtype(it, chosenSubtype) }
-        } else {
-            matched
-        }
-    }
-
-    /**
      * Colors of the entity for [IterationSpace.ColorsOf]: projection is authoritative
      * on the battlefield (Devoid / Layer-5 changes honored, including an authoritative
      * empty set); off battlefield, printed colors as last-known information.
      */
     private fun readSourceColors(state: GameState, entityId: EntityId): Set<String> {
-        if (state.getBattlefield().contains(entityId)) {
-            return state.projectedState.getColors(entityId)
-        }
-        val card = state.getEntity(entityId)?.get<CardComponent>() ?: return emptySet()
-        return card.colors.map { it.name }.toSet()
+        if (state.getEntity(entityId)?.get<CardComponent>() == null) return emptySet()
+        return state.projectedState.colorsOf(entityId)
     }
 
     private fun addCantBeRegenerated(
@@ -375,4 +402,20 @@ class ForEachExecutor(
             context = context
         )
     }
+}
+
+/**
+ * The damage effect [effect] deals as one simultaneous instruction: a bare damage effect, or a
+ * loop whose body is one damage effect over a space dealt all at once ("deals 2 damage to each
+ * creature and each player" is one instruction per loop). Null for anything else.
+ */
+internal fun simultaneousDamageOf(effect: com.wingedsheep.sdk.scripting.effects.Effect): com.wingedsheep.sdk.scripting.effects.DealDamageEffect? = when (effect) {
+    is com.wingedsheep.sdk.scripting.effects.DealDamageEffect -> effect
+    is ForEachEffect -> when (effect.space) {
+        IterationSpace.Targets, is IterationSpace.TargetsOf,
+        is IterationSpace.Group, is IterationSpace.Collection, is IterationSpace.Players ->
+            effect.body as? com.wingedsheep.sdk.scripting.effects.DealDamageEffect
+        else -> null
+    }
+    else -> null
 }

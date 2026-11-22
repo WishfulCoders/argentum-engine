@@ -14,7 +14,7 @@ package com.wingedsheep.engine.core
  *     rather than crashing (worse — undetectable downstream).
  *
  * No real game ever needs the huge number: per the Magic Tournament Rules (loops are a shortcut,
- * a mandatory loop is a draw — see [StateBasedActionChecker]'s 104.4c handling), gigantic
+ * a mandatory loop is a draw — see [StateBasedActionChecker]'s 104.4b handling), gigantic
  * quantities are never literally materialized. So the policy here is **clamp aggressively**: a
  * value that hits [MAX_QUANTITY] or an effect that hits a structural cap is, for every practical
  * purpose, "you've already won." We clamp (never wrap), and `System.err`-log when a cap actually
@@ -84,9 +84,10 @@ object GameLimits {
 
     /**
      * Maximum flips a single open-ended "flip until you lose" run may win before it is stopped for
-     * the flipper (`FlipCoinsUntilLossEffect`, Fiery Gambit). That run is bounded only by a lost
-     * flip or by the flipper answering "stop", so a forced-win replacement (Edgar's coin) combined
-     * with an automated "continue" answer has no natural end. Far above any real run — the card
+     * the flipper (`FlipCoinsUntilLossEffect`: Fiery Gambit, Mirror March). That run is bounded only
+     * by a lost flip or by the flipper answering "stop", so a forced-win replacement (Edgar's coin)
+     * combined with an automated "continue" answer — or with the mandatory form, which offers no
+     * "stop" at all — has no natural end. Far above any real run — the card
      * that motivates the effect has paid out everything it can by three.
      */
     const val MAX_COIN_FLIPS_PER_EFFECT: Int = 100

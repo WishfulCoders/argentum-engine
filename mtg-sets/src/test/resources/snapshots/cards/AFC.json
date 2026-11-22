@@ -1,0 +1,251 @@
+// Dragonborn Champion
+{
+    "name": "Dragonborn Champion",
+    "manaCost": "{2}{R}{G}",
+    "typeLine": "Creature — Dragon Warrior",
+    "oracleText": "Trample\nWhenever a source you control deals 5 or more damage to a player, draw a card.",
+    "creatureStats": {
+        "power": 5,
+        "toughness": 3
+    },
+    "keywords": [
+        "TRAMPLE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Dragonborn Champion:1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    },
+                    "sourceFilter": "ctrl:you"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                },
+                "triggerRestriction": {
+                    "type": "Compare",
+                    "left": {
+                        "type": "ContextProperty",
+                        "key": "TRIGGER_DAMAGE_AMOUNT"
+                    },
+                    "operator": "GTE",
+                    "right": {
+                        "type": "Fixed",
+                        "amount": 5
+                    }
+                },
+                "descriptionOverride": "Whenever a source you control deals 5 or more damage to a player, draw a card."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "45",
+        "rarity": "RARE",
+        "artist": "Andrey Kuzinskiy",
+        "flavorText": "\"I was raised on the stories of my ancestors, and I want to write my own pages in the tales.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/f/9f6e43a7-84b9-4e89-bfe1-442d08df34d8.jpg?1783926240",
+        "rulings": [
+            {
+                "date": "2021-07-23",
+                "text": "Dragonborn Champion's last ability only triggers if 5 or more damage is dealt by the same source at the same time. If a source deals 3 damage to a player and then later deals 2 more damage to the same player, this will not cause the ability to trigger."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
+
+// Klauth, Unrivaled Ancient
+{
+    "name": "Klauth, Unrivaled Ancient",
+    "manaCost": "{5}{R}{G}",
+    "typeLine": "Legendary Creature — Dragon",
+    "oracleText": "Flying, haste\nWhenever Klauth attacks, add X mana in any combination of colors, where X is the total power of attacking creatures. Spend this mana only to cast spells. Until end of turn, you don't lose this mana as steps and phases end.",
+    "creatureStats": {
+        "power": 4,
+        "toughness": 4
+    },
+    "keywords": [
+        "FLYING",
+        "HASTE"
+    ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Klauth, Unrivaled Ancient:1",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "AddDynamicMana",
+                    "amountSource": {
+                        "type": "AggregateBattlefield",
+                        "player": "Each",
+                        "filter": "creature attacking",
+                        "aggregation": "SUM",
+                        "property": "POWER"
+                    },
+                    "allowedColors": [
+                        "WHITE",
+                        "BLUE",
+                        "BLACK",
+                        "RED",
+                        "GREEN"
+                    ],
+                    "restriction": "SpellsOnly",
+                    "expiry": "KEPT_UNTIL_END_OF_TURN"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "50",
+        "rarity": "MYTHIC",
+        "artist": "Andrew Mar",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/f/7f5cf828-17b2-4105-9a9a-ee0ab720c2ee.jpg?1783926239"
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
+
+// Mantle of the Ancients
+{
+    "name": "Mantle of the Ancients",
+    "manaCost": "{3}{W}{W}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature you control\nWhen this Aura enters, return any number of target Aura and/or Equipment cards from your graveyard to the battlefield attached to enchanted creature.\nEnchanted creature gets +1/+1 for each Aura and Equipment attached to it.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Mantle of the Ancients:1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "ChosenTargets",
+                            "storeAs": "gathered0"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "gathered0",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            },
+                            "filter": {
+                                "cardPredicates": [
+                                    {
+                                        "type": "CouldAttachTo",
+                                        "reference": "EnchantedCreature"
+                                    }
+                                ]
+                            },
+                            "attachTo": "EnchantedCreature"
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "unlimited": true,
+                    "filter": {
+                        "baseFilter": "Aura|Equipment own:you",
+                        "zone": "Graveyard"
+                    },
+                    "id": "t0"
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "GrantDynamicStats",
+                "filter": {
+                    "baseFilter": "permanent",
+                    "scope": "AttachedTo"
+                },
+                "powerBonus": {
+                    "type": "Add",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": "EnchantedCreature",
+                        "numericProperty": {
+                            "type": "AttachmentCount",
+                            "kind": "AURA"
+                        }
+                    },
+                    "right": {
+                        "type": "EntityProperty",
+                        "entity": "EnchantedCreature",
+                        "numericProperty": {
+                            "type": "AttachmentCount",
+                            "kind": "EQUIPMENT"
+                        }
+                    }
+                },
+                "toughnessBonus": {
+                    "type": "Add",
+                    "left": {
+                        "type": "EntityProperty",
+                        "entity": "EnchantedCreature",
+                        "numericProperty": {
+                            "type": "AttachmentCount",
+                            "kind": "AURA"
+                        }
+                    },
+                    "right": {
+                        "type": "EntityProperty",
+                        "entity": "EnchantedCreature",
+                        "numericProperty": {
+                            "type": "AttachmentCount",
+                            "kind": "EQUIPMENT"
+                        }
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature ctrl:you"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "8",
+        "rarity": "RARE",
+        "artist": "Denman Rooke",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/6/867124fc-c8e4-4e0e-be41-b74a6bb34e86.jpg?1783926258",
+        "rulings": [
+            {
+                "date": "2021-07-23",
+                "text": "As the enters-the-battlefield ability is resolving, any targets that couldn't be legally attached to the creature enchanted by Mantle of the Ancients stay in your graveyard."
+            },
+            {
+                "date": "2021-07-23",
+                "text": "If Mantle of the Ancients becomes attached to a different creature in response to its enters-the-battlefield ability, the creature it's attached to as that ability is resolving is the \"enchanted creature,\" even though you used the original enchanted creature to choose targets. This means some of those targets may become illegal."
+            },
+            {
+                "date": "2021-07-23",
+                "text": "If Mantle of the Ancients leaves the battlefield before its enters-the-battlefield ability resolves, the last permanent it was attached to before leaving the battlefield is the \"enchanted creature\" (even if that permanent is no longer a creature)."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}

@@ -35,24 +35,24 @@ class EvokeSerializationTest : StringSpec({
     "a mana-only evoke round-trips and its JSON carries no additionalCosts field" {
         val original = KeywordAbility.evoke("{2}{U}")
         roundTrip(original) shouldBe original
-        CardSerialization.json.encodeToString(KeywordAbility.serializer(), original) shouldNotContain "additionalCosts"
+        CardSerialization.json.encodeToString(KeywordAbility.serializer(), original) shouldNotContain "additionalCost"
         original.description shouldBe "Evoke {2}{U}"
-        (original as KeywordAbility.Evoke).additionalCosts shouldBe emptyList()
+        (original as KeywordAbility.Evoke).additionalCost shouldBe null
     }
 
     "a non-mana evoke keeps its exile-from-hand cost through serialization" {
-        val original = KeywordAbility.Evoke(ManaCost.parse("{0}"), listOf(pitchWhite))
+        val original = KeywordAbility.Evoke(ManaCost.parse("{0}"), pitchWhite)
         val restored = roundTrip(original)
         restored shouldBe original
         restored.keyword shouldBe Keyword.EVOKE
-        (restored as KeywordAbility.Evoke).additionalCosts shouldBe listOf(pitchWhite)
+        (restored as KeywordAbility.Evoke).additionalCost shouldBe pitchWhite
     }
 
     "the description reads the way the cost is printed" {
-        KeywordAbility.Evoke(ManaCost.parse("{0}"), listOf(pitchWhite)).description shouldBe
+        KeywordAbility.Evoke(ManaCost.parse("{0}"), pitchWhite).description shouldBe
             "Evoke—${pitchWhite.description}"
-        KeywordAbility.Evoke(ManaCost.parse("{1}"), listOf(pitchWhite)).description shouldBe
-            "Evoke—{1}, " + pitchWhite.description.replaceFirstChar { it.lowercaseChar() }
+        KeywordAbility.Evoke(ManaCost.parse("{1}"), pitchWhite).description shouldBe
+            "Evoke—{1}, " + pitchWhite.description
     }
 
     "the evokeWith DSL helper attaches one Evoke keyword ability with the non-mana cost" {
@@ -64,7 +64,7 @@ class EvokeSerializationTest : StringSpec({
             evokeWith(pitchWhite)
         }
         val evokes = def.keywordAbilities.filterIsInstance<KeywordAbility.Evoke>()
-        evokes shouldBe listOf(KeywordAbility.Evoke(ManaCost.parse("{0}"), listOf(pitchWhite)))
+        evokes shouldBe listOf(KeywordAbility.Evoke(ManaCost.parse("{0}"), pitchWhite))
         (Keyword.EVOKE in def.keywords) shouldBe true
     }
 

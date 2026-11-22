@@ -1,13 +1,18 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.mkm.cards.CorneredCrook
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.KeywordAbility
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -22,12 +27,24 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * The damage is a CR 603.12 reflexive ability, so the flow under test is: enters trigger → yes/no →
  * pick the artifact → *then* pick the damage target. These cover the happy path, the decline, and
  * the infeasible case where no artifact exists and the question must not be asked at all.
+ *
+ * "Sacrifice an artifact" targets nothing, so shroud, hexproof and protection from red — which only
+ * restrict targeting — must not stop an artifact from being chosen and sacrificed.
  */
 class CorneredCrookScenarioTest : FunSpec({
 
+    val shroudedRelic = card("Shrouded Relic") {
+        typeLine = "Artifact Creature — Golem"; power = 1; toughness = 1
+        keywords(Keyword.SHROUD)
+    }
+    val redWardedRelic = card("Red-Warded Relic") {
+        typeLine = "Artifact Creature — Golem"; power = 1; toughness = 1
+        keywordAbility(KeywordAbility.protectionFrom(Color.RED))
+    }
+
     fun createDriver(): GameTestDriver {
         val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + listOf(CorneredCrook))
+        driver.registerCards(TestCards.all + listOf(CorneredCrook, shroudedRelic, redWardedRelic))
         driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), startingLife = 20)
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
         return driver
@@ -117,5 +134,71 @@ class CorneredCrookScenarioTest : FunSpec({
             driver.state.getBattlefield(opponent).contains(victim) shouldBe false
             driver.assertLifeTotal(opponent, 20)
         }
+    }
+
+    test("an artifact with shroud is offered and can be sacrificed") {
+        val driver = createDriver()
+        val me = driver.activePlayer!!
+        val opponent = driver.getOpponent(me)
+
+        val shrouded = driver.putCreatureOnBattlefield(me, "Shrouded Relic")
+        driver.putCreatureOnBattlefield(me, "Artifact Creature")
+
+        castCrook(driver, me)
+
+        driver.submitYesNo(me, true)
+        val choice = driver.pendingDecision.shouldBeInstanceOf<ChooseTargetsDecision>()
+        withClue("sacrificing is not targeting, so shroud doesn't hide the artifact") {
+            choice.legalTargets[0].orEmpty() shouldContain shrouded
+        }
+        driver.submitTargetSelection(me, listOf(shrouded))
+        driver.getGraveyard(me).contains(shrouded) shouldBe true
+
+        driver.submitTargetSelection(me, listOf(opponent))
+        driver.bothPass()
+        driver.assertLifeTotal(opponent, 17)
+    }
+
+    test("an artifact with protection from red can be sacrificed to a red creature's ability") {
+        val driver = createDriver()
+        val me = driver.activePlayer!!
+        val opponent = driver.getOpponent(me)
+
+        val warded = driver.putCreatureOnBattlefield(me, "Red-Warded Relic")
+        driver.putCreatureOnBattlefield(me, "Artifact Creature")
+
+        castCrook(driver, me)
+
+        driver.submitYesNo(me, true)
+        val choice = driver.pendingDecision.shouldBeInstanceOf<ChooseTargetsDecision>()
+        choice.legalTargets[0].orEmpty() shouldContain warded
+        driver.submitTargetSelection(me, listOf(warded))
+        driver.getGraveyard(me).contains(warded) shouldBe true
+
+        driver.submitTargetSelection(me, listOf(opponent))
+        driver.bothPass()
+        driver.assertLifeTotal(opponent, 17)
+    }
+
+    test("a lone shrouded artifact still makes the sacrifice possible") {
+        val driver = createDriver()
+        val me = driver.activePlayer!!
+        val opponent = driver.getOpponent(me)
+
+        val shrouded = driver.putCreatureOnBattlefield(me, "Shrouded Relic")
+
+        castCrook(driver, me)
+
+        withClue("the may-question is asked even though the only artifact has shroud") {
+            driver.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
+        }
+        driver.submitYesNo(me, true)
+        withClue("the only legal choice is picked automatically and sacrificed") {
+            driver.getGraveyard(me).contains(shrouded) shouldBe true
+        }
+
+        driver.submitTargetSelection(me, listOf(opponent))
+        driver.bothPass()
+        driver.assertLifeTotal(opponent, 17)
     }
 })

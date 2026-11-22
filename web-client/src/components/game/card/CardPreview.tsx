@@ -2,14 +2,17 @@ import { useMemo, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useGameStore } from '@/store/gameStore.ts'
 import { selectGameState, selectViewingPlayerId, useCardLegalActions } from '@/store/selectors.ts'
-import { AbilityFlagDisplayNames, ZoneType, zoneIdEquals } from '@/types'
+import { AbilityFlagDisplayNames, KeywordDisplayNames, ZoneType, zoneIdEquals } from '@/types'
 import { getCardImageUrl } from '@/utils/cardImages.ts'
+import { AbilityArtTile, isArtlessAbility } from './AbilityArtTile'
 import { DfcFlipHint } from '@/components/ui/useDfcHoverFlip'
 import { useResponsiveContext, handleImageError, getCounterStatModifier, hasStatCounters, listCardCounters, getTokenFrameGradient, getTokenFrameTextColor, getPTColor } from '../board/shared'
 import { styles } from '../board/styles'
 import { counterManaClass } from '@/assets/icons/keywords'
 import { HoverCardPreview } from '../../ui/HoverCardPreview'
+import { useCombatFocusBounds } from '../../combat/combatFocusBounds'
 import { useHasHover } from '@/hooks/useHasHover.ts'
+import { usePreferences } from '@/store/preferencesStore'
 import { ManaCost, AbilityText } from '../../ui/ManaSymbols'
 import { buildActionOptions, playCostRange, playLadderOptions } from '@/utils/actionOptions.ts'
 import { parseManaCost, totalManaNeeded } from '@/utils/manaCost.ts'
@@ -22,10 +25,12 @@ import { castOfferFace } from '@/utils/castFace.ts'
 export function CardPreview() {
   const hoveredCardId = useGameStore((state) => state.hoveredCardId)
   const hoverPosition = useGameStore((state) => state.hoverPosition)
+  const combatFocusBounds = useCombatFocusBounds((state) => state.bounds)
   const gameState = useGameStore(selectGameState)
   const playerId = useGameStore(selectViewingPlayerId)
   const responsive = useResponsiveContext()
   const hasHover = useHasHover()
+  const hoverPreview = usePreferences((s) => s.prefs.display.hoverPreview)
 
   // All hooks must be called before any early return
   const cardActions = useCardLegalActions(hoveredCardId)
@@ -104,6 +109,9 @@ export function CardPreview() {
   const showCostLadder = costRows.length > 1 || costRows.some((o) => o.manaCostReducedTo)
 
   if (!card) return null
+  // Preferences → Display can turn the mouse-hover preview off. Touch previews (long-press) stay:
+  // they are asked for explicitly, not triggered by passing over a card.
+  if (!hoverPreview && hasHover && !responsive.isMobile) return null
 
   // On mobile, show the fullscreen overlay (game-specific behaviour). Any device that can't hover
   // gets it too, whatever its width: the cursor-following variant has nowhere to anchor without a
@@ -261,11 +269,15 @@ export function CardPreview() {
       name={displayName}
       imageUri={displayImageUri ?? null}
       pos={hoverPosition}
+      avoid={combatFocusBounds}
       rulings={card.rulings}
       extraHeight={extraHeight}
       imageRotateDeg={previewImageRotateDeg}
       overlay={previewOverlay}
       hint={isDfc ? <DfcFlipHint flipped={showingBackFace} /> : undefined}
+      artFallback={isArtlessAbility(card)
+        ? <AbilityArtTile name={card.name} typeLine={card.typeLine} width="100%" height="100%" fontSize={18} style={{ borderRadius: 12 }} />
+        : undefined}
     >
       {/* Ways to play, with what each one costs. The badge on the image can only fit the two ends of
           the range; this is where an adventure face, a kicker, a morph, an alternative cost or a
@@ -402,7 +414,7 @@ export function CardPreview() {
         <div style={styles.cardPreviewKeywords}>
           {card.keywords.map((keyword) => (
             <div key={keyword} style={styles.cardPreviewKeyword}>
-              <span style={styles.cardPreviewKeywordName}>{keyword}</span>
+              <span style={styles.cardPreviewKeywordName}>{KeywordDisplayNames[keyword] ?? keyword}</span>
             </div>
           ))}
           {/* Ability flags are engine enum names, not printed keywords — a raw "DOESNT_UNTAP" chip
@@ -528,6 +540,8 @@ function MobileCardPreview({ card, dismissible = false }: { card: import('@/type
                 </div>
               )}
             </div>
+          ) : isArtlessAbility(card) ? (
+            <AbilityArtTile name={card.name} typeLine={card.typeLine} width="100%" height="100%" fontSize={18} style={{ borderRadius: 12 }} />
           ) : (
             <img
               src={cardImageUrl}
@@ -540,12 +554,11 @@ function MobileCardPreview({ card, dismissible = false }: { card: import('@/type
               card's image, so only this says it is a token. */}
           {card.isToken && !card.imageUri?.includes('/art_crop/') && (
             <div style={{
+              ...styles.tokenChip,
               position: 'absolute', top: 8, left: 8,
-              backgroundColor: 'rgba(0, 0, 0, 0.78)', color: '#f0f0f0',
-              fontSize: 11, fontWeight: 700, letterSpacing: 0.5, padding: '2px 8px', borderRadius: 4,
-              border: '1px solid rgba(255, 255, 255, 0.55)', pointerEvents: 'none', whiteSpace: 'nowrap',
+              fontSize: 11, padding: '3px 8px', pointerEvents: 'none',
             }}>
-              TOKEN
+              Token
             </div>
           )}
           {isRevealedFaceDown && (

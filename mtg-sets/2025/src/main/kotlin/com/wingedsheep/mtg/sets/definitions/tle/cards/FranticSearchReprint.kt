@@ -13,7 +13,7 @@ val FranticSearchReprint = Printing(
     collectorNumber = "159",
     scryfallId = "d8c5e52d-57ae-464b-8860-7dd39ebfef64",
     artist = "Alejandro Pacheco",
-    imageUri = "https://cards.scryfall.io/normal/front/d/8/d8c5e52d-57ae-464b-8860-7dd39ebfef64.jpg?1783904806",
+    imageUri = "https://cards.scryfall.io/normal/front/d/8/d8c5e52d-57ae-464b-8860-7dd39ebfef64.jpg",
     releaseDate = "2025-11-21",
     rarity = Rarity.COMMON,
 )

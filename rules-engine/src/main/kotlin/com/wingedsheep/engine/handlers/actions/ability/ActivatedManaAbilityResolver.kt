@@ -6,6 +6,7 @@ import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaAddedEvent
+import com.wingedsheep.engine.core.ManaAbilityResolvedEvent
 import com.wingedsheep.engine.core.Outcome
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
@@ -13,6 +14,8 @@ import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.EffectExecutorRegistry
 import com.wingedsheep.engine.handlers.effects.mana.ManaAbilityResolutionPipeline
+import com.wingedsheep.engine.handlers.effects.mana.manaAmountAdded
+import com.wingedsheep.engine.handlers.effects.mana.manaColorsAdded
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.activeManaSpendingScope
@@ -23,22 +26,24 @@ import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.state.components.stack.EntitySnapshot
 import com.wingedsheep.engine.state.nameVisibleToAll
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.MultiplyManaOnSourceTap
 import com.wingedsheep.sdk.scripting.OverrideEnchantedLandManaColor
 import com.wingedsheep.sdk.scripting.ReplaceLandManaColor
-import com.wingedsheep.sdk.scripting.effects.AddAnyColorManaSpendOnChosenTypeEffect
 import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
 import com.wingedsheep.sdk.scripting.effects.AddDynamicManaEffect
 import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
+import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.effects.AddOneManaOfEachColorAmongEffect
 import com.wingedsheep.engine.mechanics.mana.BorrowedManaAbilities
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
+import com.wingedsheep.engine.state.components.identity.faceUpCardDefinition
 
 /**
  * Resolves a paid mana ability immediately, off the stack (CR 605.3): applies the mana
@@ -81,6 +86,7 @@ internal class ActivatedManaAbilityResolver(
         effect: Effect,
         events: List<GameEvent>,
         sacrificedSnapshots: List<EntitySnapshot>,
+        manaSpent: com.wingedsheep.engine.mechanics.mana.SpentMana,
     ): ExecutionResult {
         val action = activation.action
         val ability = activation.ability
@@ -104,6 +110,7 @@ internal class ActivatedManaAbilityResolver(
         // exits — an any-color effect (Birds of Paradise) and an any-color tap bonus (Fertile
         // Ground) — and the ability is already activated by this point: its costs are paid.
         // Adding it to the carried events now carries it out through those exits too.
+        val manaActivatedFrom = activationZone(stateBeforeActivation, action.sourceId)
         val manaAbilityActivatedEvent = AbilityActivatedEvent(
             sourceId = action.sourceId,
             sourceName = sourceName,
@@ -111,7 +118,13 @@ internal class ActivatedManaAbilityResolver(
             abilityEntityId = null,
             costsTap = costsTap,
             isManaAbility = true,
-            isExhaust = ability.isExhaust
+            onceOnlyKind = ability.onceOnlyKind,
+            // A Treasure sacrificed for its own mana is gone (CR 704.5d) before any trigger is
+            // matched; "an ability of an artifact" reads it as it last existed (CR 113.7a).
+            sourceLastKnown = activationSourceLastKnown(
+                stateBeforeActivation, state, action.sourceId, manaActivatedFrom
+            ) { null },
+            sourceZone = manaActivatedFrom,
         )
         val activationEvents = events + manaAbilityActivatedEvent
 
@@ -121,25 +134,13 @@ internal class ActivatedManaAbilityResolver(
         if (overrideColor != null && finalEffect is AddManaEffect) {
             finalEffect = finalEffect.copy(color = overrideColor)
         }
-        // Filter-based mana-color replacement (Pulse of Llanowar): a matched land produces
-        // one mana of a color of its controller's choice instead of its normal mana. Swapping
-        // the base effect for AddManaOfChoiceEffect routes the choice through the existing
-        // any-color machinery (action.manaColorChoice on a manual tap, or a resolution-time
-        // color decision if none was supplied).
-        val colorReplacement = manaColorReplacementFor(currentState, action.sourceId)
-        if (colorReplacement != null) {
-            val fixed = colorReplacement.color
-            finalEffect = when (val fe = finalEffect) {
-                // A *fixed* colour (Deep Water: "it produces {U} instead of any other type")
-                // needs no choice at all — rewrite the produced mana directly.
-                is AddManaEffect ->
-                    if (fixed != null) fe.copy(color = fixed)
-                    else AddManaOfChoiceEffect(ManaColorSet.AnyColor, fe.amount)
-                is AddColorlessManaEffect ->
-                    if (fixed != null) AddManaEffect(fixed, fe.amount)
-                    else AddManaOfChoiceEffect(ManaColorSet.AnyColor, fe.amount)
-                else -> finalEffect
-            }
+        // Filter-based mana replacement (Pulse of Llanowar, Deep Water, Quarum Trench Gnomes): a
+        // matched land produces other mana instead of its normal mana. Every replacement the land
+        // is subject to applies in turn, each to the previous one's output — fixed ones in
+        // battlefield order, free-choice ones last (ManaSolver.replacedLandMana folds the same way),
+        // so Pulse of Llanowar over a Gnomes-hit Plains still offers every colour.
+        for (colorReplacement in manaColorReplacementsFor(currentState, action.sourceId).sortedBy { it.produces == null }) {
+            finalEffect = replaceProducedMana(finalEffect, colorReplacement)
         }
         // Multiplicative mana replacement (Virtue of Strength: "If you tap a basic land for
         // mana, it produces three times as much of that mana instead"). Scaling the resolving
@@ -147,11 +148,9 @@ internal class ActivatedManaAbilityResolver(
         // per-source provenance intact, and makes the ManaAddedEvent below report the real
         // amount for free. Gated on {T} in the cost: you are only "tapping a permanent for
         // mana" when the mana ability's cost includes the tap symbol.
-        if (costsTap) {
-            val manaMultiplier = manaProductionMultiplierFor(currentState, action.sourceId)
-            if (manaMultiplier > 1) {
-                finalEffect = multiplyManaProduced(finalEffect, manaMultiplier)
-            }
+        val manaMultiplier = if (costsTap) manaProductionMultiplierFor(currentState, action.sourceId) else 1
+        if (manaMultiplier > 1) {
+            finalEffect = multiplyManaProduced(finalEffect, manaMultiplier)
         }
         // Tapping a permanent you don't control under a "tap … for mana" grant (Piracy): the
         // grant's spending restriction rides on the mana, on top of any the ability already had.
@@ -165,6 +164,10 @@ internal class ActivatedManaAbilityResolver(
             }
         }
         val context = EffectContext(
+            // A mana ability doesn't use the stack; its effect is a program this resolver starts.
+            programOrigin = com.wingedsheep.engine.handlers.effects.composite.EffectProgramInterpreter.startedBy(ActivatedManaAbilityResolver::class),
+            chosenModes = action.chosenModes.orEmpty(),
+            modeTargetsOrdered = action.modeTargetsOrdered,
             sourceId = action.sourceId,
             objectReferences = activation.activationReferences.authorize(activationEvents),
             controllerId = action.playerId,
@@ -180,8 +183,13 @@ internal class ActivatedManaAbilityResolver(
             // permanent is already in the graveyard (CR 113.7a); without the snapshots the
             // amount resolves to 0 and the ability produces nothing.
             sacrificedPermanents = sacrificedSnapshots,
+            manaSpent = manaSpent,
+            lastKnownSourceSnapshot = if (state.projectedState.getTypes(action.sourceId).isEmpty())
+                com.wingedsheep.engine.state.components.stack.captureLastKnown(stateBeforeActivation, action.sourceId) else null,
             // Dropped when another player chooses the color at resolution (Spectral Searchlight) —
             // the activator has no say in it, whatever the client sent.
+            // "X mana in any combination of …" is split first, then each unit multiplied.
+            manaUnitMultiplier = manaMultiplier,
             manaColorChoice = action.manaColorChoice.takeUnless {
                 com.wingedsheep.engine.mechanics.mana.ManaColorChoiceTiming
                     .chosenByAnotherPlayerAtResolution(finalEffect)
@@ -193,7 +201,10 @@ internal class ActivatedManaAbilityResolver(
             activatedAbility = ability,
         )
 
-        if (currentState.activeManaSpendingScope(action.playerId) != null) {
+        // Runs the effect under a frame that finishes the activation — Damping Sphere, the
+        // ManaAbilityResolvedEvent, the tap bonuses — once *all* its parts have resolved,
+        // however many decisions they pause for.
+        fun runScoped(): ExecutionResult {
             val frame = com.wingedsheep.engine.core.ScopedManaProductionContinuation(
                 action.playerId, action.sourceId, sourceName, cardComponent,
                 currentState.getEntity(action.playerId)?.get<ManaPoolComponent>() ?: ManaPoolComponent(),
@@ -213,15 +224,17 @@ internal class ActivatedManaAbilityResolver(
                 completed, frame, activationEvents + result.events, manaPipeline,
             )
         }
+        if (currentState.activeManaSpendingScope(action.playerId) != null) return runScoped()
         val stateBeforeEffect = currentState
         val effectResult = effectExecutorRegistry.execute(currentState, finalEffect, context).toExecutionResult()
-        // A pause (e.g. choosing colors for "add X mana in any combination of colors") carries
+        // A pause (a color for "add one mana of any color", a split for "add X mana in any
+        // combination of colors") re-runs the effect — a pure function of the same state — under
+        // the scoped frame, so the activation finishes through one path once its last decision
+        // is answered instead of each resumer finishing it (or not) on its own. The pause carries
         // the activation's own events out with it, so the settle boundary queues the triggers
         // they cause (Wizard's Rockets' dies trigger, Ceaseless Searblades' activation trigger)
         // until the ability finishes resolving.
-        if (effectResult.outcome is Outcome.Paused) {
-            return ExecutionResult.propagatePause(effectResult.state, activationEvents + effectResult.events)
-        }
+        if (effectResult.outcome is Outcome.Paused) return runScoped()
         if (effectResult.outcome !is Outcome.Done) {
             return effectResult
         }
@@ -250,7 +263,19 @@ internal class ActivatedManaAbilityResolver(
             else -> manaAddedEvent(fe, stateBeforeActivation, currentState, action, activation, context)
         }
 
-        val eventsWithMana = if (manaEvent != null) activationEvents + manaEvent else activationEvents
+        // "Whenever a mana ability of this creature resolves" (Tyvar the Bellicose) — every mana
+        // ability, {T} or not, with what it produced after Damping Sphere and before the separate
+        // triggered mana abilities below.
+        val resolvedEvent = ManaAbilityResolvedEvent(
+            playerId = action.playerId,
+            sourceId = action.sourceId,
+            amount = if (dampening.dampened) 1 else manaAmountAdded(stateBeforeEffect, dampening.state, action.playerId),
+        )
+        val eventsWithMana = activationEvents + listOfNotNull(manaEvent, resolvedEvent)
+        // Every color the activation added, read off the pool before tagging moves it into
+        // per-unit entries — a composite's ManaAddedEvent reports only its first part.
+        val producedColors = if (dampening.dampened) emptySet()
+            else manaColorsAdded(stateBeforeEffect, dampening.state, action.playerId)
 
         // Read the production event before tagging moves plain mana into per-unit entries.
         // Tag before triggered bonuses so those bonuses don't inherit the activation obligation.
@@ -269,9 +294,14 @@ internal class ActivatedManaAbilityResolver(
         // reflexive "when you do" half, which is not itself a mana ability, CR 605.1a), and the
         // land-tapped event Mana Flare-style triggers watch. Such triggered abilities still use
         // the stack even though the mana ability itself resolves off it.
+        //
+        // All of these key on the source being *tapped* for mana, so a mana ability without {T}
+        // in its cost (Ashnod's Altar, a Gold token) gets none of them — Kinnan's ruling — the
+        // same gate the scoped-production path applies.
+        if (!costsTap) return ExecutionResult.success(currentState, eventsWithMana + effectResult.events)
         return manaPipeline.finishTapBonuses(
             currentState, action.sourceId, cardComponent, action.playerId,
-            manaEvent, eventsWithMana + effectResult.events
+            manaEvent, eventsWithMana + effectResult.events, producedColors
         )
     }
 
@@ -279,8 +309,7 @@ internal class ActivatedManaAbilityResolver(
     private fun Effect.isReportedManaEffect(): Boolean =
         this is AddManaEffect ||
             this is AddColorlessManaEffect ||
-            this is AddManaOfChoiceEffect ||
-            this is AddAnyColorManaSpendOnChosenTypeEffect
+            this is AddManaOfChoiceEffect
 
     /**
      * The [ManaAddedEvent] reporting what a (non-composite) mana [effect] produced, or null for an
@@ -311,11 +340,6 @@ internal class ActivatedManaAbilityResolver(
         is AddManaOfChoiceEffect -> manaAddedEventFromPoolDelta(
             oldState, newState, action, activation.cardComponent
         )
-        is AddAnyColorManaSpendOnChosenTypeEffect -> {
-            val chosenColor = action.manaColorChoice ?: Color.GREEN
-            val amount = dynamicAmountEvaluator.evaluate(oldState, effect.amount, context)
-            coloredManaAddedEvent(action, activation.sourceName, chosenColor, amount)
-        }
         else -> null
     }
 
@@ -381,8 +405,7 @@ internal class ActivatedManaAbilityResolver(
             val container = state.getEntity(entityId) ?: continue
             val attachedTo = container.get<AttachedToComponent>()
             if (attachedTo?.targetId != sourceId) continue
-            val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card) ?: continue
+            val cardDef = container.faceUpCardDefinition(cardRegistry) ?: continue
             for (staticAbility in cardDef.script.staticAbilities) {
                 val o = staticAbility as? OverrideEnchantedLandManaColor ?: continue
                 override = o.color
@@ -394,35 +417,69 @@ internal class ActivatedManaAbilityResolver(
     }
 
     /**
-     * The [ReplaceLandManaColor] static the land [landId] is subject to, if any — some permanent on
-     * the battlefield has that static and its filter matches the tapped land from the static
-     * controller's projected perspective. The land's produced mana is then replaced: with one mana
-     * of a color of its controller's choice (Pulse of Llanowar), or with the static's fixed `color`
-     * when it names one (Deep Water). Returns the static rather than a Boolean so the caller can
-     * tell those two apart.
+     * The [ReplaceLandManaColor] statics the land [landId] is subject to — every permanent on the
+     * battlefield with that static (printed or granted) whose filter matches the tapped land from
+     * the static controller's projected perspective, in battlefield order.
      */
-    private fun manaColorReplacementFor(
+    private fun manaColorReplacementsFor(
         state: GameState,
         landId: EntityId
-    ): ReplaceLandManaColor? {
+    ): List<ReplaceLandManaColor> {
+        var matched: MutableList<ReplaceLandManaColor>? = null
         val grantsByEntity = state.grantedStaticAbilities.groupBy { it.entityId }
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
-            val card = container.get<CardComponent>() ?: continue
-            val printed = cardRegistry.getCard(card)?.script?.staticAbilities.orEmpty()
+            // A face-down permanent has no printed statics (CR 708.2); granted ones still apply.
+            val printed = container.faceUpCardDefinition(cardRegistry)?.script?.staticAbilities.orEmpty()
             // Granted statics too — a durational "{U}: … until end of turn" mana rule (Deep Water)
-            // lives only in `grantedStaticAbilities`, since the layer projector doesn't carry them.
+            // or an indefinite one on a targeted land (Quarum Trench Gnomes) lives only in
+            // `grantedStaticAbilities`, since the layer projector doesn't carry them.
             val granted = grantsByEntity[entityId]?.map { it.ability }.orEmpty()
             for (staticAbility in if (granted.isEmpty()) printed else printed + granted) {
                 val replacement = staticAbility as? ReplaceLandManaColor ?: continue
                 val staticController = state.projectedState.getController(entityId) ?: continue
                 val filterContext = PredicateContext(controllerId = staticController, sourceId = entityId)
                 if (predicateEvaluator.matches(state, state.projectedState, landId, replacement.filter, filterContext)) {
-                    return replacement
+                    (matched ?: mutableListOf<ReplaceLandManaColor>().also { matched = it }).add(replacement)
                 }
             }
         }
-        return null
+        return matched ?: emptyList()
+    }
+
+    /**
+     * [effect]'s produced mana after [replacement]: one mana of a color of the controller's choice
+     * when it names no symbol (Pulse of Llanowar — routed through the any-color machinery, so a
+     * manual tap prompts and the solver sees a five-colour source), the fixed colour it names (Deep
+     * Water), or colorless (Quarum Trench Gnomes). A replacement that names a [ReplaceLandManaColor.replaces]
+     * colour leaves every other kind of mana — colorless included — alone.
+     */
+    private fun replaceProducedMana(effect: Effect, replacement: ReplaceLandManaColor): Effect {
+        val replaces = replacement.replaces
+        return when (effect) {
+            is AddManaEffect -> {
+                if (replaces != null && effect.color != replaces) return effect
+                when (val produces = replacement.produces) {
+                    null -> AddManaOfChoiceEffect(ManaColorSet.AnyColor, effect.amount)
+                    is ManaSymbol.Colored -> effect.copy(color = produces.color)
+                    else -> AddColorlessManaEffect(
+                        effect.amount, effect.restriction, riders = effect.riders, expiry = effect.expiry
+                    )
+                }
+            }
+            is AddColorlessManaEffect -> {
+                if (replaces != null) return effect
+                when (val produces = replacement.produces) {
+                    null -> AddManaOfChoiceEffect(ManaColorSet.AnyColor, effect.amount)
+                    is ManaSymbol.Colored -> AddManaEffect(
+                        produces.color, effect.amount, effect.restriction,
+                        expiry = effect.expiry, riders = effect.riders
+                    )
+                    else -> effect
+                }
+            }
+            else -> effect
+        }
     }
 
     /**
@@ -432,7 +489,7 @@ internal class ActivatedManaAbilityResolver(
      * Instances stack **multiplicatively** — two Virtues of Strength make a basic land produce nine
      * times as much, per the printed ruling — so the factors are folded with `*`.
      *
-     * Mirrors [manaColorReplacementFor]: each static's filter is evaluated from the
+     * Mirrors [manaColorReplacementsFor]: each static's filter is evaluated from the
      * *static's own* projected controller, so `.youControl()` means "controlled by the player who
      * controls the Virtue", which for a mana ability is necessarily the tapping player.
      */
@@ -443,8 +500,7 @@ internal class ActivatedManaAbilityResolver(
         var multiplier = 1
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
-            val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card) ?: continue
+            val cardDef = container.faceUpCardDefinition(cardRegistry) ?: continue
             for (staticAbility in cardDef.script.staticAbilities) {
                 val static = staticAbility as? MultiplyManaOnSourceTap ?: continue
                 if (static.multiplier <= 1) continue
@@ -463,42 +519,57 @@ internal class ActivatedManaAbilityResolver(
 
     /**
      * Adds [restriction] to the mana [effect] produces, keeping any restriction it already carries
-     * (both then apply). Recurses into a [CompositeEffect] like [multiplyManaProduced].
-     *
-     * [AddAnyColorManaSpendOnChosenTypeEffect] derives its restriction at resolution and has no
-     * field to add to, so its mana is left as is.
+     * (both then apply).
      */
-    private fun restrictManaProduced(effect: Effect, restriction: ManaRestriction): Effect = when (effect) {
-        is AddManaEffect -> effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
-        is AddColorlessManaEffect ->
-            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
-        is AddManaOfChoiceEffect ->
-            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
-        is AddDynamicManaEffect ->
-            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
-        is AddOneManaOfEachColorAmongEffect ->
-            effect.copy(restriction = BorrowedManaAbilities.combine(effect.restriction, restriction))
-        is CompositeEffect -> effect.copy(effects = effect.effects.map { restrictManaProduced(it, restriction) })
-        else -> effect
+    private fun restrictManaProduced(effect: Effect, restriction: ManaRestriction): Effect = mapManaProduced(effect) {
+        when (it) {
+            is AddManaEffect -> it.copy(restriction = BorrowedManaAbilities.combine(it.restriction, restriction))
+            is AddColorlessManaEffect ->
+                it.copy(restriction = BorrowedManaAbilities.combine(it.restriction, restriction))
+            is AddManaOfChoiceEffect ->
+                it.copy(restriction = BorrowedManaAbilities.combine(it.restriction, restriction))
+            is AddDynamicManaEffect ->
+                it.copy(restriction = BorrowedManaAbilities.combine(it.restriction, restriction))
+            is AddOneManaOfEachColorAmongEffect ->
+                it.copy(restriction = BorrowedManaAbilities.combine(it.restriction, restriction))
+            else -> it
+        }
     }
 
     /**
      * Scales the mana [effect] produces by [multiplier], leaving everything else about it — color,
-     * restriction, riders, expiry — untouched. Recurses into a [CompositeEffect] so a mana ability
-     * bundled with a side effect (pain, a counter) scales its mana half only.
+     * restriction, riders, expiry — untouched.
      *
-     * [AddOneManaOfEachColorAmongEffect] has no amount to scale (it is "one of each colour among
-     * …"), so it is deliberately left alone rather than silently mis-scaled.
+     * [AddDynamicManaEffect] ("X mana in any combination of …") is not rewritten: the player
+     * splits the printed X and each chosen unit is multiplied, which the executor does from
+     * `EffectContext.manaUnitMultiplier` — scaling X itself would allow splits the rules don't.
+     *
+     * [AddOneManaOfEachColorAmongEffect] ("for each color among …, add one mana of that color",
+     * Bloom Tender) has no amount to scale, so it runs [multiplier] times instead: the colors it
+     * reads can't change between runs, so N runs are exactly "N times as much of that mana".
      */
-    private fun multiplyManaProduced(effect: Effect, multiplier: Int): Effect = when (effect) {
-        is AddManaEffect -> effect.copy(amount = DynamicAmount.Multiply(effect.amount, multiplier))
-        is AddColorlessManaEffect -> effect.copy(amount = DynamicAmount.Multiply(effect.amount, multiplier))
-        is AddManaOfChoiceEffect -> effect.copy(amount = DynamicAmount.Multiply(effect.amount, multiplier))
-        is AddAnyColorManaSpendOnChosenTypeEffect ->
-            effect.copy(amount = DynamicAmount.Multiply(effect.amount, multiplier))
-        is AddDynamicManaEffect ->
-            effect.copy(amountSource = DynamicAmount.Multiply(effect.amountSource, multiplier))
-        is CompositeEffect -> effect.copy(effects = effect.effects.map { multiplyManaProduced(it, multiplier) })
-        else -> effect
+    private fun multiplyManaProduced(effect: Effect, multiplier: Int): Effect = mapManaProduced(effect) {
+        when (it) {
+            is AddManaEffect -> it.copy(amount = DynamicAmount.Multiply(it.amount, multiplier))
+            is AddColorlessManaEffect -> it.copy(amount = DynamicAmount.Multiply(it.amount, multiplier))
+            is AddManaOfChoiceEffect -> it.copy(amount = DynamicAmount.Multiply(it.amount, multiplier))
+            is AddOneManaOfEachColorAmongEffect -> CompositeEffect(List(multiplier) { _ -> it })
+            else -> it
+        }
+    }
+
+    /**
+     * Rewrites every mana-producing leaf of a mana ability's [effect] with [transform]. Recurses
+     * into a [CompositeEffect] (a mana ability bundled with a side effect — pain, a counter — has
+     * only its mana half rewritten) and into both branches of a [GatedEffect] (a conditional mana
+     * ability, Raucous Audience: whichever branch resolves is the mana the permanent produced).
+     */
+    private fun mapManaProduced(effect: Effect, transform: (Effect) -> Effect): Effect = when (effect) {
+        is CompositeEffect -> effect.copy(effects = effect.effects.map { mapManaProduced(it, transform) })
+        is GatedEffect -> effect.copy(
+            then = mapManaProduced(effect.then, transform),
+            otherwise = effect.otherwise?.let { mapManaProduced(it, transform) },
+        )
+        else -> transform(effect)
     }
 }

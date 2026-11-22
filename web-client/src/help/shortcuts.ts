@@ -89,6 +89,12 @@ export const SHORTCUTS: readonly Shortcut[] = [
     where: 'Multiplayer games, on the opponent board (focused camera)',
   },
   {
+    id: 'pass-priority',
+    keys: 'Space',
+    label: 'Press the pass button — Pass, Resolve, End Turn or skip ahead',
+    where: 'In a game, whenever the pass button is lit',
+  },
+  {
     id: 'deck-browser',
     keys: 'D',
     label: 'Open or close the deck browser',
@@ -125,9 +131,21 @@ export const SHORTCUTS: readonly Shortcut[] = [
     where: 'Deckbuilder',
   },
   {
+    id: 'help-search',
+    keys: '/',
+    label: 'Jump to the search box',
+    where: 'Help wiki',
+  },
+  {
+    id: 'scenario-undo',
+    keys: 'Ctrl/⌘ Z / Ctrl/⌘ Shift Z',
+    label: 'Undo / redo a board edit',
+    where: 'Scenario Builder',
+  },
+  {
     id: 'stack-yield-menu',
-    keys: 'Right-click / long-press',
-    label: 'Open the yield menu for an ability on the stack',
+    keys: 'Right-click',
+    label: 'Open the yield menu for an ability on the stack (or press Yield… under the top item)',
     where: 'In a game, on a stack item',
   },
 ]

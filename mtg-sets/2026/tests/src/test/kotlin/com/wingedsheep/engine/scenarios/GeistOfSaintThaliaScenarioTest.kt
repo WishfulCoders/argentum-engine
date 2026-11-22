@@ -1,9 +1,15 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.core.CastSpell
+import com.wingedsheep.engine.state.components.battlefield.PreparedComponent
+import com.wingedsheep.engine.state.components.battlefield.PreparedSpellCopyComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import com.wingedsheep.sdk.core.Keyword
 
@@ -37,6 +43,50 @@ class GeistOfSaintThaliaScenarioTest : ScenarioTestBase() {
                 .withActivePlayer(2)
                 .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN).build()
             game.castSpell(2, "Divination").error.shouldNotBeNull()
+        }
+        // A prepare-spell copy has only the prepare spell's characteristics (CR 722.3c), so it is a
+        // noncreature spell even though the card it copies is a creature.
+        test("discounts a prepared creature's prepare spell") {
+            val game = scenario().withPlayers()
+                .withCardOnBattlefield(1, "Geist of Saint Thalia")
+                .withCardInHand(1, "Studious First-Year")
+                .withLandsOnBattlefield(1, "Forest", 2)
+                .withCardInLibrary(1, "Forest")
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN).build()
+            game.castSpell(1, "Studious First-Year").error shouldBe null
+            game.resolveStack()
+            val firstYear = game.findPermanent("Studious First-Year")!!
+            game.state.getEntity(firstYear)?.get<PreparedComponent>().shouldNotBeNull()
+
+            val copyId = game.state.getExile(game.player1Id).first {
+                game.state.getEntity(it)?.has<PreparedSpellCopyComponent>() == true
+            }
+            val offer = game.getLegalActions(1).first { (it.action as? CastSpell)?.cardId == copyId }
+            offer.manaCostString shouldBe "{G}"
+            offer.isAffordable shouldBe true
+
+            // Rampant Growth costs {1}{G}; one Forest is left, so only the discount pays for it.
+            game.execute(CastSpell(game.player1Id, copyId, faceIndex = 0)).error shouldBe null
+            game.resolveStack()
+            game.state.getEntity(firstYear)?.get<PreparedComponent>().shouldBeNull()
+        }
+        // An Adventure on the stack has only its alternative characteristics (CR 715.3b).
+        test("discounts a creature card cast as its Adventure") {
+            val game = scenario().withPlayers()
+                .withCardOnBattlefield(1, "Geist of Saint Thalia")
+                .withCardInHand(1, "Minecart Daredevil")
+                .withLandsOnBattlefield(1, "Mountain", 1)
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN).build()
+            val geist = game.findPermanent("Geist of Saint Thalia")!!
+            val daredevil = game.state.getHand(game.player1Id).first {
+                game.state.getEntity(it)?.get<CardComponent>()?.name == "Minecart Daredevil"
+            }
+            // Ride the Rails costs {1}{R}; a single Mountain pays it only with the discount.
+            game.execute(
+                CastSpell(game.player1Id, daredevil, listOf(ChosenTarget.Permanent(geist)), faceIndex = 0)
+            ).error shouldBe null
+            game.resolveStack()
+            game.state.projectedState.getPower(geist) shouldBe 3
         }
     }
 }

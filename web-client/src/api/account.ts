@@ -8,7 +8,11 @@
  * and is sent as `Authorization: Bearer <token>` on authenticated calls. It is also picked up by the
  * WebSocket connect handshake (see connectionSlice) to attribute games to the account.
  */
+import { ALL_GAMES, type StatsFilter, filterQuery } from './statsFilter'
 import type { SharedDeck } from '@/components/deckbuilder/shareDeck'
+import type { CubeBoosterStyle, CubeRarity } from '@/types'
+
+export type { CubeBoosterStyle, CubeRarity }
 
 const AUTH_KEY = 'argentum-auth'
 
@@ -31,7 +35,10 @@ function authHeaders(): Record<string, string> {
 }
 
 async function errorMessage(res: Response, fallback: string): Promise<string> {
-  const body = (await res.json().catch(() => null)) as { error?: string } | null
+  const body = (await res.json().catch(() => null)) as { error?: string; timestamp?: unknown; path?: unknown } | null
+  // Spring's default error body also carries `error` — the bare HTTP reason ("Not Found") — beside
+  // `timestamp` and `path`. That is not a message for a player; only our own `{ error }` bodies are.
+  if (body?.timestamp !== undefined && body.path !== undefined) return fallback
   return body?.error ?? fallback
 }
 
@@ -44,6 +51,8 @@ export interface AccountUser {
   readonly isAdmin: boolean
   /** When true the account appears offline to its friends even while connected. */
   readonly hidePresence: boolean
+  /** Chosen preset avatar id (see components/profile/avatars), or null for the initial. */
+  readonly avatar?: string | null
 }
 
 export interface LoginResponse {
@@ -62,28 +71,40 @@ export interface AppConfig {
 /**
  * Fetch server feature availability. Used on startup to decide whether to show the accounts/sign-in
  * UI at all — on a server with accounts disabled the auth endpoints don't exist, so showing a
- * sign-in form would only produce a confusing error. Fails closed (accounts hidden) on any error.
+ * sign-in form would only produce a confusing error.
+ *
+ * Resolves `null` when the server couldn't be reached (down, restarting, a proxy's 502): that's
+ * "unknown", not "accounts disabled", and the caller retries rather than settling on it.
  */
-export async function fetchAppConfig(): Promise<AppConfig> {
+export async function fetchAppConfig(): Promise<AppConfig | null> {
   try {
     const res = await fetch('/api/config')
-    if (!res.ok) return { accountsEnabled: false }
+    if (!res.ok) return null
     return (await res.json()) as AppConfig
   } catch {
-    return { accountsEnabled: false }
+    return null
   }
 }
 
 // ----- Auth -----
 
-/** Request a magic-link sign-in email. Resolves on success regardless of whether the email exists. */
-export async function requestLogin(email: string): Promise<void> {
+/**
+ * Request a magic-link sign-in email. Resolves on success regardless of whether the email exists.
+ *
+ * `devLoginPath` is present only on a dev server that can't send mail (dev endpoints on, no mail
+ * credentials): the link's own path, so local sign-in doesn't mean fishing it out of the server log.
+ */
+export async function requestLogin(email: string): Promise<{ devLoginPath?: string }> {
   const res = await fetch('/api/auth/request-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   })
   if (!res.ok) throw new Error(await errorMessage(res, `Sign-in request failed (${res.status})`))
+  const body = await res.json().catch(() => ({})) as { devLoginPath?: unknown }
+  return typeof body.devLoginPath === 'string' && body.devLoginPath.startsWith('/login/verify')
+    ? { devLoginPath: body.devLoginPath }
+    : {}
 }
 
 /** Exchange a magic-link token for a durable auth token + the account. */
@@ -109,12 +130,25 @@ export async function updateProfile(displayName: string): Promise<AccountUser> {
   return (await res.json()) as AccountUser
 }
 
-/** Fetch the current account, or null if not signed in / accounts disabled. */
+/** Pick a preset avatar, or `null` to go back to the initial. Returns the updated account. */
+export async function updateAvatar(avatar: string | null): Promise<AccountUser> {
+  const res = await fetch('/api/auth/me/avatar', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ avatar }),
+  })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (!res.ok) throw new Error(await errorMessage(res, `Failed to update avatar (${res.status})`))
+  return (await res.json()) as AccountUser
+}
+
+/** Fetch the current account, or null if not signed in. Throws when the server can't answer. */
 export async function fetchMe(): Promise<AccountUser | null> {
   if (!getAuthToken()) return null
   const res = await fetch('/api/auth/me', { headers: authHeaders() })
   if (res.status === 401) return null
-  if (!res.ok) return null
+  // Any other failure leaves the session unknown, not signed out — throw so the caller can retry.
+  if (!res.ok) throw new Error(`Failed to load the signed-in account (${res.status})`)
   return (await res.json()) as AccountUser
 }
 
@@ -139,6 +173,27 @@ export async function saveLearnProgress(progress: unknown): Promise<void> {
   })
   if (res.status === 401) throw new UnauthorizedError()
   if (!res.ok) throw new Error(`Failed to save course progress (${res.status})`)
+}
+
+/**
+ * Player preferences on the account — the client's own document, stored verbatim by the server.
+ * `{}` when none were saved there yet. See `store/preferencesStore.ts` for the sync.
+ */
+export async function fetchPreferences(): Promise<unknown> {
+  const res = await fetch('/api/auth/me/preferences', { headers: authHeaders() })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (!res.ok) throw new Error(`Failed to load preferences (${res.status})`)
+  return res.json()
+}
+
+export async function savePreferences(preferences: unknown): Promise<void> {
+  const res = await fetch('/api/auth/me/preferences', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(preferences),
+  })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (!res.ok) throw new Error(`Failed to save preferences (${res.status})`)
 }
 
 export interface DeckSummary {
@@ -216,16 +271,28 @@ export async function upsertDeckByName(deck: SharedDeck): Promise<DeckDetail> {
 
 // ----- Saved cubes -----
 
+/** One line of a stored cube. `rarity` is an explicit override; absent means the card's own rarity. */
+export interface SharedCubeEntry {
+  readonly name: string
+  readonly count: number
+  readonly rarity?: CubeRarity
+}
+
 /**
  * A cube as stored in the account — card names + counts, not resolved cards, so a cube can name a
  * card that isn't implemented yet and stays valid as sets land. Mirrors `SavedCube` minus the local
- * id/timestamp, and the server's `CubeList`.
+ * id/timestamp, and the server's `CubeList`. Everything after `packSize` is optional so cubes saved
+ * before booster styles existed still read as plain shuffled cubes.
  */
 export interface SharedCube {
   readonly name: string
-  readonly cards: ReadonlyArray<{ readonly name: string; readonly count: number }>
+  readonly description?: string
+  readonly cards: ReadonlyArray<SharedCubeEntry>
   readonly basicLandSetCode: string
+  /** Cards per pack — only meaningful for a `SHUFFLED` cube; booster styles fix their own size. */
   readonly packSize: number
+  /** Absent = `SHUFFLED`. */
+  readonly boosterStyle?: CubeBoosterStyle
 }
 
 export interface CubeSummary {
@@ -236,6 +303,18 @@ export interface CubeSummary {
 }
 
 export interface CubeDetail extends CubeSummary {
+  readonly cube: SharedCube
+  /** The public link code when the owner has shared this cube; null when it is private. */
+  readonly shareCode?: string | null
+}
+
+/** A cube opened through someone's share link — always the owner's latest saved version. */
+export interface SharedCubeView {
+  readonly shareCode: string
+  readonly name: string
+  readonly cardCount: number
+  readonly updatedAt: string
+  readonly ownerName: string | null
   readonly cube: SharedCube
 }
 
@@ -282,14 +361,59 @@ export async function deleteCube(id: number): Promise<void> {
   if (!res.ok && res.status !== 404) throw new Error(`Failed to delete cube (${res.status})`)
 }
 
+/** Create (or return the existing) public link for a saved cloud cube. */
+export async function shareCube(id: number): Promise<string> {
+  const res = await fetch(`/api/account/cubes/${id}/share`, { method: 'POST', headers: authHeaders() })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (!res.ok) throw new Error(`Failed to create a share link (${res.status})`)
+  return ((await res.json()) as { shareCode: string }).shareCode
+}
+
+/** Revoke a cube's public link; anyone holding the old link gets "not found" from then on. */
+export async function unshareCube(id: number): Promise<void> {
+  const res = await fetch(`/api/account/cubes/${id}/share`, { method: 'DELETE', headers: authHeaders() })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (!res.ok && res.status !== 404) throw new Error(`Failed to revoke the share link (${res.status})`)
+}
+
+/** Public, no auth. Null when the code is unknown or revoked, or the server has no accounts. */
+export async function getSharedCube(code: string): Promise<SharedCubeView | null> {
+  const res = await fetch(`/api/cubes/shared/${encodeURIComponent(code)}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Failed to load the shared cube (${res.status})`)
+  return (await res.json()) as SharedCubeView
+}
+
+/** The browser path a share code opens on. */
+export function sharedCubePath(code: string): string {
+  return `/cubes/shared/${encodeURIComponent(code)}`
+}
+
 // ----- Stats -----
 
-export interface AccountStats {
+/** A win/loss count. */
+export interface WinLoss {
   readonly games: number
   readonly wins: number
   readonly losses: number
   readonly winRate: number
 }
+
+/**
+ * A player's record under a {@link StatsFilter}: the counted games, the same period split by who they
+ * were against (whatever the filter's opponents), and how many games in the slice don't count —
+ * someone never took an action past the mulligan.
+ */
+export interface AccountStats extends WinLoss {
+  /** Counted games in the period where every opponent was a person. */
+  readonly vsHumans: WinLoss
+  /** Counted games in the period where every opponent was the AI. */
+  readonly vsAi: WinLoss
+  readonly notCounted: number
+}
+
+/** Why a listed game is left out of the record. */
+export type NotCountedReason = 'NO_ACTION' | 'OPPONENT_NO_ACTION'
 
 /** A `(label, count)` bucket — used for color / set / mode breakdowns. */
 export interface StatBucket {
@@ -334,6 +458,8 @@ export interface GameHistoryEntry {
   readonly gameId: string
   /** True when a compact replay was stored for this game and can be watched/shared. */
   readonly hasReplay: boolean
+  /** Why this game is left out of the record; null/absent when it counts. */
+  readonly notCounted?: NotCountedReason | null
 }
 
 export interface CardStat {
@@ -355,10 +481,21 @@ export interface UserTournamentEntry {
   readonly name: string | null
   readonly format: string | null
   readonly gameMode: string | null
-  /** Final placement (1 = winner); 0 while the tournament is still in progress. */
+  /**
+   * Final placement (1 = winner). For an in-progress or abandoned tournament, the standing after the
+   * last recorded match (0 if none yet).
+   */
   readonly placement: number
   readonly playerCount: number
   readonly status: TournamentStatus
+  /** Match record — final once completed, last-known for an in-progress or abandoned tournament. */
+  readonly wins: number
+  readonly losses: number
+  readonly draws: number
+  /** Of `wins`, matches won because the opponent left — never played. */
+  readonly forfeitWins?: number
+  /** Of `losses`, matches lost because this player left — never played. */
+  readonly forfeitLosses?: number
 }
 
 /** One player's final standing in a tournament. */
@@ -370,6 +507,10 @@ export interface TournamentStanding {
   readonly wins: number
   readonly losses: number
   readonly draws: number
+  /** Of `wins`, matches won because the opponent left — never played. */
+  readonly forfeitWins?: number
+  /** Of `losses`, matches lost because this player left — never played. */
+  readonly forfeitLosses?: number
 }
 
 /** One seat within a single tournament game. */
@@ -424,8 +565,8 @@ export interface GameDeckCard {
   /** The card's own colours as enum names, e.g. `["WHITE","BLUE"]`; empty = colourless. */
   readonly colors: string[]
   /**
-   * Direct CDN art URL for the card's default printing, resolved server-side (like the deckbuilder
-   * catalog). `null` when unresolved, in which case the preview falls back to a Scryfall name lookup.
+   * Direct CDN art URL for the printing the deck used (its default printing when none was pinned),
+   * resolved server-side (like the deckbuilder catalog). `null` when unresolved, in which case the preview falls back to a Scryfall name lookup.
    */
   readonly imageUri: string | null
 }
@@ -446,6 +587,10 @@ export interface GameDecks {
   readonly endedAt: string
   readonly gameMode: string | null
   readonly participants: GameDeckParticipant[]
+  /** The lobby's deck format; only the admin by-match view sends it. */
+  readonly format?: string | null
+  /** Whether a replay is stored; only the admin by-match view sends it. */
+  readonly hasReplay?: boolean | null
 }
 
 /** A page of game history plus the total game count (for the pager). */
@@ -487,26 +632,31 @@ export interface RatingPoint {
   readonly result: string
 }
 
-export const fetchStats = () => getStats<AccountStats>('/me')
-export const fetchColorStats = () => getStats<StatBucket[]>('/me/colors')
-export const fetchSetStats = () => getStats<StatBucket[]>('/me/sets')
-export const fetchModeStats = () => getStats<StatBucket[]>('/me/modes')
-export const fetchOpponents = () => getStats<HeadToHead[]>('/me/opponents')
+// Every game-derived endpoint takes the same optional slice (see `statsFilter.ts`).
+const q = (f: StatsFilter) => filterQuery(f).replace(/^&/, '?')
+export const fetchStats = (f: StatsFilter = ALL_GAMES) => getStats<AccountStats>(`/me${q(f)}`)
+export const fetchColorStats = (f: StatsFilter = ALL_GAMES) => getStats<StatBucket[]>(`/me/colors${q(f)}`)
+export const fetchSetStats = (f: StatsFilter = ALL_GAMES) => getStats<StatBucket[]>(`/me/sets${q(f)}`)
+export const fetchModeStats = (f: StatsFilter = ALL_GAMES) => getStats<StatBucket[]>(`/me/modes${q(f)}`)
+export const fetchOpponents = (f: StatsFilter = ALL_GAMES) => getStats<HeadToHead[]>(`/me/opponents${q(f)}`)
 export const fetchHistory = (limit = 25) => getStats<GameHistoryEntry[]>(`/me/history?limit=${limit}`)
-export const fetchTopCards = (limit = 30) => getStats<CardStat[]>(`/me/cards?limit=${limit}`)
+export const fetchTopCards = (limit = 30, f: StatsFilter = ALL_GAMES) =>
+  getStats<CardStat[]>(`/me/cards?limit=${limit}${filterQuery(f)}`)
 export const fetchTournamentHistory = (limit = 25) =>
   getStats<UserTournamentEntry[]>(`/me/tournaments?limit=${limit}`)
 export const fetchRatings = () => getStats<RatingEntry[]>('/me/ratings')
 export const fetchRatingsHistory = () => getStats<RatingPoint[]>('/me/ratings/history')
-export const fetchCreatureTypes = (limit = 15) =>
-  getStats<StatBucket[]>(`/me/creature-types?limit=${limit}`)
-export const fetchCardTypes = () => getStats<StatBucket[]>('/me/card-types')
-export const fetchManaCurve = () => getStats<StatBucket[]>('/me/curve')
+export const fetchCreatureTypes = (limit = 15, f: StatsFilter = ALL_GAMES) =>
+  getStats<StatBucket[]>(`/me/creature-types?limit=${limit}${filterQuery(f)}`)
+export const fetchCardTypes = (f: StatsFilter = ALL_GAMES) => getStats<StatBucket[]>(`/me/card-types${q(f)}`)
+export const fetchManaCurve = (f: StatsFilter = ALL_GAMES) => getStats<StatBucket[]>(`/me/curve${q(f)}`)
 
 /** Everything a read-only public profile shows for another player, bundled into one response. */
 export interface PublicProfile {
   readonly userId: string
   readonly displayName: string
+  /** Preset avatar id, or null for the initial. */
+  readonly avatar?: string | null
   readonly stats: AccountStats
   readonly ratings: RatingEntry[]
   readonly ratingHistory: RatingPoint[]
@@ -526,16 +676,16 @@ export interface PublicProfile {
 export class ProfileNotFoundError extends Error {}
 
 /** Fetch another player's public, read-only profile by user id. */
-export async function fetchPublicProfile(userId: string): Promise<PublicProfile> {
-  const res = await fetch(`/api/stats/users/${encodeURIComponent(userId)}`, { headers: authHeaders() })
+export async function fetchPublicProfile(userId: string, f: StatsFilter = ALL_GAMES): Promise<PublicProfile> {
+  const res = await fetch(`/api/stats/users/${encodeURIComponent(userId)}${q(f)}`, { headers: authHeaders() })
   if (res.status === 404) throw new ProfileNotFoundError()
   if (!res.ok) throw new Error(`Failed to load profile (${res.status})`)
   return (await res.json()) as PublicProfile
 }
 
 /** One page of recent games, with the total count read from `X-Total-Count` for the pager. */
-export async function fetchHistoryPage(limit: number, offset: number): Promise<HistoryPage> {
-  const res = await fetch(`/api/stats/me/history?limit=${limit}&offset=${offset}`, {
+export async function fetchHistoryPage(limit: number, offset: number, f: StatsFilter = ALL_GAMES): Promise<HistoryPage> {
+  const res = await fetch(`/api/stats/me/history?limit=${limit}&offset=${offset}${filterQuery(f)}`, {
     headers: authHeaders(),
   })
   if (res.status === 401) throw new UnauthorizedError()
@@ -551,6 +701,41 @@ export async function fetchTournamentDetail(id: number): Promise<TournamentDetai
   if (res.status === 404) throw new ProfileNotFoundError()
   if (!res.ok) throw new Error(`Failed to load tournament (${res.status})`)
   return (await res.json()) as TournamentDetail
+}
+
+/** One card that changed hands in a game played for ante (CR 407). */
+export interface Spoil {
+  readonly cardName: string
+  readonly imageUri: string | null
+  /** The other side of the transfer: who it was won from, or lost to. */
+  readonly opponentName: string
+  readonly gameId: string | null
+  /** ISO-8601 timestamp of the game's end. */
+  readonly at: string
+}
+
+export interface Spoils {
+  readonly won: readonly Spoil[]
+  readonly lost: readonly Spoil[]
+}
+
+const NO_SPOILS: Spoils = { won: [], lost: [] }
+
+/**
+ * The signed-in user's ante winnings and losses. A server without the endpoint (404) or with
+ * accounts disabled reads as "no spoils yet" rather than an error — the panel just shows its
+ * empty state.
+ */
+export async function fetchSpoils(): Promise<Spoils> {
+  const res = await fetch('/api/stats/me/spoils', { headers: authHeaders() })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (res.status === 404 || res.status === 503) return NO_SPOILS
+  if (!res.ok) throw new Error(`Failed to load spoils (${res.status})`)
+  const body = (await res.json().catch(() => null)) as Partial<Spoils> | null
+  return {
+    won: Array.isArray(body?.won) ? body.won : [],
+    lost: Array.isArray(body?.lost) ? body.lost : [],
+  }
 }
 
 /** Both seats' decklists for one of the user's finished games (for the recent-games deck viewer). */

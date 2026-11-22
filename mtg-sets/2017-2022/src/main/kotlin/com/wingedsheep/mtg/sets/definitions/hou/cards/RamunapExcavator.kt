@@ -10,9 +10,6 @@ import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
  * Creature — Snake Cleric
  * 2/3
  * You may play lands from your graveyard.
- *
- * [MayPlayLandsFromGraveyard] only adds the graveyard as a zone to play lands from; the normal
- * land-drop count and timing still apply (the land-play scan asks the same land-drop budget).
  */
 val RamunapExcavator = card("Ramunap Excavator") {
     manaCost = "{2}{G}"
@@ -33,7 +30,14 @@ val RamunapExcavator = card("Ramunap Excavator") {
         flavorText = "\"This world was once so much more than the confines of Naktamun.\""
         imageUri = "https://cards.scryfall.io/normal/front/9/0/90a54d18-8403-441d-a115-ee462fabdabb.jpg?1783936015"
 
-        ruling("2017-07-14", "Ramunap Excavator doesn't change the times when you can play those land cards. You can still play only one land per turn, and only during your main phase when you have priority and the stack is empty.")
-        ruling("2017-07-14", "Ramunap Excavator doesn't allow you to activate activated abilities (such as cycling) of land cards in your graveyard.")
+        ruling(
+            "2017-07-14",
+            "Ramunap Excavator doesn't change the times when you can play those land cards. You can still " +
+                "play only one land per turn, and only during your main phase when you have priority and the stack is empty."
+        )
+        ruling(
+            "2017-07-14",
+            "Ramunap Excavator doesn't allow you to activate activated abilities (such as cycling) of land cards in your graveyard."
+        )
     }
 }

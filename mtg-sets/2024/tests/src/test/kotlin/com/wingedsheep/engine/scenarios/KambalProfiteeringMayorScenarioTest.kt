@@ -48,8 +48,15 @@ class KambalProfiteeringMayorScenarioTest : FunSpec({
         driver.giveColorlessMana(playerId, x)
         val posse = driver.putCardInHand(playerId, "Form a Posse")
         driver.castXSpell(playerId, posse, xValue = x).error shouldBe null
-        // Resolve Form a Posse, then any Kambal triggers it created.
-        repeat(6) { driver.bothPass() }
+        // Resolve Form a Posse, then any Kambal triggers it created — without leaving the main phase,
+        // and ending with priority back on the caster so it can cast again.
+        var guard = 0
+        while (guard++ < 16 && (driver.state.stack.isNotEmpty() || driver.pendingDecision != null ||
+                driver.state.priorityPlayerId != playerId)
+        ) {
+            if (driver.pendingDecision != null) driver.autoResolveDecision()
+            else driver.passPriority(driver.state.priorityPlayerId!!)
+        }
     }
 
     test("tokens you control entering: each opponent loses 1, you gain 1 — once per batch") {

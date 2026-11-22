@@ -95,12 +95,27 @@ class ScenarioBuilderService(
 
         fun checkPlayer(label: String, config: PlayerConfig?) {
             config ?: return
+            config.counters?.forEach { (kind, count) ->
+                if (kind.isBlank() || CounterType.of(kind) !in CounterType.KNOWN) errors += "Unknown player counter type '$kind' on $label."
+                if (count < 0) errors += "Player counter count must be nonnegative on $label."
+            }
             checkZone("$label hand", config.hand)
             checkZone("$label graveyard", config.graveyard)
             checkZone("$label library", config.library)
             checkZone("$label exile", config.exile)
             checkZone("$label sideboard", config.sideboard)
+            checkZone("$label ante", config.ante)
             checkZone("$label commanders", config.commanders)
+            config.dungeon?.let { staged ->
+                val dungeon = com.wingedsheep.sdk.dungeons.Dungeons.byName(staged.name)
+                if (dungeon == null) errors += "Unknown dungeon: ${staged.name}"
+                else if (staged.room != null && dungeon.rooms.none { it.name == staged.room }) {
+                    errors += "${staged.name} has no room named ${staged.room}"
+                }
+            }
+            config.completedDungeons?.filter { com.wingedsheep.sdk.dungeons.Dungeons.byName(it) == null }
+                ?.forEach { errors += "Unknown dungeon: $it" }
+            checkZone("$label companion", listOfNotNull(config.companion))
             val battlefield = config.battlefield ?: emptyList()
             total += battlefield.size
             if (enforceLimits && battlefield.size > MAX_CARDS_PER_ZONE) {
@@ -151,6 +166,7 @@ class ScenarioBuilderService(
         val seats = request.seats()
         val builder = ScenarioBuilder(registry)
         builder.withPlayers(seats.map { it.first })
+        if (request.commanderFormat == true) builder.withCommanderFormat()
 
         seats.forEachIndexed { i, (_, config) -> applyPlayer(builder, i + 1, config) }
 
@@ -162,6 +178,12 @@ class ScenarioBuilderService(
         request.priorityPlayer?.let { builder.withPriorityPlayer(it) }
         request.teams?.let { builder.withTeams(it, teamVsTeam = request.teamVsTeam == true) }
         request.attackMode?.let { builder.withAttackMode(it) }
+        if (request.playingForAnte == true || seats.any { !it.second?.ante.isNullOrEmpty() }) {
+            builder.playingForAnte()
+        }
+        request.monarch?.let { builder.withDesignation(it, com.wingedsheep.sdk.core.PlayerDesignation.MONARCH) }
+        request.initiative?.let { builder.withDesignation(it, com.wingedsheep.sdk.core.PlayerDesignation.INITIATIVE) }
+        request.dayNight?.let { builder.withDayNight(it) }
 
         val (state, playerIds) = builder.build()
         return ScenarioBuildResult(state, playerIds, registry)
@@ -170,6 +192,8 @@ class ScenarioBuilderService(
     private fun applyPlayer(builder: ScenarioBuilder, n: Int, config: PlayerConfig?) {
         config ?: return
         config.lifeTotal?.let { builder.withLifeTotal(n, it) }
+        config.spellsCastThisTurn?.let { builder.withSpellsCastThisTurn(n, it) }
+        config.counters?.let { builder.withPlayerCounters(n, it) }
         config.commanders?.forEach { builder.withCommander(n, it) }
         config.hand?.forEach { builder.withCardInHand(n, it) }
         config.battlefield?.forEach { card ->
@@ -190,6 +214,10 @@ class ScenarioBuilderService(
         config.library?.forEach { builder.withCardInLibrary(n, it) }
         config.exile?.forEach { builder.withCardInExile(n, it) }
         config.sideboard?.forEach { builder.withCardInSideboard(n, it) }
+        config.ante?.forEach { builder.withCardInAnte(n, it) }
+        config.dungeon?.let { builder.withDungeon(n, it.name, it.room) }
+        config.completedDungeons?.takeIf { it.isNotEmpty() }?.let { builder.withCompletedDungeons(n, it) }
+        config.companion?.let { builder.withCompanion(n, it) }
     }
 
     private fun phaseToDefaultStep(phase: Phase): Step = when (phase) {
@@ -206,7 +234,7 @@ class ScenarioBuilderService(
      */
     private class ScenarioBuilder(private val cardRegistry: CardRegistry) {
         private val entityIdCounter = AtomicLong(1000)
-        private var state = GameState(preserveGraveyardOrder = true)
+        private var state = GameState()
 
         private val playerIds = mutableListOf<EntityId>()
 
@@ -235,7 +263,8 @@ class ScenarioBuilderService(
                 priorityPlayerId = playerIds[0],
                 phase = Phase.PRECOMBAT_MAIN,
                 step = Step.PRECOMBAT_MAIN,
-                turnNumber = 1
+                turnNumber = 1,
+                roundNumber = 1
             )
 
             // Initialize empty zones for every player
@@ -397,6 +426,31 @@ class ScenarioBuilderService(
             return this
         }
 
+        /** Put a card the player owns into the ante (CR 407). */
+        fun withCardInAnte(playerNumber: Int, cardName: String): ScenarioBuilder {
+            val playerId = playerFor(playerNumber)
+            val cardId = createCard(cardName, playerId)
+            state = state.addToZone(ZoneKey(playerId, Zone.ANTE), cardId)
+            return this
+        }
+
+        /** Mark the game as played for ante (CR 407), as the lobby option does. */
+        fun playingForAnte(): ScenarioBuilder {
+            state = state.copy(playingForAnte = true)
+            return this
+        }
+
+        /** Put [cardName] in the player's sideboard as their revealed companion (CR 702.139). */
+        fun withCompanion(playerNumber: Int, cardName: String): ScenarioBuilder {
+            val playerId = playerFor(playerNumber)
+            val cardId = createCard(cardName, playerId)
+            state = state.addToZone(ZoneKey(playerId, Zone.SIDEBOARD), cardId)
+            state = state.updateEntity(playerId) {
+                it.with(com.wingedsheep.engine.state.components.player.CompanionComponent(cardId))
+            }
+            return this
+        }
+
         /**
          * Designate a card as the player's commander, placing it in the command zone with a
          * [CommanderComponent] and appending it to the player's [CommanderRegistryComponent].
@@ -411,6 +465,22 @@ class ScenarioBuilderService(
                 val existing = container.get<CommanderRegistryComponent>()
                 val ids = (existing?.commanderIds ?: emptyList()) + cardId
                 container.with(CommanderRegistryComponent(ids))
+            }
+            return this
+        }
+
+        /** Switch to Commander rules (`Format.Commander`) and give every seat its starting life. */
+        fun withCommanderFormat(): ScenarioBuilder {
+            val format = com.wingedsheep.sdk.core.Format.Commander()
+            state = state.copy(format = format)
+            playerIds.forEach { state = state.withLifeTotal(it, format.startingLife) }
+            return this
+        }
+
+        fun withPlayerCounters(playerNumber: Int, counters: Map<String, Int>): ScenarioBuilder {
+            require(counters.values.all { it >= 0 }) { "Player counters must be nonnegative" }
+            state = state.updateEntity(playerFor(playerNumber)) { container ->
+                container.with(CountersComponent(counters.mapKeys { CounterType.of(it.key) }))
             }
             return this
         }
@@ -463,6 +533,59 @@ class ScenarioBuilderService(
             return this
         }
 
+        /** Stage the game's day/night designation (CR 731). */
+        fun withDayNight(designation: com.wingedsheep.sdk.core.DayNight): ScenarioBuilder {
+            state = state.copy(dayNight = designation)
+            return this
+        }
+
+        /** Stage how many spells a seat has cast this turn (the CR 731.2 day/night check reads it). */
+        fun withSpellsCastThisTurn(playerNumber: Int, count: Int): ScenarioBuilder {
+            val playerId = playerFor(playerNumber)
+            state = state.copy(
+                playerSpellsCastThisTurn = state.playerSpellsCastThisTurn + (playerId to count),
+                spellsCastThisTurn = state.spellsCastThisTurn + count,
+            )
+            return this
+        }
+
+        /** Stage a single-holder designation (CR 725 / 726) on a seat, without triggering anything. */
+        fun withDesignation(playerNumber: Int, designation: com.wingedsheep.sdk.core.PlayerDesignation): ScenarioBuilder {
+            val playerId = playerFor(playerNumber)
+            state = when (designation) {
+                com.wingedsheep.sdk.core.PlayerDesignation.MONARCH -> state.copy(monarch = playerId)
+                com.wingedsheep.sdk.core.PlayerDesignation.INITIATIVE -> state.copy(initiative = playerId)
+            }
+            return this
+        }
+
+        /** Put [dungeonName] into the player's command zone with the marker on [roomName] (CR 309.4). */
+        fun withDungeon(playerNumber: Int, dungeonName: String, roomName: String?): ScenarioBuilder {
+            val playerId = playerFor(playerNumber)
+            val dungeon = com.wingedsheep.sdk.dungeons.Dungeons.byName(dungeonName)
+                ?: error("Unknown dungeon: $dungeonName")
+            val room = roomName?.let { name -> dungeon.rooms.indexOfFirst { it.name == name } }
+                ?.takeIf { it >= 0 } ?: dungeon.topmostRoom
+            state = com.wingedsheep.engine.mechanics.dungeon.DungeonService.enter(state, playerId, dungeon, "scenario").first
+            state = com.wingedsheep.engine.mechanics.dungeon.DungeonService.moveTo(state, playerId, room, "scenario").first
+            // Staging the marker isn't a venture this turn (a per-turn venture cap would read it).
+            state = state.updateEntity(playerId) {
+                it.without<com.wingedsheep.engine.state.components.player.VenturesThisTurnComponent>()
+            }
+            return this
+        }
+
+        /** Record dungeons the player has already completed (CR 309.7). */
+        fun withCompletedDungeons(playerNumber: Int, names: List<String>): ScenarioBuilder {
+            val playerId = playerFor(playerNumber)
+            state = state.updateEntity(playerId) { container ->
+                val progress = container.get<com.wingedsheep.engine.state.components.player.DungeonProgressComponent>()
+                    ?: com.wingedsheep.engine.state.components.player.DungeonProgressComponent()
+                container.with(progress.copy(completed = progress.completed + names))
+            }
+            return this
+        }
+
         /** The Free-for-All attack rule (CR 802 / 803) — what a lobby's `attackMode` threads through `GameConfig`. */
         fun withAttackMode(mode: com.wingedsheep.sdk.core.AttackMode): ScenarioBuilder {
             state = state.copy(attackMode = mode)
@@ -476,6 +599,8 @@ class ScenarioBuilderService(
         private fun createCard(cardName: String, ownerId: EntityId): EntityId {
             val cardDef = cardRegistry.getCard(cardName)
                 ?: error("Card not found in registry: $cardName")
+            // Like a real game, ask for graveyard order only once a card that reads it is in play.
+            if (cardDef.readsGraveyardOrder) state = state.copy(preserveGraveyardOrder = true)
 
             val cardId = EntityId.of("card-${entityIdCounter.incrementAndGet()}")
 
@@ -483,10 +608,12 @@ class ScenarioBuilderService(
             // CardComponent.cardDefinitionId matches the key used by CardRegistry. Without the
             // set-code prefix, registry lookups (e.g. TriggerAbilityResolver.getTriggeredAbilities)
             // miss and the card silently has no triggered abilities.
+            // A modal DFC's back face is registered under its bare name only, so fall back to the
+            // name whenever the registry doesn't know the numbered key (else its abilities vanish).
             val definitionId = cardDef.metadata.collectorNumber?.let { cn ->
                 if (cardDef.setCode != null) "${cardDef.name}#${cardDef.setCode}-$cn"
                 else "${cardDef.name}#$cn"
-            } ?: cardDef.name
+            }?.takeIf { cardRegistry.getCard(it) != null } ?: cardDef.name
             val cardComponent = CardComponent(
                 cardDefinitionId = definitionId,
                 name = cardDef.name,
@@ -506,6 +633,7 @@ class ScenarioBuilderService(
                 hasNonManaActivatedAbility = cardDef.hasNonManaActivatedAbility,
                 hasActivatedAbility = cardDef.hasActivatedAbility,
                 hasCycling = cardDef.hasCycling,
+                hasKicker = cardDef.hasKicker,
                 // Mirror CardEntityFactory so CardPredicate.HasAdventure (Frantic Firebolt's
                 // graveyard tally) sees adventurer cards created in dev scenarios.
                 hasAdventure = cardDef.isAdventure,

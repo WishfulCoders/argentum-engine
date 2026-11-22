@@ -18,7 +18,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 /**
- * `EventPattern.DrawEvent(exceptFirstInDrawStep = true)` on a per-card **draw replacement** —
+ * `EventPattern.DrawEvent(firstInDrawStep = com.wingedsheep.sdk.scripting.DrawStepFirstCard.EXCLUDED)` on a per-card **draw replacement** —
  * "If an opponent would draw a card except the first one they draw in each of their draw steps,
  * instead you create a Treasure token." (Hullbreacher).
  *
@@ -44,7 +44,7 @@ class DrawReplacementDrawStepExemptionTest : FunSpec({
         replacementEffect(
             ReplaceDrawWith(
                 replacementEffect = Effects.CreateTreasure(controller = EffectTarget.PlayerRef(Player.ControllerOfSource)),
-                appliesTo = EventPattern.DrawEvent(player = Player.EachOpponent, exceptFirstInDrawStep = true),
+                appliesTo = EventPattern.DrawEvent(player = Player.EachOpponent, firstInDrawStep = com.wingedsheep.sdk.scripting.DrawStepFirstCard.EXCLUDED),
             )
         )
         metadata { rarity = Rarity.RARE; collectorNumber = "T01" }

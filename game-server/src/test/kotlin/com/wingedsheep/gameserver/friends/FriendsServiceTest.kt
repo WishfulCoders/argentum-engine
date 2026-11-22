@@ -5,6 +5,7 @@ import com.wingedsheep.gameserver.persistence.FriendshipRow
 import com.wingedsheep.gameserver.persistence.FriendshipStatus
 import com.wingedsheep.gameserver.persistence.UserRepository
 import com.wingedsheep.gameserver.persistence.UserRow
+import com.wingedsheep.gameserver.social.NoAccountBlockStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -39,7 +40,7 @@ class FriendsServiceTest : FunSpec({
         users = mockk()
         presence = mockk()
         broadcaster = mockk(relaxed = true)
-        service = FriendsService(friendships, users, presence, broadcaster)
+        service = FriendsService(friendships, users, presence, broadcaster, NoAccountBlockStore())
     }
 
     // ---- sendRequest ----

@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  * [com.wingedsheep.sdk.scripting.AdditionalCostPayment].
  */
 @Serializable
-enum class AdditionalCostSelectionKind { SACRIFICE, DISCARD, EXILE, TAP, RETURN_TO_HAND }
+enum class AdditionalCostSelectionKind { SACRIFICE, DISCARD, EXILE, TAP, RETURN_TO_HAND, PUT_COUNTERS }
 
 /**
  * Pause/resume frame for choosing how to pay one selection-requiring additional cost during a
@@ -31,6 +31,25 @@ data class CastSpellAdditionalCostContinuation(
     val casterId: EntityId,
     val baseCastAction: CastSpell,
     val costKind: AdditionalCostSelectionKind,
+) : AnswerContinuation
+
+/**
+ * Announcement of X (CR 601.2b) for a cast made while an ability resolves, where no client action
+ * carried it — the miracle cast of an `{X}` miracle cost (Entreat the Angels). Resumed by
+ * re-entering the cast with [baseCastAction]'s `xValue` bound; the pause precedes every payment.
+ */
+@Serializable
+data class CastChooseXContinuation(
+    val baseCastAction: CastSpell,
+) : AnswerContinuation
+
+/**
+ * The division of damage (CR 601.2d) a synthesized cast still owes — Avacyn's Judgment cast for
+ * its madness cost. Answered with a [DistributionResponse]; the cast re-enters with it announced.
+ */
+@Serializable
+data class CastDivideDamageContinuation(
+    val baseCastAction: CastSpell,
 ) : AnswerContinuation
 
 /** Announcement of a named additional-cost branch, before any payment is made. */

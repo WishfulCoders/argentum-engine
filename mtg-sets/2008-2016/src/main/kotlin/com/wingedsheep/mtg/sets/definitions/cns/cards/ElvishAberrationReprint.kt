@@ -13,7 +13,7 @@ val ElvishAberrationReprint = Printing(
     collectorNumber = "163",
     scryfallId = "7bebe639-708f-48fb-a112-96d8ed92fd05",
     artist = "Matt Cavotta",
-    imageUri = "https://cards.scryfall.io/normal/front/7/b/7bebe639-708f-48fb-a112-96d8ed92fd05.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/7/b/7bebe639-708f-48fb-a112-96d8ed92fd05.jpg?1783939345",
     releaseDate = "2014-06-06",
     rarity = Rarity.COMMON,
 )

@@ -32,10 +32,9 @@ after shot is enough, but a before/after pair is better when the change is subtl
 How to capture (this is the flow that works in this repo):
 
 1. **Run the stack.** UI screens need real data: the deckbuilder hits `/api/sets`, lobby/tournament
-   screens need WebSocket lobby state. Start the game server
-   (`GAME_DEV_ENDPOINTS_ENABLED=true ./gradlew :game-server:bootRun --args='--spring.profiles.active=local'`,
-   ~90s cold) and `npm run dev`. Note the dev server falls back to **:5174** (or higher) if 5173 is
-   taken — read the actual port from its log.
+   screens need WebSocket lobby state. Run `just ui-dev <server-port> <client-port>` on free ports.
+   It starts this checkout's game server (dev endpoints on, ~90s cold) and Vite together, and fails
+   on an occupied port instead of quietly showing another checkout's app.
 2. **Drive it with Playwright via system Chrome** (the cached Playwright browser may not match the
    installed version): `chromium.launch({ channel: 'chrome' })`. Reuse the `playwright` already in
    `node_modules` (CommonJS — `import pkg from '.../playwright/index.js'; const { chromium } = pkg`).

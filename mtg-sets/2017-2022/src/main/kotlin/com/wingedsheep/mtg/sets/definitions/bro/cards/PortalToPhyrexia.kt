@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.bro.cards
 
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,18 +13,16 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * Portal to Phyrexia
- * {9}
- * Artifact
+ * Portal to Phyrexia — The Brothers' War #240
+ * {9} · Artifact
+ *
  * When this artifact enters, each opponent sacrifices three creatures of their choice.
  * At the beginning of your upkeep, put target creature card from a graveyard onto the battlefield
  * under your control. It's a Phyrexian in addition to its other types.
  *
- * The enters trigger is Barter in Blood's edict aimed at each opponent. The upkeep trigger is Vat
- * Emergence's reanimation from any graveyard (graveyard-guarded, under your control), followed by a
- * permanent "becomes a Phyrexian in addition to its other types" on that same object (Olivia
- * Voldaren's [Duration.Permanent] subtype grant). The trigger is mandatory: if any graveyard holds a
- * creature card, one must be chosen.
+ * The enters trigger is the Barter in Blood edict at `count = 3` over [Player.EachOpponent]; the
+ * upkeep trigger is Reanimate's "from a graveyard … under your control" move followed by Terror of
+ * Towashi's permanent Phyrexian type grant on the same target.
  */
 val PortalToPhyrexia = card("Portal to Phyrexia") {
     manaCost = "{9}"
@@ -44,9 +43,14 @@ val PortalToPhyrexia = card("Portal to Phyrexia") {
 
     triggeredAbility {
         trigger = Triggers.you.beginningOf(Step.UPKEEP)
-        val creature = target(TargetFilter.CreatureInGraveyard)
-        effect = Effects.PutOntoBattlefieldFromGraveyard(creature, underYourControl = true) then
-            Effects.AddSubtype("Phyrexian", creature, Duration.Permanent)
+        val creatureCard = target(TargetFilter.CreatureInGraveyard)
+        effect = Effects.Move(
+            creatureCard,
+            Zone.BATTLEFIELD,
+            controllerOverride = EffectTarget.Controller,
+            fromZone = Zone.GRAVEYARD
+        ) then
+            Effects.AddCreatureType("Phyrexian", creatureCard, Duration.Permanent)
     }
 
     metadata {

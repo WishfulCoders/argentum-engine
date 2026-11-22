@@ -139,7 +139,10 @@ class ColourNeeds private constructor(
         ): Set<Color> {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: return emptySet()
             if (card.isLand) {
-                return LandManaColorInspector.colorsLandCouldProduce(state, projected, entityId, cardRegistry)
+                return LandManaColorInspector.colorsLandCouldProduce(
+                    state, projected, entityId, cardRegistry,
+                    com.wingedsheep.engine.handlers.PredicateEvaluator(cardRegistry),
+                )
             }
             val definition = cardRegistry.getCard(card) ?: return emptySet()
             val colours = mutableSetOf<Color>()

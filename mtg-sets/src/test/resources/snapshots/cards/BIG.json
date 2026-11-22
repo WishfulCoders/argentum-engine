@@ -1662,7 +1662,8 @@
                             },
                             "linkToSource": true
                         },
-                        "ShuffleLibrary"
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent"
                     ]
                 }
             },
@@ -2150,28 +2151,30 @@
                 "id": "Transmutation Font:1",
                 "cost": "CostTap",
                 "effect": {
-                    "type": "Modal",
-                    "modes": [
+                    "type": "ChooseAction",
+                    "choices": [
                         {
+                            "label": "Create a Blood token",
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Blood"
                             }
                         },
                         {
+                            "label": "Create a Clue token",
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Clue"
                             }
                         },
                         {
+                            "label": "Create a Food token",
                             "effect": {
                                 "type": "CreatePredefinedToken",
                                 "tokenType": "Food"
                             }
                         }
-                    ],
-                    "countsAsModalSpell": false
+                    ]
                 }
             },
             {
@@ -2221,7 +2224,9 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "found"
+                            "storeSelected": "found",
+                            "prompt": "Search your library for an artifact card to put onto the battlefield",
+                            "selectedLabel": "Put onto the battlefield"
                         },
                         {
                             "type": "MoveCollection",

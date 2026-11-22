@@ -13,7 +13,7 @@ val FlingReprint = Printing(
     collectorNumber = "320",
     scryfallId = "8f42d773-c742-4465-b6d5-31feaba49146",
     artist = "Lucas Graciano",
-    imageUri = "https://cards.scryfall.io/normal/front/8/f/8f42d773-c742-4465-b6d5-31feaba49146.jpg?1783930394",
+    imageUri = "https://cards.scryfall.io/normal/front/8/f/8f42d773-c742-4465-b6d5-31feaba49146.jpg",
     releaseDate = "2020-07-17",
     rarity = Rarity.COMMON,
 )

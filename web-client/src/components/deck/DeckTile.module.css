@@ -108,6 +108,12 @@
   margin-top: -2px;
 }
 
+.note {
+  composes: description;
+  font-style: italic;
+  color: rgba(255, 244, 222, 0.82);
+}
+
 .metaRow {
   display: flex;
   align-items: center;
@@ -266,4 +272,26 @@
 @keyframes badgePulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* Touch screens have no hover, so a tile's corner actions (Edit / Delete / Customize) would never
+   appear. Show them on the selected tile — tap to select, then edit — rather than on every tile. */
+@media (hover: none) {
+  .tileSelected .actions { opacity: 1; }
+  .tile:hover { transform: none; }
+}
+
+/* A narrow gallery (two columns on a phone): the caption keeps the name, colours and count, and
+   lets the flavour line go — it would otherwise push the name halfway up the art. Sized to the
+   gallery container (DeckPicker sets `container-type`), not the viewport. */
+@container (max-width: 460px) {
+  .tile { aspect-ratio: 5 / 4; }
+  .description { display: none; }
+  .note { -webkit-line-clamp: 1; line-clamp: 1; font-size: 0.66rem; }
+  .info { gap: 4px; padding: 8px 9px 9px; }
+  .name { font-size: 0.88rem; }
+  .format { display: none; }
+  .count { font-size: 0.68rem; }
+  .badge { font-size: 0.55rem; padding: 2px 7px; letter-spacing: 0.06em; }
+  .storage { font-size: 0.56rem; padding: 2px 6px 2px 5px; }
 }

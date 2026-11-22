@@ -1,4 +1,5 @@
-import type { ChooseTargetsDecision, ClientCard, ClientGameState, EntityId } from '@/types'
+import type { ChooseTargetsDecision, ClientCard, ClientGameState, EntityId, TargetRequirementInfo } from '@/types'
+import type { SelectionTotalCap } from '@/store/slices/types'
 import { ZoneType } from '@/types'
 
 /**
@@ -17,8 +18,12 @@ export function isLoneTargetRequirement(decision: ChooseTargetsDecision): boolea
   return (decision.targetRequirements[0]?.maxTargets ?? 1) <= 1
 }
 
-/** Zones whose cards are only reachable through a pile picker — never clickable on the board. */
-const PILE_ZONES: ReadonlySet<ZoneType> = new Set([ZoneType.GRAVEYARD, ZoneType.EXILE])
+/**
+ * Zones whose cards are reached through a pile picker rather than a board click. The ante (CR 407)
+ * is one: Darkpact's "target card in the ante" spans every player's stake, so it gets the same
+ * cross-zone picker as a graveyard.
+ */
+const PILE_ZONES: ReadonlySet<ZoneType> = new Set([ZoneType.GRAVEYARD, ZoneType.EXILE, ZoneType.ANTE])
 
 /** How a requirement's valid targets split across the two ways a player can reach them. */
 export interface TargetZonePartition {
@@ -54,7 +59,7 @@ export function partitionTargetsByZone(
 ): TargetZonePartition {
   const pileCards: ClientCard[] = []
   let hasBoardTargets = false
-  const hintIsPile = targetZoneHint === ZoneType.GRAVEYARD || targetZoneHint === ZoneType.EXILE
+  const hintIsPile = PILE_ZONES.has(targetZoneHint as ZoneType)
 
   for (const targetId of validTargets) {
     const card = cards?.[targetId]
@@ -109,12 +114,18 @@ export function routeTargetsByZone(
 /**
  * Label for the pile the player is being sent to, derived from the cards actually there rather
  * than from the effect's prose — "Exile" for Blade of the Swarm, "Graveyard / Exile" for a union
- * like Sorceress's Schemes. Empty input reads as "Graveyard" (the label is unused in that case).
+ * like Sorceress's Schemes, "Ante" for Darkpact. Empty input reads as "Graveyard" (the label is unused
+ * in that case).
  */
 export function describePileZones(pileCards: readonly ClientCard[]): string {
   const zones = new Set(pileCards.map((card) => card.zone?.zoneType ?? ZoneType.GRAVEYARD))
-  if (zones.size > 1) return 'Graveyard / Exile'
-  return zones.has(ZoneType.EXILE) ? 'Exile' : 'Graveyard'
+  const order: readonly [ZoneType, string][] = [
+    [ZoneType.GRAVEYARD, 'Graveyard'],
+    [ZoneType.EXILE, 'Exile'],
+    [ZoneType.ANTE, 'Ante'],
+  ]
+  const labels = order.filter(([zone]) => zones.has(zone)).map(([, label]) => label)
+  return labels.length > 0 ? labels.join(' / ') : 'Graveyard'
 }
 
 /**
@@ -180,7 +191,7 @@ export function derivePileAction(effectHint: string | null | undefined): PileAct
     return { confirmText: 'Put onto Battlefield', verb: 'put onto the battlefield' }
   }
   if (hint.includes('shuffle') && hint.includes('library')) {
-    return { confirmText: 'Shuffle into Library', verb: 'shuffle into your library' }
+    return { confirmText: 'Shuffle into Library', verb: "shuffle into their owner's library" }
   }
   if (hint.includes('exile')) {
     return { confirmText: 'Exile', verb: 'exile' }
@@ -189,4 +200,27 @@ export function derivePileAction(effectHint: string | null | undefined): PileAct
     return { confirmText: 'Return to Hand', verb: 'return to your hand' }
   }
   return { confirmText: 'Confirm Target', verb: 'target' }
+}
+
+/**
+ * A requirement's "… with total power / mana value N or less" cap as the pickers hold it: empty when
+ * it has none. Cap and per-candidate values are the server's, so the client sums nothing it computed.
+ */
+export function totalCapsFor(req: TargetRequirementInfo | undefined): SelectionTotalCap[] {
+  if (req?.totalCap == null) return []
+  return [{ label: req.totalCapLabel ?? 'value', cap: req.totalCap, values: req.targetValues ?? {} }]
+}
+
+/** Would adding [candidate] to [kept] push any cap's running sum over it? */
+export function wouldExceedTotalCaps(
+  caps: readonly SelectionTotalCap[],
+  kept: readonly EntityId[],
+  candidate: EntityId,
+): SelectionTotalCap | undefined {
+  return caps.find((c) => kept.reduce((sum, id) => sum + (c.values[id] ?? 0), 0) + (c.values[candidate] ?? 0) > c.cap)
+}
+
+/** The running sum of [cap] over [selected]. */
+export function totalCapSum(cap: SelectionTotalCap, selected: readonly EntityId[]): number {
+  return selected.reduce((sum, id) => sum + (cap.values[id] ?? 0), 0)
 }

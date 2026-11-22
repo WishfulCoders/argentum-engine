@@ -67,7 +67,11 @@ Key config fields:
   libraries except for identities the current perspective is entitled to know; since one agent is
   playing *both* seats, you want to see everything. (Never use it for real RL self-play — it leaks
   information.)
-- **`skipMulligans: true`** — skip the mulligan back-and-forth.
+- **`skipMulligans: true`** — skip the mulligan back-and-forth. Every hand is kept and the first
+  observation is a Leyline-style opening-hand question or the starting player's turn-1 upkeep. With
+  `false`, the first actions are each seat's `KeepHand` / `TakeMulligan`, then one `BottomCards` per
+  distinct set of cards to bottom (its `targetEntityIds` name them); `agentToAct` says whose turn to
+  decide it is.
 - `startingPlayerIndex` — pin it for reproducibility (null = random).
 
 The response is `{ "envId": "...", "observation": { ... } }`. Keep the `envId`.
@@ -140,6 +144,31 @@ default one (CR 509.1a). Params a given action can't use, and a declaration the 
 return `400` with the reason — neither is silently dropped, on `/step` or on `/step-batch`. Anything
 richer (bands, alternative-cost payments, convoke/delve selections) is not expressible over `step`;
 complex decisions go to `POST /envs/{id}/decision` (section 5).
+
+### Cost choices and multi-requirement targets
+
+Each legal action also lists what its cost and targets need:
+
+- `targetRequirements[]` — filled only when the action has more than one target requirement:
+  one entry each (`index`, `description`, `minTargets`, `maxTargets`, `legalTargets`). Send that
+  choice as `params.targetGroups` — one list per requirement, in order — instead of `targets`. A
+  single-requirement action keeps using `targetEntityIds` / `minTargets` / `maxTargets` and `targets`.
+- `costChoices[]` — each entry names the `params` field that carries it (`sacrifice`, `tap`,
+  `discard`, `exile`, `bounce`, `variablePermanents`, `crew`, `saddle`), its `candidates`, and how
+  many to pick (`min`..`max`). When `contribution` is non-empty (crew, saddle, Teamwork, collect
+  evidence) it gives each candidate's value and the picks must add up to at least `minTotal`. Craft
+  materials go in `exile`; "sacrifice any number of …" and Teamwork go in `variablePermanents`.
+  Costs `params` can't carry — casualty, conspire, behold, reveal, blight, counter removal — get no
+  entry.
+
+```json
+{ "actionId": 14, "params": { "crew": ["<creatureId>"] } }
+{ "actionId": 1, "params": { "targetGroups": [["<myCreature>"], ["<theirCreature>"]] } }
+{ "actionId": 4, "params": { "sacrifice": ["<permanentId>"] } }
+```
+
+`affordable` assumes the cheapest legal choices; a spell that is cheaper with a particular target,
+or a tap cost that uses the lands its mana needs, can still be rejected once the choices are made.
 
 ### Reading an observation
 
@@ -223,10 +252,23 @@ empty. Post a typed `DecisionResponse` to `POST /envs/{id}/decision`. The JSON d
 | `ASSIGN_DAMAGE` | `DamageAssignmentResponse` | `assignments: { "<entityId>": int }` |
 | `SELECT_MANA_SOURCES` | `ManaSourcesSelectedResponse` | `selectedSources: ["<id>",…]`, `autoPay: true`, or `declined: true` |
 | `BUDGET_MODAL` | `BudgetModalResponse` | `selectedModeIndices: [int, …]` |
+| `FLIP_ONTO_BATTLEFIELD` | `FlipThrowResponse` | `aimX: float, aimY: float` (table millimetres), `strength: 0..1`, optional `sway: -1..1` (0 = straight) |
 
 Every response also needs `decisionId` (copy it from `pendingDecision.decisionId`). The
 `pendingDecision.shape` field carries the constraints (`minSelections`, `maxSelections`,
 `numericMin/Max`, `availableColors`, `totalToDistribute`, `budget`).
+
+The deciding seat also gets the legal choices, so a response never has to guess ids:
+
+| Field | Filled for | Holds |
+|---|---|---|
+| `targetRequirements[]` | `CHOOSE_TARGETS` | `index` (the `selectedTargets` key), `description`, `minTargets`, `maxTargets`, `legalTargets` |
+| `candidateIds[]` | `SELECT_CARDS`, `SEARCH_LIBRARY`, `DISTRIBUTE`, `ORDER_OBJECTS`, `REORDER_LIBRARY`, `SPLIT_PILES`, `ASSIGN_DAMAGE` | the entity ids the response may name |
+| `candidateInfo{}` | the same, when a candidate is otherwise hidden (library cards) | `name`, `manaCost`, `typeLine` per id |
+| `modes[]` | multi-mode `CHOOSE_MODE` | `index`, `text`, `available` |
+
+Other seats see the decision's kind and prompt but none of these fields, so an opponent's library
+search doesn't reveal the library.
 
 ```bash
 # Choose targets for a pending ChooseTargets decision (requirement 0 -> one creature)

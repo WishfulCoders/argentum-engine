@@ -13,7 +13,7 @@ val DeathrenderReprint = Printing(
     collectorNumber = "197",
     scryfallId = "ea48de8d-edcd-414e-b630-473af2d95abe",
     artist = "Martina Pilcerova",
-    imageUri = "https://cards.scryfall.io/normal/front/e/a/ea48de8d-edcd-414e-b630-473af2d95abe.jpg",
+    imageUri = "https://cards.scryfall.io/normal/front/e/a/ea48de8d-edcd-414e-b630-473af2d95abe.jpg?1783939336",
     releaseDate = "2014-06-06",
     rarity = Rarity.RARE,
 )

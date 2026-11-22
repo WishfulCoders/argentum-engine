@@ -62,7 +62,9 @@ val SunfireTorch = card("Sunfire Torch") {
                                 filter = TargetFilter(
                                     GameObjectFilter.Artifact.named("Sunfire Torch").attachedToSource()
                                 )
-                            )
+                            ),
+                            nonTargeting = true,
+                            prompt = "Sacrifice Sunfire Torch"
                         )
                         run(Effects.SacrificeTarget(toSacrifice.asTarget))
                     },

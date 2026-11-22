@@ -1,24 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.afr.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-
-private const val GOBLIN_TOKEN_IMAGE =
-    "https://cards.scryfall.io/normal/front/1/4/1425e965-7eea-419c-a7ec-c8169fa9edbf.jpg?1783926342"
-
-/** A 1/1 red Goblin creature token — "those tokens" in every row of the table. */
-private fun goblins(count: Int) = Effects.CreateToken(
-    power = 1,
-    toughness = 1,
-    colors = setOf(Color.RED),
-    creatureTypes = setOf("Goblin"),
-    count = count,
-    imageUri = GOBLIN_TOKEN_IMAGE,
-)
+import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 
 /**
  * Swarming Goblins
@@ -29,29 +17,37 @@ private fun goblins(count: Int) = Effects.CreateToken(
  * 1—9 | Create a 1/1 red Goblin creature token.
  * 10—19 | Create two of those tokens.
  * 20 | Create three of those tokens.
- *
- * The d20 results table (CR 706.3) is [Patterns.Mechanic.rollDie]; each row creates the same token
- * ("those tokens"), one, two or three of them.
  */
 val SwarmingGoblins = card("Swarming Goblins") {
     manaCost = "{4}{R}"
-    colorIdentity = "R"
     typeLine = "Creature — Goblin"
-    oracleText = "When this creature enters, roll a d20.\n1—9 | Create a 1/1 red Goblin creature token.\n" +
-        "10—19 | Create two of those tokens.\n20 | Create three of those tokens."
     power = 4
     toughness = 3
+    oracleText = "When this creature enters, roll a d20.\n" +
+        "1—9 | Create a 1/1 red Goblin creature token.\n" +
+        "10—19 | Create two of those tokens.\n" +
+        "20 | Create three of those tokens."
 
     triggeredAbility {
         trigger = Triggers.self.enters()
-        effect = Patterns.Mechanic.rollDie(
-            20,
-            1..9 to goblins(1),
-            10..19 to goblins(2),
-            20..20 to goblins(3),
-        )
-        description = "When this creature enters, roll a d20. 1—9 | Create a 1/1 red Goblin creature token. " +
-            "10—19 | Create two of those tokens. 20 | Create three of those tokens."
+        effect = Effects.Pipeline {
+            val result = rollDiceResult(sides = 20)
+            fun goblins(count: Int) = Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                colors = setOf(Color.RED),
+                creatureTypes = setOf("Goblin"),
+                count = count,
+                imageUri = "https://cards.scryfall.io/normal/front/1/4/1425e965-7eea-419c-a7ec-c8169fa9edbf.jpg?1783926342",
+            )
+            fun between(low: Int, high: Int) = Conditions.All(
+                Conditions.CompareAmounts(result.amount, ComparisonOperator.GTE, low),
+                Conditions.CompareAmounts(result.amount, ComparisonOperator.LTE, high),
+            )
+            ifThen(between(1, 9)) { run(goblins(1)) }
+            ifThen(between(10, 19)) { run(goblins(2)) }
+            ifThen(Conditions.CompareAmounts(result.amount, ComparisonOperator.GTE, 20)) { run(goblins(3)) }
+        }
     }
 
     metadata {

@@ -13,18 +13,18 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
- * Knight of the Reliquary
- * {1}{G}{W}
- * Creature — Human Knight
- * 2/2
+ * Knight of the Reliquary — Conflux #113 (earliest printing)
+ * {1}{G}{W} · Creature — Human Knight · 2/2
+ *
  * This creature gets +1/+1 for each land card in your graveyard.
  * {T}, Sacrifice a Forest or Plains: Search your library for a land card, put it onto the
  * battlefield, then shuffle.
  *
- * "Gets +1/+1" is a layer-7c modification over the printed 2/2 ([GrantDynamicStats] on the source),
- * not a characteristic-defining P/T, so a base-P/T-setting effect still leaves the bonus on top.
- * The sacrificed Forest or Plains is already in the graveyard when the ability resolves, so it
- * counts toward the bonus by then.
+ * The Liliana's Elite shape: a [GrantDynamicStats] on [GroupFilter.source] counting land cards in
+ * your graveyard — a layer-7c +N/+N on the printed 2/2 (not a characteristic-defining P/T), so it
+ * only applies on the battlefield, per the ruling. The fetch is a tap + sacrifice-a-permanent-with-
+ * subtype-Forest-or-Plains cost into [Patterns.Library.searchLibrary] to the battlefield; the
+ * sacrificed land lands in the graveyard as a cost, so it already counts by resolution.
  */
 val KnightOfTheReliquary = card("Knight of the Reliquary") {
     manaCost = "{1}{G}{W}"
@@ -33,28 +33,25 @@ val KnightOfTheReliquary = card("Knight of the Reliquary") {
     power = 2
     toughness = 2
     oracleText = "This creature gets +1/+1 for each land card in your graveyard.\n" +
-        "{T}, Sacrifice a Forest or Plains: Search your library for a land card, put it onto the battlefield, " +
-        "then shuffle."
+        "{T}, Sacrifice a Forest or Plains: Search your library for a land card, put it onto the battlefield, then shuffle."
 
     staticAbility {
         ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmounts.zone(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land).count(),
-            toughnessBonus = DynamicAmounts.zone(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land).count()
+            powerBonus = DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land),
+            toughnessBonus = DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land)
         )
     }
 
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.Sacrifice(GameObjectFilter.Land.withAnySubtype("Forest", "Plains"))
+            Costs.Sacrifice(GameObjectFilter.Permanent.withAnySubtype("Forest", "Plains"))
         )
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land,
             destination = SearchDestination.BATTLEFIELD
         )
-        description = "{T}, Sacrifice a Forest or Plains: Search your library for a land card, put it onto " +
-            "the battlefield, then shuffle."
     }
 
     metadata {
@@ -63,7 +60,9 @@ val KnightOfTheReliquary = card("Knight of the Reliquary") {
         artist = "Michael Komarck"
         flavorText = "\"Knowledge of Bant's landscape and ruins is a weapon that the invaders can't comprehend.\"\n—Elspeth"
         imageUri = "https://cards.scryfall.io/normal/front/a/d/ad8b8518-c09e-4cb7-95b2-08e4e370d89c.jpg?1783942468"
-
-        ruling("2021-03-19", "Knight of the Reliquary's first ability applies only while it's on the battlefield. In all other zones, it's a 2/2 creature.")
+        ruling(
+            "2021-03-19",
+            "Knight of the Reliquary's first ability applies only while it's on the battlefield. In all other zones, it's a 2/2 creature."
+        )
     }
 }

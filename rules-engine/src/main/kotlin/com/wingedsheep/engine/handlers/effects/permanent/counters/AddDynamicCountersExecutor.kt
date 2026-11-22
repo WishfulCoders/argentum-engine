@@ -6,6 +6,7 @@ import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.DamageUtils
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.EntersWithReplacements
 import com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -28,7 +29,7 @@ class AddDynamicCountersExecutor(
         effect: AddDynamicCountersEffect,
         context: EffectContext
     ): EffectResult {
-        val targetId = context.resolveTarget(effect.target)
+        val targetId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.error(state, "No valid target for counters")
 
         val evaluator = amountEvaluator
@@ -40,11 +41,15 @@ class AddDynamicCountersExecutor(
 
         val counterType = effect.counterType
 
+        // A permanent spell on the stack is given them as it enters, not now (CR 122.6).
+        EntersWithReplacements.oweToSpell(state, targetId, counterType, count)
+            ?.let { return EffectResult.success(it, emptyList()) }
+
         val current = state.getEntity(targetId)?.get<CountersComponent>() ?: CountersComponent()
 
         val modifiedCount = ReplacementEffectUtils.applyCounterPlacementModifiers(
             state, targetId, counterType, count, placerId = context.controllerId,
-            predicateEvaluator = amountEvaluator.predicates
+            predicateEvaluator = amountEvaluator.predicates, byEffect = true
         )
 
         // Every placement was replaced away (a capped player already locked out this turn, or a
@@ -59,11 +64,12 @@ class AddDynamicCountersExecutor(
         }.let { DamageUtils.markCounterPlacedOnCreature(it, context.controllerId, targetId, counterType) }
             .let { ReplacementEffectUtils.recordCounterPlacementLock(it, targetId, counterType, modifiedCount, amountEvaluator.predicates) }
 
-        val entityName = state.getEntity(targetId)?.get<CardComponent>()?.name ?: ""
+        val entityName = state.getEntity(targetId)?.get<CardComponent>()?.name
+            ?: state.getEntity(targetId)?.get<com.wingedsheep.engine.state.components.identity.PlayerComponent>()?.name.orEmpty()
 
         return EffectResult.success(
             newState,
-            listOf(CountersAddedEvent(targetId, effect.counterType, modifiedCount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = context.controllerId))
+            listOf(CountersAddedEvent(targetId, effect.counterType, modifiedCount, entityName, firstThisTurn, firstOfTypeThisTurn = firstOfTypeThisTurn, placedBy = context.controllerId, totalCount = current.getCount(counterType) + modifiedCount))
         )
     }
 }

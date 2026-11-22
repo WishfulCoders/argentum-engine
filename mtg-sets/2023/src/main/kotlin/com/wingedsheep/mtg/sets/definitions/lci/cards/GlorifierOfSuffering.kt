@@ -46,7 +46,9 @@ val GlorifierOfSuffering = card("Glorifier of Suffering") {
                 val toSacrifice = selectTarget(
                     TargetObject(
                         filter = TargetFilter.CreatureOrArtifact.youControl().other()
-                    )
+                    ),
+                    nonTargeting = true,
+                    prompt = "Choose another creature or artifact to sacrifice"
                 )
                 run(Effects.SacrificeTarget(toSacrifice.asTarget))
             },

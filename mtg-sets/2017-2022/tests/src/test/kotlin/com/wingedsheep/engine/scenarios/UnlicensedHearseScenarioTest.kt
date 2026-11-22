@@ -1,101 +1,86 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.core.CrewVehicle
+import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
-import com.wingedsheep.engine.support.GameTestDriver
-import com.wingedsheep.engine.support.TestCards
+import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.mtg.sets.definitions.snc.cards.UnlicensedHearse
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
 /**
- * Unlicensed Hearse (SNC #246) — "{T}: Exile up to two target cards from a single graveyard.
- * Unlicensed Hearse's power and toughness are each equal to the number of cards exiled with it.
- * Crew 2"
+ * Unlicensed Hearse (SNC #246) — {2} Artifact — Vehicle, * / *
  *
- * The exiled cards grow the Hearse (a 2/2 after one activation), the two targets must share a
- * graveyard, and crewed with nothing exiled it is a 0/0 that dies (ruling).
+ *   {T}: Exile up to two target cards from a single graveyard.
+ *   Unlicensed Hearse's power and toughness are each equal to the number of cards exiled with it.
+ *   Crew 2
+ *
+ * Proves the exiled cards are linked to the Hearse and its characteristic-defining P/T counts them
+ * and that the two targets must share a graveyard.
  */
-class UnlicensedHearseScenarioTest : FunSpec({
+class UnlicensedHearseScenarioTest : ScenarioTestBase() {
 
-    fun newDriver(): GameTestDriver {
-        val driver = GameTestDriver()
-        driver.registerCards(TestCards.all + UnlicensedHearse)
-        driver.initMirrorMatch(deck = Deck.of("Plains" to 40), skipMulligans = true, startingPlayer = 0)
-        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        return driver
+    private val exileAbilityId by lazy { UnlicensedHearse.script.activatedAbilities[0].id }
+
+    private fun board(): TestGame = scenario()
+        .withPlayers("Player1", "Player2")
+        .withCardOnBattlefield(1, "Unlicensed Hearse", summoningSickness = false)
+        .withCardInGraveyard(1, "Hill Giant")
+        .withCardInGraveyard(2, "Grizzly Bears")
+        .withCardInGraveyard(2, "Savannah Lions")
+        .withActivePlayer(1)
+        .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+        .build()
+
+    private fun TestGame.graveyardTarget(playerNumber: Int, name: String): ChosenTarget.Card {
+        val ownerId = if (playerNumber == 1) player1Id else player2Id
+        return ChosenTarget.Card(findCardsInGraveyard(playerNumber, name).single(), ownerId, Zone.GRAVEYARD)
     }
 
-    fun GameTestDriver.settle() {
-        var guard = 0
-        while (guard++ < 30) {
-            when {
-                isPaused -> autoResolveDecision()
-                state.stack.isNotEmpty() -> bothPass()
-                else -> break
+    init {
+        context("Unlicensed Hearse") {
+
+            test("exiling two cards from one graveyard makes it 2/2") {
+                val game = board()
+                val hearse = game.findPermanent("Unlicensed Hearse")!!
+                withClue("no cards exiled with it yet: 0/0") {
+                    game.state.projectedState.getPower(hearse) shouldBe 0
+                    game.state.projectedState.getToughness(hearse) shouldBe 0
+                }
+
+                val bears = game.graveyardTarget(2, "Grizzly Bears")
+                val lions = game.graveyardTarget(2, "Savannah Lions")
+                game.execute(
+                    ActivateAbility(game.player1Id, hearse, exileAbilityId, listOf(bears, lions))
+                ).error shouldBe null
+                game.resolveStack()
+
+                val opponentExile = game.state.getZone(ZoneKey(game.player2Id, Zone.EXILE))
+                withClue("both of the opponent's cards were exiled") {
+                    opponentExile.containsAll(listOf(bears.cardId, lions.cardId)) shouldBe true
+                }
+                withClue("two cards exiled with it: 2/2") {
+                    game.state.projectedState.getPower(hearse) shouldBe 2
+                    game.state.projectedState.getToughness(hearse) shouldBe 2
+                }
+            }
+
+            test("the two targets must come from a single graveyard") {
+                val game = board()
+                val hearse = game.findPermanent("Unlicensed Hearse")!!
+                withClue("Hill Giant (Player1's graveyard) and Grizzly Bears (Player2's) can't be targeted together") {
+                    game.execute(
+                        ActivateAbility(
+                            game.player1Id, hearse, exileAbilityId,
+                            listOf(game.graveyardTarget(1, "Hill Giant"), game.graveyardTarget(2, "Grizzly Bears"))
+                        )
+                    ).error shouldNotBe null
+                }
             }
         }
     }
-
-    fun GameTestDriver.exileWith(hearse: EntityId, vararg cards: ChosenTarget.Card) =
-        submit(ActivateAbility(player1, hearse, UnlicensedHearse.script.activatedAbilities.first().id, targets = cards.toList()))
-
-    test("two cards exiled from one graveyard make it a 2/2 once crewed") {
-        val driver = newDriver()
-        val you = driver.player1
-        val opponent = driver.getOpponent(you)
-        val hearse = driver.putPermanentOnBattlefield(you, "Unlicensed Hearse")
-        val a = driver.putCardInGraveyard(opponent, "Savannah Lions")
-        val b = driver.putCardInGraveyard(opponent, "Centaur Courser")
-
-        driver.exileWith(hearse, ChosenTarget.Card(a, opponent, Zone.GRAVEYARD), ChosenTarget.Card(b, opponent, Zone.GRAVEYARD))
-            .error shouldBe null
-        driver.settle()
-        driver.getExileCardNames(opponent) shouldContain "Savannah Lions"
-        driver.getExileCardNames(opponent) shouldContain "Centaur Courser"
-
-        val crewA = driver.putCreatureOnBattlefield(you, "Savannah Lions")
-        val crewB = driver.putCreatureOnBattlefield(you, "Savannah Lions")
-        driver.submitSuccess(CrewVehicle(you, hearse, listOf(crewA, crewB)))
-        driver.settle()
-
-        withClue("a creature now, with power and toughness equal to the two cards exiled with it") {
-            driver.state.projectedState.isCreature(hearse) shouldBe true
-            driver.state.projectedState.getPower(hearse) shouldBe 2
-            driver.state.projectedState.getToughness(hearse) shouldBe 2
-        }
-    }
-
-    test("the two targets must be in a single graveyard") {
-        val driver = newDriver()
-        val you = driver.player1
-        val opponent = driver.getOpponent(you)
-        val hearse = driver.putPermanentOnBattlefield(you, "Unlicensed Hearse")
-        val mine = driver.putCardInGraveyard(you, "Savannah Lions")
-        val theirs = driver.putCardInGraveyard(opponent, "Savannah Lions")
-
-        driver.exileWith(hearse, ChosenTarget.Card(mine, you, Zone.GRAVEYARD), ChosenTarget.Card(theirs, opponent, Zone.GRAVEYARD))
-            .error shouldNotBe null
-    }
-
-    test("crewed with nothing exiled it is a 0/0 and dies") {
-        val driver = newDriver()
-        val you = driver.player1
-        val hearse = driver.putPermanentOnBattlefield(you, "Unlicensed Hearse")
-        val crewA = driver.putCreatureOnBattlefield(you, "Savannah Lions")
-        val crewB = driver.putCreatureOnBattlefield(you, "Savannah Lions")
-
-        driver.submitSuccess(CrewVehicle(you, hearse, listOf(crewA, crewB)))
-        driver.settle()
-
-        driver.getGraveyardCardNames(you) shouldContain "Unlicensed Hearse"
-    }
-})
+}

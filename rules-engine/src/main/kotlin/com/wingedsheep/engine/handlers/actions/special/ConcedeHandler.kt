@@ -7,6 +7,7 @@ import com.wingedsheep.engine.core.PlayerLostEvent
 import com.wingedsheep.engine.handlers.actions.ActionHandler
 import com.wingedsheep.engine.mechanics.StateBasedActionChecker
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.engine.state.components.player.LossReason
 import com.wingedsheep.engine.state.components.player.PlayerLostComponent
 import kotlin.reflect.KClass
@@ -30,26 +31,37 @@ class ConcedeHandler(
     override fun validate(state: GameState, action: Concede): String? = null
 
     override fun execute(state: GameState, action: Concede): ExecutionResult {
-        // Idempotent: a player already out of the game can't concede again.
-        if (state.getEntity(action.playerId)?.has<PlayerLostComponent>() == true) {
+        // Idempotent: a player already out of the game can't concede again — though one out of
+        // a subgame can still concede the main game waiting on it.
+        val lostHere = state.getEntity(action.playerId)?.has<PlayerLostComponent>() == true
+        if (lostHere && (!action.includingMainGames || state.mainGame == null)) {
             return ExecutionResult.success(state)
         }
 
-        val marked = state.updateEntity(action.playerId) { container ->
-            container.with(PlayerLostComponent(LossReason.CONCESSION))
-        }
+        val marked = concede(state, action.playerId, action.includingMainGames)
+        if (lostHere) return ExecutionResult.success(marked)
         val lostEvent = PlayerLostEvent(action.playerId, GameEndReason.CONCESSION)
 
         val sbaResult = sbaChecker.checkAndApply(marked)
-        if (sbaResult.outcome is Outcome.Paused) {
-            return ExecutionResult.propagatePause(
-                sbaResult.state,
-                listOf(lostEvent) + sbaResult.events
-            )
+        if (sbaResult.outcome !is Outcome.Done) {
+            // Paused on an SBA's question (or rejected): pass it on.
+            return sbaResult.copy(events = listOf(lostEvent) + sbaResult.events)
         }
         return ExecutionResult.success(
             sbaResult.newState,
             listOf(lostEvent) + sbaResult.events
         )
+    }
+
+    /**
+     * Mark [playerId] as having conceded [state]'s game and, with [includingMainGames], each main
+     * game it is a subgame of (CR 729). A discontinued main game does nothing until it resumes, so
+     * its state-based actions remove the player then.
+     */
+    private fun concede(state: GameState, playerId: EntityId, includingMainGames: Boolean): GameState {
+        val marked = if (state.getEntity(playerId)?.has<PlayerLostComponent>() == true) state
+            else state.updateEntity(playerId) { it.with(PlayerLostComponent(LossReason.CONCESSION)) }
+        val main = state.mainGame?.takeIf { includingMainGames } ?: return marked
+        return marked.copy(mainGame = concede(main, playerId, includingMainGames = true))
     }
 }

@@ -59,7 +59,7 @@ class EmergeCastEnumerator : ActionEnumerator {
             // Normal timing (CR 702.119 adds no permission of its own).
             val isInstant = cardComponent.typeLine.isInstant
             val hasFlash = cardDef.keywords.contains(Keyword.FLASH) ||
-                context.castPermissionUtils.hasGrantedFlash(state, cardId)
+                context.castPermissionUtils.hasGrantedFlash(state, cardId, context.playerId)
             if (!isInstant && !hasFlash && !context.canPlaySorcerySpeed) continue
 
             // Honor cast restrictions exactly like the normal cast path (CR 601.3).
@@ -70,9 +70,7 @@ class EmergeCastEnumerator : ActionEnumerator {
 
             // Base emerge cost through the battlefield cost-modifier pipeline (a Thalia-style tax
             // applies on top of an alternative cost — CR 601.2f).
-            val baseCost = context.costCalculator.calculateEffectiveCostWithAlternativeBase(
-                state, cardDef, emerge.cost, playerId
-            )
+            val baseCost = context.costCalculator.calculateMinPossibleCost(state, cardDef, playerId, cardId, baseCost = emerge.cost)
 
             // Only creatures whose mana value leaves the reduced cost payable may be offered.
             // Cheapest-first so the AI's "take the first candidate" pick spends the least valuable

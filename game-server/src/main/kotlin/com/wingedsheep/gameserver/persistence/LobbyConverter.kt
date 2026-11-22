@@ -6,6 +6,7 @@ import com.wingedsheep.gameserver.lobby.LobbyPlayerState
 import com.wingedsheep.gameserver.lobby.LobbyState
 import com.wingedsheep.gameserver.lobby.TournamentFormat
 import com.wingedsheep.gameserver.lobby.TournamentLobby
+import com.wingedsheep.gameserver.cube.CubeBoosterStyle
 import com.wingedsheep.gameserver.cube.ResolvedCube
 import com.wingedsheep.gameserver.persistence.dto.*
 import com.wingedsheep.engine.limited.BoosterGenerator
@@ -19,6 +20,7 @@ import com.wingedsheep.gameserver.tournament.TournamentManager
 import com.wingedsheep.gameserver.tournament.TournamentMatch
 import com.wingedsheep.gameserver.tournament.TournamentRound
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.model.Rarity
 
 // ============================================================================
 // TournamentLobby Conversion
@@ -39,6 +41,7 @@ fun TournamentLobby.toPersistent(): PersistentTournamentLobby {
         maxPlayers = maxPlayers,
         pickTimeSeconds = pickTimeSeconds,
         gamesPerMatch = gamesPerMatch,
+        bestOf = bestOf,
         state = state.name,
         hostPlayerId = hostPlayerId?.value,
         players = players.mapKeys { it.key.value }.mapValues { (_, playerState) ->
@@ -49,6 +52,7 @@ fun TournamentLobby.toPersistent(): PersistentTournamentLobby {
                 cardPoolNames = playerState.cardPool.map { it.name },
                 jumpstartOffers = playerState.jumpstartOffers,
                 jumpstartSelections = playerState.jumpstartSelections,
+                jumpstartSecondOffers = playerState.jumpstartSecondOffers,
                 currentPackNames = playerState.currentPack?.map { it.name },
                 packQueueNames = playerState.packQueue.map { pack -> pack.map { it.name } },
                 submittedDeck = playerState.submittedDeck,
@@ -63,6 +67,8 @@ fun TournamentLobby.toPersistent(): PersistentTournamentLobby {
         cubeBasicLandSetCode = cube?.basicLandSetCode,
         cubePackSize = cube?.packSize,
         cubeDealerRemainingCardNames = cubeDealerRemainingCards().map { it.name },
+        cubeBoosterStyle = cube?.boosterStyle?.name,
+        cubeCardRarities = cube?.rarityByName()?.mapValues { (_, rarity) -> rarity.name }.orEmpty(),
         cubePoolPlay = cubePoolPlay,
         bannedCardNames = bannedCardNames,
         includedSetProducts = includedSetProducts,
@@ -77,12 +83,14 @@ fun TournamentLobby.toPersistent(): PersistentTournamentLobby {
         completedAt = completedAt,
         isPublic = isPublic,
         aiAssistEnabled = aiAssistEnabled,
+        limitedCopyLimit = limitedCopyLimit,
         gameMode = gameMode.name,
-        attackMode = attackMode.name,
+        attackMode = chosenAttackMode?.name,
         randomTeams = randomTeams,
         teamAssignments = teamAssignments.mapKeys { it.key.value },
         ffaGameSessionId = ffaGameSessionId,
-        ffaGamesPlayed = ffaGamesPlayed
+        ffaGamesPlayed = ffaGamesPlayed,
+        playingForAnte = playingForAnte,
     )
 }
 
@@ -128,13 +136,16 @@ fun restoreTournamentLobby(
         maxPlayers = persistent.maxPlayers,
         pickTimeSeconds = persistent.pickTimeSeconds,
         gamesPerMatch = persistent.gamesPerMatch,
+        bestOf = persistent.bestOf,
         isPublic = persistent.isPublic,
         aiAssistEnabled = persistent.aiAssistEnabled,
+        limitedCopyLimit = persistent.limitedCopyLimit,
         gameMode = runCatching { LobbyGameMode.valueOf(persistent.gameMode) }
             .getOrDefault(LobbyGameMode.TOURNAMENT),
-        attackMode = runCatching { com.wingedsheep.sdk.core.AttackMode.valueOf(persistent.attackMode) }
-            .getOrDefault(com.wingedsheep.sdk.core.AttackMode.MULTIPLE),
-        randomTeams = persistent.randomTeams
+        chosenAttackMode = persistent.attackMode
+            ?.let { runCatching { com.wingedsheep.sdk.core.AttackMode.valueOf(it) }.getOrNull() },
+        randomTeams = persistent.randomTeams,
+        playingForAnte = persistent.playingForAnte,
     )
     lobby.bannedCardNames = persistent.bannedCardNames
     lobby.includedSetProducts = persistent.includedSetProducts
@@ -142,20 +153,29 @@ fun restoreTournamentLobby(
         persistent.cubeBasicLandSetCode != null &&
         persistent.cubePackSize != null
     ) {
-        val cubeCards = persistent.cubeCardNames.mapNotNull(cardRegistry::getCard)
+        // Re-stamp each card as the resolver did: its cube rarity, and booster-eligible.
+        val cubeCard = { name: String ->
+            cardRegistry.getCard(name)?.let { card ->
+                val rarity = persistent.cubeCardRarities[name]
+                    ?.let { raw -> Rarity.entries.firstOrNull { it.name == raw } }
+                    ?: card.metadata.rarity
+                card.copy(metadata = card.metadata.copy(rarity = rarity, inBooster = true))
+            }
+        }
         lobby.configureCube(
             ResolvedCube(
                 name = persistent.cubeName,
-                cards = cubeCards,
+                cards = persistent.cubeCardNames.mapNotNull(cubeCard),
                 basicLandSetCode = persistent.cubeBasicLandSetCode,
                 packSize = persistent.cubePackSize,
+                boosterStyle = CubeBoosterStyle.parse(persistent.cubeBoosterStyle) ?: CubeBoosterStyle.SHUFFLED,
             )
         )
         // configureCube() clears the flag (it is cube-scoped), so restore it afterwards.
         lobby.cubePoolPlay = persistent.cubePoolPlay
         if (persistent.cubeDealerRemainingCardNames.isNotEmpty()) {
             lobby.restoreCubeDealer(
-                persistent.cubeDealerRemainingCardNames.mapNotNull(cardRegistry::getCard)
+                persistent.cubeDealerRemainingCardNames.mapNotNull(cubeCard)
             )
         }
     }
@@ -201,6 +221,7 @@ fun restoreTournamentLobby(
             cardPool = cardPool,
             jumpstartOffers = persistentPlayer.jumpstartOffers,
             jumpstartSelections = persistentPlayer.jumpstartSelections,
+            jumpstartSecondOffers = persistentPlayer.jumpstartSecondOffers,
             currentPack = currentPack,
             packQueue = packQueue,
             submittedDeck = persistentPlayer.submittedDeck,
@@ -217,6 +238,9 @@ fun restoreTournamentLobby(
         state = LobbyState.valueOf(persistent.state),
         hostPlayerId = persistent.hostPlayerId?.let { EntityId(it) },
         completedAt = persistent.completedAt
+    )
+    lobby.upgradeLegacyJumpstartPicks(
+        persistent.players.entries.associate { (id, player) -> EntityId(id) to player.jumpstartFirstOffers }
     )
 
     // Restore draft state if applicable
@@ -288,7 +312,10 @@ fun TournamentManager.toPersistent(lobbyId: String): PersistentTournament {
                 draws = standing.draws,
                 gamesWon = standing.gamesWon,
                 gamesLost = standing.gamesLost,
-                lifeDifferential = standing.lifeDifferential
+                gamesDrawn = standing.gamesDrawn,
+                lifeDifferential = standing.lifeDifferential,
+                forfeitWins = standing.forfeitWins,
+                forfeitLosses = standing.forfeitLosses,
             )
         },
         rounds = getRoundsForPersistence().map { round ->
@@ -304,7 +331,15 @@ fun TournamentManager.toPersistent(lobbyId: String): PersistentTournament {
                         isComplete = match.isComplete,
                         player1GameWins = match.player1GameWins,
                         player2GameWins = match.player2GameWins,
-                        isSimulated = match.isSimulated
+                        isSimulated = match.isSimulated,
+                        gamesDrawn = match.gamesDrawn,
+                        completedGameSessionIds = match.completedGameSessionIds.toList(),
+                        playDrawChooserId = match.playDrawChooserId?.value,
+                        lastGameWinnerId = match.lastGameWinnerId?.value,
+                        currentStarterId = match.currentStarterId?.value,
+                        nextStarterId = match.nextStarterId?.value,
+                        matchDecks = match.matchDecks.mapKeys { it.key.value },
+                        sideboardReady = match.sideboardReady.map { it.value },
                     )
                 }
             )
@@ -312,7 +347,8 @@ fun TournamentManager.toPersistent(lobbyId: String): PersistentTournament {
         currentRoundIndex = getCurrentRoundIndexForPersistence(),
         totalRounds = totalRounds,
         gamesPerMatch = getGamesPerMatchForPersistence(),
-        playerIds = playerIds.map { it.value }
+        playerIds = playerIds.map { it.value },
+        bestOf = bestOf,
     )
 }
 
@@ -333,7 +369,8 @@ fun restoreTournamentManager(persistent: PersistentTournament): TournamentManage
     val tournament = TournamentManager(
         lobbyId = persistent.lobbyId,
         players = players,
-        gamesPerMatch = persistent.gamesPerMatch
+        gamesPerMatch = persistent.gamesPerMatch,
+        bestOf = persistent.bestOf,
     )
 
     // Convert persistent rounds back to TournamentRounds
@@ -350,7 +387,15 @@ fun restoreTournamentManager(persistent: PersistentTournament): TournamentManage
                     isComplete = persistentMatch.isComplete,
                     player1GameWins = persistentMatch.player1GameWins,
                     player2GameWins = persistentMatch.player2GameWins,
-                    isSimulated = persistentMatch.isSimulated
+                    isSimulated = persistentMatch.isSimulated,
+                    gamesDrawn = persistentMatch.gamesDrawn,
+                    completedGameSessionIds = persistentMatch.completedGameSessionIds.toMutableList(),
+                    playDrawChooserId = persistentMatch.playDrawChooserId?.let { EntityId(it) },
+                    lastGameWinnerId = persistentMatch.lastGameWinnerId?.let { EntityId(it) },
+                    currentStarterId = persistentMatch.currentStarterId?.let { EntityId(it) },
+                    nextStarterId = persistentMatch.nextStarterId?.let { EntityId(it) },
+                    matchDecks = persistentMatch.matchDecks.mapKeys { EntityId(it.key) }.toMutableMap(),
+                    sideboardReady = persistentMatch.sideboardReady.mapTo(mutableSetOf()) { EntityId(it) },
                 )
             }
         )
@@ -366,7 +411,10 @@ fun restoreTournamentManager(persistent: PersistentTournament): TournamentManage
             draws = persistentStanding.draws,
             gamesWon = persistentStanding.gamesWon,
             gamesLost = persistentStanding.gamesLost,
-            lifeDifferential = persistentStanding.lifeDifferential
+            gamesDrawn = persistentStanding.gamesDrawn,
+            lifeDifferential = persistentStanding.lifeDifferential,
+            forfeitWins = persistentStanding.forfeitWins,
+            forfeitLosses = persistentStanding.forfeitLosses,
         )
     }
 

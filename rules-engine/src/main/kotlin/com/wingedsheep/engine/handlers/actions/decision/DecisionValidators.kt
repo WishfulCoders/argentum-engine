@@ -5,6 +5,8 @@ import com.wingedsheep.engine.core.BatchYesNoDecision
 import com.wingedsheep.engine.core.BatchYesNoResponse
 import com.wingedsheep.engine.core.BudgetModalDecision
 import com.wingedsheep.engine.core.BudgetModalResponse
+import com.wingedsheep.engine.core.FlipOntoBattlefieldDecision
+import com.wingedsheep.engine.core.FlipThrowResponse
 import com.wingedsheep.engine.core.CancelDecisionResponse
 import com.wingedsheep.engine.core.CardsSelectedResponse
 import com.wingedsheep.engine.core.ChooseColorDecision
@@ -13,6 +15,7 @@ import com.wingedsheep.engine.core.ChooseNumberDecision
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.ChooseReplacementDecision
 import com.wingedsheep.engine.core.ChooseTargetsDecision
+import com.wingedsheep.engine.core.legalTargetsFor
 import com.wingedsheep.engine.core.ReplacementChosenResponse
 import com.wingedsheep.engine.core.ColorChosenResponse
 import com.wingedsheep.engine.core.CombatResolutionDecision
@@ -28,6 +31,8 @@ import com.wingedsheep.engine.core.NumberChosenResponse
 import com.wingedsheep.engine.core.OptionChosenResponse
 import com.wingedsheep.engine.core.OrderObjectsDecision
 import com.wingedsheep.engine.core.OrderedResponse
+import com.wingedsheep.engine.core.OrderTriggersDecision
+import com.wingedsheep.engine.core.TriggerOrderResponse
 import com.wingedsheep.engine.core.PendingDecision
 import com.wingedsheep.engine.core.PilesSplitResponse
 import com.wingedsheep.engine.core.ReorderLibraryDecision
@@ -66,16 +71,18 @@ object DecisionValidators {
                 if (response is com.wingedsheep.engine.core.PlayCardResponse) null else "Play the instructed card"
             is ChooseTargetsDecision -> validateTargets(decision, response, state)
             is SelectCardsDecision -> validateSelectCards(decision, response, state)
-            is YesNoDecision -> validateYesNo(response)
+            is YesNoDecision -> validateYesNo(decision, response)
             is ChooseModeDecision -> validateModes(decision, response)
             is ChooseColorDecision -> validateColor(decision, response)
             is ChooseNumberDecision -> validateNumber(decision, response)
             is DistributeDecision -> validateDistribute(decision, response)
             is OrderObjectsDecision -> validateOrder(decision, response)
+            is OrderTriggersDecision -> validateTriggerOrder(decision, response)
             is SplitPilesDecision -> validateSplitPiles(decision, response)
             is ChooseOptionDecision -> validateOption(decision, response)
             is ChooseReplacementDecision -> validateReplacement(decision, response)
             is BudgetModalDecision -> validateBudgetModal(decision, response)
+            is FlipOntoBattlefieldDecision -> validateFlipThrow(response)
             is AssignDamageDecision -> validateDamageAssignment(decision, response)
             is CombatResolutionDecision -> validateCombatResolution(decision, response)
             is SearchLibraryDecision -> validateLibrarySearch(decision, response)
@@ -92,13 +99,13 @@ object DecisionValidators {
      * chooser's [DamageEdge.editableBy], so this stays submitter-agnostic):
      * - Each submitted amount lies in `[0, maximum]` for its edge.
      * - Per source, the total assigned across its edges doesn't exceed its power.
-     * - CR 510.1c damage-assignment order: the attacking player picks the order, so an assignment is
-     *   legal iff it's legal under *some* order — i.e. for an [DamageEdge.orderConstrained] source,
-     *   at most one blocker it damages may be left below lethal (counting cross-source damage this
-     *   step, which is what lets a band cooperate). Banding edges (orderConstrained = false) don't gate.
+     * - No damage-assignment order: CR 510.1c/d let a creature blocked by (or blocking) two or more
+     *   creatures divide its combat damage "as its controller chooses among them" — the old
+     *   lethal-in-order requirement was removed from the rules, so leaving several blockers below
+     *   lethal is legal (e.g. 1 + 1 from a 2/2 onto two 3/3s).
      * - CR 702.19b trample lethal-first: a trample drain may carry damage only once every blocker
-     *   the trampling attacker assigns to is at lethal (aggregated across the step). Independent of
-     *   CR 510.1c order, so banding never relaxes it.
+     *   the trampling attacker assigns to is at lethal (aggregated across the step). Banding never
+     *   relaxes it.
      */
     private fun validateCombatResolution(
         decision: CombatResolutionDecision,
@@ -125,30 +132,6 @@ object DecisionValidators {
             val total = sourceEdges.sumOf { amountOf(it) }
             val power = sourceEdges.maxOf { it.maximum }
             if (total > power) return "Source $sourceId: damage total $total exceeds available power $power"
-        }
-
-        // Aggregate damage reaching each target this step (CR 510.1c cross-source lethal counting).
-        val aggregate = mutableMapOf<EntityId, Int>()
-        for (edge in decision.edges) {
-            if (edge.isTrampleDrain) continue
-            aggregate.merge(edge.targetId, amountOf(edge), Int::plus)
-        }
-
-        // CR 510.1c: the attacking player chooses the damage-assignment order, so there is no fixed
-        // order to gate against — an assignment is legal iff it's legal under *some* order. Walking
-        // the chosen order, every blocker a source damages except the last (where it runs out) must
-        // be at lethal; blockers it skips are unconstrained. Equivalently: at most one blocker a
-        // source assigns damage to may be left below its lethal need (counting cross-source damage
-        // this step). Banding (orderConstrained = false) lifts even this — the chooser divides freely.
-        for ((sourceId, sourceEdges) in edgesBySource) {
-            val belowLethal = sourceEdges.count { edge ->
-                edge.orderConstrained && !edge.isTrampleDrain &&
-                    amountOf(edge) > 0 && (aggregate[edge.targetId] ?: 0) < edge.lethal
-            }
-            if (belowLethal > 1) {
-                return "Source $sourceId: must assign lethal damage to all but one blocker before " +
-                    "spreading damage further"
-            }
         }
 
         // CR 702.19b trample lethal-first.
@@ -192,7 +175,8 @@ object DecisionValidators {
             if (decision.targetRequirements.none { it.index == reqIndex }) {
                 return "Unknown target requirement $reqIndex"
             }
-            val legalForReq = decision.legalTargets[reqIndex] ?: emptyList()
+            // A slot that reads an earlier target is checked against the picks actually made for it.
+            val legalForReq = decision.legalTargetsFor(reqIndex, response.selectedTargets)
             for (id in selectedIds) {
                 if (id !in legalForReq) {
                     return "Invalid target: $id is not a legal choice for requirement $reqIndex"
@@ -232,6 +216,15 @@ object DecisionValidators {
             if (selectedIds.size > req.maxTargets) {
                 return "Too many targets for requirement $reqIndex: maximum is ${req.maxTargets}"
             }
+            if (req.sameNumericProperty != null && state != null &&
+                !com.wingedsheep.engine.mechanics.targeting.NumericTargetEquality.isSatisfied(state, selectedIds, req.sameNumericProperty)
+            ) return "Targets for requirement $reqIndex must have equal ${req.sameNumericProperty.description}"
+            if (req.selectionGroups != null && selectedIds.isNotEmpty() &&
+                req.selectionGroups.none { group -> selectedIds.all { it in group } }
+            ) return "Targets for requirement $reqIndex must be selected from one compatible group"
+            if (req.exclusiveGroups != null && selectedIds.any { id ->
+                req.exclusiveGroups.any { group -> id in group && selectedIds.count { it in group } > 1 }
+            }) return "Targets for requirement $reqIndex must come from different owner groups"
             // "... from a single graveyard" — every chosen card target must share an owner.
             if (req.sameOwner && selectedIds.size > 1 && state != null) {
                 val owners = selectedIds.mapNotNull { id ->
@@ -241,16 +234,14 @@ object DecisionValidators {
                     return "Targets for requirement $reqIndex must be from a single graveyard"
                 }
             }
-            // "... with total mana value N or less" — the summed mana value of the chosen card
-            // targets may not exceed the resolved cap (Fire Lord Sozin's "total mana value X or
-            // less"; the cap was baked to a concrete int at decision-build time). CR 601.2c.
-            val manaCap = req.totalManaValueAtMost
-            if (manaCap != null && state != null) {
-                val totalManaValue = selectedIds.sumOf { id ->
-                    state.getEntity(id)?.get<CardComponent>()?.manaValue ?: 0
-                }
-                if (totalManaValue > manaCap) {
-                    return "Targets for requirement $reqIndex exceed total mana value $manaCap"
+            // "... with total mana value / power N or less" — the summed value of the chosen targets
+            // may not exceed the cap; cap and per-candidate values were baked at decision-build time
+            // (`withTotalCap`). CR 601.2c.
+            val totalCap = req.totalCap
+            if (totalCap != null) {
+                val total = selectedIds.sumOf { id -> req.targetValues?.get(id) ?: 0 }
+                if (total > totalCap) {
+                    return "Targets for requirement $reqIndex exceed total ${req.totalCapLabel} $totalCap"
                 }
             }
             // "... with different names" — no two chosen targets may share a name (Behold the
@@ -275,12 +266,15 @@ object DecisionValidators {
                     return "Targets for requirement $reqIndex must be controlled by different players"
                 }
             }
-            // "Up to one target ... of each card type" (Uldaros Theorix). TargetValidator is
-            // authoritative; this rejects it interactively too.
-            if (req.onePerCardType && selectedIds.size > 1 && state != null &&
-                !com.wingedsheep.engine.mechanics.targeting.OnePerCardType.isSatisfied(state, selectedIds)
+            // "Up to one target ... of each card type / color" (Uldaros Theorix, Rogues' Gallery).
+            // TargetValidator is authoritative; this rejects it interactively too.
+            val categories = req.distinctCategories
+            if (categories != null && selectedIds.isNotEmpty() &&
+                !com.wingedsheep.engine.mechanics.targeting.OnePerCardType.canAssignDistinct(
+                    selectedIds.map { categories[it].orEmpty().toSet() }
+                )
             ) {
-                return "Targets for requirement $reqIndex must be at most one of each card type"
+                return "Targets for requirement $reqIndex must each be of a different color or card type, as the ability says"
             }
         }
         return null
@@ -298,6 +292,24 @@ object DecisionValidators {
         for (cardId in response.selectedCards) {
             if (cardId !in decision.options) {
                 return "Invalid selection: $cardId is not a valid option"
+            }
+        }
+        // An ordinary selection names each card once; only an allocation (selectionLimits) may
+        // repeat one.
+        if (decision.selectionLimits == null &&
+            response.selectedCards.distinct().size != response.selectedCards.size
+        ) {
+            return "Invalid selection: a card may be selected only once"
+        }
+        if (decision.selectionLimits != null) {
+            for ((cardId, count) in response.selectedCards.groupingBy { it }.eachCount()) {
+                if (count > (decision.selectionLimits[cardId] ?: 0)) {
+                    return "Too many units selected from $cardId"
+                }
+            }
+            // Empty means decline. A nonempty allocation must pay the whole cost.
+            if (response.selectedCards.isNotEmpty() && response.selectedCards.size != decision.maxSelections) {
+                return "Allocate exactly ${decision.maxSelections} units or decline"
             }
         }
         if (response.selectedCards.size < decision.minSelections) {
@@ -338,9 +350,12 @@ object DecisionValidators {
         return null
     }
 
-    private fun validateYesNo(response: DecisionResponse): String? {
+    private fun validateYesNo(decision: YesNoDecision, response: DecisionResponse): String? {
         if (response !is YesNoResponse) {
             return "Expected yes/no response"
+        }
+        if (response.choice && !decision.yesAvailable) {
+            return "\"${decision.yesText}\" isn't possible here"
         }
         return null
     }
@@ -456,6 +471,16 @@ object DecisionValidators {
         return null
     }
 
+    private fun validateTriggerOrder(decision: OrderTriggersDecision, response: DecisionResponse): String? {
+        if (response !is TriggerOrderResponse) {
+            return "Expected trigger ordering response"
+        }
+        if (response.resolutionOrder.sorted() != decision.triggers.indices.toList()) {
+            return "Order each triggered ability exactly once"
+        }
+        return null
+    }
+
     /**
      * True when [submitted] holds exactly the objects in [expected] — same count, same contents.
      *
@@ -529,6 +554,15 @@ object DecisionValidators {
         val allowed = decision.allowedToByFrom.getOrNull(response.fromIndex)
         if (allowed != null && !allowed.contains(response.toIndex)) {
             return "Replacement ${decision.toOptions[response.toIndex]} not allowed for ${decision.fromOptions[response.fromIndex]}"
+        }
+        return null
+    }
+
+    /** A flick's numbers only need to be numbers; the engine clamps speed and spin itself. */
+    private fun validateFlipThrow(response: DecisionResponse): String? {
+        if (response !is FlipThrowResponse) return "Expected flip throw response"
+        if (!response.velocityX.isFinite() || !response.velocityY.isFinite() || !response.spin.isFinite()) {
+            return "Flip throw values must be finite numbers"
         }
         return null
     }

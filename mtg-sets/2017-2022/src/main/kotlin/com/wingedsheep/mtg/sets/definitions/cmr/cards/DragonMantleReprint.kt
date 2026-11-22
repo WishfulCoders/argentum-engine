@@ -13,7 +13,7 @@ val DragonMantleReprint = Printing(
     collectorNumber = "174",
     scryfallId = "ca32fd66-f7f1-4e50-817f-bb259f690f00",
     artist = "Anthony Palumbo",
-    imageUri = "https://cards.scryfall.io/normal/front/c/a/ca32fd66-f7f1-4e50-817f-bb259f690f00.jpg?1783928816",
+    imageUri = "https://cards.scryfall.io/normal/front/c/a/ca32fd66-f7f1-4e50-817f-bb259f690f00.jpg",
     releaseDate = "2020-11-20",
     rarity = Rarity.COMMON,
 )
