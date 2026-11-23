@@ -59,7 +59,25 @@ object EntryCharacteristics {
         cardRegistry: CardRegistry,
         predicateEvaluator: PredicateEvaluator,
         entersWith: com.wingedsheep.sdk.scripting.effects.EntersWithCharacteristics? = null,
-    ): com.wingedsheep.engine.mechanics.layers.ProjectedState? {
+    ): com.wingedsheep.engine.mechanics.layers.ProjectedState? =
+        stateAsEntering(state, entityId, controllerId, entryCopy, cardRegistry, predicateEvaluator, entersWith)
+            ?.projectedState
+
+    /**
+     * The scratch state [projectedAsEntering] projects: [entityId] placed on the battlefield under
+     * its entering controller, its own static abilities installed, any entry copy and the effect's
+     * own "enters as" rider applied. For a caller that matches a whole filter against the entering
+     * permanent (a battlefield-entry replacement, CR 614.12). Never committed.
+     */
+    fun stateAsEntering(
+        state: GameState,
+        entityId: EntityId,
+        controllerId: EntityId?,
+        entryCopy: EntryCopyChoice?,
+        cardRegistry: CardRegistry,
+        predicateEvaluator: PredicateEvaluator,
+        entersWith: com.wingedsheep.sdk.scripting.effects.EntersWithCharacteristics? = null,
+    ): GameState? {
         val choice = GrantedEntryCopy.find(state, entityId, predicateEvaluator)?.chosen(entryCopy) ?: entryCopy
         var scratch = choice?.takeIf { it.copiedCard != null }
             ?.let { EffectCopyEntry.apply(state, entityId, it) } ?: state
@@ -76,7 +94,7 @@ object EntryCharacteristics {
         entersWith?.let {
             scratch = com.wingedsheep.engine.handlers.effects.zones.CharacteristicsEntry.apply(scratch, entityId, controller, it)
         }
-        return scratch.projectedState
+        return scratch
     }
 
     /**
