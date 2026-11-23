@@ -209,12 +209,20 @@ class CastSpellHandler(
      * Raveler's sorcery-timing lock among them, since a resolving object is still on the stack
      * (CR 608.2). A prohibited cast returns an error, which every caller already treats as "the card
      * wasn't cast" (cascade bottoms it, discover puts it into hand).
+     *
+     * Only the prohibitions are asked here
+     * ([com.wingedsheep.engine.legalactions.utils.CastPermissionUtils.castProhibition]), judged on
+     * [action] as proposed — its split half, Adventure or face included. Upstream's
+     * `reasonCannotCast` also checks the face/zone *shape* of the cast, and with its default action
+     * (no face) it refuses every split card ("Choose a split half to cast") even when the effect
+     * did choose a half (Twinning Glass casting Suffering). The face is the effect's own choice,
+     * made before this call, exactly as upstream's resolution casts call [execute] without it.
      */
     fun executeEffectCast(state: GameState, action: CastSpell): ExecutionResult {
         if (com.wingedsheep.engine.mechanics.SplitSecond.isLocked(state, cardRegistry)) {
             return ExecutionResult.error(state, com.wingedsheep.engine.mechanics.SplitSecond.REJECTION)
         }
-        castPermissionUtils.reasonCannotCast(state, action.playerId, action.cardId)
+        castPermissionUtils.castProhibition(state, action.playerId, action.cardId, action)
             ?.let { return ExecutionResult.error(state, it) }
         return execute(state, action)
     }
