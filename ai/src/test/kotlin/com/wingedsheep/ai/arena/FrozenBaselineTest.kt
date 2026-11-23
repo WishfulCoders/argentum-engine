@@ -150,7 +150,19 @@ class FrozenBaselineTest : FunSpec({
          * **`LEGACY_V0` did not move.** With `", escapeChoice=null"` stripped from the recorded
          * action text, this branch reproduces the previous golden `ad0d0b20c33d2434` exactly. Seat 1
          * still wins on turn 20 at life -8 / 16.
+         *
+         * Re-blessed 2026-11-23 for the 2026-11-22 upstream merge (2,860 engine commits under the
+         * fork's own AI). **`LEGACY_V0` did not move.** Two engine changes reach the stream, both
+         * the ones upstream re-blessed its own copy of this test for: the declare attackers step is
+         * kept when nothing can attack (#2704), so each of the four early turns with no creature on
+         * board gains a pass from each player there — the only legal action — and `CastSpell`
+         * gained `optionalCostPayments=[]`, `castFused=false`, `escapeAbility=null` and
+         * `beamMeUpSource=null`. Verified by recording the stream on fork main 98d8d53eea and on
+         * the merge: with action indices renumbered, `CastSpell` reduced to its player and card,
+         * and the eight new declare-attackers passes dropped, the two streams are identical line
+         * for line, every attack and block decision included. Seat 1 still wins on turn 20 at life
+         * -8 / 16.
          */
-        private const val GOLDEN_HASH = "90ab22ac47838fd7"
+        private const val GOLDEN_HASH = "496ea17c698f1b23"
     }
 }
