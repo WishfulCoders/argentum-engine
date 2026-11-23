@@ -22,11 +22,18 @@ import io.kotest.matchers.shouldBe
  *
  * The "When you do" is a reflexive trigger (CR 603.12) that exists only if the discard happened:
  * discarding a nonland card fires it, declining fires nothing, and a hand with no nonland card after
- * the draw means there is no discard to offer at all.
+ * the draw means there is no discard to offer — the question is still asked, since the hand is
+ * hidden (upstream #3340), but "no" is its only answer.
  */
 class HypothesizzleScenarioTest : FunSpec({
 
-    class Seen(var prompts: Int = 0, var targetChoices: Int = 0)
+    /**
+     * [prompts] counts the "may discard?" questions that offered a yes; [noOnlyPrompts] the ones
+     * asked with "no" as the only answer. Since upstream #3340 a hand with no nonland card is
+     * still asked (the opponent can't see the hand, so skipping the question would leak it), but
+     * with yes unavailable.
+     */
+    class Seen(var prompts: Int = 0, var noOnlyPrompts: Int = 0, var targetChoices: Int = 0)
 
     fun newDriver(): GameTestDriver {
         val driver = GameTestDriver()
@@ -47,7 +54,11 @@ class HypothesizzleScenarioTest : FunSpec({
         var guard = 0
         while (guard++ < 40) {
             when (val d = pendingDecision) {
-                is YesNoDecision -> { seen.prompts++; submitYesNo(d.playerId, discard) }
+                is YesNoDecision -> if (d.yesAvailable) {
+                    seen.prompts++; submitYesNo(d.playerId, discard)
+                } else {
+                    seen.noOnlyPrompts++; submitYesNo(d.playerId, false)
+                }
                 is SelectCardsDecision -> submitCardSelection(d.playerId, listOf(card!!))
                 is ChooseTargetsDecision -> { seen.targetChoices++; submitTargetSelection(d.playerId, listOf(target!!)) }
                 null -> if (state.stack.isNotEmpty()) bothPass() else break
@@ -98,7 +109,10 @@ class HypothesizzleScenarioTest : FunSpec({
 
         val seen = driver.castAndResolve(you, discard = true, card = null, target = courser)
 
-        seen.prompts shouldBe 0
+        withClue("asked (the hand is hidden), but with no as the only answer") {
+            seen.prompts shouldBe 0
+            seen.noOnlyPrompts shouldBe 1
+        }
         seen.targetChoices shouldBe 0
         withClue("drew two, discarded nothing") {
             driver.getHand(you).size shouldBe handBefore + 2
