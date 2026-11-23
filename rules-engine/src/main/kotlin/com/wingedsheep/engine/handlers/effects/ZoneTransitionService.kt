@@ -429,7 +429,10 @@ class ZoneTransitionService(
                     )
                 },
                 entering = if (destinationZone == Zone.BATTLEFIELD) {
-                    EntryProspect(options.controllerId ?: ownerId, options.faceDown, cardRegistry)
+                    EntryProspect(
+                        options.controllerId ?: ownerId, options.faceDown, cardRegistry,
+                        entryCopy = options.entryCopy, entersWith = options.entersWith,
+                    )
                 } else null
             )
         } else {

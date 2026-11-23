@@ -930,8 +930,10 @@ internal class CastValidator(
         if (playForFree && cardComponent.manaCost.hasX) {
             return "X can't be less than $minimumX for ${cardComponent.name}, and it must be 0 when cast without paying its mana cost"
         }
+        // Priced with no X announced: `CastCostTotaller` folds an announced X into the cost as
+        // generic mana (CR 601.2f), which would hide the very {X} this floor binds on.
         val totalCost = castCostTotaller.totalCost(
-            state, action, cardDef, cardComponent, playForFree,
+            state, action.copy(xValue = null), cardDef, cardComponent, playForFree,
             castingFromCommandZone = source.route == CastSourceRoute.COMMANDER,
         ) ?: return null
         if (totalCost.hasX && (action.xValue ?: 0) < minimumX) {

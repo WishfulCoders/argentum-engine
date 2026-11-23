@@ -79,12 +79,16 @@ import com.wingedsheep.sdk.scripting.predicates.evaluateWith
 /**
  * How an object would enter the battlefield, for the replacements that look at the permanent "as it
  * would exist on the battlefield" (CR 614.12): who would control it, whether it enters face down (a
- * nameless 2/2 creature, CR 708.2), and the registry its own static abilities are read from.
+ * nameless 2/2 creature, CR 708.2), the registry its own static abilities are read from, the copy it
+ * enters as (Phyrexian Metamorph) and the effect's own "enters as a … creature" rider (Dance of the
+ * Manse).
  */
 data class EntryProspect(
     val controllerId: EntityId,
     val faceDown: Boolean = false,
     val cardRegistry: CardRegistry? = null,
+    val entryCopy: com.wingedsheep.engine.handlers.effects.copy.EntryCopyChoice? = null,
+    val entersWith: com.wingedsheep.sdk.scripting.effects.EntersWithCharacteristics? = null,
 )
 
 /**
@@ -918,7 +922,7 @@ object ZoneMovementUtils {
         // computed at most once per check and only when some entry replacement asks.
         val entryProspect: GameState? by lazy(LazyThreadSafetyMode.NONE) {
             if (toZone != Zone.BATTLEFIELD) null
-            else prospectiveEntryState(state, entityId, container, entering)
+            else prospectiveEntryState(state, entityId, container, entering, predicateEvaluator)
         }
         fun entryMatches(
             event: com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent,
@@ -1133,16 +1137,29 @@ object ZoneMovementUtils {
      * already exist and would apply to the permanent"). March of the Machines makes an entering
      * artifact a creature here; a Theros god short on devotion is not one; a manifested card is a
      * 2/2 creature. Never committed: the real entry still runs through the mover, which emits the
-     * events. Returns null when the object has no card characteristics to project.
+     * events. Returns null when the object has no card characteristics to project, and when the
+     * caller passed no [entering]: such a caller judges the entry through its own `entersAsCreature`
+     * (see [EntryCharacteristics]), which knows the entry copy and the effect's rider.
+     *
+     * Face up with a registry, the state is [EntryCharacteristics.stateAsEntering]'s — the same
+     * scratch `entersAsCreature` reads, so an entry copy (Phyrexian Metamorph copying Sol Ring) and
+     * an "enters as a 5/5 creature" rider are part of what the filter sees.
      */
     private fun prospectiveEntryState(
         state: GameState,
         entityId: EntityId,
         container: ComponentContainer,
-        entering: EntryProspect?
+        entering: EntryProspect?,
+        predicateEvaluator: PredicateEvaluator,
     ): GameState? {
-        val card = container.get<CardComponent>() ?: return null
-        val controllerId = entering?.controllerId ?: card.ownerId ?: return null
+        if (entering == null || !container.has<CardComponent>()) return null
+        if (!entering.faceDown && entering.cardRegistry != null) {
+            return EntryCharacteristics.stateAsEntering(
+                state, entityId, entering.controllerId, entering.entryCopy,
+                entering.cardRegistry, predicateEvaluator, entering.entersWith,
+            )
+        }
+        val controllerId = entering.controllerId
         // Detach it from wherever it is now (graveyard, library, hand, exile, stack) first: an
         // object is in exactly one zone, and the throwaway state must hold it only on the battlefield.
         var placed = state
@@ -1153,11 +1170,8 @@ object ZoneMovementUtils {
         placed = placed.addToZone(ZoneKey(controllerId, Zone.BATTLEFIELD), entityId)
         placed = placed.updateEntity(entityId) { c ->
             var u = c.with(ControllerComponent(controllerId))
-            if (entering?.faceDown == true) {
+            if (entering.faceDown) {
                 u = u.with(com.wingedsheep.engine.state.components.identity.FaceDownComponent)
-            } else if (entering?.cardRegistry != null) {
-                u = com.wingedsheep.engine.mechanics.layers.StaticAbilityHandler(entering.cardRegistry)
-                    .addContinuousEffectComponent(u)
             }
             u
         }

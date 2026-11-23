@@ -285,6 +285,12 @@ internal class CastRecords(
                     entersTapped = riderTapped,
                 ))
             }
+        } else {
+            // A rider belongs to the one stack object it was cast as. Only resolution strips it
+            // (PermanentEntry); a spell countered or fizzled keeps the component on the card, and
+            // a later cast of that card through a rider-free route is a new object (CR 400.7)
+            // that must not enter with it (Serra Paragon's gained ability, a finality counter).
+            newState = newState.updateEntity(action.cardId) { c -> c.without<CastThisWayEntryRiderComponent>() }
         }
         authorization.topLibraryKeywordRider?.let { rider ->
             newState = newState.updateEntity(action.cardId) { c ->
