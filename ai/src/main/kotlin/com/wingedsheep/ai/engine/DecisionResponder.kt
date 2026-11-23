@@ -84,7 +84,11 @@ class DecisionResponder(
             is ChooseTargetsDecision ->
                 respondTargets(state, decision, playerId, budgetPolicy.budgetForDecision(state, playerId))
             is SelectCardsDecision -> respondSelectCards(state, decision, playerId)
-            is YesNoDecision -> respondYesNo(state, decision, playerId)
+            // "You may discard a creature card" with none in hand: the engine asks anyway since the
+            // 11-22 upstream merge (#3340), and "no" is the only legal answer — simulating "yes"
+            // would score an illegal response.
+            is YesNoDecision -> if (!decision.yesAvailable) YesNoResponse(decision.id, false)
+                else respondYesNo(state, decision, playerId)
             is BatchYesNoDecision -> respondBatchYesNo(state, decision, playerId)
             is ChooseModeDecision -> respondModes(state, decision, playerId)
             is ChooseColorDecision -> respondColor(state, decision, playerId)
