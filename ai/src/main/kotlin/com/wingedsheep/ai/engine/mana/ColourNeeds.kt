@@ -1,6 +1,7 @@
 package com.wingedsheep.ai.engine.mana
 
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
+import com.wingedsheep.engine.mechanics.mana.IntrinsicManaAbilities
 import com.wingedsheep.engine.mechanics.mana.LandManaColorInspector
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -138,15 +139,24 @@ class ColourNeeds private constructor(
             cardRegistry: CardRegistry,
         ): Set<Color> {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: return emptySet()
-            if (card.isLand) {
+            if (card.isLand && projected.hasType(entityId, "LAND")) {
                 return LandManaColorInspector.colorsLandCouldProduce(
                     state, projected, entityId, cardRegistry,
                     com.wingedsheep.engine.handlers.PredicateEvaluator(cardRegistry),
                 )
             }
-            val definition = cardRegistry.getCard(card) ?: return emptySet()
+            // A land card off the battlefield — the one a search would fetch, or the one in hand
+            // that already covers a colour. The inspector reads the *projection*, which only
+            // covers permanents, so it answers nothing for these (it read the card's own type
+            // line before the 11-22 upstream merge). Off the battlefield the printed card is
+            // what there is: its basic land types' intrinsic abilities, else its own mana
+            // abilities — the same precedence the inspector applies on the battlefield.
+            val intrinsic = if (card.isLand) IntrinsicManaAbilities.forCard(card) else emptyList()
+            val abilities = intrinsic.ifEmpty {
+                cardRegistry.getCard(card)?.script?.activatedAbilities ?: return emptySet()
+            }
             val colours = mutableSetOf<Color>()
-            for (ability in definition.script.activatedAbilities) {
+            for (ability in abilities) {
                 if (ability.isManaAbility) collectColours(ability.effect, colours)
             }
             return colours
