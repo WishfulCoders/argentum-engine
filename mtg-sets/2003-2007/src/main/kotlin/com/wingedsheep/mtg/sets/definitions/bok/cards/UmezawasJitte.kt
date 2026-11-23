@@ -37,9 +37,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * it is unattached, and falls back to the creature it was last attached to if the Jitte has left the
  * battlefield ([EffectTarget.EquippedCreature] resolves through last-known information, CR 608.2h).
  *
- * Known engine limitation, shared with every modal activated ability (Lost Jitte included — see
- * `ModalEffectExecutor`): the mode, and the -1/-1 mode's target, are picked as the ability resolves
- * rather than on activation (CR 602.2b / 700.2a, and the 2005-02-01 ruling below).
+ * The mode, and the -1/-1 mode's target, are announced on activation (CR 602.2b / 700.2a, and the
+ * 2005-02-01 ruling below), as for every top-level modal activated ability (`ActivationModalChoices`).
  */
 val UmezawasJitte = card("Umezawa's Jitte") {
     manaCost = "{2}"

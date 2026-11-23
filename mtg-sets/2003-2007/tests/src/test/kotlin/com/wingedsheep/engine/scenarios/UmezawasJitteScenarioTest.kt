@@ -109,9 +109,10 @@ class UmezawasJitteScenarioTest : FunSpec({
 
     fun GameTestDriver.activateMode(jitte: EntityId, mode: Int, target: EntityId? = null) {
         val me = activePlayer!!
-        submit(ActivateAbility(playerId = me, sourceId = jitte, abilityId = UmezawasJitte.activatedAbilities[0].id))
-            .outcome shouldBe Outcome.Done
-        bothPass() // resolve → mode choice
+        // The mode, and the -1/-1 mode's target, are announced on activation (CR 602.2b / 700.2a);
+        // the ability then goes on the stack and resolves.
+        (submit(ActivateAbility(playerId = me, sourceId = jitte, abilityId = UmezawasJitte.activatedAbilities[0].id))
+            .outcome is Outcome.Paused) shouldBe true
         val modeDecision = pendingDecision as ChooseOptionDecision
         submitDecision(me, OptionChosenResponse(modeDecision.id, mode))
         if (target != null) submitTargetSelection(me, listOf(target))
