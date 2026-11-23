@@ -3,6 +3,8 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.engine.state.ZoneKey
+import com.wingedsheep.engine.state.components.stack.CastThisWayEntryRiderComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -192,7 +194,8 @@ class GraveyardPlayGrantScenarioTest : FunSpec({
         val bears = driver.putCardInGraveyard(me, "Grizzly Bears")
         driver.giveMana(me, Color.GREEN, 2)
         driver.castSpell(me, bears).error shouldBe null
-        driver.state.grantedTriggeredAbilities.count { it.entityId == bears } shouldBe 1
+        // The rider is frozen onto the stack spell and handed to the permanent as it enters.
+        driver.state.getEntity(bears)!!.get<CastThisWayEntryRiderComponent>()?.grantedAbility shouldNotBe null
 
         val opponent = driver.getOpponent(me)
         val counter = driver.putCardInHand(opponent, "Counterspell")
@@ -203,5 +206,23 @@ class GraveyardPlayGrantScenarioTest : FunSpec({
 
         driver.getGraveyardCardNames(me).contains("Grizzly Bears") shouldBe true
         driver.state.grantedTriggeredAbilities.none { it.entityId == bears } shouldBe true
+
+        // The card is a new object (CR 400.7): returned to hand and cast from there, it enters
+        // without the ability, so it dies to the graveyard rather than being exiled.
+        driver.replaceState(
+            driver.state.removeFromZone(ZoneKey(me, Zone.GRAVEYARD), bears).addToZone(ZoneKey(me, Zone.HAND), bears)
+        )
+        driver.giveMana(me, Color.GREEN, 2)
+        driver.castSpell(me, bears).error shouldBe null
+        resolveStack(driver)
+        val life = driver.getLifeTotal(me)
+        val doom = driver.putCardInHand(me, "Doom Blade")
+        driver.giveMana(me, Color.BLACK, 2)
+        driver.castSpell(me, doom, targets = listOf(bears)).error shouldBe null
+        resolveStack(driver)
+
+        driver.getGraveyardCardNames(me).contains("Grizzly Bears") shouldBe true
+        driver.getExileCardNames(me).contains("Grizzly Bears") shouldBe false
+        driver.getLifeTotal(me) shouldBe life
     }
 })
