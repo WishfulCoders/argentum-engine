@@ -4,12 +4,15 @@ import com.wingedsheep.engine.state.Component
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedEverComponent
 import com.wingedsheep.engine.state.components.battlefield.AbilityActivatedThisTurnComponent
+import com.wingedsheep.engine.state.components.battlefield.EntryTapStateComponent
 import com.wingedsheep.engine.state.components.battlefield.HasBecomeTappedComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.battlefield.TargetedByControllerThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.TimestampComponent
+import com.wingedsheep.engine.state.components.battlefield.UntapCountComponent
 import com.wingedsheep.engine.state.components.player.EquipActivationsThisTurnComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
+import com.wingedsheep.engine.state.components.player.PermanentAbilitiesActivatedThisTurnComponent
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.model.GameRng
@@ -215,6 +218,15 @@ object StateProgress {
      * itself has to be listed: the `{T}` cost stamps the marker and the untap does not clear it, so
      * without this entry the pay-its-own-cost-back no-op would read as a fresh position every time.
      *
+     * Three more arrived with the 11-22 upstream merge, each stamped by the `{T}` cost or the untap
+     * of that same self-untap no-op: [PermanentAbilitiesActivatedThisTurnComponent] (the player's
+     * per-turn record of which permanents' abilities it activated, Tezzeret's "first each turn"),
+     * [UntapCountComponent] (how many times a permanent has untapped this battlefield visit, the
+     * clock behind "for as long as it remains tapped", which would otherwise make a two-untapper
+     * cycle a fresh position on every lap) and [EntryTapStateComponent] (how the permanent
+     * *entered*, materialised on its first tap-state change — absent and present-with-the-live-
+     * value mean the same thing, so the stamp is never a change).
+     *
      * [ManaPoolComponent] is the pool half of spent mana — see [manaSourcesOf]. Mana left floating
      * after a payment is what an action was paid with, and the pool empties between steps anyway.
      *
@@ -230,6 +242,9 @@ object StateProgress {
         HasBecomeTappedComponent::class.java,
         TimestampComponent::class.java,
         ManaPoolComponent::class.java,
+        PermanentAbilitiesActivatedThisTurnComponent::class.java,
+        UntapCountComponent::class.java,
+        EntryTapStateComponent::class.java,
     )
 
     /**
