@@ -13,6 +13,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
+import com.wingedsheep.sdk.scripting.KeywordAbility
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
@@ -56,12 +57,16 @@ class UroTitanOfNaturesWrathScenarioTest : FunSpec({
         }
     }
 
-    fun escape(player: EntityId, uro: EntityId, exiled: List<EntityId>, choice: Int? = null) = CastSpell(
+    /**
+     * [choice] is the escape ability the cast applies, echoed from the legal action (upstream's
+     * `CastSpell.escapeAbility`); null means the card's own escape.
+     */
+    fun escape(player: EntityId, uro: EntityId, exiled: List<EntityId>, choice: KeywordAbility.Escape? = null) = CastSpell(
         playerId = player,
         cardId = uro,
         useAlternativeCost = true,
         alternativeCostType = AlternativeCostType.ESCAPE,
-        escapeChoice = choice,
+        escapeAbility = choice,
         additionalCostPayment = AdditionalCostPayment(exiledCards = exiled),
         paymentStrategy = PaymentStrategy.FromPool
     )
@@ -144,7 +149,7 @@ class UroTitanOfNaturesWrathScenarioTest : FunSpec({
         val breachChoice = offers.single { it.manaCostString == "{1}{G}{U}" }.action as CastSpell
 
         // Breach's escape: Uro's mana cost {1}{G}{U} plus three other cards.
-        val result = driver.submit(escape(player, uro, fodder, choice = breachChoice.escapeChoice))
+        val result = driver.submit(escape(player, uro, fodder, choice = breachChoice.escapeAbility))
         withClue("error=${result.error}") { result.outcome shouldBe Outcome.Done }
         resolveAll(driver, player, putLand = false)
 
