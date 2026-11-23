@@ -83,12 +83,40 @@ class ConstructedDeckGenerator(
             format.displayName,
             pool.size,
         )
-        return RandomDeckGenerator(
+        val fallback = RandomDeckGenerator(
             cardPool = pool,
             basicLandVariants = basics,
             setCodes = setCodes,
             random = random,
         ).generate()
+        requirePlayable(fallback, pool, format)
+        return fallback
+    }
+
+    /**
+     * Refuse a deck the pool was too thin to really build, the contract upstream's generator has
+     * and `RandomDeckResolver` (taken from upstream in the 2026-11-22 merge) relies on: throwing is
+     * what lets it fall back to a format-wide build instead of seating a pile. The random builder
+     * cannot fill [SHAPE]'s spell slots from a thin pool and returns what it found plus its fixed
+     * lands — four instants made it a 40-card "constructed" deck. The floors are upstream's: four
+     * fifths of the spell slots and two fifths of the creature floor, and the deck must be legal
+     * size. Draftsim's own build is already refused when short, in [draftsimBuild].
+     */
+    private fun requirePlayable(deckList: Map<String, Int>, pool: List<CardDefinition>, format: DeckFormat) {
+        val byName = pool.associateBy { it.name }
+        var nonland = 0
+        var creatures = 0
+        for ((key, count) in deckList) {
+            val card = byName[key.substringBefore('#')] ?: continue
+            if (card.isLand) continue
+            nonland += count
+            if (card.typeLine.isCreature) creatures += count
+        }
+        val size = deckList.values.sum()
+        require(size >= DECK_SIZE && nonland >= MIN_NONLAND && creatures >= MIN_CREATURES) {
+            "The ${format.displayName}-legal pool is too thin for a playable deck: $size cards " +
+                "(need $DECK_SIZE), $nonland nonland (need $MIN_NONLAND), $creatures creatures (need $MIN_CREATURES)"
+        }
     }
 
     /** Convenience overload: build from the whole format-legal card base. */
@@ -147,7 +175,7 @@ class ConstructedDeckGenerator(
             if (count > 0) deckList[name] = (deckList[name] ?: 0) + count
         }
 
-        // A short build is a build the pool couldn't support; the random fallback always fills 60.
+        // A short build is a build the pool couldn't support; the random fallback is checked in [generate].
         val size = deckList.values.sum()
         if (size < DECK_SIZE) {
             logger.warn("Draftsim constructed build came back {} cards short of {}", DECK_SIZE - size, DECK_SIZE)
@@ -177,6 +205,8 @@ class ConstructedDeckGenerator(
 
         private val SHAPE = DraftsimDeckShape.CONSTRUCTED
         private val DECK_SIZE = SHAPE.nonlandCount + SHAPE.landCount
+        private val MIN_NONLAND = SHAPE.nonlandCount * 4 / 5
+        private val MIN_CREATURES = SHAPE.creatureFloor * 2 / 5
 
         /**
          * How many distinct cards the autobuilder actually sees. Sealed scale — the builder's home
